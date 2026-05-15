@@ -12,6 +12,7 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const ALLOWED_HOSTS = new Set([
   "console.kubestellar.io",
@@ -51,6 +52,11 @@ function isAllowedOrigin(req: Request): boolean {
   return false;
 }
 
+/** Rate limit: max events per IP per hour. */
+const RATE_LIMIT_MAX_PER_HOUR = 500
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+const RATE_LIMIT_STORE = "analytics-collect-ratelimit"
+
 export default async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   const corsOrigin = getAllowedCorsOrigin(origin);
@@ -66,6 +72,25 @@ export default async (req: Request) => {
 
   if (!isAllowedOrigin(req)) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders });
+  }
+
+  // Rate-limit POST events per client IP
+  const clientIpForRateLimit =
+    req.headers.get("x-nf-client-connection-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE,
+    prefix: "ga4-event:",
+    subject: clientIpForRateLimit,
+    maxRequests: RATE_LIMIT_MAX_PER_HOUR,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rate.limited) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   const realMeasurementId = Netlify.env.get("GA4_REAL_MEASUREMENT_ID") || process.env.GA4_REAL_MEASUREMENT_ID;

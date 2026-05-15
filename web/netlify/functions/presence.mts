@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const ALLOWED_HOSTS = new Set([
   "console.kubestellar.io",
@@ -24,6 +25,9 @@ const SESSION_PREFIX = "session-";
 const SESSION_TTL_MS = 90_000; // 90 seconds — sessions expire if no heartbeat
 const MAX_SESSION_ID_LEN = 64;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+/** Rate limit: max heartbeats per session per hour. */
+const RATE_LIMIT_MAX_PER_HOUR = 120;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 export default async (req: Request) => {
   const store = getStore(STORE_NAME);
@@ -56,6 +60,20 @@ export default async (req: Request) => {
         sessionId.length <= MAX_SESSION_ID_LEN &&
         SESSION_ID_PATTERN.test(sessionId)
       ) {
+        // Rate-limit heartbeats per session
+        const rate = await enforceSimpleRateLimit({
+          storeName: STORE_NAME,
+          prefix: "presence-heartbeat:",
+          subject: sessionId,
+          maxRequests: RATE_LIMIT_MAX_PER_HOUR,
+          windowMs: RATE_LIMIT_WINDOW_MS,
+        });
+        if (rate.limited) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds }),
+            { status: 429, headers: { ...headers, "Content-Type": "application/json" } },
+          );
+        }
         await store.set(`${SESSION_PREFIX}${sessionId}`, String(now));
       }
     } catch {

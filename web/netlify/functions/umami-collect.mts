@@ -10,8 +10,14 @@
 
 import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
+import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
+
+/** Rate limit: max events per IP per hour. */
+const RATE_LIMIT_MAX_PER_HOUR = 500
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+const RATE_LIMIT_STORE = "umami-collect-ratelimit"
 
 /**
  * Hosts allowed via Referer fallback when Origin is absent. Keep
@@ -61,6 +67,25 @@ export default async (req: Request) => {
 
   if (!isRequestAllowed(req)) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
+  }
+
+  // Rate-limit events per client IP
+  const clientIpForRateLimit =
+    req.headers.get("x-nf-client-connection-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE,
+    prefix: "umami-event:",
+    subject: clientIpForRateLimit,
+    maxRequests: RATE_LIMIT_MAX_PER_HOUR,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  })
+  if (rate.limited) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
   }
 
   // Forward client IP for geolocation
