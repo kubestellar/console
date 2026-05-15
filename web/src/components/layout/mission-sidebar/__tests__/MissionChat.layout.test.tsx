@@ -143,7 +143,9 @@ describe('MissionChat layout', () => {
     const composer = screen.getByTestId('mission-chat-composer')
 
     expect(scrollRegion.className).toContain('overflow-y-auto')
+    expect(scrollRegion.className).toContain('h-full')
     expect(scrollRegion.parentElement?.className).toContain('min-h-0')
+    expect(scrollRegion.parentElement?.className).toContain('overflow-hidden')
     expect(composer.className).toContain('sticky')
     expect(composer.className).toContain('bottom-0')
     expect(within(scrollRegion).getByTestId('orbit-setup-offer')).toBeInTheDocument()

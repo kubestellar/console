@@ -842,7 +842,7 @@ export function MissionSidebar() {
             data-tour="ai-missions"
             data-testid="mission-sidebar"
             className={cn(
-              "fixed bg-card border-border flex flex-col overflow-hidden shadow-2xl",
+              "fixed bg-card border-border flex min-h-0 flex-col overflow-hidden shadow-2xl",
               isMobile ? "z-modal" : "z-sidebar",
               !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
               // Mobile: bottom sheet

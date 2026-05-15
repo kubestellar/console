@@ -448,9 +448,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   return (
     <>
-    <div className={cn("flex flex-1 min-h-0 min-w-0")}>
+    <div className={cn("flex flex-1 min-h-0 min-w-0 overflow-hidden")}>
       {/* Main chat area */}
-      <div className="flex flex-col flex-1 min-h-0 min-w-0">
+      <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-border shrink-0">
         <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -599,7 +599,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       {/* Messages - using memoized component for better scroll performance */}
       {/* issue 6740 — role=log + aria-live=polite so screen readers announce streaming AI
           tokens as they arrive. aria-atomic=false keeps announcements incremental. */}
-      <div className="relative flex-1 min-h-0 min-w-0">
+      <div className="relative flex-1 min-h-0 min-w-0 overflow-hidden">
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
@@ -609,7 +609,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         aria-relevant="additions text"
         aria-label="Mission chat messages"
         data-testid="mission-chat-scroll-region"
-        className="absolute inset-0 overflow-y-auto scroll-enhanced p-4"
+        className="h-full overflow-y-auto scroll-enhanced p-4"
       >
         <div ref={messagesContentRef} className="flex min-h-full flex-col gap-4 pb-6">
         {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}
