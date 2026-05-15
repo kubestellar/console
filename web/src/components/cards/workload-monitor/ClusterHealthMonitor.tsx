@@ -12,6 +12,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { useCardLoadingState } from '../CardDataContext'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
+import { CardEmptyState } from '../../../lib/cards/CardComponents'
 import type { MonitorIssue, ResourceHealthStatus } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 
@@ -352,10 +353,11 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
         })}
 
         {clusterSummaries.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Server className="w-8 h-8 text-muted-foreground/40 mb-2" />
-            <p className="text-sm text-muted-foreground">No clusters available.</p>
-          </div>
+          <CardEmptyState
+            icon={Server}
+            title={t('clusterHealth.noClustersConfigured')}
+            message={t('clusterHealth.addClustersPrompt')}
+          />
         )}
       </div>
 

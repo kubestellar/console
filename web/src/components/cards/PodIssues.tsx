@@ -134,8 +134,8 @@ export function PodIssues() {
       />
     ) : (
       <CardEmptyState
-        title="No clusters connected"
-        message="Pod health will appear here after you connect a cluster"
+        title={t('clusterHealth.noClustersConfigured')}
+        message={t('clusterHealth.addClustersPrompt')}
       />
     )
   }

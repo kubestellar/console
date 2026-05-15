@@ -13,6 +13,7 @@ import { ClusterFilterDropdown } from '../ui/ClusterFilterDropdown'
 import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { CardEmptyState } from '../../lib/cards/CardComponents'
 
 interface ResourceCapacityProps {
   config?: Record<string, unknown>
@@ -217,10 +218,11 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
 
   if (showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No clusters available</p>
-        <p className="text-xs mt-1">Connect to clusters to see resource capacity</p>
-      </div>
+      <CardEmptyState
+        icon={Cpu}
+        title={t('clusterHealth.noClustersConfigured')}
+        message={t('clusterHealth.addClustersPrompt')}
+      />
     )
   }
 
