@@ -41,10 +41,14 @@ const minikubeStatusTimeout = 5 * time.Second
 
 var (
 	// execCommand is already declared in kubectl.go
-	lookPath               = exec.LookPath
-	statFile               = os.Stat
-	userHomeDir            = os.UserHomeDir
-	standardToolCandidates = defaultStandardToolCandidates
+	lookPath                  = exec.LookPath
+	statFile                  = os.Stat
+	userHomeDir               = os.UserHomeDir
+	standardToolCandidates    = defaultStandardToolCandidates
+	k3dVersionRegexp          = regexp.MustCompile(`v([\d.]+)`)
+	minikubeProfileNameRegexp = regexp.MustCompile(`"Name":\s*"([^"]+)"`)
+	vclusterVersionRegexp     = regexp.MustCompile(`v?([\d.]+)`)
+	semverRegexp              = regexp.MustCompile(`v?([\d]+\.[\d]+\.[\d]+)`)
 )
 
 // LocalClusterTool represents a detected local cluster tool
@@ -307,8 +311,7 @@ func (m *LocalClusterManager) detectK3d() *LocalClusterTool {
 		// Parse "k3d version v5.6.0\nk3s version v1.27.4-k3s1 (default)"
 		lines := strings.Split(out.String(), "\n")
 		if len(lines) > 0 {
-			re := regexp.MustCompile(`v([\d.]+)`)
-			if matches := re.FindStringSubmatch(lines[0]); len(matches) > 1 {
+			if matches := k3dVersionRegexp.FindStringSubmatch(lines[0]); len(matches) > 1 {
 				tool.Version = matches[1]
 			}
 		}
@@ -426,8 +429,7 @@ func (m *LocalClusterManager) listMinikubeClusters() []LocalCluster {
 	if !strings.Contains(output, "valid") {
 		return clusters
 	}
-	re := regexp.MustCompile(`"Name":\s*"([^"]+)"`)
-	matches := re.FindAllStringSubmatch(output, -1)
+	matches := minikubeProfileNameRegexp.FindAllStringSubmatch(output, -1)
 	for _, match := range matches {
 		if len(match) <= 1 {
 			continue
@@ -795,8 +797,7 @@ func (m *LocalClusterManager) detectVCluster() *LocalClusterTool {
 	if err := cmd.Run(); err == nil {
 		// Parse version output — typically "vcluster version 0.19.0" or just "0.19.0"
 		version := strings.TrimSpace(out.String())
-		re := regexp.MustCompile(`v?([\d.]+)`)
-		if matches := re.FindStringSubmatch(version); len(matches) > 1 {
+		if matches := vclusterVersionRegexp.FindStringSubmatch(version); len(matches) > 1 {
 			tool.Version = matches[1]
 		}
 	}
@@ -1033,8 +1034,7 @@ func (m *LocalClusterManager) CheckVClusterOnCluster(context string) (*VClusterC
 		if err := runWithTimeout(cmd, vclusterCRDCheckTimeout); err == nil {
 			image := strings.TrimSpace(verOut.String())
 			// Extract version from image tag (e.g., "ghcr.io/loft-sh/vcluster:0.23.0")
-			re := regexp.MustCompile(`v?([\d]+\.[\d]+\.[\d]+)`)
-			if matches := re.FindStringSubmatch(image); len(matches) > 1 {
+			if matches := semverRegexp.FindStringSubmatch(image); len(matches) > 1 {
 				status.Version = matches[1]
 			}
 		}
