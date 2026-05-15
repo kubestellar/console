@@ -706,11 +706,18 @@ func (h *StellarHandler) StartStellarV2Workers(ctx context.Context) {
 	})
 }
 
+const stellarMaxUntrustedFieldLen = 512
+
 func renderUntrustedPromptData(source, value string) string {
+	truncated := value
+	if len(truncated) > stellarMaxUntrustedFieldLen {
+		truncated = truncated[:stellarMaxUntrustedFieldLen] + "… [truncated]"
+		slog.Warn("truncated untrusted prompt field", "source", source, "originalLen", len(value))
+	}
 	return fmt.Sprintf(
 		"<cluster-data source=%q trust=\"untrusted\">%s</cluster-data>",
 		source,
-		html.EscapeString(value),
+		html.EscapeString(truncated),
 	)
 }
 
