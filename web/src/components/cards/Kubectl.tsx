@@ -186,7 +186,7 @@ export function Kubectl() {
       
       setOutput(prev => [
         ...prev,
-        `$ kubectl ${cmd}`,
+        `$ kubectl ${cmd}  [context: ${selectedContext}]`,
         result || '(no output)',
         ''
       ])
@@ -208,7 +208,7 @@ export function Kubectl() {
       const errorMsg = err instanceof Error ? err.message : 'Command failed'
       setOutput(prev => [
         ...prev,
-        `$ kubectl ${cmd}`,
+        `$ kubectl ${cmd}  [context: ${selectedContext}]`,
         `Error: ${errorMsg}`,
         ''
       ])
@@ -410,7 +410,7 @@ data:
 
       setOutput(prev => [
         ...prev,
-        `$ kubectl apply -f -`,
+        `$ kubectl apply -f -  [context: ${selectedContext}]`,
         isDryRun ? `(dry-run) ${result || 'Manifest validated successfully'}` : result || `Applied manifest "${manifestName}"`,
         yamlContent.split('\n').slice(0, YAML_PREVIEW_LINES).join('\n') + (yamlContent.split('\n').length > YAML_PREVIEW_LINES ? '\n...' : ''),
         ''
