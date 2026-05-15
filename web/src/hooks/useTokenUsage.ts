@@ -672,9 +672,15 @@ export function useTokenUsage() {
   useEffect(() => {
     const handleSettingsChange = () => {
       const settings = localStorage.getItem(SETTINGS_KEY)
-      if (settings) {
+      if (!settings) {
+        return
+      }
+
+      try {
         const parsedSettings = JSON.parse(settings)
         updateSharedUsage(parsedSettings)
+      } catch (err) {
+        console.warn('[TokenUsage] Ignoring malformed settings JSON from storage event:', err)
       }
     }
     window.addEventListener(SETTINGS_CHANGED_EVENT, handleSettingsChange)

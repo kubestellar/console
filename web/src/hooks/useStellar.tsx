@@ -8,6 +8,15 @@ const STELLAR_DEFAULT_FETCH_LIMIT = 50
 const STELLAR_RECONNECT_BASE_MS = 1000
 const STELLAR_RECONNECT_MAX_MS = 30000
 
+function parseStellarEvent<T>(event: Event, eventName: string): T | null {
+  try {
+    return JSON.parse((event as MessageEvent).data) as T
+  } catch (err) {
+    console.warn(`stellar: malformed ${eventName} event JSON`, err)
+    return null
+  }
+}
+
 function sortNotificationsByCreatedAt(items: StellarNotification[]): StellarNotification[] {
   return (items || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
@@ -80,22 +89,31 @@ function useStellarSource() {
       setTimeout(() => reconnectRef.current(), delay)
     }
     es.addEventListener('notification', (e) => {
-      const notif: StellarNotification = JSON.parse((e as MessageEvent).data)
-      if (notif.read) {
+      const notif = parseStellarEvent<StellarNotification>(e, 'notification')
+      if (!notif || notif.read) {
         return
       }
       setNotifications(prev => (prev.some(n => n.id === notif.id) ? prev : sortNotificationsByCreatedAt([notif, ...prev])))
     })
     es.addEventListener('state', (e) => {
-      const payload = JSON.parse((e as MessageEvent).data) as { clustersWatching: string[]; unreadCount: number; pendingActionCount: number }
+      const payload = parseStellarEvent<{ clustersWatching: string[]; unreadCount: number; pendingActionCount: number }>(e, 'state')
+      if (!payload) {
+        return
+      }
       setState(prev => prev ? { ...prev, clustersWatching: payload.clustersWatching } : prev)
     })
     es.addEventListener('action_updated', (e) => {
-      const payload = JSON.parse((e as MessageEvent).data) as { id: string; status: string }
+      const payload = parseStellarEvent<{ id: string; status: string }>(e, 'action_updated')
+      if (!payload) {
+        return
+      }
       setPendingActions(prev => prev.filter(a => !(a.id === payload.id && payload.status !== 'pending_approval')))
     })
     es.addEventListener('observation', (e) => {
-      const payload = JSON.parse((e as MessageEvent).data) as { id: string; summary: string; suggest?: string }
+      const payload = parseStellarEvent<{ id: string; summary: string; suggest?: string }>(e, 'observation')
+      if (!payload) {
+        return
+      }
       setNudge({
         id: payload.id,
         summary: payload.summary,
@@ -106,117 +124,135 @@ function useStellarSource() {
       stellarApi.getWatches().then(setWatches).catch(() => {/* ignore */})
     })
     es.addEventListener('initial_batch', (e) => {
-      try {
-        const batch = JSON.parse((e as MessageEvent).data) as {
-          notifications?: StellarNotification[]
-          watches?: StellarWatch[]
-          pendingActions?: StellarAction[]
-          operationalState?: StellarOperationalState
-        }
-        if (batch.notifications) setNotifications(sortNotificationsByCreatedAt(batch.notifications))
-        if (batch.watches) setWatches(batch.watches)
-        if (batch.pendingActions) setPendingActions(batch.pendingActions)
-        if (batch.operationalState) setState(batch.operationalState)
-      } catch { /* malformed batch */ }
+      const batch = parseStellarEvent<{
+        notifications?: StellarNotification[]
+        watches?: StellarWatch[]
+        pendingActions?: StellarAction[]
+        operationalState?: StellarOperationalState
+      }>(e, 'initial_batch')
+      if (!batch) {
+        return
+      }
+      if (batch.notifications) setNotifications(sortNotificationsByCreatedAt(batch.notifications))
+      if (batch.watches) setWatches(batch.watches)
+      if (batch.pendingActions) setPendingActions(batch.pendingActions)
+      if (batch.operationalState) setState(batch.operationalState)
     })
     es.addEventListener('watches', (e) => {
-      const updated: StellarWatch[] = JSON.parse((e as MessageEvent).data)
+      const updated = parseStellarEvent<StellarWatch[]>(e, 'watches')
+      if (!updated) {
+        return
+      }
       setWatches(updated || [])
     })
     es.addEventListener('watch_update', (e) => {
-      try {
-        const updated: StellarWatch = JSON.parse((e as MessageEvent).data)
-        setWatches(prev => prev.map(w => w.id === updated.id ? updated : w))
-      } catch { /* ignore */ }
+      const updated = parseStellarEvent<StellarWatch>(e, 'watch_update')
+      if (!updated) {
+        return
+      }
+      setWatches(prev => prev.map(w => w.id === updated.id ? updated : w))
     })
     es.addEventListener('watch_created', () => {
       stellarApi.getWatches().then(setWatches).catch(() => {/* ignore */})
     })
     es.addEventListener('action_update', (e) => {
-      try {
-        const updated: StellarAction = JSON.parse((e as MessageEvent).data)
-        setPendingActions(prev => {
-          const exists = prev.some(a => a.id === updated.id)
-          if (updated.status === 'pending_approval') {
-            return exists ? prev.map(a => a.id === updated.id ? updated : a) : [updated, ...prev]
-          }
-          return prev.filter(a => a.id !== updated.id)
-        })
-      } catch { /* ignore */ }
+      const updated = parseStellarEvent<StellarAction>(e, 'action_update')
+      if (!updated) {
+        return
+      }
+      setPendingActions(prev => {
+        const exists = prev.some(a => a.id === updated.id)
+        if (updated.status === 'pending_approval') {
+          return exists ? prev.map(a => a.id === updated.id ? updated : a) : [updated, ...prev]
+        }
+        return prev.filter(a => a.id !== updated.id)
+      })
     })
     es.addEventListener('notification_update', (e) => {
-      try {
-        const payload = JSON.parse((e as MessageEvent).data) as { dedupKey: string; body: string }
-        setNotifications(prev => prev.map(n =>
-          n.dedupeKey === payload.dedupKey ? { ...n, body: payload.body } : n
-        ))
-      } catch { /* ignore */ }
+      const payload = parseStellarEvent<{ dedupKey: string; body: string }>(e, 'notification_update')
+      if (!payload) {
+        return
+      }
+      setNotifications(prev => prev.map(n =>
+        n.dedupeKey === payload.dedupKey ? { ...n, body: payload.body } : n
+      ))
     })
     es.addEventListener('solve_started', (e) => {
-      try {
-        const payload = JSON.parse((e as MessageEvent).data) as { solveId: string; eventId: string }
-        setSolveProgress(prev => ({
-          ...prev,
-          [payload.eventId]: {
-            solveId: payload.solveId, eventId: payload.eventId,
-            step: 'reading', message: 'Solve started — Stellar is on it.', actionsTaken: 0, status: 'running',
-          },
-        }))
-        stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
-      } catch { /* ignore */ }
+      const payload = parseStellarEvent<{ solveId: string; eventId: string }>(e, 'solve_started')
+      if (!payload) {
+        return
+      }
+      setSolveProgress(prev => ({
+        ...prev,
+        [payload.eventId]: {
+          solveId: payload.solveId, eventId: payload.eventId,
+          step: 'reading', message: 'Solve started — Stellar is on it.', actionsTaken: 0, status: 'running',
+        },
+      }))
+      stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
     })
     es.addEventListener('solve_progress', (e) => {
-      try {
-        const payload = JSON.parse((e as MessageEvent).data) as StellarSolveProgress
-        setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload }))
-      } catch { /* ignore */ }
+      const payload = parseStellarEvent<StellarSolveProgress>(e, 'solve_progress')
+      if (!payload) {
+        return
+      }
+      setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload }))
     })
     es.addEventListener('solve_complete', (e) => {
-      try {
-        const payload = JSON.parse((e as MessageEvent).data) as { solveId: string; eventId: string; status: string; summary: string }
-        setSolveProgress(prev => {
-          const copy = { ...prev }
-          delete copy[payload.eventId]
-          return copy
-        })
-        // Refetch solves so the terminal state lands.
-        stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
-      } catch { /* ignore */ }
+      const payload = parseStellarEvent<{ solveId: string; eventId: string; status: string; summary: string }>(e, 'solve_complete')
+      if (!payload) {
+        return
+      }
+      setSolveProgress(prev => {
+        const copy = { ...prev }
+        delete copy[payload.eventId]
+        return copy
+      })
+      // Refetch solves so the terminal state lands.
+      stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
     })
     es.addEventListener('action_bumped', (e) => {
-      try {
-        const payload = JSON.parse((e as MessageEvent).data) as { id: string }
-        // Refresh pending actions order — they may have been re-bumped.
-        setPendingActions(prev => {
-          const idx = prev.findIndex(a => a.id === payload.id)
-          if (idx < 0) return prev
-          const next = prev.slice()
-          const [bumped] = next.splice(idx, 1)
-          return [bumped, ...next]
-        })
-      } catch { /* ignore */ }
+      const payload = parseStellarEvent<{ id: string }>(e, 'action_bumped')
+      if (!payload) {
+        return
+      }
+      // Refresh pending actions order — they may have been re-bumped.
+      setPendingActions(prev => {
+        const idx = prev.findIndex(a => a.id === payload.id)
+        if (idx < 0) return prev
+        const next = prev.slice()
+        const [bumped] = next.splice(idx, 1)
+        return [bumped, ...next]
+      })
     })
     es.addEventListener('activity', (e) => {
-      try {
-        const entry = JSON.parse((e as MessageEvent).data) as StellarActivity
-        setActivity(prev => {
-          if (prev.some(a => a.id === entry.id)) return prev
-          return [entry, ...prev].slice(0, STELLAR_ACTIVITY_LIMIT)
-        })
-      } catch { /* ignore */ }
+      const entry = parseStellarEvent<StellarActivity>(e, 'activity')
+      if (!entry) {
+        return
+      }
+      setActivity(prev => {
+        if (prev.some(a => a.id === entry.id)) return prev
+        return [entry, ...prev].slice(0, STELLAR_ACTIVITY_LIMIT)
+      })
     })
     es.addEventListener('digest_fired', () => {
       // Refetch solves so the digest's underlying numbers are visible.
       stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
     })
     es.addEventListener('catchup', (e) => {
-      const d = JSON.parse((e as MessageEvent).data) as { summary: string; kind: string }
-      setCatchUp(d)
+      const catchup = parseStellarEvent<{ summary: string; kind: string }>(e, 'catchup')
+      if (!catchup) {
+        return
+      }
+      setCatchUp(catchup)
     })
     es.addEventListener('digest', (e) => {
-      const d = JSON.parse((e as MessageEvent).data) as { content: string; period: string }
+      const digest = parseStellarEvent<{ content: string; period: string }>(e, 'digest')
+      if (!digest) {
+        return
+      }
       // Treat scheduled digest as a high-priority proactive nudge
-      setNudge({ id: crypto.randomUUID(), summary: d.content, ts: new Date().toISOString() })
+      setNudge({ id: crypto.randomUUID(), summary: digest.content, ts: new Date().toISOString() })
     })
   }, [])
 

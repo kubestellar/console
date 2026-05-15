@@ -18,6 +18,15 @@ import { MS_PER_MINUTE } from '../lib/constants/time'
 const CACHE_KEY = 'kubestellar-stack-cache'
 const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes
 
+function safeJsonParse<T>(value: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(value) as T
+  } catch (err) {
+    console.warn(`[useStackDiscovery] Ignoring malformed JSON for ${context}:`, err)
+    return fallback
+  }
+}
+
 export interface LLMdStackComponent {
   name: string
   namespace: string
@@ -461,7 +470,7 @@ export function useStackDiscovery(clusters: string[]) {
           }
 
           // Parse pods
-          const podsData = podsResponse.exitCode === 0 ? JSON.parse(podsResponse.output) : { items: [] }
+          const podsData = podsResponse.exitCode === 0 ? safeJsonParse<{ items: PodResource[] }>(podsResponse.output, { items: [] }, `${cluster} pods`) : { items: [] }
           const pods = (podsData.items || []) as PodResource[]
           const podsByNamespace = new Map<string, PodResource[]>()
           for (const pod of (pods || [])) {
@@ -471,15 +480,14 @@ export function useStackDiscovery(clusters: string[]) {
           }
 
           // Parse InferencePools
-          const poolsData = poolsResponse.exitCode === 0 ? JSON.parse(poolsResponse.output) : { items: [] }
+          const poolsData = poolsResponse.exitCode === 0 ? safeJsonParse<{ items: InferencePoolResource[] }>(poolsResponse.output, { items: [] }, `${cluster} inferencepools`) : { items: [] }
           const pools = (poolsData.items || []) as InferencePoolResource[]
           const poolsByNamespace = new Map(pools.map(p => [p.metadata.namespace, p]))
 
           // Parse services for EPP
-          let svcData = { items: [] as ServiceResource[] }
-          try {
-            if (svcResponse.exitCode === 0) svcData = JSON.parse(svcResponse.output)
-          } catch { /* ignore */ }
+          const svcData = svcResponse.exitCode === 0
+            ? safeJsonParse<{ items: ServiceResource[] }>(svcResponse.output, { items: [] }, `${cluster} services`)
+            : { items: [] as ServiceResource[] }
           const services = (svcData.items || []) as ServiceResource[]
           const eppByNamespace = new Map<string, ServiceResource>()
           for (const svc of (services || [])) {
@@ -489,12 +497,12 @@ export function useStackDiscovery(clusters: string[]) {
           }
 
           // Parse Gateways
-          const gwData = gwResponse.exitCode === 0 ? JSON.parse(gwResponse.output) : { items: [] }
+          const gwData = gwResponse.exitCode === 0 ? safeJsonParse<{ items: GatewayResource[] }>(gwResponse.output, { items: [] }, `${cluster} gateways`) : { items: [] }
           const gateways = (gwData.items || []) as GatewayResource[]
           const gatewayByNamespace = new Map(gateways.map(g => [g.metadata.namespace, g]))
 
           // Parse HPAs
-          const hpaData = hpaResponse.exitCode === 0 ? JSON.parse(hpaResponse.output) : { items: [] }
+          const hpaData = hpaResponse.exitCode === 0 ? safeJsonParse<{ items: HPAResource[] }>(hpaResponse.output, { items: [] }, `${cluster} HPAs`) : { items: [] }
           const hpas = (hpaData.items || []) as HPAResource[]
           const hpaByNamespace = new Map<string, HPAResource>()
           for (const hpa of (hpas || [])) {
@@ -502,7 +510,7 @@ export function useStackDiscovery(clusters: string[]) {
           }
 
           // Parse WVA (VariantAutoscaling)
-          const wvaData = wvaResponse.exitCode === 0 ? JSON.parse(wvaResponse.output) : { items: [] }
+          const wvaData = wvaResponse.exitCode === 0 ? safeJsonParse<{ items: WVAResource[] }>(wvaResponse.output, { items: [] }, `${cluster} variantautoscalings`) : { items: [] }
           const wvas = (wvaData.items || []) as WVAResource[]
           const wvaByNamespace = new Map<string, WVAResource>()
           const wvaByTargetNamespace = new Map<string, WVAResource>()
@@ -515,7 +523,7 @@ export function useStackDiscovery(clusters: string[]) {
           }
 
           // Parse VPA
-          const vpaData = vpaResponse.exitCode === 0 ? JSON.parse(vpaResponse.output) : { items: [] }
+          const vpaData = vpaResponse.exitCode === 0 ? safeJsonParse<{ items: VPAResource[] }>(vpaResponse.output, { items: [] }, `${cluster} VPAs`) : { items: [] }
           const vpas = (vpaData.items || []) as VPAResource[]
           const vpaByNamespace = new Map<string, VPAResource>()
           for (const vpa of (vpas || [])) { vpaByNamespace.set(vpa.metadata.namespace, vpa) }
