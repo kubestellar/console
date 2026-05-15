@@ -60,6 +60,15 @@ interface CacheData {
   timestamp: number
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useKubescape] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // ── Cache helpers ────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -68,7 +77,10 @@ function loadFromCache(): CacheData | null {
     const cacheTime = localStorage.getItem(STORAGE_KEY_KUBESCAPE_CACHE_TIME)
     if (!cached || !cacheTime) return null
     // Stale-while-revalidate: always return cached data. Auto-refresh handles freshness.
-    return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
+    return {
+      statuses: safeJsonParse<Record<string, KubescapeClusterStatus>>(cached, {}, 'localStorage cache'),
+      timestamp: parseInt(cacheTime, 10),
+    }
   } catch {
     return null
   }
@@ -195,7 +207,7 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
     }
 
     if (scanResult.output) {
-      const data = JSON.parse(scanResult.output)
+      const data = safeJsonParse<{ items?: ConfigScanSummaryResource[] }>(scanResult.output, { items: [] }, `${cluster} workloadconfigurationscansummaries`)
       const items = (data.items || []) as ConfigScanSummaryResource[]
 
       for (const item of (items || [])) {
@@ -217,7 +229,7 @@ async function fetchSingleCluster(cluster: string): Promise<KubescapeClusterStat
     )
 
     if (detailResult.exitCode === 0 && detailResult.output) {
-      const data = JSON.parse(detailResult.output)
+      const data = safeJsonParse<{ items?: WorkloadConfigScanResource[] }>(detailResult.output, { items: [] }, `${cluster} workloadconfigurationscans`)
       const items = (data.items || []) as WorkloadConfigScanResource[]
 
       // Aggregate control results with names

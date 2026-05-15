@@ -125,6 +125,15 @@ interface VariantAutoscalingResource {
   }
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useLLMd] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 function detectServerType(name: string, labels?: Record<string, string>): LLMdServer['type'] {
   const nameLower = name.toLowerCase()
   if (labels?.['app.kubernetes.io/name'] === 'tgi' || nameLower.includes('tgi')) return 'tgi'
@@ -252,7 +261,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               { context: cluster, timeout: KUBECTL_MEDIUM_TIMEOUT_MS }
             )
             if (resp.exitCode === 0 && resp.output) {
-              const data = JSON.parse(resp.output)
+              const data = safeJsonParse<{ items?: DeploymentResource[] }>(resp.output, { items: [] }, `${cluster} deployments`)
               const items = data.items || []
               allDeployments.push(...items)
             }
@@ -274,7 +283,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
           try {
             const hpaResponse = await kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_DEFAULT_TIMEOUT_MS })
             if (hpaResponse.exitCode === 0) {
-              const hpaData = JSON.parse(hpaResponse.output)
+              const hpaData = safeJsonParse<{ items?: HPAResource[] }>(hpaResponse.output, { items: [] }, `${cluster} HPAs`)
               const hpas = (hpaData.items || []) as HPAResource[]
               for (const hpa of (hpas || [])) {
                 if (hpa.spec.scaleTargetRef.kind === 'Deployment') {
@@ -288,7 +297,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
           try {
             const vaResponse = await kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_DEFAULT_TIMEOUT_MS })
             if (vaResponse.exitCode === 0) {
-              const vaData = JSON.parse(vaResponse.output)
+              const vaData = safeJsonParse<{ items?: VariantAutoscalingResource[] }>(vaResponse.output, { items: [] }, `${cluster} variantautoscalings`)
               const vas = (vaData.items || []) as VariantAutoscalingResource[]
               for (const va of (vas || [])) {
                 if (va.spec.targetRef?.kind === 'Deployment' || va.spec.targetRef?.name) {
@@ -530,7 +539,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
             continue
           }
 
-          const data = JSON.parse(response.output)
+          const data = safeJsonParse<{ items?: InferencePoolResource[] }>(response.output, { items: [] }, `${cluster} inferencepools`)
           const pools = (data.items || []) as InferencePoolResource[]
 
           const clusterModels: LLMdModel[] = []

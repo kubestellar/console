@@ -62,6 +62,15 @@ interface CacheData {
   timestamp: number
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useTrivy] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // ── Cache helpers ────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -72,7 +81,10 @@ function loadFromCache(): CacheData | null {
     // Always return cached data (stale-while-revalidate). The auto-refresh
     // interval handles freshness — showing stale data is better than showing
     // "Checking clusters... 0/8" for 30+ seconds on every page load.
-    return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
+    return {
+      statuses: safeJsonParse<Record<string, TrivyClusterStatus>>(cached, {}, 'localStorage cache'),
+      timestamp: parseInt(cacheTime, 10),
+    }
   } catch {
     return null
   }
@@ -177,7 +189,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
     const imageReports: TrivyImageReport[] = []
 
     if (result.output) {
-      const data = JSON.parse(result.output)
+      const data = safeJsonParse<{ items?: VulnerabilityReportResource[] }>(result.output, { items: [] }, `${cluster} vulnerabilityreports`)
       const items = (data.items || []) as VulnerabilityReportResource[]
       totalReports = items.length
 

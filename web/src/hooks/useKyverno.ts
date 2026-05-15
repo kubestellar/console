@@ -64,6 +64,15 @@ interface CacheData {
   timestamp: number
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useKyverno] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // ── Cache helpers ────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -72,7 +81,10 @@ function loadFromCache(): CacheData | null {
     const cacheTime = localStorage.getItem(STORAGE_KEY_KYVERNO_CACHE_TIME)
     if (!cached || !cacheTime) return null
     // Stale-while-revalidate: always return cached data. Auto-refresh handles freshness.
-    return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
+    return {
+      statuses: safeJsonParse<Record<string, KyvernoClusterStatus>>(cached, {}, 'localStorage cache'),
+      timestamp: parseInt(cacheTime, 10),
+    }
   } catch {
     return null
   }
@@ -197,7 +209,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
     }
 
     if (cpResult.output) {
-      const data = JSON.parse(cpResult.output)
+      const data = safeJsonParse<{ items?: KyvernoPolicyResource[] }>(cpResult.output, { items: [] }, `${cluster} clusterpolicies`)
       for (const item of (data.items || []) as KyvernoPolicyResource[]) {
         const action = (item.spec.validationFailureAction || 'Audit').toLowerCase()
         policies.push({
@@ -219,7 +231,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
     )
 
     if (pResult.exitCode === 0 && pResult.output) {
-      const data = JSON.parse(pResult.output)
+      const data = safeJsonParse<{ items?: KyvernoPolicyResource[] }>(pResult.output, { items: [] }, `${cluster} policies`)
       for (const item of (data.items || []) as KyvernoPolicyResource[]) {
         const action = (item.spec.validationFailureAction || 'Audit').toLowerCase()
         policies.push({
@@ -244,7 +256,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
 
     let totalViolations = 0
     if (reportResult.exitCode === 0 && reportResult.output) {
-      const data = JSON.parse(reportResult.output)
+      const data = safeJsonParse<{ items?: PolicyReportResource[] }>(reportResult.output, { items: [] }, `${cluster} policyreports`)
       for (const item of (data.items || []) as PolicyReportResource[]) {
         const summary = item.summary || { pass: 0, fail: 0, warn: 0, error: 0, skip: 0 }
         reports.push({
@@ -279,7 +291,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
     )
 
     if (clusterReportResult.exitCode === 0 && clusterReportResult.output) {
-      const data = JSON.parse(clusterReportResult.output)
+      const data = safeJsonParse<{ items?: PolicyReportResource[] }>(clusterReportResult.output, { items: [] }, `${cluster} clusterpolicyreports`)
       for (const item of (data.items || []) as PolicyReportResource[]) {
         const summary = item.summary || { pass: 0, fail: 0, warn: 0, error: 0, skip: 0 }
         totalViolations += summary.fail

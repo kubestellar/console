@@ -22,11 +22,23 @@ interface CacheData {
   timestamp: number
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useCertManager] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 function loadFromCache(): CacheData | null {
   try {
     const stored = sessionStorage.getItem(CACHE_KEY)
     if (!stored) return null
-    const data = JSON.parse(stored) as CacheData
+    const data = safeJsonParse<CacheData | null>(stored, null, 'sessionStorage cache')
+    if (!data) {
+      return null
+    }
     // Convert date strings back to Date objects
     data.certificates = data.certificates.map(c => ({
       ...c,
@@ -277,7 +289,7 @@ export function useCertManager() {
           )
 
           if (certResponse.exitCode === 0 && certResponse.output) {
-            const data = JSON.parse(certResponse.output)
+            const data = safeJsonParse<{ items?: CertificateResource[] }>(certResponse.output, { items: [] }, `${cluster} certificates`)
             const items = (data.items || []) as CertificateResource[]
 
             for (const cert of (items || [])) {
@@ -306,7 +318,7 @@ export function useCertManager() {
           )
 
           if (issuerResponse.exitCode === 0 && issuerResponse.output) {
-            const data = JSON.parse(issuerResponse.output)
+            const data = safeJsonParse<{ items?: IssuerResource[] }>(issuerResponse.output, { items: [] }, `${cluster} issuers`)
             const items = (data.items || []) as IssuerResource[]
 
             for (const issuer of (items || [])) {
@@ -330,7 +342,7 @@ export function useCertManager() {
           )
 
           if (clusterIssuerResponse.exitCode === 0 && clusterIssuerResponse.output) {
-            const data = JSON.parse(clusterIssuerResponse.output)
+            const data = safeJsonParse<{ items?: IssuerResource[] }>(clusterIssuerResponse.output, { items: [] }, `${cluster} clusterissuers`)
             const items = (data.items || []) as IssuerResource[]
 
             for (const issuer of (items || [])) {

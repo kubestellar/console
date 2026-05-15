@@ -5,6 +5,15 @@ import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 const STORAGE_KEY = 'kubestellar-snoozed-alerts'
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useSnoozedAlerts] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // Snooze duration options in milliseconds
 export const SNOOZE_DURATIONS = {
   '5m': 5 * MS_PER_MINUTE,
@@ -38,7 +47,7 @@ function loadState(): StoredState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<StoredState>(stored, { snoozed: [] }, 'snoozed alerts')
       // Clean up expired snoozes
       const now = Date.now()
       parsed.snoozed = (parsed.snoozed || []).filter(

@@ -93,6 +93,15 @@ interface CacheData {
 
 const INTOTO_CACHE_MAX_AGE_MS = REFRESH_INTERVAL_MS
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useIntoto] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // ── Cache helpers ────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -101,7 +110,10 @@ function loadFromCache(): CacheData | null {
     const cacheTime = localStorage.getItem(STORAGE_KEY_INTOTO_CACHE_TIME)
     if (!cached || !cacheTime) return null
     // Stale-while-revalidate: always return cached data. Auto-refresh handles freshness.
-    return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
+    return {
+      statuses: safeJsonParse<Record<string, IntotoClusterStatus>>(cached, {}, 'localStorage cache'),
+      timestamp: parseInt(cacheTime, 10),
+    }
   } catch {
     return null
   }
@@ -267,7 +279,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     const layouts: IntotoLayout[] = []
 
     if (layoutResult.output) {
-      const data = JSON.parse(layoutResult.output)
+      const data = safeJsonParse<{ items?: IntotoLayoutResource[] }>(layoutResult.output, { items: [] }, `${cluster} layouts.in-toto.io`)
       for (const item of (data.items || []) as IntotoLayoutResource[]) {
         const steps: IntotoStep[] = (item.spec.steps || []).map(s => ({
           name: s.name,
@@ -296,7 +308,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     )
 
     if (linkResult.exitCode === 0 && linkResult.output) {
-      const linkData = JSON.parse(linkResult.output)
+      const linkData = safeJsonParse<{ items?: IntotoLinkResource[] }>(linkResult.output, { items: [] }, `${cluster} links.in-toto.io`)
       for (const link of (linkData.items || []) as IntotoLinkResource[]) {
         const layoutName = link.metadata.labels?.['layout-name']
         const stepName = link.spec.name || link.metadata.labels?.['step-name']

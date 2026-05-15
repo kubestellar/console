@@ -7,6 +7,15 @@ import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 /** Default snooze duration: 1 hour */
 const DEFAULT_SNOOZE_DURATION_MS = MS_PER_HOUR
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useSnoozedCards] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 export interface SnoozedSwap {
   id: string
   originalCardId: string
@@ -35,7 +44,7 @@ function loadState(): StoredState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_SNOOZED_CARDS)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<StoredState>(stored, { swaps: [] }, 'snoozed cards')
       // Clean up expired snoozes on load
       const now = Date.now()
       parsed.swaps = (parsed.swaps || []).filter(

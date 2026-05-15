@@ -50,11 +50,20 @@ export interface AIQueryResult {
 const STORAGE_KEY = 'kubestellar-cluster-groups'
 const CLUSTER_GROUP_SYNC_LOG_PREFIX = '[ClusterGroups]'
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useClusterGroups] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 function loadGroups(): ClusterGroup[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<ClusterGroup[]>(stored, [], 'cluster groups')
       if (Array.isArray(parsed)) {
         // Migrate old groups without kind field
         return parsed.map(g => ({

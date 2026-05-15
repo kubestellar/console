@@ -59,6 +59,15 @@ interface CacheData {
   timestamp: number
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useRBACFindings] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // ── Cache helpers ─────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -66,7 +75,10 @@ function loadFromCache(): CacheData | null {
     const cached = localStorage.getItem(STORAGE_KEY_RBAC_CACHE)
     const cacheTime = localStorage.getItem(STORAGE_KEY_RBAC_CACHE_TIME)
     if (!cached || !cacheTime) return null
-    return { findings: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
+    return {
+      findings: safeJsonParse<RBACFinding[]>(cached, [], 'localStorage cache'),
+      timestamp: parseInt(cacheTime, 10),
+    }
   } catch {
     return null
   }
@@ -187,12 +199,12 @@ async function fetchSingleCluster(cluster: string): Promise<ClusterFetchResult> 
       return { cluster, findings, error: stderr }
     }
 
-    const crbData = JSON.parse(crbResult.output)
+    const crbData = safeJsonParse<{ items?: ClusterRoleBinding[] }>(crbResult.output, { items: [] }, `${cluster} clusterrolebindings`)
     const clusterRoleBindings: ClusterRoleBinding[] = crbData.items || []
 
     const clusterRoleMap = new Map<string, ClusterRole>()
     if (crResult.exitCode === 0 && crResult.output) {
-      const crData = JSON.parse(crResult.output)
+      const crData = safeJsonParse<{ items?: ClusterRole[] }>(crResult.output, { items: [] }, `${cluster} clusterroles`)
       for (const cr of (crData.items || []) as ClusterRole[]) {
         clusterRoleMap.set(cr.metadata.name, cr)
       }
@@ -200,7 +212,7 @@ async function fetchSingleCluster(cluster: string): Promise<ClusterFetchResult> 
 
     const roleBindings: RoleBinding[] = []
     if (rbResult.exitCode === 0 && rbResult.output) {
-      const rbData = JSON.parse(rbResult.output)
+      const rbData = safeJsonParse<{ items?: RoleBinding[] }>(rbResult.output, { items: [] }, `${cluster} rolebindings`)
       roleBindings.push(...(rbData.items || []))
     }
 

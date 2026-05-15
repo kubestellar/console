@@ -20,6 +20,15 @@ interface UseDashboardCardsOptions {
   defaultCollapsed?: boolean
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useDashboardCards] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 export function useDashboardCards({ storageKey, defaultCards = [], defaultCollapsed = false }: UseDashboardCardsOptions) {
   const collapsedKey = `${storageKey}:collapsed`
 
@@ -35,7 +44,7 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     try {
       const stored = localStorage.getItem(collapsedKey)
       // If not stored, use default (expanded = false collapsed)
-      return stored !== null ? JSON.parse(stored) : defaultCollapsed
+      return stored !== null ? safeJsonParse<boolean>(stored, defaultCollapsed, `${collapsedKey} collapsed state`) : defaultCollapsed
     } catch {
       return defaultCollapsed
     }

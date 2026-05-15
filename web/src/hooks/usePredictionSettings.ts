@@ -4,6 +4,15 @@ import { DEFAULT_PREDICTION_SETTINGS, type PredictionSettings } from '../types/p
 const STORAGE_KEY = 'kubestellar-prediction-settings'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-prediction-settings-changed'
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[usePredictionSettings] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // Singleton state - shared across all hook instances
 let sharedSettings: PredictionSettings = { ...DEFAULT_PREDICTION_SETTINGS }
 const subscribers = new Set<(settings: PredictionSettings) => void>()
@@ -13,7 +22,7 @@ if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) {
     try {
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<Partial<PredictionSettings>>(stored, {}, 'prediction settings')
       sharedSettings = { ...DEFAULT_PREDICTION_SETTINGS, ...parsed }
     } catch {
       // Invalid JSON, use defaults
@@ -65,7 +74,7 @@ export function usePredictionSettings() {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         try {
-          const parsed = JSON.parse(stored)
+          const parsed = safeJsonParse<Partial<PredictionSettings>>(stored, {}, 'prediction settings')
           updateSharedSettings(parsed)
         } catch {
           // Invalid JSON, ignore

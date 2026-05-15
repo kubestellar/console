@@ -190,6 +190,15 @@ interface StoredCard {
   title?: string
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useSearchIndex] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 /**
  * Scan all dashboard localStorage keys for placed cards.
  * Returns SearchItem[] with one entry per card-placement (a card on 2 dashboards = 2 items).
@@ -202,7 +211,7 @@ function scanPlacedCards(customDashboards: { id: string; name: string }[]): Sear
     try {
       const raw = localStorage.getItem(key)
       if (!raw) continue
-      const cards: StoredCard[] = JSON.parse(raw)
+      const cards = safeJsonParse<StoredCard[]>(raw, [], `${key} placed cards`)
       if (!Array.isArray(cards)) continue
       for (const card of (cards || [])) {
         const cardType = card.card_type
@@ -230,7 +239,7 @@ function scanPlacedCards(customDashboards: { id: string; name: string }[]): Sear
     try {
       const raw = localStorage.getItem(key)
       if (!raw) continue
-      const cards: StoredCard[] = JSON.parse(raw)
+      const cards = safeJsonParse<StoredCard[]>(raw, [], `${key} placed cards`)
       if (!Array.isArray(cards)) continue
       for (const card of (cards || [])) {
         const cardType = card.card_type
@@ -271,7 +280,9 @@ function scanPlacedStats(): SearchItem[] {
     let blocks: StatBlockConfig[]
     try {
       const raw = localStorage.getItem(storageKey)
-      blocks = raw ? JSON.parse(raw) : getDefaultStatBlocks(dashType)
+      blocks = raw
+        ? safeJsonParse<StatBlockConfig[]>(raw, getDefaultStatBlocks(dashType), `${storageKey} stat blocks`)
+        : getDefaultStatBlocks(dashType)
       if (!Array.isArray(blocks)) blocks = getDefaultStatBlocks(dashType)
     } catch {
       blocks = getDefaultStatBlocks(dashType)

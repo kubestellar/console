@@ -73,6 +73,15 @@ interface InferencePoolResource {
   status?: { parents?: Array<{ conditions?: Array<{ type: string; status: string }> }> }
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useCachedLLMd] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 function detectServerType(name: string, labels?: Record<string, string>): LLMdServer['type'] {
   const nameLower = name.toLowerCase()
   if (labels?.['app.kubernetes.io/name'] === 'tgi' || nameLower.includes('tgi')) return 'tgi'
@@ -132,7 +141,8 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
   try {
     const resp = await kubectlProxy.exec(['get', 'deployments', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_MEDIUM_TIMEOUT_MS })
     if (resp.exitCode === 0 && resp.output) {
-      allDeployments.push(...(JSON.parse(resp.output).items || []))
+      const deploymentData = safeJsonParse<{ items?: DeploymentResource[] }>(resp.output, { items: [] }, `${cluster} deployments`)
+      allDeployments.push(...(deploymentData.items || []))
     }
   } catch { /* cluster not reachable */ }
   if (allDeployments.length === 0) return servers
@@ -151,7 +161,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
   if (hpaResult.status === 'fulfilled' && hpaResult.value.exitCode === 0) {
     let hpaItems: HPAResource[] = []
     try {
-      hpaItems = JSON.parse(hpaResult.value.output).items || []
+      hpaItems = safeJsonParse<{ items?: HPAResource[] }>(hpaResult.value.output, { items: [] }, `${cluster} HPAs`).items || []
     } catch { /* invalid JSON — skip HPA data */ }
     for (const hpa of (hpaItems || [])) {
       if (hpa.spec.scaleTargetRef.kind === 'Deployment') {
@@ -177,7 +187,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
   if (vaResult.status === 'fulfilled' && vaResult.value.exitCode === 0) {
     let vaItems: VariantAutoscalingResource[] = []
     try {
-      vaItems = JSON.parse(vaResult.value.output).items || []
+      vaItems = safeJsonParse<{ items?: VariantAutoscalingResource[] }>(vaResult.value.output, { items: [] }, `${cluster} variantautoscalings`).items || []
     } catch { /* invalid JSON — skip VA data */ }
     for (const va of (vaItems || [])) {
       if (va.spec.targetRef?.name) {
@@ -204,7 +214,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
   if (vpaResult.status === 'fulfilled' && vpaResult.value.exitCode === 0) {
     let vpaData: { items?: Array<{ metadata: { name: string; namespace: string }; spec?: { targetRef?: { name?: string } } }> } = {}
     try {
-      vpaData = JSON.parse(vpaResult.value.output)
+      vpaData = safeJsonParse<{ items?: Array<{ metadata: { name: string; namespace: string }; spec?: { targetRef?: { name?: string } } }> }>(vpaResult.value.output, {}, `${cluster} VPAs`)
     } catch { /* invalid JSON — skip VPA data */ }
     for (const vpa of (vpaData.items || []) as Array<{ metadata: { name: string; namespace: string }; spec?: { targetRef?: { name?: string } } }>) {
       const targetName = vpa.spec?.targetRef?.name || 'unknown'
@@ -395,7 +405,8 @@ export async function fetchLLMdModels(
       const response = await kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS })
       if (response.exitCode !== 0) return []
       const clusterModels: LLMdModel[] = []
-      for (const pool of (JSON.parse(response.output).items || []) as InferencePoolResource[]) {
+      const poolData = safeJsonParse<{ items?: InferencePoolResource[] }>(response.output, { items: [] }, `${cluster} inferencepools`)
+      for (const pool of (poolData.items || []) as InferencePoolResource[]) {
         const modelName = pool.spec.selector?.matchLabels?.['llmd.org/model'] || pool.metadata.name
         const hasAccepted = pool.status?.parents?.some(p => p.conditions?.some(c => c.type === 'Accepted' && c.status === 'True'))
         clusterModels.push({

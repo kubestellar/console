@@ -8,6 +8,15 @@ const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
 const REMEMBER_POSITION_KEY = 'kubestellar-remember-position'
 const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useLastRoute] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 /**
  * Get the first dashboard route from sidebar configuration.
  * Falls back to '/' if no sidebar config exists.
@@ -16,7 +25,7 @@ function getFirstDashboardRoute(): string {
   try {
     const sidebarConfig = localStorage.getItem(SIDEBAR_CONFIG_KEY)
     if (sidebarConfig) {
-      const config = JSON.parse(sidebarConfig)
+      const config = safeJsonParse<{ primaryNav?: Array<{ href?: string }> }>(sidebarConfig, {}, 'sidebar config')
       if (config.primaryNav && config.primaryNav.length > 0) {
         return config.primaryNav[0].href || '/'
       }
@@ -65,7 +74,7 @@ export function useLastRoute() {
   // Get stored scroll positions
   const getScrollPositions = useCallback((): ScrollPositions => {
     try {
-      return JSON.parse(localStorage.getItem(SCROLL_POSITIONS_KEY) || '{}')
+      return safeJsonParse<ScrollPositions>(localStorage.getItem(SCROLL_POSITIONS_KEY) || '{}', {}, 'scroll positions')
     } catch {
       return {}
     }
@@ -405,7 +414,7 @@ export function getRememberPosition(path: string): boolean {
   try {
     const stored = localStorage.getItem(REMEMBER_POSITION_KEY)
     if (stored) {
-      const prefs = JSON.parse(stored)
+      const prefs = safeJsonParse<Record<string, boolean>>(stored, {}, 'remember-position preferences')
       if (path in prefs) return prefs[path]
     }
   } catch {
@@ -420,7 +429,9 @@ export function getRememberPosition(path: string): boolean {
 export function setRememberPosition(path: string, enabled: boolean): void {
   try {
     const stored = localStorage.getItem(REMEMBER_POSITION_KEY)
-    const prefs = stored ? JSON.parse(stored) : {}
+    const prefs = stored
+      ? safeJsonParse<Record<string, boolean>>(stored, {}, 'remember-position preferences')
+      : {}
     prefs[path] = enabled
     localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify(prefs))
   } catch {

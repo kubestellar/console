@@ -79,6 +79,15 @@ interface CacheData {
 
 const TRESTLE_CACHE_MAX_AGE_MS = REFRESH_INTERVAL_MS
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useTrestle] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // ── Cache helpers ────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -87,7 +96,10 @@ function loadFromCache(): CacheData | null {
     const cacheTime = localStorage.getItem(STORAGE_KEY_TRESTLE_CACHE_TIME)
     if (!cached || !cacheTime) return null
     // Stale-while-revalidate: always return cached data. Auto-refresh handles freshness.
-    return { statuses: JSON.parse(cached), timestamp: parseInt(cacheTime, 10) }
+    return {
+      statuses: safeJsonParse<Record<string, TrestleClusterStatus>>(cached, {}, 'localStorage cache'),
+      timestamp: parseInt(cacheTime, 10),
+    }
   } catch {
     return null
   }
@@ -290,7 +302,7 @@ async function fetchSingleCluster(cluster: string): Promise<TrestleClusterStatus
 
       if (result.exitCode === 0 && result.output) {
         try {
-          const data = JSON.parse(result.output)
+          const data = safeJsonParse<{ items?: Array<Record<string, unknown>> }>(result.output, { items: [] }, `${cluster} ${api.resource}.${api.group}`)
           const items = (data.items || []) as Array<Record<string, unknown>>
 
           if (items.length > 0) {

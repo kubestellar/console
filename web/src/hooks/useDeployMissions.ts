@@ -28,6 +28,15 @@ function safeReplicaCount(raw: unknown, fallback = 0): number {
   return parsed
 }
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useDeployMissions] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 /** Check whether a mission status is terminal (no longer needs active polling) */
 function isTerminalStatus(s: DeployMissionStatus): boolean {
   return s === 'orbit' || s === 'abort' || s === 'partial'
@@ -60,12 +69,7 @@ async function fetchDeployEventsViaProxy(
     message?: string
     involvedObject?: { name?: string }
   }
-  let data: { items?: KubeEvent[] }
-  try {
-    data = JSON.parse(response.output)
-  } catch {
-    return []
-  }
+  const data = safeJsonParse<{ items?: KubeEvent[] }>(response.output, { items: [] }, `${context}/${namespace}/${workload} deploy events`)
   // Match the deployment itself and its Kubernetes-generated children.
   // ReplicaSet names follow the pattern <deployment>-<hash> where the hash
   // is a 7-10 char alphanumeric string containing at least one digit.
@@ -210,7 +214,7 @@ function loadMissions(): DeployMission[] {
   try {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
     if (stored) {
-      const parsed: DeployMission[] = JSON.parse(stored)
+      const parsed = safeJsonParse<DeployMission[]>(stored, [], 'missions storage')
       // Ensure required arrays exist — older stored data or corruption may omit them
       return (parsed || []).map(m => ({
         ...m,
@@ -222,8 +226,8 @@ function loadMissions(): DeployMission[] {
     const oldActive = localStorage.getItem(STORAGE_KEY_MISSIONS_ACTIVE)
     const oldHistory = localStorage.getItem(STORAGE_KEY_MISSIONS_HISTORY)
     if (oldActive || oldHistory) {
-      const active: DeployMission[] = oldActive ? JSON.parse(oldActive) : []
-      const history: DeployMission[] = oldHistory ? JSON.parse(oldHistory) : []
+      const active = oldActive ? safeJsonParse<DeployMission[]>(oldActive, [], 'legacy active missions storage') : []
+      const history = oldHistory ? safeJsonParse<DeployMission[]>(oldHistory, [], 'legacy mission history storage') : []
       const merged = [...active, ...history].slice(0, MAX_MISSIONS)
       localStorage.removeItem(STORAGE_KEY_MISSIONS_ACTIVE)
       localStorage.removeItem(STORAGE_KEY_MISSIONS_HISTORY)

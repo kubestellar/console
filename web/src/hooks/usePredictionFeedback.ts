@@ -11,6 +11,15 @@ const MAX_FEEDBACK_ENTRIES = 500 // Keep last 500 feedback entries
 /** Number of recent feedback entries to include in AI prompt context */
 const FEEDBACK_CONTEXT_LIMIT = 50
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[usePredictionFeedback] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 // Singleton state - shared across all hook instances
 let feedbackMap: Map<string, StoredFeedback> = new Map()
 const subscribers = new Set<(map: Map<string, StoredFeedback>) => void>()
@@ -20,7 +29,7 @@ if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) {
     try {
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<StoredFeedback[]>(stored, [], 'prediction feedback')
       if (Array.isArray(parsed)) {
         feedbackMap = new Map(parsed.map((f: StoredFeedback) => [f.predictionId, f]))
       }
@@ -75,7 +84,7 @@ export function usePredictionFeedback() {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         try {
-          const parsed = JSON.parse(stored)
+          const parsed = safeJsonParse<StoredFeedback[]>(stored, [], 'prediction feedback')
           if (Array.isArray(parsed)) {
             feedbackMap = new Map(parsed.map((f: StoredFeedback) => [f.predictionId, f]))
             notifySubscribers()

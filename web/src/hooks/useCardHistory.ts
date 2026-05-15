@@ -16,13 +16,22 @@ export interface CardHistoryEntry {
 const STORAGE_KEY = 'kubestellar-card-history'
 const MAX_HISTORY = 100
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useCardHistory] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 export function useCardHistory() {
   const [history, setHistory] = useState<CardHistoryEntry[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (!stored) return []
 
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<CardHistoryEntry[]>(stored, [], 'card history')
       return Array.isArray(parsed) ? parsed : []
     } catch {
       return []

@@ -6,6 +6,15 @@ import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from '../lib/constants/time'
 const STORAGE_KEY = 'kubestellar-snoozed-missions'
 const SNOOZE_DURATION_MS = MS_PER_DAY // 24 hours
 
+function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch (err) {
+    console.warn(`[useSnoozedMissions] Failed to parse ${context}, using default`, err)
+    return fallback
+  }
+}
+
 export interface SnoozedMission {
   id: string
   suggestion: MissionSuggestion
@@ -35,7 +44,7 @@ function loadState(): StoredState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      const parsed = safeJsonParse<StoredState>(stored, { snoozed: [], dismissed: [] }, 'snoozed missions')
       // Clean up expired snoozes
       const now = Date.now()
       parsed.snoozed = (parsed.snoozed || []).filter(
