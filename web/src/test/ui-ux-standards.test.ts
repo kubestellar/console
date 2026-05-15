@@ -92,6 +92,8 @@ const COMPONENTS_DIR = resolve(
 //   262 → 256: PR #10266 — extracted Gauge status colors and ChangeTimeline fallback to constants
 //   256 → 258: Feature/quantum-rebased — QuantumHistogramCard uses getChartColor(), QuantumQubitGrid border extracted to constant
 const EXPECTED_RAW_HEX_COUNT = 258
+//   104 → 123: merge from origin/main — stellar/* components (ChatPanel, DigestCard, etc.)
+//              use raw rgba values for the Stellar AI panel design system
 const EXPECTED_RAW_RGBA_COUNT = 123
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
@@ -109,6 +111,8 @@ const EXPECTED_INLINE_STYLE_COLOR_COUNT = 229
 //          shared constants (CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE, etc.)
 //   3 → 0: PR #10266 — extracted last 3 raw fontSize (CHART_LEGEND_FONT_SIZE,
 //          CLUSTER_MARKER_FONT_SIZE) to shared constants
+//   0 → 174: merge from origin/main — stellar/* components use inline numeric fontSize
+//             for the Stellar AI panel design system (var(--s-*) tokens, not Tailwind)
 const EXPECTED_RAW_FONT_SIZE_COUNT = 174
 
 /** Max snippet length for readable output */
