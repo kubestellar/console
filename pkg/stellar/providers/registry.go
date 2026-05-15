@@ -2,6 +2,8 @@ package providers
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"sync"
 )
@@ -19,14 +21,15 @@ type ResolvedUserProvider struct {
 }
 
 type Registry struct {
-	mu           sync.RWMutex
-	global       map[string]Provider
-	defaultName  string
-	defaultModel string
+	mu                 sync.RWMutex
+	global             map[string]Provider
+	defaultName        string
+	defaultModel       string
+	scannerHealthCache *OllamaHealthCache
 }
 
 func NewRegistry() *Registry {
-	r := &Registry{global: map[string]Provider{}}
+	r := &Registry{global: map[string]Provider{}, scannerHealthCache: &OllamaHealthCache{}}
 	r.global["ollama"] = NewOllama(os.Getenv("OLLAMA_BASE_URL"))
 
 	if k := os.Getenv("OPENAI_API_KEY"); k != "" {
@@ -77,31 +80,31 @@ func NewRegistry() *Registry {
 	return r
 }
 
+func resolveModel(defaultModel, providerName, requestedModel string) string {
+	if requestedModel != "" {
+		return requestedModel
+	}
+	if d, ok := ProviderDefaults[providerName]; ok && d.DefaultModel != "" {
+		return d.DefaultModel
+	}
+	return defaultModel
+}
+
 func (r *Registry) Resolve(requestProvider, requestModel string, userCfg *ResolvedUserProvider) ResolvedProvider {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	resolveModel := func(providerName, requestedModel string) string {
-		if requestedModel != "" {
-			return requestedModel
-		}
-		if d, ok := ProviderDefaults[providerName]; ok && d.DefaultModel != "" {
-			return d.DefaultModel
-		}
-		return r.defaultModel
-	}
-
 	if requestProvider != "" {
 		if p, ok := r.global[requestProvider]; ok {
-			return ResolvedProvider{Provider: p, Model: resolveModel(requestProvider, requestModel), Source: "request"}
+			return ResolvedProvider{Provider: p, Model: resolveModel(r.defaultModel, requestProvider, requestModel), Source: "request"}
 		}
 	}
 	if userCfg != nil && userCfg.Provider != nil {
 		providerName := userCfg.Provider.Name()
-		return ResolvedProvider{Provider: userCfg.Provider, Model: resolveModel(providerName, userCfg.Model), Source: "user-default"}
+		return ResolvedProvider{Provider: userCfg.Provider, Model: resolveModel(r.defaultModel, providerName, userCfg.Model), Source: "user-default"}
 	}
 	if p, ok := r.global[r.defaultName]; ok {
-		return ResolvedProvider{Provider: p, Model: resolveModel(r.defaultName, ""), Source: "env-default"}
+		return ResolvedProvider{Provider: p, Model: resolveModel(r.defaultModel, r.defaultName, ""), Source: "env-default"}
 	}
 	// Last resort: any configured provider, preferring cloud over local-Ollama.
 	// We used to hard-pin to Ollama here, which made every background loop fail
@@ -109,10 +112,55 @@ func (r *Registry) Resolve(requestProvider, requestModel string, userCfg *Resolv
 	// operator had a cloud key set.
 	for _, name := range []string{"anthropic", "openai", "groq", "openrouter", "together", "ollama"} {
 		if p, ok := r.global[name]; ok {
-			return ResolvedProvider{Provider: p, Model: resolveModel(name, ""), Source: "fallback"}
+			return ResolvedProvider{Provider: p, Model: resolveModel(r.defaultModel, name, ""), Source: "fallback"}
 		}
 	}
 	return ResolvedProvider{Provider: nil, Model: r.defaultModel, Source: "fallback"}
+}
+
+func (r *Registry) ResolveScannerProvider(ctx context.Context, userID string) (Provider, string, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	select {
+	case <-ctx.Done():
+		return nil, "", ctx.Err()
+	default:
+	}
+
+	fallback := r.Resolve("", "", nil)
+	fallbackProviderName := "configured provider"
+	if fallback.Provider != nil {
+		fallbackProviderName = fallback.Provider.Name()
+	}
+
+	if !ollamaScannerEnabled() {
+		slog.Info(fmt.Sprintf("Scanner falling back to %s — Ollama scanner disabled", fallbackProviderName), "userID", userID, "provider", fallbackProviderName, "model", fallback.Model)
+		if fallback.Provider == nil {
+			return nil, fallback.Model, fmt.Errorf("scanner provider unavailable: no configured fallback provider")
+		}
+		return fallback.Provider, fallback.Model, nil
+	}
+
+	r.mu.RLock()
+	ollamaProvider, ok := r.global["ollama"]
+	defaultModel := r.defaultModel
+	cache := r.scannerHealthCache
+	r.mu.RUnlock()
+
+	if ok {
+		if ollama, isOllama := ollamaProvider.(*OllamaProvider); isOllama && cache != nil && cache.IsHealthy(ollama) {
+			model := resolveModel(defaultModel, ollama.Name(), "")
+			slog.Info("Scanner using Ollama (local)", "userID", userID, "provider", ollama.Name(), "model", model)
+			return ollama, model, nil
+		}
+	}
+
+	slog.Info(fmt.Sprintf("Scanner falling back to %s — Ollama unreachable", fallbackProviderName), "userID", userID, "provider", fallbackProviderName, "model", fallback.Model)
+	if fallback.Provider == nil {
+		return nil, fallback.Model, fmt.Errorf("scanner provider unavailable: no configured fallback provider")
+	}
+	return fallback.Provider, fallback.Model, nil
 }
 
 func (r *Registry) GetGlobal(name string) (Provider, bool) {
@@ -128,10 +176,7 @@ func (r *Registry) ListProviderInfo(ctx context.Context) []ProviderInfo {
 	out := make([]ProviderInfo, 0, len(r.global))
 	for name, p := range r.global {
 		h := p.Health(ctx)
-		model := r.defaultModel
-		if d, ok := ProviderDefaults[name]; ok && d.DefaultModel != "" {
-			model = d.DefaultModel
-		}
+		model := resolveModel(r.defaultModel, name, "")
 		out = append(out, ProviderInfo{
 			Name:              name,
 			DisplayName:       displayName(name),

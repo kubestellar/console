@@ -17,6 +17,7 @@ var ProviderDefaults = map[string]struct {
 	BaseURL      string
 	DefaultModel string
 }{
+	"ollama":         {defaultOllamaBaseURL, "llama3"},
 	"openai":         {"https://api.openai.com/v1", "gpt-4o"},
 	"anthropic":      {"https://api.anthropic.com/v1", "claude-sonnet-4-20250514"},
 	"groq":           {"https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"},

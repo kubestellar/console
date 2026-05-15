@@ -42,6 +42,7 @@ type ObserverStore interface {
 	NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error)
 }
 
+// TODO(stellar): wire ResolveScannerProvider for batched scanning (§3.1+§3.2)
 // resolveProviderForUser returns a Resolve result that prefers the user's
 // per-user default provider (saved by the Stellar settings UI in
 // stellar_provider_configs) over the global registry default. Falls through to
