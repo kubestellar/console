@@ -3,7 +3,6 @@
  * Glow filters, gradient fills, particle gradients, drop shadows.
  */
 
-import { AMBER_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 import { AMBER_500, GREEN_500_BRIGHT, PURPLE_500, RED_500 } from '../../../lib/theme/chartColors'
 
