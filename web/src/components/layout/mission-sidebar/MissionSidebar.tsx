@@ -464,11 +464,12 @@ export function MissionSidebar() {
       `fixes/${directImportSlug}.json`,
     ]
 
+    const controller = new AbortController()
+
     const tryImport = async () => {
       setIsDirectImporting(true)
       // Race all lookups — resolve as soon as the first succeeds, cancel rest.
       // This avoids waiting for 12 slow 404s when the mission is in cncf-install.
-      const controller = new AbortController()
       let found: MissionExport | null = null
       try {
         found = await Promise.any(paths.map(async (path) => {
@@ -525,6 +526,7 @@ export function MissionSidebar() {
     }
 
     tryImport().finally(() => setIsDirectImporting(false))
+    return () => controller.abort()
   }, [directImportSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mission list search filter (#3944)
