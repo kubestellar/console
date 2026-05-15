@@ -27,10 +27,10 @@ func TestYouTubePlaylistHandler(t *testing.T) {
 	app.Get("/youtube/playlist", YouTubePlaylistHandler)
 
 	// Mock shared external client transport
-	oldTransport := client.ExternalClient.Transport
-	defer func() { client.ExternalClient.Transport = oldTransport }()
+	oldTransport := client.External.Transport
+	defer func() { client.External.Transport = oldTransport }()
 
-	client.ExternalClient.Transport = &mockYouTubeTransport{
+	client.External.Transport = &mockYouTubeTransport{
 		roundTrip: func(req *http.Request) (*http.Response, error) {
 			if strings.Contains(req.URL.String(), "invidious") {
 				return &http.Response{
@@ -72,10 +72,10 @@ func TestYouTubeThumbnailProxy(t *testing.T) {
 	app.Get("/youtube/thumbnail/:id", YouTubeThumbnailProxy)
 
 	// Mock shared external client transport
-	oldTransport := client.ExternalClient.Transport
-	defer func() { client.ExternalClient.Transport = oldTransport }()
+	oldTransport := client.External.Transport
+	defer func() { client.External.Transport = oldTransport }()
 
-	client.ExternalClient.Transport = &mockYouTubeTransport{
+	client.External.Transport = &mockYouTubeTransport{
 		roundTrip: func(req *http.Request) (*http.Response, error) {
 			if strings.Contains(req.URL.String(), "mqdefault.jpg") {
 				// Real thumbnail size

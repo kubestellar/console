@@ -25,8 +25,8 @@ func TestMediumBlogHandler(t *testing.T) {
 		blogCache.mu.Unlock()
 
 		// Mock shared external HTTP client
-		origClient := client.ExternalClient
-		defer func() { client.ExternalClient = origClient }()
+		origClient := client.External
+		defer func() { client.External = origClient }()
 
 		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/xml")
@@ -46,7 +46,7 @@ func TestMediumBlogHandler(t *testing.T) {
 
 		// We can't easily change mediumFeedURL because it's a const.
 		// However, we can use RoundTrip to intercept.
-		client.ExternalClient = &http.Client{
+		client.External = &http.Client{
 			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 				resp, _ := http.Get(mockServer.URL)
 				return resp
@@ -66,10 +66,10 @@ func TestMediumBlogHandler(t *testing.T) {
 		blogCache.fetchedAt = time.Time{}
 		blogCache.mu.Unlock()
 
-		origClient := client.ExternalClient
-		defer func() { client.ExternalClient = origClient }()
+		origClient := client.External
+		defer func() { client.External = origClient }()
 
-		client.ExternalClient = &http.Client{
+		client.External = &http.Client{
 			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 				return &http.Response{
 					StatusCode: http.StatusServiceUnavailable,
