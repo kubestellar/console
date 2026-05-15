@@ -93,12 +93,13 @@ describe('FeatureRequestModal Component', () => {
   })
 
   it('shows a scrollable example report and can copy it into the editor', async () => {
-    const { container } = render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+    render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
 
     expect(await screen.findByText(/Example report/i)).toBeInTheDocument()
     expect(screen.getByText(/3\. Check the GPU card/i)).toBeInTheDocument()
 
-    const exampleReport = container.querySelector('pre')
+    const exampleReport = screen.getByText(/3\. Check the GPU card/i).closest('pre')
+    expect(exampleReport).not.toBeNull()
     expect(exampleReport).toHaveClass('overflow-y-auto', 'overscroll-contain', 'max-h-56')
 
     const textbox = screen.getByRole('textbox') as HTMLTextAreaElement

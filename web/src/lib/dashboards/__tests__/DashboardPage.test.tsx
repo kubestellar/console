@@ -51,6 +51,7 @@ vi.mock('../dashboardHooks', () => ({
 
 // Child components — stub as simple divs
 vi.mock('../DashboardComponents', () => ({
+  DASHBOARD_CARD_ROW_HEIGHT_PX: 100,
   SortableDashboardCard: ({ card }: { card: { id: string; card_type: string } }) => (
     <div data-testid={`sortable-card-${card.id}`}>{card.card_type}</div>
   ),

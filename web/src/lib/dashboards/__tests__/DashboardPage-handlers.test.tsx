@@ -48,6 +48,7 @@ vi.mock('@dnd-kit/sortable', () => ({
 // SortableDashboardCard mock — exposes ALL card callback buttons
 // ---------------------------------------------------------------------------
 vi.mock('../DashboardComponents', () => ({
+  DASHBOARD_CARD_ROW_HEIGHT_PX: 100,
   SortableDashboardCard: ({
     card,
     onConfigure,

@@ -73,6 +73,7 @@ vi.mock('../dashboardHooks', () => ({
 
 // Child component stubs
 vi.mock('../DashboardComponents', () => ({
+  DASHBOARD_CARD_ROW_HEIGHT_PX: 100,
   SortableDashboardCard: ({ card, onInsertBefore, onInsertAfter }: {
     card: { id: string; card_type: string }
     onInsertBefore?: () => void
