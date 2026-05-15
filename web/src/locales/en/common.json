@@ -4352,6 +4352,7 @@
       "impactItem3": "The workload can be restarted by scaling back up",
       "confirm": "Scale to Zero"
     },
+    "protectedNamespace": "Scaling disabled — system namespace",
     "scaleToZeroTitle": "Scale to Zero Replicas",
     "scaleToZeroMessage": "Scaling {{name}} to 0 replicas will shut down all pods. The workload will stop serving traffic until scaled back up. Are you sure?",
     "confirmScaleToZero": "Scale to Zero"

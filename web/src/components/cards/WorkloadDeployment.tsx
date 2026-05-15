@@ -69,6 +69,22 @@ const REFETCH_AFTER_SCALE_MS = 1500
 // Replica count constants
 const ZERO_REPLICAS = 0
 
+/** Namespaces where scaling is blocked to avoid disrupting system components. */
+const PROTECTED_NAMESPACES = new Set([
+  'argocd',
+  'calico-system',
+  'cert-manager',
+  'flux-system',
+  'gatekeeper-system',
+  'ingress-nginx',
+  'kube-node-lease',
+  'kube-public',
+  'kube-system',
+  'kubescape',
+  'metallb-system',
+  'tigera-operator',
+])
+
 // Demo workload data
 const DEMO_WORKLOADS: Workload[] = [
   {
@@ -330,20 +346,30 @@ interface DraggableWorkloadItemProps {
 }
 
 function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: DraggableWorkloadItemProps) {
-  const [desiredReplicas, setDesiredReplicas] = useState(workload.replicas)
+  const [replicaDraft, setReplicaDraft] = useState({ baseline: workload.replicas, desired: workload.replicas })
   const [isScaling, setIsScaling] = useState(false)
   const [scaleError, setScaleError] = useState<string | null>(null)
   const [scaleSuccess, setScaleSuccess] = useState(false)
   const [showScaleToZeroDialog, setShowScaleToZeroDialog] = useState(false)
   const { mutate: scaleWorkload } = useScaleWorkload()
   const { t } = useTranslation()
+  const isProtectedNamespace = PROTECTED_NAMESPACES.has(workload.namespace.toLowerCase())
+  const desiredReplicas = !isScaling && replicaDraft.baseline !== workload.replicas
+    ? workload.replicas
+    : replicaDraft.desired
+  const setDesiredReplicas = (nextDesiredReplicas: number | ((currentReplicas: number) => number)) => {
+    const resolvedDesiredReplicas = typeof nextDesiredReplicas === 'function'
+      ? nextDesiredReplicas(desiredReplicas)
+      : nextDesiredReplicas
 
-  // Sync desired replicas when workload data updates (e.g. after refresh)
-  useEffect(() => {
-    if (!isScaling) setDesiredReplicas(workload.replicas)
-  }, [workload.replicas, isScaling])
+    setReplicaDraft({ baseline: workload.replicas, desired: resolvedDesiredReplicas })
+  }
 
   const performScale = async () => {
+    if (isProtectedNamespace) {
+      setScaleError(t('workloads.protectedNamespace'))
+      return
+    }
     if (desiredReplicas === workload.replicas || isScaling) return
     setIsScaling(true)
     setScaleError(null)
@@ -532,63 +558,72 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
           {/* Scale controls */}
           {(workload.type === 'Deployment' || workload.type === 'StatefulSet') && (
             <div className="mt-2" onPointerDown={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground mr-1">Replicas</span>
-                <button
-                  onClick={() => setDesiredReplicas((r) => Math.max(0, r - 1))}
-                  disabled={isScaling || desiredReplicas <= 0}
-                  className={cn(
-                    'w-7 h-7 flex items-center justify-center rounded transition-colors',
-                    isScaling || desiredReplicas <= 0
-                      ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
-                      : 'bg-secondary hover:bg-secondary/80 text-foreground',
+              {isProtectedNamespace ? (
+                <p className="text-xs text-yellow-400/70 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {t('workloads.protectedNamespace')}
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground mr-1">Replicas</span>
+                    <button
+                      onClick={() => setDesiredReplicas((r) => Math.max(0, r - 1))}
+                      disabled={isScaling || desiredReplicas <= 0}
+                      className={cn(
+                        'w-7 h-7 flex items-center justify-center rounded transition-colors',
+                        isScaling || desiredReplicas <= 0
+                          ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
+                          : 'bg-secondary hover:bg-secondary/80 text-foreground',
+                      )}
+                      aria-label="Decrease replicas"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={desiredReplicas}
+                      onChange={(e) => setDesiredReplicas(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                      disabled={isScaling}
+                      className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-hidden focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                    />
+                    <button
+                      onClick={() => setDesiredReplicas((r) => Math.min(100, r + 1))}
+                      disabled={isScaling || desiredReplicas >= 100}
+                      className={cn(
+                        'w-7 h-7 flex items-center justify-center rounded transition-colors',
+                        isScaling || desiredReplicas >= 100
+                          ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
+                          : 'bg-secondary hover:bg-secondary/80 text-foreground',
+                      )}
+                      aria-label="Increase replicas"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                    {desiredReplicas !== workload.replicas && !isScaling && (
+                      <button
+                        onClick={handleApplyScale}
+                        className="ml-1 px-2 h-7 text-xs rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors flex items-center gap-1"
+                      >
+                        Apply
+                        <span className="text-2xs text-blue-400/70">
+                          {workload.replicas} → {desiredReplicas}
+                        </span>
+                      </button>
+                    )}
+                    {isScaling && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-400 ml-1" />
+                    )}
+                    {scaleSuccess && (
+                      <Check className="h-4 w-4 text-green-400 ml-1" />
+                    )}
+                  </div>
+                  {scaleError && (
+                    <p className="text-2xs text-red-400 mt-1">{scaleError}</p>
                   )}
-                  aria-label="Decrease replicas"
-                >
-                  <Minus className="h-3 w-3" />
-                </button>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={desiredReplicas}
-                  onChange={(e) => setDesiredReplicas(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                  disabled={isScaling}
-                  className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-hidden focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                />
-                <button
-                  onClick={() => setDesiredReplicas((r) => Math.min(100, r + 1))}
-                  disabled={isScaling || desiredReplicas >= 100}
-                  className={cn(
-                    'w-7 h-7 flex items-center justify-center rounded transition-colors',
-                    isScaling || desiredReplicas >= 100
-                      ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed'
-                      : 'bg-secondary hover:bg-secondary/80 text-foreground',
-                  )}
-                  aria-label="Increase replicas"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-                {desiredReplicas !== workload.replicas && !isScaling && (
-                  <button
-                    onClick={handleApplyScale}
-                    className="ml-1 px-2 h-7 text-xs rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-colors flex items-center gap-1"
-                  >
-                    Apply
-                    <span className="text-2xs text-blue-400/70">
-                      {workload.replicas} → {desiredReplicas}
-                    </span>
-                  </button>
-                )}
-                {isScaling && (
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-400 ml-1" />
-                )}
-                {scaleSuccess && (
-                  <Check className="h-4 w-4 text-green-400 ml-1" />
-                )}
-              </div>
-              {scaleError && (
-                <p className="text-2xs text-red-400 mt-1">{scaleError}</p>
+                </>
               )}
             </div>
           )}
