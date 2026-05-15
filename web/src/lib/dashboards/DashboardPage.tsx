@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useDashboard } from './dashboardHooks'
 import type { DashboardCard, DashboardCardPlacement } from './types'
-import { SortableDashboardCard, DragPreviewCard } from './DashboardComponents'
+import { SortableDashboardCard, DragPreviewCard, DASHBOARD_CARD_ROW_HEIGHT_PX } from './DashboardComponents'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../../components/dashboard/FloatingDashboardActions'
 import { DashboardCustomizer } from '../../components/dashboard/customizer/DashboardCustomizer'
@@ -424,7 +424,11 @@ export function DashboardPage({
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2" data-testid="dashboard-cards-grid">
+                    <div
+                      className="grid grid-cols-1 md:grid-cols-12 gap-2 min-w-0"
+                      data-testid="dashboard-cards-grid"
+                      style={{ gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` }}
+                    >
                       {cards.map((card, index) => (
                         <SortableDashboardCard
                           key={card.id}

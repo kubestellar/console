@@ -166,6 +166,7 @@ describe('DashboardCardsGrid', () => {
     )
     const grid = container.firstElementChild as HTMLElement
     expect(grid.style.gridTemplateColumns).toContain('repeat(12')
+    expect(grid.style.gridAutoRows).toBe('100px')
     expect(screen.getByText('A')).toBeDefined()
     expect(screen.getByText('B')).toBeDefined()
   })

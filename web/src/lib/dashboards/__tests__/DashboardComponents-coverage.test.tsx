@@ -198,6 +198,8 @@ describe('SortableDashboardCard — coverage', () => {
     )
     const desktopEl = desktopContainer.firstElementChild as HTMLElement
     expect(desktopEl.style.gridColumn).toBe('span 6')
+    expect(desktopEl.style.gridRow).toBe('span 3 / span 3')
+    expect(desktopEl.style.minHeight).toBe('300px')
 
     // Mobile
     mockIsMobile = true
@@ -213,6 +215,7 @@ describe('SortableDashboardCard — coverage', () => {
     )
     const mobileEl = mobileContainer.firstElementChild as HTMLElement
     expect(mobileEl.style.gridColumn).toBe('span 1')
+    expect(mobileEl.style.gridRow).toBe('')
   })
 
   it('reduces opacity when isDragging is true', () => {
@@ -361,5 +364,6 @@ describe('DashboardCardsGrid — coverage', () => {
     )
     const grid = container.firstElementChild as HTMLElement
     expect(grid.style.gridTemplateColumns).toContain('repeat(8')
+    expect(grid.style.gridAutoRows).toBe('100px')
   })
 })

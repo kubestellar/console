@@ -1043,7 +1043,14 @@ export const CardWrapper = memo(function CardWrapper({
                     but keep mounted so useLayoutEffect runs.
                     This prevents the deadlock where CardWrapper waits for hasData but children never mount.
                     Suspense catches lazy() chunk loading so it doesn't bubble up to Layout and blank the whole page. */}
-                    <div className={(shouldShowSkeleton || (cardLoadingTimedOut && !childDataState?.hasData) || (childDataState && !childDataState.isLoading && !childDataState.hasData && !cardLoadingTimedOut)) ? 'hidden' : 'contents'}>
+                    <div
+                      className={cn(
+                        'min-h-0',
+                        (shouldShowSkeleton || (cardLoadingTimedOut && !childDataState?.hasData) || (childDataState && !childDataState.isLoading && !childDataState.hasData && !cardLoadingTimedOut))
+                          ? 'hidden'
+                          : 'flex flex-1 flex-col'
+                      )}
+                    >
                       <DynamicCardErrorBoundary cardId={cardId || cardType}>
                         <Suspense fallback={<CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />}>
                           {children}

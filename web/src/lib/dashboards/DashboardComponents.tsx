@@ -9,6 +9,9 @@ import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../../components/cards/cardReg
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { useMobile } from '../../hooks/useMobile'
 
+/** Fixed desktop grid row height for dashboard cards. */
+export const DASHBOARD_CARD_ROW_HEIGHT_PX = 100
+
 // ============================================================================
 // Icon Resolver
 // ============================================================================
@@ -59,18 +62,19 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    // Only apply multi-column span on desktop; mobile uses single column
+    // Only apply multi-column span on desktop; mobile uses single column.
     gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
-    // Use minHeight instead of gridRow span — CSS Grid auto rows have no
-    // fixed height so `span N` doesn't actually size the element.
-    minHeight: isMobile ? undefined : `${cardHeight * 100}px`,
+    // Desktop dashboards use fixed auto rows so vertical resize changes the
+    // actual grid track height instead of only raising a min-height floor.
+    gridRow: isMobile ? undefined : `span ${cardHeight} / span ${cardHeight}`,
+    minHeight: isMobile ? undefined : `${cardHeight * DASHBOARD_CARD_ROW_HEIGHT_PX}px`,
     opacity: isDragging ? 0.5 : 1,
   }
 
   const CardComponent = CARD_COMPONENTS[card.card_type]
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group/card">
+    <div ref={setNodeRef} style={style} className="relative group/card h-full min-h-0">
       {onInsertAfter && (
         <button
           onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
@@ -340,8 +344,11 @@ export function DashboardCardsGrid({
 }: DashboardCardsGridProps) {
   return (
     <div
-      className="grid gap-4"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      className="grid gap-4 min-w-0"
+      style={{
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px`,
+      }}
     >
       {children}
     </div>
