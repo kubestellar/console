@@ -922,13 +922,15 @@ export function useMissionControl() {
   }, [planningMission?.status, state.aiStreaming])
 
   // Safety-net: clear aiStreaming if no planning mission appears within 30s (#5669).
-  // This handles the case where startMission() was called but no AI provider is configured,
-  // so planningMission never transitions to 'running' and the UI stays stuck.
+  // IMPORTANT: only arm this timer while the planning mission is still missing.
+  // Once a mission exists, let it stream/complete normally instead of force-
+  // cancelling after a fixed wall-clock window.
   // #9496 — Also cancel the backend mission and mark the request as timed out
   // so late-arriving streamed content is ignored by the parse effect.
   const AI_SUGGEST_TIMEOUT_MS = 30_000
   useEffect(() => {
     if (!state.aiStreaming) return
+    if (planningMission) return
     const timer = setTimeout(() => {
       // #9496 — Cancel the backend mission to stop the stream. Use the ref
       // for the latest planningMissionId to avoid a stale closure.
@@ -946,7 +948,7 @@ export function useMissionControl() {
       })
     }, AI_SUGGEST_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [state.aiStreaming, dismissMission])
+  }, [state.aiStreaming, planningMission, dismissMission])
 
   // ---------------------------------------------------------------------------
   // Reconcile assignments when projects change (cascade Phase 1 → 2 → 3)

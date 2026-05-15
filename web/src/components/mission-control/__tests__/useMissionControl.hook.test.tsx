@@ -131,6 +131,30 @@ describe('useMissionControl hook', () => {
     expect(result.current.state.phase).toBe('define')
   })
 
+  it('does not auto-timeout while a planning mission exists', async () => {
+    vi.useFakeTimers()
+    mockStartMission.mockReturnValue('mission-123')
+    vi.spyOn(useMissionsModule, 'useMissions').mockReturnValue({
+      startMission: mockStartMission,
+      sendMessage: mockSendMessage,
+      dismissMission: mockDismissMission,
+      missions: [{ id: 'mission-123', status: 'running', messages: [] }],
+    } as unknown as UseMissionsResult)
+
+    const { result } = renderHook(() => useMissionControl())
+
+    await act(async () => {
+      await result.current.askAIForSuggestions('suggest projects for security hardening')
+    })
+
+    act(() => {
+      vi.advanceTimersByTime(31_000)
+    })
+
+    expect(mockDismissMission).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
   it('automatically assigns projects to clusters', async () => {
     const { result } = renderHook(() => useMissionControl())
     
