@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
@@ -24,9 +24,6 @@ interface NamespaceOverviewProps {
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
-
-  // Track if we've shown restore error toast (prevent duplicate toasts on re-render)
-  const hasShownRestoreErrorRef = useRef(false)
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(

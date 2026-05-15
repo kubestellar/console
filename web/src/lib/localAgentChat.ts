@@ -10,7 +10,7 @@ export interface LocalAgentChatOptions {
   onError: (error: string) => void
 }
 
-export function localAgentChat(prompt: string, options: LocalAgentChatOptions): void {
+export async function localAgentChat(prompt: string, options: LocalAgentChatOptions): Promise<void> {
   const requestId = `stellar-chat-${crypto.randomUUID()}`
   const sessionId = options.sessionId || `stellar-${crypto.randomUUID()}`
   let settled = false
@@ -31,7 +31,7 @@ export function localAgentChat(prompt: string, options: LocalAgentChatOptions): 
   }
 
   try {
-    ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
   } catch {
     options.onError('Could not connect to local agent.')
     return

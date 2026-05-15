@@ -676,15 +676,16 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         reject(new Error('CONNECTION_TIMEOUT'))
       }, WS_CONNECTION_TIMEOUT_MS)
 
-      try {
-        // #6375 — arm the "not yet established" guard for this socket.
-        // The backoff is reset later, after the first application-layer
-        // message actually arrives, not here.
-        connectionEstablished.current = false
-        wsRef.current = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+      const initializeWebSocket = async () => {
+        try {
+          // #6375 — arm the "not yet established" guard for this socket.
+          // The backoff is reset later, after the first application-layer
+          // message actually arrives, not here.
+          connectionEstablished.current = false
+          wsRef.current = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
-        wsRef.current.onopen = () => {
-          clearTimeout(timeout)
+          wsRef.current.onopen = () => {
+            clearTimeout(timeout)
           // NOTE: Do NOT reset wsReconnectAttempts here. Corporate WAFs can
           // let the TCP/TLS handshake through and still drop the WebSocket
           // upgrade frame, causing onopen → onclose in the same event-loop
@@ -1168,10 +1169,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           setAgentsLoading(false)
           reject(new Error('CONNECTION_FAILED'))
         }
-      } catch (err: unknown) {
-        clearTimeout(timeout)
-        reject(err)
+        } catch (err: unknown) {
+          clearTimeout(timeout)
+          reject(err)
+        }
       }
+
+      void initializeWebSocket()
     })
   }
 

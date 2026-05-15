@@ -57,7 +57,15 @@ export const stellarApi = {
       return data
     } catch (err) {
       console.warn('stellar: getState failed:', err)
-      return { clustersWatching: [], unreadAlerts: 0, pendingActionIDs: [], generatedAt: new Date().toISOString() } as StellarOperationalState
+      return {
+        generatedAt: new Date().toISOString(),
+        clustersWatching: [],
+        eventCounts: { critical: 0, warning: 0, info: 0 },
+        recentEvents: [],
+        unreadAlerts: 0,
+        activeMissionIds: [],
+        pendingActionIds: [],
+      }
     }
   },
 

@@ -18,6 +18,11 @@ export interface KagentStatus {
   reason?: string
 }
 
+interface ChatStreamResponse {
+  response: Response
+  endpoint: string
+}
+
 function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
   const timeoutSignal = AbortSignal.timeout(timeoutMs)
   return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal

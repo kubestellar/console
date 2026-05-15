@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { useModalState } from '../../../lib/modals'
 import { cn } from '../../../lib/cn'
+import { NAVBAR_FILTER_PANEL_GAP_PX, NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR } from '../../../lib/constants/ui'
 import { Tooltip } from '../../ui/Tooltip'
 import { Input } from '../../ui/Input'
 

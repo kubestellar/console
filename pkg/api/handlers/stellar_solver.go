@@ -14,6 +14,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/stellar/solver"
@@ -407,11 +408,11 @@ Don't ask me first — act. If you genuinely can't fix it safely, tell me what's
 // triggered AI mission ends, so the activity log + solve record reflect the
 // real-world outcome. Sent by StellarMissionBridge.
 type CompleteAutoMissionRequest struct {
-	SolveID  string `json:"solveId"`
-	EventID  string `json:"eventId"`
-	Status   string `json:"status"`  // "resolved" | "escalated" | "exhausted"
-	Summary  string `json:"summary"`
-	Detail   string `json:"detail,omitempty"`
+	SolveID string `json:"solveId"`
+	EventID string `json:"eventId"`
+	Status  string `json:"status"` // "resolved" | "escalated" | "exhausted"
+	Summary string `json:"summary"`
+	Detail  string `json:"detail,omitempty"`
 }
 
 // CompleteAutoMission is POST /api/stellar/solve/:solveID/complete — closes

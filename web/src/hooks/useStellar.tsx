@@ -225,8 +225,6 @@ function useStellarSource() {
   }, [connectSSE])
 
   useEffect(() => {
-    let cancelled = false
-
     const waitForToken = (): Promise<void> => {
       return new Promise((resolve) => {
         if (localStorage.getItem('token') || document.cookie.includes('kc_auth')) {
@@ -260,7 +258,6 @@ function useStellarSource() {
     void initialize()
 
     return () => {
-      cancelled = true
       esRef.current?.close()
     }
   }, []) // Empty deps — run once on mount, never re-run

@@ -130,7 +130,7 @@ export function ChatPanel({
         let accumulated = ''
         const start = Date.now()
         await new Promise<void>((resolve, reject) => {
-          localAgentChat(prompt, {
+          void localAgentChat(prompt, {
             agent: providerSession.provider,
             signal: abortControllerRef.current?.signal,
             onChunk: (chunk) => {

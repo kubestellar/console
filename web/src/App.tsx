@@ -5,27 +5,6 @@ import { ThemeProvider } from './hooks/useTheme'
 import { useLiveUrl, LiveLocationProvider } from './hooks/useAppSideEffects'
 import { AppRoutes } from './routes/AppRoutes'
 
-function LiveLocationProvider({
-  location,
-  navigationType,
-  children,
-}: {
-  location: Location
-  navigationType: ReturnType<typeof useNavigationType>
-  children: React.ReactNode
-}) {
-  const contextValue = useMemo(
-    () => ({ location, navigationType }),
-    [location, navigationType],
-  )
-
-  return (
-    <UNSAFE_LocationContext.Provider value={contextValue}>
-      {children}
-    </UNSAFE_LocationContext.Provider>
-  )
-}
-
 function App() {
   const liveUrl = useLiveUrl()
   // Merge the real router location (which carries state and — critically —
@@ -45,11 +24,11 @@ function App() {
   }, [routerLocation, liveUrl])
   return (
     <BrandingProvider>
-    <ThemeProvider>
-    <LiveLocationProvider location={liveLocation} navigationType={navigationType}>
-    <AppRoutes liveLocation={liveLocation} />
-    </LiveLocationProvider>
-    </ThemeProvider>
+      <ThemeProvider>
+        <LiveLocationProvider location={liveLocation} navigationType={navigationType}>
+          <AppRoutes liveLocation={liveLocation} />
+        </LiveLocationProvider>
+      </ThemeProvider>
     </BrandingProvider>
   )
 }
