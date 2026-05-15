@@ -76,7 +76,7 @@ export default async (req: Request) => {
     const rate = await enforceSimpleRateLimit({
       storeName: STORE_NAME,
       prefix: "presence:",
-      subject: sessionId ?? clientIp,
+      subject: clientIp,
       maxRequests: PRESENCE_RATE_LIMIT_MAX_REQUESTS,
       windowMs: PRESENCE_RATE_LIMIT_WINDOW_MS,
     });
