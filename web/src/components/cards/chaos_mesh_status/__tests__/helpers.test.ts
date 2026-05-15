@@ -69,5 +69,28 @@ describe('Chaos Mesh Hook Helpers', () => {
       expect(result.workflows[0].phase).toBe('Running')
       expect(result.workflows[0].progress).toBe('1/3')
     })
+
+    it('maps flattened backend custom-resource items', () => {
+      const result = buildChaosMeshStatus([
+        {
+          name: 'demo-pod-kill',
+          namespace: 'chaos-demo',
+          status: { phase: 'Running', startTime: '2026-04-24T00:00:00Z' },
+        },
+      ], [
+        {
+          name: 'chaos-workflow',
+          namespace: 'chaos-demo',
+          status: { phase: 'Running', progress: '1/2' },
+        },
+      ])
+
+      expect(result.summary.totalExperiments).toBe(1)
+      expect(result.experiments[0].name).toBe('demo-pod-kill')
+      expect(result.experiments[0].namespace).toBe('chaos-demo')
+      expect(result.experiments[0].kind).toBe('PodChaos')
+      expect(result.workflows[0].name).toBe('chaos-workflow')
+      expect(result.workflows[0].namespace).toBe('chaos-demo')
+    })
   })
 })

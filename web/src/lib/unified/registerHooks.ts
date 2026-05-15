@@ -1090,7 +1090,7 @@ function useUnifiedChaosMeshStatus() {
     data: result.data,
     isLoading: result.showSkeleton,
     error: result.error ? new Error('Failed to fetch Chaos Mesh status') : null,
-    refetch: () => {},
+    refetch: () => { void result.refetch() },
   }
 }
 

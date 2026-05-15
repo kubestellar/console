@@ -25,6 +25,9 @@ interface CustomResourceItem {
     name?: string
     namespace?: string
   }
+  name?: string
+  namespace?: string
+  cluster?: string
   kind?: string
   status?: Record<string, unknown>
 }
@@ -55,9 +58,9 @@ function buildChaosMeshStatus(experiments: CustomResourceItem[], workflows: Cust
   }
 
   const mappedExperiments: ChaosMeshExperiment[] = experiments.map(e => ({
-    name: e.metadata?.name ?? '',
-    namespace: e.metadata?.namespace ?? 'default',
-    kind: e.kind ?? 'Unknown',
+    name: e.metadata?.name ?? e.name ?? '',
+    namespace: e.metadata?.namespace ?? e.namespace ?? 'default',
+    kind: e.kind ?? 'PodChaos',
     phase: getExperimentPhase(e) as ChaosMeshExperiment['phase'],
     startTime: typeof e.status?.startTime === 'string' ? e.status.startTime : '',
   }))
@@ -70,8 +73,8 @@ function buildChaosMeshStatus(experiments: CustomResourceItem[], workflows: Cust
   }
 
   const mappedWorkflows: ChaosMeshWorkflow[] = workflows.map(w => ({
-    name: w.metadata?.name ?? '',
-    namespace: w.metadata?.namespace ?? 'default',
+    name: w.metadata?.name ?? w.name ?? '',
+    namespace: w.metadata?.namespace ?? w.namespace ?? 'default',
     phase: (typeof w.status?.phase === 'string' ? w.status.phase : 'Unknown') as ChaosMeshWorkflow['phase'],
     progress: typeof w.status?.progress === 'string' ? w.status.progress : '0/0',
   }))
@@ -131,13 +134,14 @@ export interface UseChaosMeshStatusResult {
   showSkeleton: boolean
   showEmptyState: boolean
   isDemoData: boolean
+  refetch: () => Promise<void>
 }
 
 export function useChaosMeshStatus(): UseChaosMeshStatusResult {
-  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback, refetch } =
     useCache<ChaosMeshStatusData>({
       key: CACHE_KEY,
-      category: 'default',
+      category: 'realtime',
       initialData: INITIAL_DATA,
       demoData: CHAOS_MESH_DEMO_DATA,
       persist: true,
@@ -164,6 +168,7 @@ export function useChaosMeshStatus(): UseChaosMeshStatusResult {
     showSkeleton,
     showEmptyState,
     isDemoData: effectiveIsDemoData,
+    refetch,
   }
 }
 
