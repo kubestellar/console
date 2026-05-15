@@ -57,6 +57,7 @@ vi.mock('../useMCP', () => ({
 
 vi.mock('../useCachedData', () => ({
   useCachedPVCs: (...args: unknown[]) => mockUsePVCs(...args),
+  useCachedWarningEvents: (...args: unknown[]) => mockUseWarningEvents(...args),
 }))
 
 const mockUseIngresses = vi.fn(() => ({ ingresses: [] as unknown[], isLoading: false }))

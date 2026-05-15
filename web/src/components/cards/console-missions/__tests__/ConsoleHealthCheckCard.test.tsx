@@ -28,7 +28,7 @@ vi.mock('../../../../hooks/useMCP', () => ({
     deduplicatedClusters: [
       { name: 'ctx-a', healthy: true, reachable: true, nodeCount: 2, podCount: 4 },
       { name: 'ctx-b', healthy: true, reachable: true, nodeCount: 3, podCount: 5 },
-      { name: 'ctx-c', healthy: true, reachable: true, nodeCount: 1, podCount: 2 },
+      { name: 'ctx-c', healthy: false, reachable: true, nodeCount: 1, podCount: 2 },
     ],
     isLoading: false,
     isRefreshing: false,
@@ -109,7 +109,7 @@ describe('ConsoleHealthCheckCard', () => {
     render(<ConsoleHealthCheckCard />)
 
     expect(mockHorseshoeGauge).toHaveBeenCalledWith(
-      expect.objectContaining({ value: 100 }),
+      expect.objectContaining({ value: 67 }),
     )
   })
 })

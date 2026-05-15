@@ -77,6 +77,11 @@ vi.mock('../../../../lib/cn', () => ({
   cn: vi.fn(),
 }))
 
+vi.mock('@/hooks/mcp/shared', () => ({
+  agentFetch: vi.fn(),
+  clusterCache: { clusters: [], isLoading: false, lastUpdated: null },
+}))
+
 import { AgentStatusIndicator } from '../AgentStatusIndicator'
 
 describe('AgentStatusIndicator', () => {

@@ -28,19 +28,6 @@ const toastMockState = vi.hoisted(() => ({
   showToast: vi.fn(),
 }))
 
-const browserMockState = vi.hoisted(() => ({
-  missionCache: {
-    installers: [] as any[],
-    fixes: [] as any[],
-    installersDone: true,
-    fixesDone: true,
-    fetchError: null as string | null,
-    listeners: new Set<() => void>(),
-  },
-  fetchMissionContent: vi.fn(async (mission: any) => ({ mission, raw: JSON.stringify(mission) })),
-  fetchTreeChildren: vi.fn(async () => []),
-}))
-
 // ── Mocks ────────────────────────────────────────────────────────────────
 
 vi.mock('react-i18next', () => ({

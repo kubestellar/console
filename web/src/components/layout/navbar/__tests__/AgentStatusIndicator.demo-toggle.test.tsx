@@ -60,6 +60,7 @@ vi.mock('../../../setup/SetupInstructionsDialog', () => ({
 
 vi.mock('@/hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
+  clusterCache: { clusters: [], isLoading: false, lastUpdated: null },
 }))
 
 vi.mock('react-i18next', () => ({
