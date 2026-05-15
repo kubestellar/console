@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,9 +24,9 @@ func TestMediumBlogHandler(t *testing.T) {
 		blogCache.fetchedAt = time.Time{}
 		blogCache.mu.Unlock()
 
-		// Mock HTTP client
-		origClient := mediumHTTPClient
-		defer func() { mediumHTTPClient = origClient }()
+		// Mock shared external HTTP client
+		origClient := client.ExternalClient
+		defer func() { client.ExternalClient = origClient }()
 
 		mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/xml")
@@ -45,7 +46,7 @@ func TestMediumBlogHandler(t *testing.T) {
 
 		// We can't easily change mediumFeedURL because it's a const.
 		// However, we can use RoundTrip to intercept.
-		mediumHTTPClient = &http.Client{
+		client.ExternalClient = &http.Client{
 			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 				resp, _ := http.Get(mockServer.URL)
 				return resp
@@ -65,10 +66,10 @@ func TestMediumBlogHandler(t *testing.T) {
 		blogCache.fetchedAt = time.Time{}
 		blogCache.mu.Unlock()
 
-		origClient := mediumHTTPClient
-		defer func() { mediumHTTPClient = origClient }()
+		origClient := client.ExternalClient
+		defer func() { client.ExternalClient = origClient }()
 
-		mediumHTTPClient = &http.Client{
+		client.ExternalClient = &http.Client{
 			Transport: RoundTripFunc(func(req *http.Request) *http.Response {
 				return &http.Response{
 					StatusCode: http.StatusServiceUnavailable,

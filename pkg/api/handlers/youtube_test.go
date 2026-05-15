@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,11 +26,11 @@ func TestYouTubePlaylistHandler(t *testing.T) {
 	app := fiber.New()
 	app.Get("/youtube/playlist", YouTubePlaylistHandler)
 
-	// Mock transport
-	oldTransport := youtubeHTTPClient.Transport
-	defer func() { youtubeHTTPClient.Transport = oldTransport }()
+	// Mock shared external client transport
+	oldTransport := client.ExternalClient.Transport
+	defer func() { client.ExternalClient.Transport = oldTransport }()
 
-	youtubeHTTPClient.Transport = &mockYouTubeTransport{
+	client.ExternalClient.Transport = &mockYouTubeTransport{
 		roundTrip: func(req *http.Request) (*http.Response, error) {
 			if strings.Contains(req.URL.String(), "invidious") {
 				return &http.Response{
@@ -70,11 +71,11 @@ func TestYouTubeThumbnailProxy(t *testing.T) {
 	app := fiber.New()
 	app.Get("/youtube/thumbnail/:id", YouTubeThumbnailProxy)
 
-	// Mock transport
-	oldTransport := youtubeHTTPClient.Transport
-	defer func() { youtubeHTTPClient.Transport = oldTransport }()
+	// Mock shared external client transport
+	oldTransport := client.ExternalClient.Transport
+	defer func() { client.ExternalClient.Transport = oldTransport }()
 
-	youtubeHTTPClient.Transport = &mockYouTubeTransport{
+	client.ExternalClient.Transport = &mockYouTubeTransport{
 		roundTrip: func(req *http.Request) (*http.Response, error) {
 			if strings.Contains(req.URL.String(), "mqdefault.jpg") {
 				// Real thumbnail size
