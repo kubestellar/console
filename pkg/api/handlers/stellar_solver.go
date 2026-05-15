@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"html"
 	"log/slog"
 	"os"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/stellar/solver"
@@ -358,6 +360,13 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 	// Broadcast the mission trigger. The frontend bridge consumes this and
 	// drives MissionContext.startMission with the user's connected agent +
 	// LLM — same machinery as the ConsoleIssuesCard "Repair" button.
+	safeEventCluster := renderUntrustedPromptData("k8s-event-cluster", event.Cluster)
+	safeEventNamespace := renderUntrustedPromptData("k8s-event-namespace", event.Namespace)
+	safeEventKind := renderUntrustedPromptData("k8s-event-kind", event.Kind)
+	safeEventName := renderUntrustedPromptData("k8s-event-name", event.Name)
+	safeEventReason := renderUntrustedPromptData("k8s-event-reason", event.Reason)
+	safeEventMessage := renderUntrustedPromptData("k8s-event-message", event.Message)
+	safeRootCauseHeadline := renderUntrustedPromptData("stellar-root-cause-headline", rootCauseHeadline)
 	missionPrompt := fmt.Sprintf(`I'm a Kubernetes operator and Stellar (your assistant peer) just flagged a critical event. Diagnose and fix it.
 
 Cluster: %s
@@ -375,7 +384,7 @@ Please:
 5. Report what you did, the outcome, and any follow-up I should know about.
 
 Don't ask me first — act. If you genuinely can't fix it safely, tell me what's blocking you.`,
-		event.Cluster, event.Namespace, event.Kind, event.Name, event.Reason, event.Message, rootCauseHeadline)
+		safeEventCluster, safeEventNamespace, safeEventKind, safeEventName, safeEventReason, safeEventMessage, safeRootCauseHeadline)
 
 	h.broadcastSolveProgress(solve.ID, notif.ID, "solving",
 		"Applying fix via AI mission — using your connected agent.", 75)
@@ -573,6 +582,11 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to start solve"})
 	}
 
+	safeNotifCluster := renderUntrustedPromptData("stellar-notification-cluster", notif.Cluster)
+	safeNotifNamespace := renderUntrustedPromptData("stellar-notification-namespace", notif.Namespace)
+	safeResourceName := renderUntrustedPromptData("stellar-notification-resource", resourceName)
+	safeNotifTitle := renderUntrustedPromptData("stellar-notification-title", notif.Title)
+	safeNotifBody := renderUntrustedPromptData("stellar-notification-body", notif.Body)
 	missionPrompt := fmt.Sprintf(`Diagnose and fix this Kubernetes issue end-to-end.
 
 Cluster: %s
@@ -589,7 +603,7 @@ Please:
 5. Report what you did and the outcome.
 
 Don't ask me first — act. I trust you.`,
-		notif.Cluster, notif.Namespace, resourceName, notif.Title, notif.Body)
+		safeNotifCluster, safeNotifNamespace, safeResourceName, safeNotifTitle, safeNotifBody)
 
 	h.logActivity(ctx, &store.StellarActivity{
 		Kind:      "mission_triggered",
@@ -684,8 +698,20 @@ func deriveResourceNameFromNotification(n *store.StellarNotification) string {
 // Called from server.go alongside StartBackgroundWorkers; kept separate so the
 // route registration site stays the one place that wires v2 features in.
 func (h *StellarHandler) StartStellarV2Workers(ctx context.Context) {
-	go h.staleApprovalReviewLoop(ctx)
-	go h.dailyDigestLoop(ctx)
+	safego.GoWith("stellar/stale-approval-review-loop", func() {
+		h.staleApprovalReviewLoop(ctx)
+	})
+	safego.GoWith("stellar/daily-digest-loop", func() {
+		h.dailyDigestLoop(ctx)
+	})
+}
+
+func renderUntrustedPromptData(source, value string) string {
+	return fmt.Sprintf(
+		"<cluster-data source=%q trust=\"untrusted\">%s</cluster-data>",
+		source,
+		html.EscapeString(value),
+	)
 }
 
 // staleApprovalReviewLoop checks once per hour for pending approvals older than

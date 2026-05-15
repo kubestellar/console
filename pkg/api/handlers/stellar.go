@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -39,9 +41,12 @@ const (
 	stellarMaxToolsPerMission     = 32
 	stellarMaxToolNameLength      = 64
 	stellarMaxPromptLength        = 5000
+	stellarMaxProviderBaseURLLen  = 2048
 	stellarDigestLookbackHours    = 24
 	stellarRecentEventLookbackMin = 10
 	stellarStreamInterval         = 10 * time.Second
+
+	stellarOllamaAllowedCIDRsEnv = "STELLAR_OLLAMA_ALLOWED_CIDRS"
 )
 
 var stellarAllowedExecutionModes = map[string]bool{
@@ -1165,7 +1170,7 @@ type quickAskRequest struct {
 	Cluster  string              `json:"cluster"`
 	Provider string              `json:"provider"`
 	Model    string              `json:"model"`
-	History  []providers.Message  `json:"history"`
+	History  []providers.Message `json:"history"`
 }
 
 type watchSuggestion struct {
@@ -1657,15 +1662,15 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 	if err := c.BodyParser(&event); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid event"})
 	}
-	
+
 	// Validate required fields
 	if event.Cluster == "" || event.Namespace == "" || event.Name == "" || event.Type == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing required fields"})
 	}
-	
+
 	// Process event asynchronously (non-blocking)
 	go h.ProcessEvent(context.Background(), event)
-	
+
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"status": "accepted"})
 }
 
@@ -1692,6 +1697,118 @@ func (h *StellarHandler) ListProviders(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"global": global, "user": userItems})
 }
 
+func parseCIDRs(rawCIDRs []string) ([]*net.IPNet, error) {
+	nets := make([]*net.IPNet, 0, len(rawCIDRs))
+	for _, raw := range rawCIDRs {
+		cidr := strings.TrimSpace(raw)
+		if cidr == "" {
+			continue
+		}
+		_, ipnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid CIDR %q", cidr)
+		}
+		nets = append(nets, ipnet)
+	}
+	return nets, nil
+}
+
+func loadStellarOllamaAllowedCIDRs() ([]*net.IPNet, error) {
+	raw := strings.TrimSpace(os.Getenv(stellarOllamaAllowedCIDRsEnv))
+	if raw == "" {
+		return parseCIDRs([]string{"127.0.0.0/8", "::1/128"})
+	}
+	return parseCIDRs(strings.Split(raw, ","))
+}
+
+func resolveStellarProviderHostIPs(host string) ([]net.IP, error) {
+	if parsed := net.ParseIP(host); parsed != nil {
+		return []net.IP{parsed}, nil
+	}
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve host")
+	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("host resolved to no addresses")
+	}
+	return ips, nil
+}
+
+func ipInCIDRs(ip net.IP, cidrs []*net.IPNet) bool {
+	for _, cidr := range cidrs {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateStellarProviderBaseURL(provider, rawBaseURL string) (string, error) {
+	baseURL := strings.TrimSpace(rawBaseURL)
+	if baseURL == "" {
+		return "", nil
+	}
+	if len(baseURL) > stellarMaxProviderBaseURLLen {
+		return "", fmt.Errorf("base URL too long")
+	}
+	if strings.ContainsAny(baseURL, " \t\n\r") {
+		return "", fmt.Errorf("base URL must not contain whitespace")
+	}
+
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid base URL")
+	}
+	if parsed.User != nil {
+		return "", fmt.Errorf("base URL must not include user credentials")
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		return "", fmt.Errorf("base URL must include a host")
+	}
+	providerName := strings.ToLower(strings.TrimSpace(provider))
+
+	if providerName == "ollama" {
+		if parsed.Scheme != "http" {
+			return "", fmt.Errorf("ollama base URL must use http://")
+		}
+		allowedCIDRs, err := loadStellarOllamaAllowedCIDRs()
+		if err != nil {
+			return "", fmt.Errorf("invalid %s", stellarOllamaAllowedCIDRsEnv)
+		}
+		ips, err := resolveStellarProviderHostIPs(host)
+		if err != nil {
+			return "", err
+		}
+		for _, ip := range ips {
+			if !ipInCIDRs(ip, allowedCIDRs) {
+				return "", fmt.Errorf("ollama host IP %s not in %s", ip.String(), stellarOllamaAllowedCIDRsEnv)
+			}
+		}
+		return strings.TrimRight(baseURL, "/"), nil
+	}
+
+	if parsed.Scheme != "https" {
+		return "", fmt.Errorf("cloud provider base URL must use https://")
+	}
+	lowerHost := strings.ToLower(host)
+	if lowerHost == "localhost" || lowerHost == "metadata.google.internal" ||
+		strings.HasSuffix(lowerHost, ".internal") || strings.HasSuffix(lowerHost, ".local") {
+		return "", fmt.Errorf("cloud provider base URL cannot use internal hostnames")
+	}
+	ips, err := resolveStellarProviderHostIPs(host)
+	if err != nil {
+		return "", err
+	}
+	for _, ip := range ips {
+		if isBlockedIP(ip) {
+			return "", fmt.Errorf("cloud provider host resolves to blocked IP")
+		}
+	}
+	return strings.TrimRight(baseURL, "/"), nil
+}
+
 func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 	userID := resolveStellarUserID(c)
 	if userID == "" {
@@ -1706,6 +1823,10 @@ func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON"})
+	}
+	validatedBaseURL, err := validateStellarProviderBaseURL(req.Provider, req.BaseURL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid baseUrl: " + err.Error()})
 	}
 	upsert, ok := h.store.(interface {
 		UpsertProviderConfig(context.Context, *store.StellarProviderConfig) error
@@ -1725,7 +1846,7 @@ func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 		UserID:      userID,
 		Provider:    strings.TrimSpace(req.Provider),
 		DisplayName: strings.TrimSpace(req.DisplayName),
-		BaseURL:     strings.TrimSpace(req.BaseURL),
+		BaseURL:     validatedBaseURL,
 		Model:       strings.TrimSpace(req.Model),
 		APIKeyEnc:   keyEnc,
 		IsActive:    true,
@@ -1811,13 +1932,17 @@ func (h *StellarHandler) TestProvider(c *fiber.Ctx) error {
 	if baseURL == "" {
 		baseURL = providers.ProviderDefaults[cfg.Provider].BaseURL
 	}
+	validatedBaseURL, err := validateStellarProviderBaseURL(cfg.Provider, baseURL)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid provider baseUrl"})
+	}
 	var p providers.Provider
 	if cfg.Provider == "anthropic" {
 		p = providers.NewAnthropicProvider(rawKey)
 	} else if cfg.Provider == "ollama" {
-		p = providers.NewOllama(baseURL)
+		p = providers.NewOllama(validatedBaseURL)
 	} else {
-		p = providers.NewOpenAICompat(baseURL, rawKey, cfg.Provider)
+		p = providers.NewOpenAICompat(validatedBaseURL, rawKey, cfg.Provider)
 	}
 	testCtx, cancel := context.WithTimeout(c.UserContext(), 10*time.Second)
 	defer cancel()
@@ -2232,14 +2357,18 @@ func (h *StellarHandler) resolveUserProvider(ctx context.Context, userID string)
 	if baseURL == "" {
 		baseURL = def.BaseURL
 	}
+	validatedBaseURL, err := validateStellarProviderBaseURL(cfg.Provider, baseURL)
+	if err != nil {
+		return nil, err
+	}
 	var p providers.Provider
 	switch cfg.Provider {
 	case "ollama":
-		p = providers.NewOllama(baseURL)
+		p = providers.NewOllama(validatedBaseURL)
 	case "anthropic":
 		p = providers.NewAnthropicProvider(rawKey)
 	default:
-		p = providers.NewOpenAICompat(baseURL, rawKey, cfg.Provider)
+		p = providers.NewOpenAICompat(validatedBaseURL, rawKey, cfg.Provider)
 	}
 	model := cfg.Model
 	if model == "" {
@@ -2400,7 +2529,6 @@ func truncateString(s string, n int) string {
 	}
 	return s[:n] + "..."
 }
-
 
 // Watch handlers
 func (h *StellarHandler) ListWatches(c *fiber.Ctx) error {
@@ -3267,4 +3395,3 @@ func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
 		}})
 	}
 }
-
