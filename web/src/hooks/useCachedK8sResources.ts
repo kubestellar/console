@@ -7,7 +7,8 @@
  */
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchFromAllClusters, fetchViaSSE, getToken, getClusterFetcher } from '../lib/cache/fetcherUtils'
+import { fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
+import { authFetch } from '../lib/api'
 import { MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getDemoPVCs,
@@ -209,15 +210,60 @@ export const useCachedNetworkPolicies = createCachedK8sResourceHook<NetworkPolic
 // useCachedNamespaces — unique fetcher, kept separate from factory
 // ============================================================================
 
+const NAMESPACES_API_ENDPOINT = '/api/namespaces'
+const NAMESPACES_MCP_FALLBACK_ENDPOINT = '/api/mcp/namespaces'
+
+type NamespaceListItem = { name?: string; Name?: string }
+type NamespaceListResponse = NamespaceListItem[] | { namespaces?: NamespaceListItem[] } | null
+
+type NamespaceClusterCacheEntry = {
+  name: string
+  context?: string
+  reachable?: boolean
+  namespaces?: string[]
+}
+
+function getNamespaceClusterEntry(cluster: string): NamespaceClusterCacheEntry | undefined {
+  return clusterCacheRef.clusters.find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
+}
+
+function getNamespaceRequestCluster(cluster: string): string {
+  return getNamespaceClusterEntry(cluster)?.context || cluster
+}
+
+function normalizeNamespaceNames(data: NamespaceListResponse): string[] {
+  const namespaceItems = Array.isArray(data) ? data : (data?.namespaces || [])
+  return (namespaceItems || []).map((ns: NamespaceListItem) => ns.name || ns.Name || '').filter(Boolean)
+}
+
+function getCachedNamespaceNames(cluster: string): string[] {
+  const cachedCluster = getNamespaceClusterEntry(cluster)
+  return Array.isArray(cachedCluster?.namespaces)
+    ? (cachedCluster.namespaces || []).filter(Boolean)
+    : []
+}
+
+function mergeNamespaceNames(namespaces: string[], cluster: string): string[] {
+  return Array.from(new Set([...(namespaces || []), ...getCachedNamespaceNames(cluster)])).sort()
+}
+
+async function fetchNamespaceNames(cluster: string, endpoint: string): Promise<string[]> {
+  const response = await authFetch(`${endpoint}?cluster=${encodeURIComponent(getNamespaceRequestCluster(cluster))}`, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+  })
+  if (!response.ok) throw new Error(`API error: ${response.status}`)
+  const data = await response.json().catch(() => null) as NamespaceListResponse
+  return mergeNamespaceNames(normalizeNamespaceNames(data), cluster)
+}
+
 export function useCachedNamespaces(
   cluster?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<string[]> & { namespaces: string[] } {
   const { category = 'namespaces' } = options || {}
   const key = `namespaces:${cluster || 'all'}`
-  const isClusterOffline = !!clusterCacheRef.clusters.find(
-    currentCluster => currentCluster.name === cluster && currentCluster.reachable === false,
-  )
+  const isClusterOffline = !!(cluster && getNamespaceClusterEntry(cluster)?.reachable === false)
   const offlineError = 'Cluster is offline'
 
   const result = useCache({
@@ -228,15 +274,19 @@ export function useCachedNamespaces(
     fetcher: async () => {
       if (!cluster) return getDemoNamespaces()
       if (isClusterOffline) return []
-      const token = getToken()
-      if (!token) throw new Error('No authentication token')
-      const response = await fetch(`/api/mcp/namespaces?cluster=${encodeURIComponent(cluster)}`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-      })
-      if (!response.ok) throw new Error(`API error: ${response.status}`)
-      const data = await response.json().catch(() => null) as Array<{ name?: string; Name?: string }> | null
-      return (data || []).map((ns: { name?: string; Name?: string }) => ns.name || ns.Name || '').filter(Boolean)
+
+      try {
+        return await fetchNamespaceNames(cluster, NAMESPACES_API_ENDPOINT)
+      } catch (primaryError) {
+        const cachedNamespaces = getCachedNamespaceNames(cluster)
+        if (cachedNamespaces.length > 0) return cachedNamespaces
+
+        try {
+          return await fetchNamespaceNames(cluster, NAMESPACES_MCP_FALLBACK_ENDPOINT)
+        } catch {
+          throw primaryError
+        }
+      }
     },
   })
 

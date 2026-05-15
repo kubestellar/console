@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom'
 const mockUseClusters = vi.fn()
 const mockUseGlobalFilters = vi.fn()
 const mockUseRefreshIndicator = vi.fn()
-const mockClusterCacheRef = { clusters: [] as Array<{ name: string; namespaces?: string[] }> }
+const mockClusterCacheRef = { clusters: [] as Array<{ name: string; context?: string; namespaces?: string[] }> }
 
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
@@ -113,6 +113,45 @@ describe('NamespaceManager auth and offline handling', () => {
       2,
       '/api/namespaces?cluster=cluster-1',
       expect.any(Object)
+    )
+  })
+
+  it('uses the cluster context when fetching namespaces for a selected cluster', async () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [{ name: 'cluster-1', context: 'cluster-1-context', reachable: true }],
+      deduplicatedClusters: [{ name: 'cluster-1', context: 'cluster-1-context' }],
+      isLoading: false,
+    })
+    mockUseGlobalFilters.mockReturnValue({
+      selectedClusters: ['cluster-1'],
+      isAllClustersSelected: true,
+    })
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([
+        {
+          name: 'team-a',
+          cluster: 'cluster-1',
+          status: 'Active',
+          createdAt: '2024-01-01T00:00:00Z',
+        },
+      ]), { status: 200 }))
+
+    renderWithRouter(<NamespaceManager />)
+
+    await waitFor(() => {
+      expect(screen.getByText('team-a')).toBeInTheDocument()
+    })
+
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining(':8585/namespaces?cluster=cluster-1-context'),
+      expect.any(Object),
+    )
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      2,
+      '/api/namespaces?cluster=cluster-1-context',
+      expect.any(Object),
     )
   })
 

@@ -20,12 +20,20 @@ const NAMESPACE_FETCH_TIMEOUT_MS = 45000
 // running pods. Unioning with the cache at every tier ensures namespaces
 // discovered during cluster-health checks still appear in the dropdown
 // (#3945 regression fix). See useNamespaces callers for the consumer.
+function getClusterEntry(cluster: string) {
+  return clusterCacheRef.clusters.find(c => c.name === cluster || c.context === cluster)
+}
+
+function getClusterRequestName(cluster: string): string {
+  return getClusterEntry(cluster)?.context || cluster
+}
+
 function mergeWithClusterCache(fetched: string[], cluster: string): string[] {
   const set = new Set<string>()
   for (const ns of (fetched || [])) {
     if (ns) set.add(ns)
   }
-  const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
+  const cachedCluster = getClusterEntry(cluster)
   if (Array.isArray(cachedCluster?.namespaces)) {
     for (const ns of (cachedCluster.namespaces || [])) {
       if (ns) set.add(ns)
@@ -49,7 +57,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
   useEffect(() => {
     if (prevClusterRef.current !== cluster) {
       // Check cluster cache for pre-fetched namespaces (populated by health checks)
-      const cachedCluster = cluster ? clusterCacheRef.clusters.find(c => c.name === cluster) : undefined
+      const cachedCluster = cluster ? getClusterEntry(cluster) : undefined
       if (cachedCluster?.namespaces && cachedCluster.namespaces.length > 0) {
         setNamespaces(cachedCluster.namespaces)
         setIsLoading(true) // Still loading fresh data in background
@@ -79,12 +87,14 @@ export function useNamespaces(cluster?: string, forceLive = false) {
 
     setIsLoading(true)
 
+    const requestCluster = getClusterRequestName(cluster)
+
     // Try local agent HTTP endpoint first (works without backend)
     if (cluster && !isAgentUnavailable()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_FETCH_TIMEOUT_MS)
-        const response = await agentFetch(`${getLocalAgentURL()}/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+        const response = await agentFetch(`${getLocalAgentURL()}/namespaces?cluster=${encodeURIComponent(requestCluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -113,10 +123,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     if (!isAgentUnavailable()) {
       let timerId: ReturnType<typeof setTimeout> | null = null
       try {
-        const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
-        const kubectlContext = clusterInfo?.context || cluster
-
-        const nsPromise = kubectlProxy.getNamespaces(kubectlContext)
+        const nsPromise = kubectlProxy.getNamespaces(requestCluster)
         const timeoutPromise = new Promise<null>((resolve) => {
           timerId = setTimeout(() => resolve(null), NAMESPACE_FETCH_TIMEOUT_MS)
         })
@@ -142,7 +149,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     // kc-agent is running (NO_LOCAL_AGENT=true). The backend uses its
     // pod service account to list namespaces directly.
     try {
-      const resp = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+      const resp = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(requestCluster)}`, {
         signal: AbortSignal.timeout(NAMESPACE_FETCH_TIMEOUT_MS),
       })
       if (resp.ok) {
@@ -164,7 +171,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     try {
       const podNs: string[] = []
       try {
-        const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}`)
+        const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(requestCluster)}`)
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
         const data = await resp.json()
         for (const pod of (data.pods || [])) {

@@ -12,7 +12,7 @@ import { renderHook } from '@testing-library/react'
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
+const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> }))
 
 const mockUseCache = vi.fn()
 const mockIsBackendUnavailable = vi.fn(() => false)
@@ -619,10 +619,10 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      mockAuthFetch.mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue(null),
-      }))
+      })
 
       const { useCachedNamespaces } = await loadModule()
       useCachedNamespaces('my-cluster')
@@ -641,13 +641,13 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      mockAuthFetch.mockResolvedValue({
         ok: true,
         json: vi.fn().mockResolvedValue([
           { Name: 'production' },
           { Name: 'staging' },
         ]),
-      }))
+      })
 
       const { useCachedNamespaces } = await loadModule()
       useCachedNamespaces('my-cluster')
@@ -657,6 +657,23 @@ describe('useCachedData', () => {
 
       expect(namespaces).toContain('production')
       expect(namespaces).toContain('staging')
+    })
+
+    it('returns cached namespaces when the primary endpoint is unavailable', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+      mockClusterCacheRef.clusters = [{ name: 'my-cluster', namespaces: ['team-a', 'team-b'] }]
+      mockAuthFetch.mockResolvedValue({ ok: false, status: 401 })
+
+      const { useCachedNamespaces } = await loadModule()
+      useCachedNamespaces('my-cluster')
+
+      const fetcher = capturedOpts.fetcher as () => Promise<string[]>
+      await expect(fetcher()).resolves.toEqual(['team-a', 'team-b'])
+      expect(mockAuthFetch).toHaveBeenCalledTimes(1)
     })
 
     it('fetcher returns demo data when no cluster provided', async () => {

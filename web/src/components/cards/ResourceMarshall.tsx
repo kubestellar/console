@@ -48,6 +48,7 @@ export function ResourceMarshall() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const selectedClusterInfo = clusters.find(cluster => cluster.name === selectedCluster)
   const isSelectedClusterOffline = selectedClusterInfo?.reachable === false
+  const namespaceCluster = selectedClusterInfo?.context || selectedCluster || undefined
 
   // Fetch namespaces for selected cluster
   const {
@@ -56,7 +57,8 @@ export function ResourceMarshall() {
     isDemoFallback,
     isFailed: namespacesFailed,
     error: namespacesError,
-  } = useCachedNamespaces(selectedCluster || undefined)
+  } = useCachedNamespaces(namespaceCluster)
+  const availableNamespaces = namespaces || []
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = clusters.length > 0
@@ -76,6 +78,7 @@ export function ResourceMarshall() {
     return { cluster: selectedCluster, namespace: selectedNamespace }
   })()
   const { data: workloads, isLoading: wlLoading } = useWorkloads(workloadOpts, hasSelection)
+  const availableWorkloads = workloads || []
 
   // Dependency resolution
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
@@ -88,23 +91,23 @@ export function ResourceMarshall() {
   }, [demoMode, clusters, selectedCluster])
 
   useEffect(() => {
-    if (demoMode && selectedCluster && namespaces.length > 0 && !selectedNamespace) {
+    if (demoMode && selectedCluster && availableNamespaces.length > 0 && !selectedNamespace) {
       // Prefer 'production' if available, else first namespace
-      const preferred = namespaces.includes('production') ? 'production' : namespaces[0]
+      const preferred = availableNamespaces.includes('production') ? 'production' : availableNamespaces[0]
       setSelectedNamespace(preferred)
     }
-  }, [demoMode, selectedCluster, namespaces, selectedNamespace])
+  }, [availableNamespaces, demoMode, selectedCluster, selectedNamespace])
 
   useEffect(() => {
-    if (demoMode && selectedNamespace && workloads && workloads.length > 0 && !selectedWorkload) {
-      const first = workloads[0]
+    if (demoMode && selectedNamespace && availableWorkloads.length > 0 && !selectedWorkload) {
+      const first = availableWorkloads[0]
       setSelectedWorkload(first.name)
       if (selectedCluster && selectedNamespace) {
         resolve(selectedCluster, selectedNamespace, first.name)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoMode, selectedNamespace, workloads, selectedWorkload])
+  }, [availableWorkloads, demoMode, selectedNamespace, selectedWorkload])
 
   // Handle cluster change
   const handleClusterChange = (cluster: string) => {
@@ -182,7 +185,7 @@ export function ResourceMarshall() {
                     ? t('common.loading')
                     : t('common.selectNamespace', 'Select namespace...')}
             </option>
-            {namespaces.map(ns => (
+            {availableNamespaces.map(ns => (
               <option key={ns} value={ns}>{ns}</option>
             ))}
           </select>
@@ -207,7 +210,7 @@ export function ResourceMarshall() {
                     ? t('common.loading')
                     : t('cards:resourceMarshall.selectWorkload', 'Select workload...')}
             </option>
-            {workloads?.map(w => (
+            {availableWorkloads.map(w => (
               <option key={`${w.type}-${w.name}`} value={w.name}>
                 {w.name} ({w.type})
               </option>

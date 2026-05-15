@@ -5,9 +5,10 @@ import { renderHook } from '@testing-library/react'
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockUseCache, mockClusterCacheRef } = vi.hoisted(() => ({
+const { mockUseCache, mockClusterCacheRef, mockAuthFetch } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
-  mockClusterCacheRef: { clusters: [] as Array<{ name: string; reachable?: boolean }> },
+  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> },
+  mockAuthFetch: vi.fn(),
 }))
 
 vi.mock('../../lib/cache', () => ({
@@ -21,6 +22,10 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
   fetchFromAllClusters: vi.fn(),
   fetchViaSSE: vi.fn(),
   getToken: vi.fn(() => null),
+}))
+
+vi.mock('../../lib/api', () => ({
+  authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))
 
 vi.mock('../../lib/constants/network', () => ({
@@ -121,6 +126,23 @@ describe('useCachedNamespaces', () => {
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isFailed).toBe(true)
     expect(result.current.error).toBe('Cluster is offline')
+  })
+
+  it('uses the cached cluster context when fetching namespaces', async () => {
+    mockClusterCacheRef.clusters = [{ name: 'friendly-cluster', context: 'real-context' }]
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: 'team-a' }],
+    })
+
+    renderHook(() => useCachedNamespaces('friendly-cluster'))
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<string[]> }
+
+    await expect(config.fetcher()).resolves.toEqual(['team-a'])
+    expect(mockAuthFetch).toHaveBeenCalledWith(
+      '/api/namespaces?cluster=real-context',
+      expect.objectContaining({ headers: { Accept: 'application/json' } }),
+    )
   })
 })
 

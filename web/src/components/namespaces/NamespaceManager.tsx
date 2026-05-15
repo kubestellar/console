@@ -60,7 +60,7 @@ function getCachedNamespacesForCluster(cluster: string): NamespaceDetails[] {
     return cachedNamespaces || []
   }
 
-  const cachedCluster = clusterCacheRef.clusters.find(currentCluster => currentCluster.name === cluster)
+  const cachedCluster = clusterCacheRef.clusters.find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
   return buildFallbackNamespaces(cachedCluster?.namespaces || [], cluster)
 }
 
@@ -107,6 +107,12 @@ export function NamespaceManager() {
 
   // Filter namespaces from cache based on selected clusters (no refetch needed)
   const namespaces = allNamespaces.filter(ns => targetClusters.includes(ns.cluster))
+
+  const getClusterRequestName = useCallback((cluster: string): string => {
+    const matchingCluster = deduplicatedClusters.find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
+      || clusters.find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
+    return matchingCluster?.context || cluster
+  }, [clusters, deduplicatedClusters])
 
   // Fetch namespaces from all available clusters and cache them
   // Uses progressive loading - updates UI as each cluster completes
@@ -167,9 +173,9 @@ export function NamespaceManager() {
       setAllNamespaces(newAllNamespaces)
     }
 
-    const buildNamespacesFromPods = async (cluster: string): Promise<NamespaceDetails[]> => {
+    const buildNamespacesFromPods = async (cluster: string, requestCluster: string): Promise<NamespaceDetails[]> => {
       const response = await authFetch(
-        `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`,
+        `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(requestCluster)}&limit=1000`,
         { headers: { Accept: 'application/json' } }
       )
       if (!response.ok) {
@@ -191,6 +197,7 @@ export function NamespaceManager() {
     // Fetch namespaces from clusters progressively (not waiting for all)
     const fetchPromises = clustersToFetch.map(async (cluster) => {
       try {
+        const requestCluster = getClusterRequestName(cluster)
         let clusterNamespaces: NamespaceDetails[] = []
         let agentFailed = false
         let agentAuthFailed = false
@@ -202,7 +209,7 @@ export function NamespaceManager() {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_ABORT_TIMEOUT_MS)
           const response = await authFetch(
-            `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`,
+            `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(requestCluster)}`,
             { signal: controller.signal, headers: { Accept: 'application/json' } }
           )
           clearTimeout(timeoutId)
@@ -244,7 +251,7 @@ export function NamespaceManager() {
         // Try backend API fallback if the agent did not return namespace data.
         if (clusterNamespaces.length === 0) {
           try {
-            const response = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+            const response = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(requestCluster)}`, {
               headers: { Accept: 'application/json' }
             })
 
@@ -267,7 +274,7 @@ export function NamespaceManager() {
         // Try building namespaces from pods if we have non-auth failures.
         if (clusterNamespaces.length === 0 && !backendAuthFailed && (agentFailed || agentAuthFailed || backendFailed)) {
           try {
-            clusterNamespaces = await buildNamespacesFromPods(cluster)
+            clusterNamespaces = await buildNamespacesFromPods(cluster, requestCluster)
           } catch {
             podFallbackFailed = true
           }
@@ -368,7 +375,7 @@ export function NamespaceManager() {
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-  }, [allClusterNames, clusters, showToast, t])
+  }, [allClusterNames, clusters, getClusterRequestName, showToast, t])
 
   const handleRefreshNamespaces = () => fetchNamespaces(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)

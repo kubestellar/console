@@ -30,7 +30,7 @@ const mockFetchLLMdModels = vi.fn()
 // below returns this same object reference, so tests can mutate `.clusters`
 // directly instead of calling `vi.doMock` (which is unreliable on the first
 // test-after-resetModules in CI — see kubestellar/console#9305).
-const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
+const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> }))
 
 vi.mock('../../lib/cache', () => ({
     createCachedHook: vi.fn(),
@@ -586,7 +586,7 @@ describe('useCachedData', () => {
           { name: '' }, // empty name filtered out
         ]),
       }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(nsRes))
+      mockAuthFetch.mockResolvedValue(nsRes)
 
       const { useCachedNamespaces } = await loadModule()
       useCachedNamespaces('my-cluster')
@@ -596,8 +596,9 @@ describe('useCachedData', () => {
       expect(namespaces).toContain('production')
       expect(namespaces).toContain('staging')
       expect(namespaces).not.toContain('')
-
-      vi.unstubAllGlobals()
+      expect(mockAuthFetch).toHaveBeenCalledWith('/api/namespaces?cluster=my-cluster', expect.objectContaining({
+        headers: { Accept: 'application/json' },
+      }))
     })
 
     it('useCachedNamespaces: non-ok response throws', async () => {
@@ -607,15 +608,15 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }))
+      mockAuthFetch.mockResolvedValue({ ok: false, status: 403 })
 
       const { useCachedNamespaces } = await loadModule()
       useCachedNamespaces('my-cluster')
 
       const fetcher = capturedOpts.fetcher as () => Promise<string[]>
       await expect(fetcher()).rejects.toThrow('API error: 403')
-
-      vi.unstubAllGlobals()
+      expect(mockAuthFetch).toHaveBeenNthCalledWith(1, '/api/namespaces?cluster=my-cluster', expect.any(Object))
+      expect(mockAuthFetch).toHaveBeenNthCalledWith(2, '/api/mcp/namespaces?cluster=my-cluster', expect.any(Object))
     })
   })
 
