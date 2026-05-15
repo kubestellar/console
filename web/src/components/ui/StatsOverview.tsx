@@ -581,14 +581,14 @@ export function StatsOverview({
 
   // Dynamic grid columns based on visible blocks.
   // Mobile: max 2 columns, tablet+: responsive based on count.
-  // - ≤4 blocks: 4 columns at md+ (each card is wide enough for any label).
-  // - 5 blocks: 5 columns at lg+ (still readable at typical widths).
-  // - 6+ blocks (e.g. /deployments has 6: Total Deployments, Critical,
-  //   Warning, Healthy, Pod Issues, Deploy Issues): cap at 4 columns at lg,
-  //   expand to 5 only at xl (1280px+) so labels like "Total Deployments"
-  //   and "Deploy Issues" keep enough horizontal room. See #9858.
+  // - ≤4 blocks: 4 columns at md+.
+  // - 5 blocks: 5 columns at lg+.
+  // - 6 blocks: keep 3x2 through lg, switch to 6 across at xl to avoid a
+  //   5+1 orphan layout at 1440px.
+  // - 7+ blocks: cap at 4 columns at lg, expand to 5 at xl for readability.
   const gridCols = visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
     visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5' :
+    visibleBlocks.length === 6 ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-6' :
     'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
 
   return (
@@ -673,4 +673,3 @@ export function StatsOverview({
     </div>
   )
 }
-
