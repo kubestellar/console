@@ -115,8 +115,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           boxShadow: '0 0 0 3px rgba(56,139,253,0.15)',
           animation: 's-pulse 2s ease-in-out infinite',
         }} />
-        <span style={{
-          fontSize: 12,
+        <span className="text-xs" style={{
           fontWeight: 600,
           color: 'var(--s-text)',
           flex: 1,
@@ -127,16 +126,19 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           {watch.namespace}/{watch.resourceName}
         </span>
         <button
+          className="text-[11px]"
           onClick={() => onSnooze(watch.id, 60)}
           title="Snooze 1h"
           style={iconBtnStyle('var(--s-text-dim)')}
         >⏸</button>
         <button
+          className="text-[11px]"
           onClick={() => onResolve(watch.id)}
           title="Mark resolved"
           style={iconBtnStyle('var(--s-success)')}
         >✓</button>
         <button
+          className="text-[11px]"
           onClick={() => onDismiss(watch.id)}
           title="Dismiss"
           style={iconBtnStyle('var(--s-text-dim)')}
@@ -144,12 +146,10 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       </div>
 
       {/* Meta */}
-      <div style={{
-        fontSize: 10,
+      <div className="text-[10px] font-mono" style={{
         color: 'var(--s-text-muted)',
         marginTop: 2,
         paddingLeft: 13,
-        fontFamily: 'var(--s-mono)',
         display: 'flex',
         alignItems: 'center',
         gap: 6,
@@ -167,10 +167,10 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
               fontWeight: 600,
             }}
           >
-            <span style={{ fontSize: 11 }}>{trendIcon(trendStats.trend)}</span>
+            <span className="text-[11px]">{trendIcon(trendStats.trend)}</span>
             <span>{trendStats.recent}/24h</span>
             {renderSparkline(trendStats.sparkline) && (
-              <span style={{ fontFamily: 'var(--s-mono)', letterSpacing: '-1px', opacity: 0.8 }}>
+              <span className="font-mono" style={{ letterSpacing: '-1px', opacity: 0.8 }}>
                 {renderSparkline(trendStats.sparkline)}
               </span>
             )}
@@ -179,8 +179,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       </div>
 
       {attemptSummary && (
-        <div style={{
-          fontSize: 10, fontFamily: 'var(--s-mono)',
+        <div className="text-[10px] font-mono" style={{
           color: 'var(--s-text-muted)',
           marginTop: 3, paddingLeft: 13,
         }}>
@@ -190,8 +189,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Reason */}
       {watch.reason && (
-        <div style={{
-          fontSize: 11,
+        <div className="text-[11px]" style={{
           color: 'var(--s-text-dim)',
           marginTop: 3,
           paddingLeft: 13,
@@ -204,8 +202,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Last update from observer */}
       {watch.lastUpdate && (
-        <div style={{
-          fontSize: 11,
+        <div className="text-[11px]" style={{
           color: 'var(--s-text-muted)',
           marginTop: 4,
           background: 'rgba(56,139,253,0.05)',
@@ -218,7 +215,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Stale indicator */}
       {watch.lastChecked && isStale(watch.lastChecked) && (
-        <div style={{ fontSize: 10, color: 'var(--s-warning)', paddingLeft: 13, marginTop: 2 }}>
+        <div className="text-[10px]" style={{ color: 'var(--s-warning)', paddingLeft: 13, marginTop: 2 }}>
           ⚠ last checked {getRelativeTime(watch.lastChecked)} ago
         </div>
       )}
@@ -244,6 +241,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           }}
         >
           <button
+            className="text-[11px]"
             onClick={() => onAction(investigatePrompt)}
             style={actionBtnStyle('var(--s-info)')}
             title="Pull logs and analyze"
@@ -252,6 +250,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           </button>
           {actionType && (
             <button
+              className="text-[11px]"
               onClick={() => onAction(restartPrompt, {
                 prompt: restartPrompt,
                 actionType,
@@ -276,7 +275,6 @@ function iconBtnStyle(color: string): React.CSSProperties {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    fontSize: 11,
     color,
     padding: '0 3px',
   }
@@ -291,7 +289,6 @@ function actionBtnStyle(color: string): React.CSSProperties {
     border: `1px solid ${color}`,
     borderRadius: 'var(--s-rs)',
     padding: '2px 8px',
-    fontSize: 11,
     color,
     cursor: 'pointer',
   }
