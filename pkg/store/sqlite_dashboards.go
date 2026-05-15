@@ -110,6 +110,14 @@ func (s *SQLiteStore) scanDashboardRow(ctx context.Context, rows *sql.Rows) (*mo
 }
 
 func (s *SQLiteStore) CreateDashboard(ctx context.Context, dashboard *models.Dashboard) error {
+	return s.createDashboard(ctx, s.db, dashboard)
+}
+
+func (s *SQLiteStore) CreateDashboardTx(ctx context.Context, tx *sql.Tx, dashboard *models.Dashboard) error {
+	return s.createDashboard(ctx, tx, dashboard)
+}
+
+func (s *SQLiteStore) createDashboard(ctx context.Context, execer sqlContextExecer, dashboard *models.Dashboard) error {
 	if dashboard.ID == uuid.Nil {
 		dashboard.ID = uuid.New()
 	}
@@ -121,7 +129,7 @@ func (s *SQLiteStore) CreateDashboard(ctx context.Context, dashboard *models.Das
 		layoutStr = &str
 	}
 
-	_, err := s.db.ExecContext(ctx, `INSERT INTO dashboards (id, user_id, name, layout, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err := execer.ExecContext(ctx, `INSERT INTO dashboards (id, user_id, name, layout, is_default, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		dashboard.ID.String(), dashboard.UserID.String(), dashboard.Name, layoutStr, boolToInt(dashboard.IsDefault), dashboard.CreatedAt)
 	return err
 }
@@ -240,6 +248,14 @@ func (s *SQLiteStore) scanCardRow(ctx context.Context, rows *sql.Rows) (*models.
 }
 
 func (s *SQLiteStore) CreateCard(ctx context.Context, card *models.Card) error {
+	return s.createCard(ctx, s.db, card)
+}
+
+func (s *SQLiteStore) CreateCardTx(ctx context.Context, tx *sql.Tx, card *models.Card) error {
+	return s.createCard(ctx, tx, card)
+}
+
+func (s *SQLiteStore) createCard(ctx context.Context, execer sqlContextExecer, card *models.Card) error {
 	if card.ID == uuid.Nil {
 		card.ID = uuid.New()
 	}
@@ -255,7 +271,7 @@ func (s *SQLiteStore) CreateCard(ctx context.Context, card *models.Card) error {
 		configStr = &str
 	}
 
-	_, err = s.db.ExecContext(ctx, `INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err = execer.ExecContext(ctx, `INSERT INTO cards (id, dashboard_id, card_type, config, position, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		card.ID.String(), card.DashboardID.String(), string(card.CardType), configStr, string(positionJSON), card.CreatedAt)
 	return err
 }

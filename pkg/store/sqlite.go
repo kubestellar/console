@@ -245,9 +245,25 @@ func configureConnectionPool(db *sql.DB) {
 	)
 }
 
+type sqlContextExecer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
 // SQLiteStore implements Store using SQLite
 type SQLiteStore struct {
 	db *sql.DB
+}
+
+func (s *SQLiteStore) WithTransaction(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // NewSQLiteStore creates a new SQLite store

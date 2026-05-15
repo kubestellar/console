@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -70,6 +71,7 @@ type Store interface {
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	UpdateUserRole(ctx context.Context, userID uuid.UUID, role string) error
 	CountUsersByRole(ctx context.Context) (admins, editors, viewers int, err error)
+	WithTransaction(ctx context.Context, fn func(tx *sql.Tx) error) error
 
 	// Onboarding
 	SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error

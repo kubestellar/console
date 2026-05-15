@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,13 +74,23 @@ func (m *MockStore) CountUsersByRole(ctx context.Context) (int, int, int, error)
 	return 1, 0, 0, nil
 }
 
+func (m *MockStore) WithTransaction(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	return fn(nil)
+}
+
 func (m *MockStore) SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error {
+	return nil
+}
+func (m *MockStore) SaveOnboardingResponseTx(ctx context.Context, tx *sql.Tx, response *models.OnboardingResponse) error {
 	return nil
 }
 func (m *MockStore) GetOnboardingResponses(ctx context.Context, userID uuid.UUID) ([]models.OnboardingResponse, error) {
 	return nil, nil
 }
 func (m *MockStore) SetUserOnboarded(ctx context.Context, userID uuid.UUID) error { return nil }
+func (m *MockStore) SetUserOnboardedTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) error {
+	return nil
+}
 
 func (m *MockStore) GetDashboard(ctx context.Context, id uuid.UUID) (*models.Dashboard, error) {
 	return nil, nil
@@ -91,6 +102,12 @@ func (m *MockStore) GetDefaultDashboard(ctx context.Context, userID uuid.UUID) (
 	return nil, nil
 }
 func (m *MockStore) CreateDashboard(ctx context.Context, dashboard *models.Dashboard) error {
+	return nil
+}
+func (m *MockStore) CreateDashboardTx(ctx context.Context, tx *sql.Tx, dashboard *models.Dashboard) error {
+	if dashboard.ID == uuid.Nil {
+		dashboard.ID = uuid.New()
+	}
 	return nil
 }
 func (m *MockStore) UpdateDashboard(ctx context.Context, dashboard *models.Dashboard) error {
@@ -110,6 +127,9 @@ func (m *MockStore) GetDashboardCards(ctx context.Context, dashboardID uuid.UUID
 }
 
 func (m *MockStore) CreateCard(ctx context.Context, card *models.Card) error { return nil }
+func (m *MockStore) CreateCardTx(ctx context.Context, tx *sql.Tx, card *models.Card) error {
+	return nil
+}
 
 // CreateCardWithLimit is overridable so tests can exercise both the success
 // path and the ErrDashboardCardLimitReached branch of the RBAC/limit check.

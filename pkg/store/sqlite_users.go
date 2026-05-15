@@ -211,12 +211,20 @@ func (s *SQLiteStore) CountUsersByRole(ctx context.Context) (admins, editors, vi
 // DO UPDATE so repeated saves keep the same row id and never trip any
 // ON DELETE cascade wired up against onboarding_responses.
 func (s *SQLiteStore) SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error {
+	return s.saveOnboardingResponse(ctx, s.db, response)
+}
+
+func (s *SQLiteStore) SaveOnboardingResponseTx(ctx context.Context, tx *sql.Tx, response *models.OnboardingResponse) error {
+	return s.saveOnboardingResponse(ctx, tx, response)
+}
+
+func (s *SQLiteStore) saveOnboardingResponse(ctx context.Context, execer sqlContextExecer, response *models.OnboardingResponse) error {
 	if response.ID == uuid.Nil {
 		response.ID = uuid.New()
 	}
 	response.CreatedAt = time.Now()
 
-	_, err := s.db.ExecContext(ctx,
+	_, err := execer.ExecContext(ctx,
 		`INSERT INTO onboarding_responses (id, user_id, question_key, answer, created_at)
 		 VALUES (?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id, question_key) DO UPDATE SET
@@ -248,6 +256,14 @@ func (s *SQLiteStore) GetOnboardingResponses(ctx context.Context, userID uuid.UU
 }
 
 func (s *SQLiteStore) SetUserOnboarded(ctx context.Context, userID uuid.UUID) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE users SET onboarded = 1 WHERE id = ?`, userID.String())
+	return s.setUserOnboarded(ctx, s.db, userID)
+}
+
+func (s *SQLiteStore) SetUserOnboardedTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) error {
+	return s.setUserOnboarded(ctx, tx, userID)
+}
+
+func (s *SQLiteStore) setUserOnboarded(ctx context.Context, execer sqlContextExecer, userID uuid.UUID) error {
+	_, err := execer.ExecContext(ctx, `UPDATE users SET onboarded = 1 WHERE id = ?`, userID.String())
 	return err
 }

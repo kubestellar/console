@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -27,7 +29,25 @@ const (
 	// maxAnswerLength is the maximum length of an Answer field in an onboarding
 	// response (#7005).
 	maxAnswerLength = 1024
+
+	// onboardingCardColumns is the number of columns in the default onboarding
+	// dashboard grid.
+	onboardingCardColumns = 3
+
+	// onboardingCardWidth is the default onboarding card width in grid columns.
+	onboardingCardWidth = 4
+
+	// onboardingCardHeight is the default onboarding card height in grid rows.
+	onboardingCardHeight = 3
 )
+
+// OnboardingHandler handles onboarding operations
+type onboardingTransactionalStore interface {
+	SaveOnboardingResponseTx(ctx context.Context, tx *sql.Tx, response *models.OnboardingResponse) error
+	CreateDashboardTx(ctx context.Context, tx *sql.Tx, dashboard *models.Dashboard) error
+	CreateCardTx(ctx context.Context, tx *sql.Tx, card *models.Card) error
+	SetUserOnboardedTx(ctx context.Context, tx *sql.Tx, userID uuid.UUID) error
+}
 
 // OnboardingHandler handles onboarding operations
 type OnboardingHandler struct {
@@ -78,15 +98,25 @@ func (h *OnboardingHandler) SaveResponses(c *fiber.Ctx) error {
 		}
 	}
 
-	for _, r := range responses {
-		response := &models.OnboardingResponse{
-			UserID:      userID,
-			QuestionKey: r.QuestionKey,
-			Answer:      r.Answer,
+	txStore, ok := h.store.(onboardingTransactionalStore)
+	if !ok {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to save response")
+	}
+
+	if err := h.store.WithTransaction(c.UserContext(), func(tx *sql.Tx) error {
+		for _, r := range responses {
+			response := &models.OnboardingResponse{
+				UserID:      userID,
+				QuestionKey: r.QuestionKey,
+				Answer:      r.Answer,
+			}
+			if err := txStore.SaveOnboardingResponseTx(c.UserContext(), tx, response); err != nil {
+				return err
+			}
 		}
-		if err := h.store.SaveOnboardingResponse(c.UserContext(), response); err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to save response")
-		}
+		return nil
+	}); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to save response")
 	}
 
 	return c.JSON(fiber.Map{"status": "ok", "saved": len(responses)})
@@ -105,32 +135,37 @@ func (h *OnboardingHandler) CompleteOnboarding(c *fiber.Ctx) error {
 	// Generate default dashboard based on responses
 	cards := generateDefaultCards(responses)
 
+	txStore, ok := h.store.(onboardingTransactionalStore)
+	if !ok {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to complete onboarding")
+	}
+
 	// Create default dashboard
 	dashboard := &models.Dashboard{
 		UserID:    userID,
 		Name:      "My Dashboard",
 		IsDefault: true,
 	}
-	if err := h.store.CreateDashboard(c.UserContext(), dashboard); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create dashboard")
-	}
-
-	// Create cards
-	for i, card := range cards {
-		card.DashboardID = dashboard.ID
-		card.Position = models.CardPosition{
-			X: (i % 3) * 4,
-			Y: (i / 3) * 3,
-			W: 4,
-			H: 3,
+	if err := h.store.WithTransaction(c.UserContext(), func(tx *sql.Tx) error {
+		if err := txStore.CreateDashboardTx(c.UserContext(), tx, dashboard); err != nil {
+			return err
 		}
-		if err := h.store.CreateCard(c.UserContext(), &card); err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to create card")
-		}
-	}
 
-	// Mark user as onboarded
-	if err := h.store.SetUserOnboarded(c.UserContext(), userID); err != nil {
+		for i, card := range cards {
+			card.DashboardID = dashboard.ID
+			card.Position = models.CardPosition{
+				X: (i % onboardingCardColumns) * onboardingCardWidth,
+				Y: (i / onboardingCardColumns) * onboardingCardHeight,
+				W: onboardingCardWidth,
+				H: onboardingCardHeight,
+			}
+			if err := txStore.CreateCardTx(c.UserContext(), tx, &card); err != nil {
+				return err
+			}
+		}
+
+		return txStore.SetUserOnboardedTx(c.UserContext(), tx, userID)
+	}); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to complete onboarding")
 	}
 
