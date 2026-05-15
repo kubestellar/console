@@ -44,6 +44,8 @@ const backgroundGitHubOpTimeout = 30 * time.Second
 // under concurrent request load (#11827).
 const maxConcurrentGitHubOps = 5
 
+var fixesIssueRe = regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+(?:[\w-]+/[\w-]+)?#(\d+)`)
+
 // errGitHubUnauthorized is returned when GitHub rejects the FEEDBACK_GITHUB_TOKEN
 // as invalid or expired (HTTP 401). Callers should branch on this with errors.Is
 // and surface a user-visible "refresh your PAT" message instead of the generic
@@ -312,8 +314,7 @@ func extractLinkedIssueNumbers(body string) []int {
 
 	// Regex to match: Fixes/Closes/Resolves [org/repo]#123
 	// Handles both "#123" and "org/repo#123" formats
-	re := regexp.MustCompile(`(?i)(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+(?:[\w-]+/[\w-]+)?#(\d+)`)
-	matches := re.FindAllStringSubmatch(body, -1)
+	matches := fixesIssueRe.FindAllStringSubmatch(body, -1)
 
 	for _, match := range matches {
 		if len(match) >= 2 {

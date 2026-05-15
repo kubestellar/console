@@ -25,6 +25,8 @@ import (
 
 const maxVerificationCommentChars = 1000
 
+var fixesPatternRe = regexp.MustCompile(`(?i)(?:fixes|closes|resolves)\s+(?:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)?#(\d+)`)
+
 func featureRequestIssueKey(targetRepo models.TargetRepo, issueNumber int) string {
 	if targetRepo == "" {
 		targetRepo = models.TargetRepoConsole
@@ -719,10 +721,8 @@ func (h *FeedbackHandler) fetchLinkedPRs(ctx context.Context, issues []GitHubIss
 	allPRs := h.getCachedOrFetchPRs(ctx)
 
 	// Match PRs to issues by looking for "Fixes #N", "Closes #N", or "Fixes owner/repo#N" in PR body
-	fixesPattern := regexp.MustCompile(`(?i)(?:fixes|closes|resolves)\s+(?:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)?#(\d+)`)
-
 	for _, pr := range allPRs {
-		matches := fixesPattern.FindAllStringSubmatch(pr.Body, -1)
+		matches := fixesPatternRe.FindAllStringSubmatch(pr.Body, -1)
 		for _, match := range matches {
 			if len(match) > 1 {
 				issueNum, err := strconv.Atoi(match[1])
