@@ -16,14 +16,14 @@ describe('useQuantumSystemStatus', () => {
   it('returns disabled result when isAuthenticated is false', () => {
     const mockRefetch = vi.fn()
     vi.mocked(useCache).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isRefreshing: false,
-      isDemoFallback: false,
-      isFailed: false,
-      error: null,
-      consecutiveFailures: 0,
-      lastRefresh: null,
+      data: DEMO_QUANTUM_STATUS,
+      isLoading: true,
+      isRefreshing: true,
+      isDemoFallback: true,
+      isFailed: true,
+      error: 'cache fetch failed',
+      consecutiveFailures: 5,
+      lastRefresh: 123456789,
       refetch: mockRefetch,
     })
 
