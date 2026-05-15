@@ -11,7 +11,6 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
-import { useToast } from '../../ui/Toast'
 
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
@@ -129,7 +128,6 @@ function buildLabelSelector(
 
 export function DeploymentDrillDown({ data }: Props) {
   const { t } = useTranslation()
-  const { showToast } = useToast()
   const cluster = (data.cluster as string) || ''
   const namespace = (data.namespace as string) || ''
   const deploymentName = (data.deployment as string) || ''

@@ -13,9 +13,6 @@ import { copyToClipboard } from '../../../lib/clipboard'
 // Named constants — no magic numbers
 // ---------------------------------------------------------------------------
 
-/** Hard timeout (ms) applied to a single kubectl call issued over the agent websocket */
-const KUBECTL_REQUEST_TIMEOUT_MS = 10_000
-
 /**
  * Maximum number of bindings the Describe and YAML tabs render inline.
  * Anything above this is truncated; a notice is displayed to the user

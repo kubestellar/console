@@ -20,9 +20,6 @@ interface Props {
 
 type TabType = 'overview' | 'endpoints' | 'describe' | 'yaml'
 
-/** Timeout for kubectl WebSocket commands (milliseconds) */
-const KUBECTL_TIMEOUT_MS = 10_000
-
 export default function ServiceDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
