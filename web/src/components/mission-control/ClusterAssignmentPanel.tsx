@@ -20,6 +20,7 @@ import type { Mission } from '../../hooks/useMissions'
 // Import cluster data hook
 import { useClusters } from '../../hooks/mcp/clusters'
 import { useHelmReleases } from '../../hooks/mcp/helm'
+import { getAssistantContentSinceLastUser } from './useMissionControl'
 
 type ViewMode = 'cards' | 'matrix'
 
@@ -336,11 +337,7 @@ export function ClusterAssignmentPanel({
 function AIAssignmentStreamPreview({ planningMission }: { planningMission?: Mission | null }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const latestMsg = planningMission?.messages
-    .filter((m) => m.role === 'assistant')
-    .slice(-1)[0]
-
-  const rawText = latestMsg?.content ?? ''
+  const rawText = getAssistantContentSinceLastUser(planningMission?.messages)
   const displayText = rawText
     .replace(/```json[\s\S]*?```/g, '')
     .replace(/```[\s\S]*?```/g, '')

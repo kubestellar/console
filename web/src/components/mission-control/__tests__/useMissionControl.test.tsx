@@ -11,6 +11,7 @@ import {
   buildInstallPromptForProject,
   createBalancedBlockScanCursor,
   extractJSON,
+  getAssistantContentSinceLastUser,
   mergeProjects,
   PROJECT_NAME_MAX_LENGTH,
   resetOversizedWarnings,
@@ -221,6 +222,19 @@ describe('extractJSON — balanced block extraction (#6382)', () => {
     expect(parsed?.projects?.[0]?.reason).toBe('brace {inside string with "quote"')
     expect(cursor.completedBlocks).toHaveLength(1)
     expect(cursor.lastScanIndex).toBe(chunkTwo.length)
+  })
+
+  it('joins assistant turn chunks before extracting mission control projects (#13898)', () => {
+    const streamedTurn = getAssistantContentSinceLastUser([
+      { role: 'user', content: 'old prompt' },
+      { role: 'assistant', content: 'old answer' },
+      { role: 'user', content: 'new prompt' },
+      { role: 'assistant', content: 'Here is the plan:\n```json\n{"projects":[{"name":"fal' },
+      { role: 'assistant', content: 'co","displayName":"Falco","reason":"Runtime security","category":"Security","priority":"required","dependencies":[]}]}\n```' },
+    ])
+
+    const parsed = extractJSON<{ projects: Array<{ name: string }> }>(streamedTurn, 'projects')
+    expect(parsed?.projects?.[0]?.name).toBe('falco')
   })
 
   it('resets the balanced-block cursor when a new shorter stream starts', () => {

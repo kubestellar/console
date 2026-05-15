@@ -20,6 +20,7 @@ import rehypeSanitize from 'rehype-sanitize'
 import { cn } from '../../lib/cn'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useModalState } from '../../lib/modals'
+import { getAssistantContentSinceLastUser } from './useMissionControl'
 
 const PLACEHOLDER_EXAMPLES = [
   'Production-grade security compliance with runtime protection and policy enforcement...',
@@ -96,9 +97,7 @@ export function FixerDefinitionPanel({
     setStickyProject(project)
   }
 
-  const latestAIMessage = planningMission?.messages
-    .filter((m) => m.role === 'assistant')
-    .slice(-1)[0]
+  const latestAIContent = getAssistantContentSinceLastUser(planningMission?.messages)
 
   // Surface AI provider failures (#5907 / #5911). When the planning mission
   // transitions to 'failed', useMissions appends a system message describing
@@ -289,9 +288,9 @@ export function FixerDefinitionPanel({
         )}
 
         {/* AI Executive Analysis */}
-        {latestAIMessage && !aiStreaming && (
+        {latestAIContent && !aiStreaming && (
           <ExecutiveAnalysis
-            aiContent={latestAIMessage.content}
+            aiContent={latestAIContent}
             projects={state.projects}
             missionTitle={state.title}
             missionDescription={state.description}
@@ -884,12 +883,7 @@ function CategoryIcon({ category }: { category: string }) {
 function AIStreamingPreview({ planningMission }: { planningMission: Mission | null | undefined }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Get the latest assistant message (still streaming)
-  const latestMsg = planningMission?.messages
-    .filter((m) => m.role === 'assistant')
-    .slice(-1)[0]
-
-  const rawText = latestMsg?.content ?? ''
+  const rawText = getAssistantContentSinceLastUser(planningMission?.messages)
   // Strip JSON blocks — only show the reasoning text
   const displayText = rawText
     .replace(/```json[\s\S]*?```/g, '')

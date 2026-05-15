@@ -335,6 +335,29 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
     groundControlDashboardId: persisted?.groundControlDashboardId }
 }
 
+interface MissionConversationMessage {
+  role: 'user' | 'assistant' | 'system' | string
+  content: string
+}
+
+export function getAssistantMessagesSinceLastUser<T extends MissionConversationMessage>(
+  messages: T[] | null | undefined,
+): T[] {
+  const safeMessages = Array.isArray(messages) ? messages : []
+  const lastUserIndex = safeMessages.map((message) => message.role).lastIndexOf('user')
+  return safeMessages
+    .slice(lastUserIndex + 1)
+    .filter((message): message is T => message.role === 'assistant')
+}
+
+export function getAssistantContentSinceLastUser(
+  messages: MissionConversationMessage[] | null | undefined,
+): string {
+  return getAssistantMessagesSinceLastUser(messages)
+    .map((message) => message.content)
+    .join('')
+}
+
 // ---------------------------------------------------------------------------
 // JSON extraction from AI messages
 // ---------------------------------------------------------------------------
@@ -699,13 +722,13 @@ export function useMissionControl() {
   // Watch the planning mission for new assistant messages
   const planningMission = missions.find((m) => m.id === state.planningMissionId)
 
-  // Track content length of the latest assistant message so we can re-parse
-  // when streaming appends to it (messages.length stays the same during streaming)
-  const latestAssistantContent = useMemo(() => {
-    if (!planningMission) return ''
-    const msgs = (planningMission.messages ?? []).filter((m) => m.role === 'assistant')
-    return msgs[msgs.length - 1]?.content ?? ''
-  }, [planningMission?.messages])
+  // Track the concatenated assistant content for the latest user turn so we can
+  // re-parse when streaming appends to it, even if the response is split across
+  // multiple assistant bubbles after tool-use gaps (#13898).
+  const latestAssistantContent = useMemo(
+    () => getAssistantContentSinceLastUser(planningMission?.messages),
+    [planningMission?.messages],
+  )
 
   // #6372 — Debounce the content feed so the expensive extractJSON pass
   // (balanced-brace scan + JSON.parse) only fires after the stream pauses.
@@ -737,7 +760,7 @@ export function useMissionControl() {
     // pauses for STREAM_JSON_DEBOUNCE_MS, so we effectively skip parsing
     // mid-burst. The old comment referenced a non-existent length check.
     if (!debouncedAssistantContent) return
-    const assistantMsgs = (planningMission.messages ?? []).filter((m) => m.role === 'assistant')
+    const assistantMsgs = getAssistantMessagesSinceLastUser(planningMission.messages)
     if (planningMission.id !== lastBalancedScanMissionIdRef.current) {
       lastBalancedScanMissionIdRef.current = planningMission.id
       lastAssistantMessageCountRef.current = assistantMsgs.length
@@ -746,16 +769,16 @@ export function useMissionControl() {
       lastAssistantMessageCountRef.current = assistantMsgs.length
       resetBalancedBlockScanCursor(balancedBlockScanCursorRef.current)
     }
-    const latest = assistantMsgs[assistantMsgs.length - 1]
-    if (!latest) return
+    const assistantContent = assistantMsgs.map((message) => message.content).join('')
+    if (!assistantContent) return
 
-    // Skip if we already parsed this exact content
-    if (latest.content === lastParsedContentRef.current) return
+    // Skip if we already parsed this exact turn content
+    if (assistantContent === lastParsedContentRef.current) return
 
-    // Try to parse structured data from the latest AI message
+    // Try to parse structured data from the latest AI turn
     if (state.phase === 'define') {
       const parsed = extractJSON<{ projects?: PayloadProject[] }>(
-        latest.content,
+        assistantContent,
         'projects',
         state.planningMissionId ?? undefined,
         balancedBlockScanCursorRef.current,
@@ -805,7 +828,7 @@ export function useMissionControl() {
           // #8481 — Tag projects that have a matching Kubara chart so
           // LaunchSequence can embed production Helm values in the prompt.
           kubaraChartName: kubaraNames.has(p.name) ? p.name : undefined }))
-        lastParsedContentRef.current = latest.content
+        lastParsedContentRef.current = assistantContent
         setState((prev) => ({
           ...prev,
           projects: mergeProjects(prev.projects, normalized) }))
@@ -816,7 +839,7 @@ export function useMissionControl() {
         phases?: DeployPhase[]
         warnings?: string[]
       }>(
-        latest.content,
+        assistantContent,
         'assignments',
         state.planningMissionId ?? undefined,
         balancedBlockScanCursorRef.current,
@@ -841,10 +864,10 @@ export function useMissionControl() {
           console.warn(
             '[MissionControl] issue 6404 — discarding stale AI assignment stream (user mutated state after dispatch)',
           )
-          lastParsedContentRef.current = latest.content
+          lastParsedContentRef.current = assistantContent
           return
         }
-        lastParsedContentRef.current = latest.content
+        lastParsedContentRef.current = assistantContent
         setState((prev) => {
           const aiAssignments = assignmentsArr
           const aiClusterNames = new Set(aiAssignments.map(a => a.clusterName))
