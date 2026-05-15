@@ -10,7 +10,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType } from '../types/rewards'
+import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType, GitHubRewardsBreakdown } from '../types/rewards'
 import { GITHUB_REWARD_POINTS } from '../types/rewards'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
@@ -25,8 +25,12 @@ const LEGACY_CACHE_KEY = 'github-rewards-cache'
 const CLIENT_CACHE_TTL_MS = 15 * MS_PER_MINUTE
 /** Interval between automatic background refreshes (10 minutes) */
 const REFRESH_INTERVAL_MS = 10 * MS_PER_MINUTE
-/** Max recent contributions to fetch from the GitHub Search API */
-const CONTRIBUTIONS_PER_PAGE = 20
+/** Number of search results per page (GitHub Search API max) */
+const CONTRIBUTIONS_PER_PAGE = 100
+/** Search API hard limit is 1,000 results; fetch 10 x 100 pages max */
+const MAX_CONTRIBUTION_PAGES = 10
+/** Cap rendered contribution entries to keep UI responsive */
+const CONTRIBUTIONS_LIST_LIMIT = 200
 /** GitHub orgs to search for contributions */
 const CONTRIBUTIONS_SEARCH_ORGS = ['kubestellar', 'llm-d', 'clubanderson']
 
@@ -114,34 +118,85 @@ export function repoFromUrl(repositoryUrl: string): string {
 /** GitHub Search API base — public, no auth needed for public repos */
 const GITHUB_SEARCH_API = 'https://api.github.com/search/issues'
 
+export function summarizeContributions(contributions: GitHubContribution[]): {
+  total_points: number
+  breakdown: GitHubRewardsBreakdown
+} {
+  const breakdown: GitHubRewardsBreakdown = {
+    bug_issues: 0,
+    feature_issues: 0,
+    other_issues: 0,
+    prs_opened: 0,
+    prs_merged: 0,
+  }
+
+  let total_points = 0
+  for (const contribution of (contributions || [])) {
+    total_points += contribution.points
+    switch (contribution.type) {
+      case 'issue_bug':
+        breakdown.bug_issues += 1
+        break
+      case 'issue_feature':
+        breakdown.feature_issues += 1
+        break
+      case 'issue_other':
+        breakdown.other_issues += 1
+        break
+      case 'pr_opened':
+        breakdown.prs_opened += 1
+        break
+      case 'pr_merged':
+        breakdown.prs_merged += 1
+        break
+    }
+  }
+
+  return { total_points, breakdown }
+}
+
 async function fetchRecentContributions(
   login: string,
 ): Promise<GitHubContribution[]> {
   const orgFilter = CONTRIBUTIONS_SEARCH_ORGS.map(o => `org:${o}`).join('+')
   const query = `author:${encodeURIComponent(login)}+${orgFilter}`
-  const url = `${GITHUB_SEARCH_API}?q=${query}&sort=updated&per_page=${CONTRIBUTIONS_PER_PAGE}`
+  const allContributions: GitHubContribution[] = []
 
-  const res = await fetch(url, {
-    headers: { Accept: 'application/vnd.github.v3+json' },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  })
-  if (!res.ok) return []
+  for (let page = 1; page <= MAX_CONTRIBUTION_PAGES; page += 1) {
+    const url = `${GITHUB_SEARCH_API}?q=${query}&sort=updated&per_page=${CONTRIBUTIONS_PER_PAGE}&page=${page}`
 
-  const json = await res.json().catch(() => null) as { items?: GitHubSearchItem[] } | null
-  if (!json?.items) return []
-
-  return (json.items || []).map((item): GitHubContribution => {
-    const type = classifySearchItem(item)
-    return {
-      type,
-      title: item.title,
-      url: item.html_url,
-      repo: repoFromUrl(item.repository_url),
-      number: item.number,
-      points: GITHUB_REWARD_POINTS[type],
-      created_at: item.created_at,
+    const res = await fetch(url, {
+      headers: { Accept: 'application/vnd.github.v3+json' },
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+    if (!res.ok) {
+      if (allContributions.length > 0) break
+      return []
     }
-  })
+
+    const json = await res.json().catch(() => null) as { items?: GitHubSearchItem[] } | null
+    const pageItems = json?.items || []
+    if (pageItems.length === 0) break
+
+    allContributions.push(
+      ...pageItems.map((item): GitHubContribution => {
+        const type = classifySearchItem(item)
+        return {
+          type,
+          title: item.title,
+          url: item.html_url,
+          repo: repoFromUrl(item.repository_url),
+          number: item.number,
+          points: GITHUB_REWARD_POINTS[type],
+          created_at: item.created_at,
+        }
+      }),
+    )
+
+    if (pageItems.length < CONTRIBUTIONS_PER_PAGE) break
+  }
+
+  return allContributions.slice(0, CONTRIBUTIONS_LIST_LIMIT)
 }
 
 export function useGitHubRewards() {
@@ -189,9 +244,14 @@ export function useGitHubRewards() {
 
       if (loginRef.current !== githubLogin) return
 
+      const summary = summarizeContributions(contributions)
+      const hasLiveContributions = contributions.length > 0
+
       const merged: GitHubRewardsResponse = {
         ...result,
-        contributions: contributions.length > 0 ? contributions : result.contributions,
+        total_points: hasLiveContributions ? summary.total_points : result.total_points,
+        breakdown: hasLiveContributions ? summary.breakdown : result.breakdown,
+        contributions: hasLiveContributions ? contributions : result.contributions,
       }
 
       setData(merged)

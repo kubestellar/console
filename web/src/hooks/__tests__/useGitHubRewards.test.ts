@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import type { GitHubRewardsResponse } from '../../types/rewards'
-import { classifySearchItem, repoFromUrl, userCacheKey } from '../useGitHubRewards'
+import { classifySearchItem, repoFromUrl, summarizeContributions, userCacheKey } from '../useGitHubRewards'
 import type { GitHubSearchItem } from '../useGitHubRewards'
 
 // ---------------------------------------------------------------------------
@@ -142,6 +142,26 @@ describe('repoFromUrl', () => {
 
   it('handles URLs with hyphens in org and repo names', () => {
     expect(repoFromUrl('https://api.github.com/repos/llm-d-incubation/sched-prom')).toBe('llm-d-incubation/sched-prom')
+  })
+})
+
+describe('summarizeContributions', () => {
+  it('totals points and breakdown from contribution list', () => {
+    const summary = summarizeContributions([
+      { type: 'issue_bug', title: 'b1', url: 'u1', repo: 'kubestellar/console', number: 1, points: 300, created_at: '2025-01-01T00:00:00Z' },
+      { type: 'issue_feature', title: 'f1', url: 'u2', repo: 'kubestellar/console', number: 2, points: 100, created_at: '2025-01-02T00:00:00Z' },
+      { type: 'issue_other', title: 'o1', url: 'u3', repo: 'kubestellar/console', number: 3, points: 50, created_at: '2025-01-03T00:00:00Z' },
+      { type: 'pr_opened', title: 'p1', url: 'u4', repo: 'kubestellar/console', number: 4, points: 30, created_at: '2025-01-04T00:00:00Z' },
+      { type: 'pr_merged', title: 'p1', url: 'u4', repo: 'kubestellar/console', number: 4, points: 120, created_at: '2025-01-05T00:00:00Z' },
+    ])
+    expect(summary.total_points).toBe(600)
+    expect(summary.breakdown).toEqual({
+      bug_issues: 1,
+      feature_issues: 1,
+      other_issues: 1,
+      prs_opened: 1,
+      prs_merged: 1,
+    })
   })
 })
 
@@ -302,6 +322,42 @@ describe('useGitHubRewards', () => {
     const entry = JSON.parse(raw!)
     expect(entry.data.total_points).toBe(1500)
     expect(entry.storedAt).toBeDefined()
+  })
+
+  it('uses live GitHub search aggregation when available', async () => {
+    const apiResponse = makeSampleResponse({
+      total_points: 2100,
+      breakdown: { bug_issues: 7, feature_issues: 0, other_issues: 0, prs_opened: 0, prs_merged: 0 },
+    })
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(apiResponse),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          items: [
+            makeSearchItem({ number: 100, labels: [{ name: 'bug' }] }),
+            makeSearchItem({ number: 101, labels: [{ name: 'kind/bug' }] }),
+            makeSearchItem({ number: 102, labels: [{ name: 'enhancement' }] }),
+          ],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      } as Response)
+
+    const { useGitHubRewards } = await import('../useGitHubRewards')
+    const { result } = renderHook(() => useGitHubRewards())
+
+    await waitFor(() => {
+      expect(result.current.githubRewards).not.toBeNull()
+      expect(result.current.githubRewards!.total_points).toBe(700)
+      expect(result.current.githubRewards!.breakdown.bug_issues).toBe(2)
+      expect(result.current.githubRewards!.breakdown.feature_issues).toBe(1)
+    })
   })
 
   it('clears data on fetch failure when cache has also expired', async () => {
