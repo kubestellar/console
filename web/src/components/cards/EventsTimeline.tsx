@@ -76,13 +76,6 @@ function getEventCount(count?: number | string): number {
   return Number.isFinite(numericCount) && numericCount > 0 ? numericCount : 1
 }
 
-const TIME_RANGE_BUCKETS: Record<TimeRange, { bucketMinutes: number; numBuckets: number }> = {
-  '15m': { bucketMinutes: 1, numBuckets: 15 },
-  '1h': { bucketMinutes: 5, numBuckets: 12 },
-  '6h': { bucketMinutes: 30, numBuckets: 12 },
-  '24h': { bucketMinutes: 60, numBuckets: 24 },
-}
-
 // Group events by time buckets
 function groupEventsByTime(events: EventTimelineDatum[], bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()

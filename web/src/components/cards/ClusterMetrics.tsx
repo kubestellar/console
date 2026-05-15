@@ -63,12 +63,6 @@ const CHART_AREA_MIN_HEIGHT = 160
 const CHART_AREA_STYLE = { minHeight: CHART_AREA_MIN_HEIGHT } as const
 const CHART_FALLBACK_STYLE = { height: CHART_AREA_MIN_HEIGHT } as const
 
-/** Height (px) of the chart area — used for both the chart and its Suspense fallback */
-const CHART_AREA_MIN_HEIGHT = 160
-
-const CHART_AREA_STYLE = { minHeight: CHART_AREA_MIN_HEIGHT } as const
-const CHART_FALLBACK_STYLE = { height: CHART_AREA_MIN_HEIGHT } as const
-
 /** Metric name display threshold before truncation */
 const MAX_METRIC_NAME_DISPLAY = 15
 /** Length to truncate metric names to when they exceed the display threshold */
@@ -346,16 +340,6 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
       setHistory(newHistory)
     }
   }, [realValues, isDemoMode, isLoading, hasRealData, clusters])
-
-  const effectiveHistory = useMemo(() => {
-    if (isDemoMode && hasRealData) {
-      return buildDemoMetricHistory(clusters)
-    }
-    return history
-  }, [clusters, hasRealData, history, isDemoMode])
-
-  const rangeMs = TIME_RANGE_MS[timeRange]
-  const filteredHistory = effectiveHistory.filter(point => Date.now() - point.timestamp <= rangeMs)
 
   const effectiveHistory = useMemo(() => {
     if (isDemoMode && hasRealData) {

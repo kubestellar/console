@@ -572,11 +572,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
 			"byCluster": map[string]any{}, "byProvider": map[string]int{},
-		}); err != nil {
-			slog.Error("encode kagent summary empty response failed", "error", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
+		})
 		return
 	}
 
@@ -596,11 +592,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
 			"byCluster": map[string]any{}, "byProvider": map[string]int{},
 			"error": "internal server error",
-		}); err != nil {
-			slog.Error("encode kagent summary internal error failed", "error", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
+		})
 		return
 	}
 

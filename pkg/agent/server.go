@@ -905,30 +905,6 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleStatus handles authenticated agent status probes.
-func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	if !s.validateToken(r) {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	clusters, _ := s.kubectl.ListContexts()
-
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":   "ok",
-		"version":  Version,
-		"clusters": len(clusters),
-	})
-}
-
 // handleProviderCheck runs a readiness handshake for a specific provider.
 // GET /provider/check?name=antigravity
 func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
