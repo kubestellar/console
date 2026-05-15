@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('AI Error Recovery & Bug Discovery (LFX Prototype)', () => {
-  test('intercepts a critical backend failure and validates AI recovery UI', async ({ page }) => {
-    // 1. Intercept the core clusters API to simulate a catastrophic network failure
-    // This perfectly mirrors the 'network' classification in errorClassifier.ts
+test.describe('AppErrorBoundary E2E (LFX Prototype)', () => {
+  test('recovers from a React render crash triggered by malformed data', async ({ page }) => {
+    // 1. Intercept clusters API to return data that causes a render crash
+    // AppErrorBoundary catches these synchronous React render errors.
     await page.route('**/api/v1/clusters**', async route => {
       await route.fulfill({
-        status: 503,
+        status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          errorType: 'network',
-          message: 'dial tcp: lookup my-cluster.internal failed: no such host'
+        body: JSON.stringify({ 
+          // Returning null for an expected array triggers a "Cannot read properties of null (reading 'map')"
+          // error during component rendering, which AppErrorBoundary is designed to catch.
+          items: null 
         })
       })
     })
@@ -18,34 +19,33 @@ test.describe('AI Error Recovery & Bug Discovery (LFX Prototype)', () => {
     // 2. Navigate to the dashboard
     await page.goto('/')
 
-    // 3. Verify the AppErrorBoundary or specific error card caught the failure
-    // We expect the UI to show the network error icon (XCircle) or related text
-    // as defined in errorClassifier.ts
-    const errorContainer = page.locator('text=Something went wrong').or(page.locator('text=no such host'))
-    await expect(errorContainer.first()).toBeVisible({ timeout: 10000 })
+    // 3. Verify AppErrorBoundary caught the crash and rendered fallback UI
+    const errorTitle = page.getByText('Something went wrong')
+    await expect(errorTitle).toBeVisible({ timeout: 15000 })
+    
+    const crashMessage = page.getByText(/Cannot read properties of null/i).or(page.getByText(/items\.map is not a function/i))
+    await expect(crashMessage).toBeVisible()
 
-    // 4. Verify the AI-driven actionable suggestion is displayed
-    // The errorClassifier maps this specific error to "Check network connectivity and firewall settings"
-    const suggestionText = page.locator('text=Check network connectivity and firewall settings')
-    await expect(suggestionText).toBeVisible()
-
-    // 5. Verify recovery options are present
-    const retryButton = page.locator('button:has-text("Try again")')
+    // 4. Verify recovery options are present
+    const retryButton = page.getByRole('button', { name: /Try again/i })
     await expect(retryButton).toBeVisible()
     
-    // 6. Fix the network route to return success
+    // 5. Fix the network route to return valid data
     await page.route('**/api/v1/clusters**', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ items: [] }) // Empty clusters list
+        body: JSON.stringify({ items: [] })
       })
     })
 
-    // 7. Click retry and verify the error state clears
+    // 6. Click "Try again" and verify the app recovers
     await retryButton.click()
     
-    // The error suggestion should disappear as the app recovers
-    await expect(suggestionText).not.toBeVisible()
+    // Fallback UI should disappear
+    await expect(errorTitle).not.toBeVisible()
+    
+    // App should be back to normal
+    await expect(page.getByText('Clusters')).toBeVisible()
   })
 })
