@@ -6,6 +6,7 @@ import { Pagination } from '../ui/Pagination'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
+import { validateExternalUrl } from '../../lib/validateExternalUrl'
 
 const ITEMS_PER_PAGE = 10
 
@@ -137,9 +138,9 @@ export function AgenticDetectionRuns({ config: _config }: AgenticDetectionRunsPr
         <p className="text-sm text-muted-foreground max-w-md">
           {t('cards:agenticDetectionRuns.noDetectionsDesc')}
         </p>
-        {issueUrl && (
+        {issueUrl && validateExternalUrl(issueUrl) && (
           <a
-            href={issueUrl}
+            href={validateExternalUrl(issueUrl)!}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-4 inline-flex items-center gap-2 text-sm text-primary hover:underline"
@@ -205,9 +206,9 @@ export function AgenticDetectionRuns({ config: _config }: AgenticDetectionRunsPr
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
-                {run.workflowUrl && (
+                {run.workflowUrl && validateExternalUrl(run.workflowUrl) && (
                   <a
-                    href={run.workflowUrl}
+                    href={validateExternalUrl(run.workflowUrl)!}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-primary hover:underline inline-flex items-center gap-1"
@@ -235,10 +236,10 @@ export function AgenticDetectionRuns({ config: _config }: AgenticDetectionRunsPr
         </div>
       )}
 
-      {issueUrl && (
+      {issueUrl && validateExternalUrl(issueUrl) && (
         <div className="mt-3 pt-3 border-t border-border">
           <a
-            href={issueUrl}
+            href={validateExternalUrl(issueUrl)!}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1.5"

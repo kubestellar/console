@@ -17,6 +17,7 @@ import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestIconSync } from '../../lib/iconSuggester'
 import { useTranslation } from 'react-i18next'
 import type { CSSProperties } from 'react'
+import { validateExternalUrl } from '../../lib/validateExternalUrl'
 
 // Inline style constants
 const MARKETPLACE_DIV_STYLE_1: CSSProperties = { gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }
@@ -300,7 +301,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
           {/* Action button */}
           {isHelpWanted ? (
             <a
-              href={item.issueUrl || ISSUES_URL}
+              href={validateExternalUrl(item.issueUrl) || ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-md transition-colors"
@@ -530,7 +531,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
       <div className="shrink-0">
         {isHelpWanted ? (
           <a
-            href={item.issueUrl || ISSUES_URL}
+            href={validateExternalUrl(item.issueUrl) || ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"

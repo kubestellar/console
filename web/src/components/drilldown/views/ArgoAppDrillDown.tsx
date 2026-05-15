@@ -20,6 +20,7 @@ import {
   type ResourceContext } from '../../modals'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { validateExternalUrl } from '../../../lib/validateExternalUrl'
 
 interface Props {
   data: Record<string, unknown>
@@ -413,11 +414,11 @@ Please:
                       </div>
                     )}
                   </div>
-                  {repoURL && (
+                  {repoURL && validateExternalUrl(repoURL) && (
                     <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                       <ExternalLink className="w-3 h-3" />
                       <a
-                        href={repoURL}
+                        href={validateExternalUrl(repoURL)!}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-foreground truncate max-w-md"
