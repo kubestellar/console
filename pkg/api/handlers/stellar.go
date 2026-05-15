@@ -1958,7 +1958,12 @@ func (h *StellarHandler) TestProvider(c *fiber.Ctx) error {
 	defer cancel()
 	health := p.Health(testCtx)
 	_ = providerStore.UpdateProviderLatency(c.UserContext(), cfg.ID, health.LatencyMs)
-	return c.JSON(fiber.Map{"available": health.Available, "latencyMs": health.LatencyMs, "error": health.Error})
+	var safeErr string
+	if health.Error != "" {
+		slog.Error("[Stellar] provider health check failed", "provider", cfg.Provider, "error", health.Error)
+		safeErr = "provider connection test failed"
+	}
+	return c.JSON(fiber.Map{"available": health.Available, "latencyMs": health.LatencyMs, "error": safeErr})
 }
 
 func (h *StellarHandler) processDueActions(ctx context.Context, userID string) error {

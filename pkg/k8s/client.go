@@ -1577,7 +1577,7 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 						Reachable:    false,
 						Healthy:      false,
 						ErrorType:    errType,
-						ErrorMessage: clientErr.Error(),
+						ErrorMessage: redactedMessage(errType),
 						CheckedAt:    time.Now().Format(time.RFC3339),
 					}
 					m.cacheTime[ctxName] = time.Now()
@@ -1586,7 +1586,7 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 				if errType == "auth" {
 					slog.Info("[Warmup] auth failure — run credential refresh to restore access", "cluster", name)
 				} else {
-					slog.Error("[Warmup] unreachable (client error)", "cluster", name)
+					slog.Error("[Warmup] unreachable (client error)", "cluster", name, "error", clientErr)
 				}
 				return
 			}
@@ -1602,7 +1602,7 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 						Reachable:    false,
 						Healthy:      false,
 						ErrorType:    errType,
-						ErrorMessage: listErr.Error(),
+						ErrorMessage: redactedMessage(errType),
 						CheckedAt:    time.Now().Format(time.RFC3339),
 					}
 					m.cacheTime[ctxName] = time.Now()

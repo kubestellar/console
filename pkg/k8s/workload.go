@@ -103,11 +103,12 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 			clusterWorkloads, err := m.ListWorkloadsForCluster(ctx, cluster, namespace, workloadType)
 			if err != nil {
 				slog.Error("[ListWorkloads] error listing workloads for cluster", "cluster", cluster, "error", err)
+				errType := classifyError(err.Error())
 				mu.Lock()
 				clusterErrors = append(clusterErrors, v1alpha1.WorkloadClusterError{
 					Cluster:   cluster,
-					ErrorType: classifyError(err.Error()),
-					Message:   err.Error(),
+					ErrorType: errType,
+					Message:   redactedMessage(errType),
 				})
 				mu.Unlock()
 				return

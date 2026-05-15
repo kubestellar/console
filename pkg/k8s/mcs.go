@@ -71,11 +71,12 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 
 			clusterExports, err := m.ListServiceExportsForCluster(ctx, cluster, "")
 			if err != nil {
+				errType := classifyError(err.Error())
 				mu.Lock()
 				clusterErrors = append(clusterErrors, v1alpha1.MCSClusterError{
 					Cluster:   cluster,
-					ErrorType: "list_failed",
-					Message:   err.Error(),
+					ErrorType: errType,
+					Message:   redactedMessage(errType),
 				})
 				mu.Unlock()
 				return
@@ -179,11 +180,12 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 
 			clusterImports, err := m.ListServiceImportsForCluster(ctx, cluster, "")
 			if err != nil {
+				errType := classifyError(err.Error())
 				mu.Lock()
 				clusterErrors = append(clusterErrors, v1alpha1.MCSClusterError{
 					Cluster:   cluster,
-					ErrorType: "list_failed",
-					Message:   err.Error(),
+					ErrorType: errType,
+					Message:   redactedMessage(errType),
 				})
 				mu.Unlock()
 				return

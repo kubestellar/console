@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"strings"
@@ -88,6 +89,28 @@ func classifyError(errMsg string) string {
 	return "unknown"
 }
 
+// redactedMessage returns a safe, user-facing description for the given error
+// classification. Raw error text is never returned to API consumers because it
+// may contain internal hostnames, ports, or credential details (#13897).
+func redactedMessage(errType string) string {
+	switch errType {
+	case "timeout":
+		return "cluster probe timed out"
+	case "config":
+		return "cluster credential helper misconfigured"
+	case "auth":
+		return "authentication or authorization failure"
+	case "network":
+		return "cluster unreachable (network error)"
+	case "certificate":
+		return "TLS certificate validation failed"
+	case "not_found":
+		return "cluster context not found in kubeconfig"
+	default:
+		return "cluster health check failed"
+	}
+}
+
 // GetClusterHealth returns health status for a cluster
 func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName string) (*ClusterHealth, error) {
 	// Check cache — also save previous cached data for fallback on partial failures.
@@ -112,14 +135,15 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 
 	client, err := m.GetClient(contextName)
 	if err != nil {
-		errMsg := err.Error()
+		errType := classifyError(err.Error())
+		slog.Error("[Health] cluster client error", "cluster", contextName, "error", err)
 		return &ClusterHealth{
 			Cluster:      contextName,
 			Healthy:      false,
 			Reachable:    false,
-			ErrorType:    classifyError(errMsg),
-			ErrorMessage: errMsg,
-			Issues:       []string{fmt.Sprintf("Failed to connect: %v", err)},
+			ErrorType:    errType,
+			ErrorMessage: redactedMessage(errType),
+			Issues:       []string{redactedMessage(errType)},
 			CheckedAt:    now,
 		}, nil
 	}
@@ -162,12 +186,13 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 
 	// Process nodes - determines reachability
 	if nodesErr != nil {
-		errMsg := nodesErr.Error()
+		errType := classifyError(nodesErr.Error())
+		slog.Error("[Health] failed to list nodes", "cluster", contextName, "error", nodesErr)
 		health.Healthy = false
 		health.Reachable = false
-		health.ErrorType = classifyError(errMsg)
-		health.ErrorMessage = errMsg
-		health.Issues = append(health.Issues, fmt.Sprintf("Failed to list nodes: %v", nodesErr))
+		health.ErrorType = errType
+		health.ErrorMessage = redactedMessage(errType)
+		health.Issues = append(health.Issues, redactedMessage(errType))
 	} else if nodes != nil {
 		health.NodeCount = len(nodes.Items)
 		var totalCPU int64
