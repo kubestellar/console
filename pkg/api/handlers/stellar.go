@@ -664,13 +664,14 @@ func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
 	if auditable, ok := h.store.(interface {
 		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
 	}); ok {
+		detailBytes, _ := json.Marshal(map[string]string{"confirmToken": req.ConfirmToken})
 		_ = auditable.CreateAuditEntry(c.UserContext(), &store.StellarAuditEntry{
 			UserID:     userID,
 			Action:     "approve_action",
 			EntityType: "action",
 			EntityID:   actionID,
 			Cluster:    item.Cluster,
-			Detail:     fmt.Sprintf(`{"confirmToken":"%s"}`, req.ConfirmToken),
+			Detail:     string(detailBytes),
 		})
 	}
 	if h.broadcaster != nil {
@@ -1374,13 +1375,14 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	if auditable, ok := h.store.(interface {
 		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
 	}); ok {
+		detailBytes, _ := json.Marshal(map[string]string{"provider": generated.Provider, "model": generated.Model})
 		_ = auditable.CreateAuditEntry(c.UserContext(), &store.StellarAuditEntry{
 			UserID:     userID,
 			Action:     "ask",
 			EntityType: "execution",
 			EntityID:   execution.ID,
 			Cluster:    body.Cluster,
-			Detail:     fmt.Sprintf(`{"provider":"%s","model":"%s"}`, generated.Provider, generated.Model),
+			Detail:     string(detailBytes),
 		})
 	}
 
