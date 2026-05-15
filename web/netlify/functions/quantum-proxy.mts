@@ -75,6 +75,7 @@ const ALLOWED_PATHS = new Set([
   "/auth/status",
   "/auth/save",
   "/auth/clear",
+  "/result/histogram",
 ]);
 
 const PROXY_TIMEOUT_MS = 15_000;
