@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -140,13 +140,13 @@ export function ReplicaSetDrillDown({ data }: Props) {
 
   const isHealthy = readyReplicas === replicas && replicas > 0
 
-  const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'pods', label: `Pods (${pods.length})`, icon: Box },
-    { id: 'events', label: 'Events', icon: Zap },
-    { id: 'describe', label: 'Describe', icon: FileText },
-    { id: 'yaml', label: 'YAML', icon: Code },
-  ]
+  const TABS: { id: TabType; label: string; icon: typeof Info }[] = useMemo(() => [
+    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
+    { id: 'pods', label: `${t('drilldown.tabs.pods')} (${pods.length})`, icon: Box },
+    { id: 'events', label: t('drilldown.tabs.events'), icon: Zap },
+    { id: 'describe', label: t('drilldown.tabs.describe'), icon: FileText },
+    { id: 'yaml', label: t('drilldown.tabs.yaml'), icon: Code },
+  ], [t, pods.length])
 
   return (
     <div className="flex flex-col h-full -m-6">

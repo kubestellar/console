@@ -856,7 +856,7 @@ Please:
       ws.onmessage = (event: MessageEvent) => {
         const msg = parseWsMessage(event, 'delete pod')
         if (!msg) {
-          setDeleteError('Failed to parse response from agent')
+          setDeleteError(t('drilldown.errors.failedToParseResponse'))
           setDeletingPod(false)
           ws.close()
           return
@@ -864,7 +864,7 @@ Please:
 
         if (msg.id === requestId) {
           if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
-            setDeleteError(msg.payload?.error || 'Failed to delete pod')
+            setDeleteError(msg.payload?.error || t('drilldown.errors.failedToDeletePod'))
           } else {
             // Success - close the drill down
             closeDrillDown()
@@ -920,7 +920,7 @@ Please:
             if (!msg) {
               clearTimeout(timeout)
               ws.close()
-              resolve({ success: false, error: 'Failed to parse response' })
+              resolve({ success: false, error: t('drilldown.errors.failedToParseResponse') })
               return
             }
 
@@ -965,7 +965,7 @@ Please:
       if (labelArgs.length > 5) {
         const result = await runKubectl(labelArgs)
         if (!result.success) {
-          setLabelError(result.error || 'Failed to save labels')
+          setLabelError(result.error || t('drilldown.errors.failedToSaveLabels'))
           setLabelSaving(false)
           return
         }
@@ -1058,7 +1058,7 @@ Please:
             if (!msg) {
               clearTimeout(timeout)
               ws.close()
-              resolve({ success: false, error: 'Failed to parse response' })
+              resolve({ success: false, error: t('drilldown.errors.failedToParseResponse') })
               return
             }
 
@@ -1103,7 +1103,7 @@ Please:
       if (annotateArgs.length > 5) {
         const result = await runKubectl(annotateArgs)
         if (!result.success) {
-          setAnnotationError(result.error || 'Failed to save annotations')
+          setAnnotationError(result.error || t('drilldown.errors.failedToSaveAnnotations'))
           setAnnotationSaving(false)
           return
         }
@@ -1311,7 +1311,7 @@ Please:
     { id: 'related', label: t('drilldown.tabs.related'), icon: Layers },
     { id: 'describe', label: t('drilldown.tabs.describe'), icon: FileText },
     { id: 'logs', label: t('drilldown.tabs.logs'), icon: Terminal },
-    { id: 'exec', label: 'Exec', icon: TerminalSquare },
+    { id: 'exec', label: t('drilldown.tabs.exec'), icon: TerminalSquare },
     { id: 'events', label: t('drilldown.tabs.events'), icon: Zap },
     { id: 'yaml', label: t('drilldown.tabs.yaml'), icon: Code },
   ]

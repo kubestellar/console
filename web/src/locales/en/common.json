@@ -2314,6 +2314,7 @@
       "labels": "Labels",
       "related": "Related",
       "logs": "Logs",
+      "exec": "Exec",
       "data": "Data",
       "conditions": "Conditions",
       "rules": "Rules",
@@ -2355,6 +2356,13 @@
       "more_other": "+{{count}} more",
       "manifest": "Manifest",
       "issues": "Issues"
+    },
+    "errors": {
+      "invalidPodResponse": "Failed to load pod details due to an invalid agent response.",
+      "failedToParseResponse": "Failed to parse response from agent",
+      "failedToDeletePod": "Failed to delete pod",
+      "failedToSaveLabels": "Failed to save labels",
+      "failedToSaveAnnotations": "Failed to save annotations"
     },
     "buildpack": {
       "noBuilds": "No builds found",
