@@ -331,49 +331,6 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     return evidenceItems
   }, [podDiagnosis, reason, status, t])
 
-  const podDiagnosis = useMemo(() => getPodDiagnosis({
-    status,
-    reason,
-    issues,
-    describeOutput,
-    eventsOutput,
-    logsOutput,
-  }), [status, reason, issues, describeOutput, eventsOutput, logsOutput])
-
-  const diagnosisEvidence = useMemo(() => {
-    if (!podDiagnosis) {
-      return []
-    }
-
-    const evidenceItems: string[] = []
-
-    if (podDiagnosis.currentStateReason) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.currentStateReason', { reason: podDiagnosis.currentStateReason }))
-    }
-    if (podDiagnosis.lastExitReason && podDiagnosis.exitCode) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitReasonWithCode', { reason: podDiagnosis.lastExitReason, code: podDiagnosis.exitCode }))
-    } else if (podDiagnosis.lastExitReason) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitReason', { reason: podDiagnosis.lastExitReason }))
-    }
-    if (podDiagnosis.lastExitMessage) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitMessage', { message: podDiagnosis.lastExitMessage }))
-    }
-    if (podDiagnosis.warningEvent) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.warningEvent', { event: podDiagnosis.warningEvent }))
-    }
-    if (podDiagnosis.logSnippet) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.logSnippet', { snippet: podDiagnosis.logSnippet }))
-    }
-    if (evidenceItems.length === 0 && reason) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.reportedReason', { reason }))
-    }
-    if (evidenceItems.length === 0 && status) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.reportedStatus', { status }))
-    }
-
-    return evidenceItems
-  }, [podDiagnosis, reason, status, t])
-
   // Use passed labels/annotations if available
   useEffect(() => {
     if (passedLabels) setLabels(passedLabels)
