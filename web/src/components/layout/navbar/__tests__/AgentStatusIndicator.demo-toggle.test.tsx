@@ -9,6 +9,7 @@ const {
   mockAgentFetch,
   mockUseLocalAgent,
   mockUseBackendHealth,
+  mockUseDashboardHealth,
   mockUseMissions,
 } = vi.hoisted(() => ({
   demoModeState: {
@@ -20,6 +21,7 @@ const {
   mockAgentFetch: vi.fn(),
   mockUseLocalAgent: vi.fn(),
   mockUseBackendHealth: vi.fn(),
+  mockUseDashboardHealth: vi.fn(),
   mockUseMissions: vi.fn(),
 }))
 
@@ -43,6 +45,10 @@ vi.mock('../../../../hooks/useMissions', () => ({
 
 vi.mock('../../../../hooks/useBackendHealth', () => ({
   useBackendHealth: () => mockUseBackendHealth(),
+}))
+
+vi.mock('../../../../hooks/useDashboardHealth', () => ({
+  useDashboardHealth: () => mockUseDashboardHealth(),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
@@ -92,6 +98,13 @@ describe('AgentStatusIndicator demo mode transition', () => {
       status: 'disconnected',
       isConnected: false,
       isInClusterMode: false,
+    })
+    mockUseDashboardHealth.mockReturnValue({
+      status: 'healthy',
+      message: 'All systems healthy',
+      details: [],
+      criticalCount: 0,
+      warningCount: 0,
     })
     mockUseMissions.mockReturnValue({ selectedAgent: 'none', agents: [] })
   })

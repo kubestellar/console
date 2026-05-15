@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => false, getDemoMode: () => false, isNetlifyDeployment: false,
@@ -48,7 +48,7 @@ vi.mock('../../../../hooks/useLocalAgent', () => ({
 }))
 
 vi.mock('../../../../hooks/useMissions', () => ({
-  useMissions: () => ({ selectedAgent: vi.fn(), agents: [] }),
+  useMissions: () => ({ selectedAgent: 'none', agents: [] }),
 }))
 
 const mockUseBackendHealth = vi.fn(() => ({
@@ -74,7 +74,7 @@ vi.mock('../../../../hooks/useDashboardHealth', () => ({
 }))
 
 vi.mock('../../../../lib/cn', () => ({
-  cn: vi.fn(),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(' '),
 }))
 
 vi.mock('@/hooks/mcp/shared', () => ({
@@ -82,10 +82,20 @@ vi.mock('@/hooks/mcp/shared', () => ({
   clusterCache: { clusters: [], isLoading: false, lastUpdated: null },
 }))
 
+vi.mock('../../../agent/AgentApprovalDialog', () => ({
+  hasApprovedAgents: () => false,
+  AgentApprovalDialog: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>approval-dialog</div> : null,
+}))
+
+vi.mock('../../../setup/SetupInstructionsDialog', () => ({
+  SetupInstructionsDialog: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>setup-dialog</div> : null,
+}))
+
 import { AgentStatusIndicator } from '../AgentStatusIndicator'
 
 describe('AgentStatusIndicator', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     mockUseLocalAgent.mockReturnValue({
       status: '',
       health: {},
@@ -101,6 +111,13 @@ describe('AgentStatusIndicator', () => {
       isConnected: false,
       isInClusterMode: null,
     })
+    mockUseDashboardHealth.mockReturnValue({
+      status: 'healthy',
+      message: 'All systems healthy',
+      details: [],
+      criticalCount: 0,
+      warningCount: 0,
+    })
   })
 
   it('renders without crashing', () => {
@@ -108,7 +125,7 @@ describe('AgentStatusIndicator', () => {
     expect(container).toBeTruthy()
   })
 
-  it('shows auth warning state when agent auth fails', () => {
+  it('shows auth warning details in the dropdown when agent auth fails', () => {
     mockUseLocalAgent.mockReturnValueOnce({
       status: 'auth_error',
       health: { version: '1.2.3' },
@@ -122,8 +139,14 @@ describe('AgentStatusIndicator', () => {
 
     render(<AgentStatusIndicator />)
 
-    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.authErrorTitle')
-    expect(screen.getByText('agent.authError')).toBeTruthy()
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.localAgentDisconnected')
+    expect(screen.getByText('networkUtils.offline')).toBeTruthy()
+
+    fireEvent.click(screen.getByTestId('navbar-agent-status-btn'))
+
+    expect(screen.getByText('agent.localAgentAuthErrorLabel')).toBeTruthy()
+    expect(screen.getByText('agent.authErrorDescription')).toBeTruthy()
+    expect(screen.getByTestId('agent-approval-cta')).toBeTruthy()
   })
 
   it('shows explicit online state when the agent is connected', () => {
@@ -146,7 +169,7 @@ describe('AgentStatusIndicator', () => {
     render(<AgentStatusIndicator />)
 
     expect(screen.getByText('networkUtils.online')).toBeTruthy()
-    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.localAgentConnected')
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.liveMode')
   })
 
   it('shows degraded state when backend connectivity is unhealthy', () => {
@@ -165,10 +188,17 @@ describe('AgentStatusIndicator', () => {
       isConnected: false,
       isInClusterMode: null,
     })
+    mockUseDashboardHealth.mockReturnValueOnce({
+      status: 'warning',
+      message: 'Backend unavailable',
+      details: [],
+      criticalCount: 1,
+      warningCount: 0,
+    })
 
     render(<AgentStatusIndicator />)
 
-    expect(screen.getByText('agent.degraded')).toBeTruthy()
+    expect(screen.getByText('Backend unavailable')).toBeTruthy()
     expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.backendUnavailable')
   })
 })
