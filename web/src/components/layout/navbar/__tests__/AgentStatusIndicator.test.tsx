@@ -126,7 +126,7 @@ describe('AgentStatusIndicator', () => {
   })
 
   it('shows auth warning details in the dropdown when agent auth fails', () => {
-    mockUseLocalAgent.mockReturnValueOnce({
+    mockUseLocalAgent.mockReturnValue({
       status: 'auth_error',
       health: { version: '1.2.3' },
       connectionEvents: [],
