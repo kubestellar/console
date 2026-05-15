@@ -210,19 +210,20 @@ export function ChatPanel({
         flexShrink: 0,
         borderBottom: '1px solid var(--s-border)',
       }}>
-        <span style={{
-          fontFamily: 'var(--s-mono)',
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'var(--s-text-muted)',
-        }}>
+        <span
+          className="font-mono text-xs"
+          style={{
+            fontWeight: 600,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--s-text-muted)',
+          }}
+        >
           Chat
         </span>
         <div style={{ flex: 1 }} />
         <ProviderSelector session={providerSession} onSelect={onProviderChange} />
-        <button onClick={() => setMsgs([WELCOME])} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--s-text-dim)' }}>clear</button>
+        <button className="text-xs" onClick={() => setMsgs([WELCOME])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}>clear</button>
       </div>
 
       <div
@@ -257,6 +258,7 @@ export function ChatPanel({
             {msg.suggestedTask && (
               <div style={{ paddingLeft: 8, marginTop: -8 }}>
                 <button
+                  className="text-xs"
                   onClick={() => { void createTask(msg.suggestedTask || '', `From Stellar chat message ${msg.id}`, 'stellar') }}
                   style={{
                     marginTop: 4,
@@ -264,7 +266,6 @@ export function ChatPanel({
                     border: '1px solid var(--s-border)',
                     borderRadius: 'var(--s-rs)',
                     padding: '2px 8px',
-                    fontSize: 11,
                     color: 'var(--s-text-muted)',
                     cursor: 'pointer',
                   }}
@@ -280,22 +281,25 @@ export function ChatPanel({
 
       <div style={{ padding: '8px 10px', flexShrink: 0, borderTop: '1px solid var(--s-border)' }}>
         {localPendingAction && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            marginBottom: 6,
-            padding: '3px 8px',
-            background: 'rgba(227,179,65,0.1)',
-            border: '1px solid rgba(227,179,65,0.3)',
-            borderRadius: 'var(--s-rs)',
-            fontSize: 11,
-            color: 'var(--s-warning)',
-          }}>
+          <div
+            className="text-xs"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 6,
+              padding: '3px 8px',
+              background: 'rgba(227,179,65,0.1)',
+              border: '1px solid rgba(227,179,65,0.3)',
+              borderRadius: 'var(--s-rs)',
+              color: 'var(--s-warning)',
+            }}
+          >
             <span>⚡ Will execute: {localPendingAction.actionType} on {localPendingAction.namespace}/{localPendingAction.name} ({localPendingAction.cluster})</span>
             <button
+              className="text-xs"
               onClick={() => setLocalPendingAction(null)}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-dim)' }}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}
               title="Cancel — send as chat instead"
             >
               ✕
@@ -313,6 +317,7 @@ export function ChatPanel({
         }}>
           <TextArea
             ref={textRef}
+            className="font-sans text-sm"
             value={input}
             onChange={event => setInput(event.target.value)}
             onKeyDown={handleKey}
@@ -325,8 +330,6 @@ export function ChatPanel({
               border: 'none',
               outline: 'none',
               color: 'var(--s-text)',
-              fontSize: 13,
-              fontFamily: 'var(--s-sans)',
               resize: 'none',
               lineHeight: 1.4,
               maxHeight: 100,
@@ -335,6 +338,7 @@ export function ChatPanel({
             }}
           />
           <button
+            className="text-sm"
             onClick={() => { void send() }}
             disabled={!input.trim() || busy}
             style={{
@@ -343,7 +347,6 @@ export function ChatPanel({
               border: 'none',
               borderRadius: 'var(--s-rs)',
               padding: '4px 10px',
-              fontSize: 13,
               fontWeight: 700,
               cursor: input.trim() && !busy ? 'pointer' : 'default',
               flexShrink: 0,
@@ -353,7 +356,7 @@ export function ChatPanel({
             {busy ? '···' : '↑'}
           </button>
         </div>
-        <div style={{ fontSize: 10, color: 'var(--s-text-dim)', marginTop: 4, paddingLeft: 2 }}>
+        <div className="text-xs" style={{ color: 'var(--s-text-dim)', marginTop: 4, paddingLeft: 2 }}>
           Enter to send · Shift+Enter for newline
         </div>
       </div>

@@ -16,32 +16,33 @@ export function CatchUpBanner({ catchUp, onDismiss }: Props) {
       borderRadius: 'var(--s-r)',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        <span style={{ fontSize: 13, flexShrink: 0 }}>{isClean ? '✦' : '◉'}</span>
+        <span className="text-sm" style={{ flexShrink: 0 }}>{isClean ? '✦' : '◉'}</span>
         <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: 10,
-            fontFamily: 'var(--s-mono)',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: isClean ? 'var(--s-success)' : 'var(--s-info)',
-            marginBottom: 4,
-          }}>
+          <div
+            className="font-mono text-xs"
+            style={{
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: isClean ? 'var(--s-success)' : 'var(--s-info)',
+              marginBottom: 4,
+            }}
+          >
             While you were away
           </div>
-          <div style={{ fontSize: 12, color: 'var(--s-text)', lineHeight: 1.55 }}>
+          <div className="text-xs" style={{ color: 'var(--s-text)', lineHeight: 1.55 }}>
             {catchUp.summary}
           </div>
         </div>
         <button
           onClick={onDismiss}
           aria-label="Dismiss catch-up summary"
+          className="text-xs"
           style={{
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             color: 'var(--s-text-dim)',
-            fontSize: 12,
             flexShrink: 0,
           }}
         >

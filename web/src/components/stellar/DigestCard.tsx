@@ -36,23 +36,30 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
       margin: '6px 4px 10px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14 }}>⭐</span>
-        <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
-          letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-info)',
-        }}>Daily recap</span>
+        <span className="text-sm">⭐</span>
+        <span
+          className="font-mono text-xs"
+          style={{
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: 'var(--s-info)',
+          }}
+        >Daily recap</span>
         <div style={{ flex: 1 }} />
         <button
           onClick={() => setExpanded(e => !e)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-muted)' }}
+          className="text-xs"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-muted)' }}
         >{expanded ? '▼' : '▶'}</button>
         <button
           onClick={onDismiss}
           title="Dismiss"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--s-text-dim)' }}
+          className="text-xs"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}
         >✕</button>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--s-text)', marginTop: 6, lineHeight: 1.5 }}>
+      <div className="text-xs" style={{ color: 'var(--s-text)', marginTop: 6, lineHeight: 1.5 }}>
         {notification.body}
       </div>
 
@@ -78,11 +85,16 @@ function DigestGroup({
   if (items.length === 0) return null
   return (
     <div>
-      <div style={{
-        fontFamily: 'var(--s-mono)', fontSize: 9, fontWeight: 700,
-        letterSpacing: '0.08em', textTransform: 'uppercase',
-        color, marginBottom: 2,
-      }}>
+      <div
+        className="font-mono text-xs"
+        style={{
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color,
+          marginBottom: 2,
+        }}
+      >
         {label} ({items.length})
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -90,19 +102,20 @@ function DigestGroup({
           <button
             key={item.id}
             onClick={() => item.eventId && onOpen?.(item.eventId)}
+            className="text-xs"
             style={{
               background: 'none', border: '1px solid var(--s-border-muted)',
               borderRadius: 'var(--s-rs)', padding: '4px 6px', textAlign: 'left',
               cursor: item.eventId ? 'pointer' : 'default', color: 'var(--s-text)',
-              fontSize: 11, display: 'flex', gap: 8, alignItems: 'baseline',
+              display: 'flex', gap: 8, alignItems: 'baseline',
             }}
           >
-            <span style={{ color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)', fontSize: 10 }}>
+            <span className="font-mono text-xs" style={{ color: 'var(--s-text-muted)' }}>
               {item.cluster}/{item.namespace}
             </span>
             <span style={{ fontWeight: 600 }}>{item.workload || '—'}</span>
             <span style={{ flex: 1 }} />
-            <span style={{ color: 'var(--s-text-dim)', fontSize: 10 }}>
+            <span className="text-xs" style={{ color: 'var(--s-text-dim)' }}>
               {item.actionsTaken} action{item.actionsTaken === 1 ? '' : 's'}
             </span>
           </button>

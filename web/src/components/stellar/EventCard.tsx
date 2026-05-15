@@ -161,26 +161,25 @@ export function EventCard({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div className="text-xs" style={{ fontWeight: 600, color: 'var(--s-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {notification.title}
         </div>
         {!notification.read && (
-          <span title={`importance score: ${importance.score}`} style={{
-            fontSize: 9, fontFamily: 'var(--s-mono)', fontWeight: 700,
+          <span className="text-[9px] font-mono" title={`importance score: ${importance.score}`} style={{
+            fontWeight: 700,
             letterSpacing: '0.05em', textTransform: 'uppercase',
             color: importanceCol, border: `1px solid ${importanceCol}`,
             borderRadius: 8, padding: '0 5px', flexShrink: 0,
           }}>{importance.label}</span>
         )}
         {onOpenDetail && (
-          <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)', flexShrink: 0 }}>details →</span>
+          <span className="text-[10px] font-mono" style={{ color: 'var(--s-text-dim)', flexShrink: 0 }}>details →</span>
         )}
       </div>
       {tags.length > 0 && !notification.read && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
           {tags.map(t => (
-            <span key={t} style={{
-              fontSize: 9, fontFamily: 'var(--s-mono)',
+            <span className="text-[9px] font-mono" key={t} style={{
               padding: '1px 5px', borderRadius: 6,
               background: 'var(--s-surface)', color: 'var(--s-text-muted)',
               border: '1px solid var(--s-border-muted)',
@@ -189,8 +188,8 @@ export function EventCard({
         </div>
       )}
       {shortReason && !notification.read && (
-        <div style={{
-          fontSize: 11, color: color, lineHeight: 1.5, marginTop: 4,
+        <div className="text-[11px]" style={{
+          color: color, lineHeight: 1.5, marginTop: 4,
           fontStyle: 'italic', opacity: 0.85,
         }}>
           ✦ {shortReason}
@@ -201,15 +200,14 @@ export function EventCard({
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3,
           }}>
-            <span style={{
-              fontSize: 11, fontFamily: 'var(--s-mono)', fontWeight: 600,
+            <span className="text-[11px] font-mono" style={{
+              fontWeight: 600,
               color: solveStatus.color, flex: 1, minWidth: 0,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {solveStatus.label}
             </span>
-            <span style={{
-              fontSize: 10, fontFamily: 'var(--s-mono)',
+            <span className="text-[10px] font-mono" style={{
               color: solveStatus.color, flexShrink: 0,
             }}>
               {solveStatus.percent}%
@@ -229,16 +227,16 @@ export function EventCard({
         </div>
       )}
       {attemptCount && attemptCount > 0 ? (
-        <div style={{
+        <div className="text-[10px] font-mono" style={{
           marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4,
-          fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)',
+          color: 'var(--s-text-muted)',
           padding: '1px 6px', borderRadius: 10,
           background: 'var(--s-surface)', border: '1px solid var(--s-border-muted)',
         }}>
           <span>✦ Stellar tried {attemptCount}× — see details</span>
         </div>
       ) : null}
-      <div style={{ fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.55, marginTop: 4 }}>{notification.body}</div>
+      <div className="text-xs" style={{ color: 'var(--s-text-muted)', lineHeight: 1.55, marginTop: 4 }}>{notification.body}</div>
       {!notification.read && (() => {
         // When Stellar is autonomously solving (or already finished resolving
         // successfully), hide manual action buttons — the user shouldn't have to
@@ -263,17 +261,19 @@ export function EventCard({
           }}
           style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}
         >
-          <button onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', fontSize: 11, color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
+          <button className="text-[11px]" onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
           {showRollback && onRollback && (
             <button
+              className="text-[11px]"
               onClick={() => onRollback(buildRollbackPrompt(notification))}
-              style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', fontSize: 11, color: 'var(--s-text-muted)', cursor: 'pointer' }}
+              style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', color: 'var(--s-text-muted)', cursor: 'pointer' }}
             >
               ↩ Undo this
             </button>
           )}
           {isEscalated && onSolve && (
             <button
+              className="text-[11px]"
               onClick={() => { void onSolve(notification.id) }}
               title="Escalate to an AI mission on your connected agent"
               style={{
@@ -282,7 +282,7 @@ export function EventCard({
                 border: '1px solid var(--s-warning)',
                 borderRadius: 'var(--s-rs)',
                 padding: '2px 10px',
-                fontSize: 11, color: 'var(--s-warning)', cursor: 'pointer',
+                color: 'var(--s-warning)', cursor: 'pointer',
                 fontWeight: 600,
               }}
             >
@@ -294,6 +294,7 @@ export function EventCard({
             const isSolveActive = hint === 'solve' && solveStatus?.isActive
             return (
               <button
+                className="text-[11px]"
                 key={hint}
                 disabled={isSolveActive}
                 onClick={() => {
@@ -323,7 +324,6 @@ export function EventCard({
                   border: `1px solid ${cfg.color}`,
                   borderRadius: 'var(--s-rs)',
                   padding: '2px 8px',
-                  fontSize: 11,
                   color: cfg.color,
                   cursor: isSolveActive ? 'not-allowed' : 'pointer',
                   opacity: isSolveActive ? 0.5 : 1,
@@ -335,8 +335,8 @@ export function EventCard({
             )
           })}
           {hideManualActions && isAutoActive && (
-            <span style={{
-              fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-dim)',
+            <span className="text-[10px] font-mono" style={{
+              color: 'var(--s-text-dim)',
               fontStyle: 'italic', alignSelf: 'center',
             }}>
               Stellar is handling this — no input needed.
