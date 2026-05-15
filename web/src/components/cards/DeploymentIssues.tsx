@@ -15,6 +15,7 @@ import {
   CardSkeleton, CardEmptyState, CardSearchInput,
   CardControlsRow, CardListItem, CardPaginationFooter,
   CardAIActions } from '../../lib/cards/CardComponents'
+import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -54,6 +55,9 @@ const CARD_DATA_SORT_CONFIG = {
 } as const
 
 const DEFAULT_PAGE_LIMIT = 5
+const CARD_SKELETON_ROWS = 3
+const CARD_SKELETON_ROW_HEIGHT = 100
+const REFRESH_STALE_THRESHOLD_MINUTES = 5
 
 const getIssueIcon = (status: string, t: TFunction<readonly ['cards', 'common']>): { icon: typeof AlertCircle; tooltip: string } => {
   if (status.includes('Unavailable')) return { icon: AlertCircle, tooltip: t('deploymentIssues.tooltipUnavailable') }
@@ -78,10 +82,11 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     lastRefresh: issuesLastRefresh
   } = useCachedDeploymentIssues(clusterConfig, namespaceConfig)
 
+  const safeRawIssues = rawIssues || []
   const { drillToDeployment } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const hasData = rawIssues.length > 0
+  const hasData = safeRawIssues.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading && !hasData,
     isRefreshing,
@@ -128,7 +133,11 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<DeploymentIssue, SortByOption>(rawIssues, cardDataConfig)
+    containerStyle } = useCardData<DeploymentIssue, SortByOption>(safeRawIssues, cardDataConfig)
+
+  const safeIssues = issues || []
+  const safeLocalClusterFilter = localClusterFilter || []
+  const safeAvailableClustersForFilter = availableClustersForFilter || []
 
   const handleDeploymentClick = (issue: DeploymentIssue) => {
     if (!issue.cluster) {
@@ -143,10 +152,10 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
   }
 
   if (showSkeleton) {
-    return <CardSkeleton type="list" rows={3} showHeader rowHeight={100} />
+    return <CardSkeleton type="list" rows={CARD_SKELETON_ROWS} showHeader rowHeight={CARD_SKELETON_ROW_HEIGHT} />
   }
 
-  if (isFailed && !hookLoading && rawIssues.length === 0) {
+  if (isFailed && !hookLoading && safeRawIssues.length === 0) {
     return (
       <CardEmptyState
         icon={AlertTriangle}
@@ -157,7 +166,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
     )
   }
 
-  if (issues.length === 0 && rawIssues.length === 0) {
+  if (safeIssues.length === 0 && safeRawIssues.length === 0) {
     return (
       <CardEmptyState
         icon={CheckCircle}
@@ -182,8 +191,8 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
-          <StatusBadge color="red" title={t('deploymentIssues.issuesTitle', { count: rawIssues.length })}>
-            {t('deploymentIssues.nIssues', { count: rawIssues.length })}
+          <StatusBadge color="red" title={t('deploymentIssues.issuesTitle', { count: safeRawIssues.length })}>
+            {t('deploymentIssues.nIssues', { count: safeRawIssues.length })}
           </StatusBadge>
           {/* #6217 part 3: freshness indicator. */}
           <RefreshIndicator
@@ -191,16 +200,16 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
             lastUpdated={typeof issuesLastRefresh === 'number' ? new Date(issuesLastRefresh) : null}
             size="sm"
             showLabel={true}
-            staleThresholdMinutes={5}
+            staleThresholdMinutes={REFRESH_STALE_THRESHOLD_MINUTES}
           />
         </div>
         <CardControlsRow
           clusterIndicator={{
-            selectedCount: localClusterFilter.length,
-            totalCount: availableClustersForFilter.length }}
+            selectedCount: safeLocalClusterFilter.length,
+            totalCount: safeAvailableClustersForFilter.length }}
           clusterFilter={{
-            availableClusters: availableClustersForFilter,
-            selectedClusters: localClusterFilter,
+            availableClusters: safeAvailableClustersForFilter,
+            selectedClusters: safeLocalClusterFilter,
             onToggle: toggleClusterFilter,
             onClear: clearClusterFilter,
             isOpen: showClusterFilter,
@@ -223,12 +232,12 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
         value={localSearch}
         onChange={setLocalSearch}
         placeholder={t('common:common.searchIssues')}
-        className="mb-3"
+        className={cn('mb-3 px-2')}
       />
 
       {/* Issues list */}
       <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto min-h-card-content" style={containerStyle}>
-        {issues.map((issue, idx) => {
+        {safeIssues.map((issue, idx) => {
           const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.reason || '', t)
 
           return (
@@ -239,39 +248,63 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
               borderClass="border-red-500/20"
               title={t('deploymentIssues.clickToView', { name: issue.name })}
             >
-              <div className="flex items-start gap-3 group">
-                <div className="p-2 rounded-lg bg-red-500/20 shrink-0" title={iconTooltip}>
-                  <Icon className="w-4 h-4 text-red-400" />
+              <div className="group flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/20" title={iconTooltip}>
+                  <Icon className="h-4 w-4 text-red-400" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 min-w-0">
-                    <ClusterBadge cluster={issue.cluster || 'unknown'} className="shrink min-w-0" />
-                    <span className="text-xs text-muted-foreground truncate" title={`Namespace: ${issue.namespace}`}>{issue.namespace}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2.5">
+                    <ClusterBadge cluster={issue.cluster || t('common:common.unknown')} className="shrink min-w-0" />
+                    <span
+                      className="truncate text-xs text-muted-foreground"
+                      title={t('deploymentIssues.namespaceTitle', {
+                        defaultValue: '{{label}}: {{namespace}}',
+                        label: t('common:common.namespace'),
+                        namespace: issue.namespace,
+                      })}
+                    >
+                      {issue.namespace}
+                    </span>
                   </div>
-                  <p className="text-sm font-medium text-foreground truncate" title={issue.name}>{issue.name}</p>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <StatusBadge color="red" size="md" title={`Issue: ${issue.reason || 'Unknown'}`}>
-                      {issue.reason || 'Issue'}
+                  <p className="truncate text-sm font-medium text-foreground" title={issue.name}>{issue.name}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2.5 pr-2">
+                    <StatusBadge
+                      color="red"
+                      size="md"
+                      title={t('deploymentIssues.issueTitle', {
+                        defaultValue: '{{label}}: {{issue}}',
+                        label: t('common:common.status'),
+                        issue: issue.reason || t('common:common.unknown'),
+                      })}
+                    >
+                      {issue.reason || t('deploymentIssues.issueLabel', { defaultValue: 'Issue' })}
                     </StatusBadge>
-                    <span className="text-xs text-muted-foreground" title={t('deploymentIssues.replicasReady', { ready: issue.readyReplicas, total: issue.replicas })}>
+                    <span
+                      className="text-xs text-muted-foreground"
+                      title={t('deploymentIssues.replicasReady', { ready: issue.readyReplicas, total: issue.replicas })}
+                    >
                       {issue.readyReplicas}/{issue.replicas} {t('common:common.ready')}
                     </span>
                   </div>
                   {issue.message && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate" title={issue.message}>
+                    <p className="mt-1 truncate text-xs text-muted-foreground" title={issue.message}>
                       {issue.message}
                     </p>
                   )}
                 </div>
                 {/* AI Diagnose, Repair & Ask actions */}
                 <CardAIActions
+                  className={cn('ml-2 shrink-0 self-center')}
                   resource={{
                     kind: 'Deployment',
                     name: issue.name,
                     namespace: issue.namespace,
                     cluster: issue.cluster || 'default',
-                    status: issue.reason || 'Issue' }}
-                  issues={[{ name: issue.reason || 'Unknown', message: issue.message || 'Deployment issue' }]}
+                    status: issue.reason || t('deploymentIssues.issueLabel', { defaultValue: 'Issue' }) }}
+                  issues={[{
+                    name: issue.reason || t('common:common.unknown'),
+                    message: issue.message || t('deploymentIssues.defaultIssueMessage', { defaultValue: 'Deployment issue' }),
+                  }]}
                   additionalContext={{ replicas: issue.replicas, readyReplicas: issue.readyReplicas }}
                 />
               </div>
@@ -285,7 +318,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
         currentPage={currentPage}
         totalPages={totalPages}
         totalItems={totalItems}
-        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 5}
+        itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : DEFAULT_PAGE_LIMIT}
         onPageChange={goToPage}
         needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
       />

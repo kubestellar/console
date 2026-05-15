@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
+import type { ReactNode } from 'react'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -34,7 +35,7 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-    Trans: ({ children }: { children: React.ReactNode }) => children,
+    Trans: ({ children }: { children: ReactNode }) => children,
   }
 })
 
@@ -102,6 +103,12 @@ describe('DeploymentIssues', () => {
 
   it('renders correctly in demo mode', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    const { container } = render(<DeploymentIssues />)
+    expect(container).toBeTruthy()
+  })
+
+  it('handles undefined issues without crashing', () => {
+    mockDeploymentIssues.mockReturnValue({ issues: undefined, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
     const { container } = render(<DeploymentIssues />)
     expect(container).toBeTruthy()
   })
