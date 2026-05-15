@@ -15,6 +15,10 @@ import type { StellarActivity } from '../../types/stellar'
 
 interface Props {
   activity: StellarActivity[]
+  /** Called when the operator clicks a row that carries an eventId. Wires the
+   *  log into the events panel — click a "Tried RestartDeployment" log entry
+   *  and the matching event card's modal opens with the full attempt detail. */
+  onOpenEvent?: (eventId: string) => void
 }
 
 const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
@@ -53,7 +57,7 @@ function formatRelative(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export function StellarActivityPanel({ activity }: Props) {
+export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [filter, setFilter] = useState<'all' | 'actions'>('all')
 
@@ -111,18 +115,22 @@ export function StellarActivityPanel({ activity }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {visible.slice(0, 60).map(entry => {
                 const k = describeKind(entry.kind)
-                return (
-                  <div
-                    key={entry.id}
-                    title={entry.detail}
-                    style={{
-                      display: 'flex', alignItems: 'baseline', gap: 6,
-                      padding: '4px 6px', borderRadius: 'var(--s-rs)',
-                      borderLeft: `2px solid ${k.color}`,
-                      background: 'var(--s-surface-2)',
-                      fontSize: 11, lineHeight: 1.4,
-                    }}
-                  >
+                // A row is clickable iff it carries an eventId AND a handler
+                // was wired by the parent. Other entries (e.g., stale-approval
+                // sweeps with no event) render as plain rows.
+                const clickable = !!(entry.eventId && onOpenEvent)
+                const baseStyle: React.CSSProperties = {
+                  display: 'flex', alignItems: 'baseline', gap: 6,
+                  padding: '4px 6px', borderRadius: 'var(--s-rs)',
+                  borderLeft: `2px solid ${k.color}`,
+                  background: 'var(--s-surface-2)',
+                  fontSize: 11, lineHeight: 1.4,
+                  border: 'none', textAlign: 'left', width: '100%',
+                  cursor: clickable ? 'pointer' : 'default',
+                  font: 'inherit', color: 'inherit',
+                }
+                const body = (
+                  <>
                     <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-dim)', minWidth: 52, fontSize: 10 }}>
                       {formatRelative(entry.ts)}
                     </span>
@@ -143,6 +151,26 @@ export function StellarActivityPanel({ activity }: Props) {
                         </div>
                       )}
                     </div>
+                    {clickable && (
+                      <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)', flexShrink: 0 }}>
+                        details →
+                      </span>
+                    )}
+                  </>
+                )
+                return clickable ? (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    title={`${entry.detail ?? ''}\n\nClick to open the event in the events column.`}
+                    onClick={() => entry.eventId && onOpenEvent?.(entry.eventId)}
+                    style={baseStyle}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div key={entry.id} title={entry.detail} style={baseStyle}>
+                    {body}
                   </div>
                 )
               })}

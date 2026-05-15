@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
-import type { StellarAction, StellarNotification } from '../../types/stellar'
+import type { StellarAction, StellarNotification, StellarSolve } from '../../types/stellar'
 import type { PendingAction } from './EventCard'
+import { countSolveAttempts } from './lib/derive'
 
 const RELATED_EVENT_LIMIT = 6
 const RECURRING_RELATED_THRESHOLD = 2
@@ -23,6 +24,9 @@ interface EventModalProps {
    *  that don't yet pass it still compile; modal degrades to attempt-history
    *  narration in that case. */
   solveStatus?: import('./lib/derive').SolveStatus | null
+  /** Solves list — used to surface attempt count and a row-per-attempt history
+   *  in the modal so it matches the "Tried N×" badge on the card. */
+  solves?: StellarSolve[]
   onClose: () => void
   onAction?: (prompt: string, action?: PendingAction) => void
 }
@@ -72,6 +76,7 @@ function deriveNarration(
   completed: StellarNotification | null,
   attempts: StellarAttempt[],
   solveStatus: import('./lib/derive').SolveStatus | null,
+  solveAttemptCount: number,
 ): DerivedNarration {
   const title = n.title.toLowerCase()
 
@@ -109,6 +114,14 @@ function deriveNarration(
     whatWereDoing = 'Stellar tried multiple actions and hit the budget limit. Paused for your call — click "Try AI mission" to escalate to a deeper mission on your connected agent, or review what was attempted in the Stellar log and decide whether to retry.'
   } else if (solveStatus && solveStatus.isActive) {
     whatWereDoing = `Stellar is on it right now — ${solveStatus.label.replace(/^[^\sA-Za-z]+\s*/, '')}. Watch the progress bar; the activity log has step-by-step.`
+  }
+  // Solve-history fallback: when there's no live solveStatus but we DO have a
+  // record of Stellar having attempted this workload via the autonomous loop
+  // (the "Tried N×" badge on the card came from here), describe it. Without
+  // this branch the modal falls through to "Standing by" while the card
+  // already says "Tried 1×" — a contradiction the user called out.
+  else if (solveAttemptCount > 0) {
+    whatWereDoing = `Stellar has attempted this workload ${solveAttemptCount}× — see "Stellar's attempts" below. The current event came in after those attempts; pick Investigate to pull fresh logs, click Solve to retry with the AI, or use a recommended action below.`
   }
   // Prefer the most recent attempt — that's the freshest signal of what Stellar
   // has been doing. The pitch vision: report attempts like a junior engineer.
@@ -186,7 +199,26 @@ function formatRelative(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export function EventModal({ notification, allNotifications, pendingActions, solveStatus, onClose, onAction }: EventModalProps) {
+export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves, onClose, onAction }: EventModalProps) {
+  // Solve-derived attempt count for this workload. Mirrors the badge on the
+  // card so the modal's header agrees with the list view.
+  const solveAttemptCount = useMemo(
+    () => countSolveAttempts(notification, solves || []),
+    [notification, solves],
+  )
+
+  // Solve rows for this workload — render alongside the legacy auto-fix
+  // notifications so the modal shows the same attempt history the card hints
+  // at. Workload-matching mirrors countSolveAttempts.
+  const workloadSolves = useMemo<StellarSolve[]>(() => {
+    if (!solves || solves.length === 0) return []
+    const clusterKey = (notification.cluster || '').toLowerCase()
+    const nsKey = (notification.namespace || '').toLowerCase()
+    return solves
+      .filter(s => s.cluster.toLowerCase() === clusterKey && s.namespace.toLowerCase() === nsKey)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  }, [solves, notification.cluster, notification.namespace])
+
   // Find related events: same dedupeKey, excluding self
   const related = useMemo(() => {
     if (!notification.dedupeKey) return []
@@ -244,7 +276,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   }, [allNotifications, notification.dedupeKey])
 
   const tags = deriveTags(notification, related)
-  const narration = deriveNarration(notification, related, matchedPending, completedAction, stellarAttempts, solveStatus ?? null)
+  const narration = deriveNarration(notification, related, matchedPending, completedAction, stellarAttempts, solveStatus ?? null, solveAttemptCount)
   const recommendations = deriveRecommendations(notification)
   const color = severityColor(notification.severity)
   const resourceName = extractResourceName(notification)
@@ -310,6 +342,17 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
                 border: `1px solid ${tag === notification.severity ? color : 'var(--s-border)'}`,
               }}>{tag}</span>
             ))}
+            {solveAttemptCount > 0 && (
+              <span style={{
+                fontSize: 10, fontFamily: 'var(--s-mono)',
+                padding: '2px 6px', borderRadius: 10,
+                background: 'rgba(56,139,253,0.12)',
+                color: 'var(--s-info)',
+                border: '1px solid var(--s-info)',
+              }} title="Number of times Stellar has tried to auto-solve this workload">
+                ✦ Stellar tried {solveAttemptCount}×
+              </span>
+            )}
           </div>
         </div>
 
@@ -319,7 +362,51 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
           <Section title="Why it happened">{narration.whyItHappened}</Section>
           <Section title="What we're doing">{narration.whatWereDoing}</Section>
 
-          {stellarAttempts.length > 0 && (
+          {workloadSolves.length > 0 && (
+            <>
+              <SectionHeader title={`Stellar's attempts (${workloadSolves.length})`} />
+              <div style={{ marginBottom: 12 }}>
+                {workloadSolves.slice(0, 5).map(s => {
+                  const outcomeColor =
+                    s.status === 'resolved' ? 'var(--s-success)' :
+                    s.status === 'running' ? 'var(--s-info)' :
+                    'var(--s-critical)'
+                  const outcomeLabel =
+                    s.status === 'resolved' ? '✓ resolved' :
+                    s.status === 'running' ? '▶ running' :
+                    s.status === 'escalated' ? '⚠ escalated' :
+                    s.status === 'exhausted' ? '⏸ paused' :
+                    s.status
+                  return (
+                    <div key={s.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '6px 10px', fontSize: 11,
+                      borderLeft: `2px solid ${outcomeColor}`,
+                      background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
+                      marginBottom: 3,
+                    }}>
+                      <span style={{ fontFamily: 'var(--s-mono)', color: outcomeColor, minWidth: 86 }}>
+                        {outcomeLabel}
+                      </span>
+                      <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', minWidth: 60 }}>
+                        {formatRelative(s.startedAt)}
+                      </span>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {s.workload || s.namespace}
+                        {s.actionsTaken > 0 && (
+                          <span style={{ color: 'var(--s-text-dim)', marginLeft: 6 }}>
+                            · {s.actionsTaken} action{s.actionsTaken === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {stellarAttempts.length > 0 && workloadSolves.length === 0 && (
             <>
               <SectionHeader title={`Stellar's attempts (${stellarAttempts.length})`} />
               <div style={{ marginBottom: 12 }}>

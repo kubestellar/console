@@ -282,7 +282,15 @@ func (o *Observer) generateNudges(ctx context.Context, userIDs []string) {
 		count++
 	}
 
-	resolved := o.registry.Resolve("", "", nil)
+	// Use the first user's saved provider for this cross-cutting nudge. Most
+	// console setups have a single primary operator; multi-tenant deployments
+	// already serialize nudges per-user via the iteration below, so picking
+	// the first userID's provider is the simplest correct choice.
+	primaryUser := ""
+	if len(userIDs) > 0 {
+		primaryUser = userIDs[0]
+	}
+	resolved := o.resolveProviderForUser(ctx, primaryUser)
 	if resolved.Provider == nil {
 		return
 	}
@@ -448,9 +456,11 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 
 	contextPayload := buildObserverContext(tasks, events, observations) + liveEvents.String() + memoryContext.String()
 	
-	// Fix #2: Use registry.Resolve with empty strings to use default provider
-	// The registry will use the first available provider from the global registry
-	resolved := o.registry.Resolve("", "", nil)
+	// Prefer the user's saved provider (set via the Stellar provider UI)
+	// before falling back to the global registry default. Without this, users
+	// who picked Anthropic in the UI saw "ollama connection refused" warnings
+	// in the log because the observer was using the env-level default.
+	resolved := o.resolveProviderForUser(ctx, userID)
 	if resolved.Provider == nil {
 		return
 	}
@@ -567,8 +577,10 @@ func (o *Observer) checkWatch(ctx context.Context, w store.StellarWatch) {
 		w.Cluster, w.Namespace, w.ResourceKind, w.ResourceName,
 		w.Reason, resourceState)
 
-	// 3. Call LLM (low temp, fast model, max 150 tokens)
-	resolved := o.registry.Resolve("", "", nil)
+	// 3. Call LLM (low temp, fast model, max 150 tokens) — using the watch
+	//    owner's saved provider so user-level Anthropic/OpenAI configs work
+	//    even without env-var fallbacks.
+	resolved := o.resolveProviderForUser(ctx, w.UserID)
 	if resolved.Provider == nil {
 		return
 	}

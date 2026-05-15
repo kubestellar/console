@@ -50,6 +50,10 @@ interface EventsPanelProps {
   solves?: StellarSolve[]
   solveProgress?: Record<string, StellarSolveProgress>
   startSolve?: (eventID: string) => Promise<unknown>
+  /** Optional controlled detail modal — when provided, the StellarPage owns
+   *  the modal state so the activity log can open the same modal. */
+  detailNotification?: StellarNotification | null
+  setDetailNotification?: (n: StellarNotification | null) => void
   onRollback?: (prompt: string) => void
   onAction?: (prompt: string, action?: PendingAction) => void
 }
@@ -64,11 +68,17 @@ export function EventsPanel({
   solves = [],
   solveProgress = {},
   startSolve,
+  detailNotification: detailNotificationProp,
+  setDetailNotification: setDetailNotificationProp,
   onRollback,
   onAction,
 }: EventsPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [detailNotification, setDetailNotification] = useState<StellarNotification | null>(null)
+  // Allow the parent (StellarPage) to control the modal so the activity log
+  // can also open it. Fall back to internal state when uncontrolled.
+  const [detailLocal, setDetailLocal] = useState<StellarNotification | null>(null)
+  const detailNotification = detailNotificationProp !== undefined ? detailNotificationProp : detailLocal
+  const setDetailNotification = setDetailNotificationProp ?? setDetailLocal
 
   // Pull the latest digest notification (if any) so we can pin it at the top.
   const digest = useMemo(() => {
@@ -348,6 +358,7 @@ export function EventsPanel({
           allNotifications={notifications}
           pendingActions={pendingActions}
           solveStatus={getSolveStatus(detailNotification, solves, solveProgress)}
+          solves={solves}
           onClose={() => setDetailNotification(null)}
           onAction={onAction}
         />

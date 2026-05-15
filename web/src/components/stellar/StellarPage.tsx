@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import type { StellarNotification } from '../../types/stellar'
 import { useStellar } from '../../hooks/useStellar'
 import { EventsPanel } from './EventsPanel'
 import type { PendingAction } from './EventCard'
@@ -18,6 +19,7 @@ export function StellarPage() {
   const [tasksExpanded, setTasksExpanded] = useState(true)
   const [chatInput, setChatInput] = useState('')
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [detailNotification, setDetailNotification] = useState<StellarNotification | null>(null)
   const {
     isConnected,
     unreadCount,
@@ -92,7 +94,13 @@ export function StellarPage() {
           />
         </div>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <StellarActivityPanel activity={activity} />
+          <StellarActivityPanel
+            activity={activity}
+            onOpenEvent={useCallback((eventId: string) => {
+              const found = (notifications || []).find(n => n.id === eventId)
+              if (found) setDetailNotification(found)
+            }, [notifications])}
+          />
           <RecommendedTasksPanel createTask={createTask} />
           <WatchesPanel
             watches={watches}
@@ -129,6 +137,8 @@ export function StellarPage() {
           solves={solves}
           solveProgress={solveProgress}
           startSolve={startSolve}
+          detailNotification={detailNotification}
+          setDetailNotification={setDetailNotification}
           onRollback={(prompt) => { setChatInput(prompt); setPendingAction(null) }}
           onAction={(prompt, action) => {
             setChatInput(prompt)
