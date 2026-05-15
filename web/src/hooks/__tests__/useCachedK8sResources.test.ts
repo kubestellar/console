@@ -28,9 +28,10 @@ vi.mock('../../lib/api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))
 
-vi.mock('../../lib/constants/network', () => ({
-    createCachedHook: vi.fn(),
+vi.mock('../../lib/constants/network', async (importOriginal) => ({
+  ...(await importOriginal() as Record<string, unknown>),
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
+  MCP_HOOK_TIMEOUT_MS: 5000,
 }))
 
 vi.mock('../useCachedData/demoData', () => ({
