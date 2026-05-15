@@ -737,6 +737,9 @@ test.describe('Dashboard Live Card Data Validation', () => {
 // that sets kc-demo-mode=false, eliminating the race.
 test.describe('Dashboard Data Accuracy (#6459)', () => {
   const EXPECTED_CLUSTER_COUNT = 3
+  const EXPECTED_HEALTHY_CLUSTER_COUNT = 3
+  const EXPECTED_TOTAL_NODES = 6
+  const EXPECTED_TOTAL_PODS = 30
 
   test.beforeEach(async ({ page }) => {
     // Catch-all mock (includes targeted /api/active-users response to prevent
@@ -936,5 +939,66 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     await expect(clusterHealthCard).toContainText(injectedClusterName, {
       timeout: DASHBOARD_CARD_TIMEOUT_MS,
     })
+  })
+
+  test('stat blocks display deterministic totals from mocked cluster payload (#13825)', async ({ page }) => {
+    const STAT_BLOCK_TIMEOUT_MS = 20_000
+    const dashboardClustersApiPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
+    )
+
+    await navigateToDashboard(page)
+    await dashboardClustersApiPromise
+
+    await expect(page.getByTestId('stat-block-clusters').first()).toContainText(
+      new RegExp(String.raw`(?<!\d)${EXPECTED_CLUSTER_COUNT}(?!\d)`),
+      { timeout: STAT_BLOCK_TIMEOUT_MS },
+    )
+    await expect(page.getByTestId('stat-block-healthy').first()).toContainText(
+      new RegExp(String.raw`(?<!\d)${EXPECTED_HEALTHY_CLUSTER_COUNT}(?!\d)`),
+      { timeout: STAT_BLOCK_TIMEOUT_MS },
+    )
+    await expect(page.getByTestId('stat-block-nodes').first()).toContainText(
+      new RegExp(String.raw`(?<!\d)${EXPECTED_TOTAL_NODES}(?!\d)`),
+      { timeout: STAT_BLOCK_TIMEOUT_MS },
+    )
+    await expect(page.getByTestId('stat-block-pods').first()).toContainText(
+      new RegExp(String.raw`(?<!\d)${EXPECTED_TOTAL_PODS}(?!\d)`),
+      { timeout: STAT_BLOCK_TIMEOUT_MS },
+    )
+  })
+
+  test('clusters stat drill-down destination reflects displayed stat count (#13825)', async ({ page }) => {
+    const STAT_BLOCK_TIMEOUT_MS = 20_000
+    const DIALOG_TIMEOUT_MS = 10_000
+    const clustersApiPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
+    )
+
+    await navigateToDashboard(page)
+    await clustersApiPromise
+
+    const clustersStatBlock = page.getByTestId('stat-block-clusters').first()
+    await expect(clustersStatBlock).toContainText(
+      new RegExp(String.raw`(?<!\d)${EXPECTED_CLUSTER_COUNT}(?!\d)`),
+      { timeout: STAT_BLOCK_TIMEOUT_MS },
+    )
+
+    await clustersStatBlock.click()
+
+    const drilldownModal = page.getByTestId('drilldown-modal')
+    const openedDrilldown = await drilldownModal
+      .isVisible({ timeout: DIALOG_TIMEOUT_MS })
+      .catch(() => false)
+    const navigatedToClusters = /\/clusters(?:\?.*)?$/.test(page.url())
+
+    expect(openedDrilldown || navigatedToClusters).toBe(true)
+
+    if (navigatedToClusters) {
+      const clusterRows = page.locator('[data-testid^="cluster-row-"]')
+      await expect(clusterRows).toHaveCount(EXPECTED_CLUSTER_COUNT, {
+        timeout: STAT_BLOCK_TIMEOUT_MS,
+      })
+    }
   })
 })
