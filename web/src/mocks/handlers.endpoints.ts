@@ -337,6 +337,18 @@ export function createHandlers() {
   http.all('/nvidia-operators', () => passthrough()),
   http.all('/nvidia-operators/stream', () => passthrough()),
 
+  // AI Bug Sweep / State Resilience Quality metrics
+  http.get('**/predictions/stats', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      totalPredictions: 1418,
+      accurateFeedback: 12,
+      inaccurateFeedback: 4,
+      accuracyRate: 0.94,
+      progressPct: '15%'
+    })
+  }),
+
   // Security issues
   http.get('/api/mcp/security-issues', async () => {
     await delay(150)
