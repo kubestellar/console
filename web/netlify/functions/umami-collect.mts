@@ -10,8 +10,12 @@
 
 import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
+import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
+const RATE_LIMIT_STORE_NAME = "umami-collect-rate-limit"
+const UMAMI_RATE_LIMIT_MAX_REQUESTS = 500
+const UMAMI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 
 /**
  * Hosts allowed via Referer fallback when Origin is absent. Keep
@@ -67,7 +71,22 @@ export default async (req: Request) => {
   const clientIp =
     req.headers.get("x-nf-client-connection-ip") ||
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    ""
+    "unknown"
+  if (req.method === "POST") {
+    const rate = await enforceSimpleRateLimit({
+      storeName: RATE_LIMIT_STORE_NAME,
+      prefix: "umami-collect:",
+      subject: clientIp,
+      maxRequests: UMAMI_RATE_LIMIT_MAX_REQUESTS,
+      windowMs: UMAMI_RATE_LIMIT_WINDOW_MS,
+    })
+    if (rate.limited) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded", retryAfter: rate.retryAfterSeconds }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+  }
 
   try {
     const body = await req.text()
@@ -77,7 +96,7 @@ export default async (req: Request) => {
       headers: {
         "Content-Type": "application/json",
         "User-Agent": req.headers.get("user-agent") || "",
-        ...(clientIp && { "X-Forwarded-For": clientIp }),
+        ...(clientIp !== "unknown" && { "X-Forwarded-For": clientIp }),
       },
       body,
       signal: AbortSignal.timeout(10_000),

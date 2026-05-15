@@ -47,6 +47,7 @@
 
 import { createPrivateKey, createSign } from "node:crypto";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const GITHUB_API = "https://api.github.com";
 /** Only issues on these repos may be created via the proxy. */
@@ -62,6 +63,12 @@ const APP_JWT_SKEW_SEC = 60;
 const INSTALL_TOKEN_TTL_MS = 55 * 60 * 1000;
 /** HTTP timeout for GitHub API calls. */
 const GH_TIMEOUT_MS = 20_000;
+/** Feedback-app rate limiting lives in a separate blob store. */
+const RATE_LIMIT_STORE_NAME = "feedback-app-rate-limit";
+/** Maximum POST mutations per authenticated user per day. */
+const FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS = 50;
+/** Rate-limit window for feedback POSTs (24h). */
+const FEEDBACK_APP_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** Non-obvious header name for the per-user client credential. */
 const CLIENT_AUTH_HEADER = "x-kc-client-auth";
 
@@ -380,6 +387,26 @@ export default async function handler(request: Request): Promise<Response> {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[feedback-app] Client auth failed:", msg);
     return jsonResponse(request, 401, { error: "Client authentication failed" });
+  }
+
+  if (request.method === "POST") {
+    const clientIp =
+      request.headers.get("x-nf-client-connection-ip") ??
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "unknown";
+    const rate = await enforceSimpleRateLimit({
+      storeName: RATE_LIMIT_STORE_NAME,
+      prefix: "feedback-app:",
+      subject: String(user.id || clientIp),
+      maxRequests: FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS,
+      windowMs: FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
+    });
+    if (rate.limited) {
+      return jsonResponse(request, 429, {
+        error: "Rate limit exceeded",
+        retryAfter: rate.retryAfterSeconds,
+      });
+    }
   }
 
   if (request.method === "GET" || mode === "capabilities") {

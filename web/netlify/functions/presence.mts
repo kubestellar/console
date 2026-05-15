@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const ALLOWED_HOSTS = new Set([
   "console.kubestellar.io",
@@ -24,6 +25,17 @@ const SESSION_PREFIX = "session-";
 const SESSION_TTL_MS = 90_000; // 90 seconds — sessions expire if no heartbeat
 const MAX_SESSION_ID_LEN = 64;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const PRESENCE_RATE_LIMIT_MAX_REQUESTS = 120;
+const PRESENCE_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+function isValidSessionId(sessionId: unknown): sessionId is string {
+  return (
+    typeof sessionId === "string" &&
+    sessionId.length > 0 &&
+    sessionId.length <= MAX_SESSION_ID_LEN &&
+    SESSION_ID_PATTERN.test(sessionId)
+  );
+}
 
 export default async (req: Request) => {
   const store = getStore(STORE_NAME);
@@ -47,19 +59,36 @@ export default async (req: Request) => {
   // POST = heartbeat (register or refresh a session)
   // Each session gets its own blob key — no read-modify-write race
   if (req.method === "POST") {
+    let sessionId: string | undefined;
     try {
       const body = await req.json();
-      const sessionId = body.sessionId;
-      if (
-        typeof sessionId === "string" &&
-        sessionId.length > 0 &&
-        sessionId.length <= MAX_SESSION_ID_LEN &&
-        SESSION_ID_PATTERN.test(sessionId)
-      ) {
-        await store.set(`${SESSION_PREFIX}${sessionId}`, String(now));
+      if (isValidSessionId(body.sessionId)) {
+        sessionId = body.sessionId;
       }
     } catch {
       // Ignore malformed bodies
+    }
+
+    const clientIp =
+      req.headers.get("x-nf-client-connection-ip") ??
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "unknown";
+    const rate = await enforceSimpleRateLimit({
+      storeName: STORE_NAME,
+      prefix: "presence:",
+      subject: sessionId ?? clientIp,
+      maxRequests: PRESENCE_RATE_LIMIT_MAX_REQUESTS,
+      windowMs: PRESENCE_RATE_LIMIT_WINDOW_MS,
+    });
+    if (rate.limited) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded", retryAfter: rate.retryAfterSeconds }),
+        { status: 429, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (sessionId) {
+      await store.set(`${SESSION_PREFIX}${sessionId}`, String(now));
     }
   }
 

@@ -12,12 +12,16 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const ALLOWED_HOSTS = new Set([
   "console.kubestellar.io",
   "localhost",
   "127.0.0.1",
 ]);
+const RATE_LIMIT_STORE_NAME = "analytics-collect-rate-limit";
+const ANALYTICS_RATE_LIMIT_MAX_REQUESTS = 500;
+const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 function getAllowedCorsOrigin(origin: string): string {
   if (!origin) return "https://console.kubestellar.io";
@@ -68,6 +72,26 @@ export default async (req: Request) => {
     return new Response("Forbidden", { status: 403, headers: corsHeaders });
   }
 
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
+  if (req.method === "POST") {
+    const rate = await enforceSimpleRateLimit({
+      storeName: RATE_LIMIT_STORE_NAME,
+      prefix: "analytics-collect:",
+      subject: clientIp,
+      maxRequests: ANALYTICS_RATE_LIMIT_MAX_REQUESTS,
+      windowMs: ANALYTICS_RATE_LIMIT_WINDOW_MS,
+    });
+    if (rate.limited) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded", retryAfter: rate.retryAfterSeconds }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const realMeasurementId = Netlify.env.get("GA4_REAL_MEASUREMENT_ID") || process.env.GA4_REAL_MEASUREMENT_ID;
   const url = new URL(req.url);
 
@@ -92,11 +116,7 @@ export default async (req: Request) => {
   }
 
   // Forward user's real IP so GA4 geolocates correctly
-  const clientIp =
-    req.headers.get("x-nf-client-connection-ip") ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "";
-  if (clientIp) {
+  if (clientIp !== "unknown") {
     gaParams.set("_uip", clientIp);
   }
 
