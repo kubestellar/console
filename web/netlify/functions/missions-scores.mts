@@ -13,6 +13,11 @@ const GITHUB_RAW_URL = "https://raw.githubusercontent.com";
 const KB_REPO = "kubestellar/console-kb";
 const DEFAULT_REF = "master";
 
+/** Default number of scores per page when no limit is specified. */
+const DEFAULT_PAGE_LIMIT = 50;
+/** Maximum allowed limit to prevent abusive payloads. */
+const MAX_PAGE_LIMIT = 200;
+
 /** Maximum response size (10MB) */
 const MAX_BODY_BYTES = 10 * 1024 * 1024;
 /** Request timeout in milliseconds */
@@ -179,7 +184,21 @@ export default async (request: Request): Promise<Response> => {
           });
         }
       }
-      return jsonResponse(corsHeaders, { count: results.length, scores: results }, 200, servedFromCache ? "HIT" : "MISS");
+
+      const limit = Math.min(
+        Math.max(1, parseInt(url.searchParams.get("limit") || String(DEFAULT_PAGE_LIMIT), 10) || DEFAULT_PAGE_LIMIT),
+        MAX_PAGE_LIMIT
+      );
+      const offset = Math.max(0, parseInt(url.searchParams.get("offset") || "0", 10) || 0);
+      const page = results.slice(offset, offset + limit);
+
+      return jsonResponse(corsHeaders, {
+        count: results.length,
+        scores: page,
+        hasMore: offset + limit < results.length,
+        limit,
+        offset,
+      }, 200, servedFromCache ? "HIT" : "MISS");
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";

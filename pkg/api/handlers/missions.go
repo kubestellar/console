@@ -115,6 +115,10 @@ var missionsDefaultShareRepos = []string{
 // extend the built-in share-repo allowlist at runtime without a code change.
 const allowedShareRepoEnvVar = "KC_ALLOWED_SHARE_REPOS"
 
+// Pagination defaults for GET /api/missions/scores
+const defaultScoresPageLimit = 50
+const maxScoresPageLimit = 200
+
 // resolveAllowedShareRepos returns the effective allowlist of `owner/repo`
 // destinations for ShareToGitHub. The built-in defaults are always included;
 // any entries from KC_ALLOWED_SHARE_REPOS are appended. Empty/whitespace
@@ -956,7 +960,7 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 }
 
 // GetKBScores fetches scores across projects
-// GET /api/missions/scores
+// GET /api/missions/scores?limit=N&offset=M
 func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
 	if isDemoMode(c) {
 		return c.JSON(fiber.Map{"count": 1, "scores": []fiber.Map{
@@ -967,7 +971,7 @@ func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
 				"qualityScore": 85,
 				"qualityPass":  true,
 			},
-		}})
+		}, "hasMore": false, "limit": defaultScoresPageLimit, "offset": 0})
 	}
 	index, err := h.fetchMissionIndex(c)
 	if err != nil {
@@ -993,7 +997,34 @@ func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON(fiber.Map{"count": len(results), "scores": results})
+	limit := c.QueryInt("limit", defaultScoresPageLimit)
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > maxScoresPageLimit {
+		limit = maxScoresPageLimit
+	}
+	offset := c.QueryInt("offset", 0)
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(results) {
+		offset = len(results)
+	}
+
+	end := offset + limit
+	if end > len(results) {
+		end = len(results)
+	}
+	page := results[offset:end]
+
+	return c.JSON(fiber.Map{
+		"count":   len(results),
+		"scores":  page,
+		"hasMore": end < len(results),
+		"limit":   limit,
+		"offset":  offset,
+	})
 }
 
 // GetMissionScore fetches score breakdown for a specific entry
