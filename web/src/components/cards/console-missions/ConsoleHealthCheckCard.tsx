@@ -20,7 +20,7 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { issues: allPodIssues, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
   const { issues: allDeploymentIssues, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
-  const { drillToCluster, drillToPod, drillToAllClusters } = useDrillDownActions()
+  const { drillToAllClusters, drillToCluster, drillToPod } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -129,10 +129,9 @@ Please provide:
 
   const handleStartHealthCheck = () => checkKeyAndRun(doStartHealthCheck)
 
-  // Calculate health score from visible cluster counts so the horseshoe
-  // percentage matches the healthy/total clusters shown in this card.
+  // Health percentage mirrors the visible healthy/total cluster counts.
   const healthScore = clusters.length > 0
-    ? (healthyClusters / clusters.length) * 100
+    ? Math.round((healthyClusters / clusters.length) * 100)
     : 0
 
   // Gauge size tuned so the card + stats + issues + button all fit the
@@ -169,9 +168,7 @@ Please provide:
             "p-2 rounded bg-green-500/10",
             healthyClusters > 0 && "cursor-pointer hover:bg-green-500/20 transition-colors"
           )}
-          onClick={() => {
-            if (healthyClusters > 0) drillToAllClusters('healthy')
-          }}
+          onClick={() => healthyClusters > 0 && drillToAllClusters('healthy')}
           title={t('healthCheck.healthyClusterTooltip', { count: healthyClusters })}
         >
           <div className="text-lg font-bold text-green-400">{healthyClusters}</div>
@@ -182,9 +179,7 @@ Please provide:
             "p-2 rounded bg-red-500/10",
             unhealthyClusters > 0 && "cursor-pointer hover:bg-red-500/20 transition-colors"
           )}
-          onClick={() => {
-            if (unhealthyClusters > 0) drillToAllClusters('unhealthy')
-          }}
+          onClick={() => unhealthyClusters > 0 && drillToAllClusters('unhealthy')}
           title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
         >
           <div className="text-lg font-bold text-red-400">{unhealthyClusters}</div>
