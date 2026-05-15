@@ -95,6 +95,16 @@ type Input struct {
 	Reason    string // event reason, for narration
 }
 
+// marshalTriggerData produces a JSON string for TriggerData safely via
+// json.Marshal, avoiding injection through user-influenced values.
+func marshalTriggerData(solveID, actionType string) string {
+	b, _ := json.Marshal(map[string]string{
+		"solveId":    solveID,
+		"actionType": actionType,
+	})
+	return string(b)
+}
+
 // SolveLoop drives one solve attempt to completion. Blocking — meant to be
 // called inside its own goroutine by the handler.
 func SolveLoop(
@@ -243,7 +253,7 @@ func dispatchAction(
 		UserID:      input.UserID,
 		MissionID:   "solver",
 		TriggerType: "solve",
-		TriggerData: fmt.Sprintf(`{"solveId":"%s","actionType":"%s"}`, input.SolveID, actionType),
+		TriggerData: marshalTriggerData(input.SolveID, actionType),
 		Status:      status,
 		RawInput:    fmt.Sprintf("Action %s on %s/%s/%s", actionType, input.Cluster, input.Namespace, name),
 		Output:      outcome,

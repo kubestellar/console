@@ -104,13 +104,13 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 			_ = s.store.IncrementRetry(ctx, a.ID)
 			return
 		}
-		_ = s.store.UpdateStellarActionStatus(ctx, a.ID, "failed", "", err.Error())
+		_ = s.store.UpdateStellarActionStatus(ctx, a.ID, "failed", "", sanitizeError(err))
 		_ = s.store.CreateStellarNotification(ctx, &store.StellarNotification{
 			UserID:   a.UserID,
 			Type:     "action",
 			Severity: "warning",
 			Title:    "Scheduled action failed: " + a.Description,
-			Body:     fmt.Sprintf("Action on cluster %s failed: %s", a.Cluster, err.Error()),
+			Body:     fmt.Sprintf("Action on cluster %s failed: %s", a.Cluster, sanitizeError(err)),
 			Cluster:  a.Cluster,
 		})
 		_ = s.store.CreateStellarMemoryEntry(ctx, &store.StellarMemoryEntry{
@@ -118,7 +118,7 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 			Cluster:    a.Cluster,
 			Namespace:  a.Namespace,
 			Category:   "action",
-			Summary:    "Failed action: " + a.Description + " — " + err.Error(),
+			Summary:    "Failed action: " + a.Description + " — " + sanitizeError(err),
 			Importance: 7,
 			ExpiresAt:  ptr(time.Now().AddDate(0, 0, 60)),
 		})
@@ -145,6 +145,26 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// sanitizeError returns a generic message for errors that may contain sensitive
+// Kubernetes cluster details (server addresses, internal paths). Only known safe
+// prefixes are passed through verbatim.
+func sanitizeError(err error) string {
+	msg := err.Error()
+	safePrefixes := []string{"context deadline exceeded", "context canceled", "not found", "forbidden", "unauthorized"}
+	lower := strings.ToLower(msg)
+	for _, p := range safePrefixes {
+		if strings.HasPrefix(lower, p) {
+			return msg
+		}
+	}
+	// Truncate to avoid leaking long stack traces or server URLs.
+	const maxLen = 120
+	if len(msg) > maxLen {
+		msg = msg[:maxLen] + "…"
+	}
+	return msg
+}
 
 // ─── Sprint 5: Scheduled digest ───────────────────────────────────────────────
 
