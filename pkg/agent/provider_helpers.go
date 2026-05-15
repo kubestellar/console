@@ -9,6 +9,10 @@ import (
 
 const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API calls
 
+// cliProviderExecutionTimeout bounds standalone CLI-based providers when the
+// caller has not already attached a deadline.
+const cliProviderExecutionTimeout = 5 * time.Minute
+
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
 var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}

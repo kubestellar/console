@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // CodexProvider implements the AIProvider interface for OpenAI Codex CLI
@@ -96,14 +99,19 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 		return nil, fmt.Errorf("codex CLI not found")
 	}
 
-	prompt := buildPromptWithHistoryGeneric(req)
+	toolStatus := CheckToolDependencies()
+	toolAwareReq := withToolAvailabilityContext(req, toolStatus)
+	prompt := buildPromptWithHistoryGeneric(toolAwareReq)
 
-	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cliProviderExecutionTimeout)
+		defer cancel()
+	}
 
 	// exec subcommand: non-interactive mode for codex
 	// --full-auto: allow tool execution without confirmation
-	cmd := exec.CommandContext(execCtx, c.cliPath, "exec", "--full-auto", prompt)
+	cmd := execCommandContext(ctx, c.cliPath, "exec", "--full-auto", prompt)
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
@@ -112,9 +120,23 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start codex: %w", err)
 	}
+
+	var stderrBuf strings.Builder
+	stderrDone := make(chan struct{})
+	safego.GoWith("codex-stream", func() {
+		defer close(stderrDone)
+		if _, copyErr := io.Copy(&stderrBuf, stderr); copyErr != nil {
+			slog.Error("[Codex] error reading stderr", "error", copyErr)
+		}
+	})
 
 	var fullResponse strings.Builder
 	scanner := bufio.NewScanner(stdout)
@@ -128,8 +150,21 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 		}
 	}
 
-	if err := cmd.Wait(); err != nil {
-		slog.Error("[Codex] command finished with error", "error", err)
+	if scanErr := scanner.Err(); scanErr != nil {
+		slog.Error("[Codex] scanner error reading stdout", "error", scanErr)
+	}
+
+	<-stderrDone
+
+	if waitErr := cmd.Wait(); waitErr != nil {
+		if fullResponse.Len() == 0 {
+			stderrStr := strings.TrimSpace(stderrBuf.String())
+			if stderrStr != "" {
+				return nil, fmt.Errorf("codex exited with error: %w; stderr: %s", waitErr, stderrStr)
+			}
+			return nil, fmt.Errorf("codex exited with error: %w", waitErr)
+		}
+		slog.Error("[Codex] command finished with error", "error", waitErr)
 	}
 
 	return &ChatResponse{

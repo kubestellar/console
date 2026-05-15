@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // GeminiCLIProvider implements the AIProvider interface for Google Gemini CLI
@@ -94,12 +97,17 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 		return nil, fmt.Errorf("gemini CLI not found")
 	}
 
-	prompt := buildPromptWithHistoryGeneric(req)
+	toolStatus := CheckToolDependencies()
+	toolAwareReq := withToolAvailabilityContext(req, toolStatus)
+	prompt := buildPromptWithHistoryGeneric(toolAwareReq)
 
-	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cliProviderExecutionTimeout)
+		defer cancel()
+	}
 
-	cmd := exec.CommandContext(execCtx, g.cliPath, "-p", prompt)
+	cmd := execCommandContext(ctx, g.cliPath, "-p", prompt, "--approval-mode=yolo")
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
@@ -108,9 +116,23 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start gemini: %w", err)
 	}
+
+	var stderrBuf strings.Builder
+	stderrDone := make(chan struct{})
+	safego.GoWith("gemini-cli-stream", func() {
+		defer close(stderrDone)
+		if _, copyErr := io.Copy(&stderrBuf, stderr); copyErr != nil {
+			slog.Error("[GeminiCLI] error reading stderr", "error", copyErr)
+		}
+	})
 
 	var fullResponse strings.Builder
 	scanner := bufio.NewScanner(stdout)
@@ -128,8 +150,17 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 		slog.Error("[GeminiCLI] scanner error reading stdout", "error", scanErr)
 	}
 
-	if err := cmd.Wait(); err != nil {
-		slog.Error("[GeminiCLI] command finished with error", "error", err)
+	<-stderrDone
+
+	if waitErr := cmd.Wait(); waitErr != nil {
+		if fullResponse.Len() == 0 {
+			stderrStr := strings.TrimSpace(stderrBuf.String())
+			if stderrStr != "" {
+				return nil, fmt.Errorf("gemini exited with error: %w; stderr: %s", waitErr, stderrStr)
+			}
+			return nil, fmt.Errorf("gemini exited with error: %w", waitErr)
+		}
+		slog.Error("[GeminiCLI] command finished with error", "error", waitErr)
 	}
 
 	content := fullResponse.String()
