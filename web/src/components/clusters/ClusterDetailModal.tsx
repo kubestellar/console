@@ -11,7 +11,7 @@ import { NodeListItem } from './NodeListItem'
 import { NodeDetailPanel } from './NodeDetailPanel'
 import { NamespaceResources } from './components'
 import { CPUDetailModal, MemoryDetailModal, StorageDetailModal, GPUDetailModal } from './ResourceDetailModals'
-import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, getProviderLabel, CloudProvider as CloudProviderType } from '../ui/CloudProviderIcon'
+import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, getProviderLabel, getConsoleUrl, CloudProvider as CloudProviderType } from '../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
@@ -24,53 +24,6 @@ type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | '
 // Prevents indefinite loading when cluster is slow or unreachable
 const MAX_INITIAL_LOADING_MS = 10_000
 const MAX_HEADER_ALIASES = 2
-
-// Get console URL for a specific provider
-function getConsoleUrlForProvider(provider: string, clusterName: string, apiServerUrl?: string): string | null {
-  const serverUrl = apiServerUrl?.toLowerCase() || ''
-
-  switch (provider) {
-    case 'openshift': {
-      // OpenShift: api.xxx -> console-openshift-console.apps.xxx
-      // Handle URLs with or without protocol prefix
-      const apiMatch = apiServerUrl?.match(/(?:https?:\/\/)?api\.([^:/]+)/)
-      if (apiMatch) {
-        return `https://console-openshift-console.apps.${apiMatch[1]}`
-      }
-      return null
-    }
-    case 'eks': {
-      const urlRegionMatch = serverUrl.match(/\.([a-z]{2}-[a-z]+-\d)\.eks\.amazonaws\.com/)
-      const nameRegionMatch = clusterName.match(/(us|eu|ap|sa|ca|me|af)-(north|south|east|west|central|northeast|southeast)-\d/)
-      const region = urlRegionMatch?.[1] || nameRegionMatch?.[0] || 'us-east-1'
-      const shortName = clusterName.split('/').pop() || clusterName
-      return `https://${region}.console.aws.amazon.com/eks/home?region=${region}#/clusters/${shortName}`
-    }
-    case 'gke': {
-      const gkeMatch = clusterName.match(/gke_([^_]+)_([^_]+)_(.+)/)
-      if (gkeMatch) {
-        const [, project, location, gkeName] = gkeMatch
-        return `https://console.cloud.google.com/kubernetes/clusters/details/${location}/${gkeName}?project=${project}`
-      }
-      return 'https://console.cloud.google.com/kubernetes/list/overview'
-    }
-    case 'aks':
-      return 'https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.ContainerService%2FmanagedClusters'
-    case 'oci': {
-      const regionMatch = serverUrl.match(/\.([a-z]+-[a-z]+-\d)\.clusters\.oci/)
-      const region = regionMatch?.[1] || 'us-ashburn-1'
-      return `https://cloud.oracle.com/containers/clusters?region=${region}`
-    }
-    case 'alibaba':
-      return 'https://cs.console.aliyun.com/#/k8s/cluster/list'
-    case 'digitalocean':
-      return 'https://cloud.digitalocean.com/kubernetes/clusters'
-    case 'coreweave':
-      return 'https://cloud.coreweave.com/kubernetes'
-    default:
-      return null
-  }
-}
 
 function getProviderInfo(provider: CloudProvider): { color: string; bgColor: string } {
   switch (provider) {
@@ -342,7 +295,7 @@ After I approve, help me execute the repairs step by step.`,
               const detectedProvider = clusterInfo?.distribution as CloudProviderType ||
                 detectCloudProviderShared(clusterName, serverUrl, clusterInfo?.namespaces, clusterUser)
               // Get console URL based on detected provider
-              const consoleUrl = getConsoleUrlForProvider(detectedProvider, clusterName, serverUrl)
+              const consoleUrl = getConsoleUrl(detectedProvider, clusterName, serverUrl)
               const providerInfo = getProviderInfo(detectedProvider === 'kubernetes' ? 'unknown' : detectedProvider as CloudProvider)
               const providerLabel = getProviderLabel(detectedProvider)
               return (

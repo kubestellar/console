@@ -423,27 +423,29 @@ export function getProviderBorderClass(provider: CloudProvider): string {
 }
 
 // Get console URL for cloud providers
-export function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
+// Canonical implementation — all components should import from here.
+export function getConsoleUrl(provider: CloudProvider | string, clusterName: string, apiServerUrl?: string): string | null {
   const serverUrl = apiServerUrl?.toLowerCase() || ''
 
   switch (provider) {
     case 'eks': {
       const urlRegionMatch = serverUrl.match(/\.([a-z]{2}-[a-z]+-\d)\.eks\.amazonaws\.com/)
-      if (urlRegionMatch) {
-        return `https://${urlRegionMatch[1]}.console.aws.amazon.com/eks/home?region=${urlRegionMatch[1]}#/clusters`
-      }
-      const nameRegionMatch = clusterName.match(/([a-z]{2}-[a-z]+-\d)/)
-      if (nameRegionMatch) {
-        return `https://${nameRegionMatch[1]}.console.aws.amazon.com/eks/home?region=${nameRegionMatch[1]}#/clusters`
-      }
-      return 'https://console.aws.amazon.com/eks/home#/clusters'
+      const nameRegionMatch = clusterName.match(/(us|eu|ap|sa|ca|me|af)-(north|south|east|west|central|northeast|southeast)-\d/)
+      const region = urlRegionMatch?.[1] || nameRegionMatch?.[0] || 'us-east-1'
+      const shortName = clusterName.split('/').pop() || clusterName
+      return `https://${region}.console.aws.amazon.com/eks/home?region=${region}#/clusters/${shortName}`
     }
-    case 'gke':
+    case 'gke': {
+      const gkeMatch = clusterName.match(/gke_([^_]+)_([^_]+)_(.+)/)
+      if (gkeMatch) {
+        const [, project, location, gkeName] = gkeMatch
+        return `https://console.cloud.google.com/kubernetes/clusters/details/${location}/${gkeName}?project=${project}`
+      }
       return 'https://console.cloud.google.com/kubernetes/list/overview'
+    }
     case 'aks':
       return 'https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.ContainerService%2FmanagedClusters'
     case 'openshift': {
-      // Handle URLs with or without protocol prefix
       const apiMatch = apiServerUrl?.match(/(?:https?:\/\/)?api\.([^:/]+)/)
       if (apiMatch) {
         return `https://console-openshift-console.apps.${apiMatch[1]}`
@@ -452,10 +454,8 @@ export function getConsoleUrl(provider: CloudProvider, clusterName: string, apiS
     }
     case 'oci': {
       const regionMatch = serverUrl.match(/\.([a-z]+-[a-z]+-\d)\.clusters\.oci/)
-      if (regionMatch) {
-        return `https://cloud.oracle.com/containers/clusters?region=${regionMatch[1]}`
-      }
-      return 'https://cloud.oracle.com/containers/clusters?region=us-ashburn-1'
+      const region = regionMatch?.[1] || 'us-ashburn-1'
+      return `https://cloud.oracle.com/containers/clusters?region=${region}`
     }
     case 'alibaba':
       return 'https://cs.console.aliyun.com/#/k8s/cluster/list'

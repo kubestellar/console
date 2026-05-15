@@ -10,7 +10,7 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
-import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
+import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getConsoleUrl, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired, isClusterHealthy } from '../clusters/utils'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardDemoState, useCardLoadingState } from './CardDataContext'
@@ -20,49 +20,6 @@ import { useFederationAwareness, getProviderLabel as getFederationProviderLabel,
 import { ROUTES } from '../../config/routes'
 import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { Tooltip } from '../ui/Tooltip'
-
-// Console URL generation for cloud providers
-function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
-  const serverUrl = apiServerUrl?.toLowerCase() || ''
-
-  switch (provider) {
-    case 'eks': {
-      const urlRegionMatch = serverUrl.match(/\.([a-z]{2}-[a-z]+-\d)\.eks\.amazonaws\.com/)
-      const nameRegionMatch = clusterName.match(/(us|eu|ap|sa|ca|me|af)-(north|south|east|west|central|northeast|southeast)-\d/)
-      const region = urlRegionMatch?.[1] || nameRegionMatch?.[0] || 'us-east-1'
-      const shortName = clusterName.split('/').pop() || clusterName
-      return `https://${region}.console.aws.amazon.com/eks/home?region=${region}#/clusters/${shortName}`
-    }
-    case 'gke': {
-      const gkeMatch = clusterName.match(/gke_([^_]+)_([^_]+)_(.+)/)
-      if (gkeMatch) {
-        const [, project, location, gkeName] = gkeMatch
-        return `https://console.cloud.google.com/kubernetes/clusters/details/${location}/${gkeName}?project=${project}`
-      }
-      return 'https://console.cloud.google.com/kubernetes/list/overview'
-    }
-    case 'aks':
-      return 'https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.ContainerService%2FmanagedClusters'
-    case 'openshift': {
-      const apiMatch = apiServerUrl?.match(/https?:\/\/api\.([^:/]+)/)
-      if (apiMatch) {
-        return `https://console-openshift-console.apps.${apiMatch[1]}`
-      }
-      return null
-    }
-    case 'oci': {
-      const regionMatch = serverUrl.match(/\.([a-z]+-[a-z]+-\d)\.clusters\.oci/)
-      const region = regionMatch?.[1] || 'us-ashburn-1'
-      return `https://cloud.oracle.com/containers/clusters?region=${region}`
-    }
-    case 'alibaba':
-      return 'https://cs.console.aliyun.com/#/k8s/cluster/list'
-    case 'digitalocean':
-      return 'https://cloud.digitalocean.com/kubernetes/clusters'
-    default:
-      return null
-  }
-}
 
 type SortByOption = 'status' | 'name' | 'nodes' | 'pods'
 
