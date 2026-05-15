@@ -163,63 +163,67 @@ export function AlertRulesCard() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="mb-3 flex flex-col gap-2 shrink-0 @lg:flex-row @lg:items-start @lg:justify-between">
+        <div className="flex items-start gap-2">
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {t('alertRules.activeCount', { count: enabledCount })}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Plus button */}
-          <button
-            onClick={handleCreateNew}
-            className="p-1 rounded hover:bg-secondary/50 text-purple-400 transition-colors"
-            title={t('alertRules.createNewRule')}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          {/* CardControls */}
-          <CardControlsRow
-            cardControls={{
-              limit: itemsPerPage,
-              onLimitChange: setItemsPerPage,
-              sortBy,
-              sortOptions,
-              onSortChange: (v) => setSortBy(v as SortField),
-              sortDirection,
-              onSortDirectionChange: setSortDirection,
-            }}
-            className="mb-0!"
+        <div className="flex w-full flex-col items-stretch gap-2 @lg:w-auto @lg:min-w-[18rem] @lg:max-w-[20rem] @lg:items-end">
+          <CardSearchInput
+            value={localSearch}
+            onChange={setLocalSearch}
+            placeholder={t('alertRules.searchRules')}
+            className="mb-0 w-full"
           />
+          <div className="flex flex-wrap items-start gap-2 @lg:justify-end">
+            {/* Plus button */}
+            <button
+              onClick={handleCreateNew}
+              className="p-1 rounded hover:bg-secondary/50 text-purple-400 transition-colors"
+              title={t('alertRules.createNewRule')}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            {/* CardControls */}
+            <CardControlsRow
+              cardControls={{
+                limit: itemsPerPage,
+                onLimitChange: setItemsPerPage,
+                sortBy,
+                sortOptions,
+                onSortChange: (v) => setSortBy(v as SortField),
+                sortDirection,
+                onSortDirectionChange: setSortDirection,
+              }}
+              className="mb-0!"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Local Search */}
-      <CardSearchInput
-        value={localSearch}
-        onChange={setLocalSearch}
-        placeholder={t('alertRules.searchRules')}
-        className="mb-2"
-      />
-
       {/* Rules List */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
+      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 min-h-card-content" style={containerStyle}>
         {displayedRules.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
-            <Bell className="w-8 h-8 mb-2" />
-            <span>{t('alertRules.noRulesConfigured')}</span>
-            <Button
-              variant="accent"
-              size="sm"
-              onClick={handleCreateNew}
-              icon={<Plus className="w-3 h-3" />}
-              className="mt-2"
-            >
-              {t('alertRules.createRule')}
-            </Button>
+          <div className="rounded-lg border border-border/50 bg-secondary/10 p-3 text-sm text-muted-foreground">
+            <div className="flex items-start gap-3">
+              <Bell className="mt-0.5 h-5 w-5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">{t('alertRules.noRulesConfigured')}</p>
+                <Button
+                  variant="accent"
+                  size="sm"
+                  onClick={handleCreateNew}
+                  icon={<Plus className="w-3 h-3" />}
+                  className="mt-3"
+                >
+                  {t('alertRules.createRule')}
+                </Button>
+              </div>
+            </div>
           </div>
         ) : (
           displayedRules.map((rule: AlertRule) => (

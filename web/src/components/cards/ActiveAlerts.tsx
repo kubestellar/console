@@ -254,11 +254,11 @@ export function ActiveAlerts() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls — uses @container queries so layout
            responds to card width, not viewport width */}
-      <div className="flex flex-wrap @lg:flex-nowrap items-center justify-between gap-y-2 mb-2 shrink-0">
-        <div className="flex items-center gap-2 @xs:flex-wrap">
+      <div className="mb-3 flex flex-col gap-2 shrink-0 @lg:flex-row @lg:items-start @lg:justify-between">
+        <div className="flex flex-wrap items-start gap-2">
           {stats.firing > 0 && (
             <StatusBadge color="red" variant="outline" rounded="full">
               {t('activeAlerts.firingCount', { count: stats.firing })}
@@ -328,69 +328,72 @@ export function ActiveAlerts() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 @xs:flex-wrap">
-          {/* 1. Ack'd toggle */}
-          <button
-            onClick={() => setShowAcknowledged(!showAcknowledged)}
-            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-              showAcknowledged
-                ? 'bg-green-500/20 border-green-500/30 text-green-400'
-                : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-            }`}
-            title={showAcknowledged ? t('activeAlerts.hideAcknowledged') : t('activeAlerts.showAcknowledged')}
-          >
-            {showAcknowledged ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-            <span>{t('activeAlerts.ackd')}</span>
-            {acknowledgedAlerts.length > 0 && (
-              <StatusBadge color="green" size="xs" rounded="full" className="ml-0.5">
-                {acknowledgedAlerts.length}
-              </StatusBadge>
-            )}
-          </button>
-          {/* 2. Cluster Filter */}
-          <CardClusterFilter
-            availableClusters={availableClustersForFilter}
-            selectedClusters={localClusterFilter}
-            onToggle={toggleClusterFilter}
-            onClear={clearClusterFilter}
-            isOpen={showClusterFilter}
-            setIsOpen={setShowClusterFilter}
-            containerRef={clusterFilterRef}
-            minClusters={1}
+        <div className="flex w-full flex-col items-stretch gap-2 @lg:w-auto @lg:min-w-[18rem] @lg:max-w-[20rem] @lg:items-end">
+          <CardSearchInput
+            value={localSearch}
+            onChange={setLocalSearch}
+            placeholder={t('activeAlerts.searchAlerts')}
+            className="mb-0 w-full"
           />
-          {/* 3. CardControls */}
-          <CardControls
-            limit={itemsPerPage}
-            onLimitChange={setItemsPerPage}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            sortOptions={[
-              { value: 'severity', label: t('activeAlerts.sortSeverity') },
-              { value: 'time', label: t('activeAlerts.sortTime') },
-            ]}
-          />
-          {/* 4. RefreshButton */}
+          <div className="flex flex-wrap items-start gap-2 @lg:justify-end">
+            {/* 1. Ack'd toggle */}
+            <button
+              onClick={() => setShowAcknowledged(!showAcknowledged)}
+              className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
+                showAcknowledged
+                  ? 'bg-green-500/20 border-green-500/30 text-green-400'
+                  : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title={showAcknowledged ? t('activeAlerts.hideAcknowledged') : t('activeAlerts.showAcknowledged')}
+            >
+              {showAcknowledged ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+              <span>{t('activeAlerts.ackd')}</span>
+              {acknowledgedAlerts.length > 0 && (
+                <StatusBadge color="green" size="xs" rounded="full" className="ml-0.5">
+                  {acknowledgedAlerts.length}
+                </StatusBadge>
+              )}
+            </button>
+            {/* 2. Cluster Filter */}
+            <CardClusterFilter
+              availableClusters={availableClustersForFilter}
+              selectedClusters={localClusterFilter}
+              onToggle={toggleClusterFilter}
+              onClear={clearClusterFilter}
+              isOpen={showClusterFilter}
+              setIsOpen={setShowClusterFilter}
+              containerRef={clusterFilterRef}
+              minClusters={1}
+            />
+            {/* 3. CardControls */}
+            <CardControls
+              limit={itemsPerPage}
+              onLimitChange={setItemsPerPage}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              sortOptions={[
+                { value: 'severity', label: t('activeAlerts.sortSeverity') },
+                { value: 'time', label: t('activeAlerts.sortTime') },
+              ]}
+            />
+          </div>
         </div>
       </div>
-
-      {/* Local Search */}
-      <CardSearchInput
-        value={localSearch}
-        onChange={setLocalSearch}
-        placeholder={t('activeAlerts.searchAlerts')}
-        className="mb-2"
-      />
 
       {/* Stats Row */}
       <AlertStatsRow critical={stats.critical} warning={stats.warning} acknowledged={stats.acknowledged} />
 
       {/* Alerts List */}
       {displayedAlerts.length === 0 ? (
-        <div ref={containerRef} className="flex-1 overflow-y-auto" style={containerStyle}>
-          <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
-            <CheckCircle className="w-8 h-8 mb-2 text-green-400" />
-            <span>{t('activeAlerts.noActiveAlerts')}</span>
-            <span className="text-xs">{t('activeAlerts.allSystemsOperational')}</span>
+        <div ref={containerRef} className="flex-1 overflow-y-auto min-h-card-content" style={containerStyle}>
+          <div className="rounded-lg border border-border/50 bg-secondary/10 p-3 text-sm text-muted-foreground">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-400" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">{t('activeAlerts.noActiveAlerts')}</p>
+                <p className="text-xs text-muted-foreground">{t('activeAlerts.allSystemsOperational')}</p>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
