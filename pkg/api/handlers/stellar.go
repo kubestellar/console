@@ -1128,7 +1128,8 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 
 	resolved, err := h.resolveProviderAndModel(c.UserContext(), userID, "", "")
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider resolution failed: " + err.Error()})
+		slog.Error("stellar: provider resolution failed", "error", err, "userID", userID)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider resolution failed"})
 	}
 	if resolved.Provider == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
@@ -1143,7 +1144,8 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 		},
 	})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "digest generation failed: " + err.Error()})
+		slog.Error("stellar: digest generation failed", "error", err, "userID", userID)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "digest generation failed"})
 	}
 	_ = h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
 		UserID:     userID,
@@ -1297,7 +1299,8 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		}
 	}
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider error: " + err.Error()})
+		slog.Error("stellar: AI provider error", "error", err, "userID", userID)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider error"})
 	}
 	if generated == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider returned empty response"})
@@ -1829,7 +1832,8 @@ func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 	}
 	validatedBaseURL, err := validateStellarProviderBaseURL(req.Provider, req.BaseURL)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid baseUrl: " + err.Error()})
+		slog.Warn("stellar: invalid baseUrl", "error", err, "userID", userID, "provider", req.Provider)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid baseUrl"})
 	}
 	upsert, ok := h.store.(interface {
 		UpsertProviderConfig(context.Context, *store.StellarProviderConfig) error
@@ -1841,7 +1845,8 @@ func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 	if strings.TrimSpace(req.APIKey) != "" {
 		enc, err := providers.EncryptAPIKey(strings.TrimSpace(req.APIKey))
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+			slog.Error("stellar: API key encryption failed", "error", err, "userID", userID)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to encrypt API key"})
 		}
 		keyEnc = enc
 	}
