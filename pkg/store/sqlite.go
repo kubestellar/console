@@ -533,6 +533,7 @@ func (s *SQLiteStore) migrate() error {
 		detail TEXT
 	);
 	CREATE INDEX IF NOT EXISTS idx_audit_log_user_time ON audit_log(user_id, timestamp);
+	CREATE INDEX IF NOT EXISTS idx_users_github_login ON users(github_login COLLATE NOCASE);
 
 	-- Cross-cluster event journal (#9967 Phase 1)
 	CREATE TABLE IF NOT EXISTS cluster_events (
