@@ -60,7 +60,10 @@ func (o *OpenAICompatProvider) Health(ctx context.Context) HealthResult {
 		return HealthResult{Available: false, Error: "no API key configured"}
 	}
 	start := time.Now()
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/models", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/models", nil)
+	if err != nil {
+		return HealthResult{Available: false, LatencyMs: int(time.Since(start).Milliseconds()), Error: err.Error()}
+	}
 	req.Header.Set("Authorization", "Bearer "+o.APIKey)
 	resp, err := o.client.Do(req)
 	latency := int(time.Since(start).Milliseconds())

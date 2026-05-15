@@ -268,7 +268,9 @@ func (s *SQLiteStore) ListStellarExecutions(ctx context.Context, userID, mission
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, *exec)
+		if exec != nil {
+			results = append(results, *exec)
+		}
 	}
 	return results, rows.Err()
 }
@@ -340,7 +342,9 @@ func (s *SQLiteStore) ListStellarActions(ctx context.Context, userID, status str
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, *action)
+		if action != nil {
+			results = append(results, *action)
+		}
 	}
 	return results, rows.Err()
 }

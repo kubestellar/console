@@ -14,7 +14,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/stellar/solver"
