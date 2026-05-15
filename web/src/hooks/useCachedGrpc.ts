@@ -11,8 +11,7 @@
  * - showSkeleton / showEmptyState from useCardLoadingState
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -157,72 +156,17 @@ async function fetchGrpcStatus(): Promise<GrpcStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedGrpcResult {
-  data: GrpcStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedGrpcResult = CardCachedHookResult<GrpcStatusData>
 
-export function useCachedGrpc(): UseCachedGrpcResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<GrpcStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: GRPC_DEMO_DATA,
-    persist: true,
-    fetcher: fetchGrpcStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when gRPC services aren't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : data.services.length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export const useCachedGrpc = createCardCachedHook<GrpcStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: GRPC_DEMO_DATA,
+  persist: true,
+  fetcher: fetchGrpcStatus,
+  hasAnyData: data => (data.health === 'not-installed' ? true : data.services.length > 0),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

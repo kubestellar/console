@@ -10,8 +10,7 @@
  * - showSkeleton / showEmptyState from useCardLoadingState
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -208,74 +207,21 @@ async function fetchVolcanoStatus(): Promise<VolcanoStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedVolcanoResult {
-  data: VolcanoStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedVolcanoResult = CardCachedHookResult<VolcanoStatusData>
 
-export function useCachedVolcano(): UseCachedVolcanoResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<VolcanoStatusData>({
-    key: CACHE_KEY,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: VOLCANO_DEMO_DATA,
-    persist: true,
-    fetcher: fetchVolcanoStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when Volcano isn't present.
-  const hasAnyData =
+export const useCachedVolcano = createCardCachedHook<VolcanoStatusData>({
+  key: CACHE_KEY,
+  category: 'default',
+  initialData: INITIAL_DATA,
+  demoData: VOLCANO_DEMO_DATA,
+  persist: true,
+  fetcher: fetchVolcanoStatus,
+  hasAnyData: data => (
     data.health === 'not-installed'
       ? true
       : (data.queues ?? []).length > 0 || (data.jobs ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+  ),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

@@ -12,8 +12,7 @@
  * Source: kubestellar/console-marketplace#35
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -170,72 +169,17 @@ async function fetchCortexStatus(): Promise<CortexStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedCortexResult {
-  data: CortexStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedCortexResult = CardCachedHookResult<CortexStatusData>
 
-export function useCachedCortex(): UseCachedCortexResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<CortexStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: CORTEX_DEMO_DATA,
-    persist: true,
-    fetcher: fetchCortexStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when Cortex isn't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : data.components.length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export const useCachedCortex = createCardCachedHook<CortexStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: CORTEX_DEMO_DATA,
+  persist: true,
+  fetcher: fetchCortexStatus,
+  hasAnyData: data => (data.health === 'not-installed' ? true : data.components.length > 0),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

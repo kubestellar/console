@@ -10,8 +10,7 @@
  * - showSkeleton / showEmptyState from useCardLoadingState
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { authFetch } from '../lib/api'
 import {
@@ -33,7 +32,7 @@ const CACHE_KEY = 'wasmcloud-status'
 // The spec calls for a 'workloads' cache category; the canonical
 // RefreshCategory closest to workload-style refresh cadence is 'deployments'
 // (60s). Cast keeps this in sync if/when a 'workloads' key is added.
-const WASMCLOUD_CACHE_CATEGORY = 'deployments' as RefreshCategory
+const WASMCLOUD_CACHE_CATEGORY = 'deployments'
 const WASMCLOUD_STATUS_ENDPOINT = '/api/wasmcloud/status'
 const DEFAULT_LATTICE_VERSION = 'unknown'
 const DEFAULT_LATTICE_ID = ''
@@ -203,72 +202,17 @@ async function fetchWasmcloudStatus(): Promise<WasmcloudStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedWasmcloudResult {
-  data: WasmcloudStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedWasmcloudResult = CardCachedHookResult<WasmcloudStatusData>
 
-export function useCachedWasmcloud(): UseCachedWasmcloudResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<WasmcloudStatusData>({
-    key: CACHE_KEY,
-    category: WASMCLOUD_CACHE_CATEGORY,
-    initialData: INITIAL_DATA,
-    demoData: WASMCLOUD_DEMO_DATA,
-    persist: true,
-    fetcher: fetchWasmcloudStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when wasmCloud isn't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : (data.hosts ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export const useCachedWasmcloud = createCardCachedHook<WasmcloudStatusData>({
+  key: CACHE_KEY,
+  category: WASMCLOUD_CACHE_CATEGORY,
+  initialData: INITIAL_DATA,
+  demoData: WASMCLOUD_DEMO_DATA,
+  persist: true,
+  fetcher: fetchWasmcloudStatus,
+  hasAnyData: data => (data.health === 'not-installed' ? true : (data.hosts ?? []).length > 0),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

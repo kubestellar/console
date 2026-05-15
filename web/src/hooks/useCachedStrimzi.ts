@@ -5,8 +5,7 @@
  * Domain logic (Kafka cluster health, stats aggregation) remains in pure helpers.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { fetchJson } from '../lib/fetchJson'
 import {
   STRIMZI_DEMO_DATA,
@@ -133,67 +132,17 @@ async function fetchStrimziStatus(): Promise<StrimziStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedStrimziResult {
-  data: StrimziStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedStrimziResult = CardCachedHookResult<StrimziStatusData>
 
-export function useCachedStrimzi(): UseCachedStrimziResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<StrimziStatusData>({
-    key: CACHE_KEY,
-    category: 'realtime',
-    initialData: INITIAL_DATA,
-    demoData: STRIMZI_DEMO_DATA,
-    persist: true,
-    fetcher: fetchStrimziStatus,
-  })
-
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-  const hasAnyData =
-    data.health === 'not-installed' ? true : (data.clusters ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export const useCachedStrimzi = createCardCachedHook<StrimziStatusData>({
+  key: CACHE_KEY,
+  category: 'realtime',
+  initialData: INITIAL_DATA,
+  demoData: STRIMZI_DEMO_DATA,
+  persist: true,
+  fetcher: fetchStrimziStatus,
+  hasAnyData: data => (data.health === 'not-installed' ? true : (data.clusters ?? []).length > 0),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

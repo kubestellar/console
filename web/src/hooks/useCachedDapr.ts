@@ -5,8 +5,7 @@
  * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { fetchJson } from '../lib/fetchJson'
 import {
   DAPR_DEMO_DATA,
@@ -152,69 +151,21 @@ async function fetchDaprStatus(): Promise<DaprStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedDaprResult {
-  data: DaprStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedDaprResult = CardCachedHookResult<DaprStatusData>
 
-export function useCachedDapr(): UseCachedDaprResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<DaprStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: DAPR_DEMO_DATA,
-    persist: true,
-    fetcher: fetchDaprStatus,
-  })
-
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-  const hasAnyData =
+export const useCachedDapr = createCardCachedHook<DaprStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: DAPR_DEMO_DATA,
+  persist: true,
+  fetcher: fetchDaprStatus,
+  hasAnyData: data => (
     data.health === 'not-installed'
       ? true
       : data.controlPlane.length > 0 || data.components.length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+  ),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

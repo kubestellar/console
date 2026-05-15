@@ -5,8 +5,7 @@
  * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
 import { fetchJson } from '../lib/fetchJson'
 import {
   CNI_DEMO_DATA,
@@ -152,67 +151,17 @@ async function fetchCniStatus(): Promise<CniStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedCniResult {
-  data: CniStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export type UseCachedCniResult = CardCachedHookResult<CniStatusData>
 
-export function useCachedCni(): UseCachedCniResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<CniStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: CNI_DEMO_DATA,
-    persist: true,
-    fetcher: fetchCniStatus,
-  })
-
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-  const hasAnyData =
-    data.health === 'not-installed' ? true : (data.nodes ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export const useCachedCni = createCardCachedHook<CniStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: CNI_DEMO_DATA,
+  persist: true,
+  fetcher: fetchCniStatus,
+  hasAnyData: data => (data.health === 'not-installed' ? true : (data.nodes ?? []).length > 0),
+})
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing
