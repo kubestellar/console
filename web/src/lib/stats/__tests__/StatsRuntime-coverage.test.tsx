@@ -12,7 +12,6 @@
  * - hasData=false shows '-' instead of values
  * - collapsible=false disables toggle
  * - showConfigButton visibility
- * - lastUpdated display
  * - defaultCollapsed behavior
  * - hidden blocks (visible=false)
  * - parseStatsYAML stub
@@ -329,7 +328,7 @@ describe('StatsRuntime config button', () => {
 // ============================================================================
 
 describe('StatsRuntime lastUpdated', () => {
-  it('displays lastUpdated timestamp', () => {
+  it('does not display a duplicate timestamp when lastUpdated is provided', () => {
     const def = makeDefinition(1)
     const getStatValue = (): StatBlockValue => ({ value: 1 })
     const date = new Date('2025-01-15T10:30:00')
@@ -342,7 +341,7 @@ describe('StatsRuntime lastUpdated', () => {
       />
     )
 
-    expect(screen.getByText(/Updated/)).toBeInTheDocument()
+    expect(screen.queryByText(/Updated/)).toBeNull()
   })
 
   it('does not display timestamp when lastUpdated is null', () => {

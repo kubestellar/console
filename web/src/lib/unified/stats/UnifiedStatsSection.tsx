@@ -2,7 +2,7 @@
  * UnifiedStatsSection - Container for multiple stat blocks
  *
  * Renders a configurable grid of stat blocks with optional
- * collapsing, configuration modal, and last updated timestamp.
+ * collapsing and a configuration modal.
  */
 
 import { useState, useEffect } from 'react'
@@ -23,7 +23,7 @@ export function UnifiedStatsSection({
   getStatValue,
   hasData = true,
   isLoading = false,
-  lastUpdated = null,
+  lastUpdated: _lastUpdated = null,
   className = '' }: UnifiedStatsSectionProps) {
   // Collapsed state with localStorage persistence.
   // The storage key name says "collapsed", so the stored value represents
@@ -158,12 +158,6 @@ export function UnifiedStatsSection({
         </div>
 
         <div className="flex items-center gap-2">
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-
           {/* Configure button */}
           {config.showConfigButton !== false && isExpanded && (
             <Button

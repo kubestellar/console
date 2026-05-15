@@ -9,7 +9,6 @@
  * - Grid column calculation for various block counts
  * - Custom grid responsive config
  * - Non-collapsible mode
- * - lastUpdated display
  * - getStatValue passthrough
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -150,14 +149,9 @@ describe('UnifiedStatsSection', () => {
     expect(screen.getByTestId('stat-block-a')).toBeInTheDocument()
   })
 
-  it('displays lastUpdated timestamp', () => {
+  it('does not render a duplicate updated timestamp', () => {
     const date = new Date('2024-01-15T10:30:00')
     render(<UnifiedStatsSection config={makeConfig()} lastUpdated={date} />)
-    expect(screen.getByText(/Updated/)).toBeInTheDocument()
-  })
-
-  it('does not show lastUpdated when null', () => {
-    render(<UnifiedStatsSection config={makeConfig()} lastUpdated={null} />)
     expect(screen.queryByText(/Updated/)).not.toBeInTheDocument()
   })
 
