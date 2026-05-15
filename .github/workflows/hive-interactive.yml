@@ -54,10 +54,11 @@ jobs:
 
           echo "triaged=$TRIAGED" >> "$GITHUB_OUTPUT"
           echo "active_run=$ACTIVE_RUN" >> "$GITHUB_OUTPUT"
+          DELIMITER="EOF_$(openssl rand -hex 8)"
           {
-            echo 'clean_body<<EOF'
+            echo "clean_body<<${DELIMITER}"
             printf '%s\n' "$CLEAN_BODY"
-            echo EOF
+            echo "${DELIMITER}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Ensure hive labels are present
