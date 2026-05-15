@@ -35,7 +35,6 @@ describe('errorClassifier', () => {
     })
 
     it('handles empty or undefined error messages safely', () => {
-      // @ts-ignore - testing runtime safety
       const result = classifyError('')
       expect(result.type).toBe('unknown')
       expect(result.icon).toBe('AlertCircle')

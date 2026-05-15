@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AppErrorBoundary } from './AppErrorBoundary'
 import { emitError, markErrorReported } from '../lib/analytics'
@@ -25,10 +25,25 @@ const Bomb = ({ shouldThrow = false }: { shouldThrow?: boolean }) => {
 }
 
 describe('AppErrorBoundary', () => {
+  let originalLocation: Location
+
   beforeEach(() => {
     vi.clearAllMocks()
     // Suppress console.error so our test logs remain clean when we intentionally throw
     vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    originalLocation = window.location
+    Object.defineProperty(window, 'location', {
+      value: { href: '', reload: vi.fn() },
+      writable: true,
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
   })
 
   it('renders children normally when there is no error', () => {
@@ -94,12 +109,6 @@ describe('AppErrorBoundary', () => {
   })
 
   it('triggers a full page reload when "Reload page" is clicked', () => {
-    // Mock window.location.reload
-    const originalLocation = window.location
-    // @ts-ignore
-    delete window.location
-    window.location = { ...originalLocation, reload: vi.fn() }
-
     render(
       <AppErrorBoundary>
         <Bomb shouldThrow={true} />
@@ -110,8 +119,5 @@ describe('AppErrorBoundary', () => {
     fireEvent.click(reloadButton)
     
     expect(window.location.reload).toHaveBeenCalledTimes(1)
-    
-    // Restore window.location
-    window.location = originalLocation
   })
 })
