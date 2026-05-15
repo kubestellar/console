@@ -703,7 +703,7 @@ Please:
         value={search}
         onChange={setSearch}
         placeholder={t('common:common.searchClusters')}
-        className="mb-2"
+        className="mb-2 flex-none"
       />
 
       {/* Summary stats */}

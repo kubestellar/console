@@ -277,6 +277,7 @@ Please proceed step by step.`,
         value={localSearch}
         onChange={setLocalSearch}
         placeholder={t('common:common.searchPolicies')}
+        className="mb-3 flex-none"
       />
 
       {/* Policies list */}
