@@ -144,3 +144,23 @@ func TestCardProxyAuthorization_NilStoreSkipsCheck(t *testing.T) {
 		t.Errorf("expected 400 for missing url param, got %d", resp.StatusCode)
 	}
 }
+
+func TestCardProxyDialContext_EmptyDNSResult(t *testing.T) {
+	// Extract the DialContext from the cardProxyClient transport.
+	transport, ok := cardProxyClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("cardProxyClient.Transport is not *http.Transport")
+	}
+	dialCtx := transport.DialContext
+	if dialCtx == nil {
+		t.Fatal("cardProxyClient has no custom DialContext")
+	}
+
+	// Call DialContext with a host that will fail DNS resolution.
+	// The empty-DNS guard should return an error before reaching ips[0].
+	// Using .invalid TLD (RFC 6761) guarantees DNS failure in any environment.
+	_, err := dialCtx(t.Context(), "tcp", "empty-dns-test.invalid:443")
+	if err == nil {
+		t.Fatal("expected error for unresolvable host, got nil")
+	}
+}

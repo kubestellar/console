@@ -114,6 +114,9 @@ var drasiProxyClient = &http.Client{
 			if err != nil {
 				return nil, err
 			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no IPs resolved for host %s", host)
+			}
 			for _, ip := range ips {
 				if isDrasiBlockedIP(ip.IP) {
 					return nil, fmt.Errorf("blocked: private/reserved IP %s for host %s", ip.IP, host)

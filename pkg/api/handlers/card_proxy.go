@@ -51,6 +51,9 @@ var cardProxyClient = &http.Client{
 			if err != nil {
 				return nil, err
 			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no IPs resolved for host %s", host)
+			}
 			for _, ip := range ips {
 				if isBlockedIP(ip.IP) {
 					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)

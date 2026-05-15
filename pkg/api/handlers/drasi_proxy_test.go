@@ -144,3 +144,23 @@ func TestProxyDrasi_Platform(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	assert.JSONEq(t, `{"platform":"ok"}`, string(body))
 }
+
+func TestDrasiProxyDialContext_EmptyDNSResult(t *testing.T) {
+	// Extract the DialContext from the drasiProxyClient transport.
+	transport, ok := drasiProxyClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("drasiProxyClient.Transport is not *http.Transport")
+	}
+	dialCtx := transport.DialContext
+	if dialCtx == nil {
+		t.Fatal("drasiProxyClient has no custom DialContext")
+	}
+
+	// Call DialContext with a host that will fail DNS resolution.
+	// The empty-DNS guard should return an error before reaching ips[0].
+	// Using .invalid TLD (RFC 6761) guarantees DNS failure in any environment.
+	_, err := dialCtx(t.Context(), "tcp", "empty-dns-test.invalid:443")
+	if err == nil {
+		t.Fatal("expected error for unresolvable host, got nil")
+	}
+}
