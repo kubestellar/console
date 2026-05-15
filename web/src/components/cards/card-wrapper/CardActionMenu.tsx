@@ -24,6 +24,7 @@ const HEIGHT_OPTIONS = [
   { value: 2, labelKey: 'cardWrapper.heightDefault' as const, descKey: 'cardWrapper.heightDefaultDesc' as const },
   { value: 3, labelKey: 'cardWrapper.heightTall' as const, descKey: 'cardWrapper.heightTallDesc' as const },
   { value: 4, labelKey: 'cardWrapper.heightExtraTall' as const, descKey: 'cardWrapper.heightExtraTallDesc' as const },
+  { value: 6, labelKey: 'cardWrapper.heightMaximum' as const, descKey: 'cardWrapper.heightMaximumDesc' as const },
 ]
 
 /** Approximate height of the card action menu (px) */

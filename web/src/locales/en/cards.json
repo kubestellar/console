@@ -749,6 +749,8 @@
     "heightTallDesc": "3 rows",
     "heightExtraTall": "Extra Tall",
     "heightExtraTallDesc": "4 rows",
+    "heightMaximum": "Maximum",
+    "heightMaximumDesc": "6 rows",
     "exportWidget": "Export Widget",
     "exportWidgetTooltip": "Export this card as a desktop widget for Übersicht",
     "replaceTooltip": "Replace this card with a different card type",
