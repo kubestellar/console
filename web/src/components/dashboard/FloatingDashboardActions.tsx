@@ -97,6 +97,32 @@ export function FloatingDashboardActions({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isUnifiedMode, onOpenCustomizer])
 
+  // Ctrl+Z / Ctrl+Shift+Z (Ctrl+Y) — undo/redo keyboard shortcuts
+  useEffect(() => {
+    const handleUndoRedo = (e: KeyboardEvent) => {
+      // Skip when user is typing in form fields
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+
+      const isMod = e.metaKey || e.ctrlKey
+
+      // Ctrl+Z (no shift) → undo
+      if (isMod && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        if (canUndo) onUndo?.()
+        return
+      }
+
+      // Ctrl+Shift+Z or Ctrl+Y → redo
+      if (isMod && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
+        e.preventDefault()
+        if (canRedo) onRedo?.()
+      }
+    }
+    document.addEventListener('keydown', handleUndoRedo)
+    return () => document.removeEventListener('keydown', handleUndoRedo)
+  }, [canUndo, canRedo, onUndo, onRedo])
+
   // Close menu when clicking outside (legacy mode)
   useEffect(() => {
     if (!menuIsOpen) return
