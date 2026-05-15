@@ -568,7 +568,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if s.k8sClient == nil {
-		if err := writeJSON(w, map[string]any{
+		writeJSON(w, map[string]any{
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
 			"byCluster": map[string]any{}, "byProvider": map[string]int{},
@@ -587,7 +587,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		slog.Warn("error fetching kagent CRD summary for cluster", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		if err := writeJSON(w, map[string]any{
+		writeJSON(w, map[string]any{
 			"agentCount": 0, "toolServerCount": 0, "remoteMCPServerCount": 0,
 			"modelConfigCount": 0, "modelProviderConfigCount": 0, "memoryCount": 0,
 			"byCluster": map[string]any{}, "byProvider": map[string]int{},
