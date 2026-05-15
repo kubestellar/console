@@ -112,64 +112,173 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
       `/api/drasi/proxy${upstreamPath}` +
       `?target=server&url=${encodeURIComponent(drasiServerUrl)}`
 
-    const es = new EventSource(proxyUrl)
-    sourceRef.current = es
+    // Retry/backoff constants (no magic numbers inline)
+    const INITIAL_RETRY_MS = 1000
+    const MAX_RETRY_MS = 30000
+    const BACKOFF_FACTOR = 2
+    const JITTER_MS = 300
+    const UNRECOVERABLE_STATUSES = new Set([401, 403, 404])
 
-    es.onopen = () => {
-      setConnected(true)
-      setError(null)
+    const retryCountRef = { current: 0 }
+    const lastErrorRef = { current: null as string | null }
+    let timer: number | null = null
+    let aborted = false
+
+    function clearTimer() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
     }
 
-    es.onmessage = (ev) => {
-      let payload: QueryDeltaEvent
-      try {
-        payload = JSON.parse(ev.data)
-      } catch {
-        return // Non-JSON heartbeats etc.
-      }
+    function withJitter(ms: number) {
+      return Math.min(MAX_RETRY_MS, ms + Math.floor(Math.random() * JITTER_MS))
+    }
 
-      // Lifecycle events update connection state but don't touch the table.
-      if (payload.componentType === 'Query' && payload.status) {
-        if (payload.status === 'Stopped' || payload.status === 'Failed') {
+    async function preflightCheck(): Promise<{ ok: boolean; status: number }>
+    {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
+      try {
+        const resp = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: { Accept: 'text/event-stream' },
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        return { ok: resp.ok, status: resp.status }
+      } catch (e) {
+        return { ok: false, status: 0 }
+      } finally {
+        clearTimeout(timeout)
+      }
+    }
+
+    function setErrorOnce(msg: string | null) {
+      if (lastErrorRef.current === msg) return
+      lastErrorRef.current = msg
+      setError(msg)
+    }
+
+    function scheduleReconnect() {
+      if (aborted) return
+      retryCountRef.current++
+      const base = INITIAL_RETRY_MS * Math.pow(BACKOFF_FACTOR, Math.max(0, retryCountRef.current - 1))
+      const delay = withJitter(base)
+      // Only surface a persistent reconnecting error after a couple attempts
+      if (retryCountRef.current >= 2) {
+        setConnected(false)
+        setErrorOnce('Reconnecting to SSE stream...')
+      }
+      clearTimer()
+      timer = window.setTimeout(() => {
+        timer = null
+        connect()
+      }, delay)
+    }
+
+    let es: EventSource | null = null
+
+    async function connect() {
+      if (aborted) return
+      // Preflight to detect HTTP status codes so we can avoid noisy retries
+      const { ok, status } = await preflightCheck()
+      if (aborted) return
+
+      if (!ok) {
+        if (UNRECOVERABLE_STATUSES.has(status)) {
+          // Unrecoverable — surface once and stop retrying
           setConnected(false)
+          setErrorOnce(`SSE unavailable (HTTP ${status})`)
+          return
         }
+        // Transient or unknown — schedule a reconnect with backoff
+        setConnected(false)
+        setErrorOnce(`SSE connection failed (HTTP ${status || 'network'})`)
+        scheduleReconnect()
         return
       }
 
-      // Apply the delta to the rolling result set.
-      setResults(prev => {
-        const next = new Map<string, LiveResultRow>(
-          prev.map(r => [rowKey(r), r]),
-        )
-        for (const r of payload.added || []) {
-          next.set(rowKey(r), r)
+      // Successful preflight — open EventSource and wire handlers
+      try {
+        es = new EventSource(proxyUrl)
+        sourceRef.current = es
+
+        es.onopen = () => {
+          retryCountRef.current = 0
+          lastErrorRef.current = null
+          setConnected(true)
+          setError(null)
         }
-        for (const u of payload.updated || []) {
-          const after: LiveResultRow = isUpdateEnvelope(u) ? u.after : u
-          // For updates, drasi sends the new state — we just upsert by the
-          // hashed key. Without a stable identifier it's not possible to
-          // remove the old row, so updates accumulate as inserts.
-          next.set(rowKey(after), after)
+
+        es.onmessage = (ev) => {
+          let payload: QueryDeltaEvent
+          try {
+            payload = JSON.parse(ev.data)
+          } catch {
+            return // Non-JSON heartbeats etc.
+          }
+
+          // Lifecycle events update connection state but don't touch the table.
+          if (payload.componentType === 'Query' && payload.status) {
+            if (payload.status === 'Stopped' || payload.status === 'Failed') {
+              setConnected(false)
+            }
+            return
+          }
+
+          // Apply the delta to the rolling result set.
+          setResults(prev => {
+            const next = new Map<string, LiveResultRow>(
+              prev.map(r => [rowKey(r), r]),
+            )
+            for (const r of payload.added || []) {
+              next.set(rowKey(r), r)
+            }
+            for (const u of payload.updated || []) {
+              const after: LiveResultRow = isUpdateEnvelope(u) ? u.after : u
+              next.set(rowKey(after), after)
+            }
+            for (const r of payload.deleted || []) {
+              next.delete(rowKey(r))
+            }
+            const arr = Array.from(next.values())
+            if (arr.length > MAX_STREAMED_ROWS) {
+              return arr.slice(arr.length - MAX_STREAMED_ROWS)
+            }
+            return arr
+          })
         }
-        for (const r of payload.deleted || []) {
-          next.delete(rowKey(r))
+
+        es.onerror = async () => {
+          // Close the current source and attempt a reconnect backoff loop.
+          try { es && es.close() } catch {}
+          sourceRef.current = null
+          setConnected(false)
+          setErrorOnce('SSE connection error')
+          // Run a quick preflight to decide whether to retry or stop.
+          const { ok: preOk, status: preStatus } = await preflightCheck()
+          if (aborted) return
+          if (!preOk && UNRECOVERABLE_STATUSES.has(preStatus)) {
+            setErrorOnce(`SSE unavailable (HTTP ${preStatus})`)
+            return
+          }
+          scheduleReconnect()
         }
-        const arr = Array.from(next.values())
-        if (arr.length > MAX_STREAMED_ROWS) {
-          return arr.slice(arr.length - MAX_STREAMED_ROWS)
-        }
-        return arr
-      })
+      } catch (e) {
+        setConnected(false)
+        setErrorOnce('Failed to open SSE stream')
+        scheduleReconnect()
+      }
     }
 
-    es.onerror = () => {
-      setConnected(false)
-      setError('SSE connection error')
-      // EventSource auto-reconnects, so no manual retry loop needed.
-    }
+    // Start the first connection attempt
+    connect()
 
     return () => {
-      es.close()
+      aborted = true
+      clearTimer()
+      try { es && es.close() } catch {}
       sourceRef.current = null
       setConnected(false)
     }
