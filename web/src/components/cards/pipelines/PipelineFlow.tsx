@@ -28,6 +28,7 @@ import {
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
 import { usePipelineData } from './PipelineDataContext'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { useMissions } from '../../../hooks/useMissions'
@@ -205,7 +206,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
       )}>
         {run.run.event}
         {(run.run.pullRequests?.length ?? 0) > 0 && run.run.pullRequests?.[0] && (
-          <a href={run.run.pullRequests[0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests[0].number}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
+          <a href={sanitizeUrl(run.run.pullRequests[0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests[0].number}`)} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
             #{run.run.pullRequests[0].number}
           </a>
         )}
@@ -220,7 +221,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         <div className="text-[10px] text-muted-foreground truncate">
           {run.run.headBranch}
           {(run.run.pullRequests?.length ?? 0) > 0 && (
-            <a href={run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{run.run.pullRequests![0].number}</a>
+            <a href={sanitizeUrl(run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`)} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{run.run.pullRequests![0].number}</a>
           )}
         </div>
       </div>
@@ -292,7 +293,7 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
       <div className="relative z-20 flex items-center gap-1 justify-end pt-1">
         {run.run.htmlUrl && run.run.htmlUrl !== '#' && (
           <a
-            href={run.run.htmlUrl}
+            href={sanitizeUrl(run.run.htmlUrl)}
             target="_blank"
             rel="noreferrer noopener"
             className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary/50"

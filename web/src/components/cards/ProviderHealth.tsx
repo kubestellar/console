@@ -10,6 +10,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 const STATUS_COLORS: Record<ProviderHealthInfo['status'], string> = {
   operational: 'bg-green-500',
@@ -72,7 +73,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
       {/* Status page link */}
       {provider.statusUrl && (
         <a
-          href={provider.statusUrl}
+          href={sanitizeUrl(provider.statusUrl)}
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0 p-1 hover:bg-secondary/50 rounded transition-colors text-muted-foreground hover:text-foreground"

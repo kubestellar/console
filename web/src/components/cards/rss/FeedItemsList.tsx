@@ -6,6 +6,7 @@ import { formatTimeAgo } from '../../../lib/formatters'
 import { RSS_DEMO_ACTIVE_FEED, RSS_DEMO_ITEMS } from './demoData'
 import { RSS_UI_STRINGS } from './strings'
 import type { FeedItem, FeedConfig } from './types'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 interface FeedItemsListProps {
   paginatedItems?: FeedItem[]
@@ -63,7 +64,7 @@ export const FeedItemsList = memo(function FeedItemsList({
       {paginatedItems.map((item) => (
         <a
           key={item.id}
-          href={normalizeRedditLink(item.link)}
+          href={sanitizeUrl(normalizeRedditLink(item.link))}
           target="_blank"
           rel="noopener noreferrer"
           className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors group"

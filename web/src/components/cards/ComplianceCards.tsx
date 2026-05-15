@@ -28,6 +28,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
 import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
 import { CARD_UI_STRINGS } from './strings'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { buildComplianceScoreSummary } from '../../lib/complianceScore'
 
 interface CardConfig {
@@ -706,7 +707,7 @@ Please proceed step by step.`,
                     </span>
                     {info?.url && (
                       <a
-                        href={info.url}
+                        href={sanitizeUrl(info.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}

@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 // Types for GitHub activity data
 interface GitHubPR {
@@ -963,7 +964,7 @@ const PRItem = memo(function PRItem({ pr }: { pr: GitHubPR }) {
 
   return (
     <a
-      href={pr.html_url}
+      href={sanitizeUrl(pr.html_url)}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
@@ -1029,7 +1030,7 @@ const IssueItem = memo(function IssueItem({ issue }: { issue: GitHubIssue }) {
 
   return (
     <a
-      href={issue.html_url}
+      href={sanitizeUrl(issue.html_url)}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
@@ -1086,7 +1087,7 @@ const ReleaseItem = memo(function ReleaseItem({ release }: { release: GitHubRele
   const { t } = useTranslation(['cards'])
   return (
     <a
-      href={release.html_url}
+      href={sanitizeUrl(release.html_url)}
       target="_blank"
       rel="noopener noreferrer"
       className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"
@@ -1119,7 +1120,7 @@ const ContributorItem = memo(function ContributorItem({ contributor }: { contrib
   const { t } = useTranslation(['cards'])
   return (
     <a
-      href={contributor.html_url}
+      href={sanitizeUrl(contributor.html_url)}
       target="_blank"
       rel="noopener noreferrer"
       className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"

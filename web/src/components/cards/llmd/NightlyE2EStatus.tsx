@@ -22,6 +22,7 @@ import { POPUP_HIDE_DELAY_MS, TOOLTIP_HIDE_DELAY_MS } from '../../../lib/constan
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { useTranslation } from 'react-i18next'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
@@ -234,7 +235,7 @@ Please provide:
       onMouseLeave={handleDotLeave}
     >
       <a
-        href={run.htmlUrl}
+        href={sanitizeUrl(run.htmlUrl)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Run #${run.runNumber}: ${title}`}

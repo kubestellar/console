@@ -12,6 +12,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { safeGetJSON, safeRemoveItem, safeSetJSON } from '../../lib/utils/localStorage'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
@@ -550,7 +551,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
         {/* Provider link (uniform mode only) */}
         {pricingMode === 'uniform' && selectedProvider !== 'estimate' && pricing.pricingUrl && (
           <a
-            href={pricing.pricingUrl}
+            href={sanitizeUrl(pricing.pricingUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
@@ -571,7 +572,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
                 <span className="font-medium text-foreground">{t('cards:clusterCosts.pricingRates', { provider: pricing.name })}</span>
                 {pricing.pricingUrl && (
                   <a
-                    href={pricing.pricingUrl}
+                    href={sanitizeUrl(pricing.pricingUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
@@ -629,7 +630,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
                       )}
                       {p.pricingUrl && (
                         <a
-                          href={p.pricingUrl}
+                          href={sanitizeUrl(p.pricingUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-purple-400 hover:text-purple-300"
@@ -793,7 +794,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
                 <span>{t('cards:clusterCosts.basedOnRates', { provider: pricing.name })}</span>
                 {pricing.pricingUrl && (
                   <a
-                    href={pricing.pricingUrl}
+                    href={sanitizeUrl(pricing.pricingUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-purple-400 hover:text-purple-300 transition-colors"

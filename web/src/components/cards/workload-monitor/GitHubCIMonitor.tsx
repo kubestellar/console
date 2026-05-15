@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 import { usePipelineFilter } from '../pipelines/PipelineFilterContext'
 import { RepoSubtitle } from '../pipelines/RepoSubtitle'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 const THIRTY_SECONDS_MS = 30 * MS_PER_SECOND
 const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
@@ -490,7 +491,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
                 <span className="text-2xs text-muted-foreground truncate block">
                   {w.repo.split('/')[1]} · {w.branch}
                   {w.prNumber && (
-                    <a href={w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{w.prNumber}</a>
+                    <a href={sanitizeUrl(w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`)} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{w.prNumber}</a>
                   )}
                 </span>
               </div>
@@ -524,7 +525,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
               )}
               {w.url !== '#' && (
                 <a
-                  href={w.url}
+                  href={sanitizeUrl(w.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 p-0.5 rounded hover:bg-secondary transition-colors"

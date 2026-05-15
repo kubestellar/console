@@ -15,6 +15,7 @@ import type { SortDirection } from '../../../lib/cards/cardHooks'
 import { useCachedProwJobs } from '../../../hooks/useCachedData'
 import type { ProwJob } from '../../../hooks/useProw'
 import { useCardLoadingState, useCardDemoState } from '../CardDataContext'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 interface ProwJobsProps {
   config?: Record<string, unknown>
@@ -207,7 +208,7 @@ export function ProwJobs({ config: _config }: ProwJobsProps) {
               {job.pr && <span>PR: #{job.pr}</span>}
               <span>Duration: {job.duration}</span>
               {job.url && (
-                <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-2 min-h-11 min-w-11">
+                <a href={sanitizeUrl(job.url)} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline flex items-center gap-2 min-h-11 min-w-11">
                   Logs <ExternalLink className="w-3 h-3" />
                 </a>
               )}

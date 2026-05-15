@@ -18,6 +18,7 @@ import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
 import { cn } from '../../../lib/cn'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 /** Available range options. Must match the server's MATRIX_MAX_DAYS (90) */
 const RANGE_OPTIONS = [14, 30, 90] as const
@@ -158,7 +159,7 @@ export function WorkflowMatrix() {
                     return cell.htmlUrl && cell.htmlUrl !== '#' ? (
                       <a
                         key={cell.date}
-                        href={cell.htmlUrl}
+                        href={sanitizeUrl(cell.htmlUrl)}
                         target="_blank"
                         rel="noreferrer noopener"
                         title={label}

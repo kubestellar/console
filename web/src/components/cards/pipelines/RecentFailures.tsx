@@ -26,6 +26,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { MS_PER_SECOND, MS_PER_HOUR, SECONDS_PER_MINUTE } from '../../../lib/constants/time'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 /** Maximum ms duration we format compactly (1 hr). Over this, show "1h+" */
 const SHORT_DURATION_CAP_MS = MS_PER_HOUR
@@ -167,7 +168,7 @@ export function RecentFailures() {
                   <td className="py-1.5 pr-2 text-muted-foreground truncate max-w-[120px]" title={r.branch}>
                     {r.branch}
                     {(r.pullRequests?.length ?? 0) > 0 && (
-                      <a href={r.pullRequests![0].url || `https://github.com/${r.repo}/pull/${r.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{r.pullRequests![0].number}</a>
+                      <a href={sanitizeUrl(r.pullRequests![0].url || `https://github.com/${r.repo}/pull/${r.pullRequests![0].number}`)} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{r.pullRequests![0].number}</a>
                     )}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
@@ -217,7 +218,7 @@ export function RecentFailures() {
                       <RefreshCw className={cn('w-3 h-3', mutating === r.runId && 'animate-spin')} /> Re-run
                     </button>
                     <a
-                      href={r.htmlUrl}
+                      href={sanitizeUrl(r.htmlUrl)}
                       target="_blank"
                       rel="noreferrer noopener"
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground ml-1"

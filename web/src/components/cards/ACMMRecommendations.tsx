@@ -21,6 +21,7 @@ import {
   allRecommendationsPrompt,
 } from '../../lib/acmm/missionPrompts'
 import { emitACMMMissionLaunched } from '../../lib/analytics'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 const SOURCE_LABELS: Record<SourceId, string> = {
   acmm: 'ACMM',
@@ -195,7 +196,7 @@ export function ACMMRecommendations() {
                       </span>
                     )
                     return src?.url ? (
-                      <a key={s} href={src.url} target="_blank" rel="noopener noreferrer" className="no-underline">
+                      <a key={s} href={sanitizeUrl(src.url)} target="_blank" rel="noopener noreferrer" className="no-underline">
                         {badge}
                       </a>
                     ) : (
