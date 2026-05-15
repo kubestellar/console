@@ -489,6 +489,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	var lastToolOutput string // Capture last tool output in case of API error
 	var lastToolName string
 	var textContent strings.Builder // Accumulate text content
+	var toolsExecuted bool          // Track whether any tools were actually called (#13728)
 
 	scanner := bufio.NewScanner(stdout)
 	// Increase buffer size for potentially large JSON lines
@@ -514,6 +515,7 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 		case "tool_use":
 			// Tool is being called
+			toolsExecuted = true // #13728 — Track that at least one tool was executed
 			lastToolName = event.Tool
 			slog.Info("[Claude Code] tool use", "tool", event.Tool)
 			if onProgress != nil {
@@ -708,7 +710,8 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 			OutputTokens: outputTokens,
 			TotalTokens:  inputTokens + outputTokens,
 		},
-		Done: true,
+		Done:          true,
+		ToolsExecuted: toolsExecuted, // #13728 — Prevent false-positive completions
 	}, nil
 }
 

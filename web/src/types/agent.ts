@@ -91,6 +91,7 @@ export interface ChatStreamPayload {
   sessionId: string
   done: boolean
   isError?: boolean
+  toolsExecuted?: boolean
   model?: string
   usage?: ChatTokenUsage
 }

@@ -207,12 +207,13 @@ type ChatRequest struct {
 
 // ChatStreamPayload is a streaming response chunk from chat
 type ChatStreamPayload struct {
-	Content   string           `json:"content"`
-	Agent     string           `json:"agent"`
-	SessionID string           `json:"sessionId"`
-	Done      bool             `json:"done"`
-	IsError   bool             `json:"isError,omitempty"`
-	Usage     *ChatTokenUsage  `json:"usage,omitempty"`
+	Content       string           `json:"content"`
+	Agent         string           `json:"agent"`
+	SessionID     string           `json:"sessionId"`
+	Done          bool             `json:"done"`
+	IsError       bool             `json:"isError,omitempty"`
+	Usage         *ChatTokenUsage  `json:"usage,omitempty"`
+	ToolsExecuted bool             `json:"toolsExecuted,omitempty"` // Whether any tools were actually called
 }
 
 // ChatTokenUsage tracks token usage for a chat response

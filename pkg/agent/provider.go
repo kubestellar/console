@@ -81,6 +81,11 @@ type ChatResponse struct {
 	// (e.g. buffer overflow, read error) before the stream completed.
 	// Consumers should treat the Content as potentially incomplete (#7278).
 	Truncated bool `json:"truncated,omitempty"`
+
+	// ToolsExecuted indicates whether any tools were actually called during
+	// the mission execution. Used to detect false-positive completions where
+	// the agent claims "task completed" without executing any commands (#13728).
+	ToolsExecuted bool `json:"toolsExecuted,omitempty"`
 }
 
 // ProviderTokenUsage tracks token consumption for a request

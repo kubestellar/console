@@ -1803,7 +1803,11 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // event (#6016 — per-operation tracking keyed by missionId).
         clearActiveTokenCategory(missionId)
         const resultIsError = !!chatPayload.isError
-        if (m.status === 'running' && !resultIsError) {
+        const toolsWereExecuted = !!chatPayload.toolsExecuted
+        const missionRequiresTools = ['deploy', 'maintain', 'repair', 'upgrade'].includes(m.type)
+        const falsePositiveCompletion = !resultIsError && missionRequiresTools && !toolsWereExecuted
+
+        if (m.status === 'running' && !resultIsError && !falsePositiveCompletion) {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
@@ -1814,8 +1818,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           window.dispatchEvent(new CustomEvent('kc-mission-completed', {
             detail: { missionId, missionType: m.type },
           }))
-        } else if (m.status === 'running' && resultIsError) {
-          emitMissionError(m.type, chatPayload.content || 'Mission failed')
+        } else if (m.status === 'running' && (resultIsError || falsePositiveCompletion)) {
+          // #13728 — Treat false-positive completions as errors in analytics
+          const errorMsg = falsePositiveCompletion 
+            ? 'Agent claimed completion without executing tools' 
+            : (chatPayload.content || 'Mission failed')
+          emitMissionError(m.type, errorMsg)
         }
 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
@@ -1866,9 +1874,27 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // is only used while streaming is in progress (stream done w/o result).
         // The UI shows a completion panel with feedback buttons when status is
         // 'completed', so reaching this state is the correct lifecycle end (#5479).
+        //
+        // #13728 — Prevent false-positive completions: if the mission type typically
+        // requires tool execution (deploy, maintain, repair, upgrade) and the agent
+        // claims success but no tools were actually called, mark it as failed with
+        // a clear warning. This catches AI drift where the agent reports "completed"
+        // without executing any commands.
+        let finalStatus: MissionStatus
+        let falsePositiveWarning = ''
+        if (resultIsError) {
+          finalStatus = 'failed'
+        } else if (falsePositiveCompletion) {
+          // Agent claimed success but never executed any tools
+          finalStatus = 'failed'
+          falsePositiveWarning = '\n\n**⚠️ Mission Validation Failed**\n\nThe AI agent reported completion, but no tools were executed. This typically means the agent did not actually perform the requested actions (e.g., install, deploy, upgrade). Please verify the agent has the required tools available and retry the mission.'
+        } else {
+          finalStatus = 'completed'
+        }
+
         return {
           ...m,
-          status: (resultIsError ? 'failed' : 'completed') as MissionStatus,
+          status: finalStatus,
           currentStep: undefined,
           updatedAt: new Date(),
           agent: chatPayload.agent || m.agent,
@@ -1878,7 +1904,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             {
               id: generateMessageId(),
               role: 'assistant' as const,
-              content: resultContent,
+              content: resultContent + falsePositiveWarning,
               timestamp: new Date(),
               agent: chatPayload.agent || m.agent }
           ]

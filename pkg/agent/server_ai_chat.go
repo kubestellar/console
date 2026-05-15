@@ -568,6 +568,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 				OutputTokens: outputTokens,
 				TotalTokens:  totalTokens,
 			},
+			ToolsExecuted: resp.ToolsExecuted, // #13728 — Prevent false-positive completions
 		},
 	})
 }
@@ -895,6 +896,7 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 				OutputTokens: outputTokens,
 				TotalTokens:  totalTokens,
 			},
+			ToolsExecuted: resp.ToolsExecuted, // #13728 — Prevent false-positive completions
 		},
 	}
 }
