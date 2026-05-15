@@ -97,7 +97,8 @@ function getPredictionStaleDetection(): WsStaleDetectionController {
         // If 'clusters' count drifted, we MUST trigger a full refresh to avoid
         // showing stale data from a deleted/added context (#12000).
         const currentClusters = clusterCache.clusters?.length || 0
-        if (versions.clusters && parseInt(versions.clusters) !== currentClusters) {
+        const serverClusters = parseInt(versions.clusters)
+        if (!isNaN(serverClusters) && serverClusters !== currentClusters) {
           console.warn('[AIPredictions] Cluster count drift detected, refreshing...');
           fullFetchClusters();
         }

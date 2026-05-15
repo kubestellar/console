@@ -1,60 +1,76 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import React from 'react'
-import QualityDashboard from '../QualityDashboard'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import React from 'react';
+import QualityDashboard from '../QualityDashboard';
+import * as useCachedData from '../../../hooks/useCachedData';
+import * as CardDataContext from '../CardDataContext';
 
 // Mock i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
-}))
+}));
 
-// Mock card loading state
-const mockUseCardLoadingState = vi.fn()
-vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: (opts: any) => mockUseCardLoadingState(opts),
-  useReportCardDataState: vi.fn(),
-}))
-
-// Mock AI predictions hook
-vi.mock('../../../hooks/useAIPredictions', () => ({
-  useAIPredictions: () => ({
-    isStale: false,
-    lastDigest: Date.now(),
-    sequence: 42,
-  }),
-}))
+// Mock hooks
+vi.mock('../../../hooks/useCachedData');
+vi.mock('../CardDataContext');
 
 describe('QualityDashboard', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockUseCardLoadingState.mockReturnValue({})
-  })
+    vi.clearAllMocks();
+  });
 
-  it('renders without crashing', () => {
-    const { container } = render(<QualityDashboard />)
-    expect(container).toBeTruthy()
-  })
+  it('renders loading state correctly', () => {
+    vi.mocked(useCachedData.useCachedQuality).mockReturnValue({
+      data: {
+        bugsFoundCount: 0,
+        remediationsFixed: 0,
+        driftEventsCount: 0,
+        healthScore: 100,
+        progressPct: '0%'
+      },
+      isLoading: true,
+      isRefreshing: false,
+      isDemoFallback: false,
+    } as any);
 
-  it('displays the correct bug count', () => {
-    render(<QualityDashboard />)
-    // The component hardcodes 1418 for the POC
-    expect(screen.getByText('1418')).toBeTruthy()
-  })
+    vi.mocked(CardDataContext.useCardLoadingState).mockReturnValue({
+      showSkeleton: true,
+    } as any);
 
-  it('displays state integrity status', () => {
-    render(<QualityDashboard />)
-    expect(screen.getByText('quality.state_integrity')).toBeTruthy()
-  })
+    render(<QualityDashboard />);
+    expect(screen.getByText('messages.checking')).toBeInTheDocument();
+  });
 
-  it('registers with the correct loading state configuration', () => {
-    render(<QualityDashboard />)
-    expect(mockUseCardLoadingState).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isDemoData: true,
-        hasAnyData: true,
-      })
-    )
-  })
-})
+  it('renders stats correctly when data is loaded', () => {
+    vi.mocked(useCachedData.useCachedQuality).mockReturnValue({
+      data: {
+        bugsFoundCount: 42,
+        remediationsFixed: 10,
+        driftEventsCount: 5,
+        healthScore: 85,
+        progressPct: '75%'
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+    } as any);
+
+    vi.mocked(CardDataContext.useCardLoadingState).mockReturnValue({
+      showSkeleton: false,
+    } as any);
+
+    render(<QualityDashboard />);
+    
+    // Check for specific values in the rendered output
+    const body = document.body.innerHTML;
+    expect(body).toContain('42');
+    expect(body).toContain('75%');
+    expect(body).toContain('5');
+    
+    // Check for section headers
+    expect(screen.getByText('quality.state_integrity')).toBeInTheDocument();
+    expect(screen.getByText('quality.bug_sweep')).toBeInTheDocument();
+  });
+});

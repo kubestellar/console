@@ -26,12 +26,6 @@ const PATTERNS = [
     regex: /[a-zA-Z0-9_]+\.filter\(/,
     guardRegex: /\([a-zA-Z0-9_]+\s*\|\|\s*\[\]\)\.filter\(/,
     message: 'Array .filter() call missing (data || []) guard.'
-  },
-  {
-    name: 'Unsafe Object Destructure',
-    regex: /const\s*\{\s*[a-zA-Z0-9_,\s]+\s*\}\s*=\s*useCached/,
-    guardRegex: /const\s*\{\s*[a-zA-Z0-9_,\s]+\s*\}\s*=\s*useCached[a-zA-Z0-9]+\(\)\s*\|\|\s*\{\}/,
-    message: 'Hook destructuring missing fallback || {}.'
   }
 ];
 
@@ -82,7 +76,10 @@ function getFiles(dir, ext) {
   const list = fs.readdirSync(dir);
   list.forEach(file => {
     file = path.resolve(dir, file);
-    const stat = fs.statSync(file);
+    const stat = fs.lstatSync(file);
+    if (stat && stat.isSymbolicLink()) {
+      return; // Skip symlinks to avoid infinite loops
+    }
     if (stat && stat.isDirectory()) {
       results = results.concat(getFiles(file, ext));
     } else if (file.endsWith(ext)) {

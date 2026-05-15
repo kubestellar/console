@@ -216,6 +216,7 @@ type Server struct {
 	// digestSequence tracks state integrity packets (#12000)
 	digestSequence atomic.Int64
 	stopCh         chan struct{}
+	stopOnce       sync.Once
 
 	SkipKeyValidation bool // For testing purposes
 }
@@ -375,7 +376,7 @@ func NewServer(cfg Config) (*Server, error) {
 	server.stopCh = make(chan struct{})
 
 	// Start state integrity worker (#12000)
-	go server.startStateDigestWorker()
+	safego.GoWith("server/state-digest-worker", server.startStateDigestWorker)
 
 	return server, nil
 }
@@ -1029,9 +1030,11 @@ const clusterOpsShutdownTimeout = 30 * time.Second
 // finish (up to clusterOpsShutdownTimeout). Call this before process exit to
 // avoid orphaning background cluster create/delete operations.
 func (s *Server) GracefulShutdown() {
-	if s.stopCh != nil {
-		close(s.stopCh)
-	}
+	s.stopOnce.Do(func() {
+		if s.stopCh != nil {
+			close(s.stopCh)
+		}
+	})
 	done := make(chan struct{})
 	safego.GoWith("server/graceful-shutdown", func() {
 		s.clusterOpsWG.Wait()
@@ -1048,7 +1051,7 @@ func (s *Server) GracefulShutdown() {
 // startStateDigestWorker broadcasts state integrity digests periodically.
 // Clients use these to detect missed events and trigger resyncs. (#12000)
 func (s *Server) startStateDigestWorker() {
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(stateDigestInterval)
 	defer ticker.Stop()
 
 	for {
@@ -1066,15 +1069,15 @@ func (s *Server) sendStateDigest() {
 	// internal cache. For this mentorship POC, we pull current cluster
 	// count and health status as the "state".
 	clusters, _ := s.kubectl.ListContexts()
-	
 	versions := make(map[string]string)
 	versions["clusters"] = strconv.Itoa(len(clusters))
-	
+
 	// If k8sClient is available, we can add more granular versions
 	if s.k8sClient != nil {
-		// Mock versions based on timestamp to simulate "active" state
-		// In production, these would be real Kubernetes ResourceVersions.
-		versions["pods"] = fmt.Sprintf("%d", time.Now().Unix())
+		// Mock versions for this POC. In production, these would be real
+		// Kubernetes ResourceVersions. We omit the synthetic timestamp
+		// version to prevent spurious client-side refreshes (#12000).
+		// versions["pods"] = "1"
 	}
 
 	payload := protocol.StateDigestPayload{

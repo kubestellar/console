@@ -229,6 +229,7 @@ export { useCachedOpenfga } from './useCachedOpenfga'
 // Named re-export (avoids `__testables` export-name collision with others).
 
 export { useCachedFlatcar } from './useCachedFlatcar'
+export { useCachedQuality } from './useCachedQuality'
 
 // ============================================================================
 // TiKV Distributed Key-Value Store — useCachedTikv.ts
