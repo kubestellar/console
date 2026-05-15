@@ -49,11 +49,12 @@ describe('useDrasiQueryStream', () => {
     MockEventSource.instances = []
     // @ts-expect-error — override global for the duration of the test
     globalThis.EventSource = MockEventSource
+    // Mock fetch so preflightCheck() resolves successfully without a real network
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, status: 200 } as Response)))
   })
 
   afterEach(() => {
-    // @ts-expect-error — restore
-    delete globalThis.EventSource
+    vi.unstubAllGlobals()
   })
 
   describe('no-op paths', () => {
@@ -102,14 +103,14 @@ describe('useDrasiQueryStream', () => {
   })
 
   describe('subscribe + URL shape', () => {
-    it('opens an EventSource via the backend proxy with encoded params', () => {
+    it('opens an EventSource via the backend proxy with encoded params', async () => {
       renderHook(() => useDrasiQueryStream({
         mode: 'server',
         drasiServerUrl: 'http://drasi.local:8090',
         instanceId: 'inst 1',
         queryId: 'q 1',
       }))
-      expect(MockEventSource.instances.length).toBe(1)
+      await waitFor(() => expect(MockEventSource.instances.length).toBe(1))
       const url = MockEventSource.instances[0].url
       expect(url).toContain('/api/drasi/proxy')
       expect(url).toContain('/api/v1/instances/inst%201/queries/q%201/events/stream')
@@ -121,30 +122,32 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => { MockEventSource.instances[0].open() })
       await waitFor(() => expect(result.current.connected).toBe(true))
       expect(result.current.error).toBeNull()
     })
 
-    it('closes the EventSource on unmount', () => {
+    it('closes the EventSource on unmount', async () => {
       const { unmount } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       const es = MockEventSource.instances[0]
       unmount()
       expect(es.closed).toBe(true)
     })
 
-    it('reopens when queryId changes', () => {
+    it('reopens when queryId changes', async () => {
       const { rerender } = renderHook(
         ({ q }: { q: string }) => useDrasiQueryStream({
           mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: q,
         }),
         { initialProps: { q: 'q1' } },
       )
-      expect(MockEventSource.instances.length).toBe(1)
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       rerender({ q: 'q2' })
-      expect(MockEventSource.instances.length).toBe(2)
+      await waitFor(() => expect(MockEventSource.instances.length).toBe(2))
       expect(MockEventSource.instances[0].closed).toBe(true)
     })
   })
@@ -154,6 +157,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => {
         MockEventSource.instances[0].emit({
           added: [{ symbol: 'AAPL', price: 100 }],
@@ -167,6 +171,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => {
         MockEventSource.instances[0].emit({
           updated: [{ before: { symbol: 'AAPL', price: 100 }, after: { symbol: 'AAPL', price: 110 } }],
@@ -180,6 +185,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => {
         MockEventSource.instances[0].emit({
           updated: [{ symbol: 'MSFT', price: 300 }],
@@ -192,6 +198,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => {
         MockEventSource.instances[0].emit({ added: [{ symbol: 'AAPL' }, { symbol: 'MSFT' }] })
       })
@@ -207,6 +214,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => { MockEventSource.instances[0].emitRaw('heartbeat') })
       expect(result.current.results.length).toBe(0)
     })
@@ -215,6 +223,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => { MockEventSource.instances[0].open() })
       await waitFor(() => expect(result.current.connected).toBe(true))
       act(() => {
@@ -229,6 +238,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       // Push 250 unique rows in one delta.
       const added = Array.from({ length: 250 }, (_, i) => ({ n: i }))
       act(() => { MockEventSource.instances[0].emit({ added }) })
@@ -241,6 +251,7 @@ describe('useDrasiQueryStream', () => {
       const { result } = renderHook(() => useDrasiQueryStream({
         mode: 'server', drasiServerUrl: 'http://x', instanceId: 'i', queryId: 'q',
       }))
+      await waitFor(() => expect(MockEventSource.instances.length).toBeGreaterThan(0))
       act(() => { MockEventSource.instances[0].error() })
       await waitFor(() => expect(result.current.error).not.toBeNull())
       expect(result.current.connected).toBe(false)

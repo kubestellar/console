@@ -112,6 +112,11 @@ func (w *Watcher) poll(ctx context.Context) {
 		go func(name string) {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("stellar/watcher: pollCluster panicked", "cluster", name, "recover", r)
+				}
+			}()
 			added := w.pollCluster(pollCtx, name)
 			countMu.Lock()
 			newNotifs += added

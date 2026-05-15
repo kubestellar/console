@@ -43,8 +43,8 @@ describe('AISettingsSection', () => {
   it('renders segmented AI mode controls', () => {
     render(<AISettingsSection mode="high" setMode={vi.fn()} description="test" />)
 
-    expect(screen.getByRole('button', { name: 'low' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'medium' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'high' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^low/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^medium/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^high/i })).toBeInTheDocument()
   })
 })
