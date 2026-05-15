@@ -14,14 +14,18 @@ export function EmptyClusterState({ onAddCluster, agentConnected, agentDegraded,
   // Agent connected (or degraded) but no cluster data — show degraded state
   if ((agentConnected || agentDegraded) && !inClusterMode) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center" data-testid="cluster-degraded-state">
-        <AlertTriangle className="w-12 h-12 text-yellow-400 mb-4 opacity-75" />
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          {t('cluster.agentConnectedNoDataTitle')}
-        </h3>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md">
-          {t('cluster.agentConnectedNoDataDesc')}
-        </p>
+      <div className="mx-auto w-full max-w-3xl py-4" data-testid="cluster-degraded-state">
+        <div className="flex items-start gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500 mt-0.5" />
+          <div className="text-left">
+            <h3 className="text-sm font-semibold text-foreground leading-5">
+              {t('cluster.agentConnectedNoDataTitle')}
+            </h3>
+            <p className="text-xs text-muted-foreground leading-5">
+              {t('cluster.agentConnectedNoDataDesc')}
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
