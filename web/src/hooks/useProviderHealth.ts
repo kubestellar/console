@@ -26,6 +26,8 @@ const STATUS_PAGES: Record<string, string> = {
   anthropic: 'https://status.claude.com',
   openai: 'https://status.openai.com',
   google: 'https://aistudio.google.com/status',
+  'github-copilot': 'https://www.githubstatus.com',
+  mistral: 'https://status.mistral.ai',
   // Cloud providers
   eks: 'https://health.aws.amazon.com/health/status',
   gke: 'https://status.cloud.google.com',
@@ -44,14 +46,37 @@ const AI_PROVIDER_NAMES: Record<string, string> = {
   google: 'Google (Gemini)',
   gemini: 'Google (Gemini)',
   bob: 'Bob (Built-in)',
-  'anthropic-local': 'Claude Code (Local)' }
+  'anthropic-local': 'Claude Code (Local)',
+  'github-copilot': 'GitHub Copilot',
+  'github-cli': 'GitHub Copilot CLI',
+  'copilot-cli': 'GitHub Copilot CLI',
+  github: 'GitHub Copilot',
+  copilot: 'GitHub Copilot',
+  antigravity: 'Antigravity',
+  'google-ag': 'Antigravity',
+  ollama: 'Ollama (Local)',
+  'lm-studio': 'LM Studio (Local)',
+  lmstudio: 'LM Studio (Local)',
+  mistral: 'Mistral AI',
+  cohere: 'Cohere',
+  deepseek: 'DeepSeek',
+  groq: 'Groq',
+  together: 'Together AI',
+  fireworks: 'Fireworks AI',
+  perplexity: 'Perplexity',
+  openrouter: 'OpenRouter',
+  'open-webui': 'Open WebUI' }
 
 /** Normalize AI provider ID for dedup and status lookup */
 function normalizeAIProvider(provider: string): string {
-  if (provider === 'claude') return 'anthropic'
-  if (provider === 'gemini') return 'google'
-  if (provider === 'anthropic-local') return 'anthropic-local'
-  return provider
+  const normalizedProvider = provider.trim().toLowerCase()
+
+  if (normalizedProvider === 'claude') return 'anthropic'
+  if (normalizedProvider === 'gemini') return 'google'
+  if (normalizedProvider === 'github' || normalizedProvider === 'github-cli' || normalizedProvider === 'github-copilot' || normalizedProvider === 'copilot' || normalizedProvider === 'copilot-cli') return 'github-copilot'
+  if (normalizedProvider === 'google-ag') return 'antigravity'
+  if (normalizedProvider === 'lmstudio') return 'lm-studio'
+  return normalizedProvider
 }
 
 interface KeyStatus {
@@ -63,9 +88,17 @@ interface KeyStatus {
   error?: string
 }
 
+interface RegisteredProvider {
+  name: string
+  displayName: string
+  provider: string
+  available: boolean
+}
+
 interface KeysStatusResponse {
   keys: KeyStatus[]
   configPath: string
+  registeredProviders?: RegisteredProvider[]
 }
 
 function createAIProviderHealth(
@@ -76,11 +109,12 @@ function createAIProviderHealth(
     detail?: string
   },
 ): ProviderHealthInfo {
+  const providerId = provider.trim().toLowerCase()
   const normalizedProvider = normalizeAIProvider(provider)
 
   return {
     id: normalizedProvider,
-    name: AI_PROVIDER_NAMES[provider] || AI_PROVIDER_NAMES[normalizedProvider] || options.displayName || provider,
+    name: AI_PROVIDER_NAMES[providerId] || AI_PROVIDER_NAMES[normalizedProvider] || options.displayName || provider,
     category: 'ai',
     status: options.status,
     configured: true,
@@ -98,6 +132,7 @@ async function fetchLocalAIProviders(): Promise<ProviderHealthInfo[]> {
     if (response.ok) {
       const data: KeysStatusResponse = await response.json()
       const seen = new Set<string>()
+
       for (const key of (data.keys || [])) {
         // Skip unconfigured providers — they shouldn't appear in the health card.
         // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
@@ -129,6 +164,23 @@ async function fetchLocalAIProviders(): Promise<ProviderHealthInfo[]> {
           displayName: key.displayName,
           status,
           detail,
+        }))
+      }
+
+      for (const provider of (data.registeredProviders || [])) {
+        if (!provider.available) {
+          continue
+        }
+
+        const providerId = provider.provider || provider.name
+        const normalized = normalizeAIProvider(providerId)
+        if (seen.has(normalized)) continue
+        seen.add(normalized)
+
+        result.push(createAIProviderHealth(providerId, {
+          displayName: provider.displayName,
+          status: 'operational',
+          detail: 'Provider available',
         }))
       }
     }

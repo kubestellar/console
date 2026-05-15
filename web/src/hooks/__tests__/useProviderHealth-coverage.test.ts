@@ -208,6 +208,46 @@ describe('fetchProviders — AI providers', () => {
     expect(globalThis.fetch).toHaveBeenCalledTimes(1)
   })
 
+  it('includes available registered providers that are not key-based', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        keys: [{ provider: 'anthropic', displayName: 'Anthropic', configured: true, valid: true }],
+        registeredProviders: [
+          { name: 'copilot-cli', displayName: 'Copilot CLI', provider: 'github-cli', available: true },
+          { name: 'antigravity', displayName: 'Antigravity', provider: 'google-ag', available: true },
+          { name: 'ollama', displayName: 'Ollama', provider: 'ollama', available: false },
+        ],
+        configPath: '/fake',
+      }),
+    })
+
+    const providers = await invokeProviderFetcher()
+    expect(providers).toContainEqual(expect.objectContaining({ id: 'anthropic', name: 'Anthropic (Claude)' }))
+    expect(providers).toContainEqual(expect.objectContaining({ id: 'github-copilot', name: 'GitHub Copilot CLI', status: 'operational', detail: 'Provider available' }))
+    expect(providers).toContainEqual(expect.objectContaining({ id: 'antigravity', name: 'Antigravity', status: 'operational' }))
+    expect(providers.find(provider => provider.id === 'ollama')).toBeUndefined()
+  })
+
+  it('falls back to the backend display name for unknown providers', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        keys: [{ provider: 'custom-gateway', displayName: 'Custom Gateway', configured: true, valid: true }],
+        configPath: '/fake',
+      }),
+    })
+
+    const providers = await invokeProviderFetcher()
+    expect(providers).toEqual([
+      expect.objectContaining({
+        id: 'custom-gateway',
+        name: 'Custom Gateway',
+        status: 'operational',
+      }),
+    ])
+  })
+
   it('normalizes provider ids and deduplicates anthropic aliases', async () => {
     globalThis.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
