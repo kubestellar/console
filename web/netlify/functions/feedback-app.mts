@@ -71,6 +71,16 @@ const FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS = 50;
 const FEEDBACK_APP_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** Non-obvious header name for the per-user client credential. */
 const CLIENT_AUTH_HEADER = "x-kc-client-auth";
+/** Maximum chars of upstream response body to log (defense-in-depth). */
+const MAX_LOG_BODY_CHARS = 200;
+
+/** Truncate upstream error body for logging — never log full external responses. */
+function sanitizeUpstreamError(text: string): string {
+  const oneLine = text.replace(/[\r\n]+/g, " ").trim();
+  return oneLine.length > MAX_LOG_BODY_CHARS
+    ? oneLine.slice(0, MAX_LOG_BODY_CHARS) + "…[truncated]"
+    : oneLine;
+}
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
@@ -462,7 +472,7 @@ export default async function handler(request: Request): Promise<Response> {
       );
       if (!resp.ok) {
         const txt = await resp.text();
-        console.error("[feedback-app] GitHub issue comment failed:", resp.status, txt);
+        console.error("[feedback-app] GitHub issue comment failed:", resp.status, sanitizeUpstreamError(txt));
         return jsonResponse(request, resp.status, {
           error: "Failed to add comment to issue",
         });
@@ -492,7 +502,7 @@ export default async function handler(request: Request): Promise<Response> {
       );
       if (!resp.ok) {
         const txt = await resp.text();
-        console.error("[feedback-app] GitHub issue update failed:", resp.status, txt);
+        console.error("[feedback-app] GitHub issue update failed:", resp.status, sanitizeUpstreamError(txt));
         return jsonResponse(request, resp.status, {
           error: "Failed to update issue state",
         });
@@ -530,7 +540,7 @@ export default async function handler(request: Request): Promise<Response> {
     );
     if (!resp.ok) {
       const txt = await resp.text();
-      console.error("[feedback-app] GitHub issue create failed:", resp.status, txt);
+      console.error("[feedback-app] GitHub issue create failed:", resp.status, sanitizeUpstreamError(txt));
       return jsonResponse(request, resp.status, {
         error: "Failed to create issue",
       });
