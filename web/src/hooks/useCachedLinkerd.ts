@@ -1,19 +1,12 @@
 /**
  * Linkerd Service Mesh Status Hook — Data fetching for the linkerd_status card.
  *
- * Mirrors the envoy_status / contour_status pattern:
- * - useCache with fetcher + demo fallback
- * - isDemoFallback gated on !isLoading (prevents demo flash while loading)
- * - fetchJson helper with treat404AsEmpty (no real endpoint yet — this is
- *   scaffolding; the fetch will 404 until a real Linkerd Viz bridge lands,
- *   at which point useCache will transparently switch to live data)
- * - showSkeleton / showEmptyState from useCardLoadingState
+ * Uses createCardCachedHook factory for zero-boilerplate caching.
+ * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { authFetch } from '../lib/api'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
+import { fetchJson } from '../lib/fetchJson'
 import {
   LINKERD_DEMO_DATA,
   type LinkerdMeshedDeployment,
@@ -53,11 +46,6 @@ const INITIAL_DATA: LinkerdStatusData = {
 // ---------------------------------------------------------------------------
 // Internal types (shape of the future /api/linkerd/status response)
 // ---------------------------------------------------------------------------
-
-interface FetchResult<T> {
-  data: T
-  failed: boolean
-}
 
 interface LinkerdStatusResponse {
   deployments?: LinkerdMeshedDeployment[]
@@ -104,45 +92,12 @@ function buildLinkerdStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Private fetchJson helper (mirrors envoy/contour pattern)
-// ---------------------------------------------------------------------------
-
-async function fetchJson<T>(
-  url: string,
-  options?: { treat404AsEmpty?: boolean },
-): Promise<FetchResult<T | null>> {
-  try {
-    const resp = await authFetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
-
-    if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
-        return { data: null, failed: false }
-      }
-      return { data: null, failed: true }
-    }
-
-    const body = (await resp.json()) as T
-    return { data: body, failed: false }
-  } catch {
-    return { data: null, failed: true }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Fetcher
 // ---------------------------------------------------------------------------
 
 async function fetchLinkerdStatus(): Promise<LinkerdStatusData> {
-  const result = await fetchJson<LinkerdStatusResponse>(
-    LINKERD_STATUS_ENDPOINT,
-    { treat404AsEmpty: true },
-  )
+  const result = await fetchJson<LinkerdStatusResponse>(LINKERD_STATUS_ENDPOINT)
 
-  // If the endpoint isn't wired up yet (404) or the request failed, the
-  // cache layer will surface demo data via its demoData fallback path.
   if (result.failed) {
     throw new Error('Unable to fetch Linkerd status')
   }
@@ -163,72 +118,17 @@ async function fetchLinkerdStatus(): Promise<LinkerdStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedLinkerdResult {
-  data: LinkerdStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export const useCachedLinkerd = createCardCachedHook<LinkerdStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: LINKERD_DEMO_DATA,
+  fetcher: fetchLinkerdStatus,
+  hasAnyData: (data) =>
+    data.health === 'not-installed' ? true : data.deployments.length > 0,
+})
 
-export function useCachedLinkerd(): UseCachedLinkerdResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<LinkerdStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: LINKERD_DEMO_DATA,
-    persist: true,
-    fetcher: fetchLinkerdStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when Linkerd isn't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : data.deployments.length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export type UseCachedLinkerdResult = CardCachedHookResult<LinkerdStatusData>
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

@@ -1,20 +1,12 @@
 /**
  * OpenFeature Status Hook — Data fetching for the openfeature_status card.
  *
- * Mirrors the spiffe / linkerd / envoy / contour pattern:
- * - useCache with fetcher + demo fallback
- * - isDemoFallback gated on !isLoading (prevents demo flash while loading)
- * - fetchJson helper with treat404AsEmpty (the `/api/openfeature/status`
- *   endpoint may not be wired up on every backend — a 404 is treated as
- *   "not installed" rather than a failure, which cleanly surfaces the demo
- *   fallback through useCache's demoData path)
- * - showSkeleton / showEmptyState from useCardLoadingState
+ * Uses createCardCachedHook factory for zero-boilerplate caching.
+ * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { authFetch } from '../lib/api'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
+import { fetchJson } from '../lib/fetchJson'
 import {
   OPENFEATURE_DEMO_DATA,
   type OpenFeatureFlag,
@@ -51,11 +43,6 @@ const INITIAL_DATA: OpenFeatureStatusData = {
 // ---------------------------------------------------------------------------
 // Internal types (shape of the future /api/openfeature/status response)
 // ---------------------------------------------------------------------------
-
-interface FetchResult<T> {
-  data: T
-  failed: boolean
-}
 
 interface OpenFeatureStatusResponse {
   providers?: OpenFeatureProvider[]
@@ -126,45 +113,12 @@ function buildOpenFeatureStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Private fetchJson helper (mirrors spiffe/envoy/contour/linkerd pattern)
-// ---------------------------------------------------------------------------
-
-async function fetchJson<T>(
-  url: string,
-  options?: { treat404AsEmpty?: boolean },
-): Promise<FetchResult<T | null>> {
-  try {
-    const resp = await authFetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
-
-    if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
-        return { data: null, failed: false }
-      }
-      return { data: null, failed: true }
-    }
-
-    const body = (await resp.json()) as T
-    return { data: body, failed: false }
-  } catch {
-    return { data: null, failed: true }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Fetcher
 // ---------------------------------------------------------------------------
 
 async function fetchOpenFeatureStatus(): Promise<OpenFeatureStatusData> {
-  const result = await fetchJson<OpenFeatureStatusResponse>(
-    OPENFEATURE_STATUS_ENDPOINT,
-    { treat404AsEmpty: true },
-  )
+  const result = await fetchJson<OpenFeatureStatusResponse>(OPENFEATURE_STATUS_ENDPOINT)
 
-  // If the endpoint isn't wired up yet (404) or the request failed, the
-  // cache layer will surface demo data via its demoData fallback path.
   if (result.failed) {
     throw new Error('Unable to fetch OpenFeature status')
   }
@@ -189,74 +143,19 @@ async function fetchOpenFeatureStatus(): Promise<OpenFeatureStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedOpenfeatureResult {
-  data: OpenFeatureStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
-
-export function useCachedOpenfeature(): UseCachedOpenfeatureResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<OpenFeatureStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: OPENFEATURE_DEMO_DATA,
-    persist: true,
-    fetcher: fetchOpenFeatureStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when OpenFeature isn't present.
-  const hasAnyData =
+export const useCachedOpenfeature = createCardCachedHook<OpenFeatureStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: OPENFEATURE_DEMO_DATA,
+  fetcher: fetchOpenFeatureStatus,
+  hasAnyData: (data) =>
     data.health === 'not-installed'
       ? true
-      : (data.providers ?? []).length > 0 || (data.flags ?? []).length > 0
+      : (data.providers ?? []).length > 0 || (data.flags ?? []).length > 0,
+})
 
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export type UseCachedOpenfeatureResult = CardCachedHookResult<OpenFeatureStatusData>
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

@@ -1,19 +1,12 @@
 /**
  * SPIFFE Status Hook — Data fetching for the spiffe_status card.
  *
- * Mirrors the linkerd / envoy / contour pattern:
- * - useCache with fetcher + demo fallback
- * - isDemoFallback gated on !isLoading (prevents demo flash while loading)
- * - fetchJson helper with treat404AsEmpty (no real endpoint yet — this is
- *   scaffolding; the fetch will 404 until a real SPIRE server bridge lands,
- *   at which point useCache will transparently switch to live data)
- * - showSkeleton / showEmptyState from useCardLoadingState
+ * Uses createCardCachedHook factory for zero-boilerplate caching.
+ * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { authFetch } from '../lib/api'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
+import { fetchJson } from '../lib/fetchJson'
 import {
   SPIFFE_DEMO_DATA,
   type SpiffeFederatedDomain,
@@ -59,11 +52,6 @@ const INITIAL_DATA: SpiffeStatusData = {
 // ---------------------------------------------------------------------------
 // Internal types (shape of the future /api/spiffe/status response)
 // ---------------------------------------------------------------------------
-
-interface FetchResult<T> {
-  data: T
-  failed: boolean
-}
 
 interface SpiffeStatusResponse {
   trustDomain?: string
@@ -119,55 +107,12 @@ function buildSpiffeStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Private fetchJson helper (mirrors envoy/contour/linkerd pattern)
-// ---------------------------------------------------------------------------
-
-/** HTTP statuses that indicate "endpoint not available" — treat as empty, not
- *  as a hard failure. 401/403 cover unauthenticated/demo visitors hitting
- *  the JWT-protected /api group; 404/501/503 cover Netlify SPA fallback and
- *  the MSW catch-all (#9933). */
-const NOT_INSTALLED_STATUSES = new Set<number>([401, 403, 404, 501, 503])
-
-async function fetchJson<T>(
-  url: string,
-): Promise<FetchResult<T | null>> {
-  try {
-    const resp = await authFetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
-
-    if (!resp.ok) {
-      if (NOT_INSTALLED_STATUSES.has(resp.status)) {
-        return { data: null, failed: false }
-      }
-      return { data: null, failed: true }
-    }
-
-    // Defensive JSON parse — Netlify SPA fallback may return text/html (#9933)
-    let body: T
-    try {
-      body = (await resp.json()) as T
-    } catch {
-      return { data: null, failed: false }
-    }
-    return { data: body, failed: false }
-  } catch {
-    return { data: null, failed: true }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Fetcher
 // ---------------------------------------------------------------------------
 
 async function fetchSpiffeStatus(): Promise<SpiffeStatusData> {
-  const result = await fetchJson<SpiffeStatusResponse>(
-    SPIFFE_STATUS_ENDPOINT,
-  )
+  const result = await fetchJson<SpiffeStatusResponse>(SPIFFE_STATUS_ENDPOINT)
 
-  // If the endpoint isn't wired up yet (404) or the request failed, the
-  // cache layer will surface demo data via its demoData fallback path.
   if (result.failed) {
     throw new Error('Unable to fetch SPIFFE status')
   }
@@ -193,72 +138,17 @@ async function fetchSpiffeStatus(): Promise<SpiffeStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedSpiffeResult {
-  data: SpiffeStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export const useCachedSpiffe = createCardCachedHook<SpiffeStatusData>({
+  key: CACHE_KEY,
+  category: 'services',
+  initialData: INITIAL_DATA,
+  demoData: SPIFFE_DEMO_DATA,
+  fetcher: fetchSpiffeStatus,
+  hasAnyData: (data) =>
+    data.health === 'not-installed' ? true : (data.entries ?? []).length > 0,
+})
 
-export function useCachedSpiffe(): UseCachedSpiffeResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<SpiffeStatusData>({
-    key: CACHE_KEY,
-    category: 'services',
-    initialData: INITIAL_DATA,
-    demoData: SPIFFE_DEMO_DATA,
-    persist: true,
-    fetcher: fetchSpiffeStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when SPIRE isn't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : (data.entries ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export type UseCachedSpiffeResult = CardCachedHookResult<SpiffeStatusData>
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

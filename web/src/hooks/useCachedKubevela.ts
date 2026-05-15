@@ -1,21 +1,14 @@
 /**
  * KubeVela Status Hook — Data fetching for the kubevela_status card.
  *
- * Mirrors the spiffe / dapr / envoy / linkerd pattern:
- * - useCache with fetcher + demo fallback
- * - isDemoFallback gated on !isLoading (prevents demo flash while loading)
- * - fetchJson helper with treat404AsEmpty (no real endpoint yet — this is
- *   scaffolding; the fetch will 404 until a real KubeVela bridge lands,
- *   at which point useCache will transparently switch to live data)
- * - showSkeleton / showEmptyState from useCardLoadingState
+ * Uses createCardCachedHook factory for zero-boilerplate caching.
+ * Domain logic (parsing, health derivation) remains in pure helper functions.
  *
  * Source: kubestellar/console-marketplace#43
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { authFetch } from '../lib/api'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
+import { fetchJson } from '../lib/fetchJson'
 import {
   KUBEVELA_DEMO_DATA,
   type KubeVelaApplication,
@@ -63,11 +56,6 @@ const INITIAL_DATA: KubeVelaStatusData = {
 // ---------------------------------------------------------------------------
 // Internal types (shape of the future /api/kubevela/status response)
 // ---------------------------------------------------------------------------
-
-interface FetchResult<T> {
-  data: T
-  failed: boolean
-}
 
 interface KubeVelaStatusResponse {
   applications?: KubeVelaApplication[]
@@ -164,45 +152,12 @@ function buildKubeVelaStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Private fetchJson helper (mirrors spiffe/dapr/envoy/contour pattern)
-// ---------------------------------------------------------------------------
-
-async function fetchJson<T>(
-  url: string,
-  options?: { treat404AsEmpty?: boolean },
-): Promise<FetchResult<T | null>> {
-  try {
-    const resp = await authFetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
-
-    if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
-        return { data: null, failed: false }
-      }
-      return { data: null, failed: true }
-    }
-
-    const body = (await resp.json()) as T
-    return { data: body, failed: false }
-  } catch {
-    return { data: null, failed: true }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Fetcher
 // ---------------------------------------------------------------------------
 
 async function fetchKubeVelaStatus(): Promise<KubeVelaStatusData> {
-  const result = await fetchJson<KubeVelaStatusResponse>(
-    KUBEVELA_STATUS_ENDPOINT,
-    { treat404AsEmpty: true },
-  )
+  const result = await fetchJson<KubeVelaStatusResponse>(KUBEVELA_STATUS_ENDPOINT)
 
-  // If the endpoint isn't wired up yet (404) or the request failed, the
-  // cache layer will surface demo data via its demoData fallback path.
   if (result.failed) {
     throw new Error('Unable to fetch KubeVela status')
   }
@@ -222,78 +177,20 @@ async function fetchKubeVelaStatus(): Promise<KubeVelaStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedKubevelaResult {
-  data: KubeVelaStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
-
-export function useCachedKubevela(): UseCachedKubevelaResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<KubeVelaStatusData>({
-    key: CACHE_KEY,
-    // KubeVela Application CRs are deployment-like — refresh at the same
-    // cadence as Deployments/Services (60s). `workloads` is the UI category
-    // on the card itself; `deployments` is the RefreshCategory for caching.
-    category: 'deployments',
-    initialData: INITIAL_DATA,
-    demoData: KUBEVELA_DEMO_DATA,
-    persist: true,
-    fetcher: fetchKubeVelaStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when KubeVela isn't present.
-  const hasAnyData =
+export const useCachedKubevela = createCardCachedHook<KubeVelaStatusData>({
+  key: CACHE_KEY,
+  category: 'deployments',
+  initialData: INITIAL_DATA,
+  demoData: KUBEVELA_DEMO_DATA,
+  fetcher: fetchKubeVelaStatus,
+  hasAnyData: (data) =>
     data.health === 'not-installed'
       ? true
       : (data.applications ?? []).length > 0 ||
-        (data.controllerPods ?? []).length > 0
+        (data.controllerPods ?? []).length > 0,
+})
 
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export type UseCachedKubevelaResult = CardCachedHookResult<KubeVelaStatusData>
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

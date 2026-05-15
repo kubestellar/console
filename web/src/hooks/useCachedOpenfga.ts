@@ -1,19 +1,12 @@
 /**
  * OpenFGA Status Hook — Data fetching for the openfga_status card.
  *
- * Mirrors the spiffe / linkerd / envoy / contour pattern:
- * - useCache with fetcher + demo fallback
- * - isDemoFallback gated on !isLoading (prevents demo flash while loading)
- * - fetchJson helper with treat404AsEmpty (no real endpoint yet — this is
- *   scaffolding; the fetch will 404 until a real OpenFGA server bridge lands,
- *   at which point useCache will transparently switch to live data)
- * - showSkeleton / showEmptyState from useCardLoadingState
+ * Uses createCardCachedHook factory for zero-boilerplate caching.
+ * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { authFetch } from '../lib/api'
+import { createCardCachedHook, type CardCachedHookResult } from '../lib/cache/createCardCachedHook'
+import { fetchJson } from '../lib/fetchJson'
 import {
   OPENFGA_DEMO_DATA,
   type OpenfgaApiRps,
@@ -75,11 +68,6 @@ const INITIAL_DATA: OpenfgaStatusData = {
 // Internal types (shape of the future /api/openfga/status response)
 // ---------------------------------------------------------------------------
 
-interface FetchResult<T> {
-  data: T
-  failed: boolean
-}
-
 interface OpenfgaStatusResponse {
   endpoint?: string
   stores?: OpenfgaStore[]
@@ -140,45 +128,12 @@ function buildOpenfgaStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Private fetchJson helper (mirrors spiffe/envoy/contour/linkerd pattern)
-// ---------------------------------------------------------------------------
-
-async function fetchJson<T>(
-  url: string,
-  options?: { treat404AsEmpty?: boolean },
-): Promise<FetchResult<T | null>> {
-  try {
-    const resp = await authFetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
-
-    if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
-        return { data: null, failed: false }
-      }
-      return { data: null, failed: true }
-    }
-
-    const body = (await resp.json()) as T
-    return { data: body, failed: false }
-  } catch {
-    return { data: null, failed: true }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Fetcher
 // ---------------------------------------------------------------------------
 
 async function fetchOpenfgaStatus(): Promise<OpenfgaStatusData> {
-  const result = await fetchJson<OpenfgaStatusResponse>(
-    OPENFGA_STATUS_ENDPOINT,
-    { treat404AsEmpty: true },
-  )
+  const result = await fetchJson<OpenfgaStatusResponse>(OPENFGA_STATUS_ENDPOINT)
 
-  // If the endpoint isn't wired up yet (404) or the request failed, the
-  // cache layer will surface demo data via its demoData fallback path.
   if (result.failed) {
     throw new Error('Unable to fetch OpenFGA status')
   }
@@ -216,72 +171,17 @@ async function fetchOpenfgaStatus(): Promise<OpenfgaStatusData> {
 // Hook
 // ---------------------------------------------------------------------------
 
-export interface UseCachedOpenfgaResult {
-  data: OpenfgaStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export const useCachedOpenfga = createCardCachedHook<OpenfgaStatusData>({
+  key: CACHE_KEY,
+  category: 'rbac',
+  initialData: INITIAL_DATA,
+  demoData: OPENFGA_DEMO_DATA,
+  fetcher: fetchOpenfgaStatus,
+  hasAnyData: (data) =>
+    data.health === 'not-installed' ? true : (data.stores ?? []).length > 0,
+})
 
-export function useCachedOpenfga(): UseCachedOpenfgaResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<OpenfgaStatusData>({
-    key: CACHE_KEY,
-    category: 'rbac',
-    initialData: INITIAL_DATA,
-    demoData: OPENFGA_DEMO_DATA,
-    persist: true,
-    fetcher: fetchOpenfgaStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when OpenFGA isn't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : (data.stores ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+export type UseCachedOpenfgaResult = CardCachedHookResult<OpenfgaStatusData>
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing
