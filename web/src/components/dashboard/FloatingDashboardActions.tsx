@@ -15,8 +15,8 @@ import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 const FAB_SIZE_DESKTOP = 'w-10 h-10 min-w-10 min-h-10 shrink-0 aspect-square'
 const FAB_SIZE_MOBILE  = 'w-8 h-8 min-w-8 min-h-8 shrink-0 aspect-square'
 const FAB_POSITION_MOBILE = 'right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]'
-const FAB_POSITION_TABLET = 'right-16 bottom-20'
-const FAB_POSITION_DESKTOP = 'right-16 bottom-20'
+const FAB_POSITION_TABLET = 'right-4 bottom-20'
+const FAB_POSITION_DESKTOP = 'right-4 bottom-20'
 const FAB_POSITION_DESKTOP_MINIMIZED = 'right-[104px] bottom-20'
 const FAB_POSITION_DESKTOP_EXPANDED = 'bottom-20'
 
@@ -149,9 +149,8 @@ export function FloatingDashboardActions({
     // On tablet (768-1023px) the sidebar renders as an overlay and does not
     // push content, so always use default right positioning (#11505).
     if (isTablet) return FAB_POSITION_TABLET
-    // right-16 (64px) keeps the 40px FAB fully visible regardless of
-    // macOS "always-show scrollbars" preference, browser zoom, or any
-    // future scrollbar-gutter changes (#8551 follow-up).
+    // Keep the closed-state FAB aligned with the floating AI Missions
+    // launcher on the viewport's right edge.
     if (!isSidebarOpen) return FAB_POSITION_DESKTOP
     if (isSidebarMinimized) return FAB_POSITION_DESKTOP_MINIMIZED
     // When expanded, position dynamically using the CSS var so the FAB
