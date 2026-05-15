@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect, useRef, useId } from 'react'
 import { createPortal } from 'react-dom'
+import { matchPath, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { X, Send, CheckCircle2 } from 'lucide-react'
 import { MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH, useNPSSurvey } from '../../hooks/useNPSSurvey'
 import { useToast } from '../ui/Toast'
 import { cn } from '../../lib/cn'
+import { ROUTES } from '../../config/routes'
 
 const NPS_OPTIONS = [
   { score: 1, emoji: '\u{1F620}', labelKey: 'nps.notGreat' as const, category: 'detractor' as const },
@@ -23,9 +25,18 @@ const FEEDBACK_PROMPT_KEYS = {
   promoter: 'nps.feedbackPositive',
 } as const
 
+function isSupportedNPSSurveyRoute(pathname: string): boolean {
+  return pathname === ROUTES.HOME
+    || pathname === ROUTES.DASHBOARD_ALIAS
+    || matchPath(ROUTES.CUSTOM_DASHBOARD, pathname) !== null
+}
+
 export function NPSSurvey() {
+  const location = useLocation()
   const { t } = useTranslation()
-  const { isVisible, submitResponse, dismiss } = useNPSSurvey()
+  const { isVisible, submitResponse, dismiss } = useNPSSurvey({
+    isEnabled: isSupportedNPSSurveyRoute(location.pathname),
+  })
   const { showToast } = useToast()
   const [selectedScore, setSelectedScore] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')

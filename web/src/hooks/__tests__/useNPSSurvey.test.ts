@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { MS_PER_DAY, MS_PER_MINUTE } from '../../lib/constants/time'
+
+const SECOND_SESSION_ENGAGEMENT_MS = 5 * MS_PER_MINUTE
+const DEFAULT_ENGAGEMENT_MS = SECOND_SESSION_ENGAGEMENT_MS
+const MIN_SNOOZE_ASSERTION_MS = 6 * MS_PER_DAY
+const REPROMPT_LOOKBACK_MS = 31 * MS_PER_DAY
 
 const {
   mockAwardCoins,
@@ -7,6 +13,7 @@ const {
   mockEmitShown,
   mockEmitResponse,
   mockEmitDismissed,
+  mockPeekSessionEngagementMs,
   store,
 } = vi.hoisted(() => ({
   mockAwardCoins: vi.fn(),
@@ -14,6 +21,7 @@ const {
   mockEmitShown: vi.fn(),
   mockEmitResponse: vi.fn(),
   mockEmitDismissed: vi.fn(),
+  mockPeekSessionEngagementMs: vi.fn(),
   store: new Map<string, string>(),
 }))
 
@@ -36,6 +44,10 @@ vi.mock('../../lib/analytics', () => ({
   emitNPSSurveyShown: (...args: unknown[]) => mockEmitShown(...args),
   emitNPSResponse: (...args: unknown[]) => mockEmitResponse(...args),
   emitNPSDismissed: (...args: unknown[]) => mockEmitDismissed(...args),
+}))
+
+vi.mock('../../lib/analytics-session', () => ({
+  peekSessionEngagementMs: () => mockPeekSessionEngagementMs(),
 }))
 
 vi.mock('../../lib/utils/localStorage', () => ({
@@ -63,6 +75,8 @@ describe('useNPSSurvey', () => {
     mockEmitShown.mockClear()
     mockEmitResponse.mockClear()
     mockEmitDismissed.mockClear()
+    mockPeekSessionEngagementMs.mockReset()
+    mockPeekSessionEngagementMs.mockReturnValue(DEFAULT_ENGAGEMENT_MS)
     // Default: enough sessions
     store.set('kc-session-count', '10')
     // NPS POST now throws on non-ok; default to a successful 201
@@ -76,9 +90,8 @@ describe('useNPSSurvey', () => {
     fetchMock.mockReset()
   })
 
-  it('shows for demo/unauthenticated visitors (voluntary feedback has no auth gate)', () => {
+  it('shows for demo/unauthenticated visitors after enough usage', () => {
     const { result } = renderHook(() => useNPSSurvey())
-    act(() => { vi.advanceTimersByTime(15_000) })
     expect(result.current.isVisible).toBe(true)
     expect(mockEmitShown).toHaveBeenCalledOnce()
   })
@@ -91,10 +104,16 @@ describe('useNPSSurvey', () => {
     expect(result.current.isVisible).toBe(false)
   })
 
-  it('shows after idle delay when eligible', () => {
+  it('waits for meaningful activity on the second session', () => {
+    store.set('kc-session-count', '2')
+    mockPeekSessionEngagementMs.mockReturnValue(0)
+
     const { result } = renderHook(() => useNPSSurvey())
     expect(result.current.isVisible).toBe(false)
-    act(() => { vi.advanceTimersByTime(10_000) })
+
+    mockPeekSessionEngagementMs.mockReturnValue(SECOND_SESSION_ENGAGEMENT_MS)
+    act(() => { vi.advanceTimersByTime(15_000) })
+
     expect(result.current.isVisible).toBe(true)
     expect(mockEmitShown).toHaveBeenCalledOnce()
   })
@@ -200,9 +219,8 @@ describe('useNPSSurvey', () => {
     expect(mockApiPost).not.toHaveBeenCalled()
   })
 
-  it('dismiss increments count and hides widget', () => {
+  it('dismiss increments count, hides widget, and writes a 7 day snooze', () => {
     const { result } = renderHook(() => useNPSSurvey())
-    act(() => { vi.advanceTimersByTime(30_000) })
 
     act(() => {
       result.current.dismiss()
@@ -213,6 +231,7 @@ describe('useNPSSurvey', () => {
 
     const state = JSON.parse(store.get('kc-nps-state') || '{}')
     expect(state.dismissCount).toBe(1)
+    expect(new Date(state.snoozedUntil).getTime()).toBeGreaterThan(Date.now() + MIN_SNOOZE_ASSERTION_MS)
   })
 
   it('respects dismiss retry days', () => {
@@ -242,17 +261,23 @@ describe('useNPSSurvey', () => {
     expect(result.current.isVisible).toBe(false)
   })
 
+  it('does not show when disabled for the current route', () => {
+    const { result } = renderHook(() => useNPSSurvey({ isEnabled: false }))
+    expect(result.current.isVisible).toBe(false)
+    expect(mockEmitShown).not.toHaveBeenCalled()
+  })
+
   it('re-prompts after reprompt days since submission', () => {
-    const oldDate = new Date(Date.now() - 31 * 86_400_000).toISOString()
+    const oldDate = new Date(Date.now() - REPROMPT_LOOKBACK_MS).toISOString()
     store.set('kc-nps-state', JSON.stringify({
       lastSubmittedAt: oldDate,
       lastDismissedAt: null,
+      snoozedUntil: null,
       dismissCount: 0,
       maxDismissalsReachedAt: null,
     }))
 
     const { result } = renderHook(() => useNPSSurvey())
-    act(() => { vi.advanceTimersByTime(30_000) })
     expect(result.current.isVisible).toBe(true)
   })
 })
