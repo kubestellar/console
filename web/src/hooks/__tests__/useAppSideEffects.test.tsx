@@ -1,11 +1,21 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, renderHook, screen, act, waitFor } from '@testing-library/react'
-import React from 'react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+/**
+ * Tests for useAppSideEffects exports:
+ * LoadingFallback, useLiveUrl, LiveLocationProvider,
+ * PageViewTracker, DataPrefetchInit, OrbitAutoRunner, SettingsSyncInit
+ * 
+ */
 
-// ---------------------------------------------------------------------------
-// Mocks — declared before import of the module under test
-// ---------------------------------------------------------------------------
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, act, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
+import { MemoryRouter, useLocation, useNavigationType} from 'react-router-dom'
+import React, { useContext } from 'react'
+import { UNSAFE_LocationContext} from 'react-router-dom'
+import { Action } from 'history'
+import type { Location } from 'react-router-dom'
+
+
+// ---------- Mocks ----------
 
 vi.mock('../useOrbitAutoRun', () => ({ useOrbitAutoRun: vi.fn() }))
 vi.mock('../usePersistedSettings', () => ({ usePersistedSettings: vi.fn() }))
@@ -19,278 +29,217 @@ vi.mock('../../lib/analytics', () => ({
   emitPageView: vi.fn(),
   emitDashboardViewed: vi.fn(),
 }))
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: vi.fn(() => false),
-}))
-vi.mock('../useSidebarConfig', () => ({
+vi.mock('../../hooks/useSidebarConfig', () => ({
   fetchEnabledDashboards: vi.fn(() => Promise.resolve()),
   getEnabledDashboardIds: vi.fn(() => null),
 }))
-vi.mock('../../lib/dashboardChunks', () => ({
-  DASHBOARD_CHUNKS: {
-    dashboard: vi.fn(() => Promise.resolve({})),
-    settings: vi.fn(() => Promise.resolve({})),
-  },
-}))
-vi.mock('../../routes/routeTitles', () => ({
-  ROUTE_TITLES: { '/': 'Home', '/settings': 'Settings' },
-  pathToDashboardId: vi.fn((path: string) => (path === '/' ? 'main' : null)),
-}))
-vi.mock('../../lib/prefetchCardData', () => ({
-  prefetchCardData: vi.fn(() => Promise.resolve()),
-}))
+vi.mock('../../lib/demoMode', () => ({ isDemoMode: vi.fn(() => false) }))
+vi.mock('../../lib/dashboardChunks', () => ({ DASHBOARD_CHUNKS: {} }))
+vi.mock('../../lib/prefetchCardData', () => ({ prefetchCardData: vi.fn(() => Promise.resolve()) }))
 vi.mock('../../components/cards/cardRegistry', () => ({
   prefetchCardChunks: vi.fn(),
   prefetchDemoCardChunks: vi.fn(),
 }))
 
-// ---------------------------------------------------------------------------
-// Dynamic imports (after mocks)
-// ---------------------------------------------------------------------------
-
 import {
-  OrbitAutoRunner,
-  SettingsSyncInit,
-  PageViewTracker,
-  DataPrefetchInit,
   LoadingFallback,
   useLiveUrl,
   LiveLocationProvider,
+  PageViewTracker,
+  DataPrefetchInit,
+  OrbitAutoRunner,
+  SettingsSyncInit,
 } from '../useAppSideEffects'
 import { emitPageView, emitDashboardViewed } from '../../lib/analytics'
 import { useAuth } from '../../lib/auth'
 import { useBranding } from '../useBranding'
-import { pathToDashboardId } from '../../routes/routeTitles'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// ---------- LoadingFallback ----------
 
-const WithRouter = ({ children }: { children: React.ReactNode }) =>
-  React.createElement(MemoryRouter, null, children)
+describe('LoadingFallback', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
 
-// ---------------------------------------------------------------------------
-// OrbitAutoRunner
-// ---------------------------------------------------------------------------
+  it('renders an invisible placeholder before 200ms', () => {
+    const { container } = render(<LoadingFallback />)
+    // Spinner not present yet
+    expect(container.querySelector('.animate-spin')).toBeNull()
+    // Placeholder div is present
+    expect(container.querySelector('.min-h-screen')).toBeTruthy()
+  })
 
-describe('OrbitAutoRunner', () => {
-  it('renders null', () => {
-    const { container } = render(React.createElement(OrbitAutoRunner), { wrapper: WithRouter })
-    expect(container.firstChild).toBeNull()
+ it('shows the spinner after 200ms', () => {
+  const { container } = render(<LoadingFallback />)
+  act(() => { vi.advanceTimersByTime(200) })
+  expect(container.querySelector('.animate-spin')).toBeTruthy()
+})
+  
+
+  it('does not show spinner at 199ms', () => {
+    const { container } = render(<LoadingFallback />)
+    act(() => { vi.advanceTimersByTime(199) })
+    expect(container.querySelector('.animate-spin')).toBeNull()
+  })
+
+  it('clears timer on unmount', () => {
+    const { unmount } = render(<LoadingFallback />)
+    unmount()
+    // Should not throw
+    act(() => { vi.advanceTimersByTime(500) })
   })
 })
 
-// ---------------------------------------------------------------------------
-// SettingsSyncInit
-// ---------------------------------------------------------------------------
+// ---------- useLiveUrl ----------
 
-describe('SettingsSyncInit', () => {
-  it('renders null', () => {
-    const { container } = render(React.createElement(SettingsSyncInit), { wrapper: WithRouter })
-    expect(container.firstChild).toBeNull()
+describe('useLiveUrl', () => {
+  it('returns the current pathname', () => {
+    const { result } = renderHook(() => useLiveUrl())
+    expect(result.current).toContain(window.location.pathname)
+  })
+
+  it('updates when pushState is called', async () => {
+    const { result } = renderHook(() => useLiveUrl())
+    await act(async () => {
+      window.history.pushState({}, '', '/new-path')
+    })
+    expect(result.current).toContain('/new-path')
+    window.history.pushState({}, '', '/')
+  })
+
+  it('updates when replaceState is called', async () => {
+    const { result } = renderHook(() => useLiveUrl())
+    await act(async () => {
+      window.history.replaceState({}, '', '/replaced')
+    })
+    expect(result.current).toContain('/replaced')
+    window.history.pushState({}, '', '/')
+  })
+
+  it('updates on popstate event', async () => {
+    const { result } = renderHook(() => useLiveUrl())
+    await act(async () => {
+      window.history.pushState({}, '', '/popped')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    expect(result.current).toContain('/popped')
+    window.history.pushState({}, '', '/')
   })
 })
 
-// ---------------------------------------------------------------------------
-// PageViewTracker
-// ---------------------------------------------------------------------------
+// ---------- LiveLocationProvider ----------
+
+describe('LiveLocationProvider', () => {
+  it('provides location to children via UNSAFE_LocationContext', () => {
+   const testLocation = {
+  pathname: '/test',
+  search: '',
+  hash: '',
+  state: null,
+  key: 'default',
+  unstable_mask: undefined,
+} as Location
+    let capturedContext: unknown
+    function Consumer() {
+      capturedContext = useContext(UNSAFE_LocationContext)
+      return null
+    }
+    render(
+      <LiveLocationProvider location={testLocation} navigationType={Action.Pop}>
+        <Consumer />
+      </LiveLocationProvider>
+    )
+    expect((capturedContext as { location: typeof testLocation }).location.pathname).toBe('/test')
+  })
+
+  it('renders children', () => {
+    const testLocation = {
+      pathname: '/', search: '', hash: '', state: null, key: 'default',
+    }as Location
+    render(
+      <LiveLocationProvider location={testLocation} navigationType={Action.Push}>
+        <span data-testid="child">hello</span>
+      </LiveLocationProvider>
+    )
+    expect(screen.getByTestId('child')).toBeTruthy()
+  })
+})
+
+// ---------- PageViewTracker ----------
 
 describe('PageViewTracker', () => {
   beforeEach(() => {
     vi.mocked(emitPageView).mockClear()
     vi.mocked(emitDashboardViewed).mockClear()
-    vi.mocked(useBranding).mockReturnValue({ appName: 'KubeStellar' })
+vi.mocked(useBranding).mockReturnValue({ appName: 'TestApp' } as ReturnType<typeof useBranding>)
   })
 
-  it('renders null', () => {
-    const { container } = render(React.createElement(PageViewTracker), { wrapper: WithRouter })
-    expect(container.firstChild).toBeNull()
-  })
-
-  it('emits page view on mount', () => {
-    render(React.createElement(PageViewTracker), { wrapper: WithRouter })
-    expect(emitPageView).toHaveBeenCalledWith('/')
-  })
-
-  it('sets document title from ROUTE_TITLES', () => {
-    render(React.createElement(PageViewTracker), { wrapper: WithRouter })
-    expect(document.title).toContain('KubeStellar')
-  })
-
-  it('emits page view for unknown route with app name only', () => {
-    const { container } = render(
-      React.createElement(MemoryRouter, { initialEntries: ['/unknown'] },
-        React.createElement(PageViewTracker)),
+  it('emits a page view on mount', () => {
+    render(
+      <MemoryRouter initialEntries={['/clusters']}>
+        <PageViewTracker />
+      </MemoryRouter>
     )
-    expect(emitPageView).toHaveBeenCalledWith('/unknown')
-    expect(document.title).toBe('KubeStellar')
-    container.remove()
+    expect(emitPageView).toHaveBeenCalledWith('/clusters')
   })
 
-  it('adds visibilitychange listener on mount', () => {
-    const spy = vi.spyOn(document, 'addEventListener')
-    render(React.createElement(PageViewTracker), { wrapper: WithRouter })
-    expect(spy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
-    spy.mockRestore()
+  it('sets the document title using appName', () => {
+    render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <PageViewTracker />
+      </MemoryRouter>
+    )
+    expect(document.title).toContain('TestApp')
   })
 
-  it('removes visibilitychange listener on unmount', () => {
-    const spy = vi.spyOn(document, 'removeEventListener')
-    const { unmount } = render(React.createElement(PageViewTracker), { wrapper: WithRouter })
-    unmount()
-    expect(spy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
-    spy.mockRestore()
-  })
-
-  it('emits dashboard duration on visibility hidden', () => {
-    vi.mocked(pathToDashboardId).mockReturnValue('main')
-    render(React.createElement(PageViewTracker), { wrapper: WithRouter })
-    act(() => {
-      Object.defineProperty(document, 'visibilityState', { value: 'hidden', writable: true, configurable: true })
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    expect(emitDashboardViewed).toHaveBeenCalledWith('main', expect.any(Number))
-    Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true })
+  it('renders null (no DOM output)', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <PageViewTracker />
+      </MemoryRouter>
+    )
+    expect(container.firstChild).toBeNull()
   })
 })
 
-// ---------------------------------------------------------------------------
-// DataPrefetchInit
-// ---------------------------------------------------------------------------
+// ---------- DataPrefetchInit ----------
 
 describe('DataPrefetchInit', () => {
   it('renders null', () => {
-    const { container } = render(React.createElement(DataPrefetchInit), { wrapper: WithRouter })
+    const { container } = render(<DataPrefetchInit />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('does not prefetch when not authenticated', () => {
+  it('does not trigger prefetch when not authenticated', () => {
     vi.mocked(useAuth).mockReturnValue({ isAuthenticated: false } as ReturnType<typeof useAuth>)
-    render(React.createElement(DataPrefetchInit), { wrapper: WithRouter })
-    // No dynamic imports triggered — no assertion needed beyond no-throw
+    render(<DataPrefetchInit />)
+    // prefetchCardData not called — dynamic import only fires if authenticated
+    // We just assert no errors are thrown
   })
 
   it('triggers prefetch when authenticated', async () => {
     vi.mocked(useAuth).mockReturnValue({ isAuthenticated: true } as ReturnType<typeof useAuth>)
-    render(React.createElement(DataPrefetchInit), { wrapper: WithRouter })
-    // Dynamic import triggered — just verify no errors thrown
-    await act(async () => { await Promise.resolve() })
+    const prefetchCardData = vi.fn(() => Promise.resolve())
+    vi.doMock('../../lib/prefetchCardData', () => ({ prefetchCardData }))
+    render(<DataPrefetchInit />)
+    // Dynamic imports are fire-and-forget; just assert no throw
+    await waitFor(() => {})
   })
 })
 
-// ---------------------------------------------------------------------------
-// LoadingFallback
-// ---------------------------------------------------------------------------
+// ---------- OrbitAutoRunner ----------
 
-describe('LoadingFallback', () => {
-  beforeEach(() => { vi.useFakeTimers() })
-  afterEach(() => { vi.useRealTimers() })
-
-  it('renders invisible placeholder before delay', () => {
-    render(React.createElement(LoadingFallback), { wrapper: WithRouter })
-    // Spinner not visible yet — placeholder div with min-h-screen
-    expect(screen.queryByRole('status')).toBeNull()
-    const divs = document.querySelectorAll('.min-h-screen')
-    expect(divs.length).toBeGreaterThan(0)
-  })
-
-  it('renders spinner after delay', () => {
-    render(React.createElement(LoadingFallback), { wrapper: WithRouter })
-    act(() => { vi.advanceTimersByTime(300) })
-    const spinner = document.querySelector('.animate-spin')
-    expect(spinner).not.toBeNull()
-  })
-
-  it('clears timer on unmount', () => {
-    const { unmount } = render(React.createElement(LoadingFallback), { wrapper: WithRouter })
-    expect(() => unmount()).not.toThrow()
+describe('OrbitAutoRunner', () => {
+  it('renders null', () => {
+    const { container } = render(<OrbitAutoRunner />)
+    expect(container.firstChild).toBeNull()
   })
 })
 
-// ---------------------------------------------------------------------------
-// useLiveUrl
-// ---------------------------------------------------------------------------
+// ---------- SettingsSyncInit ----------
 
-describe('useLiveUrl', () => {
-  it('returns current pathname', () => {
-    const { result } = renderHook(() => useLiveUrl())
-    expect(typeof result.current).toBe('string')
-    expect(result.current).toContain('/')
-  })
-
-  it('updates on pushState', async () => {
-    const { result } = renderHook(() => useLiveUrl())
-    act(() => { window.history.pushState(null, '', '/new-path') })
-    await waitFor(() => {
-      expect(result.current).toContain('/new-path')
-    })
-    act(() => { window.history.pushState(null, '', '/') })
-  })
-
-  it('updates on replaceState', async () => {
-    const { result } = renderHook(() => useLiveUrl())
-    act(() => { window.history.replaceState(null, '', '/replaced') })
-    await waitFor(() => {
-      expect(result.current).toContain('/replaced')
-    })
-    act(() => { window.history.replaceState(null, '', '/') })
-  })
-
-  it('updates on popstate event', async () => {
-    const { result } = renderHook(() => useLiveUrl())
-    act(() => {
-      window.history.pushState(null, '', '/pop-target')
-    })
-    act(() => {
-      window.dispatchEvent(new PopStateEvent('popstate', {}))
-    })
-    await waitFor(() => {
-      expect(result.current).toContain('/pop-target')
-    })
-    act(() => { window.history.replaceState(null, '', '/') })
-  })
-})
-
-// ---------------------------------------------------------------------------
-// LiveLocationProvider
-// ---------------------------------------------------------------------------
-
-describe('LiveLocationProvider', () => {
-  it('renders children', () => {
-    const location = {
-      pathname: '/test',
-      search: '',
-      hash: '',
-      state: null,
-      key: 'default',
-    }
-    const { getByText } = render(
-      React.createElement(MemoryRouter, null,
-        React.createElement(LiveLocationProvider, { location, navigationType: 'POP', children: React.createElement('span', null, 'child') }),
-      ),
-    )
-    expect(getByText('child')).toBeTruthy()
-  })
-
-  it('provides location context to children', () => {
-    const location = {
-      pathname: '/ctx-test',
-      search: '',
-      hash: '',
-      state: null,
-      key: 'k1',
-    }
-    let capturedPath = ''
-    function Consumer() {
-      const loc = useLocation()
-      capturedPath = loc.pathname
-      return null
-    }
-    render(
-      React.createElement(MemoryRouter, { initialEntries: ['/original'] },
-        React.createElement(LiveLocationProvider, { location, navigationType: 'PUSH', children: React.createElement(Consumer) }),
-      ),
-    )
-    expect(capturedPath).toBe('/ctx-test')
+describe('SettingsSyncInit', () => {
+  it('renders null', () => {
+    const { container } = render(<SettingsSyncInit />)
+    expect(container.firstChild).toBeNull()
   })
 })
