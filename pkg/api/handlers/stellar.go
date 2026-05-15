@@ -964,7 +964,8 @@ func (h *StellarHandler) executeLLMAction(c *fiber.Ctx, userID string, body exec
 	durationMs := int(time.Since(startTime).Milliseconds())
 
 	if genErr != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "LLM call failed: " + genErr.Error()})
+		slog.Error("stellar: action-execute LLM call failed", "error", genErr, "userID", userID)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider error"})
 	}
 
 	completedAt := time.Now().UTC()
@@ -1283,7 +1284,8 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		if fallbackName != "" && fallbackName != resolved.Provider.Name() {
 			if fp, ok := h.providerRegistry.GetGlobal(fallbackName); ok && fp != nil {
 				fallbackUsed = true
-				fallbackReason = fmt.Sprintf("%s failed after %dms: %s. Falling back to %s.", resolved.Provider.Name(), durationMs, err.Error(), fallbackName)
+				slog.Warn("stellar: primary provider failed, using fallback", "primary", resolved.Provider.Name(), "fallback", fallbackName, "durationMs", durationMs, "error", err)
+				fallbackReason = fmt.Sprintf("%s unavailable after %dms. Falling back to %s.", resolved.Provider.Name(), durationMs, fallbackName)
 				startTime = time.Now()
 				generated, err = fp.Generate(c.UserContext(), providers.GenerateRequest{
 					Model:       resolved.Model,
