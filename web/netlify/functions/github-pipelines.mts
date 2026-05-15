@@ -23,6 +23,7 @@
  *   GITHUB_MUTATIONS_TOKEN  — PAT with actions:write (optional; disabled if absent)
  */
 import { getStore } from "@netlify/blobs";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -814,8 +815,28 @@ async function buildLog(
 async function mutate(
   op: string,
   repo: string,
-  runId: string
+  runId: string,
+  req: Request
 ): Promise<Response> {
+  // Rate limiting — 5 mutations per hour per IP
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+  const rate = await enforceSimpleRateLimit({
+    storeName: STORE_NAME,
+    prefix: "gh-pipelines-mutate:",
+    subject: clientIp,
+    maxRequests: 5,
+    windowMs: 3600 * 1000, // 1 hour
+  });
+  if (rate.limited) {
+    return jsonResponse(
+      { error: "Rate limit exceeded", retryAfter: rate.retryAfterSeconds },
+      { status: 429 }
+    );
+  }
+
   const token = process.env.GITHUB_MUTATIONS_TOKEN;
   if (!token) {
     // Intentional: demo site never mutates without an operator explicitly
@@ -884,7 +905,7 @@ export default async (req: Request): Promise<Response> => {
       if (!/^\d+$/.test(run)) {
         return jsonResponse({ error: "Invalid run ID" }, { status: 400, headers: baseHeaders });
       }
-      const resp = await mutate(op, repo, run);
+      const resp = await mutate(op, repo, run, req);
       // Inherit CORS headers
       for (const [k, v] of Object.entries(baseHeaders)) resp.headers.set(k, v);
       return resp;
