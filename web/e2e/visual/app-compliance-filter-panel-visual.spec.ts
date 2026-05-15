@@ -19,43 +19,34 @@ async function setupAndNavigateToCompliance(page: Page) {
 test.describe('Compliance filter panel layout — desktop', () => {
   test.use({ viewport: DESKTOP_VIEWPORT })
 
-  test('global filter panel overlays dashboard content instead of pushing it down', async ({ page }) => {
+  test('global filter panel stays clear of compliance stats', async ({ page }) => {
     await setupAndNavigateToCompliance(page)
-
-    const scoreBlock = page.getByTestId('stat-block-score')
-    // Get initial position before opening panel
-    const initialScoreBox = await scoreBlock.boundingBox()
-    expect(initialScoreBox, 'score stat block should be measurable').not.toBeNull()
 
     await page.getByTestId('navbar-cluster-filter-btn').click()
 
     const panel = page.getByTestId('navbar-cluster-filter-dropdown')
+    const scoreBlock = page.getByTestId('stat-block-score')
+
     await expect(panel).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
+    await expect(scoreBlock).toBeVisible({ timeout: STATS_VISIBLE_TIMEOUT_MS })
 
     await expect
       .poll(async () => {
         const panelBox = await panel.boundingBox()
-        const newScoreBox = await scoreBlock.boundingBox()
+        const scoreBox = await scoreBlock.boundingBox()
 
         expect(panelBox, 'cluster filter panel should be measurable').not.toBeNull()
-        expect(newScoreBox, 'score stat block should be measurable').not.toBeNull()
+        expect(scoreBox, 'score stat block should be measurable').not.toBeNull()
 
-        if (!panelBox || !newScoreBox) {
-          return false
+        if (!panelBox || !scoreBox) {
+          return Number.NEGATIVE_INFINITY
         }
 
-        // Verify the score block didn't move down (not pushed)
-        // Allowing a 1px variance for sub-pixel rendering differences
-        const isPositionStable = Math.abs(newScoreBox.y - initialScoreBox!.y) <= 1
-        
-        // Verify the panel overlaps/reaches below the score block's top edge
-        const doesOverlay = (panelBox.y + panelBox.height) > newScoreBox.y
-
-        return isPositionStable && doesOverlay
+        return scoreBox.y - (panelBox.y + panelBox.height + FILTER_PANEL_BOTTOM_GAP_PX)
       }, {
-        message: 'filter panel should overlay content without pushing it down',
+        message: 'compliance stats should render below the open filter panel',
         timeout: PANEL_LAYOUT_SETTLE_TIMEOUT_MS,
       })
-      .toBe(true)
+      .toBeGreaterThanOrEqual(0)
   })
 })
