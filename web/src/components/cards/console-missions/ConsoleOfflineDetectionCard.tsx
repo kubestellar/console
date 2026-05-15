@@ -226,54 +226,6 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     ],
   )
 
-  const cardLoadState = useMemo(
-    () => buildOfflineDetectionCardLoadState([
-      {
-        hasData: allNodes.length > 0,
-        isLoading: !shouldUseDemoData && nodesLoading,
-        isRefreshing: !shouldUseDemoData && nodesRefreshing,
-        consecutiveFailures: shouldUseDemoData ? 0 : nodesFailures,
-        isFailed: !shouldUseDemoData && nodesFailures >= OFFLINE_DETECTION_FAILURE_THRESHOLD,
-      },
-      {
-        hasData: gpuNodes.length > 0,
-        isLoading: gpuLoading,
-        isRefreshing: gpuRefreshing,
-        isDemoData: gpuDemoFallback,
-        isFailed: gpuFailed,
-        consecutiveFailures: gpuFailures,
-      },
-      {
-        hasData: podIssues.length > 0,
-        isLoading: podsLoading,
-        isRefreshing: podsRefreshing,
-        isDemoData: podsDemoFallback,
-        isFailed: podsFailed,
-        consecutiveFailures: podsFailures,
-      },
-    ], shouldUseDemoData || isDemoMode),
-    [
-      allNodes.length,
-      gpuDemoFallback,
-      gpuFailed,
-      gpuFailures,
-      gpuLoading,
-      gpuNodes.length,
-      gpuRefreshing,
-      isDemoMode,
-      nodesFailures,
-      nodesLoading,
-      nodesRefreshing,
-      podIssues.length,
-      podsDemoFallback,
-      podsFailed,
-      podsFailures,
-      podsLoading,
-      podsRefreshing,
-      shouldUseDemoData,
-    ],
-  )
-
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState(cardLoadState)
 

@@ -63,12 +63,6 @@ const CHART_AREA_MIN_HEIGHT = 160
 const CHART_AREA_STYLE = { minHeight: CHART_AREA_MIN_HEIGHT } as const
 const CHART_FALLBACK_STYLE = { height: CHART_AREA_MIN_HEIGHT } as const
 
-/** Height (px) of the chart area — used for both the chart and its Suspense fallback */
-const CHART_AREA_MIN_HEIGHT = 160
-
-const CHART_AREA_STYLE = { minHeight: CHART_AREA_MIN_HEIGHT } as const
-const CHART_FALLBACK_STYLE = { height: CHART_AREA_MIN_HEIGHT } as const
-
 /** Metric name display threshold before truncation */
 const MAX_METRIC_NAME_DISPLAY = 15
 /** Length to truncate metric names to when they exceed the display threshold */
