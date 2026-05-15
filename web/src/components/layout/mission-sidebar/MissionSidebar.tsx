@@ -877,16 +877,16 @@ export function MissionSidebar() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-3 md:p-4 border-b border-border min-w-0">
-        <div className="flex items-center gap-2 shrink-0">
-          <LogoWithStar className="w-5 h-5" />
-          <h2 className="font-semibold text-foreground text-sm md:text-base whitespace-nowrap">{t('missionSidebar.aiMissions')}</h2>
+      <div className="flex items-center gap-2 p-3 md:p-4 border-b border-border min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <LogoWithStar className="w-5 h-5 shrink-0" />
+          <h2 className="font-semibold text-foreground text-sm md:text-base truncate">{t('missionSidebar.aiMissions')}</h2>
           {needsAttention > 0 && (
             <StatusBadge color="purple" rounded="full">{needsAttention}</StatusBadge>
           )}
         </div>
         {/* Toolbar and window controls — split so close/minimize never overflow */}
-        <div className="flex items-center gap-1.5 min-w-0" role="toolbar" aria-label={t('missionSidebar.headerActions', { defaultValue: 'Mission panel actions' })}>
+        <div className="flex items-center gap-1.5 shrink-0" role="toolbar" aria-label={t('missionSidebar.headerActions', { defaultValue: 'Mission panel actions' })}>
           {/* + button with dropdown — outside overflow-hidden so the dropdown isn't clipped */}
           <div className="relative mr-1 shrink-0" ref={addMenuRef}>
             <button
@@ -986,9 +986,9 @@ export function MissionSidebar() {
               )}
             </button>
           )}
-          {/* Optional toolbar buttons — clipped when sidebar is narrow */}
-          <div className="flex items-center gap-1 overflow-hidden min-w-0 shrink">
-            <AgentSelector compact={!isFullScreen} />
+          {/* Optional toolbar buttons — keep the selector fully visible while the title truncates first */}
+          <div className="flex items-center gap-1 min-w-0 shrink-0">
+            <AgentSelector compact={!isFullScreen} className="shrink-0" />
           </div>
           {/* Window control buttons — always visible, never clipped */}
           <div className="flex items-center gap-1 shrink-0">
