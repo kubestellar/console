@@ -173,7 +173,7 @@ export function Compliance() {
       case 'total_checks':
         return allDemo
           ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, isClickable: false }
-          : { value: realData.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance(undefined, { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.totalChecks > 0 }
+          : { value: realData.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance() }, isClickable: realData.totalChecks > 0 }
       // #9717 — IDs must match COMPLIANCE_STAT_BLOCKS in StatsBlockDefinitions.ts
       // ('checks_passing' / 'checks_failing'), not the generic 'passing'/'failing'
       // used by the Operators dashboard. Mismatched IDs caused these blocks to fall
@@ -181,16 +181,16 @@ export function Compliance() {
       case 'checks_passing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, isClickable: false }
-          : { value: realData.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing', { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.passing > 0 }
+          : { value: realData.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing') }, isClickable: realData.passing > 0 }
       case 'checks_failing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, isClickable: false }
-          : { value: realData.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing', { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.failing > 0 }
+          : { value: realData.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing') }, isClickable: realData.failing > 0 }
       case 'warning': {
         const mockTotal = (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER
         return allDemo
           ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'skipped', isDemo: true, isClickable: false }
-          : { value: realData.warning, sublabel: 'skipped', onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning', { passing: realData.passing, failing: realData.failing, warning: realData.warning, totalChecks: realData.totalChecks }) }, isClickable: realData.warning > 0 }
+          : { value: realData.warning, sublabel: 'skipped', onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning') }, isClickable: realData.warning > 0 }
       }
       case 'critical_findings':
         return allDemo
