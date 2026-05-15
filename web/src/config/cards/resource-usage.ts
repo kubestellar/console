@@ -102,9 +102,9 @@ export const resourceUsageConfig: UnifiedCardConfig = {
   // Empty state
   emptyState: {
     icon: 'Cpu',
-    title: 'No resource data',
-    message: 'Resource metrics will appear here',
-    variant: 'neutral',
+    title: 'No clusters connected',
+    message: 'Connect a cluster to get started',
+    variant: 'info',
   },
 
   // Loading state

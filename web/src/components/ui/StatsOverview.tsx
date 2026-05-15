@@ -252,7 +252,12 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
 
   const rawValue = data.value
   const rawProgressValue = typeof data.progressValue === 'number' ? data.progressValue : rawValue
-  const isEmptyValue = !isLoading && (rawValue === undefined || rawValue === null || rawValue === '-')
+  const isEmptyValue = !isLoading && (
+    rawValue === undefined ||
+    rawValue === null ||
+    rawValue === '-' ||
+    (typeof rawValue === 'string' && rawValue.trim() === '')
+  )
   const displayValue = isEmptyValue
     ? '—'
     : (data.format && typeof rawValue === 'number' ? data.format(rawValue) : rawValue)
@@ -477,7 +482,14 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       ) : (
         /* Default numeric mode */
         <>
-          <div data-testid={`stat-block-${block.id}-count`} className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
+          <div
+            data-testid={`stat-block-${block.id}-count`}
+            className={isEmptyValue
+              ? 'text-sm font-medium text-muted-foreground/70'
+              : `text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}
+          >
+            {displayValue}
+          </div>
           {/* #9708 — Only show "Building trend…" when there is no sublabel.
               Both elements appearing together overflows the card height and
               creates visual inconsistency across stat cards. The sublabel

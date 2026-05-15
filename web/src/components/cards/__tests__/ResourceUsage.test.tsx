@@ -146,7 +146,7 @@ describe('ResourceUsage', () => {
     it('shows empty state message when showEmptyState=true', () => {
       setupDefaults({ showEmptyState: true })
       render(<ResourceUsage />)
-      expect(screen.getByText('resourceUsage.noClusters')).toBeInTheDocument()
+      expect(screen.getByText('clusterHealth.noClustersConfigured')).toBeInTheDocument()
     })
   })
 

@@ -118,10 +118,10 @@ export const podIssuesConfig: UnifiedCardConfig = {
 
   // Empty state
   emptyState: {
-    icon: 'CheckCircle',
-    title: 'All pods healthy',
-    message: 'No issues detected',
-    variant: 'success',
+    icon: 'Server',
+    title: 'No clusters connected',
+    message: 'Connect a cluster to get started',
+    variant: 'info',
   },
 
   // Loading state

@@ -130,8 +130,8 @@ function ResourceUsageInternal() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">{t('resourceUsage.noClusters')}</p>
-        <p className="text-xs mt-1">{t('resourceUsage.noClustersHint')}</p>
+        <p className="text-sm">{t('clusterHealth.noClustersConfigured')}</p>
+        <p className="text-xs mt-1">{t('clusterHealth.addClustersPrompt')}</p>
       </div>
     )
   }

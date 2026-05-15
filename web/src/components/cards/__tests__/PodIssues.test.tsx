@@ -217,14 +217,14 @@ describe('PodIssues', () => {
     it('shows error CardEmptyState when isFailed and no data', () => {
       setupDefaults({ isFailed: true, error: 'API unavailable', issues: [] })
       render(<PodIssues />)
-      expect(screen.getByText('Failed to load pod data')).toBeInTheDocument()
+      expect(screen.getByText('podIssues.failedLoadTitle')).toBeInTheDocument()
       expect(screen.getByText('API unavailable')).toBeInTheDocument()
     })
 
     it('shows fallback error message when error is null', () => {
       setupDefaults({ isFailed: true, error: null, issues: [] })
       render(<PodIssues />)
-      expect(screen.getByText('Pod API is unavailable')).toBeInTheDocument()
+      expect(screen.getByText('podIssues.apiUnavailable')).toBeInTheDocument()
     })
   })
 
@@ -233,16 +233,16 @@ describe('PodIssues', () => {
     it('shows all-healthy CardEmptyState when clusters exist but no issues were found', () => {
       setupDefaults({ issues: [], clusterCount: 1 })
       render(<PodIssues />)
-      expect(screen.getByText('All pods healthy')).toBeInTheDocument()
-      expect(screen.getByText('No issues detected')).toBeInTheDocument()
+      expect(screen.getByText('podIssues.allHealthy')).toBeInTheDocument()
+      expect(screen.getByText('podIssues.noIssuesDetected')).toBeInTheDocument()
     })
 
     it('shows a neutral empty state when no clusters are connected', () => {
       setupDefaults({ issues: [], clusterCount: 0 })
       render(<PodIssues />)
-      expect(screen.getByText('No clusters connected')).toBeInTheDocument()
-      expect(screen.getByText('Pod health will appear here after you connect a cluster')).toBeInTheDocument()
-      expect(screen.queryByText('All pods healthy')).not.toBeInTheDocument()
+      expect(screen.getByText('clusterHealth.noClustersConfigured')).toBeInTheDocument()
+      expect(screen.getByText('clusterHealth.addClustersPrompt')).toBeInTheDocument()
+      expect(screen.queryByText('podIssues.allHealthy')).not.toBeInTheDocument()
     })
   })
 

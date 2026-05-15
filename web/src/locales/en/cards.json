@@ -138,8 +138,8 @@
     "totalCpusTitle": "Total CPU cores across all filtered clusters",
     "totalGpusTitle": "{{assigned}} GPUs assigned out of {{total}} total",
     "totalPodsTitle": "Total pods running across all filtered clusters",
-    "noClustersConfigured": "No clusters configured",
-    "addClustersPrompt": "Add clusters to your kubeconfig to get started",
+    "noClustersConfigured": "No clusters connected",
+    "addClustersPrompt": "Connect a cluster to get started",
     "unableToConnect": "Unable to connect to clusters - showing demo data",
     "checkKubeconfigNetwork": "Check your kubeconfig and network connectivity",
     "clustersExpiredCredentials": "{{count}} cluster(s) have expired credentials - re-authenticate",
@@ -2822,14 +2822,20 @@
     "cloudProviders": "Cloud Providers"
   },
   "resourceUsage": {
-    "noClusters": "No clusters available",
-    "noClustersHint": "Connect to clusters to see resource usage",
+    "noClusters": "No clusters connected",
+    "noClustersHint": "Connect a cluster to get started",
     "totalCPU": "Total CPU",
     "totalRAM": "Total RAM",
     "cores": "cores",
     "totalLabel": "Total {{label}}",
     "overcommitted": "{{used}}/{{total}} overcommitted",
     "viewDetailsAria": "View resource usage details"
+  },
+  "podIssues": {
+    "allHealthy": "All pods healthy",
+    "noIssuesDetected": "No issues detected",
+    "failedLoadTitle": "Failed to load pod data",
+    "apiUnavailable": "Pod API is unavailable"
   },
   "serviceExports": {
     "loadFailed": "Failed to load service exports",
