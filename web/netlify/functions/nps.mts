@@ -12,6 +12,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -72,10 +73,12 @@ const SCORE_MAX = 4;
 const PROMOTER_MIN = 4;
 /** Threshold at/above which a response is a passive (else detractor) */
 const PASSIVE_MIN = 2;
-/** Rate limit: one NPS submission per IP per 24 hours */
-const RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
-/** Key prefix for per-IP rate limiting */
-const RATE_KEY_PREFIX = "nps-rate-";
+/** Blob store for per-IP NPS rate limiting */
+const RATE_LIMIT_STORE_NAME = "nps-rate-limit";
+/** One NPS submission per IP per 24 hours */
+const NPS_RATE_LIMIT_MAX_REQUESTS = 1;
+/** Rate-limit window for NPS POSTs */
+const NPS_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -228,16 +231,17 @@ export default async (req: Request) => {
   // ── POST: submit a response ──
   if (req.method === "POST") {
     try {
-      // Per-IP rate limiting — 1 submission per 24h
-      const clientIp =
-        req.headers.get("x-nf-client-connection-ip") ??
-        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        "unknown";
-      const rateKey = `${RATE_KEY_PREFIX}${clientIp}`;
-      const lastSubmit = await store.get(rateKey);
-      if (lastSubmit && Date.now() - parseInt(lastSubmit, 10) < RATE_LIMIT_MS) {
+      const clientIp = req.headers.get("x-nf-client-connection-ip") ?? "unknown";
+      const rate = await enforceSimpleRateLimit({
+        storeName: RATE_LIMIT_STORE_NAME,
+        prefix: "nps:",
+        subject: clientIp,
+        maxRequests: NPS_RATE_LIMIT_MAX_REQUESTS,
+        windowMs: NPS_RATE_LIMIT_WINDOW_MS,
+      });
+      if (rate.limited) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded — one submission per 24 hours" }),
+          JSON.stringify({ error: "Rate limit exceeded" }),
           { status: 429, headers }
         );
       }
@@ -275,9 +279,6 @@ export default async (req: Request) => {
 
       // Save
       await store.set(DATA_KEY, JSON.stringify(data));
-
-      // Record rate-limit timestamp for this IP
-      await store.set(rateKey, String(Date.now()));
 
       return new Response(
         JSON.stringify({ ok: true, category: response.category }),
