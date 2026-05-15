@@ -26,7 +26,7 @@ import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardActionMenu } from './card-wrapper/CardActionMenu'
 import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
 import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
-import { shouldShowLiveBadge } from './card-wrapper/badgeVisibility'
+import { shouldShowFailureBanner, shouldShowLiveBadge } from './card-wrapper/badgeVisibility'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
@@ -873,7 +873,11 @@ export const CardWrapper = memo(function CardWrapper({
             </div>
 
             {/* Failure detail banner — shown when card has failed to refresh */}
-            {effectiveIsFailed && !isCollapsed && (
+            {shouldShowFailureBanner({
+              cardType,
+              isFailed: effectiveIsFailed,
+              isCollapsed,
+            }) && (
               <div className="px-3 pt-2" data-testid="card-failure-banner">
                 <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-3 py-2 backdrop-blur-sm">
                   <div className="flex items-start gap-2 text-xs">
