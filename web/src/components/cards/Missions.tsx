@@ -255,7 +255,7 @@ export function Missions(_props: MissionsProps) {
   const handleDiagnose = (mission: DeployMission) => {
     checkKeyAndRun(() => {
       if (!mission.targetClusters?.length) return
-      const targetClustersStr = mission.targetClusters.join(', ')
+      const targetClustersStr = (mission.targetClusters || []).join(', ')
       const failedClusterNames = (mission.clusterStatuses || [])
         .filter(cs => cs.status === 'failed')
         .map(cs => cs.cluster)
@@ -292,7 +292,7 @@ Please:
   const handleRepair = (mission: DeployMission) => {
     checkKeyAndRun(() => {
       if (!mission.targetClusters?.length) return
-      const targetClustersStr = mission.targetClusters.join(', ')
+      const targetClustersStr = (mission.targetClusters || []).join(', ')
       const failedClusterNames = (mission.clusterStatuses || [])
         .filter(cs => cs.status === 'failed')
         .map(cs => cs.cluster)

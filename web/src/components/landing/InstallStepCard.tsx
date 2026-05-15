@@ -42,7 +42,7 @@ export function InstallStepCard({
         {step.commands && (
           <div className="relative mb-3">
             <pre className="p-4 rounded-lg bg-slate-950 text-slate-300 text-sm font-mono overflow-x-auto">
-              {step.commands.join('\n')}
+              {(step.commands || []).join('\n')}
             </pre>
             <button
               onClick={() => onCopy(step.commands!, step.step)}
