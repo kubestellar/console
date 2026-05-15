@@ -658,15 +658,16 @@ export function StatsOverview({
       {(!collapsible || isExpanded) && (
         <div className={`grid ${gridCols} gap-4`}>
           {visibleBlocks.map(block => {
-            const data = effectiveIsLoading
-              ? { value: undefined as string | number | undefined, sublabel: undefined }
-              : (getStatValue(block.id) ?? { value: undefined as string | number | undefined, sublabel: t('statsOverview.notAvailable') })
+            const statValue = effectiveIsLoading ? undefined : getStatValue(block.id)
+            const data: StatBlockValue = effectiveIsLoading
+              ? { value: '', sublabel: undefined }
+              : (statValue ?? { value: '', sublabel: t('statsOverview.notAvailable') })
             return (
               <StatBlock
                 key={block.id}
                 block={block}
                 data={data}
-                hasData={effectiveHasData && !effectiveIsLoading && data?.value !== undefined}
+                hasData={effectiveHasData && !effectiveIsLoading && statValue?.value !== undefined}
                 isLoading={effectiveIsLoading}
                 history={getHistory(block.id)}
                 onDisplayModeChange={(mode) => handleDisplayModeChange(block.id, mode)}
