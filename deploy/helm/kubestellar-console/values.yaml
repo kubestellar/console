@@ -274,6 +274,23 @@ selfUpgrade:
 # Additional environment variables
 extraEnv: []
 
+# Optional kubeconfig mount for multi-cluster installs.
+#
+# By default, in-cluster installs use the pod's ServiceAccount and only see the
+# cluster the console is running in. To surface multiple local Kind/Minikube
+# clusters, mount a kubeconfig and set KUBECONFIG automatically via either:
+#   1. helm install ... --set-file kubeconfig.content=$HOME/.kube/config
+#   2. kubeconfig.existingSecret=<name> (Secret key defaults to `config`)
+#
+# The mounted kubeconfig takes precedence over in-cluster credentials, matching
+# the local `start.sh` behavior.
+kubeconfig:
+  content: ""
+  existingSecret: ""
+  existingSecretKey: config
+  mountPath: /app/.kube
+  fileName: config
+
 # Kagenti integration (optional)
 # Enable this section when the console should connect to an in-cluster Kagenti
 # controller and/or a direct Kagenti agent service.
@@ -288,10 +305,10 @@ extraEnv: []
 #
 # Cluster scope:
 #   The in-cluster ServiceAccount (see rbac section above) grants read-only
-#   access to the LOCAL cluster only by default.  Dashboard cards show data
-#   from that single cluster.  To surface remote clusters, either:
-#     1. Configure additional kubeconfigs via extraEnv / mounted secrets, or
-#     2. Use the kc-agent in local-agent mode to bridge browser kubeconfigs.
+#   access to the LOCAL cluster only by default. Dashboard cards show data
+#   from that single cluster. To surface multiple Kind/Minikube clusters,
+#   configure kubeconfig.content / kubeconfig.existingSecret above, or use the
+#   kc-agent in local-agent mode to bridge browser kubeconfigs.
 kagenti:
   enabled: false
 

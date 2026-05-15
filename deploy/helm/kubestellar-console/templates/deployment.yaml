@@ -274,6 +274,10 @@ spec:
             - name: CLUSTER_NAME
               value: {{ .Values.clusterName | quote }}
             {{- end }}
+            {{- if or .Values.kubeconfig.content .Values.kubeconfig.existingSecret }}
+            - name: KUBECONFIG
+              value: {{ include "kubestellar-console.kubeconfigPath" . | quote }}
+            {{- end }}
             # Suppress local kc-agent connections — in-cluster deployments
             # accessed via port-forward or ingress have no local kc-agent
             # on the user's machine. Without this, the frontend sends
@@ -349,6 +353,11 @@ spec:
             - name: data
               mountPath: /app/data
             {{- end }}
+            {{- if or .Values.kubeconfig.content .Values.kubeconfig.existingSecret }}
+            - name: kubeconfig
+              mountPath: {{ .Values.kubeconfig.mountPath | quote }}
+              readOnly: true
+            {{- end }}
             {{- if and .Values.branding .Values.branding.logoConfigMap }}
             - name: custom-logos
               mountPath: /app/web/dist/custom-logos
@@ -361,6 +370,14 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "kubestellar-console.fullname" . }}
+        {{- end }}
+        {{- if or .Values.kubeconfig.content .Values.kubeconfig.existingSecret }}
+        - name: kubeconfig
+          secret:
+            secretName: {{ include "kubestellar-console.kubeconfigSecretName" . }}
+            items:
+              - key: {{ .Values.kubeconfig.existingSecretKey | quote }}
+                path: {{ .Values.kubeconfig.fileName | quote }}
         {{- end }}
         {{- if and .Values.branding .Values.branding.logoConfigMap }}
         - name: custom-logos

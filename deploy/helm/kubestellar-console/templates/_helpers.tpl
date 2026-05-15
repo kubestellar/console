@@ -63,3 +63,17 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create the name of the kubeconfig Secret to use.
+*/}}
+{{- define "kubestellar-console.kubeconfigSecretName" -}}
+{{- default (printf "%s-kubeconfig" (include "kubestellar-console.fullname" .)) .Values.kubeconfig.existingSecret }}
+{{- end }}
+
+{{/*
+Create the file path for the mounted kubeconfig.
+*/}}
+{{- define "kubestellar-console.kubeconfigPath" -}}
+{{- printf "%s/%s" (trimSuffix "/" .Values.kubeconfig.mountPath) .Values.kubeconfig.fileName }}
+{{- end }}

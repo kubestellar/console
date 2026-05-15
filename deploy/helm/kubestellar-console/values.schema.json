@@ -72,6 +72,31 @@
           "description": "Number of failed jobs to keep"
         }
       }
+    },
+    "kubeconfig": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "Inline kubeconfig content rendered into a Secret (for example via --set-file)"
+        },
+        "existingSecret": {
+          "type": "string",
+          "description": "Existing Secret containing a kubeconfig file"
+        },
+        "existingSecretKey": {
+          "type": "string",
+          "description": "Key inside the Secret that stores the kubeconfig file"
+        },
+        "mountPath": {
+          "type": "string",
+          "description": "Directory where the kubeconfig Secret is mounted"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Filename used for the mounted kubeconfig"
+        }
+      }
     }
   }
 }

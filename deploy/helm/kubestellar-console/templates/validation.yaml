@@ -58,3 +58,7 @@
 {{- end -}}
 
 {{- end -}}
+
+{{- if and .Values.kubeconfig.content .Values.kubeconfig.existingSecret -}}
+{{- fail "kubestellar-console: set either kubeconfig.content or kubeconfig.existingSecret, not both. Use kubeconfig.content for a chart-managed Secret (for example: --set-file kubeconfig.content=$HOME/.kube/config), or kubeconfig.existingSecret to mount a pre-created Secret." -}}
+{{- end -}}

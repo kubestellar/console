@@ -122,6 +122,29 @@ kubectl -n kubestellar-console port-forward svc/kc-kubestellar-console 8080:8080
 #    no real GitHub OAuth credentials are configured.
 ```
 
+### Show multiple local Kind/Minikube clusters
+
+A plain in-cluster install only sees the cluster the pod is running in. To make
+Helm behave like the local `start.sh` flow and show every context from your
+laptop kubeconfig, mount that kubeconfig into the pod:
+
+```bash
+helm upgrade --install kc ./deploy/helm/kubestellar-console \
+  -n kubestellar-console \
+  --set-file kubeconfig.content=$HOME/.kube/config
+```
+
+If you prefer to manage the Secret yourself:
+
+```bash
+kubectl -n kubestellar-console create secret generic kc-kubeconfig \
+  --from-file=config=$HOME/.kube/config
+
+helm upgrade --install kc ./deploy/helm/kubestellar-console \
+  -n kubestellar-console \
+  --set kubeconfig.existingSecret=kc-kubeconfig
+```
+
 Teardown:
 
 ```bash
