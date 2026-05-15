@@ -10,6 +10,7 @@ import {
   List, DollarSign, ChevronDown, ChevronRight, FlaskConical } from 'lucide-react'
 import { Button } from './Button'
 import { StatusBadge } from './StatusBadge'
+import { Skeleton } from './Skeleton'
 import { StatBlockConfig, DashboardStatsType, StatDisplayMode } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { StatBlockModePicker } from './StatBlockModePicker'
@@ -239,6 +240,7 @@ interface StatBlockProps {
 }
 
 const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, history, onDisplayModeChange }: StatBlockProps) {
+  const { t } = useTranslation()
   const IconComponent = ICONS[block.icon] || Server
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
@@ -250,9 +252,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
 
   const rawValue = data.value
   const rawProgressValue = typeof data.progressValue === 'number' ? data.progressValue : rawValue
-  // Show actual value if it's a number (including 0), only show '-' if truly no data (undefined/null/'-')
-  const displayValue = isLoading || rawValue === undefined || rawValue === null || rawValue === '-'
-    ? '-'
+  const isEmptyValue = !isLoading && (rawValue === undefined || rawValue === null || rawValue === '-')
+  const displayValue = isEmptyValue
+    ? '—'
     : (data.format && typeof rawValue === 'number' ? data.format(rawValue) : rawValue)
   const numericValue = typeof rawValue === 'number'
     ? rawValue
@@ -331,7 +333,12 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       </div>
 
       {/* Mode-specific content */}
-      {effectiveMode === 'sparkline' && hasEnoughHistory && !isNaN(numericValue) ? (
+      {isLoading ? (
+        <>
+          <Skeleton variant="text" width="55%" height={34} className="mb-2" />
+          <Skeleton variant="text" width="70%" height={12} />
+        </>
+      ) : effectiveMode === 'sparkline' && hasEnoughHistory && !isNaN(numericValue) ? (
         <>
           <div className="flex items-end justify-between gap-2">
             <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
@@ -477,6 +484,14 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
               (e.g. "healthy pods") is more informative and takes priority. */}
           {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && !data.sublabel && (
             <div className="text-2xs text-muted-foreground/50 mt-0.5">Building trend…</div>
+          )}
+          {isEmptyValue && (
+            <div className="text-2xs text-muted-foreground/70 mt-0.5">
+              {t('statsOverview.emptyHint', 'Connect a cluster to populate')}{' '}
+              <a href="/login" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                {t('statsOverview.setupWizard', 'Open setup wizard')}
+              </a>
+            </div>
           )}
           {data.sublabel && <div className="text-xs text-muted-foreground">{wrapAbbreviations(data.sublabel)}</div>}
         </>
@@ -644,8 +659,8 @@ export function StatsOverview({
         <div className={`grid ${gridCols} gap-4`}>
           {visibleBlocks.map(block => {
             const data = effectiveIsLoading
-              ? { value: '-' as string | number, sublabel: undefined }
-              : (getStatValue(block.id) ?? { value: '-' as string | number, sublabel: t('statsOverview.notAvailable') })
+              ? { value: undefined as string | number | undefined, sublabel: undefined }
+              : (getStatValue(block.id) ?? { value: undefined as string | number | undefined, sublabel: t('statsOverview.notAvailable') })
             return (
               <StatBlock
                 key={block.id}
@@ -673,4 +688,3 @@ export function StatsOverview({
     </div>
   )
 }
-
