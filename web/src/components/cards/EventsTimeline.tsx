@@ -33,6 +33,14 @@ interface TimePoint {
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 type TimeRangeTranslationKey = 'cards:eventsTimeline.range15m' | 'cards:eventsTimeline.range1h' | 'cards:eventsTimeline.range6h' | 'cards:eventsTimeline.range24h'
 type EventTimelineDatum = { type: string; lastSeen?: string; firstSeen?: string; count?: number | string }
+type EventTimelineTooltipParam = {
+  seriesName: string
+  value: number | string | number[]
+  color?: string
+  axisValueLabel?: string
+  dataIndex: number
+  marker?: string
+}
 
 const DEFAULT_TIME_RANGE: TimeRange = '1h'
 const CHART_Y_AXIS_MIN_INTERVAL = 1
@@ -250,9 +258,29 @@ function EventsTimelineInternal() {
     },
     tooltip: {
       trigger: 'axis' as const,
+      axisPointer: { type: 'shadow' as const },
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
       textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
+      formatter: (params: EventTimelineTooltipParam[] | EventTimelineTooltipParam) => {
+        const list = Array.isArray(params) ? params : [params]
+        if (list.length === 0) return ''
+
+        const dataIndex = list[0]?.dataIndex ?? -1
+        const point = dataIndex >= 0 ? chartTimePoints[dataIndex] : undefined
+        const header = point?.time ?? list[0]?.axisValueLabel ?? ''
+        const total = point?.total ?? list.reduce((sum, param) => {
+          const value = Array.isArray(param.value) ? Number(param.value[1]) : Number(param.value)
+          return sum + (Number.isFinite(value) ? value : 0)
+        }, 0)
+        const lines = list.map(param => {
+          const value = Array.isArray(param.value) ? Number(param.value[1]) : Number(param.value)
+          const safeValue = Number.isFinite(value) ? value : 0
+          return `${param.marker ?? ''}${param.seriesName}: <b>${safeValue}</b>`
+        }).join('<br/>')
+
+        return `<div style="font-size:${CHART_BODY_FONT_SIZE}px"><b>${header}</b><br/>${lines}<br/><span style="color:${CHART_TICK_COLOR}">Total: <b>${total}</b></span></div>`
+      },
     },
     series: [
       {
@@ -273,6 +301,7 @@ function EventsTimelineInternal() {
           },
         },
         showSymbol: false,
+        emphasis: { focus: 'series' as const },
       },
       {
         name: t('common:common.normal'),
@@ -292,9 +321,10 @@ function EventsTimelineInternal() {
           },
         },
         showSymbol: false,
+        emphasis: { focus: 'series' as const },
       },
     ],
-  }), [chartXAxisData, normalSeriesData, t, warningSeriesData])
+  }), [chartTimePoints, chartXAxisData, normalSeriesData, t, warningSeriesData])
 
   if (showSkeleton) {
     return (
