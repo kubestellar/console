@@ -29,11 +29,10 @@ export function ClusterChangelog() {
     isFailed,
     consecutiveFailures })
 
-  const cutoff = (() => {
-    const now = Date.now()
+  const cutoff = useMemo(() => {
     const hours: Record<TimeRange, number> = { '1h': 1, '6h': 6, '24h': 24, '7d': 168 }
-    return now - hours[timeRange] * MS_PER_HOUR
-  })()
+    return Date.now() - hours[timeRange] * MS_PER_HOUR
+  }, [timeRange])
 
   const changeEvents = useMemo(() => {
     return events
