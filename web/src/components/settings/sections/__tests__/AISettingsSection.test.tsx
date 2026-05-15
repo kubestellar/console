@@ -40,12 +40,11 @@ describe('AISettingsSection', () => {
     expect(container).toBeTruthy()
   })
 
-  it('renders a filled slider track for the selected mode', () => {
+  it('renders segmented AI mode controls', () => {
     render(<AISettingsSection mode="high" setMode={vi.fn()} description="test" />)
 
-    const slider = screen.getByRole('slider', { name: 'AI usage mode' })
-    const fill = slider.parentElement?.querySelector('[data-slider-fill="true"]')
-
-    expect(fill).toHaveStyle({ width: '100%' })
+    expect(screen.getByRole('button', { name: 'low' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'medium' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'high' })).toBeInTheDocument()
   })
 })
