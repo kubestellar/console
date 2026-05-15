@@ -1,0 +1,171 @@
+name: Netlify Deploy Failure Reporter
+
+on:
+  status:
+
+jobs:
+  report-netlify-failure:
+    if: >-
+      github.event.state == 'failure' &&
+      contains(github.event.context, 'netlify')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      statuses: read
+    steps:
+      - name: Find PR for this commit
+        id: find-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMIT_SHA="${{ github.event.sha }}"
+          PR_NUMBER=$(gh api "repos/${{ github.repository }}/commits/${COMMIT_SHA}/pulls" \
+            --jq '.[0].number // empty' 2>/dev/null || true)
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch Netlify deploy error
+        id: netlify
+        env:
+          NETLIFY_API_TOKEN: ${{ secrets.NETLIFY_API_TOKEN }}
+        run: |
+          SITE_ID="${{ secrets.NETLIFY_SITE_ID }}"
+          COMMIT_SHA="${{ steps.find-pr.outputs.commit_sha }}"
+
+          if [ -z "$NETLIFY_API_TOKEN" ] || [ -z "$SITE_ID" ]; then
+            echo "Missing NETLIFY_API_TOKEN or NETLIFY_SITE_ID secret"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          DEPLOY_JSON=$(curl -sf \
+            -H "Authorization: Bearer ${NETLIFY_API_TOKEN}" \
+            "https://api.netlify.com/api/v1/sites/${SITE_ID}/deploys?per_page=20" \
+            | jq --arg sha "$COMMIT_SHA" '[.[] | select(.commit_ref == $sha)] | first // empty')
+
+          if [ -z "$DEPLOY_JSON" ] || [ "$DEPLOY_JSON" = "null" ]; then
+            echo "No deploy found for commit ${COMMIT_SHA}"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          DEPLOY_ID=$(echo "$DEPLOY_JSON" | jq -r '.id')
+          ERROR_MSG=$(echo "$DEPLOY_JSON" | jq -r '.error_message // empty')
+          DEPLOY_STATE=$(echo "$DEPLOY_JSON" | jq -r '.state')
+          ADMIN_URL=$(echo "$DEPLOY_JSON" | jq -r '.admin_url // empty')
+
+          if [ -z "$ERROR_MSG" ] && [ "$DEPLOY_STATE" = "error" ]; then
+            LOG_OUTPUT=$(curl -sf \
+              -H "Authorization: Bearer ${NETLIFY_API_TOKEN}" \
+              "https://api.netlify.com/api/v1/deploys/${DEPLOY_ID}/log" \
+              | jq -r '.[] | select(.section == "building" or .section == "preparation") | .message' \
+              | grep -i "error\|fail\|fatal" | head -10 || true)
+            if [ -n "$LOG_OUTPUT" ]; then
+              ERROR_MSG="$LOG_OUTPUT"
+            else
+              ERROR_MSG="Deploy failed (no error message available — check Netlify dashboard)"
+            fi
+          fi
+
+          if [ -n "$ERROR_MSG" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_id=${DEPLOY_ID}" >> "$GITHUB_OUTPUT"
+            echo "$ERROR_MSG" > /tmp/netlify_error.txt
+            echo "admin_url=${ADMIN_URL}" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post comment on PR
+        if: steps.netlify.outputs.found == 'true' && steps.find-pr.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ steps.find-pr.outputs.pr_number }}"
+          DEPLOY_ID="${{ steps.netlify.outputs.deploy_id }}"
+          ADMIN_URL="${{ steps.netlify.outputs.admin_url }}"
+          ERROR_MSG=$(cat /tmp/netlify_error.txt)
+
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq "[.[] | select(.body | contains(\"${DEPLOY_ID}\"))] | length" 2>/dev/null || echo "0")
+
+          if [ "$EXISTING" != "0" ]; then
+            echo "Already commented on deploy ${DEPLOY_ID}, skipping"
+            exit 0
+          fi
+
+          BODY=$(cat <<EOF
+          ## Netlify Deploy Preview Failed
+
+          **Deploy ID:** \`${DEPLOY_ID}\`
+          **Dashboard:** ${ADMIN_URL}
+
+          \`\`\`
+          ${ERROR_MSG}
+          \`\`\`
+
+          <sub>Posted by netlify-error-reporter workflow</sub>
+          EOF
+          )
+
+          gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            -f body="$BODY"
+
+      - name: Open issue for direct-to-main failures
+        if: steps.netlify.outputs.found == 'true' && steps.find-pr.outputs.pr_number == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DEPLOY_ID="${{ steps.netlify.outputs.deploy_id }}"
+          ADMIN_URL="${{ steps.netlify.outputs.admin_url }}"
+          COMMIT_SHA="${{ steps.find-pr.outputs.commit_sha }}"
+          ERROR_MSG=$(cat /tmp/netlify_error.txt)
+          TAG="[netlify-deploy-failure]"
+
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues" \
+            --jq "[.[] | select(.state == \"open\" and (.title | contains(\"${TAG}\")))] | length" \
+            -f state=open -f per_page=20 2>/dev/null || echo "0")
+
+          if [ "$EXISTING" != "0" ]; then
+            ISSUE_NUMBER=$(gh api "repos/${{ github.repository }}/issues" \
+              --jq "[.[] | select(.state == \"open\" and (.title | contains(\"${TAG}\")))] | first | .number" \
+              -f state=open -f per_page=20)
+            gh api "repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/comments" \
+              -f body="Still failing as of $(date -u +%Y-%m-%dT%H:%M:%SZ).
+
+          **Commit:** ${COMMIT_SHA}
+          **Deploy ID:** \`${DEPLOY_ID}\`
+          **Dashboard:** ${ADMIN_URL}
+
+          \`\`\`
+          ${ERROR_MSG}
+          \`\`\`"
+            echo "Commented on existing issue #${ISSUE_NUMBER}"
+            exit 0
+          fi
+
+          gh label create "ci-failure" --color "b60205" --description "CI/CD pipeline failure" \
+            --repo "${{ github.repository }}" 2>/dev/null || true
+
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "${TAG} Netlify production deploy failing" \
+            --label "ci-failure,kind/bug" \
+            --body "## Netlify production deploy is failing
+
+          The Netlify build for a direct-to-main commit failed. The live site is serving stale content until this is resolved.
+
+          **Commit:** [\`${COMMIT_SHA}\`](https://github.com/${{ github.repository }}/commit/${COMMIT_SHA})
+          **Deploy ID:** \`${DEPLOY_ID}\`
+          **Dashboard:** ${ADMIN_URL}
+
+          \`\`\`
+          ${ERROR_MSG}
+          \`\`\`
+
+          ### Impact
+          - Leaderboard data is not updating on the live site
+          - Any other static data committed to main is stale
+
+          > Auto-generated by netlify-error-reporter. Subsequent failures will be appended as comments."
