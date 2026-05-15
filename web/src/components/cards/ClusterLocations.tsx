@@ -283,8 +283,9 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   // Hover state
   const [hoveredCluster, setHoveredCluster] = useState<string | null>(null)
 
-  // Apply global filters
-  const clusters = useMemo(() => {
+  // Step 1: Global/reachability scoping only — no status chip, no local search.
+  // Stats tiles read from here so their counts remain accurate when a filter is active.
+  const baseClusters = useMemo(() => {
     let result = allClusters.filter(c => c.reachable !== false)
 
     if (!isAllClustersSelected) {
@@ -299,7 +300,13 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       )
     }
 
-    // Apply local filters
+    return result
+  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+
+  // Step 2: Apply status chip and local search on top for map markers and the cluster list.
+  const clusters = useMemo(() => {
+    let result = baseClusters
+
     if (statusFilter === 'healthy') {
       result = result.filter(c => c.healthy)
     } else if (statusFilter === 'unhealthy') {
@@ -315,7 +322,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, statusFilter, debouncedSearchFilter])
+  }, [baseClusters, statusFilter, debouncedSearchFilter])
 
   // Group clusters by region
   const regionGroups = useMemo(() => {
@@ -341,13 +348,13 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     return Array.from(groups.values()).sort((a, b) => b.clusters.length - a.clusters.length)
   }, [clusters])
 
-  // Calculate stats
+  // Stats always read from baseClusters so chip/search filters don't change fleet totals.
   const stats = useMemo(() => {
-    const healthyClusters = clusters.filter(c => c.healthy).length
-    const uniqueRegions = regionGroups.length
-    const providers = new Set(regionGroups.map(r => r.provider))
-    return { healthyClusters, totalClusters: clusters.length, uniqueRegions, providerCount: providers.size }
-  }, [clusters, regionGroups])
+    const healthyClusters = baseClusters.filter(c => c.healthy).length
+    const uniqueRegions = new Set(baseClusters.map(c => extractRegion(c) || 'unknown')).size
+    const providers = new Set(baseClusters.map(c => detectCloudProvider(c.name, c.server, c.namespaces)))
+    return { healthyClusters, totalClusters: baseClusters.length, uniqueRegions, providerCount: providers.size }
+  }, [baseClusters])
 
   // Memoize provider legend to avoid expensive flatMap+Set on every render
   const MAX_LEGEND_PROVIDERS = 5
