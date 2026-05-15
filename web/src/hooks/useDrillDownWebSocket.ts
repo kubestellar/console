@@ -5,10 +5,14 @@ import { appendWsAuthToken } from '../lib/utils/wsAuth'
 const DEFAULT_TIMEOUT_MS = 10000
 
 interface KubectlMessage {
-  id: string
-  type: string
+  id?: string
+  type?: string
   payload?: {
     output?: string
+    content?: string
+    error?: string
+    message?: string
+    exitCode?: number
     [key: string]: unknown
   }
   [key: string]: unknown
@@ -16,7 +20,7 @@ interface KubectlMessage {
 
 /**
  * Hook for managing WebSocket connections to the local agent in drilldown views.
- * Provides kubectl command execution with automatic cleanup and memory leak prevention.
+ * Provides tracked sockets, safe message parsing, and kubectl/helm helpers with automatic cleanup.
  *
  * Features:
  * - Tracks all active WebSocket connections
@@ -54,13 +58,14 @@ export function useDrillDownWebSocket(cluster: string) {
   }, [])
 
   /**
-   * Run a kubectl command via the local agent WebSocket.
-   *
-   * @param args - kubectl arguments (e.g., ['get', 'pods', '-n', 'default'])
-   * @param timeoutMs - timeout in milliseconds (default: 10000)
+   * Generic command runner via WebSocket.
+   * @param commandType - command type ('kubectl' or 'helm')
+   * @param args - command arguments
+   * @param timeoutMs - timeout in milliseconds
    * @returns command output or empty string on error/timeout
    */
-  const runKubectl = useCallback(async (
+  const runCommand = useCallback(async (
+    commandType: 'kubectl' | 'helm',
     args: string[],
     timeoutMs: number = DEFAULT_TIMEOUT_MS
   ): Promise<string> => {
@@ -73,7 +78,7 @@ export function useDrillDownWebSocket(cluster: string) {
     }
 
     return new Promise((resolve) => {
-      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const requestId = `${commandType}-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
       const timeout = setTimeout(() => {
@@ -84,7 +89,7 @@ export function useDrillDownWebSocket(cluster: string) {
       ws.onopen = () => {
         ws.send(JSON.stringify({
           id: requestId,
-          type: 'kubectl',
+          type: commandType,
           payload: { context: cluster, args }
         }))
       }
@@ -114,6 +119,34 @@ export function useDrillDownWebSocket(cluster: string) {
     })
   }, [cluster, openTrackedWs, parseWsMessage])
 
+  /**
+   * Run a kubectl command via the local agent WebSocket.
+   *
+   * @param args - kubectl arguments (e.g., ['get', 'pods', '-n', 'default'])
+   * @param timeoutMs - timeout in milliseconds (default: 10000)
+   * @returns command output or empty string on error/timeout
+   */
+  const runKubectl = useCallback(async (
+    args: string[],
+    timeoutMs: number = DEFAULT_TIMEOUT_MS
+  ): Promise<string> => {
+    return runCommand('kubectl', args, timeoutMs)
+  }, [runCommand])
+
+  /**
+   * Run a helm command via the local agent WebSocket.
+   *
+   * @param args - helm arguments (e.g., ['status', 'myrelease', '-n', 'default', '-o', 'json'])
+   * @param timeoutMs - timeout in milliseconds (default: 15000 for helm)
+   * @returns command output or empty string on error/timeout
+   */
+  const runHelm = useCallback(async (
+    args: string[],
+    timeoutMs: number = 15000
+  ): Promise<string> => {
+    return runCommand('helm', args, timeoutMs)
+  }, [runCommand])
+
   // Close all tracked WebSocket connections on unmount
   useEffect(() => {
     const wsSet = activeWsRef.current
@@ -125,5 +158,11 @@ export function useDrillDownWebSocket(cluster: string) {
     }
   }, [])
 
-  return { runKubectl }
+  return {
+    runKubectl,
+    runHelm,
+    // Low-level utilities for custom WebSocket operations (e.g., AI analysis)
+    openTrackedWs,
+    parseWsMessage,
+  }
 }

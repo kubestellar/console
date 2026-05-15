@@ -13,8 +13,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions }
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { useCardLoadingState } from './CardDataContext'
-import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { useDrillDownWebSocket } from '../../hooks/useDrillDownWebSocket'
 import { safeGetJSON, safeSetJSON } from '../../lib/safeLocalStorage'
 import { useTranslation } from 'react-i18next'
 
@@ -83,7 +82,17 @@ interface VersionWsHandle {
   destroy: () => void
 }
 
-function createVersionWsHandle(): VersionWsHandle {
+interface VersionWsMessage {
+  id?: string
+  payload?: {
+    output?: string
+  }
+}
+
+function createVersionWsHandle(
+  openTrackedWs: () => Promise<WebSocket>,
+  parseWsMessage: (event: MessageEvent) => VersionWsMessage | null,
+): VersionWsHandle {
   let ws: WebSocket | null = null
   let connecting = false
   let destroyed = false
@@ -144,47 +153,41 @@ function createVersionWsHandle(): VersionWsHandle {
 
     connecting = true
 
-    let wsUrl: string
-    try {
-      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
-    } catch {
-      connecting = false
-      return Promise.reject(new Error('Failed to get auth token'))
-    }
-
     return new Promise((resolve, reject) => {
-      let localWs: WebSocket
-      try {
-        localWs = new WebSocket(wsUrl)
-      } catch {
-        connecting = false
-        reject(new Error('Failed to create WebSocket'))
-        return
-      }
-
-      ws = localWs
-
-      const connectionTimeout = setTimeout(() => {
-        connecting = false
-        if (localWs?.readyState !== WebSocket.OPEN) {
-          closeWs()
-          reject(new Error('WebSocket connection timeout'))
-        }
-      }, VERSION_REQUEST_TIMEOUT_MS)
-
-      localWs.onopen = () => {
-        clearTimeout(connectionTimeout)
-        connecting = false
-        if (destroyed) { closeWs(); reject(new Error('Handle destroyed')); return }
-        resolve(localWs!)
-      }
-
-      localWs.onmessage = (event) => {
+      const setupSocket = async () => {
+        let localWs: WebSocket
         try {
-          const msg = JSON.parse(event.data)
-          const resolver = pendingRequests.get(msg.id)
+          localWs = await openTrackedWs()
+        } catch {
+          connecting = false
+          reject(new Error('Failed to create WebSocket'))
+          return
+        }
+
+        ws = localWs
+
+        const connectionTimeout = setTimeout(() => {
+          connecting = false
+          if (localWs.readyState !== WebSocket.OPEN) {
+            closeWs()
+            reject(new Error('WebSocket connection timeout'))
+          }
+        }, VERSION_REQUEST_TIMEOUT_MS)
+
+        localWs.onopen = () => {
+          clearTimeout(connectionTimeout)
+          connecting = false
+          if (destroyed) { closeWs(); reject(new Error('Handle destroyed')); return }
+          resolve(localWs)
+        }
+
+        localWs.onmessage = (event) => {
+          const msg = parseWsMessage(event)
+          if (!msg) return
+
+          const resolver = pendingRequests.get(msg.id ?? '')
           if (resolver) {
-            pendingRequests.delete(msg.id)
+            pendingRequests.delete(msg.id ?? '')
             if (msg.payload?.output) {
               try {
                 const versionInfo = JSON.parse(msg.payload.output)
@@ -196,24 +199,24 @@ function createVersionWsHandle(): VersionWsHandle {
               resolver(null)
             }
           }
-        } catch {
-          // Ignore parse errors
+        }
+
+        localWs.onerror = () => {
+          clearTimeout(connectionTimeout)
+          connecting = false
+          rejectAllPending()
+          reject(new Error('WebSocket error'))
+        }
+
+        localWs.onclose = () => {
+          clearTimeout(connectionTimeout)
+          connecting = false
+          ws = null
+          rejectAllPending()
         }
       }
 
-      localWs.onerror = () => {
-        clearTimeout(connectionTimeout)
-        connecting = false
-        rejectAllPending()
-        reject(new Error('WebSocket error'))
-      }
-
-      localWs.onclose = () => {
-        clearTimeout(connectionTimeout)
-        connecting = false
-        ws = null
-        rejectAllPending()
-      }
+      void setupSocket()
     })
   }
 
@@ -374,6 +377,8 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
+  const defaultCluster = allClusters[0]?.name || ''
+  const { openTrackedWs, parseWsMessage } = useDrillDownWebSocket(defaultCluster)
   const [{ clusterVersions, fetchCompleted }, setVersionState] = useState({
     clusterVersions: {} as Record<string, string>,
     fetchCompleted: false,
@@ -382,7 +387,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   // Managed WebSocket handle — created once per mount, destroyed on unmount
   const wsHandleRef = useRef<VersionWsHandle | null>(null)
   if (!wsHandleRef.current) {
-    wsHandleRef.current = createVersionWsHandle()
+    wsHandleRef.current = createVersionWsHandle(openTrackedWs, parseWsMessage)
   }
 
   // Destroy WebSocket and pending requests on unmount

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
-import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
+import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -180,48 +179,25 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const [showDeletePodConfirm, setShowDeletePodConfirm] = useState(false)
   const { checkPermission } = useCanI()
   const { close: closeDrillDown } = useDrillDown()
-
-  // Track all active WebSocket connections so they can be cleaned up on unmount.
-  // Without this, WS connections opened by async handlers leak if the component
-  // unmounts before the server responds.
-  const activeWsRef = useRef(new Set<WebSocket>())
-
-  /** Create a tracked WebSocket — automatically removed from the set when closed. */
-  const openTrackedWs = useCallback(async (): Promise<WebSocket> => {
-    const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
-    activeWsRef.current.add(ws)
-    const origClose = ws.close.bind(ws)
-    ws.close = (...args: Parameters<WebSocket['close']>) => {
-      activeWsRef.current.delete(ws)
-      origClose(...args)
-    }
-    return ws
-  }, [])
+  const {
+    runKubectl,
+    openTrackedWs,
+    parseWsMessage: parseDrillDownWsMessage,
+  } = useDrillDownWebSocket(cluster)
 
   const getInvalidWsResponseError = useCallback((context: string) => (
     `${context} failed: received an invalid response from the agent.`
   ), [])
 
   const parseWsMessage = useCallback((event: MessageEvent, context: string) => {
-    try {
-      return JSON.parse(event.data)
-    } catch (err) {
-      console.error(`[PodDrillDown] Failed to parse ${context} WebSocket message:`, err)
+    const message = parseDrillDownWsMessage(event)
+    if (!message) {
+      console.error(`[PodDrillDown] Failed to parse ${context} WebSocket message.`)
       showToast(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'), 'error')
       return null
     }
-  }, [showToast, t])
-
-  // Close all tracked WebSocket connections on unmount
-  useEffect(() => {
-    const wsSet = activeWsRef.current
-    return () => {
-      for (const ws of Array.from(wsSet)) {
-        try { ws.close() } catch { /* already closed */ }
-      }
-      wsSet.clear()
-    }
-  }, [])
+    return message
+  }, [parseDrillDownWsMessage, showToast, t])
 
   // Pod data from the issue
   const status = data.status as string
@@ -368,67 +344,44 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setDescribeLoading(true)
 
     try {
-      const ws = await openTrackedWs()
-      const requestId = `describe-${Date.now()}`
+      const output = await runKubectl(['describe', 'pod', podName, '-n', namespace])
 
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['describe', 'pod', podName, '-n', namespace] }
-        }))
-      }
+      if (output) {
+        setDescribeOutput(output)
+        setDescribeError(null)
+        // Parse labels and annotations from describe output if not already set
+        if (!labels || !annotations) {
+          const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
+          const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
 
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'describe output')
-        if (!msg) {
-          setDescribeError(getInvalidWsResponseError('Describe'))
-          setDescribeLoading(false)
-          ws.close()
-          return
-        }
+          if (labelsMatch && !labels) {
+            const parsed: Record<string, string> = Object.create(null) as Record<string, string>
+            labelsMatch[1].trim().split('\n').forEach(line => {
+              const [key, ...valueParts] = line.trim().split('=')
+              if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
+            })
+            if (Object.keys(parsed).length > 0) setLabels(parsed)
+          }
 
-        if (msg.id === requestId && msg.payload?.output) {
-          setDescribeOutput(msg.payload.output)
-          setDescribeError(null)
-          // Parse labels and annotations from describe output if not already set
-          if (!labels || !annotations) {
-            const output = msg.payload.output as string
-            const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
-            const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
-
-            if (labelsMatch && !labels) {
-              const parsed: Record<string, string> = Object.create(null) as Record<string, string>
-              labelsMatch[1].trim().split('\n').forEach(line => {
-                const [key, ...valueParts] = line.trim().split('=')
-                if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
-              })
-              if (Object.keys(parsed).length > 0) setLabels(parsed)
-            }
-
-            if (annotationsMatch && !annotations) {
-              const parsed: Record<string, string> = Object.create(null) as Record<string, string>
-              annotationsMatch[1].trim().split('\n').forEach(line => {
-                const colonIdx = line.indexOf(':')
-                if (colonIdx > 0) {
-                  const key = line.substring(0, colonIdx).trim()
-                  const value = line.substring(colonIdx + 1).trim()
-                  if (key && key !== '<none>') safeSet(parsed, key, value)
-                }
-              })
-              if (Object.keys(parsed).length > 0) setAnnotations(parsed)
-            }
+          if (annotationsMatch && !annotations) {
+            const parsed: Record<string, string> = Object.create(null) as Record<string, string>
+            annotationsMatch[1].trim().split('\n').forEach(line => {
+              const colonIdx = line.indexOf(':')
+              if (colonIdx > 0) {
+                const key = line.substring(0, colonIdx).trim()
+                const value = line.substring(colonIdx + 1).trim()
+                if (key && key !== '<none>') safeSet(parsed, key, value)
+              }
+            })
+            if (Object.keys(parsed).length > 0) setAnnotations(parsed)
           }
         }
-        ws.close()
-        setDescribeLoading(false)
-      }
-
-      ws.onerror = () => {
-        setDescribeLoading(false)
-        ws.close()
+      } else {
+        setDescribeError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
       }
     } catch {
+      setDescribeError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
+    } finally {
       setDescribeLoading(false)
     }
   }
@@ -440,39 +393,17 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setLogsLoading(true)
 
     try {
-      const ws = await openTrackedWs()
-      const requestId = `logs-${Date.now()}`
+      const output = await runKubectl(['logs', podName, '-n', namespace, '--tail=500'])
 
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['logs', podName, '-n', namespace, '--tail=500'] }
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'logs')
-        if (!msg) {
-          setLogsError(getInvalidWsResponseError('Logs'))
-          setLogsLoading(false)
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId && msg.payload?.output) {
-          setLogsOutput(msg.payload.output)
-          setLogsError(null)
-        }
-        ws.close()
-        setLogsLoading(false)
-      }
-
-      ws.onerror = () => {
-        setLogsLoading(false)
-        ws.close()
+      if (output) {
+        setLogsOutput(output)
+        setLogsError(null)
+      } else {
+        setLogsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
       }
     } catch {
+      setLogsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
+    } finally {
       setLogsLoading(false)
     }
   }
@@ -484,39 +415,17 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setEventsLoading(true)
 
     try {
-      const ws = await openTrackedWs()
-      const requestId = `events-${Date.now()}`
+      const output = await runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${podName}`, '-o', 'wide'])
 
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${podName}`, '-o', 'wide'] }
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'events')
-        if (!msg) {
-          setEventsError(getInvalidWsResponseError('Events'))
-          setEventsLoading(false)
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId && msg.payload?.output) {
-          setEventsOutput(msg.payload.output)
-          setEventsError(null)
-        }
-        ws.close()
-        setEventsLoading(false)
-      }
-
-      ws.onerror = () => {
-        setEventsLoading(false)
-        ws.close()
+      if (output) {
+        setEventsOutput(output)
+        setEventsError(null)
+      } else {
+        setEventsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
       }
     } catch {
+      setEventsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
+    } finally {
       setEventsLoading(false)
     }
   }
@@ -535,49 +444,6 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setAiAnalysisError(null)
 
     try {
-      // Helper to run a kubectl command and get output
-      const runKubectl = async (args: string[]): Promise<string> => {
-        const ws = await openTrackedWs()
-        return new Promise((resolve) => {
-          const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
-          let output = ''
-
-          const timeout = setTimeout(() => {
-            ws.close()
-            resolve(output || 'Command timed out')
-          }, 10000)
-
-          ws.onopen = () => {
-            ws.send(JSON.stringify({
-              id: requestId,
-              type: 'kubectl',
-              payload: { context: cluster, args }
-            }))
-          }
-          ws.onmessage = (event: MessageEvent) => {
-            const msg = parseWsMessage(event, 'repair assistant context')
-            if (!msg) {
-              clearTimeout(timeout)
-              ws.close()
-              resolve('Failed to parse response from agent.')
-              return
-            }
-
-            if (msg.id === requestId && msg.payload?.output) {
-              output = msg.payload.output
-            }
-            clearTimeout(timeout)
-            ws.close()
-            resolve(output)
-          }
-          ws.onerror = () => {
-            clearTimeout(timeout)
-            ws.close()
-            resolve(output || 'Command failed')
-          }
-        })
-      }
-
       // Gather all context in parallel
       const [
         podGet,
