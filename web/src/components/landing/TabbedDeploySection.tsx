@@ -4,6 +4,7 @@ import { Globe, KeyRound, Lock, Monitor, Terminal, Wifi } from 'lucide-react'
 import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { copyToClipboard } from '../../lib/clipboard'
 import { emitInstallCommandCopied } from '../../lib/analytics'
+import type { InstallCopySource } from '../../lib/analytics-types'
 import { InstallStepCard, type InstallStep } from './InstallStepCard'
 import { ACCENT_CLASSES, type AccentColor } from './styles'
 
@@ -16,7 +17,7 @@ interface TabbedDeploySectionProps {
   localhostSteps: InstallStep[]
   portForwardSteps: InstallStep[]
   ingressSteps: InstallStep[]
-  analyticsSource: string
+  analyticsSource: InstallCopySource
   onTabSwitch?: (tab: DeployTab) => void
   onCommandCopy?: (tab: DeployTab, step: number, command: string) => void
 }
