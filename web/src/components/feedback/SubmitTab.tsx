@@ -6,6 +6,7 @@ import {
   Film,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
+import { cn } from '@/lib/cn'
 import { Button } from '../ui/Button'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
@@ -115,6 +116,9 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
 const MIN_PARENT_ISSUE_NUMBER = 1
 const MAX_AGENT_CONNECTION_LOG_LINES = 10
 const ALL_CLUSTERS_CONTEXT_LABEL = 'all clusters'
+const DESCRIPTION_EDITOR_HEIGHT_CLASS = 'h-56'
+const DESCRIPTION_EXAMPLE_MAX_HEIGHT_CLASS = 'max-h-56'
+const SCROLL_EDGE_TOLERANCE_PX = 1
 
 type SubmitErrorAction = 'reauthenticate' | 'setup' | null
 
@@ -175,6 +179,26 @@ function getSubmitErrorDetails(
     message: error,
     guidance: t('feedback.submitFailedGuidance'),
     action: !canPerformActions ? 'setup' : null,
+  }
+}
+
+function preventModalScrollChaining(event: React.WheelEvent<HTMLElement>) {
+  event.stopPropagation()
+
+  const element = event.currentTarget
+  const { scrollTop, scrollHeight, clientHeight } = element
+
+  if (scrollHeight <= clientHeight) {
+    event.preventDefault()
+    return
+  }
+
+  const isScrollingDown = event.deltaY > 0
+  const isAtTop = scrollTop <= SCROLL_EDGE_TOLERANCE_PX
+  const isAtBottom = scrollTop + clientHeight >= scrollHeight - SCROLL_EDGE_TOLERANCE_PX
+
+  if ((isScrollingDown && isAtBottom) || (!isScrollingDown && isAtTop)) {
+    event.preventDefault()
   }
 }
 
@@ -247,6 +271,18 @@ export function SubmitForm({
   const { selectedClusters } = useGlobalFilters()
   const directIssueUrl = buildDirectIssueUrl(targetRepo, description)
   const errorDetails = error ? getSubmitErrorDetails(error, canPerformActions, t as unknown as (key: string, defaultValue?: string) => string) : null
+  const bugReportExample = t(
+    'feedback.exampleBugReportBody',
+    'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card',
+  )
+  const featureRequestExample = t(
+    'feedback.exampleFeatureRequestBody',
+    'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.',
+  )
+  const descriptionExample = requestType === 'bug' ? bugReportExample : featureRequestExample
+  const descriptionPlaceholder = requestType === 'bug'
+    ? t('feedback.descriptionPlaceholderBug', 'Describe the bug in your own words. See the full example below.')
+    : t('feedback.descriptionPlaceholderFeature', 'Describe the feature in your own words. See the full example below.')
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
@@ -788,6 +824,7 @@ export function SubmitForm({
               value={description}
               onChange={e => setDescription(e.target.value)}
               onPaste={handlePaste}
+              onWheel={preventModalScrollChaining}
               onKeyDown={e => {
                 // Cmd+Enter (Mac) / Ctrl+Enter (Win/Linux) submits the form,
                 // matching the convention used by GitHub, Slack, and other
@@ -797,24 +834,55 @@ export function SubmitForm({
                   e.currentTarget.form?.requestSubmit()
                 }
               }}
-              placeholder={
-                requestType === 'bug'
-                  ? 'Example bug report: (replace this with a detailed bug report)\n\nWhat happened:\nThe GPU utilization card shows 0% even though pods are running.\n\nWhat I expected:\nGPU metrics should reflect actual usage from nvidia-smi.\n\nSteps to reproduce:\n1. Deploy a GPU workload\n2. Open the dashboard\n3. Check the GPU card'
-                  : 'Example feature request: (replace this with your feature request)\n\nWhat I want:\nAdd a button to export dashboard data as CSV.\n\nWhy it would be useful:\nI need to share cluster metrics with my team in spreadsheets.\n\nAdditional context:\nShould include all visible card data with timestamps.'
-              }
-              className="w-full h-[200px] px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              placeholder={descriptionPlaceholder}
+              className={cn(
+                'w-full overflow-y-auto overscroll-contain px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+                DESCRIPTION_EDITOR_HEIGHT_CLASS,
+              )}
               disabled={inputsDisabled}
               aria-disabled={inputsDisabled}
             />
           ) : (
-            <div className="w-full h-[200px] overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg ghmd">
+            <div
+              onWheel={preventModalScrollChaining}
+              className={cn(
+                'w-full overflow-y-auto overscroll-contain px-3 py-2 bg-secondary/50 border border-border rounded-lg ghmd',
+                DESCRIPTION_EDITOR_HEIGHT_CLASS,
+              )}
+            >
               {description.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
                   {description}
                 </ReactMarkdown>
               ) : (
-                <p className="text-muted-foreground italic">Nothing to preview</p>
+                <p className="text-muted-foreground italic">{t('feedback.nothingToPreview', 'Nothing to preview')}</p>
               )}
+            </div>
+          )}
+          {descriptionTab === 'write' && !description.trim() && (
+            <div className="mt-2 rounded-lg border border-border bg-background/40">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t('feedback.exampleReport', 'Example report')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setDescription(descriptionExample)}
+                  disabled={inputsDisabled}
+                  className="text-xs font-medium text-purple-400 transition-colors hover:text-purple-300 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {t('feedback.useExample', 'Use example')}
+                </button>
+              </div>
+              <pre
+                onWheel={preventModalScrollChaining}
+                className={cn(
+                  'overflow-y-auto overscroll-contain whitespace-pre-wrap break-words px-3 py-2 font-mono text-xs text-muted-foreground',
+                  DESCRIPTION_EXAMPLE_MAX_HEIGHT_CLASS,
+                )}
+              >
+                {descriptionExample}
+              </pre>
             </div>
           )}
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

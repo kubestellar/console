@@ -92,6 +92,26 @@ describe('FeatureRequestModal Component', () => {
     expect(typeof FeatureRequestModalModule.FeatureRequestModal).toBe('function')
   })
 
+  it('shows a scrollable example report and can copy it into the editor', async () => {
+    const { container } = render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+
+    expect(await screen.findByText(/Example report/i)).toBeInTheDocument()
+    expect(screen.getByText(/3\. Check the GPU card/i)).toBeInTheDocument()
+
+    const exampleReport = container.querySelector('pre')
+    expect(exampleReport).toHaveClass('overflow-y-auto', 'overscroll-contain', 'max-h-56')
+
+    const textbox = screen.getByRole('textbox') as HTMLTextAreaElement
+    expect(textbox).toHaveClass('overflow-y-auto', 'overscroll-contain', 'h-56')
+
+    fireEvent.click(screen.getByRole('button', { name: /^Use example$/i }))
+
+    await waitFor(() => {
+      expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toContain('Example bug report:')
+    })
+    expect(screen.queryByText(/Example report/i)).not.toBeInTheDocument()
+  })
+
   // Regression test for #9152 — clicking Discard after typing must close
   // both the discard confirmation AND the parent feedback modal.
   it('closes the parent modal when Discard is clicked from the unsaved-changes prompt', async () => {
