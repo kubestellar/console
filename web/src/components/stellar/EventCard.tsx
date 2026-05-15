@@ -140,6 +140,14 @@ export function EventCard({
   return (
     <div
       onClick={() => onOpenDetail?.(notification)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenDetail?.(notification)
+        }
+      }}
       style={{
         borderLeft: `3px solid ${color}`,
         background: notification.read ? 'transparent' : 'var(--s-surface-2)',
@@ -243,7 +251,18 @@ export function EventCard({
         const isEscalated = solveStatus?.phase === 'escalated' || solveStatus?.phase === 'exhausted'
         const hideManualActions = isAutoActive || isResolved
         return (
-        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              e.stopPropagation()
+            }
+          }}
+          style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}
+        >
           <button onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', fontSize: 11, color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
           {showRollback && onRollback && (
             <button

@@ -73,6 +73,14 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
   return (
     <div
       onClick={() => onOpenDetail?.(watch)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenDetail?.(watch)
+        }
+      }}
       style={{
         padding: '7px 10px',
         background: 'var(--s-surface-2)',
@@ -85,7 +93,18 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       }}
     >
       {/* Header row */}
-      <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+        }}
+        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+      >
         {/* Pulse dot */}
         <div style={{
           width: 7,
@@ -206,13 +225,24 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Action buttons — only shown when onAction is wired AND we have a usable kind */}
       {onAction && (
-        <div onClick={(e) => e.stopPropagation()} style={{
-          display: 'flex',
-          gap: 6,
-          marginTop: 6,
-          paddingLeft: 13,
-          flexWrap: 'wrap',
-        }}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              e.stopPropagation()
+            }
+          }}
+          style={{
+            display: 'flex',
+            gap: 6,
+            marginTop: 6,
+            paddingLeft: 13,
+            flexWrap: 'wrap',
+          }}
+        >
           <button
             onClick={() => onAction(investigatePrompt)}
             style={actionBtnStyle('var(--s-info)')}
