@@ -10,16 +10,12 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/store"
 )
-
-// manifestConversionTimeout is the HTTP timeout for the GitHub App Manifest
-// code-to-credentials exchange.
-const manifestConversionTimeout = 15 * time.Second
 
 // manifestAppNameSuffixBytes is the number of random bytes appended to the
 // GitHub App name to avoid global name collisions on retry.
@@ -59,7 +55,7 @@ func NewManifestHandler(
 		githubURL:         strings.TrimRight(githubURL, "/"),
 		onConfigured:      onConfigured,
 		isOAuthConfigured: isOAuthConfigured,
-		httpClient:        &http.Client{Timeout: manifestConversionTimeout},
+		httpClient:        client.GitHub,
 	}
 }
 

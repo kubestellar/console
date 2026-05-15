@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	httpclient "github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 )
@@ -851,7 +852,7 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(ctx context.Context, githubL
 	// #7059: reuse shared HTTP client for connection pooling.
 	client := h.httpClient
 	if client == nil {
-		client = &http.Client{Timeout: githubAPITimeout}
+		client = httpclient.GitHub
 	}
 
 	apiBase := resolveGitHubAPIBase()

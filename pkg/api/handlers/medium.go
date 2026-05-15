@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/sync/singleflight"
-
 	"github.com/kubestellar/console/pkg/client"
+	"golang.org/x/sync/singleflight"
 )
 
 // MediumBlogHandler fetches the latest blog posts from the KubeStellar
@@ -40,6 +39,10 @@ const (
 	// prevent memory exhaustion from unexpectedly large responses. #7064.
 	maxMediumResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
+
+// mediumHTTPClient is a package-level shared HTTP client for Medium
+// fetches so TCP connections are reused across requests. #7065.
+var mediumHTTPClient = client.Short
 
 // MediumPost is the JSON shape returned to the frontend.
 type MediumPost struct {
@@ -130,7 +133,7 @@ func stripHTML(html string, maxLen int) string {
 
 func fetchMediumBlog() ([]MediumPost, error) {
 	// #7065: reuse shared HTTP client for connection pooling.
-	resp, err := client.ExternalClient.Get(mediumFeedURL)
+	resp, err := mediumHTTPClient.Get(mediumFeedURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Medium feed: %w", err)
 	}

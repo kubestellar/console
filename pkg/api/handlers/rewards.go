@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/rewards"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
@@ -23,7 +23,6 @@ import (
 // Point values for GitHub contributions
 const (
 	rewardsCacheTTL         = 10 * time.Minute
-	rewardsAPITimeout       = 30 * time.Second
 	rewardsPerPage          = 100              // GitHub max per page
 	rewardsMaxPages         = 100              // REST Issues API supports up to 10,000 per repo
 	rewardsMaxItems         = 10_000           // Hard cap on total items across all pages
@@ -104,7 +103,7 @@ func NewRewardsHandler(cfg RewardsConfig) *RewardsHandler {
 	return &RewardsHandler{
 		githubToken: cfg.GitHubToken,
 		repos:       parseRepos(cfg.Orgs),
-		httpClient:  client.LongRunningClient,
+		httpClient:  client.External,
 		cache:       make(map[string]*rewardsCacheEntry),
 	}
 }

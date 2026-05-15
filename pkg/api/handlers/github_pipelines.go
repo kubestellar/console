@@ -9,7 +9,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -389,7 +389,7 @@ func NewGitHubPipelinesHandler(githubToken string) *GitHubPipelinesHandler {
 	return &GitHubPipelinesHandler{
 		token:         githubToken,
 		mutationToken: os.Getenv("GITHUB_MUTATIONS_TOKEN"),
-		httpClient:    client.GitHubClient,
+		httpClient:    client.GitHub,
 		history:       newGHPHistory(),
 		cache:         make(map[string]ghpCacheEntry),
 	}

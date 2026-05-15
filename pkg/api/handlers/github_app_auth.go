@@ -27,7 +27,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -39,6 +38,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/kubestellar/console/pkg/client"
 )
 
 // ───────────────────────────────────────────────────────────────────────
@@ -81,9 +81,6 @@ const appJWTLifetime = 9 * time.Minute
 // 5-min safety buffer in case of clock skew or GitHub API blips.
 const tokenRefreshMargin = 5 * time.Minute
 
-// tokenMintTimeout caps the HTTP call to GitHub's /app/installations/:id/access_tokens.
-const tokenMintTimeout = 15 * time.Second
-
 // ───────────────────────────────────────────────────────────────────────
 // Provider
 // ───────────────────────────────────────────────────────────────────────
@@ -124,7 +121,7 @@ func NewGitHubAppTokenProvider() *GitHubAppTokenProvider {
 		appID:          appID,
 		installationID: installationID,
 		privateKeyPEM:  []byte(privateKey),
-		httpClient:     client.GitHubClient,
+		httpClient:     client.GitHub,
 	}
 }
 

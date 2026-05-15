@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -38,7 +39,7 @@ const (
 // acmmHTTPClient is a dedicated client for ACMM GitHub API calls.
 // Using http.DefaultClient would race under concurrent requests and
 // lacks a timeout, risking indefinite hangs on unresponsive upstreams.
-var acmmHTTPClient = &http.Client{Timeout: 30 * time.Second}
+var acmmHTTPClient = client.External
 
 
 var (

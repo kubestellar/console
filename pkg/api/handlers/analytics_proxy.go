@@ -14,14 +14,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"golang.org/x/sync/singleflight"
 )
 
-// analyticsUpstreamTimeout is the maximum time the proxy waits for a response
-// from the upstream analytics service (Google Analytics, Umami).
-const analyticsUpstreamTimeout = 10 * time.Second
-
-var analyticsClient = &http.Client{Timeout: analyticsUpstreamTimeout}
+var analyticsClient = client.Short
 
 // allowedOrigins lists hostnames that may send analytics through the proxy.
 var allowedOrigins = map[string]bool{

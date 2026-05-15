@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"encoding/xml"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -29,15 +29,14 @@ const (
 	// playlistCacheTTL controls how long playlist results are cached.
 	playlistCacheTTL = 5 * time.Minute
 
-	// playlistFetchTimeout is the HTTP timeout for fetching the RSS feed.
-
 	// maxYouTubeResponseBytes caps external YouTube/RSS response reads to
 	// prevent memory exhaustion from unexpectedly large responses. #7064.
 	maxYouTubeResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
 
-// client.ExternalClient is a package-level shared HTTP client for YouTube
+// youtubeHTTPClient is a package-level shared HTTP client for YouTube
 // fetches so TCP connections are reused across requests. #7065.
+var youtubeHTTPClient = client.Short
 
 // PlaylistVideo is the JSON shape returned to the frontend.
 type PlaylistVideo struct {
@@ -125,7 +124,7 @@ func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
 	var lastErr error
 	for _, instance := range invidiousInstances {
 		apiURL := fmt.Sprintf("%s/api/v1/playlists/%s", instance, playlistID)
-		resp, err := client.ExternalClient.Get(apiURL)
+		resp, err := youtubeHTTPClient.Get(apiURL)
 		if err != nil {
 			lastErr = fmt.Errorf("invidious %s: %w", instance, err)
 			continue
@@ -173,7 +172,7 @@ func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
 func fetchPlaylistViaRSS() ([]PlaylistVideo, error) {
 	url := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?playlist_id=%s", playlistID)
 
-	resp, err := client.ExternalClient.Get(url)
+	resp, err := youtubeHTTPClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playlist feed: %w", err)
 	}
@@ -342,7 +341,7 @@ func YouTubeThumbnailProxy(c *fiber.Ctx) error {
 	thumbURL := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", videoID)
 
 	// #7065: reuse shared HTTP client for connection pooling.
-	resp, err := client.ExternalClient.Get(thumbURL)
+	resp, err := youtubeHTTPClient.Get(thumbURL)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).SendString("failed to fetch thumbnail")
 	}

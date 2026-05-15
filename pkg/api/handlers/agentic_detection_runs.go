@@ -5,7 +5,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 )
 
 const (
@@ -109,8 +109,7 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns() (*DetectionRunsRespon
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "kubestellar-console")
 
-	client := client.GitHubClient
-	resp, err := client.Do(req)
+	resp, err := client.GitHub.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch comments: %w", err)
 	}

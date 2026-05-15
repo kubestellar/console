@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/safego"
 
 	"github.com/gofiber/fiber/v2"
@@ -187,7 +188,7 @@ const prewarmTimeout = 30 * time.Second
 func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 	h := &NightlyE2EHandler{
 		githubToken: githubToken,
-		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		httpClient:  client.External,
 		logCache:    make(map[string]*RunLogsResponse),
 		logCacheExp: make(map[string]time.Time),
 		imgCache:    make(map[string]map[string]string),

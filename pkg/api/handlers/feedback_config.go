@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"bytes"
 	"errors"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 	"golang.org/x/sync/singleflight"
@@ -254,7 +254,7 @@ func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 		webhookSecret:       cfg.WebhookSecret,
 		repoOwner:           cfg.RepoOwner,
 		repoName:            cfg.RepoName,
-		httpClient:          client.GitHubClient,
+		httpClient:          client.GitHub,
 		appTokenProvider:    NewGitHubAppTokenProvider(),
 		attributionProxyURL: strings.TrimRight(os.Getenv("FEEDBACK_PROXY_URL"), "/"),
 	}

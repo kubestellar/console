@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -18,6 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -404,7 +404,7 @@ type MissionsHandler struct {
 // NewMissionsHandler creates a new MissionsHandler with default settings.
 func NewMissionsHandler() *MissionsHandler {
 	return &MissionsHandler{
-		httpClient:   client.ExternalClient,
+		httpClient:   client.External,
 		githubAPIURL: "https://api.github.com",
 		githubRawURL: "https://raw.githubusercontent.com",
 		cache:        &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)},

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -14,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/safego"
 
 	"github.com/gofiber/fiber/v2"
@@ -407,7 +407,7 @@ func NewBenchmarkHandlers(apiKey, folderID string) *BenchmarkHandlers {
 		cache: &benchmarkCache{
 			ttl: defaultCacheTTL,
 		},
-		client: client.LongRunningClient,
+		client: client.External,
 	}
 }
 

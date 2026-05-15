@@ -2,7 +2,6 @@
 package handlers
 
 import (
-	"github.com/kubestellar/console/pkg/client"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/client"
 )
 
 const (
@@ -18,10 +18,6 @@ const (
 	// before re-fetching from GitHub. All users share a single cached copy
 	// so only one upstream request is made per TTL window (#8487).
 	kubaraCatalogCacheTTL = 10 * time.Minute
-
-	// kubaraCatalogTimeout is the HTTP timeout for the upstream GitHub
-	// Contents API call when refreshing the catalog.
-	kubaraCatalogTimeout = 15 * time.Second
 
 	// kubaraCatalogMaxResponseBytes caps the response body from the upstream
 	// GitHub Contents API to prevent unbounded memory consumption.
@@ -73,7 +69,7 @@ func NewKubaraCatalogHandler(githubToken, catalogRepo, catalogPath string) *Kuba
 		githubToken: githubToken,
 		catalogRepo: catalogRepo,
 		catalogPath: catalogPath,
-		httpClient:  client.GitHubClient,
+		httpClient:  client.GitHub,
 	}
 }
 
