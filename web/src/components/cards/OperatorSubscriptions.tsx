@@ -51,8 +51,10 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   // Fetch subscriptions - pass undefined to get all clusters
   const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperatorSubscriptions(undefined)
 
+  const rawSubscriptionsArray = rawSubscriptions || []
+
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const hasData = rawSubscriptions.length > 0
+  const hasData = rawSubscriptionsArray.length > 0
   const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
     isLoading: (clustersLoading || subscriptionsLoading) && !hasData,
     isRefreshing,
@@ -62,7 +64,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     isDemoData })
 
   // Use useCardFilters for summary counts (globally filtered, before local search/pagination)
-  const { filtered: globalFilteredSubscriptions } = useCardFilters(rawSubscriptions, FILTER_CONFIG)
+  const { filtered: globalFilteredSubscriptions } = useCardFilters(rawSubscriptionsArray, FILTER_CONFIG)
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -90,7 +92,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptions, {
+    containerStyle } = useCardData<OperatorSubscription, SortByOption>(rawSubscriptionsArray, {
     filter: {
       searchFields: ['name', 'namespace', 'channel', 'currentCSV'] as (keyof OperatorSubscription)[],
       clusterField: 'cluster',

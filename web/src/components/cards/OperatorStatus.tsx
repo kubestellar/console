@@ -55,8 +55,10 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   // Fetch operators - pass undefined to get all clusters
   const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperators(undefined)
 
+  const rawOperatorsArray = rawOperators || []
+
   // Report card data state
-  const hasData = rawOperators.length > 0
+  const hasData = rawOperatorsArray.length > 0
   const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
     isLoading: (clustersLoading || operatorsLoading) && !hasData,
     isRefreshing,
@@ -66,7 +68,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     isDemoData })
 
   // Use useCardFilters for status counts (globally filtered, before local search/pagination)
-  const { filtered: globalFilteredOperators } = useCardFilters(rawOperators, FILTER_CONFIG)
+  const { filtered: globalFilteredOperators } = useCardFilters(rawOperatorsArray, FILTER_CONFIG)
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -94,7 +96,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<Operator, SortByOption>(rawOperators, {
+    containerStyle } = useCardData<Operator, SortByOption>(rawOperatorsArray, {
     filter: {
       searchFields: ['name', 'namespace', 'version'] as (keyof Operator)[],
       clusterField: 'cluster',

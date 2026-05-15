@@ -410,10 +410,10 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   // Report state to CardWrapper for refresh animation
   const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading: isLoadingHook && !hasData,
+    isLoading: isLoading,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode,
+    isDemoData: isDemoMode && !isLoadingHook,
     isFailed,
     consecutiveFailures })
 
@@ -718,7 +718,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-card">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
         <div className="flex items-center gap-2">
