@@ -437,6 +437,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const showHeaderStatus = mission.status !== 'blocked'
   const StatusIcon = config.icon
   const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
+  const showCompletedFeedback = !mission.feedback && !feedbackDismissed.has(mission.id)
+  const showSaveResolutionPrompt = mission.feedback === 'positive' && !feedbackDismissed.has(mission.id)
+  const showOrbitSetupOffer = mission.importedFrom?.missionClass === 'install' || mission.type === 'deploy'
+  const showOrbitMonitorOffer =
+    mission.importedFrom?.missionClass !== 'install' &&
+    mission.importedFrom?.missionClass !== 'orbit' &&
+    mission.type !== 'deploy' &&
+    Boolean(onOpenOrbitDialog)
 
   return (
     <>
@@ -591,7 +599,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       {/* Messages - using memoized component for better scroll performance */}
       {/* issue 6740 — role=log + aria-live=polite so screen readers announce streaming AI
           tokens as they arrive. aria-atomic=false keeps announcements incremental. */}
-      <div className="relative flex-1 min-h-[150px] min-w-0">
+      <div className="relative flex-1 min-h-0 min-w-0">
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
@@ -600,6 +608,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         aria-atomic="false"
         aria-relevant="additions text"
         aria-label="Mission chat messages"
+        data-testid="mission-chat-scroll-region"
         className="absolute inset-0 overflow-y-auto scroll-enhanced p-4"
       >
         <div ref={messagesContentRef} className="flex min-h-full flex-col gap-4 pb-6">
@@ -891,63 +900,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         )}
 
-        <div ref={messagesEndRef} aria-hidden="true" className="h-px shrink-0" />
-        </div>
-      </div>
-
-      {/* Floating scroll-to-bottom button — appears when user scrolls up (#10452) */}
-      <button
-        onClick={() => scrollToBottom('smooth')}
-        className={cn(
-          'absolute bottom-4 right-4 z-10 p-2 rounded-full',
-          'bg-primary/90 text-primary-foreground shadow-lg',
-          'hover:bg-primary transition-all',
-          'focus:outline-hidden focus:ring-2 focus:ring-primary/50',
-          shouldAutoScroll
-            ? 'opacity-0 pointer-events-none scale-90'
-            : 'opacity-100 scale-100',
-        )}
-        style={{ transitionDuration: `${SCROLL_BTN_FADE_MS}ms` }}
-        aria-label={t('missionChat.scrollToBottom', { defaultValue: 'Scroll to latest message' })}
-        data-testid="scroll-to-bottom-btn"
-      >
-        <ArrowDown className="w-4 h-4" />
-      </button>
-      </div>
-
-      {/* Input / Actions — hidden when Run button is inline above */}
-      {!isSavedPreRun && (
-      <div className="p-4 border-t border-border shrink-0 bg-card min-w-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {mission.status === 'cancelling' ? (
-          <div className="flex items-center justify-center gap-2 py-3">
-            <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
-            <span className="text-sm text-orange-400">Cancelling mission...</span>
-          </div>
-        ) : mission.status === 'running' ? (
-          <div className="flex flex-col gap-2">
-            {/* Input is disabled while mission is running to prevent interleaved
-                responses from concurrent requests (#5478). Only cancel is allowed. */}
-            <div className="flex gap-2 min-w-0">
-              <input
-                type="text"
-                disabled
-                placeholder={t('missionChat.waitingForAgent', { defaultValue: 'Waiting for agent to finish...' })}
-                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/30 border border-border rounded-lg text-muted-foreground placeholder:text-muted-foreground/60 cursor-not-allowed"
-              />
-              <button
-                disabled
-                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                title={t('missionChat.sendWillQueue')}
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-            {/* Terminate button removed — header already has one (line 448) */}
-          </div>
-        ) : mission.status === 'completed' ? (
-          <div className="flex flex-col gap-3">
-            {/* Slim inline feedback bar — dismissable, non-obtrusive */}
-            {!mission.feedback && !feedbackDismissed.has(mission.id) && (
+        {mission.status === 'completed' && (
+          <div className="space-y-3">
+            {showCompletedFeedback && (
               <div className="flex items-center gap-2 px-2.5 py-1.5 bg-secondary/30 border border-border rounded-md text-xs">
                 <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
                 <span className="text-muted-foreground">{t('missionChat.wasHelpful', { defaultValue: 'Helpful?' })}</span>
@@ -985,8 +940,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               </div>
             )}
 
-            {/* Save resolution prompt — slim, dismissable */}
-            {mission.feedback === 'positive' && !feedbackDismissed.has(mission.id) && (
+            {showSaveResolutionPrompt && (
               <div className="flex items-center gap-2 px-2.5 py-1.5 bg-secondary/30 border border-border rounded-md text-xs">
                 <span className="text-muted-foreground">{t('missionChat.saveResolutionShort', { defaultValue: 'Save this resolution for next time?' })}</span>
                 <button
@@ -1006,8 +960,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               </div>
             )}
 
-            {/* Orbit Setup Offer — shown after install/deploy missions complete */}
-            {(mission.importedFrom?.missionClass === 'install' || mission.type === 'deploy') && (
+            {showOrbitSetupOffer && (
               <OrbitSetupOffer
                 projects={mission.importedFrom?.cncfProject
                   ? [{ name: mission.importedFrom.cncfProject, cncfProject: mission.importedFrom.cncfProject, category: (mission.context?.category as string) }]
@@ -1019,14 +972,70 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               />
             )}
 
-            {/* Monitor offer — shown after repair/troubleshoot/analyze missions complete */}
-            {mission.importedFrom?.missionClass !== 'install' &&
-             mission.importedFrom?.missionClass !== 'orbit' &&
-             mission.type !== 'deploy' &&
-             onOpenOrbitDialog && (
+            {showOrbitMonitorOffer && onOpenOrbitDialog && (
               <OrbitMonitorOffer mission={mission} onOpenOrbitDialog={onOpenOrbitDialog} />
             )}
+          </div>
+        )}
 
+        <div ref={messagesEndRef} aria-hidden="true" className="h-px shrink-0" />
+        </div>
+      </div>
+
+      {/* Floating scroll-to-bottom button — appears when user scrolls up (#10452) */}
+      <button
+        onClick={() => scrollToBottom('smooth')}
+        className={cn(
+          'absolute bottom-4 right-4 z-10 p-2 rounded-full',
+          'bg-primary/90 text-primary-foreground shadow-lg',
+          'hover:bg-primary transition-all',
+          'focus:outline-hidden focus:ring-2 focus:ring-primary/50',
+          shouldAutoScroll
+            ? 'opacity-0 pointer-events-none scale-90'
+            : 'opacity-100 scale-100',
+        )}
+        style={{ transitionDuration: `${SCROLL_BTN_FADE_MS}ms` }}
+        aria-label={t('missionChat.scrollToBottom', { defaultValue: 'Scroll to latest message' })}
+        data-testid="scroll-to-bottom-btn"
+      >
+        <ArrowDown className="w-4 h-4" />
+      </button>
+      </div>
+
+      {/* Input / Actions — hidden when Run button is inline above */}
+      {!isSavedPreRun && (
+      <div
+        data-testid="mission-chat-composer"
+        className="sticky bottom-0 border-t border-border shrink-0 bg-card min-w-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        {mission.status === 'cancelling' ? (
+          <div className="flex items-center justify-center gap-2 py-3">
+            <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+            <span className="text-sm text-orange-400">Cancelling mission...</span>
+          </div>
+        ) : mission.status === 'running' ? (
+          <div className="flex flex-col gap-2">
+            {/* Input is disabled while mission is running to prevent interleaved
+                responses from concurrent requests (#5478). Only cancel is allowed. */}
+            <div className="flex gap-2 min-w-0">
+              <input
+                type="text"
+                disabled
+                placeholder={t('missionChat.waitingForAgent', { defaultValue: 'Waiting for agent to finish...' })}
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/30 border border-border rounded-lg text-muted-foreground placeholder:text-muted-foreground/60 cursor-not-allowed"
+              />
+              <button
+                disabled
+                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                title={t('missionChat.sendWillQueue')}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Terminate button removed — header already has one (line 448) */}
+          </div>
+        ) : mission.status === 'completed' ? (
+          <div className="flex flex-col gap-3">
             {/* Follow-up input — allow continuing the conversation after completion (#5735) */}
             <div className="flex gap-2 min-w-0">
               <input
