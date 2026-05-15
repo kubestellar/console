@@ -20,7 +20,7 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { issues: allPodIssues, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
   const { issues: allDeploymentIssues, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
-  const { drillToCluster, drillToPod } = useDrillDownActions()
+  const { drillToCluster, drillToPod, drillToAllClusters } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -129,17 +129,11 @@ Please provide:
 
   const handleStartHealthCheck = () => checkKeyAndRun(doStartHealthCheck)
 
-  // Calculate health score (0-100).
-  // The score factors in both cluster-level health and workload issues so that
-  // 100% only appears when there are zero issues — preventing the contradictory
-  // display of "100% health" alongside "N issues detected" (#11514).
-  const ISSUE_PENALTY_PER_ISSUE = 5
-  const MAX_ISSUE_PENALTY = 30
-  const clusterScore = clusters.length > 0
+  // Calculate health score from visible cluster counts so the horseshoe
+  // percentage matches the healthy/total clusters shown in this card.
+  const healthScore = clusters.length > 0
     ? (healthyClusters / clusters.length) * 100
     : 0
-  const issuePenalty = Math.min(totalIssues * ISSUE_PENALTY_PER_ISSUE, MAX_ISSUE_PENALTY)
-  const healthScore = Math.max(0, Math.round(clusterScore - issuePenalty))
 
   // Gauge size tuned so the card + stats + issues + button all fit the
   // standard card height (see #6461). Previously size=120 plus mb-4 spacing
@@ -176,8 +170,7 @@ Please provide:
             healthyClusters > 0 && "cursor-pointer hover:bg-green-500/20 transition-colors"
           )}
           onClick={() => {
-            const healthyCluster = clusters.find(c => getClusterHealthState(c) === 'healthy')
-            if (healthyCluster) drillToCluster(healthyCluster.name)
+            if (healthyClusters > 0) drillToAllClusters('healthy')
           }}
           title={t('healthCheck.healthyClusterTooltip', { count: healthyClusters })}
         >
@@ -190,8 +183,7 @@ Please provide:
             unhealthyClusters > 0 && "cursor-pointer hover:bg-red-500/20 transition-colors"
           )}
           onClick={() => {
-            const unhealthyCluster = clusters.find(c => getClusterHealthState(c) === 'unhealthy')
-            if (unhealthyCluster) drillToCluster(unhealthyCluster.name)
+            if (unhealthyClusters > 0) drillToAllClusters('unhealthy')
           }}
           title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
         >

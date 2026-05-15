@@ -6,14 +6,13 @@ import {
   useDeploymentIssues,
   useServices,
   useEvents,
-  useWarningEvents,
   useSecurityIssues,
   useHelmReleases,
   useOperatorSubscriptions,
   useOperators,
   useGPUNodes } from './useMCP'
 import { useIngresses } from './mcp/networking'
-import { useCachedPVCs } from './useCachedData'
+import { useCachedPVCs, useCachedWarningEvents } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
@@ -56,7 +55,9 @@ export function useUniversalStats() {
   const { pvcs } = useCachedPVCs()
   const { services } = useServices()
   const { events } = useEvents(undefined, undefined, 100)
-  const { events: warningEvents } = useWarningEvents(undefined, undefined, 100)
+  // Keep warning stat counts aligned with the all-events drilldown list by
+  // using the same cached warning-events dataset there.
+  const { events: warningEvents } = useCachedWarningEvents(undefined, undefined, { limit: 100, category: 'realtime' })
   const { issues: securityIssues } = useSecurityIssues()
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubscriptions } = useOperatorSubscriptions()
