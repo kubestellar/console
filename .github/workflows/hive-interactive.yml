@@ -1,0 +1,122 @@
+name: Hive Interactive Mentions
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+  cancel-in-progress: false
+
+jobs:
+  hive-mention:
+    if: |
+      !github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@kubestellar-hive')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Evaluate mention
+        id: evaluate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/issues/comments/$COMMENT_ID/reactions" \
+            -X POST \
+            -f content='eyes' >/dev/null
+
+          LABELS=$(gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || true)
+
+          TRIAGED=false
+          if printf '%s\n' "$LABELS" | grep -Fxq 'triage/accepted'; then
+            TRIAGED=true
+          fi
+
+          ACTIVE_RUN=false
+          if printf '%s\n' "$LABELS" | grep -Eq '^(ai-processing|ai-awaiting-fix|ai-pr-draft|ai-pr-ready)$'; then
+            ACTIVE_RUN=true
+          fi
+
+          CLEAN_BODY=$(python3 -c 'import os,re; text=os.environ["COMMENT_BODY"]; text=re.sub(r"@kubestellar-hive\\b", "", text, flags=re.IGNORECASE).strip(); print(text or "No additional instruction provided.")')
+
+          echo "triaged=$TRIAGED" >> "$GITHUB_OUTPUT"
+          echo "active_run=$ACTIVE_RUN" >> "$GITHUB_OUTPUT"
+          {
+            echo 'clean_body<<EOF'
+            printf '%s\n' "$CLEAN_BODY"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure hive labels are present
+        if: steps.evaluate.outputs.triaged == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          gh label create "ai-fix-requested" --repo "$REPO" --color "d4c5f9" \
+            --description "AI fix has been requested" 2>/dev/null || true
+
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "ai-fix-requested"
+
+      - name: Dispatch hive fix workflow
+        if: |
+          steps.evaluate.outputs.triaged == 'true' &&
+          steps.evaluate.outputs.active_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/actions/workflows/implement-fix.lock.yml/dispatches" \
+            -X POST \
+            -f ref="$DEFAULT_BRANCH" \
+            -f inputs[issue_number]="$ISSUE_NUMBER"
+
+      - name: Acknowledge mention
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          CLEAN_BODY: ${{ steps.evaluate.outputs.clean_body }}
+          TRIAGED: ${{ steps.evaluate.outputs.triaged }}
+          ACTIVE_RUN: ${{ steps.evaluate.outputs.active_run }}
+        run: |
+          set -euo pipefail
+
+          QUOTED_BODY=$(printf '%s\n' "$CLEAN_BODY" | sed 's/^/> /')
+
+          if [ "$TRIAGED" != 'true' ]; then
+            STATUS_LINE='I saved your instruction, but I did not queue a hive run because this issue is not labeled `triage/accepted` yet.'
+            NEXT_STEP='Once a maintainer accepts the issue, mention the hive again (or use `/triage accepted`) to kick off the workflow.'
+          elif [ "$ACTIVE_RUN" = 'true' ]; then
+            STATUS_LINE='I saved your instruction on the issue thread. This issue already has an active hive run, so I did not start a duplicate workflow.'
+            NEXT_STEP='The existing automation can use this new context on its next pass.'
+          else
+            STATUS_LINE='I saved your instruction and queued the hive fix workflow for this issue.'
+            NEXT_STEP='The queued run will use the issue thread, including your mention comment, as additional context.'
+          fi
+
+          BODY=$(printf '## 🐝 Hive mention received\n\nThanks @%s — I captured the instruction from [your comment](%s).\n\n%s\n\n%s\n\n### Instruction captured\n%s\n' "$COMMENT_AUTHOR" "$COMMENT_URL" "$STATUS_LINE" "$NEXT_STEP" "$QUOTED_BODY")
+
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
