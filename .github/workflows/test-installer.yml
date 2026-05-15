@@ -169,8 +169,8 @@ jobs:
       - name: Verify all platform binaries exist
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           echo "Checking assets for release $TAG..."
 
           EXPECTED_ASSETS=(
