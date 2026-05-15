@@ -364,6 +364,7 @@ func (s *SQLiteStore) migrate() error {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
+	CREATE INDEX IF NOT EXISTS idx_users_github_login ON users(github_login COLLATE NOCASE);
 	CREATE INDEX IF NOT EXISTS idx_dashboards_user ON dashboards(user_id);
 	CREATE INDEX IF NOT EXISTS idx_cards_dashboard ON cards(dashboard_id);
 	CREATE INDEX IF NOT EXISTS idx_events_user_time ON user_events(user_id, created_at);
