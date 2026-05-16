@@ -80,6 +80,7 @@ export function StellarSidebar() {
       {STELLAR_RAIL_ITEMS.map(item => {
         const active = isStellarRailItemActive(item, location.pathname, location.hash)
         const showUnreadBadge = item.key === 'events' && unreadCount > 0
+        const Icon = item.icon
         return (
           <button
             key={item.key}
@@ -97,15 +98,13 @@ export function StellarSidebar() {
               cursor: 'pointer',
               background: active ? 'var(--s-brand)' : 'transparent',
               color: active ? '#0a0e14' : onStellarRoute ? 'var(--s-text)' : 'var(--s-brand)',
-              fontFamily: 'var(--s-mono)',
-              fontWeight: 700,
               fontSize: STELLAR_NAV_FONT_SIZE_PX,
               lineHeight: 1,
               display: 'grid',
               placeItems: 'center',
             }}
           >
-            <span aria-hidden>{item.glyph}</span>
+            <Icon aria-hidden size={14} strokeWidth={2.25} />
             {showUnreadBadge && (
               <span
                 aria-hidden

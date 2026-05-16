@@ -113,6 +113,20 @@ describe('Stellar navigation', () => {
     ])
   })
 
+  it('renders icon buttons instead of text initials in the Stellar rail', () => {
+    render(<StellarSidebar />)
+
+    for (const key of ['overview', 'activity', 'chat', 'audit'] as const) {
+      const button = screen.getByTestId(`stellar-rail-${key}`)
+      expect(button.querySelector('svg')).not.toBeNull()
+      expect(button).toHaveTextContent(/^$/)
+    }
+
+    const eventsButton = screen.getByTestId('stellar-rail-events')
+    expect(eventsButton.querySelector('svg')).not.toBeNull()
+    expect(eventsButton).toHaveTextContent(/^3$/)
+  })
+
   it('replays section actions when the current Stellar target is clicked again', () => {
     Object.assign(mockLocation, {
       pathname: '/stellar',

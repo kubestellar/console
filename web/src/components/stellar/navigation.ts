@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react'
+import { Activity, Bell, FileText, MessageSquare, Sparkles } from 'lucide-react'
 import { ROUTES } from '../../config/routes'
 
 export const STELLAR_NAVIGATION_EVENT = 'stellar:navigate'
@@ -16,7 +18,7 @@ type StellarRailKey = 'overview' | 'activity' | 'events' | 'chat' | 'audit'
 export interface StellarRailItem {
   key: StellarRailKey
   label: string
-  glyph: string
+  icon: LucideIcon
   href: string
   route: string
   sectionId?: StellarSectionId
@@ -34,7 +36,7 @@ export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
   {
     key: 'overview',
     label: 'Open Stellar overview',
-    glyph: '✦',
+    icon: Sparkles,
     href: STELLAR_NAV_HREF.OVERVIEW,
     route: ROUTES.STELLAR,
     sectionId: STELLAR_SECTION_ID.OVERVIEW,
@@ -42,7 +44,7 @@ export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
   {
     key: 'activity',
     label: 'Open Stellar activity log',
-    glyph: 'L',
+    icon: Activity,
     href: STELLAR_NAV_HREF.ACTIVITY,
     route: ROUTES.STELLAR,
     sectionId: STELLAR_SECTION_ID.ACTIVITY,
@@ -50,7 +52,7 @@ export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
   {
     key: 'events',
     label: 'Open Stellar events',
-    glyph: 'E',
+    icon: Bell,
     href: STELLAR_NAV_HREF.EVENTS,
     route: ROUTES.STELLAR,
     sectionId: STELLAR_SECTION_ID.EVENTS,
@@ -58,7 +60,7 @@ export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
   {
     key: 'chat',
     label: 'Open Stellar chat',
-    glyph: 'C',
+    icon: MessageSquare,
     href: STELLAR_NAV_HREF.CHAT,
     route: ROUTES.STELLAR,
     sectionId: STELLAR_SECTION_ID.CHAT,
@@ -66,7 +68,7 @@ export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
   {
     key: 'audit',
     label: 'Open Stellar audit log',
-    glyph: 'A',
+    icon: FileText,
     href: STELLAR_NAV_HREF.AUDIT,
     route: ROUTES.STELLAR_AUDIT,
   },
