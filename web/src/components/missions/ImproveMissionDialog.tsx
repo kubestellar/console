@@ -10,6 +10,7 @@ import {
   MessageSquarePlus,
   ExternalLink,
 } from 'lucide-react'
+import { buildGitHubIssueUrl } from '@/lib/githubUrls'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import type { MissionExport } from '../../lib/missions/types'
@@ -65,15 +66,15 @@ function buildIssueUrl(
     `_Mission file: \`fixes/cncf-install/install-${(mission.cncfProject || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json\`_`,
   ].filter(Boolean).join('\n')
 
-  const labels = ['ai-mission', 'community-improvement', section !== 'general' ? section : ''].filter(Boolean).join(',')
+  const labels = ['ai-mission', 'community-improvement', section !== 'general' ? section : '']
 
-  const params = new URLSearchParams({
+  return buildGitHubIssueUrl({
+    owner: 'kubestellar',
+    repo: 'console-kb',
     title,
     body,
     labels,
   })
-
-  return `https://github.com/kubestellar/console-kb/issues/new?${params.toString()}`
 }
 
 export function ImproveMissionDialog({

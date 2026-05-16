@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '@/lib/cn'
+import { buildGitHubIssueUrl } from '@/lib/githubUrls'
 import { Button } from '../ui/Button'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
@@ -142,11 +143,13 @@ function splitDraftForIssue(description: string): { title: string; body: string 
 function buildDirectIssueUrl(targetRepo: TargetRepo, description: string): string {
   const repoName = targetRepo === 'docs' ? 'docs' : 'console'
   const { title, body } = splitDraftForIssue(description)
-  const params = new URLSearchParams()
-  if (title) params.set('title', title)
-  if (body) params.set('body', body)
-  const query = params.toString()
-  return `https://github.com/kubestellar/${repoName}/issues/new${query ? `?${query}` : ''}`
+
+  return buildGitHubIssueUrl({
+    owner: 'kubestellar',
+    repo: repoName,
+    title,
+    body,
+  })
 }
 
 function getSubmitErrorDetails(
