@@ -214,6 +214,10 @@ export function FlightPlanBlueprint({
   })
   const [infoPanelCollapsed, setInfoPanelCollapsed] = useState(false)
 
+  // Track if mouse is over the info panel to keep it visible while interacting
+  const isOverInfoPanelRef = useRef(false)
+  const hidePanelTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   // Zoom controls
   const [zoom, setZoom] = useState(1)
 
@@ -373,27 +377,79 @@ export function FlightPlanBlueprint({
     }
   }, [])
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hidePanelTimeoutRef.current) {
+        clearTimeout(hidePanelTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const projectMap = new Map(state.projects.map((p) => [p.name, p]))
 
   const handleProjectHover = (info: ProjectHoverInfo | null) => {
+    // Clear any pending hide timeout
+    if (hidePanelTimeoutRef.current) {
+      clearTimeout(hidePanelTimeoutRef.current)
+      hidePanelTimeoutRef.current = null
+    }
+
     if (info) {
       const data: InfoPanelData = { kind: 'project', info }
       setInfoPanel(data)
       setStickyPanel(data)
     } else {
-      setInfoPanel(null)
+      // Delay hiding to allow user to move cursor to info panel
+      hidePanelTimeoutRef.current = setTimeout(() => {
+        // Only hide if mouse is not over the info panel
+        if (!isOverInfoPanelRef.current) {
+          setInfoPanel(null)
+        }
+      }, 150) // Small delay for smooth transition
     }
   }
 
   const handleClusterHover = (info: ClusterHoverInfo | null) => {
     if (dragProject) return
+
+    // Clear any pending hide timeout
+    if (hidePanelTimeoutRef.current) {
+      clearTimeout(hidePanelTimeoutRef.current)
+      hidePanelTimeoutRef.current = null
+    }
+
     if (info) {
       const data: InfoPanelData = { kind: 'cluster', info }
       setInfoPanel(data)
       setStickyPanel(data)
     } else {
-      setInfoPanel(null)
+      // Delay hiding to allow user to move cursor to info panel
+      hidePanelTimeoutRef.current = setTimeout(() => {
+        // Only hide if mouse is not over the info panel
+        if (!isOverInfoPanelRef.current) {
+          setInfoPanel(null)
+        }
+      }, 150) // Small delay for smooth transition
     }
+  }
+
+  /** Handlers for info panel hover to keep it visible while interacting */
+  const handleInfoPanelEnter = () => {
+    isOverInfoPanelRef.current = true
+    // Clear any pending hide timeout when entering the panel
+    if (hidePanelTimeoutRef.current) {
+      clearTimeout(hidePanelTimeoutRef.current)
+      hidePanelTimeoutRef.current = null
+    }
+  }
+
+  const handleInfoPanelLeave = () => {
+    isOverInfoPanelRef.current = false
+    // Hide the panel when leaving (after a small delay)
+    hidePanelTimeoutRef.current = setTimeout(() => {
+      setInfoPanel(null)
+    }, 150)
   }
 
   /** Open mission preview modal for a project (fetches from KB) */
@@ -821,6 +877,8 @@ export function FlightPlanBlueprint({
             infoPanelCollapsed && 'w-0 border-l-0 overflow-hidden'
           )}
           style={infoPanelCollapsed ? { width: 0 } : { width: infoPanelWidth }}
+          onMouseEnter={handleInfoPanelEnter}
+          onMouseLeave={handleInfoPanelLeave}
         >
           {/* Resize drag handle */}
           <div
