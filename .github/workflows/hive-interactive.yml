@@ -122,8 +122,7 @@ jobs:
 
       - name: Ensure hive labels are present
         if: |
-          steps.evaluate.outputs.is_pull_request != 'true' &&
-          steps.evaluate.outputs.triaged == 'true'
+          steps.evaluate.outputs.is_pull_request != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -139,7 +138,6 @@ jobs:
       - name: Dispatch hive fix workflow
         if: |
           steps.evaluate.outputs.is_pull_request != 'true' &&
-          steps.evaluate.outputs.triaged == 'true' &&
           steps.evaluate.outputs.active_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -162,7 +160,6 @@ jobs:
           COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
           COMMENT_URL: ${{ github.event.comment.html_url }}
           CLEAN_BODY: ${{ steps.evaluate.outputs.clean_body }}
-          TRIAGED: ${{ steps.evaluate.outputs.triaged }}
           ACTIVE_RUN: ${{ steps.evaluate.outputs.active_run }}
           IS_PULL_REQUEST: ${{ steps.evaluate.outputs.is_pull_request }}
         run: |
@@ -178,9 +175,6 @@ jobs:
               STATUS_LINE='I saved your instruction on this PR thread.'
               NEXT_STEP='Mention `@kubestellar-hive` again any time with more details, follow-up questions, or review requests.'
             fi
-          elif [ "$TRIAGED" != 'true' ]; then
-            STATUS_LINE='I saved your instruction, but I did not queue a hive run because this issue is not labeled `triage/accepted` yet.'
-            NEXT_STEP='Once a maintainer accepts the issue, mention the hive again (or use `/triage accepted`) to kick off the workflow.'
           elif [ "$ACTIVE_RUN" = 'true' ]; then
             STATUS_LINE='I saved your instruction on the issue thread. This issue already has an active hive run, so I did not start a duplicate workflow.'
             NEXT_STEP='The existing automation can use this new context on its next pass.'
