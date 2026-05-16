@@ -187,22 +187,20 @@ function getSubmitErrorDetails(
 }
 
 function preventModalScrollChaining(event: React.WheelEvent<HTMLElement>) {
-  event.stopPropagation()
-
   const element = event.currentTarget
   const { scrollTop, scrollHeight, clientHeight } = element
 
   if (scrollHeight <= clientHeight) {
-    event.preventDefault()
     return
   }
 
   const isScrollingDown = event.deltaY > 0
   const isAtTop = scrollTop <= SCROLL_EDGE_TOLERANCE_PX
   const isAtBottom = scrollTop + clientHeight >= scrollHeight - SCROLL_EDGE_TOLERANCE_PX
+  const canScrollWithinElement = isScrollingDown ? !isAtBottom : !isAtTop
 
-  if ((isScrollingDown && isAtBottom) || (!isScrollingDown && isAtTop)) {
-    event.preventDefault()
+  if (canScrollWithinElement) {
+    event.stopPropagation()
   }
 }
 
@@ -840,7 +838,7 @@ export function SubmitForm({
               }}
               placeholder={descriptionPlaceholder}
               className={cn(
-                'w-full overflow-y-auto overscroll-contain px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed',
+                'w-full overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 resize-none font-mono text-sm disabled:opacity-60 disabled:cursor-not-allowed',
                 DESCRIPTION_EDITOR_HEIGHT_CLASS,
               )}
               disabled={inputsDisabled}
@@ -850,7 +848,7 @@ export function SubmitForm({
             <div
               onWheel={preventModalScrollChaining}
               className={cn(
-                'w-full overflow-y-auto overscroll-contain px-3 py-2 bg-secondary/50 border border-border rounded-lg ghmd',
+                'w-full overflow-y-auto px-3 py-2 bg-secondary/50 border border-border rounded-lg ghmd',
                 DESCRIPTION_EDITOR_HEIGHT_CLASS,
               )}
             >
@@ -881,7 +879,7 @@ export function SubmitForm({
               <pre
                 onWheel={preventModalScrollChaining}
                 className={cn(
-                  'overflow-y-auto overscroll-contain whitespace-pre-wrap break-words px-3 py-2 font-mono text-xs text-muted-foreground',
+                  'overflow-y-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-xs text-muted-foreground',
                   DESCRIPTION_EXAMPLE_MAX_HEIGHT_CLASS,
                 )}
               >

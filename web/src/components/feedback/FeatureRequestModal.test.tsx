@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, createEvent } from '@testing-library/react'
 import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
 import * as FeatureRequestModalModule from './FeatureRequestModal'
 import { FeatureRequestModal } from './FeatureRequestModal'
@@ -100,10 +100,12 @@ describe('FeatureRequestModal Component', () => {
 
     const exampleReport = screen.getByText(/3\. Check the GPU card/i).closest('pre')
     expect(exampleReport).not.toBeNull()
-    expect(exampleReport).toHaveClass('overflow-y-auto', 'overscroll-contain', 'max-h-56')
+    expect(exampleReport).toHaveClass('overflow-y-auto', 'max-h-56')
+    expect(exampleReport).not.toHaveClass('overscroll-contain')
 
     const textbox = screen.getByRole('textbox') as HTMLTextAreaElement
-    expect(textbox).toHaveClass('overflow-y-auto', 'overscroll-contain', 'h-56')
+    expect(textbox).toHaveClass('overflow-y-auto', 'h-56')
+    expect(textbox).not.toHaveClass('overscroll-contain')
 
     fireEvent.click(screen.getByRole('button', { name: /^Use example$/i }))
 
@@ -111,6 +113,31 @@ describe('FeatureRequestModal Component', () => {
       expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toContain('Example bug report:')
     })
     expect(screen.queryByText(/Example report/i)).not.toBeInTheDocument()
+  })
+
+  it('lets wheel events bubble when the editor does not overflow', async () => {
+    render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+
+    const textarea = await screen.findByRole('textbox') as HTMLTextAreaElement
+    const bodyWheelListener = vi.fn()
+    document.body.addEventListener('wheel', bodyWheelListener)
+
+    Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 120 })
+    Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 240 })
+    Object.defineProperty(textarea, 'scrollTop', { configurable: true, value: 0, writable: true })
+
+    const wheelEvent = createEvent.wheel(textarea, {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 40,
+    })
+
+    fireEvent(textarea, wheelEvent)
+
+    expect(wheelEvent.defaultPrevented).toBe(false)
+    expect(bodyWheelListener).toHaveBeenCalledTimes(1)
+
+    document.body.removeEventListener('wheel', bodyWheelListener)
   })
 
   // Regression test for #9152 — clicking Discard after typing must close
