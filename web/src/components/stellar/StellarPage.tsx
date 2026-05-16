@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { StellarNotification } from '../../types/stellar'
 import { useStellar } from '../../hooks/useStellar'
 import { EventsPanel } from './EventsPanel'
@@ -9,6 +10,12 @@ import { TasksPanel } from './TasksPanel'
 import { WatchesPanel } from './WatchesPanel'
 import { RecommendedTasksPanel } from './RecommendedTasksPanel'
 import { StellarActivityPanel } from './StellarActivityPanel'
+import {
+  STELLAR_NAVIGATION_EVENT,
+  STELLAR_SECTION_ID,
+  getStellarSectionIdFromHash,
+  type StellarSectionId,
+} from './navigation'
 
 import '../../styles/stellar.css'
 
@@ -16,10 +23,15 @@ import '../../styles/stellar.css'
 // Reuses the same panels as the sidebar but in a roomier 3-column layout
 // so the user can see events, chat, and watches/tasks at once.
 export function StellarPage() {
+  const location = useLocation()
   const [tasksExpanded, setTasksExpanded] = useState(true)
   const [chatInput, setChatInput] = useState('')
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [detailNotification, setDetailNotification] = useState<StellarNotification | null>(null)
+  const overviewRef = useRef<HTMLDivElement | null>(null)
+  const activityRef = useRef<HTMLDivElement | null>(null)
+  const eventsRef = useRef<HTMLDivElement | null>(null)
+  const chatRef = useRef<HTMLDivElement | null>(null)
   const {
     isConnected,
     unreadCount,
@@ -49,8 +61,59 @@ export function StellarPage() {
     activity,
   } = useStellar()
 
+  const focusSection = useCallback((sectionId: StellarSectionId) => {
+    const target = (() => {
+      switch (sectionId) {
+        case STELLAR_SECTION_ID.ACTIVITY:
+          return activityRef.current
+        case STELLAR_SECTION_ID.EVENTS:
+          return eventsRef.current
+        case STELLAR_SECTION_ID.CHAT:
+          return chatRef.current
+        case STELLAR_SECTION_ID.OVERVIEW:
+        default:
+          return overviewRef.current
+      }
+    })()
+
+    if (!target) {
+      return
+    }
+
+    target.focus({ preventScroll: true })
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+    }
+  }, [])
+
+  useEffect(() => {
+    const sectionId = getStellarSectionIdFromHash(location.hash)
+    if (!sectionId) {
+      return
+    }
+
+    const handle = window.requestAnimationFrame(() => focusSection(sectionId))
+    return () => window.cancelAnimationFrame(handle)
+  }, [focusSection, location.hash])
+
+  useEffect(() => {
+    const handleNavigation = (event: Event) => {
+      const customEvent = event as CustomEvent<{ sectionId?: StellarSectionId }>
+      if (customEvent.detail?.sectionId) {
+        focusSection(customEvent.detail.sectionId)
+      }
+    }
+
+    window.addEventListener(STELLAR_NAVIGATION_EVENT, handleNavigation as EventListener)
+    return () => window.removeEventListener(STELLAR_NAVIGATION_EVENT, handleNavigation as EventListener)
+  }, [focusSection])
+
   return (
     <div
+      ref={overviewRef}
+      id={STELLAR_SECTION_ID.OVERVIEW}
+      tabIndex={-1}
+      data-testid="stellar-section-overview"
       style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(260px, 320px) 1fr 1fr',
@@ -94,13 +157,20 @@ export function StellarPage() {
           />
         </div>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <StellarActivityPanel
-            activity={activity}
-            onOpenEvent={useCallback((eventId: string) => {
-              const found = (notifications || []).find(n => n.id === eventId)
-              if (found) setDetailNotification(found)
-            }, [notifications])}
-          />
+          <div
+            ref={activityRef}
+            id={STELLAR_SECTION_ID.ACTIVITY}
+            tabIndex={-1}
+            data-testid="stellar-section-activity"
+          >
+            <StellarActivityPanel
+              activity={activity}
+              onOpenEvent={useCallback((eventId: string) => {
+                const found = (notifications || []).find(n => n.id === eventId)
+                if (found) setDetailNotification(found)
+              }, [notifications])}
+            />
+          </div>
           <RecommendedTasksPanel createTask={createTask} />
           <WatchesPanel
             watches={watches}
@@ -119,6 +189,10 @@ export function StellarPage() {
 
       {/* Middle column — events */}
       <div
+        ref={eventsRef}
+        id={STELLAR_SECTION_ID.EVENTS}
+        tabIndex={-1}
+        data-testid="stellar-section-events"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -149,6 +223,10 @@ export function StellarPage() {
 
       {/* Right column — chat */}
       <div
+        ref={chatRef}
+        id={STELLAR_SECTION_ID.CHAT}
+        tabIndex={-1}
+        data-testid="stellar-section-chat"
         style={{
           display: 'flex',
           flexDirection: 'column',

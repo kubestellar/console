@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useStellar } from '../../hooks/useStellar'
 import { useToast } from '../ui/Toast'
-import { ROUTES } from '../../config/routes'
+import {
+  STELLAR_NAV_HREF,
+  isOnStellarRoute,
+} from './navigation'
 
 // Severities that interrupt the user on other pages. Info-level events stay silent.
 const TOAST_SEVERITIES = new Set(['critical', 'warning'])
@@ -40,7 +43,7 @@ export function StellarToastBridge() {
 
   useEffect(() => {
     if (notifications.length === 0) return
-    const onStellarPage = location.pathname === ROUTES.STELLAR
+    const onStellarPage = isOnStellarRoute(location.pathname)
     const cutoff = mountedAtRef.current - MOUNT_TIME_TOLERANCE_MS
 
     for (const n of notifications) {
@@ -83,7 +86,7 @@ export function StellarToastBridge() {
 
       maybeBrowserNotify(n.title, n.body, n.id, permissionAskedRef, () => {
         window.focus()
-        navigate(ROUTES.STELLAR)
+        navigate(STELLAR_NAV_HREF.EVENTS)
       })
     }
 
