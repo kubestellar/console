@@ -34,6 +34,12 @@ import { prefetchCardChunks } from '../../components/cards/cardRegistry'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+const GRID_STYLE = { gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` } as const
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -295,26 +301,26 @@ export function DashboardPage({
     setCustomizerInitialSection(undefined)
   }
 
-  const handleRemoveCard = (cardId: string) => {
+  const handleRemoveCard = useCallback((cardId: string) => {
     removeCard(cardId)
-  }
+  }, [removeCard])
 
-  const handleConfigureCard = (cardId: string) => {
+  const handleConfigureCard = useCallback((cardId: string) => {
     openConfigureCard(cardId)
-  }
+  }, [openConfigureCard])
 
-  const handleSaveCardConfig = (cardId: string, config: Record<string, unknown>) => {
+  const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
     configureCard(cardId, config)
     setConfiguringCard(null)
-  }
+  }, [configureCard, setConfiguringCard])
 
-  const handleWidthChange = (cardId: string, newWidth: number) => {
+  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
     updateCardWidth(cardId, newWidth)
-  }
+  }, [updateCardWidth])
 
-  const handleHeightChange = (cardId: string, newHeight: number) => {
+  const handleHeightChange = useCallback((cardId: string, newHeight: number) => {
     updateCardHeight(cardId, newHeight)
-  }
+  }, [updateCardHeight])
 
   const applyTemplate = (template: DashboardTemplate) => {
     const newCards = template.cards.map((card, i) => ({
@@ -477,7 +483,7 @@ export function DashboardPage({
                     <div
                       className="grid grid-cols-1 md:grid-cols-12 gap-2 min-w-0"
                       data-testid="dashboard-cards-grid"
-                      style={{ gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` }}
+                      style={GRID_STYLE}
                     >
                       {visibleCards.map((card, index) => (
                         <SortableDashboardCard
