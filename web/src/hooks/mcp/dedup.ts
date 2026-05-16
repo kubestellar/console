@@ -49,8 +49,8 @@ export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[] | 
     if (!source) return cluster
 
     // Check if we need to copy anything - include nodeCount, podCount, and capacity/requests
-    const needsNodes = (!cluster.nodeCount || cluster.nodeCount === 0) && source.nodeCount && source.nodeCount > 0
-    const needsPods = (!cluster.podCount || cluster.podCount === 0) && source.podCount && source.podCount > 0
+    const needsNodes = cluster.nodeCount === undefined && source.nodeCount !== undefined && source.nodeCount > 0
+    const needsPods = cluster.podCount === undefined && source.podCount !== undefined && source.podCount > 0
     const needsCapacity = !cluster.cpuCores && source.cpuCores
     const needsRequests = !cluster.cpuRequestsCores && source.cpuRequestsCores
 

@@ -32,7 +32,7 @@ describe('dedup.ts extended coverage', () => {
       expect(shareMetricsBetweenSameServerClusters(undefined as unknown as ClusterInfo[])).toEqual([])
     })
 
-    it('copies pod count from source when target has zero', () => {
+    it('does not overwrite explicit podCount:0 with stale source data', () => {
       const withPods = makeCluster({
         name: 'full',
         server: 'https://api.example.com',
@@ -47,7 +47,8 @@ describe('dedup.ts extended coverage', () => {
       })
       const result = shareMetricsBetweenSameServerClusters([noPods, withPods])
       const alias = result.find(c => c.name === 'alias')!
-      expect(alias.podCount).toBe(50)
+      // podCount:0 is an explicit value (scaled-to-zero), not missing — must be preserved
+      expect(alias.podCount).toBe(0)
     })
 
     it('copies memory and storage metrics via nullish coalescing', () => {
