@@ -26,6 +26,7 @@ import {
   MAX_ALERTS,
   MAX_RESOLVED_ALERTS_AFTER_PRUNE,
   NOTIFICATION_DEDUP_MAX_AGE_MS,
+  MAX_DEDUP_KEYS,
   NOTIFICATION_COOLDOWN_BY_SEVERITY,
   DEFAULT_NOTIFICATION_COOLDOWN_MS,
   DEFAULT_TEMPERATURE_THRESHOLD_F,
@@ -209,6 +210,22 @@ describe('loadNotifiedAlertKeys', () => {
     expect(result.has('valid-2')).toBe(true)
     expect(mockSafeSet).toHaveBeenCalledOnce()
   })
+
+  it('enforces MAX_DEDUP_KEYS hard cap by keeping newest entries', () => {
+    const now = Date.now()
+    const entries = Array.from({ length: MAX_DEDUP_KEYS + 10 }, (_, i) => [
+      `k-${i}`,
+      now - i,
+    ] as [string, number])
+    mockSafeGet.mockReturnValue(JSON.stringify(entries))
+
+    const result = loadNotifiedAlertKeys()
+
+    expect(result.size).toBe(MAX_DEDUP_KEYS)
+    expect(result.has('k-0')).toBe(true)
+    expect(result.has(`k-${MAX_DEDUP_KEYS + 9}`)).toBe(false)
+    expect(mockSafeSet).toHaveBeenCalledOnce()
+  })
 })
 
 // =============================================================================
@@ -249,6 +266,20 @@ describe('saveNotifiedAlertKeys', () => {
       expect.any(String),
       '[]'
     )
+  })
+
+  it('evicts oldest keys when map exceeds MAX_DEDUP_KEYS', () => {
+    const now = Date.now()
+    const keys = new Map<string, number>()
+    for (let i = 0; i < MAX_DEDUP_KEYS + 7; i++) {
+      keys.set(`key-${i}`, now - i)
+    }
+
+    saveNotifiedAlertKeys(keys)
+
+    expect(keys.size).toBe(MAX_DEDUP_KEYS)
+    expect(keys.has('key-0')).toBe(true)
+    expect(keys.has(`key-${MAX_DEDUP_KEYS + 6}`)).toBe(false)
   })
 
   it('silently handles localStorage errors', () => {
@@ -364,6 +395,34 @@ describe('saveAlerts', () => {
     expect(savedFiring).toHaveLength(100)
   })
 
+  it('sorts resolved alerts by resolvedAt with firedAt fallback', () => {
+    const fixedNow = Date.now()
+    const alerts = [
+      makeAlert({ id: 'firing-1', status: 'firing', firedAt: new Date(fixedNow - 500).toISOString() }),
+      makeAlert({
+        id: 'resolved-with-resolvedAt',
+        status: 'resolved',
+        firedAt: new Date(fixedNow - 60_000).toISOString(),
+        resolvedAt: new Date(fixedNow - 1_000).toISOString(),
+      }),
+      makeAlert({
+        id: 'resolved-fallback-firedAt',
+        status: 'resolved',
+        firedAt: new Date(fixedNow - 2_000).toISOString(),
+      }),
+    ]
+
+    saveAlerts(alerts)
+
+    const saved = JSON.parse(
+      (localStorage.setItem as ReturnType<typeof vi.fn>).mock.calls[0][1]
+    ) as Alert[]
+    const resolved = saved.filter((a) => a.status === 'resolved')
+    expect(resolved).toHaveLength(2)
+    expect(resolved[0].id).toBe('resolved-with-resolvedAt')
+    expect(resolved[1].id).toBe('resolved-fallback-firedAt')
+  })
+
   it('handles QuotaExceededError by pruning resolved alerts', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     let callCount = 0
@@ -400,6 +459,41 @@ describe('saveAlerts', () => {
     const retryResolved = retrySaved.filter((a: Alert) => a.status === 'resolved')
     expect(retryResolved.length).toBeLessThanOrEqual(MAX_RESOLVED_ALERTS_AFTER_PRUNE)
     consoleSpy.mockRestore()
+  })
+
+  it('uses resolvedAt fallback to firedAt during quota pruning sort', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let callCount = 0
+    ;(localStorage.setItem as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        throw new DOMException('quota exceeded', 'QuotaExceededError')
+      }
+    })
+
+    const now = Date.now()
+    const alerts = [
+      makeAlert({ id: 'firing', status: 'firing', firedAt: new Date(now - 100).toISOString() }),
+      makeAlert({
+        id: 'resolved-newer-fallback',
+        status: 'resolved',
+        firedAt: new Date(now - 200).toISOString(),
+      }),
+      makeAlert({
+        id: 'resolved-older',
+        status: 'resolved',
+        firedAt: new Date(now - 5_000).toISOString(),
+        resolvedAt: new Date(now - 4_000).toISOString(),
+      }),
+    ]
+
+    saveAlerts(alerts)
+
+    const retrySaved = JSON.parse(
+      (localStorage.setItem as ReturnType<typeof vi.fn>).mock.calls[1][1]
+    ) as Alert[]
+    const retryResolved = retrySaved.filter((a) => a.status === 'resolved')
+    expect(retryResolved[0].id).toBe('resolved-newer-fallback')
   })
 
   it('clears alerts when retry also fails with quota error', () => {
