@@ -247,7 +247,7 @@ export default defineConfig(({ mode }) => ({
     retry: process.env.CI ? 2 : 0,
     teardownTimeout: process.env.CI ? 120_000 : 10_000, // CI: increased from 60s to 120s for worker cleanup stability (#10436)
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
-    maxWorkers: process.env.CI ? 2 : undefined,
+    maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
     // poolOptions.forks removed — deprecated in Vitest 4 (#5860).
     // maxWorkers/minWorkers above handle fork limits; teardownTimeout

@@ -131,11 +131,12 @@ func readInt32(params map[string]any, key string) (int32, error) {
 	}
 	switch n := v.(type) {
 	case float64:
-		return int32(n), nil
-	case int:
+		if n < math.MinInt32 || n > math.MaxInt32 {
+			return 0, fmt.Errorf("%s out of int32 range: %f", key, n)
+		}
 		return int32(n), nil
 	case string:
-		parsed, err := strconv.Atoi(n)
+		parsed, err := strconv.ParseInt(n, 10, 32)
 		if err != nil {
 			return 0, err
 		}
