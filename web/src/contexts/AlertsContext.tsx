@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, Suspense, type ReactNode } from 'react'
+/**
+ * Alerts Context
+ *
+ * Category: domain state.
+ * Owns alert rules, evaluated alert instances, and notification workflows.
+ */
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense, type ReactNode } from 'react'
 import { safeLazy } from '@/lib/safeLazy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
@@ -40,6 +46,7 @@ import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
 import { executeRunbook } from '../lib/runbooks/executor'
 import { alertDedupKey, deduplicateAlerts } from './alerts/deduplication'
+import { createStateContext } from './createStateContext'
 
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
 // the main chunk.  The provider renders immediately with empty data; once
@@ -287,7 +294,12 @@ interface AlertsContextValue {
   toggleRule: (id: string) => void
 }
 
-export const AlertsContext = createContext<AlertsContextValue | null>(null)
+const {
+  Context: AlertsContext,
+  useRequiredStateContext: useAlertsContext,
+} = createStateContext<AlertsContextValue>({ name: 'Alerts' })
+
+export { AlertsContext, useAlertsContext }
 
 export function AlertsProvider({ children }: { children: ReactNode }) {
   // Alert Rules State
@@ -1790,14 +1802,6 @@ Please provide:
       {children}
     </AlertsContext.Provider>
   )
-}
-
-export function useAlertsContext() {
-  const context = useContext(AlertsContext)
-  if (!context) {
-    throw new Error('useAlertsContext must be used within an AlertsProvider')
-  }
-  return context
 }
 
 export const __alertsTestables = {

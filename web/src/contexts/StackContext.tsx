@@ -1,15 +1,17 @@
 /**
  * Stack Context
  *
- * Provides llm-d stack selection and discovery state to the AI/ML dashboard.
- * Persists selection to localStorage for session continuity.
+ * Category: domain state.
+ * Provides llm-d stack discovery and selection for the AI/ML dashboard,
+ * persisting the current selection across sessions.
  *
  * When demo mode is enabled, provides fake demo stacks instead of live data.
  */
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useStackDiscovery, type LLMdStack, type LLMdStackComponent } from '../hooks/useStackDiscovery'
 import { useDemoMode } from '../hooks/useDemoMode'
 import { useClusters } from '../hooks/mcp/clusters'
+import { createStateContext } from './createStateContext'
 
 const STORAGE_KEY = 'kubestellar-llmd-stack'
 
@@ -167,7 +169,11 @@ interface StackContextType {
   disaggregatedStacks: LLMdStack[]
 }
 
-const StackContext = createContext<StackContextType | null>(null)
+const {
+  Context: StackContext,
+  useRequiredStateContext: useStack,
+  useOptionalStateContext: useOptionalStack,
+} = createStateContext<StackContextType>({ name: 'Stack' })
 
 interface StackProviderProps {
   children: React.ReactNode
@@ -282,15 +288,4 @@ export function StackProvider({ children }: StackProviderProps) {
   )
 }
 
-export function useStack() {
-  const context = useContext(StackContext)
-  if (!context) {
-    throw new Error('useStack must be used within a StackProvider')
-  }
-  return context
-}
-
-// Hook to check if we're inside a StackProvider
-export function useOptionalStack(): StackContextType | null {
-  return useContext(StackContext)
-}
+export { useStack, useOptionalStack }
