@@ -6,6 +6,7 @@ on:
 
 permissions:
   pull-requests: write
+  issues: write
 
 jobs:
   check-contributor:
@@ -26,7 +27,7 @@ jobs:
             exit 0
           fi
 
-          # Check if author has any prior merged PRs or commits to this repo
+          # Check if author has any prior merged PRs or issues to this repo
           MERGED_PRS=$(gh api "repos/${REPO}/pulls?state=closed&per_page=100" \
             --jq "[.[] | select(.user.login == \"${AUTHOR}\" and .merged_at != null)] | length" 2>/dev/null || echo "0")
 
@@ -60,11 +61,11 @@ jobs:
             --repo "${REPO}" \
             --comment "👋 Welcome! This repo requires new contributors to open an issue first before submitting a PR. This helps us coordinate work and avoid duplicate effort.
 
-          **Your account** is less than ${MIN_ACCOUNT_AGE_DAYS} days old and has no prior contributions to this repo.
+**Your account** is less than ${MIN_ACCOUNT_AGE_DAYS} days old and has no prior contributions to this repo.
 
-          **Next steps:**
-          1. Open an issue describing what you'd like to work on
-          2. Wait for a maintainer to approve and assign it to you
-          3. Then submit your PR referencing that issue
+**Next steps:**
+1. Open an issue describing what you'd like to work on
+2. Wait for a maintainer to approve and assign it to you
+3. Then submit your PR referencing that issue
 
-          This is an automated check — if you believe this was a mistake, comment on this PR and a maintainer will review."
+This is an automated check — if you believe this was a mistake, comment on this PR and a maintainer will review."
