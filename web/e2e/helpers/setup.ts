@@ -109,7 +109,7 @@ export const EXPECTED_ERROR_PATTERNS = [
   /\[mockApiFallback\]/i, // Test mock logging that leaks to browser console (#11660)
   /Error fetching from cluster/i, // Cluster fetch errors when backend is unavailable (#11660)
   /\[SSE\] .*retr/i, // SSE retry-related messages (backoff, exhaustion) (#12742)
-  /\[AppErrorBoundary\]/i, // Errors caught and logged by the global React error boundary
+  /\[AppErrorBoundary\] Uncaught error:/i, // Specific global React error boundary log
 ]
 
 function isExpectedError(message: string): boolean {
