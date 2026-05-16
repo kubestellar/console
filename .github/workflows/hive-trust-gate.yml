@@ -1,0 +1,109 @@
+name: Hive Trust Gate
+
+on:
+  workflow_call:
+    inputs:
+      actor:
+        description: GitHub login to evaluate
+        required: true
+        type: string
+      repository:
+        description: Repository in owner/name form
+        required: true
+        type: string
+      repository-owner:
+        description: Repository owner / org login
+        required: true
+        type: string
+      default-branch:
+        description: Repository default branch
+        required: true
+        type: string
+      issue-number:
+        description: Issue or PR number for reply comments
+        required: true
+        type: string
+      comment-url:
+        description: HTML URL for the triggering comment
+        required: true
+        type: string
+    outputs:
+      is-trusted:
+        description: Whether the actor passed the trust gate
+        value: ${{ jobs.evaluate.outputs.is-trusted }}
+      trust-reason:
+        description: Why the actor passed or failed the gate
+        value: ${{ jobs.evaluate.outputs.trust-reason }}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    outputs:
+      is-trusted: ${{ steps.trust.outputs.is-trusted }}
+      trust-reason: ${{ steps.trust.outputs.trust-reason }}
+    steps:
+      - name: Evaluate commenter trust
+        id: trust
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_USER: ${{ inputs.actor }}
+          REPO: ${{ inputs.repository }}
+          REPO_OWNER: ${{ inputs.repository-owner }}
+          DEFAULT_BRANCH: ${{ inputs.default-branch }}
+          ISSUE_NUMBER: ${{ inputs.issue-number }}
+          COMMENT_URL: ${{ inputs.comment-url }}
+        run: |
+          set -euo pipefail
+
+          MIN_PRIOR_PULL_REQUESTS=1
+          TRUSTED=false
+          TRUST_REASON='untrusted'
+          USER_LOWER=$(printf '%s' "$TRUSTED_USER" | tr '[:upper:]' '[:lower:]')
+
+          read_repo_file() {
+            local path="$1"
+            gh api "repos/$REPO/contents/$path" -f ref="$DEFAULT_BRANCH" --jq '.content' 2>/dev/null \
+              | tr -d '\n' \
+              | base64 -d 2>/dev/null || true
+          }
+
+          extract_owner_usernames() {
+            sed -nE 's/^[[:space:]]*-[[:space:]]*([A-Za-z0-9-]+)[[:space:]]*$/\1/p'
+          }
+
+          if gh api "orgs/$REPO_OWNER/members/$TRUSTED_USER" --silent >/dev/null 2>&1; then
+            TRUSTED=true
+            TRUST_REASON='org-member'
+          elif gh api "repos/$REPO/collaborators/$TRUSTED_USER" --silent >/dev/null 2>&1; then
+            TRUSTED=true
+            TRUST_REASON='repo-collaborator'
+          else
+            OWNERS_USERS=$( {
+              read_repo_file 'OWNERS'
+              printf '\n'
+              read_repo_file 'OWNERS_ALIASES'
+            } | extract_owner_usernames | tr '[:upper:]' '[:lower:]' | sort -u )
+
+            if printf '%s\n' "$OWNERS_USERS" | grep -Fxq "$USER_LOWER"; then
+              TRUSTED=true
+              TRUST_REASON='owners-file'
+            else
+              PRIOR_PULL_REQUEST_COUNT=$(gh api "search/issues" -f q="repo:$REPO is:pr author:$TRUSTED_USER" --jq '.total_count' 2>/dev/null || echo '0')
+              if [ "${PRIOR_PULL_REQUEST_COUNT:-0}" -ge "$MIN_PRIOR_PULL_REQUESTS" ]; then
+                TRUSTED=true
+                TRUST_REASON='prior-pr'
+              fi
+            fi
+          fi
+
+          echo "is-trusted=$TRUSTED" >> "$GITHUB_OUTPUT"
+          echo "trust-reason=$TRUST_REASON" >> "$GITHUB_OUTPUT"
+
+          if [ "$TRUSTED" != 'true' ]; then
+            BODY=$(printf '## 🐝 Hive interaction limited\n\nThanks @%s. I saw [your comment](%s), but Hive currently responds only to trusted contributors.\n\nI can only process requests from organization members, repository collaborators, people listed in `OWNERS` or `OWNERS_ALIASES`, or contributors with prior pull requests in this repository.\n\nIf you believe this is a mistake, please ask a maintainer to review your request or relay it on your behalf.\n' "$TRUSTED_USER" "$COMMENT_URL")
+            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
+          fi

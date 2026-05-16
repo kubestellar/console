@@ -31,7 +31,7 @@ jobs:
             const body = [
               `🐝 Hi @${item.user.login}! I'm \`kubestellar-hive[bot]\`, an AI assistant for this repo.`,
               '',
-              'Mention `@kubestellar-hive` in any comment to interact with me.',
+              'Trusted users can mention `@kubestellar-hive` in a comment to interact with me.',
               'I can help with code reviews, bug fixes, CI/CD help, and questions about the codebase.',
               '',
               '_I’m AI-powered, so replies may take a moment._',
@@ -44,11 +44,30 @@ jobs:
               body,
             });
 
-  hive-mention:
+  trust-gate:
     if: |
       github.event_name == 'issue_comment' &&
       github.event.comment.user.type != 'Bot' &&
       contains(github.event.comment.body, '@kubestellar-hive')
+    uses: ./.github/workflows/hive-trust-gate.yml
+    permissions:
+      contents: read
+      issues: write
+    with:
+      actor: ${{ github.event.comment.user.login }}
+      repository: ${{ github.repository }}
+      repository-owner: ${{ github.repository_owner }}
+      default-branch: ${{ github.event.repository.default_branch }}
+      issue-number: ${{ github.event.issue.number }}
+      comment-url: ${{ github.event.comment.html_url }}
+
+  hive-mention:
+    needs: trust-gate
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@kubestellar-hive') &&
+      needs.trust-gate.outputs.is-trusted == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
