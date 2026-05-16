@@ -36,8 +36,6 @@ import {
 import {
   runPreflightCheck,
   runToolPreflightCheck,
-  resolveRequiredTools,
-  type PreflightError,
   type PreflightResult,
 } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -68,8 +66,14 @@ import {
 } from './useMissionPromptBuilder'
 import {
   getMissionMessages,
-  getMissionContextTools,
   isStaleAgentErrorMessage,
+  generateRequestId,
+  shouldAllowMissingToolWarning,
+  shouldSkipClusterPreflight,
+  getMissingTools,
+  resolveMissionToolRequirements,
+  buildMissingToolWarning,
+  buildMissionToolUnavailableError,
   KAGENTI_PROVIDER_UNAVAILABLE_EVENT,
   KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
   buildKagentiDiscoveryErrorMessage,
@@ -148,87 +152,6 @@ interface MissionContextValue {
 }
 
 const MissionContext = createContext<MissionContextValue | null>(null)
-
-/**
- * #7089 — Monotonic counter for generating unique request IDs. The previous
- * `claude-${Date.now()}` pattern could collide when two requests were sent
- * in the same millisecond (rapid sends, concurrent tabs). A monotonic counter
- * combined with a random suffix guarantees uniqueness within the same tab,
- * and the random suffix provides uniqueness across tabs.
- */
-let requestIdCounter = 0
-function generateRequestId(prefix = 'claude'): string {
-  requestIdCounter += 1
-  return `${prefix}-${Date.now()}-${requestIdCounter}-${crypto.randomUUID().replace(/-/g, '').slice(0, 6)}`
-}
-
-const OPTIONAL_MISSION_TOOL_PATTERNS = {
-  gh: /\bgh\b|\bgithub\s+cli\b/i,
-  helm: /\bhelm\b/i,
-} as const
-const MISSING_TOOL_WARNING_HEADING = `**${i18n.t('missions.preflight.toolWarning.heading')}**`
-const MISSING_TOOL_WARNING_SUFFIX = i18n.t('missions.preflight.toolWarning.suffix')
-
-function shouldAllowMissingToolWarning(context?: Record<string, unknown>): boolean {
-  return context?.allowMissingLocalTools === true
-}
-
-function shouldSkipClusterPreflight(context?: Record<string, unknown>): boolean {
-  return context?.skipClusterPreflight === true
-}
-
-function getMissingTools(error: PreflightError, fallbackTools: string[]): string[] {
-  const missingTools = error.details?.missingTools
-  return Array.isArray(missingTools) && missingTools.every(tool => typeof tool === 'string')
-    ? missingTools
-    : fallbackTools
-}
-
-function resolveMissionToolRequirements({
-  title,
-  description,
-  prompt,
-  type,
-  context,
-}: {
-  title?: string
-  description?: string
-  prompt: string
-  type?: string
-  context?: Record<string, unknown>
-}): { requiredTools: string[]; missionSpecificOptionalTools: string[] } {
-  const searchableText = `${title || ''}\n${description || ''}\n${prompt}`
-  const missionSpecificOptionalTools = Object.entries(OPTIONAL_MISSION_TOOL_PATTERNS)
-    .filter(([, pattern]) => pattern.test(searchableText))
-    .map(([tool]) => tool)
-  const requiredTools = [...new Set([
-    ...resolveRequiredTools(type),
-    ...getMissionContextTools(context),
-    ...missionSpecificOptionalTools,
-  ])]
-
-  return { requiredTools, missionSpecificOptionalTools }
-}
-
-function buildMissingToolWarning(error: PreflightError): string {
-  const missingTools = getMissingTools(error, [])
-  const toolSummary = missingTools.length > 0
-    ? i18n.t('missions.preflight.toolWarning.summary', { tools: (missingTools || []).join(', ') })
-    : error.message
-
-  return `${MISSING_TOOL_WARNING_HEADING}\n\n${toolSummary}\n\n${MISSING_TOOL_WARNING_SUFFIX}`
-}
-
-function buildMissionToolUnavailableError(error: PreflightError, missingTools: string[]): PreflightError {
-  return {
-    ...error,
-    message: i18n.t('missions.preflight.optionalToolUnavailable.message', { tools: (missingTools || []).join(', ') }),
-    details: {
-      ...(error.details || {}),
-      missingTools,
-    },
-  }
-}
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
