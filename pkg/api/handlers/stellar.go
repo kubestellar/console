@@ -2620,8 +2620,11 @@ func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
 	if err := h.store.(interface {
-		ResolveWatch(ctx context.Context, id string) error
-	}).ResolveWatch(c.UserContext(), watchID); err != nil {
+		ResolveWatch(ctx context.Context, id, userID string) error
+	}).ResolveWatch(c.UserContext(), watchID, userID); err != nil {
+		if err == store.ErrNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "watch not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to resolve watch"})
 	}
 	return c.JSON(fiber.Map{
@@ -2641,8 +2644,11 @@ func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
 	if err := h.store.(interface {
-		UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error
-	}).UpdateWatchStatus(c.UserContext(), watchID, "dismissed", ""); err != nil {
+		UpdateWatchStatus(ctx context.Context, id, status, lastUpdate, userID string) error
+	}).UpdateWatchStatus(c.UserContext(), watchID, "dismissed", "", userID); err != nil {
+		if err == store.ErrNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "watch not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to dismiss watch"})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
@@ -2666,7 +2672,10 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 		body.Minutes = 60
 	}
 	until := time.Now().Add(time.Duration(body.Minutes) * time.Minute)
-	if err := h.store.SnoozeWatch(c.UserContext(), watchID, until); err != nil {
+	if err := h.store.SnoozeWatch(c.UserContext(), watchID, userID, until); err != nil {
+		if err == store.ErrNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "watch not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to snooze watch"})
 	}
 	return c.JSON(fiber.Map{"id": watchID, "snoozedUntil": until.UTC().Format(time.RFC3339)})
