@@ -5,6 +5,7 @@ import React from 'react'
 
 // Mock i18next
 vi.mock('react-i18next', () => ({
+    initReactI18next: { type: '3rdParty', init: () => {} },
     useTranslation: () => ({ t: (k: string) => k }),
     Trans: ({ children }: { children: React.ReactNode }) => children,
 }))

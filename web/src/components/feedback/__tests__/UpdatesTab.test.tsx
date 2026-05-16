@@ -6,6 +6,7 @@ import { UpdatesTab } from '../UpdatesTab'
 import type { FeatureRequest } from '../../../hooks/useFeatureRequests'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, options?: Record<string, string>) => options?.requestType ? `${key}:${options.requestType}` : key,
   }),

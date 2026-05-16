@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { WelcomeCard } from './WelcomeCard'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, options?: { origin?: string }) => {
       if (key === 'dashboard.welcome.step2Desc') {

@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 import type { ClusterHealth, ClusterInfo } from '../../../hooks/mcp/types'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, options?: Record<string, string | number>) => {
       if (key === 'cluster.andMoreClusters') return `+${options?.count || 0} more`

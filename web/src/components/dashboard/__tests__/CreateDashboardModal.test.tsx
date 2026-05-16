@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event'
 
 // ── Mocks ────────────────────────────────────────────────────────────
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       const map: Record<string, string> = {

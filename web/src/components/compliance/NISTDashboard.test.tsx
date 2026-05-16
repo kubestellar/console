@@ -14,6 +14,7 @@ const mockSummary = { total_controls: 19, implemented_controls: 13, partial_cont
 
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 vi.mock('../../lib/api', () => ({

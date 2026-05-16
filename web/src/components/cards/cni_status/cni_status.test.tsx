@@ -7,6 +7,7 @@ import { CNI_DEMO_DATA } from '../../../lib/demo/cni'
 const mockUseCachedCni = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

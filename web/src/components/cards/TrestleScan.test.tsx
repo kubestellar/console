@@ -14,6 +14,7 @@ import type { TrestleClusterStatus, OscalProfile } from '../../hooks/useTrestle'
 
 // ── Mock react-i18next to return interpolated translation values ─────────
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       // Map known keys to English text for test assertions

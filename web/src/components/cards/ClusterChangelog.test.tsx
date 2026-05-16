@@ -9,6 +9,7 @@ const mockUseCardLoadingState = vi.fn()
 const mockRefetch = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (key.endsWith('minutesAgo')) return `${opts?.count}m ago`

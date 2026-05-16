@@ -9,6 +9,7 @@ import { describe, it, expect, vi } from 'vitest'
 
 // Mock the heavy deps that the module imports at top level
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 

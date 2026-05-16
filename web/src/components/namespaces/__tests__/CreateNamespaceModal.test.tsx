@@ -23,6 +23,7 @@ vi.mock('../../../hooks/mcp/shared', () => ({
 
 const mockTranslation = vi.fn((key: string) => key)
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: mockTranslation,
   }),

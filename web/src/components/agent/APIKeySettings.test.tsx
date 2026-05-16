@@ -14,6 +14,7 @@ const translations: Record<string, string> = {
 }
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => translations[key] ?? key,
     i18n: { language: 'en', changeLanguage: vi.fn() },

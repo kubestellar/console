@@ -11,6 +11,7 @@ const mockUseCardData = vi.fn()
 const mockDrillToCost = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (key.endsWith('clusterCount')) return `${opts?.count ?? 0} clusters`

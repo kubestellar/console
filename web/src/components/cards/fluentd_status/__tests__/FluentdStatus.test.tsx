@@ -13,6 +13,7 @@ vi.mock('../useFluentdStatus', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, secondArg?: unknown) => {
       if (typeof secondArg === 'string') {

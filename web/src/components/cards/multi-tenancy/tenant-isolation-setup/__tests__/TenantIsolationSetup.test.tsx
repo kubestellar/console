@@ -28,6 +28,7 @@ const mockData = {
 }
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (_key: string, defaultValue?: string) => defaultValue ?? _key,
   }),

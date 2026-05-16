@@ -30,6 +30,7 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     // Return the key so we can assert on it (with interpolation baked in
     // for count-style keys we actually check).

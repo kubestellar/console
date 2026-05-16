@@ -6,6 +6,7 @@ import { FlatcarStatus } from './index'
 const mockUseFlatcarStatus = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: (ns: string) => ({
     t: (key: string) => key,
   }),

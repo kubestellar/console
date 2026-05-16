@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { SegregationOfDutiesContent as SegregationOfDuties } from './SegregationOfDuties'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 

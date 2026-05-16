@@ -7,6 +7,7 @@ const mockUseCachedVitess = vi.fn()
 const mockUseCardLoadingState = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

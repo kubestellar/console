@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import type { ClusterGroup } from '../../../hooks/useGlobalFilters'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 

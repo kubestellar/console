@@ -20,6 +20,7 @@ import type { ArgoApplication, TriggerSyncResult } from '../../hooks/useArgoCD'
 
 // i18n — return the key itself so assertions are translation-agnostic
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (opts && 'count' in opts) return `${opts.count} apps`

@@ -12,6 +12,7 @@ vi.mock('../../../../hooks/useCachedVolcano', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: string | Record<string, unknown>) => {
       if (typeof fallbackOrOpts === 'string') return fallbackOrOpts

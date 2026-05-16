@@ -13,6 +13,7 @@ const mockScore = { overall_score: 71, authorization_status: 'in_process', impac
 
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 vi.mock('../../lib/api', () => ({

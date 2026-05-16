@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { WidgetExportModal } from './WidgetExportModal'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, defaultValueOrOptions?: string | Record<string, unknown>) =>
       typeof defaultValueOrOptions === 'string' ? defaultValueOrOptions : (defaultValueOrOptions as any)?.defaultValue ?? key,

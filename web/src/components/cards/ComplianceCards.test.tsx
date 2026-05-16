@@ -13,6 +13,7 @@ import { ComplianceScoreBreakdownModal } from './compliance/ComplianceScoreBreak
 
 // ── Mock react-i18next to return interpolated translation values ─────────
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       const translations: Record<string, string> = {

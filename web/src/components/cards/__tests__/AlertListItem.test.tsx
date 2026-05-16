@@ -6,6 +6,7 @@ import type { Alert } from '../../../types/alerts'
 /* ---------- Mocks ---------- */
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (opts?.count !== undefined) return `${opts.count} ${key}`

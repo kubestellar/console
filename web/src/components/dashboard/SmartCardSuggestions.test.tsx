@@ -4,6 +4,7 @@ import { SmartCardSuggestions } from './SmartCardSuggestions'
 
 // Mock dependencies
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (_key: string, fallback: string) => fallback,
     i18n: { language: 'en', changeLanguage: vi.fn() },

@@ -4,6 +4,7 @@ import type { ReactNode, ButtonHTMLAttributes } from 'react'
 import type { StatBlockConfig } from './StatsBlockDefinitions'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string, fallback?: string) => fallback ?? key }),
 }))
 

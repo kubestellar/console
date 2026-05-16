@@ -76,6 +76,7 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (k: string, opts?: Record<string, unknown>) => {
       if (opts?.count !== undefined) return `${k}:${opts.count}`

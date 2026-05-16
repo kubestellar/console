@@ -12,6 +12,7 @@ const mockSummary = { compliance_score: 76, total_findings: 120, open: 14, cat_i
 
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 vi.mock('../../lib/api', () => ({

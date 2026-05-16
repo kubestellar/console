@@ -8,6 +8,7 @@ let mockLocalClusters: Array<{ name: string; tool: string; status: string }> = [
 const clusterLifecycle = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 

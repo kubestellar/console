@@ -20,6 +20,7 @@ const mockChain = { valid: true, total_records: 8, verified_records: 8, broken_a
 
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 vi.mock('../../lib/api', () => ({

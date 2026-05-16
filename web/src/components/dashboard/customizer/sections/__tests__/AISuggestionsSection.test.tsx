@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 const mockGenerateCardSuggestions = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (k: string, d?: string | Record<string, unknown>) =>
       typeof d === 'string' ? d : k,

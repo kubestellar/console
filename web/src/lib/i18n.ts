@@ -1,12 +1,6 @@
 import i18n from 'i18next'
-import * as ReactI18next from 'react-i18next'
+import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
-
-// Use property access instead of named import so vitest's mock system doesn't
-// throw when a test mocks react-i18next without including initReactI18next.
-// Named imports trigger vitest's strict export check at module resolution;
-// namespace property access resolves to undefined without throwing.
-const initReactI18next = ReactI18next.initReactI18next
 
 // Import translations
 import commonEN from '../locales/en/common.json'

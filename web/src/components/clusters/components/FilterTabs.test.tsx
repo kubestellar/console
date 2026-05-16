@@ -4,6 +4,7 @@ import { FilterTabs, type FilterType, type SortByType } from './FilterTabs'
 import type { ClusterStats } from './StatsOverview'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 

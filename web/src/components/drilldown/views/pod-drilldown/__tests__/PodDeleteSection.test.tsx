@@ -28,6 +28,7 @@ vi.mock('../../../../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))

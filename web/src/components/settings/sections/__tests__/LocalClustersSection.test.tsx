@@ -47,6 +47,7 @@ const translations: Record<string, string> = {
 }
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) => interpolate(translations[key] ?? key, params),
   }),

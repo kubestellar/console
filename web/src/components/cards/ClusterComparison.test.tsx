@@ -11,6 +11,7 @@ const mockUseCardLoadingState = vi.fn()
 const mockDrillToCluster = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key.split('.').pop() ?? key,
   }),

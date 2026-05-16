@@ -6,6 +6,7 @@ import React from 'react'
 import type { CiliumNode } from '../../../../types/cilium'
 
 vi.mock('react-i18next', () => ({
+    initReactI18next: { type: '3rdParty', init: () => {} },
     useTranslation: () => ({ t: (k: string) => k }),
 }))
 

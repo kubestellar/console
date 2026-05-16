@@ -81,6 +81,7 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 

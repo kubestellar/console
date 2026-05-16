@@ -4,6 +4,7 @@ import { CreateDashboardModal } from './CreateDashboardModal'
 import { useDashboardHealth } from '../../hooks/useDashboardHealth'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key.split('.').pop() ?? key,
   }),

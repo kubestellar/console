@@ -12,6 +12,7 @@ const mockSummary = { total_requirements: 12, ready: 9, not_ready: 1, partial: 2
 
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 vi.mock('../../lib/api', () => ({

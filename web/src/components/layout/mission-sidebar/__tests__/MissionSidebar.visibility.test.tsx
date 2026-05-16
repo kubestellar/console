@@ -28,6 +28,7 @@ interface MockMissionState {
 let mockMissionState: MockMissionState
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string; count?: number }) => options?.defaultValue ?? key,
   }),

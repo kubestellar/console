@@ -9,6 +9,7 @@ const mockUseCardLoadingState = vi.fn()
 const mockUseChartFilters = vi.fn()
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => (
       opts?.count !== undefined ? `${key}:${opts.count}` : key

@@ -8,6 +8,7 @@ import { CardChat, ChatMessage } from '../CardChat'
 // ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
   }),

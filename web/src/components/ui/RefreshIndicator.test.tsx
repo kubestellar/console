@@ -6,6 +6,7 @@ import { RefreshButton, RefreshIndicator } from './RefreshIndicator'
 
 // Mock react-i18next so useTranslation returns a passthrough t()
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string) => key,
     i18n: { language: 'en', changeLanguage: vi.fn() },

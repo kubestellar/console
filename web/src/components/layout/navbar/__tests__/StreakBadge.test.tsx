@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 

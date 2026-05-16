@@ -9,6 +9,7 @@ import type { DeployMission } from '../../../hooks/useDeployMissions'
 // ---------------------------------------------------------------------------
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (k: string, fallback?: string) => fallback ?? k,
   }),

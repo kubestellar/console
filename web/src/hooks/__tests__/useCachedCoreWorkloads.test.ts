@@ -5,12 +5,24 @@ import { renderHook } from '@testing-library/react'
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockUseCache } = vi.hoisted(() => ({
+const { mockUseCache, mockCreateCachedHook } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
+  mockCreateCachedHook: vi.fn(() => () => ({
+    data: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    error: null,
+    isFailed: false,
+    consecutiveFailures: 0,
+    lastRefresh: null,
+    refetch: vi.fn(),
+    retryFetch: vi.fn(),
+  })),
 }))
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(),
+  createCachedHook: (...args: unknown[]) => mockCreateCachedHook(...args),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
