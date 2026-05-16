@@ -2,16 +2,16 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-
-	"github.com/kubestellar/console/pkg/safego"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -20,6 +20,11 @@ import (
 const (
 	sseHeartbeatInterval = 30 * time.Second // interval between SSE keepalive comments
 	sseWatchTimeout      = 10 * time.Minute // server-side watch timeout before re-establishing
+
+	// Event forwarding concurrency limits
+	maxConcurrentForwards    = 32              // max parallel event forwards to Stellar backend
+	forwardTimeout           = 10 * time.Second // HTTP request timeout for event forwarding
+	semaphoreAcquireTimeout  = 1 * time.Second  // max wait time to acquire semaphore before dropping event
 )
 
 // sseEvent is the JSON envelope sent over the SSE stream for each Kubernetes event.
@@ -203,6 +208,23 @@ func extractResourceName(object string) string {
 // forwardEventToStellar sends a k8s event to the backend's Stellar ingestion endpoint.
 // This bridges the agent process to the backend's notification system.
 func (s *Server) forwardEventToStellar(event sseEventSummary) {
+	// Try to acquire semaphore with timeout to prevent unbounded goroutine growth
+	ctx, cancel := context.WithTimeout(context.Background(), semaphoreAcquireTimeout)
+	defer cancel()
+
+	select {
+	case s.stellarForwardSem <- struct{}{}:
+		// Acquired semaphore, proceed with forwarding
+		defer func() { <-s.stellarForwardSem }() // Release semaphore when done
+	case <-ctx.Done():
+		// Timeout waiting for semaphore — drop event to prevent backlog
+		slog.Warn("stellar: dropped event (semaphore timeout)", 
+			"cluster", event.Cluster, 
+			"namespace", event.Namespace, 
+			"reason", event.Reason)
+		return
+	}
+
 	backendURL := os.Getenv("BACKEND_URL")
 	if backendURL == "" {
 		backendURL = "http://localhost:8080"
@@ -225,7 +247,11 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 		return
 	}
 
-	req, err := http.NewRequest("POST", backendURL+"/api/stellar/events/ingest", bytes.NewReader(body))
+	// Create request with deadline to prevent goroutine pile-up
+	reqCtx, reqCancel := context.WithTimeout(context.Background(), forwardTimeout)
+	defer reqCancel()
+
+	req, err := http.NewRequestWithContext(reqCtx, "POST", backendURL+"/api/stellar/events/ingest", bytes.NewReader(body))
 	if err != nil {
 		slog.Warn("stellar: failed to create request", "error", err)
 		return

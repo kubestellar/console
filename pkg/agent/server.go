@@ -231,6 +231,9 @@ type Server struct {
 
 	// HTTP client for Stellar event forwarding (reused to avoid per-call allocation)
 	stellarClient *http.Client
+
+	// Semaphore for bounding concurrent event forwards to prevent goroutine exhaustion (#13991)
+	stellarForwardSem chan struct{}
 }
 
 // NewServer creates a new agent server
@@ -354,6 +357,7 @@ func NewServer(cfg Config) (*Server, error) {
 				MaxIdleConnsPerHost: 2,
 			},
 		},
+		stellarForwardSem: make(chan struct{}, 32), // maxConcurrentForwards from server_events_stream.go
 	}
 
 	server.upgrader = websocket.Upgrader{
