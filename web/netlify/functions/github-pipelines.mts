@@ -846,7 +846,7 @@ async function mutate(
       { status: 503 }
     );
   }
-  if (!isValidRepo(repo)) {
+  if (!isValidRepo(repo) || !REPOS.includes(repo)) {
     return jsonResponse({ error: "Unknown repo" }, { status: 400 });
   }
   let path: string;
@@ -969,7 +969,7 @@ export default async (req: Request): Promise<Response> => {
       case "log": {
         const repo = url.searchParams.get("repo") ?? "";
         const job = url.searchParams.get("job") ?? "";
-        if (!isValidRepo(repo) || !job || !/^\d+$/.test(job)) {
+        if (!isValidRepo(repo) || !REPOS.includes(repo) || !job || !/^\d+$/.test(job)) {
           return jsonResponse(
             { error: "repo and valid numeric job params required" },
             { status: 400, headers: baseHeaders }
