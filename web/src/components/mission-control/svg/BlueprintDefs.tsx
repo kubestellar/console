@@ -4,7 +4,18 @@
  */
 
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
-import { AMBER_500, GREEN_500_BRIGHT, PURPLE_500, RED_500 } from '../../../lib/theme/chartColors'
+import {
+  AMBER_500,
+  BLACK,
+  GREEN_500_BRIGHT,
+  INDIGO_500,
+  PURPLE_300,
+  PURPLE_500,
+  RED_500,
+  SLATE_700,
+  SLATE_800,
+  SLATE_900,
+} from '../../../lib/theme/chartColors'
 
 interface BlueprintDefsProps {
   id: string // unique prefix to avoid filter ID collisions
@@ -25,7 +36,7 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
       {/* ── Cluster zone glow (softer, wider) ─────────────────── */}
       <filter id={`${id}-zone-glow`} x="-10%" y="-10%" width="120%" height="120%">
         <feGaussianBlur stdDeviation="2" result="blur" />
-        <feFlood floodColor="#6366f1" floodOpacity="0.15" result="color" />
+        <feFlood floodColor={INDIGO_500} floodOpacity="0.15" result="color" />
         <feComposite in="color" in2="blur" operator="in" result="glow" />
         <feMerge>
           <feMergeNode in="glow" />
@@ -35,13 +46,13 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
 
       {/* ── Drop shadow ──────────────────────────────────────── */}
       <filter id={`${id}-shadow`} x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000" floodOpacity="0.3" />
+        <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor={BLACK} floodOpacity="0.3" />
       </filter>
 
       {/* ── Particle gradient (for animated dependency paths) ── */}
       <radialGradient id={`${id}-particle`} cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#a78bfa" stopOpacity="1" />
-        <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+        <stop offset="0%" stopColor={PURPLE_300} stopOpacity="1" />
+        <stop offset="100%" stopColor={PURPLE_300} stopOpacity="0" />
       </radialGradient>
 
       {/* ── Cross-cluster dependency gradient ─────────────────── */}
@@ -52,13 +63,13 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
 
       {/* ── Intra-cluster dependency gradient ─────────────────── */}
       <linearGradient id={`${id}-intra-dep`} x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
+        <stop offset="0%" stopColor={INDIGO_500} stopOpacity="0.6" />
         <stop offset="100%" stopColor={PURPLE_500} stopOpacity="0.6" />
       </linearGradient>
 
       {/* ── Background grid pattern ──────────────────────────── */}
       <pattern id={`${id}-grid`} width="20" height="20" patternUnits="userSpaceOnUse">
-        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#334155" strokeWidth="0.3" opacity="0.3" />
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke={SLATE_700} strokeWidth="0.3" opacity="0.3" />
       </pattern>
 
       {/* ── Status glow colors ───────────────────────────────── */}
@@ -112,8 +123,8 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
 
       {/* ── Center dark gradient (for depth on nodes) ──────── */}
       <radialGradient id={`${id}-node-bg`} cx="50%" cy="40%" r="60%">
-        <stop offset="0%" stopColor="#1e293b" />
-        <stop offset="100%" stopColor="#0f172a" />
+        <stop offset="0%" stopColor={SLATE_800} />
+        <stop offset="100%" stopColor={SLATE_900} />
       </radialGradient>
     </defs>
   )

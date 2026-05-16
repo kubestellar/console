@@ -5,7 +5,21 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { AMBER_500, GREEN_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
+import {
+  AMBER_500,
+  EMERALD_300,
+  EMERALD_900,
+  GREEN_400,
+  GREEN_500,
+  GREEN_500_BRIGHT,
+  INDIGO_500,
+  RED_500,
+  SLATE_200,
+  SLATE_500,
+  SLATE_600,
+  SLATE_900,
+  WHITE,
+} from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
 /**
@@ -32,7 +46,7 @@ function getAvatarUrl(name: string): string {
 type NodeStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
-  pending: '#64748b',
+  pending: SLATE_500,
   running: AMBER_500,
   completed: GREEN_500_BRIGHT,
   failed: RED_500,
@@ -122,7 +136,7 @@ export function ProjectNode({
 }: ProjectNodeProps) {
   const [imgFailed, setImgFailed] = useState(false)
   const gradientColors = (CNCF_CATEGORY_GRADIENTS as Record<string, [string, string]>)[category]
-  const primaryColor = gradientColors?.[0] ?? '#6366f1'
+  const primaryColor = gradientColors?.[0] ?? INDIGO_500
   const statusColor = STATUS_COLORS[status]
   const iconSize = radius * 1.4
 
@@ -206,7 +220,7 @@ export function ProjectNode({
         cy={cy}
         r={radius + 3}
         fill="none"
-        stroke={glow ? (installed ? '#4ade80' : '#e2e8f0') : installed ? GREEN_500_BRIGHT : '#64748b'}
+        stroke={glow ? (installed ? GREEN_400 : SLATE_200) : installed ? GREEN_500_BRIGHT : SLATE_500}
         strokeWidth={glow ? (installed ? 2 : 1.2) : installed ? 1.5 : 0.6}
         strokeOpacity={glow ? 1 : installed ? 0.6 : 0.3}
         strokeDasharray={installed ? 'none' : '3 2'}
@@ -226,7 +240,7 @@ export function ProjectNode({
         cy={cy}
         r={radius}
         fill={`url(#${id}-node-bg)`}
-        stroke={glow ? (installed ? '#4ade80' : '#ffffff') : '#475569'}
+        stroke={glow ? (installed ? GREEN_400 : WHITE) : SLATE_600}
         strokeWidth={glow ? 1.2 : 1}
         strokeOpacity={glow ? 0.7 : 0.4}
         cursor="pointer"
@@ -289,7 +303,7 @@ export function ProjectNode({
         <motion.path
           d={`M${cx + radius - 5} ${cy - radius + 2} l2 2 l3 -3`}
           fill="none"
-          stroke="white"
+          stroke={WHITE}
           strokeWidth={1}
           strokeLinecap="round"
           initial={{ pathLength: 0 }}
@@ -305,7 +319,7 @@ export function ProjectNode({
             cx={cx + radius - 1}
             cy={cy + radius - 1}
             r={4}
-            fill="#065f46"
+            fill={EMERALD_900}
             stroke={GREEN_500}
             strokeWidth={0.5}
           />
@@ -313,7 +327,7 @@ export function ProjectNode({
             x={cx + radius - 1}
             y={cy + radius + 0.5}
             textAnchor="middle"
-            fill="#6ee7b7"
+            fill={EMERALD_300}
             fontSize={4}
             fontWeight="bold"
             fontFamily="system-ui, sans-serif"
@@ -340,9 +354,9 @@ export function ProjectNode({
               width={labelW}
               height={8.5}
               rx={2.5}
-              fill="#0f172a"
+              fill={SLATE_900}
               fillOpacity={0.9}
-              stroke={installed ? GREEN_500_BRIGHT : '#ffffff'}
+              stroke={installed ? GREEN_500_BRIGHT : WHITE}
               strokeWidth={0.3}
               strokeOpacity={0.5}
             />
@@ -350,7 +364,7 @@ export function ProjectNode({
               x={cx}
               y={labelY + 1}
               textAnchor="middle"
-              fill="#e2e8f0"
+              fill={SLATE_200}
               fontSize={4.2}
               fontFamily="system-ui, sans-serif"
               fontWeight="600"

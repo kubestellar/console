@@ -41,6 +41,68 @@ export const YELLOW_500 = '#eab308'
 /** Tailwind green-500 (brighter variant used for "free/available" areas) */
 export const GREEN_500_BRIGHT = '#22c55e'
 
+// ── Slate palette tokens ─────────────────────────────────────────────────────
+
+/** Tailwind slate-200 */
+export const SLATE_200 = '#e2e8f0'
+/** Tailwind slate-400 */
+export const SLATE_400 = '#94a3b8'
+/** Tailwind slate-500 */
+export const SLATE_500 = '#64748b'
+/** Tailwind slate-600 */
+export const SLATE_600 = '#475569'
+/** Tailwind slate-700 */
+export const SLATE_700 = '#334155'
+/** Tailwind slate-800 */
+export const SLATE_800 = '#1e293b'
+/** Tailwind slate-900 */
+export const SLATE_900 = '#0f172a'
+/** Tailwind slate-950 */
+export const SLATE_950 = '#0a0f1a'
+
+// ── Additional accent tokens ──────────────────────────────────────────────────
+
+/** Tailwind indigo-400 */
+export const INDIGO_400 = '#818cf8'
+/** Tailwind indigo-200 */
+export const INDIGO_200 = '#a5b4fc'
+/** Tailwind purple-300 */
+export const PURPLE_300 = '#a78bfa'
+/** Tailwind orange-200 */
+export const ORANGE_200 = '#fdba74'
+/** Tailwind green-400 */
+export const GREEN_400 = '#4ade80'
+/** Tailwind emerald-900 */
+export const EMERALD_900 = '#065f46'
+/** Tailwind emerald-300 */
+export const EMERALD_300 = '#6ee7b7'
+/** Tailwind sky-500 */
+export const SKY_500 = '#0ea5e9'
+
+// ── Utility colors ───────────────────────────────────────────────────────────
+
+/** Pure white */
+export const WHITE = '#ffffff'
+/** Pure black */
+export const BLACK = '#000000'
+
+// ── Cloud provider brand colors ──────────────────────────────────────────────
+
+/** Amazon EKS brand color */
+export const PROVIDER_EKS = '#FF9900'
+/** Google Kubernetes Engine brand color */
+export const PROVIDER_GKE = '#4285F4'
+/** Azure Kubernetes Service brand color */
+export const PROVIDER_AKS = '#0078D4'
+/** Red Hat OpenShift brand color */
+export const PROVIDER_OPENSHIFT = '#EE0000'
+/** CoreWeave brand color */
+export const PROVIDER_COREWEAVE = '#4F7BEF'
+/** K3s brand color */
+export const PROVIDER_K3S = '#FFC61C'
+/** Kubernetes distribution brand color */
+export const PROVIDER_KUBERNETES = '#326CE5'
+
 // ── Chart palettes ───────────────────────────────────────────────────────────
 
 /** 10-color palette for multi-series cluster charts (ClusterMetrics, etc.) */

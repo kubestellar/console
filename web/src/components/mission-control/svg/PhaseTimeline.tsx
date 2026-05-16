@@ -4,14 +4,15 @@
  */
 
 import { motion } from 'framer-motion'
+import { AMBER_500, GREEN_500_BRIGHT, INDIGO_500, RED_500, SLATE_500, SLATE_600, SLATE_700, SLATE_800 } from '../../../lib/theme/chartColors'
 import type { DeployPhase, PhaseProgress, PhaseStatus } from '../types'
 
 const STATUS_COLORS: Record<PhaseStatus, string> = {
-  pending: '#475569',
-  running: '#f59e0b',
-  completed: '#22c55e',
-  failed: '#ef4444',
-  skipped: '#64748b',
+  pending: SLATE_600,
+  running: AMBER_500,
+  completed: GREEN_500_BRIGHT,
+  failed: RED_500,
+  skipped: SLATE_500,
 }
 
 interface PhaseTimelineProps {
@@ -52,8 +53,8 @@ export function PhaseTimeline({ phases, progress, viewBoxWidth, y }: PhaseTimeli
         width={totalWidth}
         height={barHeight}
         rx={4}
-        fill="#1e293b"
-        stroke="#334155"
+        fill={SLATE_800}
+        stroke={SLATE_700}
         strokeWidth={0.5}
       />
 
@@ -88,7 +89,7 @@ export function PhaseTimeline({ phases, progress, viewBoxWidth, y }: PhaseTimeli
                 y1={y + 3}
                 x2={segX}
                 y2={y + barHeight - 3}
-                stroke="#475569"
+                stroke={SLATE_600}
                 strokeWidth={0.5}
                 opacity={0.5}
               />
@@ -131,7 +132,7 @@ export function PhaseTimeline({ phases, progress, viewBoxWidth, y }: PhaseTimeli
                 height={barHeight - 2}
                 rx={3}
                 fill="none"
-                stroke="#f59e0b"
+                stroke={AMBER_500}
                 strokeWidth={1}
               >
                 <animate
@@ -155,7 +156,7 @@ export function PhaseTimeline({ phases, progress, viewBoxWidth, y }: PhaseTimeli
             cx={dotX}
             cy={y + barHeight / 2}
             r={2}
-            fill="#6366f1"
+            fill={INDIGO_500}
             opacity={0.6}
           />
         )

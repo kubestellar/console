@@ -4,6 +4,16 @@
  */
 
 import { motion } from 'framer-motion'
+import {
+  INDIGO_200,
+  INDIGO_400,
+  INDIGO_500,
+  ORANGE_200,
+  ORANGE_500,
+  SLATE_800,
+  SLATE_900,
+  WHITE,
+} from '../../../lib/theme/chartColors'
 
 interface DependencyPathProps {
   id: string
@@ -76,7 +86,7 @@ export function DependencyPath({
   const pathD = `M ${fromX} ${fromY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${toX} ${toY}`
   const pathId = `${id}-dep-path-${index}`
   const gradientRef = crossCluster ? `url(#${id}-cross-dep)` : `url(#${id}-intra-dep)`
-  const particleColor = crossCluster ? '#f97316' : '#818cf8'
+  const particleColor = crossCluster ? ORANGE_500 : INDIGO_400
 
   return (
     <motion.g
@@ -133,7 +143,7 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
     crossCluster ? 'Cross-cluster dependency' : 'Intra-cluster dependency',
   ].filter(Boolean).join('\n')
 
-  const lineColor = crossCluster ? '#f97316' : '#6366f1'
+  const lineColor = crossCluster ? ORANGE_500 : INDIGO_500
   const showConnector = anchorX != null && anchorY != null &&
     (Math.abs(midX - anchorX) > 2 || Math.abs(midY - anchorY) > 2)
 
@@ -162,8 +172,8 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
         width={label.length * 3.6}
         height={9}
         rx={3}
-        fill={highlight ? '#1e293b' : '#0f172a'}
-        stroke={highlight ? '#ffffff' : lineColor}
+        fill={highlight ? SLATE_800 : SLATE_900}
+        stroke={highlight ? WHITE : lineColor}
         strokeWidth={highlight ? 0.6 : 0.3}
         strokeOpacity={highlight ? 0.9 : 0.5}
       />
@@ -171,7 +181,7 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
         x={midX}
         y={midY + 1}
         textAnchor="middle"
-        fill={crossCluster ? '#fdba74' : '#a5b4fc'}
+        fill={crossCluster ? ORANGE_200 : INDIGO_200}
         fontSize={4.5}
         fontFamily="system-ui, sans-serif"
         fontWeight="500"

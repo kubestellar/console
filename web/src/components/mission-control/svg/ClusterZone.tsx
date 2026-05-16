@@ -5,6 +5,28 @@
  */
 
 import { motion } from 'framer-motion'
+import {
+  AMBER_500,
+  BLUE_500,
+  CYAN_500,
+  GREEN_500_BRIGHT,
+  LIME_500,
+  PROVIDER_AKS,
+  PROVIDER_COREWEAVE,
+  PROVIDER_EKS,
+  PROVIDER_GKE,
+  PROVIDER_K3S,
+  PROVIDER_KUBERNETES,
+  PROVIDER_OPENSHIFT,
+  PURPLE_400,
+  RED_500,
+  SKY_500,
+  SLATE_400,
+  SLATE_800,
+  SLATE_900,
+  SLATE_950,
+  WHITE,
+} from '../../../lib/theme/chartColors'
 import { CloudProviderIcon } from '../../ui/CloudProviderIcon'
 import type { LayoutRect, OverlayMode } from '../types'
 
@@ -14,33 +36,33 @@ import type { LayoutRect, OverlayMode } from '../types'
  * Each constant documents its Tailwind equivalent for design-token traceability.
  */
 const SVG_COLORS = {
-  /** red-500 */    danger:  '#ef4444',
-  /** amber-500 */  warning: '#f59e0b',
-  /** green-500 */  cpu:     '#22c55e',
-  /** blue-500 */   mem:     '#3b82f6',
-  /** purple-500 */ gpu:     '#a855f7',
-  /** amber-500 */  tpu:     '#f59e0b',
-  /** lime-500 */   disk:    '#84cc16',
-  /** cyan-500 */   pvc:     '#06b6d4',
-  /** sky-500 */    network: '#0ea5e9',
-  /** slate-400 */  muted:   '#94a3b8',
-  /** slate-950 */  zoneBg:  '#0a0f1a',
-  /** slate-900 */  zoneFg:  '#0f172a',
-  /** slate-800 */  barBg:   '#1e293b',
+  /** red-500 */ danger: RED_500,
+  /** amber-500 */ warning: AMBER_500,
+  /** green-500 */ cpu: GREEN_500_BRIGHT,
+  /** blue-500 */ mem: BLUE_500,
+  /** purple-500 */ gpu: PURPLE_400,
+  /** amber-500 */ tpu: AMBER_500,
+  /** lime-500 */ disk: LIME_500,
+  /** cyan-500 */ pvc: CYAN_500,
+  /** sky-500 */ network: SKY_500,
+  /** slate-400 */ muted: SLATE_400,
+  /** slate-950 */ zoneBg: SLATE_950,
+  /** slate-900 */ zoneFg: SLATE_900,
+  /** slate-800 */ barBg: SLATE_800,
 } as const
 
 /** Brand colors for cloud providers — used as SVG fill values.
  *  These are intentional brand colors that cannot use Tailwind classes in SVG context. */
 const PROVIDER_COLORS: Record<string, string> = {
-  eks: '#FF9900',
-  gke: '#4285F4',
-  aks: '#0078D4',
-  openshift: '#EE0000',
-  coreweave: '#4F7BEF',
-  k3s: '#FFC61C',
-  kind: '#326CE5',
-  minikube: '#326CE5',
-  kubernetes: '#326CE5',
+  eks: PROVIDER_EKS,
+  gke: PROVIDER_GKE,
+  aks: PROVIDER_AKS,
+  openshift: PROVIDER_OPENSHIFT,
+  coreweave: PROVIDER_COREWEAVE,
+  k3s: PROVIDER_K3S,
+  kind: PROVIDER_KUBERNETES,
+  minikube: PROVIDER_KUBERNETES,
+  kubernetes: PROVIDER_KUBERNETES,
 }
 
 export interface ClusterZoneProps {
@@ -116,7 +138,7 @@ function StatBlock({ x, y, label, value, max, unit, color, displayOverride, noAl
         {label}
       </text>
       {/* Value */}
-      <text x={x + 53} y={y + 5} textAnchor="end" fill="white" fontSize={5.5} fontFamily="system-ui, sans-serif" opacity={0.9}>
+      <text x={x + 53} y={y + 5} textAnchor="end" fill={WHITE} fontSize={5.5} fontFamily="system-ui, sans-serif" opacity={0.9}>
         {display}
       </text>
       {/* Gauge bar */}
@@ -249,7 +271,7 @@ export function ClusterZone({
         x={x + 30}
         y={y + 17}
         textAnchor="start"
-        fill="white"
+        fill={WHITE}
         fontSize={8}
         fontWeight="600"
         fontFamily="system-ui, sans-serif"
@@ -307,28 +329,28 @@ export function ClusterZone({
           <g>
             <title>{nodeCount} nodes</title>
             <text x={x + width / 2 - 48} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">⊞</text>
-            <text x={x + width / 2 - 40} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{nodeCount}</text>
+            <text x={x + width / 2 - 40} y={y + height - 7} fill={WHITE} fontSize={8} fontFamily="system-ui, sans-serif">{nodeCount}</text>
           </g>
         )}
         {cpuCores != null && (
           <g>
             <title>{cpuCores} CPU cores</title>
             <text x={x + width / 2 - 18} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">⚙</text>
-            <text x={x + width / 2 - 10} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{cpuCores}</text>
+            <text x={x + width / 2 - 10} y={y + height - 7} fill={WHITE} fontSize={8} fontFamily="system-ui, sans-serif">{cpuCores}</text>
           </g>
         )}
         {podCount != null && (
           <g>
             <title>{podCount} pods</title>
             <text x={x + width / 2 + 12} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">▣</text>
-            <text x={x + width / 2 + 20} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{podCount}</text>
+            <text x={x + width / 2 + 20} y={y + height - 7} fill={WHITE} fontSize={8} fontFamily="system-ui, sans-serif">{podCount}</text>
           </g>
         )}
         {memGB != null && (
           <g>
             <title>{memGB.toFixed(0)} GB memory</title>
             <text x={x + width / 2 + 38} y={y + height - 7} fill={color} fontSize={9} fontFamily="system-ui, sans-serif">◧</text>
-            <text x={x + width / 2 + 46} y={y + height - 7} fill="white" fontSize={8} fontFamily="system-ui, sans-serif">{memGB.toFixed(0)}</text>
+            <text x={x + width / 2 + 46} y={y + height - 7} fill={WHITE} fontSize={8} fontFamily="system-ui, sans-serif">{memGB.toFixed(0)}</text>
           </g>
         )}
       </g>
