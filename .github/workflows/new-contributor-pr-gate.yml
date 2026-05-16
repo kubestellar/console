@@ -14,9 +14,10 @@ jobs:
       - name: Check contributor history
         env:
           GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          AUTHOR="${{ github.event.pull_request.user.login }}"
-          REPO="${{ github.repository }}"
           MIN_ACCOUNT_AGE_DAYS=30
 
           # Skip bots and known automation
@@ -55,7 +56,7 @@ jobs:
 
           echo "New account (${AGE_DAYS} days) with no prior contributions — closing PR."
 
-          gh pr close "${{ github.event.pull_request.number }}" \
+          gh pr close "$PR_NUMBER" \
             --repo "${REPO}" \
             --comment "👋 Welcome! This repo requires new contributors to open an issue first before submitting a PR. This helps us coordinate work and avoid duplicate effort.
 
