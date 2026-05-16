@@ -15,6 +15,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { AMBER_500, GREEN_500_BRIGHT, RED_500, SLATE_700 } from '../../lib/theme/chartColors'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import type { DependencyEdge, DeployPhase, PayloadProject } from './types'
@@ -54,8 +55,8 @@ export function GaugeRow({ label, value, max, unit }: {
     ? max != null ? `${Math.round(value)} / ${max}${unit ?? ''}` : `${Math.round(value)}${unit ?? ''}`
     : max != null ? `— / ${max}${unit ?? ''}` : 'N/A'
   const barColor = pctVal != null
-    ? pctVal >= 80 ? '#ef4444' : pctVal >= 50 ? '#f59e0b' : '#22c55e'
-    : '#334155'
+    ? pctVal >= 80 ? RED_500 : pctVal >= 50 ? AMBER_500 : GREEN_500_BRIGHT
+    : SLATE_700
 
   return (
     <div className="space-y-1">
