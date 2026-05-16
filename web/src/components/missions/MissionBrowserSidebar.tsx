@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react'
 import { Upload, CheckCircle, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
-import { TreeNodeItem, updateNodeInTree } from './browser'
+import { TreeNodeItem } from './browser'
 import type { TreeNode } from './browser'
 import { useToast } from '../ui/Toast'
 
@@ -51,9 +51,6 @@ interface MissionBrowserSidebarProps {
   newPathValue: string
   setNewPathValue: (value: string) => void
   onAddPath: (val: string) => void
-
-  setTreeNodes: React.Dispatch<React.SetStateAction<TreeNode[]>>
-  setExpandedNodes: React.Dispatch<React.SetStateAction<Set<string>>>
 }
 
 export function MissionBrowserSidebar({
@@ -84,8 +81,6 @@ export function MissionBrowserSidebar({
   newPathValue,
   setNewPathValue,
   onAddPath,
-  setTreeNodes,
-  setExpandedNodes,
 }: MissionBrowserSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const treeNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
@@ -138,23 +133,7 @@ export function MissionBrowserSidebar({
                 }
                 onRefresh={
                   node.id === 'github' || node.id === 'local'
-                    ? (child) => {
-                        // Mark node as unloaded to force re-fetch
-                        setTreeNodes((prev) =>
-                          updateNodeInTree(prev, child.id, {
-                            loaded: false,
-                            loading: false,
-                            children: [],
-                          }),
-                        )
-                        // Collapse so re-expand triggers load
-                        setExpandedNodes((prev) => {
-                          const next = new Set(prev)
-                          next.delete(child.id)
-                          return next
-                        })
-                        onRefreshNode(child)
-                      }
+                    ? onRefreshNode
                     : undefined
                 }
                 onAdd={
