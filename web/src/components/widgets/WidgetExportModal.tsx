@@ -388,7 +388,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
 
           {/* Right: Preview & Code — sticky positioning keeps the preview visible
               while the left selection list scrolls independently. */}
-          <div className="sticky top-0 self-start w-1/2 flex flex-col overflow-hidden min-h-0">
+          <div className="sticky top-0 self-start w-1/2 flex flex-col overflow-hidden min-h-0 pb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
@@ -436,7 +436,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border shrink-0">
           <a
             href="https://tracesof.net/uebersicht/"
             target="_blank"
