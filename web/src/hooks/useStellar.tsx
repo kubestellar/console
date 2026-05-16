@@ -30,7 +30,15 @@ function useStellarSource() {
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [state, setState] = useState<StellarOperationalState | null>(null)
-  const [notifications, setNotifications] = useState<StellarNotification[]>([])
+  const [notifications, setNotificationsRaw] = useState<StellarNotification[]>([])
+  const notificationsRef = useRef<StellarNotification[]>([])
+  const setNotifications = useCallback((updater: StellarNotification[] | ((prev: StellarNotification[]) => StellarNotification[])) => {
+    setNotificationsRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      notificationsRef.current = next
+      return next
+    })
+  }, [])
   const [pendingActions, setPendingActions] = useState<StellarAction[]>([])
   const [tasks, setTasks] = useState<StellarTask[]>([])
   const [watches, setWatches] = useState<StellarWatch[]>([])
@@ -301,21 +309,18 @@ function useStellarSource() {
   const unreadCount = useMemo(() => notifications.filter(item => !item.read).length, [notifications])
 
   const acknowledgeNotification = useCallback(async (id: string) => {
-    let removed: StellarNotification | null = null
-    // Remove immediately so dismiss feels instant.
-    setNotifications(prev => {
-      removed = prev.find(n => n.id === id) || null
-      return prev.filter(n => n.id !== id)
-    })
+    // Snapshot the item before removal so we can restore on failure.
+    // Read from the ref to avoid depending on React's setState batch timing.
+    const removed = notificationsRef.current.find(n => n.id === id) || null
+    setNotifications(prev => prev.filter(n => n.id !== id))
     try {
       await stellarApi.acknowledgeNotification(id)
     } catch (error) {
       if (removed) {
-        const itemToRestore: StellarNotification = removed
         setNotifications(prev => (
-          prev.some(item => item.id === itemToRestore.id)
+          prev.some(item => item.id === removed.id)
             ? prev
-            : sortNotificationsByCreatedAt([itemToRestore, ...prev])
+            : sortNotificationsByCreatedAt([removed, ...prev])
         ))
       }
       throw error
@@ -323,11 +328,10 @@ function useStellarSource() {
   }, [])
 
   const dismissAllNotifications = useCallback(async () => {
-    let snapshot: StellarNotification[] = []
-    setNotifications(prev => {
-      snapshot = prev.slice()
-      return []
-    })
+    // Read current notifications from ref for reliable access regardless of
+    // React batch timing.
+    const snapshot = notificationsRef.current.slice()
+    setNotifications([])
     if (snapshot.length === 0) {
       return
     }

@@ -28,6 +28,7 @@ interface MockWs {
   onclose: WsEventHandler | null
   send: ReturnType<typeof vi.fn>
   close: ReturnType<typeof vi.fn>
+  _closeSpy: ReturnType<typeof vi.fn>
   readyState: number
   url: string
   _triggerOpen: () => void
@@ -37,16 +38,18 @@ interface MockWs {
 }
 
 function createMockWs(url = 'ws://localhost:8585'): MockWs {
+  const closeSpy = vi.fn().mockImplementation(function(this: MockWs) {
+    this.readyState = WS_CLOSED
+    this.onclose?.(new Event('close'))
+  })
   const ws: MockWs = {
     onopen: null,
     onmessage: null,
     onerror: null,
     onclose: null,
     send: vi.fn(),
-    close: vi.fn().mockImplementation(function(this: MockWs) {
-      this.readyState = WS_CLOSED
-      this.onclose?.(new Event('close'))
-    }),
+    close: closeSpy,
+    _closeSpy: closeSpy,
     readyState: WS_CONNECTING,
     url,
     _triggerOpen() {
@@ -280,7 +283,9 @@ describe('useDrillDownWebSocket', () => {
 
       unmount()
 
-      wsInstances.forEach(ws => expect(ws.close).toHaveBeenCalled())
+      // The hook wraps ws.close with a tracking wrapper, so assert on the
+      // persistent _closeSpy reference which the wrapper delegates to.
+      wsInstances.forEach(ws => expect(ws._closeSpy).toHaveBeenCalled())
     })
   })
 
