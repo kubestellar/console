@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import {
   ChevronRight,
   ChevronDown,
@@ -18,7 +18,7 @@ import { STATUS_CONFIG, TYPE_ICONS } from './types'
 /** Mission statuses that indicate the mission was interrupted or failed and may need rollback */
 const ROLLBACK_ELIGIBLE_STATUSES = new Set(['failed', 'cancelled'])
 
-export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpand, onTerminate, onRollback, isCollapsed, onToggleCollapse }: {
+type MissionListItemProps = {
   mission: Mission
   isActive: boolean
   onClick: () => void
@@ -29,7 +29,9 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
   onRollback?: (mission: Mission) => void
   isCollapsed: boolean
   onToggleCollapse: () => void
-}) {
+}
+
+function MissionListItemComponent({ mission, isActive, onClick, onDismiss, onExpand, onTerminate, onRollback, isCollapsed, onToggleCollapse }: MissionListItemProps) {
   const { t } = useTranslation()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showRollbackConfirm, setShowRollbackConfirm] = useState(false)
@@ -168,3 +170,26 @@ export function MissionListItem({ mission, isActive, onClick, onDismiss, onExpan
     </>
   )
 }
+
+function areMissionListItemPropsEqual(prev: MissionListItemProps, next: MissionListItemProps): boolean {
+  if (prev.isActive !== next.isActive || prev.isCollapsed !== next.isCollapsed) return false
+  if (Boolean(prev.onTerminate) !== Boolean(next.onTerminate)) return false
+  if (Boolean(prev.onRollback) !== Boolean(next.onRollback)) return false
+
+  const prevMission = prev.mission
+  const nextMission = next.mission
+  const prevUpdatedAt = prevMission.updatedAt instanceof Date ? prevMission.updatedAt.getTime() : new Date(prevMission.updatedAt).getTime()
+  const nextUpdatedAt = nextMission.updatedAt instanceof Date ? nextMission.updatedAt.getTime() : new Date(nextMission.updatedAt).getTime()
+
+  return prevMission.id === nextMission.id &&
+    prevMission.status === nextMission.status &&
+    prevMission.type === nextMission.type &&
+    prevMission.title === nextMission.title &&
+    prevMission.description === nextMission.description &&
+    prevMission.cluster === nextMission.cluster &&
+    prevUpdatedAt === nextUpdatedAt &&
+    prevMission.importedFrom?.missionClass === nextMission.importedFrom?.missionClass &&
+    (prevMission.messages || []).length === (nextMission.messages || []).length
+}
+
+export const MissionListItem = memo(MissionListItemComponent, areMissionListItemPropsEqual)

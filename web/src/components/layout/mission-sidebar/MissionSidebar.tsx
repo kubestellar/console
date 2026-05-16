@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react'
 import { safeLazy } from '../../../lib/safeLazy'
 import { ConfirmDialog, isAnyModalOpen } from '../../../lib/modals'
 import {
@@ -79,6 +79,11 @@ const MISSION_CONTROL_BUTTON_CLASSES = 'appearance-none isolate overflow-hidden 
 
 function getMissionAttentionCount(missions: Mission[]): number {
   return missions.filter(mission => ATTENTION_MISSION_STATUSES.has(mission.status)).length
+}
+
+function matchesMissionSearch(mission: Mission, normalizedQuery: string): boolean {
+  if (!normalizedQuery) return true
+  return mission.title.toLowerCase().includes(normalizedQuery) || mission.description.toLowerCase().includes(normalizedQuery)
 }
 
 function loadSavedWidth(): number {
@@ -559,12 +564,11 @@ export function MissionSidebar() {
   }, [missionSearchQuery])
 
   // Split missions into saved (library) and active, applying search filter
-  const matchesSearch = (m: Mission) => {
-    if (!missionSearchQuery.trim()) return true
-    const q = missionSearchQuery.toLowerCase()
-    return m.title.toLowerCase().includes(q) || m.description.toLowerCase().includes(q)
-  }
-  const savedMissions = missions.filter(m => m.status === 'saved' && matchesSearch(m))
+  const normalizedMissionSearchQuery = missionSearchQuery.trim().toLowerCase()
+  const savedMissions = useMemo(
+    () => (missions || []).filter(m => m.status === 'saved' && matchesMissionSearch(m, normalizedMissionSearchQuery)),
+    [missions, normalizedMissionSearchQuery]
+  )
   // issue 8143 — The sidebar list MUST show terminal (completed / failed /
   // cancelled) missions so users can find their mission history. Issue 5946
   // tightened this filter to isActiveMission, which correctly excludes
@@ -576,9 +580,12 @@ export function MissionSidebar() {
   // isActiveMission so the badge stays accurate. Named `activeMissions`
   // for historical continuity with the many references below, but the
   // contents are now "all non-library missions".
-  const activeMissions = missions
-    .filter(m => m.status !== 'saved' && matchesSearch(m))
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const activeMissions = useMemo(
+    () => (missions || [])
+      .filter(m => m.status !== 'saved' && matchesMissionSearch(m, normalizedMissionSearchQuery))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [missions, normalizedMissionSearchQuery]
+  )
 
   /** Paginated slice of active missions for rendering (#4778) */
   const visibleActiveMissions = activeMissions.slice(0, visibleMissionCount)
@@ -647,7 +654,7 @@ export function MissionSidebar() {
   }
 
   /** Convert a saved Mission to MissionExport for the detail view */
-  const savedMissionToExport = (m: Mission): MissionExport => ({
+  const savedMissionToExport = useCallback((m: Mission): MissionExport => ({
     version: '1.0',
     title: m.importedFrom?.title || m.title,
     description: m.importedFrom?.description || m.description,
@@ -657,28 +664,28 @@ export function MissionSidebar() {
     cncfProject: m.importedFrom?.cncfProject,
     steps: (m.importedFrom?.steps || []).map(s => ({
       title: s.title,
-      description: s.description })) })
+      description: s.description })) }), [])
 
-  const handleViewSavedMission = (m: Mission) => {
+  const handleViewSavedMission = useCallback((m: Mission) => {
     setViewingMission(savedMissionToExport(m))
     setViewingMissionRaw(false)
-  }
+  }, [savedMissionToExport])
 
   // Run mission — in demo mode (Netlify), block and open the install dialog instead.
   // For install/deploy types in live mode, show cluster picker first.
-  const handleRunMission = (missionId: string) => {
+  const handleRunMission = useCallback((missionId: string) => {
     if (isDemoMode()) {
       window.dispatchEvent(new CustomEvent('open-install'))
       return
     }
-    const mission = missions.find(m => m.id === missionId)
+    const mission = (missions || []).find(m => m.id === missionId)
     const isInstall = mission?.importedFrom?.missionClass === 'install' || mission?.type === 'deploy'
     if (isInstall) {
       setPendingRunMissionId(missionId)
     } else {
       runSavedMission(missionId)
     }
-  }
+  }, [missions, runSavedMission])
 
   const pendingMission = pendingRunMissionId ? missions.find(m => m.id === pendingRunMissionId) : null
 
@@ -774,6 +781,94 @@ export function MissionSidebar() {
     openSidebar()
   }
 
+  const fullscreenSavedMissionItems = useMemo(() => savedMissions.map(m => (
+    <div
+      key={m.id}
+      className="group p-2 rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer border border-transparent hover:border-purple-500/20"
+      onClick={() => handleViewSavedMission(m)}
+    >
+      <div className="flex items-start gap-2">
+        <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
+          {m.importedFrom?.cncfProject && (
+            <p className="text-2xs text-muted-foreground truncate">{m.importedFrom.cncfProject}</p>
+          )}
+          {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
+            <div className="flex flex-wrap gap-0.5 mt-1">
+              {m.importedFrom.tags.slice(0, 3).map(tag => (
+                <span key={tag} className="text-[9px] px-1 py-0 bg-secondary rounded text-muted-foreground">{tag}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
+          className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
+        >
+          <Eye className="w-2.5 h-2.5" /> View
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
+          className="flex items-center gap-1 px-2 py-0.5 text-2xs font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+        >
+          <Play className="w-2.5 h-2.5" /> Run
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
+          className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
+        >
+          <Trash2 className="w-2.5 h-2.5" /> Remove
+        </button>
+      </div>
+    </div>
+  )), [handleRunMission, handleViewSavedMission, savedMissions])
+
+  const sidebarSavedMissionItems = useMemo(() => savedMissions.map(m => (
+    <div
+      key={m.id}
+      className="group flex items-center gap-3 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors cursor-pointer"
+      onClick={() => handleViewSavedMission(m)}
+    >
+      <Bookmark className="w-4 h-4 text-purple-400 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
+        <p className="text-xs text-muted-foreground truncate">{m.description}</p>
+        {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {m.importedFrom.tags.slice(0, 4).map(tag => (
+              <span key={tag} className="text-2xs px-1.5 py-0.5 bg-secondary rounded text-muted-foreground">{tag}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
+          className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
+          title={t('layout.missionSidebar.viewMissionDetails')}
+        >
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          title={t('layout.missionSidebar.runThisMission')}
+        >
+          <Play className="w-3 h-3" /> {t('layout.missionSidebar.run')}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
+          className="p-1.5 text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
+          title={t('layout.missionSidebar.removeFromLibrary')}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  )), [handleRunMission, handleViewSavedMission, savedMissions, t])
 
   const shouldRenderMinimizedSidebar = isSidebarOpen && isSidebarMinimized && !isMobile
   const shouldRenderExpandedSidebar = isSidebarOpen && !isSidebarMinimized
@@ -1212,50 +1307,7 @@ export function MissionSidebar() {
                       <StatusBadge color="purple" size="xs" rounded="full" className="ml-auto">{savedMissions.length}</StatusBadge>
                     </div>
                     <div className="p-1.5 space-y-1">
-                      {savedMissions.map(m => (
-                        <div
-                          key={m.id}
-                          className="group p-2 rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer border border-transparent hover:border-purple-500/20"
-                          onClick={() => handleViewSavedMission(m)}
-                        >
-                          <div className="flex items-start gap-2">
-                            <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
-                              {m.importedFrom?.cncfProject && (
-                                <p className="text-2xs text-muted-foreground truncate">{m.importedFrom.cncfProject}</p>
-                              )}
-                              {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-0.5 mt-1">
-                                  {m.importedFrom.tags.slice(0, 3).map(tag => (
-                                    <span key={tag} className="text-[9px] px-1 py-0 bg-secondary rounded text-muted-foreground">{tag}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
-                              className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
-                            >
-                              <Eye className="w-2.5 h-2.5" /> View
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
-                              className="flex items-center gap-1 px-2 py-0.5 text-2xs font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                            >
-                              <Play className="w-2.5 h-2.5" /> Run
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
-                              className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
-                            >
-                              <Trash2 className="w-2.5 h-2.5" /> Remove
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                      {fullscreenSavedMissionItems}
                     </div>
                   </div>
                 )}
@@ -1475,49 +1527,7 @@ export function MissionSidebar() {
                 <StatusBadge color="purple" size="xs" rounded="full">{savedMissions.length}</StatusBadge>
               </div>
               <div className="space-y-1.5">
-                {savedMissions.map(m => (
-                  <div
-                    key={m.id}
-                    className="group flex items-center gap-3 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors cursor-pointer"
-                    onClick={() => handleViewSavedMission(m)}
-                  >
-                    <Bookmark className="w-4 h-4 text-purple-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{m.description}</p>
-                      {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {m.importedFrom.tags.slice(0, 4).map(tag => (
-                            <span key={tag} className="text-2xs px-1.5 py-0.5 bg-secondary rounded text-muted-foreground">{tag}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
-                        className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
-                        title={t('layout.missionSidebar.viewMissionDetails')}
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                        title={t('layout.missionSidebar.runThisMission')}
-                      >
-                        <Play className="w-3 h-3" /> {t('layout.missionSidebar.run')}
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
-                        className="p-1.5 text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
-                        title={t('layout.missionSidebar.removeFromLibrary')}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {sidebarSavedMissionItems}
               </div>
             </div>
           )}
