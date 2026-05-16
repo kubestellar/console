@@ -73,7 +73,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 
 	limit, err := parseCustomResourceLimit(c.Query("limit"))
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid limit parameter"})
 	}
 
 	if group == "" || version == "" || resource == "" {
@@ -125,7 +125,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	}
 	continueOffset, err := parseCustomResourceContinueToken(continueToken)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid continue token"})
 	}
 
 	// Fan-out across all healthy clusters
