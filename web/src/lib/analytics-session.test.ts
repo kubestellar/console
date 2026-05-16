@@ -352,6 +352,51 @@ describe('engagement tracking', () => {
     stopEngagementTracking()
     expect(clearSpy).toHaveBeenCalled()
   })
+
+  it('flushes on tab hide and resumes on visible', () => {
+    const flush = vi.fn()
+    const addSpy = vi.spyOn(document, 'addEventListener')
+    const setVisibilityState = (state: 'hidden' | 'visible') => {
+      Object.defineProperty(document, 'visibilityState', {
+        get: () => state,
+        configurable: true,
+      })
+    }
+
+    startEngagementTracking(flush)
+
+    const visibilityHandler = addSpy.mock.calls.find(([event]) => event === 'visibilitychange')?.[1]
+    expect(typeof visibilityHandler).toBe('function')
+
+    markActive()
+    vi.advanceTimersByTime(500)
+    const beforeHide = peekEngagementMs()
+
+    setVisibilityState('hidden')
+    ;(visibilityHandler as EventListener)(new Event('visibilitychange'))
+
+    expect(flush).toHaveBeenCalledTimes(1)
+    expect(peekEngagementMs()).toBeGreaterThanOrEqual(beforeHide)
+
+    setVisibilityState('visible')
+    ;(visibilityHandler as EventListener)(new Event('visibilitychange'))
+
+    const beforeResume = peekEngagementMs()
+    vi.advanceTimersByTime(500)
+    expect(peekEngagementMs()).toBeGreaterThan(beforeResume)
+  })
+})
+
+describe('hashUserId fallback', () => {
+  it('uses fallback hashing when crypto.subtle is unavailable', async () => {
+    vi.stubGlobal('crypto', { subtle: undefined })
+    try {
+      const hash = await hashUserId('fallback-user')
+      expect(hash).toMatch(/^[0-9a-f]{8}$/)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
 
 // ── UTM tracking ────────────────────────────────────────────────────────────
