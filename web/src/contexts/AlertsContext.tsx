@@ -297,7 +297,11 @@ interface AlertsContextValue {
 const {
   Context: AlertsContext,
   useRequiredStateContext: useAlertsContext,
-} = createStateContext<AlertsContextValue>({ name: 'Alerts' })
+} = createStateContext<AlertsContextValue>({
+  name: 'Alerts',
+  hookName: 'useAlertsContext',
+  providerLabel: 'an AlertsProvider',
+})
 
 export { AlertsContext, useAlertsContext }
 

@@ -22,11 +22,12 @@ const { mockClusterCacheRef } = vi.hoisted(() => ({
 }))
 
 const mockUseCache = vi.fn()
+const mockCreateCachedHook = vi.fn((config: Record<string, unknown>) => () => mockUseCache(config))
 const mockKubectlProxy = { exec: vi.fn() }
 const mockSettledWithConcurrency = vi.fn()
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(),
+  createCachedHook: (...args: unknown[]) => mockCreateCachedHook(...args),
   useCache: (...args: unknown[]) => mockUseCache(...args),
   REFRESH_RATES: {
     realtime: 15_000, pods: 30_000, clusters: 60_000,

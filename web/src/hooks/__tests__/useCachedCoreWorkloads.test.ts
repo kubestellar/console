@@ -7,18 +7,7 @@ import { renderHook } from '@testing-library/react'
 
 const { mockUseCache, mockCreateCachedHook } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
-  mockCreateCachedHook: vi.fn(() => () => ({
-    data: [],
-    isLoading: false,
-    isRefreshing: false,
-    isDemoFallback: false,
-    error: null,
-    isFailed: false,
-    consecutiveFailures: 0,
-    lastRefresh: null,
-    refetch: vi.fn(),
-    retryFetch: vi.fn(),
-  })),
+  mockCreateCachedHook: vi.fn((config: Record<string, unknown>) => () => mockUseCache(config)),
 }))
 
 vi.mock('../../lib/cache', () => ({
@@ -349,8 +338,8 @@ describe('useCachedWorkloads', () => {
     expect(result.current.workloads).toEqual(workloads)
   })
 
-  it('uses fixed cache key regardless of cluster param', () => {
-    renderHook(() => useCachedWorkloads('prod'))
+  it('uses a fixed cache key', () => {
+    renderHook(() => useCachedWorkloads())
     expect(mockUseCache.mock.calls[0][0].key).toBe('workloads:all:all')
   })
 

@@ -53,7 +53,11 @@ const {
   Context: DashboardContext,
   useRequiredStateContext: useDashboardContext,
   useOptionalStateContext: useDashboardContextOptional,
-} = createStateContext<DashboardContextType>({ name: 'Dashboard' })
+} = createStateContext<DashboardContextType>({
+  name: 'Dashboard',
+  hookName: 'useDashboardContext',
+  providerLabel: 'a DashboardProvider',
+})
 
 export { DashboardContext, useDashboardContext, useDashboardContextOptional }
 

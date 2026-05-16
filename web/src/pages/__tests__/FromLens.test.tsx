@@ -2,16 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
-const emitFromLensViewed = vi.fn()
-const emitFromLensActioned = vi.fn()
-const emitFromLensTabSwitch = vi.fn()
-const emitFromLensCommandCopy = vi.fn()
-const emitFromHeadlampViewed = vi.fn()
-const emitFromHeadlampActioned = vi.fn()
-const emitFromHeadlampTabSwitch = vi.fn()
-const emitFromHeadlampCommandCopy = vi.fn()
+const analyticsMocks = vi.hoisted(() => ({
+  emitFromLensViewed: vi.fn(),
+  emitFromLensActioned: vi.fn(),
+  emitFromLensTabSwitch: vi.fn(),
+  emitFromLensCommandCopy: vi.fn(),
+  emitFromHeadlampViewed: vi.fn(),
+  emitFromHeadlampActioned: vi.fn(),
+  emitFromHeadlampTabSwitch: vi.fn(),
+  emitFromHeadlampCommandCopy: vi.fn(),
+}))
 
-vi.mock('../../lib/analytics', () => ({
+const {
   emitFromLensViewed,
   emitFromLensActioned,
   emitFromLensTabSwitch,
@@ -20,6 +22,10 @@ vi.mock('../../lib/analytics', () => ({
   emitFromHeadlampActioned,
   emitFromHeadlampTabSwitch,
   emitFromHeadlampCommandCopy,
+} = analyticsMocks
+
+vi.mock('../../lib/analytics', () => ({
+  ...analyticsMocks,
   emitInstallCommandCopied: vi.fn(),
 }))
 
