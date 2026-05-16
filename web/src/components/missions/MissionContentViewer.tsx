@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../../lib/api'
 import { copyToClipboard } from '../../lib/clipboard'
 import {
@@ -70,6 +71,7 @@ export function useMissionContentViewer({
   fixerMissions,
   revealMissionInTree,
 }: UseMissionContentViewerOptions) {
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const [directoryEntries, setDirectoryEntries] = useState<BrowseEntry[]>([])
   const [selectedMission, setSelectedMission] = useState<MissionExport | null>(null)
@@ -294,12 +296,12 @@ export function useMissionContentViewer({
     if (result.valid) {
       emitFixerImported(mission.title, mission.cncfProject)
       onImport(mission)
-      showToast(`Imported "${mission.title}"`, 'success')
+      showToast(t('missions.browser.importSuccess', { title: mission.title }), 'success')
       pendingImportRef.current = null
       setScanResult(null)
     }
     setIsScanning(false)
-  }, [onImport, showToast])
+  }, [onImport, showToast, t])
 
   const handleScanDismiss = useCallback(() => {
     pendingImportRef.current = null
