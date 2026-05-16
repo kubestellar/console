@@ -56,6 +56,8 @@ interface LaunchSequenceProps {
   onComplete: (dashboardId?: string) => void
   /** Close the Mission Control dialog entirely */
   onClose?: () => void
+  /** Initiate rollback of changes made by failed projects */
+  onRollback?: () => void
 }
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -92,7 +94,8 @@ export function LaunchSequence({
   state,
   onUpdateProgress,
   onComplete,
-  onClose }: LaunchSequenceProps) {
+  onClose,
+  onRollback }: LaunchSequenceProps) {
   const { startMission, missions } = useMissions()
   const [isStarted, setIsStarted] = useState(false)
   const progressRef = useRef<PhaseProgress[]>(state.launchProgress)
@@ -625,8 +628,19 @@ export function LaunchSequence({
           animate={{ opacity: 1, y: 0 }}
           className="flex justify-center gap-3 pt-4"
         >
+          {!allSuccess && onRollback && (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RotateCcw className="w-3 h-3" />}
+              onClick={onRollback}
+              data-testid="mission-control-rollback"
+            >
+              Rollback Changes
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => onClose ? onClose() : onComplete()}>
-            Close
+            {!allSuccess ? 'Close Mission' : 'Close'}
           </Button>
         </motion.div>
       )}
