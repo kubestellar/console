@@ -210,11 +210,13 @@ export const QuantumQubitGrid: React.FC = () => {
     }
   }, [qubitData])
 
-  // Emit pattern changes to trigger histogram refresh (including empty patterns for cleared results)
+  // Emit pattern changes to trigger histogram refresh.
+  // This includes empty patterns (cleared results, reset circuit, or fetch errors)
+  // so the histogram can react to all quantum state transitions, not just successful runs.
   useEffect(() => {
-    if (qubitData) {
-      notifyPatternChange(qubitData.pattern || '')
-    }
+    // Always notify, even when qubitData is null (representing cleared/reset state)
+    const pattern = qubitData?.pattern ?? ''
+    notifyPatternChange(pattern)
   }, [qubitData])
 
   const svgContent = useMemo(() => {

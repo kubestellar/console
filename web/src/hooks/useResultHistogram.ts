@@ -159,10 +159,12 @@ export function useResultHistogram(
   const { isAuthenticated } = useAuth()
   const isQuantumDemoOnly = isQuantumForcedToDemo()
 
+  // Event-driven refresh only (no polling): histogram updates when qubit pattern changes.
+  // refreshInterval: 0 and autoRefresh: false disable all timer-based polling.
+  // The subscribeToPatternChanges listener below is the sole refresh trigger.
   const result = useCache<HistogramData>({
     key: `quantum-result-histogram:${sortBy}`,
-    category: 'realtime',
-    // Pattern-change trigger is primary; polling is disabled (event-driven refresh only)
+    category: 'default',
     refreshInterval: 0,
     autoRefresh: false,
     enabled: isAuthenticated && !isQuantumDemoOnly,
