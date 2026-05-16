@@ -54,6 +54,11 @@ const federationRequestTimeout = 60 * time.Second
 // handler deadline.
 const federationPerProviderTimeout = 10 * time.Second
 
+// maxConcurrentFederationProbes bounds the number of simultaneous
+// (provider, context) goroutines in fanOutDetect to prevent resource
+// exhaustion when many providers × contexts are configured.
+const maxConcurrentFederationProbes = 32
+
 // handleFederationDetect serves `GET /federation/detect[?cluster=<ctx>]` and
 // returns []ProviderHubStatus — one row per (registered provider, resolved
 // context) pair. When `cluster` is omitted the handler fans out over every
@@ -270,9 +275,12 @@ func fanOutDetect(
 	out := make(chan federation.ProviderHubStatus, len(jobs))
 	var wg sync.WaitGroup
 	wg.Add(len(jobs))
+	sem := make(chan struct{}, maxConcurrentFederationProbes)
 	for _, j := range jobs {
 		jobItem := j
+		sem <- struct{}{} // acquire semaphore slot
 		safego.GoWith("federation-detect/"+jobItem.hubContext+"/"+string(jobItem.provider.Name()), func() {
+			defer func() { <-sem }() // release semaphore slot
 			defer wg.Done()
 			out <- runOneDetect(ctx, jobItem.provider, jobItem.hubContext, getConfig)
 		})

@@ -36,6 +36,10 @@ func queryAllClusters[T any](
 	return queryAllClustersWithTimeout(ctx, clusters, mcpDefaultTimeout, queryFn)
 }
 
+// maxConcurrentClusterQueries bounds the number of simultaneous per-cluster
+// goroutines to prevent resource exhaustion in large fleets.
+const maxConcurrentClusterQueries = 32
+
 // queryAllClustersWithTimeout is like queryAllClusters but accepts a custom
 // per-cluster timeout. Use this when the default timeout is insufficient
 // (e.g., GPU node queries, pod listings on large clusters).
@@ -53,10 +57,14 @@ func queryAllClustersWithTimeout[T any](
 	clusterCtx, clusterCancel := context.WithCancel(ctx)
 	defer clusterCancel()
 
+	sem := make(chan struct{}, maxConcurrentClusterQueries)
+
 	for _, cl := range clusters {
 		wg.Add(1)
 		clusterName := cl.Name
+		sem <- struct{}{} // acquire semaphore slot
 		safego.GoWith("mcp-query/"+clusterName, func() {
+			defer func() { <-sem }() // release semaphore slot
 			defer wg.Done()
 			itemCtx, cancel := context.WithTimeout(clusterCtx, perClusterTimeout)
 			defer cancel()
