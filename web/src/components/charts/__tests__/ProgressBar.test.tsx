@@ -51,6 +51,11 @@ describe('ProgressBar', () => {
     expect(container.textContent).not.toContain('50%')
   })
 
+  it('hides header row when label empty and showValue=false', () => {
+    const { container } = render(<ProgressBar value={40} showValue={false} />)
+    expect(container.querySelector('.mb-1')).toBeNull()
+  })
+
   it('renders label text', () => {
     render(<ProgressBar value={25} max={100} label="CPU" />)
     expect(screen.getByText('CPU')).toBeDefined()
@@ -149,6 +154,21 @@ describe('SegmentedProgressBar', () => {
     const bar = container.querySelector('[style*="25%"]')
     expect(bar).toBeTruthy()
   })
+
+  it('hides legend when showLegend=false', () => {
+    const { container } = render(<SegmentedProgressBar segments={segments} showLegend={false} />)
+    expect(container.textContent).not.toContain('Critical')
+  })
+
+  it('falls back to generated segment labels', () => {
+    render(<SegmentedProgressBar segments={[{ value: 10, color: '#aaa' }]} />)
+    expect(screen.getByText('Segment 1')).toBeDefined()
+  })
+
+  it('handles empty segments by using fallback total', () => {
+    const { container } = render(<SegmentedProgressBar segments={[]} />)
+    expect(container.querySelectorAll('[style*="width"]').length).toBe(0)
+  })
 })
 
 describe('CircularProgress', () => {
@@ -167,5 +187,23 @@ describe('CircularProgress', () => {
       const { container } = render(<CircularProgress value={50} size={size} />)
       expect(container.querySelector('svg')).toBeTruthy()
     }
+  })
+
+  it('hides center percentage when showValue=false', () => {
+    const { container } = render(<CircularProgress value={75} showValue={false} />)
+    expect(container.textContent).not.toContain('75%')
+  })
+
+  it('uses formatValue when provided', () => {
+    render(<CircularProgress value={15} formatValue={(pct) => `${Math.round(pct)} points`} />)
+    expect(screen.getByText('15 points')).toBeDefined()
+  })
+
+  it('applies threshold-derived stroke color', () => {
+    const { container } = render(
+      <CircularProgress value={95} thresholds={{ warning: 60, critical: 90 }} />,
+    )
+    const circles = container.querySelectorAll('circle')
+    expect(circles[1].getAttribute('stroke')).toBe('#ef4444')
   })
 })
