@@ -137,15 +137,15 @@ async function fetchWorkloadsViaAgent(opts?: {
         let ws: Workload['status'] = 'Running'
         if (st === 'failed') ws = 'Failed'
         else if (st === 'deploying') ws = 'Pending'
-        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+        else if (Number(d.readyReplicas ?? 0) < Number(d.replicas ?? 0)) ws = 'Degraded'
         return {
           name: String(d.name || ''),
           namespace: String(d.namespace || 'default'),
           type: 'Deployment' as const,
           cluster: String(d.cluster || opts?.cluster || ''),
           targetClusters: [String(d.cluster || opts?.cluster || '')],
-          replicas: Number(d.replicas || 1),
-          readyReplicas: Number(d.readyReplicas || 0),
+          replicas: Number(d.replicas ?? 0),
+          readyReplicas: Number(d.readyReplicas ?? 0),
           status: ws,
           image: String(d.image || ''),
           createdAt: new Date().toISOString(),
@@ -192,15 +192,15 @@ async function fetchWorkloadsViaAgent(opts?: {
         let ws: Workload['status'] = 'Running'
         if (st === 'failed') ws = 'Failed'
         else if (st === 'deploying') ws = 'Pending'
-        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+        else if (Number(d.readyReplicas ?? 0) < Number(d.replicas ?? 0)) ws = 'Degraded'
         return {
           name: String(d.name || ''),
           namespace: String(d.namespace || 'default'),
           type: 'Deployment' as const,
           cluster: name,
           targetClusters: [name],
-          replicas: Number(d.replicas || 1),
-          readyReplicas: Number(d.readyReplicas || 0),
+          replicas: Number(d.replicas ?? 0),
+          readyReplicas: Number(d.readyReplicas ?? 0),
           status: ws,
           image: String(d.image || ''),
           createdAt: new Date().toISOString() }
