@@ -44,13 +44,37 @@ function useStellarSource() {
   const [watches, setWatches] = useState<StellarWatch[]>([])
   const [nudge, setNudge] = useState<StellarObservation | null>(null)
   const [catchUp, setCatchUp] = useState<CatchUpState | null>(null)
-  const [providerSession, setProviderSession] = useState<ProviderSession | null>(null)
+  const [providerSession, setProviderSession] = useState<ProviderSession | null>(() => {
+    // #14201 — Initialize from the user's persisted AI agent selection so
+    // Stellar uses the same default provider the user chose in the navbar
+    // or mission sidebar, without requiring manual re-selection.
+    try {
+      const persisted = localStorage.getItem('kc_selected_agent')
+      if (persisted && persisted !== 'none') {
+        return { provider: persisted, model: '', source: 'user-default' as const, isCli: true }
+      }
+    } catch { /* localStorage unavailable */ }
+    return null
+  })
   const [solves, setSolves] = useState<StellarSolve[]>([])
   const [solveProgress, setSolveProgress] = useState<Record<string, StellarSolveProgress>>({})
   const [activity, setActivity] = useState<StellarActivity[]>([])
   const esRef = useRef<EventSource | null>(null)
   const reconnectRef = useRef<() => void>(() => {})
   const reconnectDelay = useRef(STELLAR_RECONNECT_BASE_MS)
+
+  // #14201 — Sync Stellar provider with user's agent selection changes
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== 'kc_selected_agent') return
+      const agent = e.newValue
+      if (agent && agent !== 'none') {
+        setProviderSession({ provider: agent, model: '', source: 'user-default', isCli: true })
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   const refreshState = useCallback(async () => {
     const results = await Promise.allSettled([
