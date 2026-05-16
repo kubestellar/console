@@ -15,7 +15,8 @@ describe('Slider', () => {
 
   it('does not render a label element when label prop is omitted', () => {
     render(<Slider value={5000} onChange={() => {}} />)
-    expect(screen.queryByRole('label')).not.toBeInTheDocument()
+    // There should be no <label> element in the DOM
+    expect(document.querySelector('label')).not.toBeInTheDocument()
   })
 
   it('renders the label text when label prop is provided', () => {
