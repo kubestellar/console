@@ -12,6 +12,10 @@ vi.mock('../../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: vi.fn(),
 }))
 
+vi.mock('../../hooks/mcp/shared', () => ({
+  agentFetch: vi.fn(),
+}))
+
 import {
   getNotificationCooldown,
   isClusterUnreachable,
@@ -26,9 +30,11 @@ import {
   DEFAULT_NOTIFICATION_COOLDOWN_MS,
 } from '../alertStorage'
 import { sendNotificationWithDeepLink } from '../../hooks/useDeepLink'
+import { agentFetch } from '../../hooks/mcp/shared'
 import type { AlertRule, Alert, AlertChannel } from '../../types/alerts'
 
 const mockSendNotification = sendNotificationWithDeepLink as ReturnType<typeof vi.fn>
+const mockAgentFetch = vi.mocked(agentFetch)
 
 function makeRule(overrides: Partial<AlertRule> = {}): AlertRule {
   return {
@@ -56,6 +62,7 @@ function makeAlert(overrides: Partial<Alert> = {}): Alert {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockAgentFetch.mockReset()
 })
 
 afterEach(() => {
@@ -218,21 +225,19 @@ describe('dispatchNotification', () => {
 
 describe('sendNotifications', () => {
   it('skips when token is null', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
     await sendNotifications(makeAlert(), [], null, 'http://localhost', 5000)
-    expect(fetchSpy).not.toHaveBeenCalled()
-    fetchSpy.mockRestore()
+    expect(mockAgentFetch).not.toHaveBeenCalled()
   })
 
   it('sends POST request with auth token', async () => {
     const mockResponse = { ok: true, json: () => Promise.resolve({}) }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as Response)
+    mockAgentFetch.mockResolvedValue(mockResponse as Response)
 
     const alert = makeAlert()
     const channels: AlertChannel[] = [{ type: 'browser', enabled: true } as AlertChannel]
     await sendNotifications(alert, channels, 'my-token', 'http://localhost:8080', 5000)
 
-    expect(fetchSpy).toHaveBeenCalledWith(
+    expect(mockAgentFetch).toHaveBeenCalledWith(
       'http://localhost:8080/api/notifications/send',
       expect.objectContaining({
         method: 'POST',
@@ -241,38 +246,34 @@ describe('sendNotifications', () => {
         }),
       })
     )
-    fetchSpy.mockRestore()
   })
 
   it('silently ignores 401 responses', async () => {
     const mockResponse = { ok: false, status: 401, json: () => Promise.resolve({}) }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as Response)
+    mockAgentFetch.mockResolvedValue(mockResponse as Response)
 
-    // Should not throw
     await sendNotifications(makeAlert(), [], 'token', 'http://localhost', 5000)
-    fetchSpy.mockRestore()
   })
 
   it('silently ignores 403 responses', async () => {
     const mockResponse = { ok: false, status: 403, json: () => Promise.resolve({}) }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as Response)
+    mockAgentFetch.mockResolvedValue(mockResponse as Response)
 
     await sendNotifications(makeAlert(), [], 'token', 'http://localhost', 5000)
-    fetchSpy.mockRestore()
   })
 
-  it('throws on non-auth error response', async () => {
+  it('warns on non-auth error response', async () => {
     const mockResponse = {
       ok: false,
       status: 500,
       json: () => Promise.resolve({ message: 'Internal error' }),
     }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as Response)
+    mockAgentFetch.mockResolvedValue(mockResponse as Response)
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    // sendNotifications catches errors internally, so it should not throw
     await sendNotifications(makeAlert(), [], 'token', 'http://localhost', 5000)
-    fetchSpy.mockRestore()
+
+    expect(consoleSpy).toHaveBeenCalledWith('Notification send failed:', 'Internal error')
     consoleSpy.mockRestore()
   })
 })
@@ -296,14 +297,11 @@ describe('sendBatchedNotifications', () => {
   }
 
   it('returns early for empty items array', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
     await sendBatchedNotifications([], 'token', 'http://localhost', 5000, mockSettled)
-    expect(fetchSpy).not.toHaveBeenCalled()
-    fetchSpy.mockRestore()
+    expect(mockAgentFetch).not.toHaveBeenCalled()
   })
 
   it('returns early when token is null', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
     await sendBatchedNotifications(
       [{ alert: makeAlert(), channels: [] }],
       null,
@@ -311,29 +309,25 @@ describe('sendBatchedNotifications', () => {
       5000,
       mockSettled
     )
-    expect(fetchSpy).not.toHaveBeenCalled()
-    fetchSpy.mockRestore()
+    expect(mockAgentFetch).not.toHaveBeenCalled()
   })
 
   it('sends notifications for each item', async () => {
     const mockResponse = { ok: true, json: () => Promise.resolve({}) }
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as Response)
+    mockAgentFetch.mockResolvedValue(mockResponse as Response)
 
     const items = [
       { alert: makeAlert({ id: '1' }), channels: [{ type: 'browser', enabled: true } as AlertChannel] },
       { alert: makeAlert({ id: '2' }), channels: [{ type: 'browser', enabled: true } as AlertChannel] },
     ]
     await sendBatchedNotifications(items, 'token', 'http://localhost:8080', 5000, mockSettled)
-    expect(fetchSpy).toHaveBeenCalledTimes(2)
-    fetchSpy.mockRestore()
+    expect(mockAgentFetch).toHaveBeenCalledTimes(2)
   })
 
   it('silently handles individual item failures', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network error'))
+    mockAgentFetch.mockRejectedValue(new Error('network error'))
 
     const items = [{ alert: makeAlert(), channels: [] }]
-    // Should not throw
     await sendBatchedNotifications(items, 'token', 'http://localhost', 5000, mockSettled)
-    fetchSpy.mockRestore()
   })
 })

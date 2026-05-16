@@ -11,6 +11,7 @@
 import type { AlertRule, Alert, AlertChannel } from '../types/alerts'
 import type { DeepLinkParams } from '../hooks/useDeepLink'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
+import { agentFetch } from '../hooks/mcp/shared'
 import {
   NOTIFICATION_COOLDOWN_BY_SEVERITY,
   DEFAULT_NOTIFICATION_COOLDOWN_MS,
@@ -103,6 +104,45 @@ export function dispatchNotification(
   sendNotificationWithDeepLink(title, body, deepLinkParams)
 }
 
+interface NotificationErrorResponse {
+  message?: string
+}
+
+async function sendSingleNotification(
+  alert: Alert,
+  channels: AlertChannel[],
+  token: string | null,
+  apiBase: string,
+  fetchTimeout: number,
+  fallbackMessage: string,
+  logUnexpectedErrors = false
+): Promise<void> {
+  try {
+    if (!token) return
+
+    const response = await agentFetch(`${apiBase}/api/notifications/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ alert, channels }),
+      signal: AbortSignal.timeout(fetchTimeout),
+    })
+
+    if (response.status === 401 || response.status === 403) return
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({})) as NotificationErrorResponse
+      throw new Error(data.message || fallbackMessage)
+    }
+  } catch (error: unknown) {
+    if (logUnexpectedErrors && error instanceof Error && !error.message.includes('fetch')) {
+      console.warn('Notification send failed:', error.message)
+    }
+  }
+}
+
 /**
  * Send notifications to configured channels
  *
@@ -116,33 +156,15 @@ export async function sendNotifications(
   apiBase: string,
   fetchTimeout: number
 ): Promise<void> {
-  try {
-    // Skip notification if not authenticated - notifications require login
-    if (!token) return
-
-    const response = await fetch(`${apiBase}/api/notifications/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ alert, channels }),
-      signal: AbortSignal.timeout(fetchTimeout) })
-
-    // Silently ignore auth errors - user may not be logged in
-    if (response.status === 401 || response.status === 403) return
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
-      throw new Error(data.message || 'Failed to send notifications')
-    }
-  } catch (error: unknown) {
-    // Silent failure - notifications are best-effort
-    // Only log unexpected errors (not network issues)
-    if (error instanceof Error && !error.message.includes('fetch')) {
-      console.warn('Notification send failed:', error.message)
-    }
-  }
+  await sendSingleNotification(
+    alert,
+    channels,
+    token,
+    apiBase,
+    fetchTimeout,
+    'Failed to send notifications',
+    true
+  )
 }
 
 /**
@@ -167,25 +189,14 @@ export async function sendBatchedNotifications(
     /** Maximum concurrent notification requests to avoid overwhelming the backend */
     const MAX_NOTIFICATION_CONCURRENCY = 3
     await settledWithConcurrency(
-      items.map(({ alert, channels }) => async () => {
-        try {
-          const response = await fetch(`${apiBase}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XMLHttpRequest',
-              Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ alert, channels }),
-            signal: AbortSignal.timeout(fetchTimeout) })
-          if (response.status === 401 || response.status === 403) return
-          if (!response.ok) {
-            const data = await response.json().catch(() => ({}))
-            throw new Error(data.message || 'Failed to send notification')
-          }
-        } catch {
-          // Silent failure - notifications are best-effort
-        }
-      }),
+      items.map(({ alert, channels }) => async () => sendSingleNotification(
+        alert,
+        channels,
+        token,
+        apiBase,
+        fetchTimeout,
+        'Failed to send notification'
+      )),
       MAX_NOTIFICATION_CONCURRENCY
     )
   } catch {
