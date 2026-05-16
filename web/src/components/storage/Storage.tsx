@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Database, AlertCircle } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
 import { useClusters } from '../../hooks/useMCP'
@@ -134,27 +134,41 @@ export function Storage() {
   const [pvcModalFilter, setPVCModalFilter] = useState<'Bound' | 'Pending' | 'all'>('all')
 
   // Filter clusters based on global selection
-  const filteredClusters = clusters.filter(c =>
-    isAllClustersSelected || globalSelectedClusters.includes(c.name)
+  const filteredClusters = useMemo(
+    () => clusters.filter(c =>
+      isAllClustersSelected || globalSelectedClusters.includes(c.name)
+    ),
+    [clusters, globalSelectedClusters, isAllClustersSelected]
   )
 
   // Reachable clusters are those not explicitly marked as unreachable
-  const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
+  const reachableClusters = useMemo(
+    () => filteredClusters.filter(c => c.reachable !== false),
+    [filteredClusters]
+  )
+
+  const reachableClusterNames = useMemo(
+    () => new Set(reachableClusters.map(cluster => cluster.name)),
+    [reachableClusters]
+  )
 
   // Filter PVCs by global selection (only from reachable clusters)
-  const filteredPVCs = pvcs.filter(p =>
-    isAllClustersSelected || (p.cluster && globalSelectedClusters.includes(p.cluster))
-  ).filter(p => {
-    const cluster = clusters.find(c => c.name === p.cluster)
-    return cluster?.reachable !== false
-  })
+  const filteredPVCs = useMemo(
+    () => pvcs.filter(pvc => {
+      const clusterName = pvc.cluster
+      if (!clusterName || !reachableClusterNames.has(clusterName)) return false
+      return isAllClustersSelected || globalSelectedClusters.includes(clusterName)
+    }),
+    [pvcs, reachableClusterNames, isAllClustersSelected, globalSelectedClusters]
+  )
 
   // Calculate storage stats from reachable clusters only
-  const currentStats = {
+  const currentStats = useMemo(() => ({
     totalStorageGB: reachableClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0),
     totalPVCs: filteredPVCs.length,
     boundPVCs: filteredPVCs.filter(p => p.status === 'Bound').length,
-    pendingPVCs: filteredPVCs.filter(p => p.status === 'Pending').length }
+    pendingPVCs: filteredPVCs.filter(p => p.status === 'Pending').length,
+  }), [reachableClusters, filteredPVCs])
 
   // Check if we have actual data (not just loading state) — storage data is valid
   // regardless of nodeCount (#6808). Use filteredPVCs (not global pvcs) so that

@@ -70,6 +70,15 @@ function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; 
 
 type SortField = 'severity' | 'time'
 
+const mapAlertSeverityToGlobal = (alertSeverity: AlertSeverity): SeverityLevel[] => {
+  switch (alertSeverity) {
+    case 'critical': return ['critical']
+    case 'warning': return ['warning']
+    case 'info': return ['info']
+    default: return ['info']
+  }
+}
+
 const ALERT_ROW_ESTIMATED_HEIGHT_PX = 144
 const ALERT_LIST_OVERSCAN_COUNT = 8
 const ALERT_LIST_ITEM_GAP_PX = 8
@@ -108,25 +117,15 @@ export function ActiveAlerts() {
   const dnd = useDoNotDisturb()
 
   // Combine active and acknowledged alerts when toggle is on
-  const allAlertsToShow = (() => {
+  const allAlertsToShow = useMemo(() => {
     if (showAcknowledged) {
       return [...activeAlerts, ...acknowledgedAlerts]
     }
     return activeAlerts
-  })()
-
-  // Map AlertSeverity to global SeverityLevel for filtering
-  const mapAlertSeverityToGlobal = (alertSeverity: AlertSeverity): SeverityLevel[] => {
-    switch (alertSeverity) {
-      case 'critical': return ['critical']
-      case 'warning': return ['warning']
-      case 'info': return ['info']
-      default: return ['info']
-    }
-  }
+  }, [showAcknowledged, activeAlerts, acknowledgedAlerts])
 
   // Pre-filter by severity and global custom filter (these are outside useCardData)
-  const severityFilteredAlerts = (() => {
+  const severityFilteredAlerts = useMemo(() => {
     let result = allAlertsToShow
 
     // Apply global severity filter
@@ -148,7 +147,7 @@ export function ActiveAlerts() {
     }
 
     return result
-  })()
+  }, [allAlertsToShow, isAllSeveritiesSelected, selectedSeverities, customFilter])
 
   const groupedAlerts = useMemo(
     () => groupAlertsForDisplay(severityFilteredAlerts),

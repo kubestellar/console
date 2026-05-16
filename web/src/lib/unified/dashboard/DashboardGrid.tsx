@@ -4,7 +4,7 @@
  * Renders a responsive grid of cards with optional drag-and-drop support.
  */
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useMemo, useCallback } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -85,10 +85,18 @@ export function DashboardGrid({
   )
 
   // Get the active card for drag overlay
-  const activeCard = (() => {
+  const activeCard = useMemo(() => {
     if (!activeId) return null
     return cards.find((c) => c.id === activeId) || null
-  })()
+  }, [activeId, cards])
+
+  const handleRemoveCard = useCallback((cardId: string) => {
+    onRemoveCard?.(cardId)
+  }, [onRemoveCard])
+
+  const handleConfigureCard = useCallback((cardId: string) => {
+    onConfigureCard?.(cardId)
+  }, [onConfigureCard])
 
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
@@ -130,10 +138,8 @@ export function DashboardGrid({
             placement={placement}
             isDraggable={enableDragDrop}
             isLoading={isLoading}
-            onRemove={onRemoveCard ? () => onRemoveCard(placement.id) : undefined}
-            onConfigure={
-              onConfigureCard ? () => onConfigureCard(placement.id) : undefined
-            }
+            onRemoveCard={onRemoveCard ? handleRemoveCard : undefined}
+            onConfigureCard={onConfigureCard ? handleConfigureCard : undefined}
           />
         ))}
       </div>
@@ -181,8 +187,8 @@ interface DashboardCardWrapperProps {
   isDraggable?: boolean
   isOverlay?: boolean
   isLoading?: boolean
-  onRemove?: () => void
-  onConfigure?: () => void
+  onRemoveCard?: (cardId: string) => void
+  onConfigureCard?: (cardId: string) => void
 }
 
 function DashboardCardWrapper({
@@ -190,8 +196,8 @@ function DashboardCardWrapper({
   isDraggable = false,
   isOverlay = false,
   isLoading = false,
-  onRemove,
-  onConfigure }: DashboardCardWrapperProps) {
+  onRemoveCard,
+  onConfigureCard }: DashboardCardWrapperProps) {
   // Get sortable props if draggable
   const {
     attributes,
@@ -244,6 +250,14 @@ function DashboardCardWrapper({
           opacity: isDragging ? 0.5 : 1 }
       : {}) }
 
+  const handleRemove = useCallback(() => {
+    onRemoveCard?.(placement.id)
+  }, [onRemoveCard, placement.id])
+
+  const handleConfigure = useCallback(() => {
+    onConfigureCard?.(placement.id)
+  }, [onConfigureCard, placement.id])
+
   // Fallback: component-only cards (no config file) render directly via CardWrapper
   const DirectComponent = !cardConfig && cardTypeKey ? getCardComponent(cardTypeKey) : undefined
 
@@ -292,8 +306,8 @@ function DashboardCardWrapper({
             title={placement.title}
             cardWidth={placement.position?.w || 4}
             dragHandle={dragHandleNode}
-            onRemove={onRemove}
-            onConfigure={onConfigure}
+            onRemove={onRemoveCard ? handleRemove : undefined}
+            onConfigure={onConfigureCard ? handleConfigure : undefined}
           >
             <Suspense fallback={<div className="h-full animate-pulse" />}>
               <DirectComponent config={placement.config as Record<string, unknown> | undefined} />
