@@ -48,6 +48,8 @@ interface MissionControlDialogProps {
   initialKubaraChart?: string
   /** Base64-encoded plan from a deep link — opens in read-only review mode */
   reviewPlanEncoded?: string
+  /** Changes when sidebar CTAs should force a brand-new Mission Control session. */
+  freshSessionToken?: number
 }
 
 const PHASE_STEPS: {
@@ -79,7 +81,7 @@ const PHASE_STEPS: {
 /** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
 const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
 
-export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded }: MissionControlDialogProps) {
+export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded, freshSessionToken }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
   const { state } = mc
@@ -87,6 +89,15 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const [reviewNotes, setReviewNotes] = useState<string | undefined>()
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
   const launchSubmittingRef = useRef(false)
+
+  useEffect(() => {
+    if (!open || freshSessionToken === undefined) return
+    if (reviewPlanEncoded || initialKubaraChart) return
+    setIsReviewMode(false)
+    setReviewNotes(undefined)
+    mc.reset()
+    setHighestReached(0)
+  }, [open, freshSessionToken, reviewPlanEncoded, initialKubaraChart]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open || !reviewPlanEncoded) return

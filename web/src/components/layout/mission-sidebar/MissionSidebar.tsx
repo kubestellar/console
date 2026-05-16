@@ -219,6 +219,8 @@ export function MissionSidebar() {
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
+  /** Increments when sidebar CTAs should force a brand-new Mission Control session. */
+  const [missionControlFreshSessionToken, setMissionControlFreshSessionToken] = useState<number | undefined>(undefined)
   /** Kubara chart name to pre-populate in Mission Control Phase 1 (#8483) */
   const [pendingKubaraChart, setPendingKubaraChart] = useState<string | undefined>(undefined)
   /** Base64-encoded plan from a deep link — opens Mission Control in review mode */
@@ -346,6 +348,20 @@ export function MissionSidebar() {
     setShowBrowser(false)
   }
 
+  const openFreshMissionControl = useCallback(() => {
+    setPendingKubaraChart(undefined)
+    setPendingReviewPlan(undefined)
+    setMissionControlFreshSessionToken((prev) => (prev ?? 0) + 1)
+    setShowMissionControl(true)
+  }, [])
+
+  const openExistingMissionControl = useCallback(() => {
+    setPendingKubaraChart(undefined)
+    setPendingReviewPlan(undefined)
+    setMissionControlFreshSessionToken(undefined)
+    setShowMissionControl(true)
+  }, [])
+
   useEffect(() => {
     if (isMissionBrowserDeepLink) {
       setShowBrowser(true)
@@ -422,14 +438,16 @@ export function MissionSidebar() {
   // shareable URL and makes Missions.spec.ts e2e tests actually work.
   useEffect(() => {
     if (missionControlParam === 'open') {
-      setShowMissionControl(true)
+      openFreshMissionControl()
       const newParams = new URLSearchParams(searchParams)
       newParams.delete(MISSION_CONTROL_QUERY_KEY)
       setSearchParams(newParams, { replace: true })
     } else if (missionControlParam === 'review') {
       const planParam = searchParams.get(MISSION_PLAN_QUERY_KEY)
       if (planParam) {
+        setPendingKubaraChart(undefined)
         setPendingReviewPlan(planParam)
+        setMissionControlFreshSessionToken(undefined)
         setShowMissionControl(true)
       }
       const newParams = new URLSearchParams(searchParams)
@@ -437,7 +455,7 @@ export function MissionSidebar() {
       newParams.delete(MISSION_PLAN_QUERY_KEY)
       setSearchParams(newParams, { replace: true })
     }
-  }, [missionControlParam, searchParams, setSearchParams])
+  }, [missionControlParam, openFreshMissionControl, searchParams, setSearchParams])
 
   // Direct import from landing page — fetch mission content and import it
   // without opening the MissionBrowser dialog
@@ -1018,7 +1036,7 @@ export function MissionSidebar() {
                   Browse Community
                 </button>
                 <button
-                  onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
+                  onClick={() => { setShowAddMenu(false); openFreshMissionControl() }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
                   <Rocket className="w-4 h-4 text-muted-foreground" />
@@ -1275,7 +1293,7 @@ export function MissionSidebar() {
               <span className="text-left leading-snug">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
-              onClick={() => setShowMissionControl(true)}
+              onClick={openFreshMissionControl}
               className={cn(
                 'flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
                 MISSION_CONTROL_BUTTON_CLASSES
@@ -1452,7 +1470,7 @@ export function MissionSidebar() {
               <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
-              onClick={() => setShowMissionControl(true)}
+              onClick={openFreshMissionControl}
               className={cn(
                 'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
                 MISSION_CONTROL_BUTTON_CLASSES
@@ -1561,7 +1579,7 @@ export function MissionSidebar() {
                     setActiveMission(mission.id)
                     // Also open Mission Control dialog for planning missions
                     if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
-                      setShowMissionControl(true)
+                      openExistingMissionControl()
                     }
                   }}
                   onDismiss={() => dismissMission(mission.id)}
@@ -1572,7 +1590,7 @@ export function MissionSidebar() {
                     setActiveMission(mission.id)
                     setFullScreen(true)
                     if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
-                      setShowMissionControl(true)
+                      openExistingMissionControl()
                     }
                   }}
                   isCollapsed={collapsedMissions.has(mission.id)}
@@ -1666,6 +1684,8 @@ export function MissionSidebar() {
           onUseInMissionControl={(chartName: string) => {
             closeMissionBrowser()
             setPendingKubaraChart(chartName)
+            setPendingReviewPlan(undefined)
+            setMissionControlFreshSessionToken(undefined)
             setShowMissionControl(true)
           }}
         />
@@ -1678,9 +1698,11 @@ export function MissionSidebar() {
           setShowMissionControl(false)
           setPendingKubaraChart(undefined)
           setPendingReviewPlan(undefined)
+          setMissionControlFreshSessionToken(undefined)
         }}
         initialKubaraChart={pendingKubaraChart}
         reviewPlanEncoded={pendingReviewPlan}
+        freshSessionToken={missionControlFreshSessionToken}
       />
 
       {/* Standalone Orbit Mission Dialog */}
