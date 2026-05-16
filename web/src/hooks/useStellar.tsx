@@ -487,9 +487,9 @@ function useStellarSource() {
 // Previously each component that called useStellar() opened its own SSE
 // connection and held its own state. That broke toast delivery on pages that
 // didn't mount the Stellar page itself — events arrived at one instance, the
-// toast bridge held a different empty state. Hoisting to a Provider in App.tsx
-// gives the whole app one connection, one state, and matches the
-// MissionProvider / AlertsProvider pattern.
+// toast bridge held a different empty state. Hoisting to a Provider in the
+// protected app route gives the whole app one connection, one state, and
+// matches the MissionProvider / AlertsProvider pattern.
 // ---------------------------------------------------------------------------
 
 type StellarContextValue = ReturnType<typeof useStellarSource>

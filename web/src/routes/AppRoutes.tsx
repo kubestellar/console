@@ -29,6 +29,7 @@ import { UnifiedDemoProvider } from '../lib/unified/demo'
 import { ChunkErrorBoundary } from '../components/ChunkErrorBoundary'
 import { AppErrorBoundary } from '../components/AppErrorBoundary'
 import { PageErrorBoundary } from '../components/PageErrorBoundary'
+import { StellarProvider } from '../hooks/useStellar'
 import { ROUTES } from '../config/routes'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { safeGet, safeSet } from '../lib/safeLocalStorage'
@@ -298,7 +299,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
             warm-nav is near-instant (no unmount/remount). */}
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute><StellarProvider><Layout /></StellarProvider></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path={ROUTES.DASHBOARD_ALIAS} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.MISSIONS} element={<Dashboard />} />
