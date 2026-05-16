@@ -149,7 +149,7 @@ export function CompetitorLandingPage({
         onCommandCopy={onCommandCopy}
       />
 
-      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
+      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-slate-950">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to explore?</h2>
           <p className="text-slate-400 mb-10 text-lg">{footerDescription}</p>
