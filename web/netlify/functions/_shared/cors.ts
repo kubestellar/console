@@ -23,6 +23,18 @@
 /** Production origin for the hosted console. */
 const PROD_ORIGIN = "https://console.kubestellar.io";
 
+/**
+ * KubeStellar docs site origins. These are first-party sites in the same
+ * org that legitimately call Netlify Functions (e.g. the leaderboard page
+ * on kubestellar.io calls /api/affiliate/clicks for the Social column).
+ * Netlify preview deploys for the docs site are also included so that
+ * docs PRs can test against the staging console API.
+ */
+const DOCS_ORIGINS = new Set<string>([
+  "https://kubestellar.io",
+  "https://www.kubestellar.io",
+]);
+
 /** Netlify preview deploys — `{branch}--{sitename}.netlify.app`. */
 const NETLIFY_PREVIEW_RE = /^https:\/\/[a-z0-9-]+--kubestellar-console\.netlify\.app$/i;
 
@@ -30,11 +42,15 @@ const NETLIFY_PREVIEW_RE = /^https:\/\/[a-z0-9-]+--kubestellar-console\.netlify\
 const NETLIFY_DEPLOY_RE =
   /^https:\/\/deploy-preview-\d+--kubestellar-console\.netlify\.app$/i;
 
+/** Netlify preview/branch deploys for the kubestellar docs site. */
+const NETLIFY_DOCS_RE =
+  /^https:\/\/[a-z0-9-]+--kubestellar-docs\.netlify\.app$/i;
+
 /** Local development (Vite default + project-standard port 5174). */
 const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1):(5173|5174|8080|8888)$/;
 
 /** Static allowlist of exact-match allowed origins. */
-const ALLOWED_EXACT = new Set<string>([PROD_ORIGIN]);
+const ALLOWED_EXACT = new Set<string>([PROD_ORIGIN, ...DOCS_ORIGINS]);
 
 /**
  * Return true if the given Origin header value is allowed to make CORS
@@ -45,6 +61,7 @@ export function isAllowedOrigin(origin: string | null | undefined): boolean {
   if (ALLOWED_EXACT.has(origin)) return true;
   if (NETLIFY_PREVIEW_RE.test(origin)) return true;
   if (NETLIFY_DEPLOY_RE.test(origin)) return true;
+  if (NETLIFY_DOCS_RE.test(origin)) return true;
   if (LOCALHOST_RE.test(origin)) return true;
   return false;
 }
