@@ -34,6 +34,7 @@ env:
   NODE_VERSION: '22'
   GO_VERSION_FILE: go.mod
   KIND_VERSION: 'v0.27.0'
+  KUBECTL_VERSION: 'v1.31.4'
   BACKEND_PORT: '8080'
   AGENT_PORT: '8585'
   HEALTH_TIMEOUT_S: '60'
@@ -114,9 +115,8 @@ jobs:
 
       - name: Install kubectl
         run: |
-          KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/stable.txt)"
           curl -Lo /usr/local/bin/kubectl \
-            "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+            "https://dl.k8s.io/release/${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl"
           chmod +x /usr/local/bin/kubectl
           kubectl version --client
 
@@ -215,7 +215,7 @@ jobs:
           name: mc-kind-e2e-results-${{ github.run_id }}
           path: |
             web/playwright-report/
-            test-results/kind-e2e-*.png
+            web/test-results/kind-e2e-*.png
           retention-days: 14
 
       # ------------------------------------------------------------------
