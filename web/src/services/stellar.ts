@@ -17,7 +17,7 @@ export interface AskResponse {
   executionId: string
   model: string
   provider: string
-  providerSource: 'request' | 'user-default' | 'env-default' | 'fallback'
+  providerSource: 'request' | 'user-default' | 'env-default' | 'fallback' | 'auto'
   tokens: number
   durationMs: number
   fallbackUsed?: boolean

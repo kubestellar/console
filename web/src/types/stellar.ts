@@ -78,7 +78,7 @@ export interface ProviderSession {
   provider: string
   model: string
   configId?: string
-  source: 'request' | 'user-default' | 'env-default' | 'fallback'
+  source: 'request' | 'user-default' | 'env-default' | 'fallback' | 'auto'
   isCli?: boolean
 }
 

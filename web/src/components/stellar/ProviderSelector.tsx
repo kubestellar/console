@@ -114,7 +114,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
           {/* Auto / default */}
           <button
             onClick={() => {
-              onSelect({ provider: '', model: '', source: 'fallback' })
+              onSelect({ provider: '', model: '', source: 'auto' })
               setOpen(false)
             }}
             style={{

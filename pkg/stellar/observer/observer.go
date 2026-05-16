@@ -42,7 +42,6 @@ type ObserverStore interface {
 	NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error)
 }
 
-// TODO(stellar): wire ResolveScannerProvider for batched scanning (§3.1+§3.2)
 // resolveProviderForUser returns a Resolve result that prefers the user's
 // per-user default provider (saved by the Stellar settings UI in
 // stellar_provider_configs) over the global registry default. Falls through to
@@ -76,6 +75,19 @@ func (o *Observer) resolveProviderForUser(ctx context.Context, userID string) pr
 	model := strings.TrimSpace(cfg.Model)
 	userCfg := &providers.ResolvedUserProvider{Provider: p, Model: model, ConfigID: cfg.ID}
 	return o.registry.Resolve("", "", userCfg)
+}
+
+// resolveScannerProvider returns a provider optimised for background batch
+// scans: prefers local Ollama (cheap, no API cost) and falls back to a cloud
+// provider when Ollama is unavailable.  Used for proactive nudges and watch
+// refresh — paths where the user is not waiting interactively.
+func (o *Observer) resolveScannerProvider(ctx context.Context, userID string) providers.ResolvedProvider {
+	p, model, err := o.registry.ResolveScannerProvider(ctx, userID)
+	if err != nil || p == nil {
+		slog.Debug("stellar/observer: scanner provider unavailable, falling back to user provider", "userID", userID, "error", err)
+		return o.resolveProviderForUser(ctx, userID)
+	}
+	return providers.ResolvedProvider{Provider: p, Model: model, Source: "scanner"}
 }
 
 type K8sClient interface {
@@ -283,15 +295,13 @@ func (o *Observer) generateNudges(ctx context.Context, userIDs []string) {
 		count++
 	}
 
-	// Use the first user's saved provider for this cross-cutting nudge. Most
-	// console setups have a single primary operator; multi-tenant deployments
-	// already serialize nudges per-user via the iteration below, so picking
-	// the first userID's provider is the simplest correct choice.
+	// Proactive nudges are background batch scans — prefer the local Ollama
+	// scanner provider to save API costs, falling back to a cloud provider.
 	primaryUser := ""
 	if len(userIDs) > 0 {
 		primaryUser = userIDs[0]
 	}
-	resolved := o.resolveProviderForUser(ctx, primaryUser)
+	resolved := o.resolveScannerProvider(ctx, primaryUser)
 	if resolved.Provider == nil {
 		return
 	}
@@ -578,10 +588,9 @@ func (o *Observer) checkWatch(ctx context.Context, w store.StellarWatch) {
 		w.Cluster, w.Namespace, w.ResourceKind, w.ResourceName,
 		w.Reason, resourceState)
 
-	// 3. Call LLM (low temp, fast model, max 150 tokens) — using the watch
-	//    owner's saved provider so user-level Anthropic/OpenAI configs work
-	//    even without env-var fallbacks.
-	resolved := o.resolveProviderForUser(ctx, w.UserID)
+	// 3. Call LLM (low temp, fast model, max 150 tokens) — watch checks are
+	//    background batch scans, so prefer the local Ollama scanner provider.
+	resolved := o.resolveScannerProvider(ctx, w.UserID)
 	if resolved.Provider == nil {
 		return
 	}
