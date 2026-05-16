@@ -116,50 +116,67 @@ func (b *Bridge) Start(ctx context.Context) error {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 3)
 
-	// Start kubestellar-ops if path is configured and binary exists
-	if b.config.KubestellarOpsPath != "" {
-		if _, err := exec.LookPath(b.config.KubestellarOpsPath); err != nil {
-			slog.Info("kubestellar-ops binary not found on PATH — MCP ops tools will be unavailable", "path", b.config.KubestellarOpsPath, "install", "brew install kubestellar/tap/kubestellar-ops")
-		} else {
-			wg.Add(1)
-			safego.Go(func() {
-				defer wg.Done()
-				if err := b.startOpsClient(ctx); err != nil {
-					errCh <- fmt.Errorf("ops client: %w", err)
-				}
-			})
+	startConfiguredClient := func(clientName, binaryPath, missingMessage, installHint, errPrefix string, assign func(*Client)) {
+		if binaryPath == "" {
+			return
 		}
+		if _, err := exec.LookPath(binaryPath); err != nil {
+			args := []any{"path", binaryPath}
+			if installHint != "" {
+				args = append(args, "install", installHint)
+			}
+			slog.Info(missingMessage, args...)
+			return
+		}
+
+		wg.Add(1)
+		safego.Go(func() {
+			defer wg.Done()
+			client, err := b.startBinaryClient(ctx, clientName, binaryPath)
+			if err != nil {
+				errCh <- fmt.Errorf("%s client: %w", errPrefix, err)
+				return
+			}
+			assign(client)
+		})
 	}
 
-	// Start kubestellar-deploy if path is configured and binary exists
-	if b.config.KubestellarDeployPath != "" {
-		if _, err := exec.LookPath(b.config.KubestellarDeployPath); err != nil {
-			slog.Info("kubestellar-deploy binary not found on PATH — MCP deploy tools will be unavailable", "path", b.config.KubestellarDeployPath, "install", "brew install kubestellar/tap/kubestellar-deploy")
-		} else {
-			wg.Add(1)
-			safego.Go(func() {
-				defer wg.Done()
-				if err := b.startDeployClient(ctx); err != nil {
-					errCh <- fmt.Errorf("deploy client: %w", err)
-				}
-			})
-		}
-	}
-
-	// Start inspektor-gadget if path is configured and binary exists
-	if b.config.InspektorGadgetPath != "" {
-		if _, err := exec.LookPath(b.config.InspektorGadgetPath); err != nil {
-			slog.Info("inspektor-gadget MCP binary not found on PATH — Gadget tools will be unavailable", "path", b.config.InspektorGadgetPath)
-		} else {
-			wg.Add(1)
-			safego.Go(func() {
-				defer wg.Done()
-				if err := b.startGadgetClient(ctx); err != nil {
-					errCh <- fmt.Errorf("gadget client: %w", err)
-				}
-			})
-		}
-	}
+	startConfiguredClient(
+		"kubestellar-ops",
+		b.config.KubestellarOpsPath,
+		"kubestellar-ops binary not found on PATH — MCP ops tools will be unavailable",
+		"brew install kubestellar/tap/kubestellar-ops",
+		"ops",
+		func(client *Client) {
+			b.mu.Lock()
+			defer b.mu.Unlock()
+			b.opsClient = client
+		},
+	)
+	startConfiguredClient(
+		"kubestellar-deploy",
+		b.config.KubestellarDeployPath,
+		"kubestellar-deploy binary not found on PATH — MCP deploy tools will be unavailable",
+		"brew install kubestellar/tap/kubestellar-deploy",
+		"deploy",
+		func(client *Client) {
+			b.mu.Lock()
+			defer b.mu.Unlock()
+			b.deployClient = client
+		},
+	)
+	startConfiguredClient(
+		"inspektor-gadget",
+		b.config.InspektorGadgetPath,
+		"inspektor-gadget MCP binary not found on PATH — Gadget tools will be unavailable",
+		"",
+		"gadget",
+		func(client *Client) {
+			b.mu.Lock()
+			defer b.mu.Unlock()
+			b.gadgetClient = client
+		},
+	)
 
 	wg.Wait()
 	close(errCh)
@@ -220,70 +237,26 @@ func (b *Bridge) Stop() error {
 	return nil
 }
 
-func (b *Bridge) startOpsClient(ctx context.Context) error {
+// startBinaryClient creates and starts an MCP client for a binary.
+func (b *Bridge) startBinaryClient(ctx context.Context, name, binaryPath string) (*Client, error) {
 	args := []string{"--mcp-server"}
+	if name == "kubestellar-deploy" {
+		args[0] = "--mcp"
+	}
 	if b.config.Kubeconfig != "" {
 		args = append(args, "--kubeconfig", b.config.Kubeconfig)
 	}
 
-	client, err := NewClient(ctx, "kubestellar-ops", b.config.KubestellarOpsPath, args...)
+	client, err := NewClient(ctx, name, binaryPath, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := client.Start(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.opsClient = client
-
-	return nil
-}
-
-func (b *Bridge) startGadgetClient(ctx context.Context) error {
-	args := []string{"--mcp-server"}
-	if b.config.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", b.config.Kubeconfig)
-	}
-
-	client, err := NewClient(ctx, "inspektor-gadget", b.config.InspektorGadgetPath, args...)
-	if err != nil {
-		return err
-	}
-
-	if err := client.Start(ctx); err != nil {
-		return err
-	}
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.gadgetClient = client
-
-	return nil
-}
-
-func (b *Bridge) startDeployClient(ctx context.Context) error {
-	args := []string{"--mcp"}
-	if b.config.Kubeconfig != "" {
-		args = append(args, "--kubeconfig", b.config.Kubeconfig)
-	}
-
-	client, err := NewClient(ctx, "kubestellar-deploy", b.config.KubestellarDeployPath, args...)
-	if err != nil {
-		return err
-	}
-
-	if err := client.Start(ctx); err != nil {
-		return err
-	}
-
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.deployClient = client
-
-	return nil
+	return client, nil
 }
 
 // GetOpsTools returns the list of available ops tools

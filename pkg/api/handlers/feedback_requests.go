@@ -98,82 +98,29 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	// Validate input
-	if input.Title == "" || len(input.Title) < 10 {
-		return fiber.NewError(fiber.StatusBadRequest, "Title must be at least 10 characters")
-	}
-	if input.Description == "" || len(input.Description) < 20 {
-		return fiber.NewError(fiber.StatusBadRequest, "Description must be at least 20 characters")
-	}
-	if len(strings.Fields(input.Description)) < 3 {
-		return fiber.NewError(fiber.StatusBadRequest, "Description must contain at least 3 words")
-	}
-	if input.RequestType != models.RequestTypeBug && input.RequestType != models.RequestTypeFeature {
-		return fiber.NewError(fiber.StatusBadRequest, "Request type must be 'bug' or 'feature'")
-	}
-	if input.ParentIssueNumber != nil && *input.ParentIssueNumber < 1 {
-		return fiber.NewError(fiber.StatusBadRequest, "Parent issue number must be a positive integer")
+	targetRepo, targetRepoName, err := h.validateFeatureRequest(&input)
+	if err != nil {
+		return err
 	}
 
-	// Reject early if GitHub issue creation is not configured
-	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Issue submission is not available: FEEDBACK_GITHUB_TOKEN is not configured. "+
-			"Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. "+
-			"Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.")
-	}
-
-	// Determine target repo — default to console if not specified or invalid
-	targetRepo := input.TargetRepo
-	if targetRepo != models.TargetRepoConsole && targetRepo != models.TargetRepoDocs {
-		targetRepo = models.TargetRepoConsole
-	}
-
-	// Resolve the actual GitHub repo name based on target
-	targetRepoName := h.resolveRepoName(targetRepo)
-
-	// Get user info for the issue
 	user, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || user == nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
 	}
 
-	// Create feature request in database first
-	request := &models.FeatureRequest{
-		UserID:      userID,
-		Title:       input.Title,
-		Description: input.Description,
-		RequestType: input.RequestType,
-		TargetRepo:  targetRepo,
-		Status:      models.RequestStatusOpen,
+	request, err := h.persistRequest(c.UserContext(), userID, &input, targetRepo)
+	if err != nil {
+		return err
 	}
 
-	if err := h.store.CreateFeatureRequest(c.UserContext(), request); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create feature request")
-	}
-
-	// Per-user client credential used by the attribution proxy to
-	// verify submitter identity (never logged). Empty is fine — the
-	// proxy path is skipped in that case.
 	clientAuth := c.Get("X-KC-Client-Auth")
-
-	// Create GitHub issue (route to the correct repo). The issue itself is
-	// created synchronously so the client receives the issue number/URL in
-	// the response; screenshot comments are uploaded asynchronously below
-	// (#9898) so slow GitHub responses do not block Fiber workers.
-	issueNumber, issueWarning, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(c.UserContext(), request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, input.ParentIssueNumber, clientAuth)
+	issueNumber, issueWarning, validScreenshots, ssResult, err := h.notifyUpstream(c.UserContext(), request, user, targetRepoName, &input, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
-		// Clean up the orphaned database record. Log but don't fail the
-		// outer error path on cleanup failure — the upstream GitHub error
-		// is the useful signal to return.
 		if cErr := h.store.CloseFeatureRequest(c.UserContext(), request.ID, false); cErr != nil {
 			slog.Warn("[Feedback] failed to close orphaned feature request",
 				"request_id", request.ID, "error", cErr)
 		}
-		// #6186: distinguish an expired/invalid FEEDBACK_GITHUB_TOKEN (the
-		// GitHub API returned 401) from other upstream failures. The generic
-		// "create a GitHub OAuth app" guidance the client shows on generic
-		// errors misleads users whose real problem is a stale PAT.
 		if errors.Is(err, errGitHubUnauthorized) {
 			return fiber.NewError(fiber.StatusUnauthorized, "FEEDBACK_GITHUB_TOKEN is invalid or expired. Refresh the PAT in your .env and restart the console.")
 		}
@@ -182,21 +129,15 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		}
 		return fiber.NewError(fiber.StatusBadGateway, "Failed to create GitHub issue")
 	}
+
 	request.GitHubIssueNumber = &issueNumber
 	request.Status = models.RequestStatusOpen
-	// UpdateFeatureRequest writes user-visible state (issue number, status).
-	// A failure here means the client will see stale data — return 500.
 	if err := h.store.UpdateFeatureRequest(c.UserContext(), request); err != nil {
 		slog.Error("[Feedback] failed to persist GitHub issue number",
 			"request_id", request.ID, "issue", issueNumber, "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to persist feature request state")
 	}
 
-	// #9898: Upload screenshot comments asynchronously so slow GitHub
-	// responses cannot block the Fiber worker handling this request.
-	// The FeatureRequest + issue number are already persisted above, so
-	// a dropped screenshot does not lose the user's submission — it can
-	// be retried from the persisted record.
 	if len(validScreenshots) > 0 {
 		asyncCtx, cancel := context.WithTimeout(context.Background(), asyncScreenshotUploadTimeout)
 		safego.GoWith("feedback-screenshot-upload", func() {
@@ -205,7 +146,6 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create notification for the user
 	notifTitle := "Request Submitted"
 	actionURL := ""
 	if request.GitHubIssueNumber != nil {
@@ -225,14 +165,6 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 			"user", userID, "request_id", request.ID, "error", err)
 	}
 
-	// Return the request with screenshot queue status so the frontend can
-	// display an accurate message. #9898: with the async upload path,
-	// ScreenshotsUploaded now reports the number of screenshots queued
-	// for upload (validated data URIs) and ScreenshotsFailed reports
-	// data-URI validation failures. Per-comment upload failures are
-	// logged via slog in the background goroutine — surfacing them
-	// synchronously would re-introduce the blocking behavior this fix
-	// is removing.
 	type createResponse struct {
 		*models.FeatureRequest
 		ScreenshotsUploaded int    `json:"screenshots_uploaded"`
@@ -245,6 +177,62 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		ScreenshotsFailed:   ssResult.Failed,
 		Warning:             issueWarning,
 	})
+}
+
+// validateFeatureRequest validates the input and returns the target repo details.
+func (h *FeedbackHandler) validateFeatureRequest(input *models.CreateFeatureRequestInput) (models.TargetRepo, string, error) {
+	if input.Title == "" || len(input.Title) < 10 {
+		return "", "", fiber.NewError(fiber.StatusBadRequest, "Title must be at least 10 characters")
+	}
+	if input.Description == "" || len(input.Description) < 20 {
+		return "", "", fiber.NewError(fiber.StatusBadRequest, "Description must be at least 20 characters")
+	}
+	if len(strings.Fields(input.Description)) < 3 {
+		return "", "", fiber.NewError(fiber.StatusBadRequest, "Description must contain at least 3 words")
+	}
+	if input.RequestType != models.RequestTypeBug && input.RequestType != models.RequestTypeFeature {
+		return "", "", fiber.NewError(fiber.StatusBadRequest, "Request type must be 'bug' or 'feature'")
+	}
+	if input.ParentIssueNumber != nil && *input.ParentIssueNumber < 1 {
+		return "", "", fiber.NewError(fiber.StatusBadRequest, "Parent issue number must be a positive integer")
+	}
+
+	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
+		return "", "", fiber.NewError(fiber.StatusServiceUnavailable, "Issue submission is not available: FEEDBACK_GITHUB_TOKEN is not configured. "+
+			"Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. "+
+			"Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.")
+	}
+
+	targetRepo := input.TargetRepo
+	if targetRepo != models.TargetRepoConsole && targetRepo != models.TargetRepoDocs {
+		targetRepo = models.TargetRepoConsole
+	}
+
+	targetRepoName := h.resolveRepoName(targetRepo)
+	return targetRepo, targetRepoName, nil
+}
+
+// persistRequest creates the feature request in the database.
+func (h *FeedbackHandler) persistRequest(ctx context.Context, userID uuid.UUID, input *models.CreateFeatureRequestInput, targetRepo models.TargetRepo) (*models.FeatureRequest, error) {
+	request := &models.FeatureRequest{
+		UserID:      userID,
+		Title:       input.Title,
+		Description: input.Description,
+		RequestType: input.RequestType,
+		TargetRepo:  targetRepo,
+		Status:      models.RequestStatusOpen,
+	}
+
+	if err := h.store.CreateFeatureRequest(ctx, request); err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to create feature request")
+	}
+
+	return request, nil
+}
+
+// notifyUpstream creates the GitHub issue and returns issue details.
+func (h *FeedbackHandler) notifyUpstream(ctx context.Context, request *models.FeatureRequest, user *models.User, targetRepoName string, input *models.CreateFeatureRequestInput, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
+	return h.createGitHubIssueInRepo(ctx, request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, input.ParentIssueNumber, clientAuth)
 }
 
 func (h *FeedbackHandler) GetIssueLinkCapabilities(c *fiber.Ctx) error {

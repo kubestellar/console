@@ -99,61 +99,16 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validate URL length
-	if len(rawURL) > cardProxyMaxURLLen {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "URL too long",
-		})
-	}
-
-	// Parse and validate URL
-	parsed, err := url.Parse(rawURL)
+	host, err := h.validateProxyTarget(rawURL)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid URL",
-		})
+		return err
 	}
 
-	// Only allow http and https schemes
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Only http and https URLs are allowed",
-		})
-	}
-
-	// Block empty host
-	host := parsed.Hostname()
-	if host == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid URL: missing host",
-		})
-	}
-
-	// Block localhost synonyms
-	lowerHost := strings.ToLower(host)
-	if lowerHost == "localhost" || lowerHost == "0.0.0.0" || lowerHost == "[::1]" {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "Requests to localhost are not allowed",
-		})
-	}
-
-	// SSRF protection: private/internal IP blocking is enforced in the custom
-	// DialContext of cardProxyClient — checked at connection time, preventing
-	// DNS rebinding attacks.
-
-	// Build proxied request — GET only, tied to the client's request context
-	// so the proxy request is cancelled if the client disconnects.
-	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, rawURL, nil)
+	req, err := h.buildProxyRequest(c.Context(), rawURL, host)
 	if err != nil {
-		slog.Error("[CardProxy] failed to build request", "host", host, "error", err)
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": "Failed to create proxy request",
-		})
+		return err
 	}
-	req.Header.Set("User-Agent", "KubeStellar-Console-CardProxy/1.0")
-	req.Header.Set("Accept", "application/json, text/plain, */*")
 
-	// Execute request
 	resp, err := cardProxyClient.Do(req)
 	if err != nil {
 		slog.Error("[CardProxy] request failed", "host", host, "error", err)
@@ -163,7 +118,6 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	// Detect redirects and return a helpful error instead of an opaque 3xx
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		location := resp.Header.Get("Location")
 		slog.Info("[CardProxy] redirect detected", "host", host, "status", resp.StatusCode, "location", location)
@@ -172,7 +126,6 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Read response with size limit
 	limitedReader := io.LimitReader(resp.Body, cardProxyMaxResponseBytes+1)
 	body, err := io.ReadAll(limitedReader)
 	if err != nil {
@@ -188,12 +141,55 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Log successful proxy requests for audit trail
 	slog.Info("[CardProxy] proxied request", "clientIP", c.IP(), "host", host, "status", resp.StatusCode, "bytes", len(body))
 
-	// Sanitize Content-Type to prevent reflected XSS (#7573).
-	// If the upstream returns HTML/XML/SVG, override to application/octet-stream
-	// so the browser never interprets attacker-controlled markup under our origin.
+	h.sanitizeResponse(c, resp)
+
+	return c.Status(resp.StatusCode).Send(body)
+}
+
+// validateProxyTarget validates the target URL for SSRF protection.
+func (h *CardProxyHandler) validateProxyTarget(rawURL string) (string, error) {
+	if len(rawURL) > cardProxyMaxURLLen {
+		return "", fiber.NewError(fiber.StatusBadRequest, "URL too long")
+	}
+
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid URL")
+	}
+
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Only http and https URLs are allowed")
+	}
+
+	host := parsed.Hostname()
+	if host == "" {
+		return "", fiber.NewError(fiber.StatusBadRequest, "Invalid URL: missing host")
+	}
+
+	lowerHost := strings.ToLower(host)
+	if lowerHost == "localhost" || lowerHost == "0.0.0.0" || lowerHost == "[::1]" {
+		return "", fiber.NewError(fiber.StatusForbidden, "Requests to localhost are not allowed")
+	}
+
+	return host, nil
+}
+
+// buildProxyRequest constructs the HTTP request for the proxy target.
+func (h *CardProxyHandler) buildProxyRequest(ctx context.Context, rawURL, host string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		slog.Error("[CardProxy] failed to build request", "host", host, "error", err)
+		return nil, fiber.NewError(fiber.StatusBadGateway, "Failed to create proxy request")
+	}
+	req.Header.Set("User-Agent", "KubeStellar-Console-CardProxy/1.0")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	return req, nil
+}
+
+// sanitizeResponse cleans response headers to prevent XSS and forwards safe headers.
+func (h *CardProxyHandler) sanitizeResponse(c *fiber.Ctx, resp *http.Response) {
 	ct := resp.Header.Get("Content-Type")
 	if ct != "" {
 		ctLower := strings.ToLower(ct)
@@ -203,10 +199,8 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 			c.Set("Content-Type", ct)
 		}
 	}
-	// Prevent MIME sniffing to block browsers from guessing a dangerous content type.
 	c.Set("X-Content-Type-Options", "nosniff")
 
-	// Forward CORS-safe headers that cards might need
 	for _, header := range []string{
 		"X-Total-Count",
 		"X-Request-Id",
@@ -217,6 +211,4 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 			c.Set(header, v)
 		}
 	}
-
-	return c.Status(resp.StatusCode).Send(body)
 }
