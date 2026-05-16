@@ -173,7 +173,11 @@ const {
   Context: StackContext,
   useRequiredStateContext: useStack,
   useOptionalStateContext: useOptionalStack,
-} = createStateContext<StackContextType>({ name: 'Stack' })
+} = createStateContext<StackContextType>({
+  name: 'Stack',
+  hookName: 'useStack',
+  providerLabel: 'a StackProvider',
+})
 
 interface StackProviderProps {
   children: React.ReactNode
