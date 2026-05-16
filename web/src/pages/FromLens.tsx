@@ -1,12 +1,9 @@
-import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Cpu, DollarSign, ExternalLink, GitBranch, Monitor, Shield, Sparkles, Terminal } from 'lucide-react'
+import { Cpu, DollarSign, GitBranch, Monitor, Shield, Sparkles, Terminal } from 'lucide-react'
 
 import { emitFromLensActioned, emitFromLensCommandCopy, emitFromLensTabSwitch, emitFromLensViewed } from '../lib/analytics'
-import { ROUTES } from '../config/routes'
-import { ComparisonTable, type ComparisonRow } from '../components/landing/ComparisonTable'
-import { HighlightGrid, type HighlightFeature } from '../components/landing/HighlightGrid'
-import { TabbedDeploySection } from '../components/landing/TabbedDeploySection'
+import { CompetitorLandingPage } from '../components/landing/CompetitorLandingPage'
+import type { ComparisonRow } from '../components/landing/ComparisonTable'
+import type { HighlightFeature } from '../components/landing/HighlightGrid'
 import type { InstallStep } from '../components/landing/InstallStepCard'
 
 const COMPARISON_DATA: ComparisonRow[] = [
@@ -118,141 +115,39 @@ const CLUSTER_INGRESS_STEPS: InstallStep[] = [
 ]
 
 export function FromLens() {
-  useEffect(() => {
-    emitFromLensViewed()
-  }, [])
-
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm">
-            <Sparkles className="w-4 h-4" />
-            Open Source Kubernetes Console
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
-            Coming from{' '}
-            <span className="bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-              Lens?
-            </span>
-          </h1>
-
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-6 leading-relaxed">
-            Lens is a solid Kubernetes IDE.{' '}
-            <span className="text-white font-medium">KubeStellar Console adds multi-cluster AI, GPU visibility, and built-in ops tools.</span>
-          </p>
-
-          <p className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
-            Both tools work well for Kubernetes management. Console is fully open source and focused on teams that need cross-cluster observability and AI-powered troubleshooting.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to={ROUTES.HOME}
-              onClick={() => emitFromLensActioned('hero_try_demo')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
-            >
-              Try Demo Mode
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <a
-              href="https://github.com/kubestellar/console"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => emitFromLensActioned('hero_view_github')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
-            >
-              View on GitHub
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section className="max-w-5xl mx-auto px-6 py-12">
-        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-8 text-center">
-          <Monitor className="w-8 h-8 text-purple-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-3">Lens does a lot of things right</h3>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed">
-            Lens pioneered the desktop Kubernetes IDE experience with its Electron app, rich extension ecosystem, and clean resource browser.
-            If Lens works well for your team, keep using it! KubeStellar Console is designed for teams that need
-            AI-powered troubleshooting, multi-cluster management at scale, GPU/AI-ML workload visibility, and
-            built-in cost and security analytics — capabilities that complement what Lens provides.
-          </p>
-          <a
-            href="https://k8slens.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
-          >
-            Visit k8slens.dev
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </section>
-
-      <HighlightGrid
-        title="What Console"
-        titleAccent="adds to your toolkit"
-        subtitle="Built-in capabilities that go beyond single-cluster resource browsing."
-        highlights={HIGHLIGHTS}
-        accentColor="purple"
-      />
-
-      <ComparisonTable
-        title="Side-by-side comparison"
-        subtitle="How the two tools compare across common workflows."
-        rows={COMPARISON_DATA}
-        competitorName="Lens"
-        accentColor="purple"
-      />
-
-      <TabbedDeploySection
-        accentColor="purple"
-        title="Getting started in"
-        subtitle="No sign-up, no license file. Just Helm and a kubeconfig."
-        localhostSteps={LOCALHOST_STEPS}
-        portForwardSteps={CLUSTER_PORTFORWARD_STEPS}
-        ingressSteps={CLUSTER_INGRESS_STEPS}
-        analyticsSource="from_lens"
-        onTabSwitch={emitFromLensTabSwitch}
-        onCommandCopy={emitFromLensCommandCopy}
-      />
-
-      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
-        <div className="max-w-5xl mx-auto px-6 py-20 text-center">
-          <h2 className="text-4xl font-bold mb-4">Ready to explore?</h2>
-          <p className="text-slate-400 mb-10 text-lg">
-            Try Console alongside Lens. No accounts, no subscriptions — just open source.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to={ROUTES.HOME}
-              onClick={() => emitFromLensActioned('footer_try_demo')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
-            >
-              Try Demo
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <a
-              href="https://github.com/kubestellar/console"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => emitFromLensActioned('footer_view_github')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
-            >
-              View on GitHub
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-    </div>
+    <CompetitorLandingPage
+      accentColor="purple"
+      competitorName="Lens"
+      analyticsSource="from_lens"
+      heroBadgeIcon={<Sparkles className="w-4 h-4" />}
+      heroBadgeText="Open Source Kubernetes Console"
+      heroLeadText="Lens is a solid Kubernetes IDE."
+      heroLeadEmphasis="KubeStellar Console adds multi-cluster AI, GPU visibility, and built-in ops tools."
+      heroSupportText="Both tools work well for Kubernetes management. Console is fully open source and focused on teams that need cross-cluster observability and AI-powered troubleshooting."
+      appreciationIcon={<Monitor className="w-8 h-8 text-purple-400" />}
+      appreciationTitle="Lens does a lot of things right"
+      appreciationDescription="Lens pioneered the desktop Kubernetes IDE experience with its Electron app, rich extension ecosystem, and clean resource browser. If Lens works well for your team, keep using it! KubeStellar Console is designed for teams that need AI-powered troubleshooting, multi-cluster management at scale, GPU/AI-ML workload visibility, and built-in cost and security analytics — capabilities that complement what Lens provides."
+      appreciationLinkHref="https://k8slens.dev"
+      appreciationLinkLabel="Visit k8slens.dev"
+      highlightTitle="What Console"
+      highlightTitleAccent="adds to your toolkit"
+      highlightSubtitle="Built-in capabilities that go beyond single-cluster resource browsing."
+      highlights={HIGHLIGHTS}
+      comparisonTitle="Side-by-side comparison"
+      comparisonSubtitle="How the two tools compare across common workflows."
+      comparisonRows={COMPARISON_DATA}
+      deployTitle="Getting started in"
+      deploySubtitle="No sign-up, no license file. Just Helm and a kubeconfig."
+      localhostSteps={LOCALHOST_STEPS}
+      portForwardSteps={CLUSTER_PORTFORWARD_STEPS}
+      ingressSteps={CLUSTER_INGRESS_STEPS}
+      footerDescription="Try Console alongside Lens. No accounts, no subscriptions — just open source."
+      onViewed={emitFromLensViewed}
+      onActioned={emitFromLensActioned}
+      onTabSwitch={emitFromLensTabSwitch}
+      onCommandCopy={emitFromLensCommandCopy}
+    />
   )
 }
 

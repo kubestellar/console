@@ -1,12 +1,9 @@
-import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Cpu, DollarSign, ExternalLink, GitBranch, Heart, Layers, Puzzle, Shield, Sparkles } from 'lucide-react'
+import { Cpu, DollarSign, GitBranch, Heart, Layers, Puzzle, Shield, Sparkles } from 'lucide-react'
 
 import { emitFromHeadlampActioned, emitFromHeadlampCommandCopy, emitFromHeadlampTabSwitch, emitFromHeadlampViewed } from '../lib/analytics'
-import { ROUTES } from '../config/routes'
-import { ComparisonTable, type ComparisonRow } from '../components/landing/ComparisonTable'
-import { HighlightGrid, type HighlightFeature } from '../components/landing/HighlightGrid'
-import { TabbedDeploySection } from '../components/landing/TabbedDeploySection'
+import { CompetitorLandingPage } from '../components/landing/CompetitorLandingPage'
+import type { ComparisonRow } from '../components/landing/ComparisonTable'
+import type { HighlightFeature } from '../components/landing/HighlightGrid'
 import type { InstallStep } from '../components/landing/InstallStepCard'
 
 const COMPARISON_DATA: ComparisonRow[] = [
@@ -118,142 +115,40 @@ const CLUSTER_INGRESS_STEPS: InstallStep[] = [
 ]
 
 export function FromHeadlamp() {
-  useEffect(() => {
-    emitFromHeadlampViewed()
-  }, [])
-
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-br from-teal-900/20 via-transparent to-blue-900/20 pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-sm">
-            <Heart className="w-4 h-4" />
-            Fellow CNCF Projects
-          </div>
-
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
-            Coming from{' '}
-            <span className="bg-linear-to-r from-teal-400 to-blue-400 bg-clip-text text-transparent">
-              Headlamp?
-            </span>
-          </h1>
-
-          <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-6 leading-relaxed">
-            Headlamp is a great Kubernetes dashboard.{' '}
-            <span className="text-white font-medium">KubeStellar Console adds multi-cluster AI, GPU visibility, and built-in ops tools.</span>
-          </p>
-
-          <p className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
-            Both are open source, both are CNCF projects. Console complements Headlamp for teams that need cross-cluster observability and AI-powered troubleshooting.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to={ROUTES.HOME}
-              onClick={() => emitFromHeadlampActioned('hero_try_demo')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-teal-500 hover:bg-teal-600 text-white font-semibold text-lg transition-colors"
-            >
-              Try Demo Mode
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <a
-              href="https://github.com/kubestellar/console"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => emitFromHeadlampActioned('hero_view_github')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
-            >
-              View on GitHub
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section className="max-w-5xl mx-auto px-6 py-12">
-        <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-8 text-center">
-          <Puzzle className="w-8 h-8 text-teal-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-3">Headlamp does a lot of things right</h3>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed">
-            Headlamp's plugin architecture, clean UI, and Electron desktop app make it an excellent choice for many teams.
-            If you're happy with Headlamp, keep using it! KubeStellar Console is designed for teams that need
-            AI-powered troubleshooting, multi-cluster management at scale, GPU/AI-ML workload visibility, and
-            built-in cost and security analytics — capabilities that complement what Headlamp provides.
-          </p>
-          <a
-            href="https://headlamp.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-4 text-sm text-teal-400 hover:text-teal-300 transition-colors"
-          >
-            Visit headlamp.dev
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </section>
-
-      <HighlightGrid
-        title="What Console"
-        titleAccent="adds to your toolkit"
-        subtitle="Built-in capabilities that go beyond single-cluster resource browsing."
-        highlights={HIGHLIGHTS}
-        accentColor="teal"
-      />
-
-      <ComparisonTable
-        title="Feature comparison"
-        subtitle="An honest look at what each project offers."
-        rows={COMPARISON_DATA}
-        competitorName="Headlamp"
-        competitorSubtitle="(CNCF Sandbox)"
-        accentColor="teal"
-      />
-
-      <TabbedDeploySection
-        accentColor="teal"
-        title="Try it in"
-        subtitle="Runs alongside Headlamp — no need to uninstall anything."
-        localhostSteps={LOCALHOST_STEPS}
-        portForwardSteps={CLUSTER_PORTFORWARD_STEPS}
-        ingressSteps={CLUSTER_INGRESS_STEPS}
-        analyticsSource="from_headlamp"
-        onTabSwitch={emitFromHeadlampTabSwitch}
-        onCommandCopy={emitFromHeadlampCommandCopy}
-      />
-
-      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
-        <div className="max-w-5xl mx-auto px-6 py-20 text-center">
-          <h2 className="text-4xl font-bold mb-4">Ready to explore?</h2>
-          <p className="text-slate-400 mb-10 text-lg">
-            Try Console alongside Headlamp. No accounts, no subscriptions — just open source.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to={ROUTES.HOME}
-              onClick={() => emitFromHeadlampActioned('footer_try_demo')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-teal-500 hover:bg-teal-600 text-white font-semibold text-lg transition-colors"
-            >
-              Try Demo
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <a
-              href="https://github.com/kubestellar/console"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => emitFromHeadlampActioned('footer_view_github')}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
-            >
-              View on GitHub
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </section>
-    </div>
+    <CompetitorLandingPage
+      accentColor="teal"
+      competitorName="Headlamp"
+      competitorSubtitle="(CNCF Sandbox)"
+      analyticsSource="from_headlamp"
+      heroBadgeIcon={<Heart className="w-4 h-4" />}
+      heroBadgeText="Fellow CNCF Projects"
+      heroLeadText="Headlamp is a great Kubernetes dashboard."
+      heroLeadEmphasis="KubeStellar Console adds multi-cluster AI, GPU visibility, and built-in ops tools."
+      heroSupportText="Both are open source, both are CNCF projects. Console complements Headlamp for teams that need cross-cluster observability and AI-powered troubleshooting."
+      appreciationIcon={<Puzzle className="w-8 h-8 text-teal-400" />}
+      appreciationTitle="Headlamp does a lot of things right"
+      appreciationDescription="Headlamp's plugin architecture, clean UI, and Electron desktop app make it an excellent choice for many teams. If you're happy with Headlamp, keep using it! KubeStellar Console is designed for teams that need AI-powered troubleshooting, multi-cluster management at scale, GPU/AI-ML workload visibility, and built-in cost and security analytics — capabilities that complement what Headlamp provides."
+      appreciationLinkHref="https://headlamp.dev"
+      appreciationLinkLabel="Visit headlamp.dev"
+      highlightTitle="What Console"
+      highlightTitleAccent="adds to your toolkit"
+      highlightSubtitle="Built-in capabilities that go beyond single-cluster resource browsing."
+      highlights={HIGHLIGHTS}
+      comparisonTitle="Feature comparison"
+      comparisonSubtitle="An honest look at what each project offers."
+      comparisonRows={COMPARISON_DATA}
+      deployTitle="Try it in"
+      deploySubtitle="Runs alongside Headlamp — no need to uninstall anything."
+      localhostSteps={LOCALHOST_STEPS}
+      portForwardSteps={CLUSTER_PORTFORWARD_STEPS}
+      ingressSteps={CLUSTER_INGRESS_STEPS}
+      footerDescription="Try Console alongside Headlamp. No accounts, no subscriptions — just open source."
+      onViewed={emitFromHeadlampViewed}
+      onActioned={emitFromHeadlampActioned}
+      onTabSwitch={emitFromHeadlampTabSwitch}
+      onCommandCopy={emitFromHeadlampCommandCopy}
+    />
   )
 }
 
