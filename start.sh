@@ -470,6 +470,23 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
+write_pid_file_atomically() {
+    local pid_file="$1"
+    local pid_value="$2"
+    local tmp_pid_file=""
+
+    tmp_pid_file=$(mktemp "${pid_file}.XXXXXX") || return 1
+    if ! printf '%s\n' "$pid_value" > "$tmp_pid_file"; then
+        rm -f "$tmp_pid_file"
+        return 1
+    fi
+
+    if ! mv "$tmp_pid_file" "$pid_file"; then
+        rm -f "$tmp_pid_file"
+        return 1
+    fi
+}
+
 # Start kc-agent as a background daemon (survives console/script exit)
 AGENT_PORT=8585
 if [ -x "$INSTALL_DIR/kc-agent" ]; then
@@ -496,8 +513,12 @@ if [ -x "$INSTALL_DIR/kc-agent" ]; then
     if [ ! -f "$AGENT_PID_FILE" ]; then
         echo "Starting kc-agent as background daemon..."
         nohup "$INSTALL_DIR/kc-agent" >> "$AGENT_LOG_FILE" 2>&1 &
-        TMP_PID_FILE="${AGENT_PID_FILE}.$$"
-        echo $! > "$TMP_PID_FILE" && mv "$TMP_PID_FILE" "$AGENT_PID_FILE"
+        NEW_AGENT_PID="$!"
+        if ! write_pid_file_atomically "$AGENT_PID_FILE" "$NEW_AGENT_PID"; then
+            echo "  Warning: failed to write kc-agent PID file at $AGENT_PID_FILE."
+            kill "$NEW_AGENT_PID" 2>/dev/null || true
+            exit 1
+        fi
         sleep 1
 
         # Verify it started
