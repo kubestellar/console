@@ -66,6 +66,7 @@ captureUtmParams,
   setAnalyticsUserProperties,
   startGlobalErrorTracking,
   stopGlobalErrorTracking,
+  updateAnalyticsIds,
   userProperties,
 } from '../analytics-core'
 import * as analyticsSession from '../analytics-session'
@@ -86,6 +87,7 @@ _resetCapturedApiCalls()
   _resetErrorThrottles()
   _resetAnalyticsState()
   localStorage.clear()
+  document.querySelectorAll('script[src*="/api/gtag"], script[src*="googletagmanager.com/gtag/js"], script[src="/api/ksc"]').forEach((s) => s.remove())
   ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = undefined
   vi.mocked(analyticsSession.isOptedOut).mockReturnValue(false)
   vi.mocked(analyticsSession.peekEngagementMs).mockReturnValue(0)
@@ -364,6 +366,13 @@ describe('public analytics API', () => {
     expect(track).not.toHaveBeenCalledWith('ksc_opt_out_blocked', { ok: true })
   })
 
+  it('send bypasses opt-out when bypassOptOut=true', () => {
+    const track = setupInitializedAnalytics()
+    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    send('ksc_forced_event', { ok: true }, { bypassOptOut: true })
+    expect(track).toHaveBeenCalledWith('ksc_forced_event', { ok: true })
+  })
+
   it('emitUserEngagement emits only when engagement > 0', () => {
     const track = setupInitializedAnalytics()
     vi.mocked(analyticsSession.peekEngagementMs).mockReturnValue(250)
@@ -421,6 +430,17 @@ describe('public analytics API', () => {
   it('isAnalyticsOptedOut reflects analytics-session state', () => {
     vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
     expect(isAnalyticsOptedOut()).toBe(true)
+  })
+
+  it('updateAnalyticsIds uses provided IDs for script bootstrapping', () => {
+    updateAnalyticsIds({ ga4MeasurementId: 'G-TEST1234', umamiWebsiteId: 'umami-test-id' })
+    initAnalytics()
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    const gtagScript = document.querySelector<HTMLScriptElement>('script[src*="/api/gtag?id=G-TEST1234"]')
+    const umamiScript = document.querySelector<HTMLScriptElement>('script[src="/api/ksc"]')
+    expect(gtagScript).toBeTruthy()
+    expect(umamiScript?.dataset.websiteId).toBe('umami-test-id')
   })
 
   it('emitChunkReloadRecoveryFailed sends recovery failure event', () => {
