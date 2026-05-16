@@ -46,6 +46,7 @@ const (
 	stellarDigestLookbackHours    = 24
 	stellarRecentEventLookbackMin = 10
 	stellarStreamInterval         = 10 * time.Second
+	stellarWatchInactivityTimeout = 30 * time.Minute
 
 	stellarOllamaAllowedCIDRsEnv = "STELLAR_OLLAMA_ALLOWED_CIDRS"
 )
@@ -136,6 +137,7 @@ type StellarStore interface {
 	GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]store.StellarWatch, error)
 	GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
 	CreateWatch(ctx context.Context, w *store.StellarWatch) (string, error)
+	TouchWatch(ctx context.Context, id, lastUpdate string, ts time.Time) error
 	UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error
 	ResolveWatch(ctx context.Context, id string) error
 	SetWatchLastChecked(ctx context.Context, id string, ts time.Time) error
@@ -2622,7 +2624,11 @@ func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
 	}).ResolveWatch(c.UserContext(), watchID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to resolve watch"})
 	}
-	return c.SendStatus(fiber.StatusNoContent)
+	return c.JSON(fiber.Map{
+		"id":                  watchID,
+		"status":              "resolved",
+		"inactivityTimeoutMs": int64(stellarWatchInactivityTimeout / time.Millisecond),
+	})
 }
 
 func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
@@ -3396,8 +3402,13 @@ func looksLikeRSHash(s string) bool {
 // autoCreateWatch creates a standing watch for a resource that has critical or
 // recurring events, so the observer goroutine will track it and report recovery.
 func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
+	lastEventAt := time.Now().UTC()
+	lastUpdate := fmt.Sprintf("%s: %s", e.Reason, truncateString(e.Message, 200))
 	existing, _ := h.store.GetWatchByResource(ctx, "system", e.Cluster, e.Namespace, e.Kind, e.Name)
 	if existing != nil {
+		if err := h.store.TouchWatch(ctx, existing.ID, lastUpdate, lastEventAt); err != nil {
+			slog.Warn("stellar: failed to refresh watch after new event", "id", existing.ID, "error", err)
+		}
 		return // already watching
 	}
 	id, err := h.store.CreateWatch(ctx, &store.StellarWatch{
@@ -3407,6 +3418,8 @@ func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
 		ResourceKind: e.Kind,
 		ResourceName: e.Name,
 		Reason:       fmt.Sprintf("Auto-watched: %s event", e.Reason),
+		LastEventAt:  &lastEventAt,
+		LastUpdate:   lastUpdate,
 	})
 	if err == nil {
 		slog.Info("stellar: auto-created watch", "id", id, "resource", e.Name, "cluster", e.Cluster)

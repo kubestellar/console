@@ -210,6 +210,7 @@ type StellarWatch struct {
 	ResourceName string     `json:"resourceName"`
 	Reason       string     `json:"reason"`
 	Status       string     `json:"status"` // active|resolved|dismissed
+	LastEventAt  *time.Time `json:"lastEventAt,omitempty"`
 	LastChecked  *time.Time `json:"lastChecked,omitempty"`
 	LastUpdate   string     `json:"lastUpdate"`
 	ResolvedAt   *time.Time `json:"resolvedAt,omitempty"`

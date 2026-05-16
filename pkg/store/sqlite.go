@@ -857,6 +857,7 @@ func (s *SQLiteStore) migrate() error {
 			resource_name TEXT NOT NULL,
 			reason        TEXT NOT NULL DEFAULT '',
 			status        TEXT NOT NULL DEFAULT 'active',
+			last_event_at DATETIME,
 			last_checked  DATETIME,
 			last_update   TEXT NOT NULL DEFAULT '',
 			resolved_at   DATETIME,
@@ -876,6 +877,10 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_observations ADD COLUMN reasoning TEXT NOT NULL DEFAULT ''",
 
 		// Sprint 5: snooze support — last_checked already exists on stellar_watches
+
+		// Issue #14198: auto-resolve inactive watches after event silence.
+		"ALTER TABLE stellar_watches ADD COLUMN last_event_at DATETIME",
+		"UPDATE stellar_watches SET last_event_at = COALESCE(last_event_at, updated_at, created_at) WHERE last_event_at IS NULL",
 
 		// Stellar v2: solve sessions (headless solve loop). Each row tracks one
 		// end-to-end attempt by Stellar to resolve an event without user input.
