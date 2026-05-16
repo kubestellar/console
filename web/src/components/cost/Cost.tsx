@@ -15,8 +15,22 @@ import { formatMemoryStat } from '../../lib/formatStats'
 
 /** GiB per TiB — used for storage unit display in cost blocks */
 
+type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
+
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 const STORAGE_COST_PER_GB_MONTH = 0.10
+const CLOUD_PRICING: Record<CloudProvider, { cpu: number; memory: number; gpu: number }> = {
+  estimate: { cpu: 0.05, memory: 0.01, gpu: 2.50 },
+  aws: { cpu: 0.048, memory: 0.012, gpu: 3.06 },
+  gcp: { cpu: 0.0475, memory: 0.0064, gpu: 2.48 },
+  azure: { cpu: 0.05, memory: 0.011, gpu: 2.07 },
+  oci: { cpu: 0.025, memory: 0.0015, gpu: 2.95 },
+  openshift: { cpu: 0.048, memory: 0.012, gpu: 3.00 },
+}
+const COST_EMPTY_STATE = {
+  title: 'Cost Dashboard',
+  description: 'Add cards to monitor and optimize resource costs across your clusters.',
+}
 
 // Default cards for the Cost dashboard
 const DEFAULT_COST_CARDS = getDefaultCards('cost')
@@ -32,16 +46,6 @@ export function Cost() {
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
   )
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
-
-  // Cloud provider pricing (same as ClusterCosts card for consistency)
-  type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
-  const CLOUD_PRICING: Record<CloudProvider, { cpu: number; memory: number; gpu: number }> = {
-    estimate: { cpu: 0.05, memory: 0.01, gpu: 2.50 },
-    aws: { cpu: 0.048, memory: 0.012, gpu: 3.06 },
-    gcp: { cpu: 0.0475, memory: 0.0064, gpu: 2.48 },
-    azure: { cpu: 0.05, memory: 0.011, gpu: 2.07 },
-    oci: { cpu: 0.025, memory: 0.0015, gpu: 2.95 },
-    openshift: { cpu: 0.048, memory: 0.012, gpu: 3.00 } }
 
   // Read provider overrides from localStorage (same key as ClusterCosts card)
   const [providerOverrides, setProviderOverrides] = useState<Record<string, CloudProvider>>(
@@ -63,7 +67,7 @@ export function Cost() {
   }, [])
 
   // Detect cloud provider from cluster name (matches ClusterCosts logic)
-  const detectClusterProvider = (name: string, context?: string): CloudProvider => {
+  const detectClusterProvider = useCallback((name: string, context?: string): CloudProvider => {
     // Check for manual override first
     if (providerOverrides[name]) {
       return providerOverrides[name]
@@ -75,7 +79,7 @@ export function Cost() {
     if (searchStr.includes('aks') || searchStr.includes('azure') || searchStr.includes('microsoft')) return 'azure'
     if (searchStr.includes('oke') || searchStr.includes('oci') || searchStr.includes('oracle') || name.toLowerCase() === 'prow') return 'oci'
     return 'estimate'
-  }
+  }, [providerOverrides])
 
   // Count GPUs from GPU nodes
   const gpuByCluster = useMemo(() => {
@@ -131,8 +135,7 @@ export function Cost() {
       memoryMonthly,
       gpuMonthly,
       storageMonthly }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- CLOUD_PRICING and detectClusterProvider are stable module-level constants
-  }, [reachableClusters, gpuByCluster, providerOverrides])
+  }, [detectClusterProvider, gpuByCluster, reachableClusters])
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
@@ -158,11 +161,6 @@ export function Cost() {
     }
   }, [costStats, drillToCost])
 
-  const emptyStateConfig = useMemo(() => ({
-    title: 'Cost Dashboard',
-    description: 'Add cards to monitor and optimize resource costs across your clusters.',
-  }), [])
-
   return (
     <DashboardPage
       title="Cost Management"
@@ -178,7 +176,7 @@ export function Cost() {
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
       hasData={reachableClusters.length > 0}
-      emptyState={emptyStateConfig}
+      emptyState={COST_EMPTY_STATE}
     >
       {/* Error Display */}
       {error && (

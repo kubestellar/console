@@ -12,6 +12,18 @@ import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 
 const SERVICES_CARDS_KEY = 'kubestellar-services-cards'
+const SERVICES_EMPTY_STATE = {
+  title: 'Services Dashboard',
+  description: 'Add cards to monitor Kubernetes services, endpoints, and network connectivity across your clusters.',
+}
+const SERVICES_NO_CLUSTERS_EMPTY_STATE = {
+  title: 'No services yet',
+  description: 'Connect a Kubernetes cluster to start monitoring services, endpoints, and network connectivity.',
+}
+const SERVICES_CONNECT_CLUSTER_ACTION = {
+  label: 'Connect a cluster',
+  icon: Server,
+}
 
 // Default cards for the services dashboard
 const DEFAULT_SERVICES_CARDS = getDefaultCards('services')
@@ -39,6 +51,9 @@ export function Services() {
   const filteredServices = useMemo(() => services.filter(s =>
     isAllClustersSelected || globalSelectedClusters.includes(s.cluster || '')
   ), [globalSelectedClusters, isAllClustersSelected, services])
+  const filteredIngresses = useMemo(() => (ingresses || []).filter(ingress =>
+    isAllClustersSelected || globalSelectedClusters.includes(ingress.cluster || '')
+  ), [globalSelectedClusters, ingresses, isAllClustersSelected])
 
   // Calculate service stats
   const totalServices = filteredServices.length
@@ -79,13 +94,8 @@ export function Services() {
         return { value: nodePortServices, sublabel: 'NodePort', onClick: () => drillToAllServices('nodeport'), isClickable: nodePortServices > 0 }
       case 'clusterip':
         return { value: clusterIPServices, sublabel: 'ClusterIP', onClick: () => drillToAllServices('clusterip'), isClickable: clusterIPServices > 0 }
-      case 'ingresses': {
-        // Show actual ingress count instead of hardcoded 0 (#7517)
-        const allIngresses = (ingresses || []).filter(i =>
-          isAllClustersSelected || globalSelectedClusters.includes(i.cluster || '')
-        )
-        return { value: allIngresses.length, sublabel: 'ingresses', isClickable: false }
-      }
+      case 'ingresses':
+        return { value: filteredIngresses.length, sublabel: 'ingresses', isClickable: false }
       case 'endpoints':
         return { value: totalEndpoints, sublabel: 'endpoints', onClick: () => drillToAllServices(), isClickable: totalEndpoints > 0 }
       default:
@@ -95,9 +105,7 @@ export function Services() {
     clusterIPServices,
     drillToAllClusters,
     drillToAllServices,
-    globalSelectedClusters,
-    ingresses,
-    isAllClustersSelected,
+    filteredIngresses.length,
     loadBalancers,
     nodePortServices,
     reachableClusters.length,
@@ -105,19 +113,25 @@ export function Services() {
     totalServices,
   ])
 
-  const emptyStateConfig = useMemo(() => ({
-    title: reachableClusters.length === 0 ? 'No services yet' : 'Services Dashboard',
-    description: reachableClusters.length === 0
-      ? 'Connect a Kubernetes cluster to start monitoring services, endpoints, and network connectivity.'
-      : 'Add cards to monitor Kubernetes services, endpoints, and network connectivity across your clusters.',
-    secondaryAction: reachableClusters.length === 0
+  const handleConnectCluster = useCallback(() => {
+    navigate(ROUTES.CLUSTERS)
+  }, [navigate])
+  const secondaryAction = useMemo(() => (
+    reachableClusters.length === 0
       ? {
-          label: 'Connect a cluster',
-          icon: Server,
-          onClick: () => navigate(ROUTES.CLUSTERS),
+          ...SERVICES_CONNECT_CLUSTER_ACTION,
+          onClick: handleConnectCluster,
         }
-      : undefined,
-  }), [navigate, reachableClusters.length])
+      : undefined
+  ), [handleConnectCluster, reachableClusters.length])
+  const emptyStateConfig = useMemo(() => (
+    reachableClusters.length === 0
+      ? {
+          ...SERVICES_NO_CLUSTERS_EMPTY_STATE,
+          secondaryAction,
+        }
+      : SERVICES_EMPTY_STATE
+  ), [reachableClusters.length, secondaryAction])
 
   return (
     <DashboardPage

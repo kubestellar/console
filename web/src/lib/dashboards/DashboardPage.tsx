@@ -101,6 +101,8 @@ const DASHBOARD_VIRTUALIZATION_THRESHOLD = 60
 const DASHBOARD_VIRTUALIZATION_INITIAL_COUNT = 48
 const DASHBOARD_VIRTUALIZATION_STEP = 24
 const DASHBOARD_VIRTUALIZATION_ROOT_MARGIN = '900px 0px'
+const DEFAULT_STAT_BLOCK_VALUE: StatBlockValue = { value: '-', sublabel: '' }
+const DEFAULT_EMPTY_STATE_ACTION_PROPS = { label: 'Add Cards' }
 
 // ============================================================================
 // DashboardPage Component
@@ -138,9 +140,9 @@ export function DashboardPage({
   const Icon = getIcon(icon)
 
   // Combine refresh with indicator
-  const combinedRefetch = () => {
+  const combinedRefetch = useCallback(() => {
     onRefresh?.()
-  }
+  }, [onRefresh])
   const { showIndicator, triggerRefresh } = useRefreshIndicator(combinedRefetch)
 
   // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
@@ -338,7 +340,7 @@ export function DashboardPage({
     if (mergedStatValueGetter) {
       return mergedStatValueGetter(blockId)
     }
-    return getUniversalStatValue(blockId) ?? { value: '-', sublabel: '' }
+    return getUniversalStatValue(blockId) ?? DEFAULT_STAT_BLOCK_VALUE
   }, [mergedStatValueGetter, getUniversalStatValue])
 
   const shouldVirtualizeCards = showCards && cards.length > DASHBOARD_VIRTUALIZATION_THRESHOLD
@@ -346,10 +348,16 @@ export function DashboardPage({
     () => (shouldVirtualizeCards ? cards.slice(0, Math.min(cards.length, visibleCardCount)) : cards),
     [cards, shouldVirtualizeCards, visibleCardCount],
   )
+  const handleOpenCustomizer = useCallback(() => {
+    setShowAddCard(true)
+  }, [setShowAddCard])
   const defaultEmptyStateAction = useMemo<EmptyStateAction>(() => ({
-    label: 'Add Cards',
-    onClick: () => setShowAddCard(true),
-  }), [setShowAddCard])
+    ...DEFAULT_EMPTY_STATE_ACTION_PROPS,
+    onClick: handleOpenCustomizer,
+  }), [handleOpenCustomizer])
+  const handleRefresh = useCallback(() => {
+    triggerRefresh()
+  }, [triggerRefresh])
 
   useEffect(() => {
     if (!showCards) return
@@ -400,7 +408,7 @@ export function DashboardPage({
           subtitle={subtitle}
           icon={<Icon className="w-6 h-6 text-purple-400" />}
           isFetching={isFetching}
-          onRefresh={() => triggerRefresh()}
+          onRefresh={handleRefresh}
           autoRefresh={autoRefresh}
           onAutoRefreshChange={setAutoRefresh}
           autoRefreshId={`${storageKey}-auto-refresh`}
@@ -522,7 +530,7 @@ export function DashboardPage({
 
       {/* Floating action button — opens Dashboard Studio */}
       <FloatingDashboardActions
-        onOpenCustomizer={() => setShowAddCard(true)}
+        onOpenCustomizer={handleOpenCustomizer}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
