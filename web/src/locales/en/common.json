@@ -4218,6 +4218,9 @@
         "message": "This mission needs {{tools}} installed locally before it can run. Install {{tools}} and retry the mission."
       }
     },
+    "queue": {
+      "waitingForTools": "Waiting for {{tools}} to become available from another mission..."
+    },
     "detail": {
       "tabs": {
         "install": "Install",

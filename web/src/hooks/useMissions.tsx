@@ -75,6 +75,13 @@ import {
 } from './useMissions.helpers'
 import i18n from '../lib/i18n'
 
+interface QueuedMissionExecution {
+  missionId: string
+  enhancedPrompt: string
+  params: { context?: Record<string, unknown>; type?: string; dryRun?: boolean }
+  requiredTools: string[]
+}
+
 interface MissionContextValue {
   missions: Mission[]
   activeMission: Mission | null
@@ -344,6 +351,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     } catch { /* localStorage unavailable */ }
   }, [activeMissionId])
   useEffect(() => {
+    let releasedLock = false
+
+    for (const [missionId] of missionToolLocks.current.entries()) {
+      const mission = missions.find(candidate => candidate.id === missionId)
+      if (!mission || mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') {
+        missionToolLocks.current.delete(missionId)
+        releasedLock = true
+      }
+    }
+
+    if (releasedLock || queuedMissionExecutions.current.length > 0) {
+      drainQueuedMissionExecutions()
+    }
+  }, [missions])
+  useEffect(() => {
     isSidebarOpenRef.current = isSidebarOpen
     // Persist so the next page load restores the same state.
     try { localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(isSidebarOpen)) } catch { /* ok */ }
@@ -401,6 +423,93 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // STATUS_PROCESSING_DELAY_MS) so they can be cleared when a mission is
   // cancelled, dismissed, or the provider unmounts.
   const missionStatusTimers = useRef<Map<string, Set<ReturnType<typeof setTimeout>>>>(new Map())
+  // #14139 — Queue tool-overlapping missions so installers that share mutable
+  // local CLIs (for example `helm repo add`) do not race each other.
+  const queuedMissionExecutions = useRef<QueuedMissionExecution[]>([])
+  const missionToolLocks = useRef<Map<string, string[]>>(new Map())
+
+  const normalizeMissionTools = (tools: string[]): string[] => [...new Set(
+    tools
+      .map(tool => tool.trim().toLowerCase())
+      .filter(Boolean)
+  )]
+
+  const getMissionToolConflicts = (requiredTools: string[]): string[] => {
+    const normalizedRequiredTools = normalizeMissionTools(requiredTools)
+    if (normalizedRequiredTools.length === 0) return []
+
+    const conflicts = new Set<string>()
+    for (const lockedTools of missionToolLocks.current.values()) {
+      for (const tool of normalizedRequiredTools) {
+        if (lockedTools.includes(tool)) {
+          conflicts.add(tool)
+        }
+      }
+    }
+
+    return [...conflicts]
+  }
+
+  const releaseMissionToolLock = (missionId: string) => {
+    missionToolLocks.current.delete(missionId)
+  }
+
+  const drainQueuedMissionExecutions = () => {
+    if (queuedMissionExecutions.current.length === 0) return
+
+    const remainingQueue: QueuedMissionExecution[] = []
+    for (const entry of queuedMissionExecutions.current) {
+      const mission = missionsRef.current.find(candidate => candidate.id === entry.missionId)
+      if (!mission) continue
+      if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') continue
+      if (cancelIntents.current.has(entry.missionId)) continue
+
+      const conflicts = getMissionToolConflicts(entry.requiredTools)
+      if (conflicts.length > 0) {
+        remainingQueue.push(entry)
+        continue
+      }
+
+      if (entry.requiredTools.length > 0) {
+        missionToolLocks.current.set(entry.missionId, entry.requiredTools)
+      }
+      executeMission(entry.missionId, entry.enhancedPrompt, entry.params)
+    }
+
+    queuedMissionExecutions.current = remainingQueue
+  }
+
+  const enqueueMissionExecution = (
+    missionId: string,
+    enhancedPrompt: string,
+    params: { context?: Record<string, unknown>; type?: string; dryRun?: boolean },
+    requiredTools: string[],
+  ) => {
+    const normalizedRequiredTools = normalizeMissionTools(requiredTools)
+    const conflicts = getMissionToolConflicts(normalizedRequiredTools)
+
+    if (conflicts.length === 0) {
+      if (normalizedRequiredTools.length > 0) {
+        missionToolLocks.current.set(missionId, normalizedRequiredTools)
+      }
+      executeMission(missionId, enhancedPrompt, params)
+      return
+    }
+
+    queuedMissionExecutions.current = [
+      ...queuedMissionExecutions.current.filter(entry => entry.missionId !== missionId),
+      { missionId, enhancedPrompt, params, requiredTools: normalizedRequiredTools },
+    ]
+
+    setMissions(prev => prev.map(m =>
+      m.id === missionId
+        ? {
+            ...m,
+            currentStep: i18n.t('missions.queue.waitingForTools', { tools: conflicts.join(', ') }),
+          }
+        : m
+    ))
+  }
 
   /**
    * Send a message over the WebSocket with retry logic.
@@ -2144,8 +2253,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         finalizeCancellation(missionId, 'Mission cancelled by user before execution started.')
         return
       }
-      // Preflight passed — proceed to send to agent
-      executeMission(missionId, enhancedPrompt, params)
+      // Preflight passed — proceed to send to agent. Missions that need the
+      // same local tools are serialized to avoid overlapping CLI state.
+      enqueueMissionExecution(missionId, enhancedPrompt, params, requiredTools)
     }).catch((err) => {
       // Preflight itself threw unexpectedly — block the mission instead of
       // fail-open to prevent executing without validation (#5846).
@@ -2266,12 +2376,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // kicked off but before executeMission started sending to the agent.
     // Finalize the cancel and return without contacting the backend.
     if (cancelIntents.current.has(missionId)) {
+      releaseMissionToolLock(missionId)
       finalizeCancellation(missionId, 'Mission cancelled by user before execution started.')
       return
     }
     // #7304 — Prevent duplicate execution: if this mission is already being
     // sent to the agent (e.g. double-click during preflight window), bail out.
     if (executingMissions.current.has(missionId)) {
+      releaseMissionToolLock(missionId)
       console.debug(`[Missions] executeMission already in-flight for ${missionId}, skipping duplicate`)
       return
     }

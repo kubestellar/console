@@ -4,6 +4,7 @@ import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { resolveRequiredTools } from '../lib/missions/preflightCheck'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -189,6 +190,53 @@ beforeEach(() => {
 })
 
 // ── wsSend: partial retry success ────────────────────────────────────────────
+
+describe('tool overlap queueing', () => {
+  it('queues missions until conflicting tools are released', async () => {
+    vi.mocked(resolveRequiredTools).mockReturnValue(['helm'])
+    const { result } = renderHook(() => useMissions(), { wrapper })
+
+    const first = await startMissionWithConnection(result)
+
+    let secondMissionId = ''
+    act(() => {
+      secondMissionId = result.current.startMission({
+        ...defaultParams,
+        title: 'Second Mission',
+        initialPrompt: 'Install another chart',
+      })
+    })
+    await act(async () => { await Promise.resolve() })
+
+    const chatCallsBeforeCompletion = (MockWebSocket.lastInstance?.send.mock.calls ?? []).filter(
+      (call: string[]) => {
+        try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
+      },
+    )
+    expect(chatCallsBeforeCompletion).toHaveLength(1)
+    expect(result.current.missions.find(m => m.id === secondMissionId)?.currentStep)
+      .toContain('Waiting for helm')
+
+    await act(async () => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: first.requestId,
+        type: 'result',
+        payload: { content: 'done', toolsExecuted: true },
+      })
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      const chatCallsAfterCompletion = (MockWebSocket.lastInstance?.send.mock.calls ?? []).filter(
+        (call: string[]) => {
+          try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
+        },
+      )
+      expect(chatCallsAfterCompletion).toHaveLength(2)
+      expect(result.current.missions.find(m => m.id === secondMissionId)?.status).toBe('running')
+    })
+  })
+})
 
 describe('wsSend partial retry', () => {
   it('succeeds on second retry when WS opens after initial failure', async () => {
