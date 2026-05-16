@@ -132,17 +132,30 @@ func readInt32(params map[string]any, key string) (int32, error) {
 	}
 	switch n := v.(type) {
 	case float64:
-		if n < math.MinInt32 || n > math.MaxInt32 {
-			return 0, fmt.Errorf("%s out of int32 range: %f", key, n)
+		if n != math.Trunc(n) {
+			return 0, fmt.Errorf("%s must be a whole number: %v", key, n)
 		}
-		return int32(n), nil
+		return checkedInt32(int64(n), key)
+	case int:
+		return checkedInt32(int64(n), key)
+	case int32:
+		return n, nil
+	case int64:
+		return checkedInt32(n, key)
 	case string:
-		parsed, err := strconv.ParseInt(n, 10, 32)
+		parsed, err := strconv.Atoi(n)
 		if err != nil {
 			return 0, err
 		}
-		return int32(parsed), nil
+		return checkedInt32(int64(parsed), key)
 	default:
 		return 0, fmt.Errorf("invalid %s", key)
 	}
+}
+
+func checkedInt32(value int64, key string) (int32, error) {
+	if value > int64(math.MaxInt32) || value < int64(math.MinInt32) {
+		return 0, fmt.Errorf("%s value %d overflows int32", key, value)
+	}
+	return int32(value), nil
 }
