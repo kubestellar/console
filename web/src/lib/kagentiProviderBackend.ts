@@ -7,6 +7,60 @@ const KAGENTI_STATUS_TIMEOUT_MS = 5_000
 // Timeout for tool invocation through kagenti provider
 const KAGENTI_TOOL_CALL_TIMEOUT_MS = 30_000
 
+export interface SSEDecodeState {
+  remainder: string
+  pendingDataLines: string[]
+}
+
+export function createSSEDecodeState(): SSEDecodeState {
+  return {
+    remainder: '',
+    pendingDataLines: [],
+  }
+}
+
+function normalizeSSEDataLine(line: string): string {
+  const raw = line.slice('data:'.length)
+  return raw.startsWith(' ') ? raw.slice(1) : raw
+}
+
+export function consumeSSEChunk(chunk: string, state: SSEDecodeState): string[] {
+  state.remainder += chunk
+  const lines = state.remainder.split('\n')
+  state.remainder = lines.pop() || ''
+  const events: string[] = []
+
+  for (const rawLine of lines) {
+    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
+    if (line === '') {
+      if (state.pendingDataLines.length > 0) {
+        events.push(state.pendingDataLines.join('\n'))
+        state.pendingDataLines = []
+      }
+      continue
+    }
+
+    if (line.startsWith('data:')) {
+      state.pendingDataLines.push(normalizeSSEDataLine(line))
+    }
+  }
+
+  return events
+}
+
+export function flushSSEDecodeState(state: SSEDecodeState): string[] {
+  if (state.remainder.startsWith('data:')) {
+    state.pendingDataLines.push(normalizeSSEDataLine(state.remainder))
+    state.remainder = ''
+  }
+
+  if (state.pendingDataLines.length === 0) return []
+
+  const events = [state.pendingDataLines.join('\n')]
+  state.pendingDataLines = []
+  return events
+}
+
 export interface KagentiProviderAgent {
   name: string
   namespace: string
@@ -191,27 +245,29 @@ export async function kagentiProviderChat(
     }
 
     const decoder = new TextDecoder()
-    let buffer = ''
+    const decodeState = createSSEDecodeState()
+
+    const handleEvents = (events: string[]): boolean => {
+      for (const data of events) {
+        if (data === '[DONE]') {
+          options.onDone()
+          return true
+        }
+        options.onChunk(data)
+      }
+      return false
+    }
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6).trim()
-          if (data === '[DONE]') {
-            options.onDone()
-            return
-          }
-          options.onChunk(data)
-        }
-      }
+      const events = consumeSSEChunk(decoder.decode(value, { stream: true }), decodeState)
+      if (handleEvents(events)) return
     }
+
+    const finalEvents = flushSSEDecodeState(decodeState)
+    if (handleEvents(finalEvents)) return
 
     // Stream ended without [DONE]
     options.onDone()

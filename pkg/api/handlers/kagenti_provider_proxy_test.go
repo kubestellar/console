@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -101,4 +102,14 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&payload)
 	assert.Equal(t, "anthropic", payload["llm_provider"])
 	assert.Equal(t, true, payload["api_key_configured"])
+}
+
+func TestWriteSSEDataEvent_PreservesMultilinePayloads(t *testing.T) {
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	err := writeSSEDataEvent(writer, "line one\nline two")
+	assert.NoError(t, err)
+	assert.NoError(t, writer.Flush())
+	assert.Equal(t, "data: line one\ndata: line two\n\n", buf.String())
 }

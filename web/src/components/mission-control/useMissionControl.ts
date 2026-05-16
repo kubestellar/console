@@ -727,7 +727,7 @@ export function useMissionControl() {
   // multiple assistant bubbles after tool-use gaps (#13898).
   const latestAssistantContent = useMemo(
     () => getAssistantContentSinceLastUser(planningMission?.messages),
-    [planningMission?.messages],
+    [planningMission?.id, planningMission?.messages],
   )
 
   // #6372 — Debounce the content feed so the expensive extractJSON pass
@@ -1097,10 +1097,17 @@ export function useMissionControl() {
         return
       }
       const currentHelmReleases = helmReleasesRef.current
+      const currentPlanningMissionId =
+        planningMissionIdRef.current ?? currentState.planningMissionId
+      // #13898 — Only reuse a planning mission that still exists locally.
+      // Persisted/orphaned IDs cause follow-up sends against a ghost session,
+      // which streams no visible response back into Mission Control.
+      const hasPlanningMission = !!currentPlanningMissionId &&
+        missions.some((mission) => mission.id === currentPlanningMissionId)
       // #6834 — Read from the dedicated ref instead of stateRef to avoid a
       // stale null when a prior setState (which set planningMissionId) hasn't
       // been committed yet. This prevents creating a duplicate planning mission.
-      let missionId = planningMissionIdRef.current ?? currentState.planningMissionId
+      let missionId = hasPlanningMission ? currentPlanningMissionId : undefined
 
       const existingContext =
         existingProjects.length > 0
@@ -1185,7 +1192,8 @@ Include real CNCF projects only. Consider dependencies between projects.`
             title: 'Mission Control Planning',
             description: 'AI-assisted fix planning',
             type: 'custom',
-            initialPrompt: prompt })
+            initialPrompt: prompt,
+            skipReview: true })
           // #6834 — Update the ref synchronously so a rapid second click reads
           // the missionId before React commits the setState below.
           planningMissionIdRef.current = missionId
@@ -1288,7 +1296,10 @@ Include real CNCF projects only. Consider dependencies between projects.`
         console.warn('[MissionControl] issue 6406 — askAIForAssignments called while already streaming; ignoring')
         return
       }
-      let missionId = stateRef.current.planningMissionId
+      const currentPlanningMissionId = stateRef.current.planningMissionId
+      const hasPlanningMission = !!currentPlanningMissionId &&
+        missions.some((mission) => mission.id === currentPlanningMissionId)
+      let missionId = hasPlanningMission ? currentPlanningMissionId : undefined
 
       const prompt = `The user selected these projects for deployment:
 ${JSON.stringify(projects.map((p) => ({ name: p.name, displayName: p.displayName, category: p.category, dependencies: p.dependencies, priority: p.priority })), null, 2)}
@@ -1353,7 +1364,8 @@ Order phases by dependency — prerequisites first. Each phase completes before 
             title: 'Mission Control Planning',
             description: 'AI-assisted cluster assignment',
             type: 'custom',
-            initialPrompt: prompt })
+            initialPrompt: prompt,
+            skipReview: true })
           setState((prev) => ({
             ...prev,
             planningMissionId: missionId,

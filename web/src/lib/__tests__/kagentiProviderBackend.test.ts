@@ -16,6 +16,9 @@ let discoverKagentiProviderAgent: typeof import('../kagentiProviderBackend').dis
 let updateKagentiProviderConfig: typeof import('../kagentiProviderBackend').updateKagentiProviderConfig
 let kagentiProviderCallTool: typeof import('../kagentiProviderBackend').kagentiProviderCallTool
 let kagentiProviderChat: typeof import('../kagentiProviderBackend').kagentiProviderChat
+let createSSEDecodeState: typeof import('../kagentiProviderBackend').createSSEDecodeState
+let consumeSSEChunk: typeof import('../kagentiProviderBackend').consumeSSEChunk
+let flushSSEDecodeState: typeof import('../kagentiProviderBackend').flushSSEDecodeState
 
 beforeEach(async () => {
   vi.clearAllMocks()
@@ -26,6 +29,9 @@ beforeEach(async () => {
   updateKagentiProviderConfig = mod.updateKagentiProviderConfig
   kagentiProviderCallTool = mod.kagentiProviderCallTool
   kagentiProviderChat = mod.kagentiProviderChat
+  createSSEDecodeState = mod.createSSEDecodeState
+  consumeSSEChunk = mod.consumeSSEChunk
+  flushSSEDecodeState = mod.flushSSEDecodeState
 })
 
 describe('fetchKagentiProviderStatus', () => {
@@ -195,6 +201,25 @@ describe('discoverKagentiProviderAgent', () => {
   })
 })
 
+describe('SSE decoding', () => {
+  it('joins multiline data events so mission control keeps JSON blocks intact', () => {
+    const state = createSSEDecodeState()
+
+    expect(consumeSSEChunk('data: ```json\ndata: {"projects": [', state)).toEqual([])
+    expect(consumeSSEChunk('{"name": "falco"}]}\ndata: ```\n\n', state)).toEqual([
+      '```json\n{"projects": [{"name": "falco"}]}\n```',
+    ])
+    expect(flushSSEDecodeState(state)).toEqual([])
+  })
+
+  it('flushes a trailing unterminated event when the stream closes', () => {
+    const state = createSSEDecodeState()
+
+    expect(consumeSSEChunk('data: [DONE]', state)).toEqual([])
+    expect(flushSSEDecodeState(state)).toEqual(['[DONE]'])
+  })
+})
+
 describe('kagentiProviderCallTool', () => {
   it('calls a tool and returns result', async () => {
     mockAuthFetch.mockResolvedValueOnce({
@@ -285,6 +310,31 @@ describe('kagentiProviderChat', () => {
     await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
     expect(onChunk).toHaveBeenCalledWith('chunk1')
     expect(onChunk).toHaveBeenCalledWith('chunk2')
+    expect(onDone).toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('preserves multiline SSE events so streamed JSON suggestions stay parseable', async () => {
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: ```json\ndata: {"projects": [{"name": "falco"}]}\ndata: ```\n\ndata: [DONE]\n\n'))
+        controller.close()
+      },
+    })
+
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      body: stream,
+    } as unknown as Response)
+
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    await kagentiProviderChat('agent1', 'ns1', 'hello', { onChunk, onDone, onError })
+
+    expect(onChunk).toHaveBeenCalledWith('```json\n{"projects": [{"name": "falco"}]}\n```')
     expect(onDone).toHaveBeenCalled()
     expect(onError).not.toHaveBeenCalled()
   })

@@ -90,6 +90,16 @@ type kagentiChatRequest struct {
 	ContextID string `json:"contextId,omitempty"`
 }
 
+func writeSSEDataEvent(w *bufio.Writer, payload string) error {
+	for _, line := range strings.Split(payload, "\n") {
+		if _, err := fmt.Fprintf(w, "data: %s\n", line); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprint(w, "\n")
+	return err
+}
+
 // Chat streams a kagenti agent conversation via SSE.
 func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 	if h.client == nil {
@@ -137,30 +147,36 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 				}
 
 				if payload == "[DONE]" {
-					fmt.Fprintf(w, "data: [DONE]\n\n")
+					if err := writeSSEDataEvent(w, "[DONE]"); err != nil {
+						return
+					}
 					w.Flush()
 					doneSent = true
 					break
 				}
 
 				text := extractTextFromChunk(payload)
-				fmt.Fprintf(w, "data: %s\n\n", text)
+				if err := writeSSEDataEvent(w, text); err != nil {
+					return
+				}
 				w.Flush()
 			}
 
 			if err != nil {
 				if err != io.EOF {
 					slog.Error("kagenti SSE stream interrupted", "error", err)
-					fmt.Fprintf(w, "data: {\"error\": \"stream interrupted\"}\n\n")
-					w.Flush()
+					if writeErr := writeSSEDataEvent(w, "{\"error\": \"stream interrupted\"}"); writeErr == nil {
+						w.Flush()
+					}
 				}
 				break
 			}
 		}
 
 		if !doneSent {
-			fmt.Fprintf(w, "data: [DONE]\n\n")
-			w.Flush()
+			if err := writeSSEDataEvent(w, "[DONE]"); err == nil {
+				w.Flush()
+			}
 		}
 	})
 

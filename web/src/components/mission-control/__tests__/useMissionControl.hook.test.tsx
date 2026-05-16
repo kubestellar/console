@@ -131,6 +131,63 @@ describe('useMissionControl hook', () => {
     expect(result.current.state.phase).toBe('define')
   })
 
+  it('starts mission control planning without showing the review prompt', async () => {
+    mockStartMission.mockReturnValue('mission-123')
+
+    const { result } = renderHook(() => useMissionControl())
+
+    await act(async () => {
+      await result.current.askAIForSuggestions('suggest projects for security hardening')
+    })
+
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      skipReview: true,
+      type: 'custom',
+    }))
+  })
+
+  it('replaces a stale persisted planning mission before suggesting workloads', async () => {
+    mockStartMission.mockReturnValue('mission-456')
+    localStorage.setItem('kc_mission_control_state', JSON.stringify({
+      state: {
+        phase: 'define',
+        description: 'Persisted description',
+        planningMissionId: 'stale-mission-id',
+      } satisfies Partial<MissionControlState>,
+      savedAt: Date.now(),
+      schemaVersion: 1,
+    }))
+
+    const { result } = renderHook(() => useMissionControl())
+
+    await act(async () => {
+      await result.current.askAIForSuggestions('suggest projects for security hardening')
+    })
+
+    expect(mockSendMessage).not.toHaveBeenCalled()
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      skipReview: true,
+      type: 'custom',
+    }))
+    expect(result.current.state.planningMissionId).toBe('mission-456')
+  })
+
+  it('starts mission control assignment planning without showing the review prompt', async () => {
+    mockStartMission.mockReturnValue('mission-789')
+
+    const { result } = renderHook(() => useMissionControl())
+
+    await act(async () => {
+      result.current.askAIForAssignments([], '[]')
+    })
+
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      skipReview: true,
+      type: 'custom',
+      description: 'AI-assisted cluster assignment',
+    }))
+  })
+
   it('does not auto-timeout while a planning mission exists', async () => {
     vi.useFakeTimers()
     mockStartMission.mockReturnValue('mission-123')
