@@ -2151,6 +2151,8 @@
     "activity": "Activity",
     "markAllRead": "Mark all read",
     "noRequestsInQueue": "No requests in queue",
+    "searchUpdates": "Search requests by title or description",
+    "noMatchingRequests": "No requests match your search.",
     "noActivityYet": "No activity yet",
     "demo": "Demo",
     "loginRequired": "Login Required",

@@ -36,6 +36,19 @@ const baseRequest: FeatureRequest = {
   created_at: '2024-01-01T00:00:00Z',
 }
 
+const secondaryRequest: FeatureRequest = {
+  id: 'request-2',
+  user_id: 'user-1',
+  github_login: 'reporter',
+  title: 'Older feature request',
+  description: 'Legacy workflow still needs a reopen path.',
+  request_type: 'feature',
+  github_issue_number: 12997,
+  github_issue_url: 'https://github.com/kubestellar/console/issues/12997',
+  status: 'open',
+  created_at: '2024-01-02T00:00:00Z',
+}
+
 function renderUpdatesTab(overrides?: Partial<ComponentProps<typeof UpdatesTab>>) {
   const onCloseRequest = vi.fn(() => Promise.resolve({}))
   const onReopenRequest = vi.fn(() => Promise.resolve({}))
@@ -152,5 +165,30 @@ describe('UpdatesTab verification flow', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('awaiting-verification-request-1')).toBeNull()
     })
+  })
+
+  it('filters requests by title and description from the search input', () => {
+    renderUpdatesTab({
+      requests: [baseRequest, secondaryRequest],
+    })
+
+    const searchInput = screen.getByPlaceholderText('feedback.searchUpdates')
+
+    expect(screen.getByText(/Merged bug fix/)).toBeTruthy()
+    expect(screen.getByText(/Older feature request/)).toBeTruthy()
+
+    fireEvent.change(searchInput, { target: { value: 'older feature' } })
+
+    expect(screen.queryByText(/Merged bug fix/)).toBeNull()
+    expect(screen.getByText(/Older feature request/)).toBeTruthy()
+
+    fireEvent.change(searchInput, { target: { value: 'LEGACY WORKFLOW' } })
+
+    expect(screen.getByText(/Older feature request/)).toBeTruthy()
+    expect(screen.queryByText(/Merged bug fix/)).toBeNull()
+
+    fireEvent.change(searchInput, { target: { value: 'does not exist' } })
+
+    expect(screen.getByText('feedback.noMatchingRequests')).toBeTruthy()
   })
 })

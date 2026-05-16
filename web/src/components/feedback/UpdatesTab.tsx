@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   X, Bug, Loader2, ExternalLink, Bell, Check, Clock,
   GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare,
-  Lightbulb, AlertCircle, AlertTriangle, Trophy,
+  Lightbulb, AlertCircle, AlertTriangle, Trophy, Search,
 } from 'lucide-react'
 import { Github, Linkedin } from '@/lib/icons'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next'
 import { getStatusDescription } from '../../hooks/useFeatureRequests'
 import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
 import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
+import { cn } from '../../lib/cn'
 
 const REOPEN_COMMENT_ROWS = 3
 const REOPEN_COMMENT_MAX_LENGTH = 1000
@@ -131,6 +132,16 @@ export function UpdatesTab({
   const [confirmClose, setConfirmClose] = useState<string | null>(null)
   const [previewChecking, setPreviewChecking] = useState<number | null>(null)
   const [previewResults, setPreviewResults] = useState<Record<number, PreviewResult>>({})
+  const [searchQuery, setSearchQuery] = useState('')
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase()
+  const filteredRequests = (requests || []).filter(request => {
+    if (!normalizedSearchQuery) {
+      return true
+    }
+
+    const searchableText = `${request.title} ${request.description}`.toLowerCase()
+    return searchableText.includes(normalizedSearchQuery)
+  })
 
   const handleRequestUpdate = async (requestId: string) => {
     try {
@@ -259,24 +270,49 @@ export function UpdatesTab({
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Your Requests section */}
-        <div className="p-2 border-b border-border/50 shrink-0">
-          <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-            Your Requests ({requests.length})
-          </span>
+        <div className="border-b border-border/50 shrink-0">
+          <div className="p-2">
+            <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
+              Your Requests ({normalizedSearchQuery ? `${filteredRequests.length}/${(requests || []).length}` : (requests || []).length})
+            </span>
+          </div>
+          {(requests || []).length > 0 && (
+            <div className="px-2 pb-2">
+              <label className="relative block">
+                <Search className={cn(
+                  'pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground transition-colors',
+                  normalizedSearchQuery && 'text-foreground',
+                )} />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={t('feedback.searchUpdates')}
+                  aria-label={t('feedback.searchUpdates')}
+                  className="h-9 w-full rounded-md border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+            </div>
+          )}
         </div>
-        {requestsLoading && requests.length === 0 ? (
+        {requestsLoading && (requests || []).length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
             <p className="text-sm">{t('common.loading')}</p>
           </div>
-        ) : requests.length === 0 ? (
+        ) : (requests || []).length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Bug className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No requests in queue</p>
             <p className="text-xs mt-1">Submit a bug report or feature request to get started</p>
           </div>
+        ) : filteredRequests.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">{t('feedback.noMatchingRequests')}</p>
+          </div>
         ) : (
-          requests.map(request => (
+          filteredRequests.map(request => (
             <RequestItem
               key={request.id}
               request={request}
