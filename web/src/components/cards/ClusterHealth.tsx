@@ -20,6 +20,7 @@ import { useFederationAwareness, getProviderLabel as getFederationProviderLabel,
 import { ROUTES } from '../../config/routes'
 import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { Tooltip } from '../ui/Tooltip'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 type SortByOption = 'status' | 'name' | 'nodes' | 'pods'
 
@@ -407,7 +408,7 @@ export function ClusterHealth() {
                 )}
                 {consoleUrl && (
                   <a
-                    href={consoleUrl}
+                    href={sanitizeUrl(consoleUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}

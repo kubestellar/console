@@ -308,7 +308,7 @@ Please provide:
                   {isDiagnosing ? 'Loading...' : 'AI Diagnose'}
                 </button>
               )}
-              <a href={logsUrl} target="_blank" rel="noopener noreferrer"
+              <a href={sanitizeUrl(logsUrl)} target="_blank" rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-0.5 min-h-11 min-w-11"
                 onClick={e => e.stopPropagation()}>
                 View Logs <ExternalLink size={8} />
@@ -393,7 +393,7 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }: {
       </div>
       <TrendIndicator trend={guide.trend} passRate={guide.passRate} />
       <a
-        href={workflowUrl}
+        href={sanitizeUrl(workflowUrl)}
         target="_blank"
         rel="noopener noreferrer"
         className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-secondary"
@@ -814,7 +814,7 @@ function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
         <div className="flex items-center gap-2 text-2xs text-muted-foreground">
           <span style={{ color: PLATFORM_COLORS[guide.platform] }}>{guide.platform}</span>
           <span>&middot;</span>
-          <a href={workflowUrl} target="_blank" rel="noopener noreferrer"
+          <a href={sanitizeUrl(workflowUrl)} target="_blank" rel="noopener noreferrer"
             className="hover:text-foreground transition-colors flex items-center gap-0.5 min-h-11 min-w-11">
             {guide.repo.split('/')[1]} <ExternalLink size={9} />
           </a>

@@ -999,7 +999,7 @@ export function UpdateSettings() {
                 {latestRelease.releaseNotes}
               </pre>
               <a
-                href={latestRelease.url}
+                href={sanitizeUrl(latestRelease.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 mt-3 text-sm text-primary hover:underline"
