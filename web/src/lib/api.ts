@@ -659,7 +659,7 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await safeParseJsonOrNull(response, `[api] GET ${path} failed to parse JSON response`)
+      const data = await safeParseJsonOrNull<T>(response, `[api] GET ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -715,7 +715,7 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await safeParseJsonOrNull(response, `[api] POST ${path} failed to parse JSON response`)
+      const data = await safeParseJsonOrNull<T>(response, `[api] POST ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -767,7 +767,7 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await safeParseJsonOrNull(response, `[api] PATCH ${path} failed to parse JSON response`)
+      const data = await safeParseJsonOrNull<T>(response, `[api] PATCH ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -823,7 +823,7 @@ class ApiClient {
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await safeParseJsonOrNull(response, `[api] PUT ${path} failed to parse JSON response`)
+      const data = await safeParseJsonOrNull<T>(response, `[api] PUT ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
