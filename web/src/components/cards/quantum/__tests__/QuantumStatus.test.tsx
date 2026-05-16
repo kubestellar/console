@@ -94,7 +94,7 @@ describe('QuantumStatus', () => {
 
     render(<QuantumStatus />)
 
-    expect(screen.getByText('fetch failed')).toBeTruthy()
+    expect(screen.getByText('fetch failed')).toBeInTheDocument()
   })
 
   it('reports isDemoData: true to CardDataReportContext when hook returns isDemoData true', async () => {
@@ -136,6 +136,22 @@ describe('QuantumStatus', () => {
 
     render(<QuantumStatus />)
 
-    expect(screen.getByText('1.2.3')).toBeTruthy()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+  })
+
+  it('renders fallback when data is object with null version_info', () => {
+    mockUseQuantumSystemStatus.mockReturnValue(
+      defaultHookReturn({
+        data: {
+          ...DEMO_QUANTUM_STATUS,
+          version_info: null as unknown as typeof DEMO_QUANTUM_STATUS.version_info,
+        },
+      }),
+    )
+
+    render(<QuantumStatus />)
+
+    // Should still render but without version info
+    expect(screen.queryByText('1.2.3')).not.toBeInTheDocument()
   })
 })

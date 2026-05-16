@@ -129,4 +129,29 @@ describe('QuantumQubitGrid', () => {
     expect(svg).toBeInTheDocument()
     expect(screen.queryByText('01010')).not.toBeInTheDocument()
   })
+
+  it('renders logo fallback when data object has empty qubits but valid versionInfo', () => {
+    mockUseQuantumQubitGridData.mockReturnValue(
+      defaultHook({
+        data: {
+          qubits: { num_qubits: 0, pattern: '' },
+          versionInfo: {
+            version: '1.0.0',
+            commit: 'abc123',
+            timestamp: '2026-01-01T00:00:00Z',
+          },
+        },
+      }),
+    )
+    const { container } = render(<QuantumQubitGrid />)
+
+    const infoBox = container.querySelector('.bg-blue-50')
+    expect(infoBox).toBeInTheDocument()
+    const info = within(infoBox as HTMLElement)
+    expect(info.getByText('1.0.0', { exact: true })).toBeInTheDocument()
+    expect(info.getByText('abc123', { exact: true })).toBeInTheDocument()
+
+    const svg = container.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+  })
 })

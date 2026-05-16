@@ -81,4 +81,15 @@ describe('QuantumCircuitViewer', () => {
       screen.getByText('Unable to load quantum circuit diagram'),
     ).toBeInTheDocument()
   })
+
+  it('renders fallback message when data object has null circuitAscii field', () => {
+    mockUseQuantumCircuitAscii.mockReturnValue(
+      defaultHook({ data: { circuitAscii: null } }),
+    )
+    const { container } = render(<QuantumCircuitViewer />)
+    expect(container.querySelector('pre.quantum-circuit-display')).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Unable to load quantum circuit diagram'),
+    ).toBeInTheDocument()
+  })
 })
