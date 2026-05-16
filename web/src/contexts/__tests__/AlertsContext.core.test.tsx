@@ -28,6 +28,16 @@ vi.mock('../../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: vi.fn(),
 }))
 
+vi.mock('../notifications', () => ({
+  shouldDispatchBrowserNotification: vi.fn(() => true),
+  isClusterUnreachable: vi.fn(() => false),
+  dispatchNotification: vi.fn(),
+  sendNotifications: vi.fn(),
+  sendBatchedNotifications: vi.fn(),
+  getNotificationCooldown: vi.fn(() => 300000),
+  PERSISTENT_CLUSTER_CONDITIONS: new Set(['certificate_error', 'cluster_unreachable']),
+}))
+
 vi.mock('../../lib/runbooks/builtins', () => ({
   findRunbookForCondition: vi.fn(() => undefined),
 }))
