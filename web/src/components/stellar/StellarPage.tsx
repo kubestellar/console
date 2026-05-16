@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import type { StellarNotification } from '../../types/stellar'
+import type { StellarActivity, StellarNotification } from '../../types/stellar'
 import { useStellar } from '../../hooks/useStellar'
 import { EventsPanel } from './EventsPanel'
 import type { PendingAction } from './EventCard'
@@ -22,6 +22,35 @@ import '../../styles/stellar.css'
 // StellarPage — full-route view of the Stellar PA.
 // Reuses the same panels as the sidebar but in a roomier 3-column layout
 // so the user can see events, chat, and watches/tasks at once.
+function normalizeActivitySeverity(severity: StellarActivity['severity']): StellarNotification['severity'] {
+  if (severity === 'critical' || severity === 'warning') {
+    return severity
+  }
+  return 'info'
+}
+
+function buildActivityDedupeKey(entry: StellarActivity): string | undefined {
+  if (entry.cluster && entry.namespace && entry.workload) {
+    return `ev:${entry.cluster}:${entry.namespace}:${entry.workload}`
+  }
+  return entry.eventId || entry.id
+}
+
+function buildDetailNotificationFromActivity(eventId: string, entry: StellarActivity): StellarNotification {
+  return {
+    id: eventId,
+    type: 'event',
+    severity: normalizeActivitySeverity(entry.severity),
+    title: entry.title,
+    body: entry.detail || entry.title,
+    cluster: entry.cluster,
+    namespace: entry.namespace,
+    dedupeKey: buildActivityDedupeKey(entry),
+    read: true,
+    createdAt: entry.ts,
+  }
+}
+
 export function StellarPage() {
   const location = useLocation()
   const [tasksExpanded, setTasksExpanded] = useState(true)
@@ -108,6 +137,11 @@ export function StellarPage() {
     return () => window.removeEventListener(STELLAR_NAVIGATION_EVENT, handleNavigation as EventListener)
   }, [focusSection])
 
+  const handleOpenActivityEvent = useCallback((eventId: string, entry: StellarActivity) => {
+    const found = (notifications || []).find(notification => notification.id === eventId)
+    setDetailNotification(found ?? buildDetailNotificationFromActivity(eventId, entry))
+  }, [notifications])
+
   return (
     <div
       ref={overviewRef}
@@ -165,10 +199,7 @@ export function StellarPage() {
           >
             <StellarActivityPanel
               activity={activity}
-              onOpenEvent={useCallback((eventId: string) => {
-                const found = (notifications || []).find(n => n.id === eventId)
-                if (found) setDetailNotification(found)
-              }, [notifications])}
+              onOpenEvent={handleOpenActivityEvent}
             />
           </div>
           <RecommendedTasksPanel createTask={createTask} />
