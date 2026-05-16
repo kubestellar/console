@@ -21,21 +21,6 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
-func (h *MCPHandlers) withDemoFallback(
-	c *fiber.Ctx,
-	demoKey string,
-	demoData any,
-	handler func(client *k8s.MultiClusterClient) error,
-) error {
-	if isDemoMode(c) {
-		return demoResponse(c, demoKey, demoData)
-	}
-	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
-	}
-	return handler(h.k8sClient)
-}
-
 func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
