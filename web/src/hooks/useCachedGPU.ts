@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook, useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { fetchBackendAPI, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, getClusterFetcher, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
@@ -385,7 +385,7 @@ export function useGPUHealthCronJob(cluster?: string) {
  * Uses IndexedDB persistence so data survives navigation.
  */
 export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> & { retryFetch: () => Promise<void> } {
-  const result = useCache({
+  const useHardwareHealthBase = createCachedHook<HardwareHealthData>({
     key: 'hardware-health',
     category: 'pods', // 30-second refresh
     initialData: HW_INITIAL_DATA,
@@ -395,6 +395,7 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
     // mounts and `enabled` is only read once. The fetcher handles unavailability
     // internally by throwing, which useCache tracks as consecutive failures.
     fetcher: fetchHardwareHealth })
+  const result = useHardwareHealthBase()
 
   return {
     data: result.data,

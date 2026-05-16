@@ -5,7 +5,7 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { KUBECTL_DEFAULT_TIMEOUT_MS, KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -359,7 +359,7 @@ export function useCachedLLMdServers(
 ): CachedHookResult<LLMdServer[]> & { servers: LLMdServer[]; status: LLMdStatus } {
   const key = `llmd-servers:${clusters.join(',')}`
 
-  const result = useCache({
+  const useLLMdServersBase = createCachedHook<LLMdServer[]>({
     key,
     category: 'gitops' as RefreshCategory,
     initialData: [] as LLMdServer[],
@@ -367,6 +367,7 @@ export function useCachedLLMdServers(
     fetcher: () => fetchLLMdServers(clusters),
     progressiveFetcher: async (onProgress) => fetchLLMdServers(clusters, onProgress),
   })
+  const result = useLLMdServersBase()
 
   const status = computeLLMdStatus(result.data, result.consecutiveFailures)
 
@@ -448,7 +449,7 @@ export function useCachedLLMdModels(
 ): CachedHookResult<LLMdModel[]> & { models: LLMdModel[] } {
   const key = `llmd-models:${clusters.join(',')}`
 
-  const result = useCache({
+  const useLLMdModelsBase = createCachedHook<LLMdModel[]>({
     key,
     category: 'gitops' as RefreshCategory,
     initialData: [] as LLMdModel[],
@@ -456,6 +457,7 @@ export function useCachedLLMdModels(
     fetcher: () => fetchLLMdModels(clusters),
     progressiveFetcher: async (onProgress) => fetchLLMdModels(clusters, onProgress),
   })
+  const result = useLLMdModelsBase()
 
   return {
     models: result.data,

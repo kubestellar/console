@@ -39,6 +39,10 @@ export interface CreateCachedHookConfig<T> {
   getDemoData?: () => T
   /** Async function that fetches live data */
   fetcher: () => Promise<T>
+  /** Optional progressive fetcher for incremental updates */
+  progressiveFetcher?: (onProgress: (partial: T) => void) => Promise<T>
+  /** Optional enable flag forwarded to useCache */
+  enabled?: boolean
   /** Whether to persist to SQLite/IndexedDB (default: true) */
   persist?: boolean
 }
@@ -57,6 +61,8 @@ export function createCachedHook<T>(
     demoData,
     getDemoData,
     fetcher,
+    progressiveFetcher,
+    enabled,
     persist = true,
   } = config
 
@@ -69,7 +75,9 @@ export function createCachedHook<T>(
       initialData,
       demoData: resolvedDemoData,
       persist,
+      enabled,
       fetcher,
+      progressiveFetcher,
     })
 
     return {

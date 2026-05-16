@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from 'react'
-import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { createCachedHook, useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { clusterCacheRef, agentFetch, deduplicateClustersByServer } from './mcp/shared'
@@ -693,7 +693,7 @@ export function useCachedWorkloads(
   const { category = 'deployments' } = options || {}
   const key = 'workloads:all:all'
 
-  const result = useCache({
+  const useWorkloadsBase = createCachedHook<Workload[]>({
     key,
     category,
     initialData: [] as Workload[],
@@ -741,6 +741,7 @@ export function useCachedWorkloads(
       // Fall back to SSE streaming -> progressive per-cluster
       return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
     } })
+  const result = useWorkloadsBase()
 
   return {
     workloads: result.data,
