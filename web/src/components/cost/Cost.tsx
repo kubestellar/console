@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
@@ -78,14 +78,14 @@ export function Cost() {
   }
 
   // Count GPUs from GPU nodes
-  const gpuByCluster = (() => {
+  const gpuByCluster = useMemo(() => {
     const map: Record<string, number> = {}
-    gpuNodes.forEach(node => {
+    ;(gpuNodes || []).forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  })()
+  }, [gpuNodes])
 
   // Calculate per-cluster costs (matches ClusterCosts card exactly)
   const costStats = useMemo(() => {
@@ -135,7 +135,7 @@ export function Cost() {
   }, [reachableClusters, gpuByCluster, providerOverrides])
 
   // Stats value getter for the configurable StatsOverview component
-  const getDashboardStatValue = (blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     const drillToCostType = (type: string) => {
       drillToCost('all', { costType: type, totalMonthly: costStats.totalMonthly })
     }
@@ -156,9 +156,12 @@ export function Cost() {
       default:
         return { value: 0 }
     }
-  }
+  }, [costStats, drillToCost])
 
-  const getStatValue = getDashboardStatValue
+  const emptyStateConfig = useMemo(() => ({
+    title: 'Cost Dashboard',
+    description: 'Add cards to monitor and optimize resource costs across your clusters.',
+  }), [])
 
   return (
     <DashboardPage
@@ -169,15 +172,13 @@ export function Cost() {
       storageKey={COST_CARDS_KEY}
       defaultCards={DEFAULT_COST_CARDS}
       statsType="cost"
-      getStatValue={getStatValue}
+      getStatValue={getDashboardStatValue}
       onRefresh={refetch}
       isLoading={isLoading}
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
       hasData={reachableClusters.length > 0}
-      emptyState={{
-        title: 'Cost Dashboard',
-        description: 'Add cards to monitor and optimize resource costs across your clusters.' }}
+      emptyState={emptyStateConfig}
     >
       {/* Error Display */}
       {error && (

@@ -86,63 +86,79 @@ func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
 	return nil
 }
 
-// ListWorkloads returns all workloads across clusters
-// GET /api/workloads
-func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
+func (h *WorkloadHandlers) withDemoAndClient(
+	c *fiber.Ctx,
+	demoHandler func() error,
+	handler func(client *k8s.MultiClusterClient) error,
+) error {
 	if isDemoMode(c) {
-		return demoResponse(c, "workloads", getDemoWorkloads())
+		return demoHandler()
 	}
 	if h.k8sClient == nil {
 		return errNoClusterAccess(c)
 	}
+	return handler(h.k8sClient)
+}
 
-	// Optional filters
-	cluster := c.Query("cluster")
-	namespace := c.Query("namespace")
-	workloadType := c.Query("type")
+// ListWorkloads returns all workloads across clusters
+// GET /api/workloads
+func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
+	return h.withDemoAndClient(
+		c,
+		func() error {
+			return demoResponse(c, "workloads", getDemoWorkloads())
+		},
+		func(client *k8s.MultiClusterClient) error {
+			// Optional filters
+			cluster := c.Query("cluster")
+			namespace := c.Query("namespace")
+			workloadType := c.Query("type")
 
-	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
-	defer cancel()
+			ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
+			defer cancel()
 
-	workloads, err := h.k8sClient.ListWorkloads(ctx, cluster, namespace, workloadType)
-	if err != nil {
-		return handleK8sError(c, err)
-	}
+			workloads, err := client.ListWorkloads(ctx, cluster, namespace, workloadType)
+			if err != nil {
+				return handleK8sError(c, err)
+			}
 
-	return c.JSON(workloads)
+			return c.JSON(workloads)
+		},
+	)
 }
 
 // GetWorkload returns a specific workload
 // GET /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
-	if isDemoMode(c) {
-		demos := getDemoWorkloads()
-		if len(demos) > 0 {
-			return c.JSON(demos[0])
-		}
-		return c.JSON(fiber.Map{})
-	}
-	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
-	}
+	return h.withDemoAndClient(
+		c,
+		func() error {
+			demos := getDemoWorkloads()
+			if len(demos) > 0 {
+				return c.JSON(demos[0])
+			}
+			return c.JSON(fiber.Map{})
+		},
+		func(client *k8s.MultiClusterClient) error {
+			cluster := c.Params("cluster")
+			namespace := c.Params("namespace")
+			name := c.Params("name")
 
-	cluster := c.Params("cluster")
-	namespace := c.Params("namespace")
-	name := c.Params("name")
+			ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+			defer cancel()
 
-	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
-	defer cancel()
+			workload, err := client.GetWorkload(ctx, cluster, namespace, name)
+			if err != nil {
+				return handleK8sError(c, err)
+			}
 
-	workload, err := h.k8sClient.GetWorkload(ctx, cluster, namespace, name)
-	if err != nil {
-		return handleK8sError(c, err)
-	}
+			if workload == nil {
+				return c.Status(404).JSON(fiber.Map{"error": "Workload not found"})
+			}
 
-	if workload == nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Workload not found"})
-	}
-
-	return c.JSON(workload)
+			return c.JSON(workload)
+		},
+	)
 }
 
 // NOTE: DeployWorkload moved to kc-agent (#7993 Phase 1 PR B).
@@ -153,104 +169,106 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 // ResolveDependencies returns the dependency tree for a workload without deploying (dry-run).
 // GET /api/workloads/resolve-deps/:cluster/:namespace/:name
 func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
-	if isDemoMode(c) {
-		return c.JSON(fiber.Map{
-			"workload":     c.Params("name"),
-			"kind":         "Deployment",
-			"namespace":    c.Params("namespace"),
-			"cluster":      c.Params("cluster"),
-			"dependencies": make([]fiber.Map, 0),
-			"warnings":     make([]string, 0),
-		})
-	}
-	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
-	}
+	return h.withDemoAndClient(
+		c,
+		func() error {
+			return c.JSON(fiber.Map{
+				"workload":     c.Params("name"),
+				"kind":         "Deployment",
+				"namespace":    c.Params("namespace"),
+				"cluster":      c.Params("cluster"),
+				"dependencies": make([]fiber.Map, 0),
+				"warnings":     make([]string, 0),
+			})
+		},
+		func(client *k8s.MultiClusterClient) error {
+			cluster := c.Params("cluster")
+			namespace := c.Params("namespace")
+			name := c.Params("name")
 
-	cluster := c.Params("cluster")
-	namespace := c.Params("namespace")
-	name := c.Params("name")
+			ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+			defer cancel()
 
-	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
-	defer cancel()
+			workloadKind, bundle, err := client.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					slog.Info("[Workloads] not found", "error", err)
+					return c.Status(404).JSON(fiber.Map{"error": "not found"})
+				}
+				return handleK8sError(c, err)
+			}
 
-	workloadKind, bundle, err := h.k8sClient.ResolveWorkloadDependencies(ctx, cluster, namespace, name)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			slog.Info("[Workloads] not found", "error", err)
-			return c.Status(404).JSON(fiber.Map{"error": "not found"})
-		}
-		return handleK8sError(c, err)
-	}
+			type depDTO struct {
+				Kind      string `json:"kind"`
+				Name      string `json:"name"`
+				Namespace string `json:"namespace"`
+				Optional  bool   `json:"optional"`
+				Order     int    `json:"order"`
+			}
 
-	type depDTO struct {
-		Kind      string `json:"kind"`
-		Name      string `json:"name"`
-		Namespace string `json:"namespace"`
-		Optional  bool   `json:"optional"`
-		Order     int    `json:"order"`
-	}
+			deps := make([]depDTO, 0, len(bundle.Dependencies))
+			for _, d := range bundle.Dependencies {
+				deps = append(deps, depDTO{
+					Kind:      string(d.Kind),
+					Name:      d.Name,
+					Namespace: d.Namespace,
+					Optional:  d.Optional,
+					Order:     d.Order,
+				})
+			}
 
-	deps := make([]depDTO, 0, len(bundle.Dependencies))
-	for _, d := range bundle.Dependencies {
-		deps = append(deps, depDTO{
-			Kind:      string(d.Kind),
-			Name:      d.Name,
-			Namespace: d.Namespace,
-			Optional:  d.Optional,
-			Order:     d.Order,
-		})
-	}
+			warnings := bundle.Warnings
+			if warnings == nil {
+				warnings = []string{}
+			}
 
-	warnings := bundle.Warnings
-	if warnings == nil {
-		warnings = []string{}
-	}
-
-	return c.JSON(fiber.Map{
-		"workload":     name,
-		"kind":         workloadKind,
-		"namespace":    namespace,
-		"cluster":      cluster,
-		"dependencies": deps,
-		"warnings":     warnings,
-	})
+			return c.JSON(fiber.Map{
+				"workload":     name,
+				"kind":         workloadKind,
+				"namespace":    namespace,
+				"cluster":      cluster,
+				"dependencies": deps,
+				"warnings":     warnings,
+			})
+		},
+	)
 }
 
 // MonitorWorkload returns a workload's dependencies with health status and detected issues.
 // GET /api/workloads/monitor/:cluster/:namespace/:name
 func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
-	if isDemoMode(c) {
-		return c.JSON(fiber.Map{
-			"workload":     c.Params("name"),
-			"namespace":    c.Params("namespace"),
-			"cluster":      c.Params("cluster"),
-			"status":       "Healthy",
-			"dependencies": make([]fiber.Map, 0),
-			"issues":       make([]fiber.Map, 0),
-		})
-	}
-	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
-	}
+	return h.withDemoAndClient(
+		c,
+		func() error {
+			return c.JSON(fiber.Map{
+				"workload":     c.Params("name"),
+				"namespace":    c.Params("namespace"),
+				"cluster":      c.Params("cluster"),
+				"status":       "Healthy",
+				"dependencies": make([]fiber.Map, 0),
+				"issues":       make([]fiber.Map, 0),
+			})
+		},
+		func(client *k8s.MultiClusterClient) error {
+			cluster := c.Params("cluster")
+			namespace := c.Params("namespace")
+			name := c.Params("name")
 
-	cluster := c.Params("cluster")
-	namespace := c.Params("namespace")
-	name := c.Params("name")
+			ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
+			defer cancel()
 
-	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
-	defer cancel()
+			result, err := client.MonitorWorkload(ctx, cluster, namespace, name)
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					slog.Info("[Workloads] not found", "error", err)
+					return c.Status(404).JSON(fiber.Map{"error": "not found"})
+				}
+				return handleK8sError(c, err)
+			}
 
-	result, err := h.k8sClient.MonitorWorkload(ctx, cluster, namespace, name)
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			slog.Info("[Workloads] not found", "error", err)
-			return c.Status(404).JSON(fiber.Map{"error": "not found"})
-		}
-		return handleK8sError(c, err)
-	}
-
-	return c.JSON(result)
+			return c.JSON(result)
+		},
+	)
 }
 
 // GetDeployStatus returns the current replica status of a deployment on a cluster

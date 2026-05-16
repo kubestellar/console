@@ -21,12 +21,22 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
-func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
-	// Demo mode: return demo data immediately
+func (h *MCPHandlers) withDemoFallback(
+	c *fiber.Ctx,
+	demoKey string,
+	demoData any,
+	handler func(client *k8s.MultiClusterClient) error,
+) error {
 	if isDemoMode(c) {
-		return demoResponse(c, "configmaps", getDemoConfigMaps())
+		return demoResponse(c, demoKey, demoData)
 	}
+	if h.k8sClient == nil {
+		return errNoClusterAccess(c)
+	}
+	return handler(h.k8sClient)
+}
 
+func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -34,15 +44,15 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		return err
 	}
 
-	if h.k8sClient != nil {
+	return h.withDemoFallback(c, "configmaps", getDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
 		if cluster == "" {
-			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
 				return handleK8sError(c, err)
 			}
 
 			allConfigMaps, errTracker := queryAllClusters(c.Context(), clusters, func(ctx context.Context, clusterName string) ([]k8s.ConfigMap, error) {
-				return h.k8sClient.GetConfigMaps(ctx, clusterName, namespace)
+				return client.GetConfigMaps(ctx, clusterName, namespace)
 			})
 			return c.JSON(errTracker.annotate(fiber.Map{"configmaps": allConfigMaps, "source": "k8s"}))
 		}
@@ -50,7 +60,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
 		defer cancel()
 
-		configmaps, err := h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
+		configmaps, err := client.GetConfigMaps(ctx, cluster, namespace)
 		if err != nil {
 			return handleK8sError(c, err)
 		}
@@ -58,18 +68,11 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 			configmaps = make([]k8s.ConfigMap, 0)
 		}
 		return c.JSON(fiber.Map{"configmaps": configmaps, "source": "k8s"})
-	}
-
-	return errNoClusterAccess(c)
+	})
 }
 
 // GetSecrets returns Secrets from clusters
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
-	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
-		return demoResponse(c, "secrets", getDemoSecrets())
-	}
-
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -77,15 +80,15 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		return err
 	}
 
-	if h.k8sClient != nil {
+	return h.withDemoFallback(c, "secrets", getDemoSecrets(), func(client *k8s.MultiClusterClient) error {
 		if cluster == "" {
-			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
 				return handleK8sError(c, err)
 			}
 
 			allSecrets, errTracker := queryAllClusters(c.Context(), clusters, func(ctx context.Context, clusterName string) ([]k8s.Secret, error) {
-				return h.k8sClient.GetSecrets(ctx, clusterName, namespace)
+				return client.GetSecrets(ctx, clusterName, namespace)
 			})
 			return c.JSON(errTracker.annotate(fiber.Map{"secrets": allSecrets, "source": "k8s"}))
 		}
@@ -93,7 +96,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
 		defer cancel()
 
-		secrets, err := h.k8sClient.GetSecrets(ctx, cluster, namespace)
+		secrets, err := client.GetSecrets(ctx, cluster, namespace)
 		if err != nil {
 			return handleK8sError(c, err)
 		}
@@ -101,18 +104,11 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 			secrets = make([]k8s.Secret, 0)
 		}
 		return c.JSON(fiber.Map{"secrets": secrets, "source": "k8s"})
-	}
-
-	return errNoClusterAccess(c)
+	})
 }
 
 // GetServiceAccounts returns ServiceAccounts from clusters
 func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
-	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
-		return demoResponse(c, "serviceAccounts", getDemoServiceAccounts())
-	}
-
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -120,15 +116,15 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		return err
 	}
 
-	if h.k8sClient != nil {
+	return h.withDemoFallback(c, "serviceAccounts", getDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
 		if cluster == "" {
-			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
 				return handleK8sError(c, err)
 			}
 
 			allServiceAccounts, errTracker := queryAllClusters(c.Context(), clusters, func(ctx context.Context, clusterName string) ([]k8s.ServiceAccount, error) {
-				return h.k8sClient.GetServiceAccounts(ctx, clusterName, namespace)
+				return client.GetServiceAccounts(ctx, clusterName, namespace)
 			})
 			return c.JSON(errTracker.annotate(fiber.Map{"serviceAccounts": allServiceAccounts, "source": "k8s"}))
 		}
@@ -136,7 +132,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
 		defer cancel()
 
-		serviceAccounts, err := h.k8sClient.GetServiceAccounts(ctx, cluster, namespace)
+		serviceAccounts, err := client.GetServiceAccounts(ctx, cluster, namespace)
 		if err != nil {
 			return handleK8sError(c, err)
 		}
@@ -144,18 +140,11 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 			serviceAccounts = make([]k8s.ServiceAccount, 0)
 		}
 		return c.JSON(fiber.Map{"serviceAccounts": serviceAccounts, "source": "k8s"})
-	}
-
-	return errNoClusterAccess(c)
+	})
 }
 
 // GetPVCs returns PersistentVolumeClaims from clusters
 func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
-	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
-		return demoResponse(c, "pvcs", getDemoPVCs())
-	}
-
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -163,15 +152,15 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		return err
 	}
 
-	if h.k8sClient != nil {
+	return h.withDemoFallback(c, "pvcs", getDemoPVCs(), func(client *k8s.MultiClusterClient) error {
 		if cluster == "" {
-			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+			clusters, _, err := client.HealthyClusters(c.Context())
 			if err != nil {
 				return handleK8sError(c, err)
 			}
 
 			allPVCs, errTracker := queryAllClusters(c.Context(), clusters, func(ctx context.Context, clusterName string) ([]k8s.PVC, error) {
-				return h.k8sClient.GetPVCs(ctx, clusterName, namespace)
+				return client.GetPVCs(ctx, clusterName, namespace)
 			})
 			return c.JSON(errTracker.annotate(fiber.Map{"pvcs": allPVCs, "source": "k8s"}))
 		}
@@ -179,7 +168,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
 		defer cancel()
 
-		pvcs, err := h.k8sClient.GetPVCs(ctx, cluster, namespace)
+		pvcs, err := client.GetPVCs(ctx, cluster, namespace)
 		if err != nil {
 			return handleK8sError(c, err)
 		}
@@ -187,9 +176,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 			pvcs = make([]k8s.PVC, 0)
 		}
 		return c.JSON(fiber.Map{"pvcs": pvcs, "source": "k8s"})
-	}
-
-	return errNoClusterAccess(c)
+	})
 }
 
 // GetPVs returns PersistentVolumes from clusters

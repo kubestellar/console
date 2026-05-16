@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,10 +29,17 @@ type CustomResourceItem struct {
 // Errors maps cluster name -> error message for per-cluster failures (#7967,
 // #7973). Empty/missing when all fanned-out clusters succeeded.
 type CustomResourceResponse struct {
-	Items      []CustomResourceItem `json:"items"`
-	Errors     map[string]string    `json:"errors,omitempty"`
-	IsDemoData bool                 `json:"isDemoData"`
+	Items        []CustomResourceItem `json:"items"`
+	Errors       map[string]string    `json:"errors,omitempty"`
+	IsDemoData   bool                 `json:"isDemoData"`
+	Limit        int                  `json:"limit,omitempty"`
+	NextContinue string               `json:"nextContinue,omitempty"`
 }
+
+const (
+	defaultCustomResourceLimit = 500
+	maxCustomResourceLimit     = 2000
+)
 
 // GetCustomResources queries custom resource instances across clusters.
 //
@@ -61,6 +69,12 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	resource := c.Query("resource")
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
+	continueToken := c.Query("continue")
+
+	limit, err := parseCustomResourceLimit(c.Query("limit"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
 
 	if group == "" || version == "" || resource == "" {
 		// Return an empty list instead of 400 — callers may query the base URL
@@ -87,7 +101,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 
 	// Single-cluster path
 	if cluster != "" {
-		items, err := h.listCR(c.Context(), cluster, namespace, gvr)
+		items, nextContinue, err := h.listCR(c.Context(), cluster, namespace, gvr, int64(limit), continueToken)
 		if err != nil {
 			slog.Warn("custom-resources: cluster error", "cluster", cluster, "error", err)
 			// #7973: distinguish RBAC 403 (caller has no permission) from
@@ -102,7 +116,16 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list resources"})
 		}
-		return c.JSON(CustomResourceResponse{Items: items, IsDemoData: false})
+		return c.JSON(CustomResourceResponse{
+			Items:        items,
+			IsDemoData:   false,
+			Limit:        limit,
+			NextContinue: nextContinue,
+		})
+	}
+	continueOffset, err := parseCustomResourceContinueToken(continueToken)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Fan-out across all healthy clusters
@@ -114,7 +137,12 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	allItems := make([]CustomResourceItem, 0)
+	targetResultCount := continueOffset + limit + 1
+	if targetResultCount > maxCustomResourceLimit+continueOffset {
+		targetResultCount = maxCustomResourceLimit + continueOffset
+	}
+
+	allItems := make([]CustomResourceItem, 0, minCustomResourceInt(targetResultCount, limit))
 	clusterErrors := make(map[string]string)
 
 	clusterCtx, clusterCancel := context.WithCancel(c.Context())
@@ -135,7 +163,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 			ctx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
 			defer cancel()
 
-			items, err := h.listCR(ctx, clusterName, namespace, gvr)
+			items, _, err := h.listCR(ctx, clusterName, namespace, gvr, int64(targetResultCount), "")
 			if err != nil {
 				slog.Warn("custom-resources: cluster error", "cluster", clusterName, "resource", gvr.Resource, "error", err)
 				// #7973: propagate per-cluster errors instead of silently
@@ -158,14 +186,26 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 			}
 			if len(items) > 0 {
 				mu.Lock()
-				allItems = append(allItems, items...)
+				if len(allItems) < targetResultCount {
+					remaining := targetResultCount - len(allItems)
+					if len(items) > remaining {
+						items = items[:remaining]
+					}
+					allItems = append(allItems, items...)
+				}
 				mu.Unlock()
 			}
 		})
 	}
 
 	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
-	resp := CustomResourceResponse{Items: allItems, IsDemoData: false}
+	pageItems, nextContinue := paginateCustomResourceItems(allItems, continueOffset, limit)
+	resp := CustomResourceResponse{
+		Items:        pageItems,
+		IsDemoData:   false,
+		Limit:        limit,
+		NextContinue: nextContinue,
+	}
 	if len(clusterErrors) > 0 {
 		resp.Errors = clusterErrors
 	}
@@ -177,20 +217,27 @@ func (h *MCPHandlers) listCR(
 	ctx context.Context,
 	clusterName, namespace string,
 	gvr schema.GroupVersionResource,
-) ([]CustomResourceItem, error) {
+	limit int64,
+	continueToken string,
+) ([]CustomResourceItem, string, error) {
 	dynClient, err := h.k8sClient.GetDynamicClient(clusterName)
 	if err != nil {
-		return nil, fmt.Errorf("dynamic client: %w", err)
+		return nil, "", fmt.Errorf("dynamic client: %w", err)
+	}
+
+	listOpts := metav1.ListOptions{
+		Limit:    limit,
+		Continue: continueToken,
 	}
 
 	var uList interface{}
 	if namespace != "" {
-		uList, err = dynClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		uList, err = dynClient.Resource(gvr).Namespace(namespace).List(ctx, listOpts)
 	} else {
-		uList, err = dynClient.Resource(gvr).List(ctx, metav1.ListOptions{})
+		uList, err = dynClient.Resource(gvr).List(ctx, listOpts)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("list %s: %w", gvr.Resource, err)
+		return nil, "", fmt.Errorf("list %s: %w", gvr.Resource, err)
 	}
 
 	// Dynamic client returns *unstructured.UnstructuredList
@@ -199,15 +246,22 @@ func (h *MCPHandlers) listCR(
 	}
 	ul, ok := uList.(unstructuredList)
 	if !ok {
-		return nil, fmt.Errorf("unexpected return type %T", uList)
+		return nil, "", fmt.Errorf("unexpected return type %T", uList)
 	}
 
 	content := ul.UnstructuredContent()
 	rawItems, ok := content["items"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected type for items field in %s response", gvr.Resource)
+		return nil, "", fmt.Errorf("unexpected type for items field in %s response", gvr.Resource)
 	}
 	items := make([]CustomResourceItem, 0, len(rawItems))
+	nextContinue := ""
+
+	if metadata, ok := content["metadata"].(map[string]interface{}); ok {
+		if token, ok := metadata["continue"].(string); ok {
+			nextContinue = token
+		}
+	}
 
 	for _, raw := range rawItems {
 		obj, ok := raw.(map[string]interface{})
@@ -217,7 +271,65 @@ func (h *MCPHandlers) listCR(
 		items = append(items, parseCRItem(obj, clusterName))
 	}
 
-	return items, nil
+	return items, nextContinue, nil
+}
+
+func parseCustomResourceLimit(raw string) (int, error) {
+	if raw == "" {
+		return defaultCustomResourceLimit, nil
+	}
+	parsed, err := parsePositiveIntQuery("limit", raw, 1, maxCustomResourceLimit)
+	if err != nil {
+		return 0, err
+	}
+	return parsed, nil
+}
+
+func parseCustomResourceContinueToken(raw string) (int, error) {
+	if raw == "" {
+		return 0, nil
+	}
+	parsed, err := parsePositiveIntQuery("continue", raw, 0, 10_000)
+	if err != nil {
+		return 0, err
+	}
+	return parsed, nil
+}
+
+func parsePositiveIntQuery(name, raw string, minValue, maxValue int) (int, error) {
+	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s parameter — must be an integer", name)
+	}
+	if parsed < minValue {
+		return 0, fmt.Errorf("invalid %s parameter — must be >= %d", name, minValue)
+	}
+	if parsed > maxValue {
+		return 0, fmt.Errorf("invalid %s parameter — must be <= %d", name, maxValue)
+	}
+	return parsed, nil
+}
+
+func paginateCustomResourceItems(items []CustomResourceItem, offset, limit int) ([]CustomResourceItem, string) {
+	if offset >= len(items) {
+		return make([]CustomResourceItem, 0), ""
+	}
+	end := offset + limit
+	if end > len(items) {
+		end = len(items)
+	}
+	nextContinue := ""
+	if len(items) > end {
+		nextContinue = fmt.Sprintf("%d", end)
+	}
+	return items[offset:end], nextContinue
+}
+
+func minCustomResourceInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // parseCRItem extracts the key fields from an unstructured custom resource.

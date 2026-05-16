@@ -1,4 +1,5 @@
 import { AlertCircle, Server } from 'lucide-react'
+import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useClusters, useServices } from '../../hooks/useMCP'
 import { useIngresses } from '../../hooks/mcp/networking'
@@ -26,33 +27,45 @@ export function Services() {
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters based on global selection
-  const filteredClusters = clusters.filter(c =>
+  const filteredClusters = useMemo(() => clusters.filter(c =>
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
+  ), [clusters, globalSelectedClusters, isAllClustersSelected])
+  const reachableClusters = useMemo(
+    () => filteredClusters.filter(c => c.reachable !== false),
+    [filteredClusters],
   )
-  const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
 
   // Filter services by selected clusters
-  const filteredServices = services.filter(s =>
+  const filteredServices = useMemo(() => services.filter(s =>
     isAllClustersSelected || globalSelectedClusters.includes(s.cluster || '')
-  )
+  ), [globalSelectedClusters, isAllClustersSelected, services])
 
   // Calculate service stats
   const totalServices = filteredServices.length
-  const loadBalancers = filteredServices.filter(s => s.type === 'LoadBalancer').length
-  const nodePortServices = filteredServices.filter(s => s.type === 'NodePort').length
-  const clusterIPServices = filteredServices.filter(s => s.type === 'ClusterIP').length
+  const loadBalancers = useMemo(
+    () => filteredServices.filter(s => s.type === 'LoadBalancer').length,
+    [filteredServices],
+  )
+  const nodePortServices = useMemo(
+    () => filteredServices.filter(s => s.type === 'NodePort').length,
+    [filteredServices],
+  )
+  const clusterIPServices = useMemo(
+    () => filteredServices.filter(s => s.type === 'ClusterIP').length,
+    [filteredServices],
+  )
   // Issue #6150: "Endpoints" stat must reflect the actual number of
   // ready backend addresses (pods) across all services, not the number
   // of services. Each service's `endpoints` field is the sum of ready
   // addresses from its core/v1 Endpoints object as populated by the
   // backend. Services with no matching pods contribute 0.
-  const totalEndpoints = filteredServices.reduce(
+  const totalEndpoints = useMemo(() => filteredServices.reduce(
     (sum, svc) => sum + (svc.endpoints ?? 0),
     0,
-  )
+  ), [filteredServices])
 
   // Stats value getter
-  const getDashboardStatValue = (blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
         return { value: reachableClusters.length, sublabel: 'clusters', onClick: () => drillToAllClusters(), isClickable: reachableClusters.length > 0 }
@@ -78,9 +91,33 @@ export function Services() {
       default:
         return { value: 0 }
     }
-  }
+  }, [
+    clusterIPServices,
+    drillToAllClusters,
+    drillToAllServices,
+    globalSelectedClusters,
+    ingresses,
+    isAllClustersSelected,
+    loadBalancers,
+    nodePortServices,
+    reachableClusters.length,
+    totalEndpoints,
+    totalServices,
+  ])
 
-  const getStatValue = getDashboardStatValue
+  const emptyStateConfig = useMemo(() => ({
+    title: reachableClusters.length === 0 ? 'No services yet' : 'Services Dashboard',
+    description: reachableClusters.length === 0
+      ? 'Connect a Kubernetes cluster to start monitoring services, endpoints, and network connectivity.'
+      : 'Add cards to monitor Kubernetes services, endpoints, and network connectivity across your clusters.',
+    secondaryAction: reachableClusters.length === 0
+      ? {
+          label: 'Connect a cluster',
+          icon: Server,
+          onClick: () => navigate(ROUTES.CLUSTERS),
+        }
+      : undefined,
+  }), [navigate, reachableClusters.length])
 
   return (
     <DashboardPage
@@ -91,29 +128,13 @@ export function Services() {
       storageKey={SERVICES_CARDS_KEY}
       defaultCards={DEFAULT_SERVICES_CARDS}
       statsType="network"
-      getStatValue={getStatValue}
+      getStatValue={getDashboardStatValue}
       onRefresh={refetch}
       isLoading={isLoading}
       isRefreshing={dataRefreshing}
       lastUpdated={lastUpdated}
       hasData={reachableClusters.length > 0}
-      emptyState={{
-        // Issues 6391/6392/6393: give the Services empty state actionable guidance.
-        // The primary CTA (add cards) is provided automatically by DashboardPage;
-        // we surface a secondary "Connect a cluster" action when there are no
-        // reachable clusters so the user knows what to do next.
-        title: reachableClusters.length === 0 ? 'No services yet' : 'Services Dashboard',
-        description: reachableClusters.length === 0
-          ? 'Connect a Kubernetes cluster to start monitoring services, endpoints, and network connectivity.'
-          : 'Add cards to monitor Kubernetes services, endpoints, and network connectivity across your clusters.',
-        secondaryAction: reachableClusters.length === 0
-          ? {
-              label: 'Connect a cluster',
-              icon: Server,
-              onClick: () => navigate(ROUTES.CLUSTERS),
-            }
-          : undefined,
-      }}
+      emptyState={emptyStateConfig}
     >
       {/* Error Display */}
       {error && (

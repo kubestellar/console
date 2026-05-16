@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ReactNode } from 'react'
+import { useState, useEffect, useRef, ReactNode, useMemo, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
 import { EmptyState, EmptyStateAction } from '../../components/ui/EmptyState'
@@ -96,6 +96,11 @@ export interface DashboardPageProps {
    */
   testId?: string
 }
+
+const DASHBOARD_VIRTUALIZATION_THRESHOLD = 60
+const DASHBOARD_VIRTUALIZATION_INITIAL_COUNT = 48
+const DASHBOARD_VIRTUALIZATION_STEP = 24
+const DASHBOARD_VIRTUALIZATION_ROOT_MARGIN = '900px 0px'
 
 // ============================================================================
 // DashboardPage Component
@@ -263,6 +268,8 @@ export function DashboardPage({
   // Inline card insertion
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
   const insertAtIndexRef = useRef<number | null>(null)
+  const [visibleCardCount, setVisibleCardCount] = useState(DASHBOARD_VIRTUALIZATION_INITIAL_COUNT)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
   insertAtIndexRef.current = insertAtIndex
 
   // Card handlers
@@ -322,13 +329,51 @@ export function DashboardPage({
     setCustomizerInitialSection(undefined)
   }
 
+  const mergedStatValueGetter = useMemo(
+    () => (customGetStatValue ? createMergedStatValueGetter(customGetStatValue, getUniversalStatValue) : null),
+    [customGetStatValue, getUniversalStatValue],
+  )
   // Merged stat value getter: dashboard-specific first, then universal fallback
-  const getStatValue = (blockId: string): StatBlockValue => {
-    if (customGetStatValue) {
-      return createMergedStatValueGetter(customGetStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    if (mergedStatValueGetter) {
+      return mergedStatValueGetter(blockId)
     }
     return getUniversalStatValue(blockId) ?? { value: '-', sublabel: '' }
-  }
+  }, [mergedStatValueGetter, getUniversalStatValue])
+
+  const shouldVirtualizeCards = showCards && cards.length > DASHBOARD_VIRTUALIZATION_THRESHOLD
+  const visibleCards = useMemo(
+    () => (shouldVirtualizeCards ? cards.slice(0, Math.min(cards.length, visibleCardCount)) : cards),
+    [cards, shouldVirtualizeCards, visibleCardCount],
+  )
+  const defaultEmptyStateAction = useMemo<EmptyStateAction>(() => ({
+    label: 'Add Cards',
+    onClick: () => setShowAddCard(true),
+  }), [setShowAddCard])
+
+  useEffect(() => {
+    if (!showCards) return
+    setVisibleCardCount((prev) => {
+      const nextMinimum = Math.min(cards.length, DASHBOARD_VIRTUALIZATION_INITIAL_COUNT)
+      return prev < nextMinimum ? nextMinimum : prev
+    })
+  }, [cards.length, showCards])
+
+  useEffect(() => {
+    if (!shouldVirtualizeCards || visibleCardCount >= cards.length) return
+    const target = loadMoreRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some(entry => entry.isIntersecting)) return
+        setVisibleCardCount(prev => Math.min(prev + DASHBOARD_VIRTUALIZATION_STEP, cards.length))
+      },
+      { rootMargin: DASHBOARD_VIRTUALIZATION_ROOT_MARGIN },
+    )
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [cards.length, shouldVirtualizeCards, visibleCardCount])
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
@@ -409,10 +454,7 @@ export function DashboardPage({
                   icon={<Icon className="w-12 h-12 text-muted-foreground" />}
                   title={emptyTitle}
                   description={emptyDescription}
-                  action={emptyState?.action ?? {
-                    label: 'Add Cards',
-                    onClick: () => setShowAddCard(true),
-                  }}
+                  action={emptyState?.action ?? defaultEmptyStateAction}
                   secondaryAction={emptyState?.secondaryAction}
                   data-testid="dashboard-empty-state"
                 />
@@ -423,13 +465,13 @@ export function DashboardPage({
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                 >
-                  <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
+                  <SortableContext items={visibleCards.map(c => c.id)} strategy={rectSortingStrategy}>
                     <div
                       className="grid grid-cols-1 md:grid-cols-12 gap-2 min-w-0"
                       data-testid="dashboard-cards-grid"
                       style={{ gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` }}
                     >
-                      {cards.map((card, index) => (
+                      {visibleCards.map((card, index) => (
                         <SortableDashboardCard
                           key={card.id}
                           card={card}
@@ -446,6 +488,9 @@ export function DashboardPage({
                         />
                       ))}
                     </div>
+                    {shouldVirtualizeCards && visibleCards.length < cards.length && (
+                      <div ref={loadMoreRef} className="h-1 w-full" aria-hidden="true" />
+                    )}
                   </SortableContext>
                   <DragOverlay dropAnimation={null} zIndex={9999}>
                     {activeId && cards.find(c => c.id === activeId) ? (
