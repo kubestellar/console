@@ -77,18 +77,46 @@ echo "" >> "$OUTPUT"
 echo "| Error Code | Search Terms | Missions Found |" >> "$OUTPUT"
 echo "|------------|-------------|----------------|" >> "$OUTPUT"
 
-# Defined in explicit order so report output is stable across runs.
-# Each entry is "ERROR_CODE:search terms" — terms are OR-joined into a jq regex.
-# 7 additional gh API calls; well within the 5000/hr token rate limit.
-PREFLIGHT_ENTRIES=(
-  "MISSING_CREDENTIALS:kubeconfig credentials setup"
-  "EXPIRED_CREDENTIALS:certificate rotation renewal"
-  "RBAC_DENIED:rbac permissions rolebinding clusterrole"
-  "CONTEXT_NOT_FOUND:kubeconfig context cluster"
-  "CLUSTER_UNREACHABLE:cluster connectivity network troubleshoot"
-  "MISSING_TOOLS:kubectl helm tool prerequisites install"
-  "UNKNOWN_EXECUTION_FAILURE:troubleshoot debug error recovery"
+# Auto-extract PreflightErrorCode values from the TypeScript source so new
+# codes are picked up automatically without a manual sync step.
+PREFLIGHT_TS="web/src/lib/missions/preflightCheck.ts"
+if [ ! -f "$PREFLIGHT_TS" ]; then
+  echo "⚠️  Cannot find $PREFLIGHT_TS — skipping preflight coverage check" >> "$OUTPUT"
+  echo "PREFLIGHT_UNCOVERED=skip"
+  exit 0
+fi
+
+mapfile -t TS_CODES < <(
+  grep -oP "'\K[A-Z_]+(?=')" "$PREFLIGHT_TS" | sort -u
 )
+
+# Search-term map: associates each error code with KB search keywords.
+# If a new code is added to preflightCheck.ts without a mapping here the
+# script will still report it (with generic fallback terms derived from the
+# code name itself), so coverage gaps are never silently hidden.
+declare -A SEARCH_TERMS=(
+  [MISSING_CREDENTIALS]="kubeconfig credentials setup"
+  [EXPIRED_CREDENTIALS]="certificate rotation renewal"
+  [RBAC_DENIED]="rbac permissions rolebinding clusterrole"
+  [CONTEXT_NOT_FOUND]="kubeconfig context cluster"
+  [CLUSTER_UNREACHABLE]="cluster connectivity network troubleshoot"
+  [MISSING_TOOLS]="kubectl helm tool prerequisites install"
+  [UNKNOWN_EXECUTION_FAILURE]="troubleshoot debug error recovery"
+)
+
+# Build PREFLIGHT_ENTRIES from the TypeScript source, falling back to
+# lowercase-dash-to-space conversion when no explicit mapping exists.
+PREFLIGHT_ENTRIES=()
+for code in "${TS_CODES[@]}"; do
+  if [ -n "${SEARCH_TERMS[$code]+x}" ]; then
+    PREFLIGHT_ENTRIES+=("$code:${SEARCH_TERMS[$code]}")
+  else
+    # Fallback: convert UPPER_SNAKE to lowercase space-separated words
+    fallback=$(echo "$code" | tr '[:upper:]_' '[:lower:] ')
+    PREFLIGHT_ENTRIES+=("$code:$fallback")
+    echo "⚠️  No explicit search terms for $code — using fallback: $fallback" >&2
+  fi
+done
 
 PREFLIGHT_UNCOVERED=0
 for entry in "${PREFLIGHT_ENTRIES[@]}"; do
