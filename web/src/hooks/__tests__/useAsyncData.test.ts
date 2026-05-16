@@ -116,6 +116,36 @@ describe('useAsyncData', () => {
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
 
+  it('ignores stale results after dependencies change when enabled is false', async () => {
+    let resolveFetch: (value: string) => void = () => {}
+    const fetcher = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+
+    const { result, rerender } = renderHook(
+      ({ dep }) => useAsyncData(fetcher, [dep], { enabled: false }),
+      { initialProps: { dep: 'first' } },
+    )
+
+    act(() => {
+      void result.current.refetch()
+    })
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(true)
+    })
+
+    rerender({ dep: 'second' })
+    resolveFetch('late')
+
+    await new Promise((r) => setTimeout(r, 10))
+    expect(result.current.data).toBeNull()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
   it('ignores stale results after unmount when enabled is false', async () => {
     let resolveFetch: (value: string) => void = () => {}
     const fetcher = vi.fn(

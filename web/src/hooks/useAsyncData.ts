@@ -33,9 +33,13 @@ export function useAsyncData<T>(
 
   const cancelActiveRef = useRef<(() => void) | null>(null)
 
-  const run = useCallback((): Promise<void> => {
+  const cancelActive = useCallback(() => {
     cancelActiveRef.current?.()
     cancelActiveRef.current = null
+  }, [])
+
+  const run = useCallback((): Promise<void> => {
+    cancelActive()
 
     let cancelled = false
     setLoading(true)
@@ -65,25 +69,15 @@ export function useAsyncData<T>(
         }
       })
       .finally(finish)
-  }, deps) // eslint-disable-line react-hooks/exhaustive-deps -- caller controls invalidation via deps
+  }, [...deps, cancelActive]) // eslint-disable-line react-hooks/exhaustive-deps -- caller controls invalidation via deps
 
   useEffect(() => {
-    if (!enabled) {
-      return
+    if (enabled) {
+      void run()
     }
-    void run()
-    return () => {
-      cancelActiveRef.current?.()
-      cancelActiveRef.current = null
-    }
-  }, [run, enabled])
 
-  useEffect(() => {
-    return () => {
-      cancelActiveRef.current?.()
-      cancelActiveRef.current = null
-    }
-  }, [])
+    return cancelActive
+  }, [run, enabled, cancelActive])
 
   const refetch = useCallback(() => run(), [run])
 
