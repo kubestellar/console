@@ -95,6 +95,8 @@ export const Drasi = safeLazy(() => import('../components/drasi/Drasi'), 'Drasi'
 export const ACMM = safeLazy(() => import('../components/acmm/ACMM'), 'ACMM')
 export const Marketplace = safeLazy(() => import('../components/marketplace/Marketplace'), 'Marketplace')
 export const Quantum = safeLazy(() => import('../components/quantum/Quantum'), 'Quantum')
+export const StellarPage = safeLazy(() => import('../components/stellar/StellarPage'), 'StellarPage')
+export const AuditPage = safeLazy(() => import('../components/stellar/AuditPage'), 'AuditPage')
 export const MiniDashboard = safeLazy(() => import('../components/widget/MiniDashboard'), 'MiniDashboard')
 export const EmbedCard = safeLazy(() => import('../pages/EmbedCard'), 'EmbedCard')
 export const Welcome = safeLazy(() => import('../pages/Welcome'), 'Welcome')

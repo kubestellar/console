@@ -53,7 +53,7 @@ import {
   Services, Operators, HelmReleases, Logs, Pods, CardHistory,
   UserManagementPage, NamespaceManager, Arcade, Deploy, AIML, AIAgents,
   LLMdBenchmarks, ClusterAdmin, CICD, Insights, MultiTenancy, Drasi,
-  ACMM, Marketplace, Quantum, MiniDashboard, EmbedCard, Welcome,
+  ACMM, Marketplace, Quantum, StellarPage, AuditPage, MiniDashboard, EmbedCard, Welcome,
   FromLens, FromHeadlamp, FromHolmesGPT, FeatureInspektorGadget,
   FeatureKagent, WhiteLabel, UnifiedCardTest, UnifiedStatsTest,
   UnifiedDashboardTest, AllCardsPerfTest, CompliancePerfTest, NotFound,
@@ -359,6 +359,8 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.ACMM} element={<SuspenseRoute><ACMM /></SuspenseRoute>} />
           <Route path={ROUTES.MARKETPLACE} element={<SuspenseRoute><Marketplace /></SuspenseRoute>} />
           <Route path={ROUTES.QUANTUM} element={<SuspenseRoute><Quantum /></SuspenseRoute>} />
+          <Route path={ROUTES.STELLAR} element={<SuspenseRoute><StellarPage /></SuspenseRoute>} />
+          <Route path={ROUTES.STELLAR_AUDIT} element={<SuspenseRoute><AuditPage /></SuspenseRoute>} />
           {/* Dev test routes for unified framework validation */}
           <Route path={ROUTES.TEST_UNIFIED_CARD} element={<UnifiedCardTest />} />
           <Route path={ROUTES.TEST_UNIFIED_STATS} element={<UnifiedStatsTest />} />
