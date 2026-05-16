@@ -91,31 +91,36 @@ export const languages = [
 export const defaultNS = 'common'
 export const namespaces = ['common', 'cards', 'status', 'errors'] as const
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    defaultNS,
-    ns: namespaces,
-    fallbackLng: 'en',
-    supportedLngs: ['en', 'es', 'fr', 'de', 'ja', 'zh', 'it', 'pt', 'hi', 'zh-TW'],
+// Guard against test environments where react-i18next is mocked without
+// exporting initReactI18next. Without this check, .use(undefined) throws
+// and any test file that imports a component using i18n will "fail to load".
+const configuredI18n = i18n.use(LanguageDetector)
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+if (initReactI18next) {
+  configuredI18n.use(initReactI18next)
+}
+configuredI18n.init({
+  resources,
+  defaultNS,
+  ns: namespaces,
+  fallbackLng: 'en',
+  supportedLngs: ['en', 'es', 'fr', 'de', 'ja', 'zh', 'it', 'pt', 'hi', 'zh-TW'],
 
-    interpolation: {
-      escapeValue: false, // React already escapes values
-    },
+  interpolation: {
+    escapeValue: false, // React already escapes values
+  },
 
-    detection: {
-      // Auto-detect from browser first, then check localStorage
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      lookupLocalStorage: 'i18nextLng',
-      caches: ['localStorage'],
-    },
+  detection: {
+    // Auto-detect from browser first, then check localStorage
+    order: ['localStorage', 'navigator', 'htmlTag'],
+    lookupLocalStorage: 'i18nextLng',
+    caches: ['localStorage'],
+  },
 
-    react: {
-      useSuspense: false, // Disable suspense to avoid loading states
-    },
-  })
+  react: {
+    useSuspense: false, // Disable suspense to avoid loading states
+  },
+})
 
 export default i18n
 
