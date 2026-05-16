@@ -127,7 +127,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     const failedProjects = (state.launchProgress || [])
       .flatMap(phase => (phase.projects || []).filter(p => p.status === 'failed'))
     const projectNames = failedProjects.map(p => p.name).join(', ')
-    const clusters = (state.assignments || []).map(a => a.cluster).filter(Boolean).join(', ')
+    const clusters = (state.assignments || []).map(a => a.clusterName).filter(Boolean).join(', ')
 
     const rollbackPrompt = [
       `The following Mission Control deployment failed and may have left clusters in an inconsistent state.`,
