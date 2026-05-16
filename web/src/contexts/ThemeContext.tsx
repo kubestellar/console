@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, type ReactNode } from 'react'
 import { Theme, themes, getAllThemes, getThemeById, getDefaultTheme } from '../lib/themes'
 import { emitThemeChanged } from '../lib/analytics'
 import { GOOGLE_FONTS_API_URL } from '../config/externalApis'
@@ -253,8 +253,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const currentTheme = getThemeById(resolvedThemeId) || getDefaultTheme()
 
-  // Apply theme on mount and changes
-  useEffect(() => {
+  // Apply theme on mount and changes — useLayoutEffect ensures DOM updates
+  // (class names, CSS variables) are committed synchronously before the browser
+  // paints, preventing a flash of the previous theme's colors (#14183).
+  useLayoutEffect(() => {
     applyTheme(currentTheme)
     localStorage.setItem(STORAGE_KEY, themeId)
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
