@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePersistence } from './usePersistence'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 
 // =============================================================================
@@ -271,9 +272,9 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     }
 
     try {
-      const response = await fetch(agentWriteURL(), {
+      const response = await agentFetch(agentWriteURL(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
@@ -297,9 +298,9 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     }
 
     try {
-      const response = await fetch(agentWriteURL('', { name }), {
+      const response = await agentFetch(agentWriteURL('', { name }), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
@@ -323,9 +324,8 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     }
 
     try {
-      const response = await fetch(agentWriteURL('', { name }), {
+      const response = await agentFetch(agentWriteURL('', { name }), {
         method: 'DELETE',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok || response.status === 204) {
         // Optimistic update
@@ -393,9 +393,9 @@ export function useWorkloadDeployments() {
     try {
       const params = new URLSearchParams({ cluster: activeCluster, namespace: persistenceNamespace, name })
       const url = `${LOCAL_AGENT_HTTP_URL}/console-cr/deployments/status?${params.toString()}`
-      const response = await fetch(url, {
+      const response = await agentFetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(status),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {

@@ -8,7 +8,7 @@ import { getPredictionSettings, getSettingsForBackend } from './usePredictionSet
 import { getDemoMode } from './useDemoMode'
 import { isAgentUnavailable, reportAgentDataSuccess, reportAgentDataError } from './useLocalAgent'
 import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
-import { fullFetchClusters, clusterCache } from './mcp/shared'
+import { fullFetchClusters, clusterCache, agentFetch } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
@@ -271,7 +271,7 @@ async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
   }
 
   try {
-    const response = await fetch(`${AGENT_HTTP_URL}/predictions/ai`, {
+    const response = await agentFetch(`${AGENT_HTTP_URL}/predictions/ai`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
       signal: getRequestSignal(AI_PREDICTION_TIMEOUT_MS, signal)
@@ -440,9 +440,9 @@ async function triggerAnalysis(specificProviders?: string[], signal?: AbortSigna
   }
 
   try {
-    const response = await fetch(`${AGENT_HTTP_URL}/predictions/analyze`, {
+    const response = await agentFetch(`${AGENT_HTTP_URL}/predictions/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: specificProviders }),
       signal: getRequestSignal(FETCH_DEFAULT_TIMEOUT_MS, signal)
     })
