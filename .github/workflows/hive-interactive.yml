@@ -1,25 +1,63 @@
-name: Hive Interactive Mentions
+name: Hive Interactive
 
 on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
   issue_comment:
     types: [created]
 
 permissions:
-  actions: write
   contents: read
   issues: write
-
-concurrency:
-  group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
-  cancel-in-progress: false
+  pull-requests: write
 
 jobs:
+  post-directions:
+    if: |
+      (github.event_name == 'issues' && github.event.issue.user.type != 'Bot') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.user.type != 'Bot')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post hive interaction directions
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const item = context.eventName === 'issues'
+              ? context.payload.issue
+              : context.payload.pull_request;
+
+            const body = [
+              `🐝 Hi @${item.user.login}! I'm \`kubestellar-hive[bot]\`, an AI assistant for this repo.`,
+              '',
+              'Mention `@kubestellar-hive` in any comment to interact with me.',
+              'I can help with code reviews, bug fixes, CI/CD help, and questions about the codebase.',
+              '',
+              '_I’m AI-powered, so replies may take a moment._',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: item.number,
+              body,
+            });
+
   hive-mention:
     if: |
-      !github.event.issue.pull_request &&
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
       contains(github.event.comment.body, '@kubestellar-hive')
     runs-on: ubuntu-latest
-
+    concurrency:
+      group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+      cancel-in-progress: false
+    permissions:
+      actions: write
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - name: Evaluate mention
         id: evaluate
@@ -31,6 +69,7 @@ jobs:
           COMMENT_URL: ${{ github.event.comment.html_url }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
         run: |
           set -euo pipefail
 
@@ -54,6 +93,7 @@ jobs:
 
           echo "triaged=$TRIAGED" >> "$GITHUB_OUTPUT"
           echo "active_run=$ACTIVE_RUN" >> "$GITHUB_OUTPUT"
+          echo "is_pull_request=$IS_PULL_REQUEST" >> "$GITHUB_OUTPUT"
           DELIMITER="EOF_$(openssl rand -hex 8)"
           {
             echo "clean_body<<${DELIMITER}"
@@ -62,7 +102,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Ensure hive labels are present
-        if: steps.evaluate.outputs.triaged == 'true'
+        if: |
+          steps.evaluate.outputs.is_pull_request != 'true' &&
+          steps.evaluate.outputs.triaged == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -77,6 +119,7 @@ jobs:
 
       - name: Dispatch hive fix workflow
         if: |
+          steps.evaluate.outputs.is_pull_request != 'true' &&
           steps.evaluate.outputs.triaged == 'true' &&
           steps.evaluate.outputs.active_run != 'true'
         env:
@@ -102,12 +145,21 @@ jobs:
           CLEAN_BODY: ${{ steps.evaluate.outputs.clean_body }}
           TRIAGED: ${{ steps.evaluate.outputs.triaged }}
           ACTIVE_RUN: ${{ steps.evaluate.outputs.active_run }}
+          IS_PULL_REQUEST: ${{ steps.evaluate.outputs.is_pull_request }}
         run: |
           set -euo pipefail
 
           QUOTED_BODY=$(printf '%s\n' "$CLEAN_BODY" | sed 's/^/> /')
 
-          if [ "$TRIAGED" != 'true' ]; then
+          if [ "$IS_PULL_REQUEST" = 'true' ]; then
+            if [ "$ACTIVE_RUN" = 'true' ]; then
+              STATUS_LINE='I saved your instruction on this PR thread. There is already AI automation active for this PR, so I did not start anything new.'
+              NEXT_STEP='The active automation can use this new context on its next pass.'
+            else
+              STATUS_LINE='I saved your instruction on this PR thread.'
+              NEXT_STEP='Mention `@kubestellar-hive` again any time with more details, follow-up questions, or review requests.'
+            fi
+          elif [ "$TRIAGED" != 'true' ]; then
             STATUS_LINE='I saved your instruction, but I did not queue a hive run because this issue is not labeled `triage/accepted` yet.'
             NEXT_STEP='Once a maintainer accepts the issue, mention the hive again (or use `/triage accepted`) to kick off the workflow.'
           elif [ "$ACTIVE_RUN" = 'true' ]; then
