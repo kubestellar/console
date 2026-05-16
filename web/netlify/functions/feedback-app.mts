@@ -189,7 +189,9 @@ async function getInstallationCred(): Promise<string> {
 
   if (!resp.ok) {
     const txt = await resp.text();
-    throw new Error(`installation credential exchange HTTP ${resp.status}: ${txt}`);
+    const reqId = Date.now();
+    console.error(`[feedback-app] installation credential exchange failed (req=${reqId}): HTTP ${resp.status} — ${sanitizeUpstreamError(txt)}`);
+    throw new Error(`Upstream service error (req=${reqId})`);
   }
   const data = (await resp.json()) as { token: string };
   cachedInstallCred = { value: data.token, fetchedAt: Date.now() };

@@ -24,6 +24,15 @@ const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWT_EXPIRY_SECONDS = 3600;
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000; // refresh 5 min before expiry
+const MAX_LOG_BODY_CHARS = 500; // max chars of upstream error body to log
+
+/** Truncate upstream error body for logging — never log full external responses. */
+function sanitizeUpstreamError(text: string): string {
+  const oneLine = text.replace(/[\r\n]+/g, " ").trim();
+  return oneLine.length > MAX_LOG_BODY_CHARS
+    ? oneLine.slice(0, MAX_LOG_BODY_CHARS) + "…[truncated]"
+    : oneLine;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -192,7 +201,9 @@ async function getAccessToken(
 
   if (!resp.ok) {
     const body = await resp.text();
-    throw new Error(`Token exchange failed (${resp.status}): ${body}`);
+    const reqId = Date.now();
+    console.error(`[analytics-dashboard] token exchange failed (req=${reqId}): HTTP ${resp.status} — ${sanitizeUpstreamError(body)}`);
+    throw new Error(`Upstream service error (req=${reqId})`);
   }
 
   const data = await resp.json();
@@ -233,7 +244,9 @@ async function runReport(
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`GA4 API ${resp.status}: ${text}`);
+    const reqId = Date.now();
+    console.error(`[analytics-dashboard] GA4 API error (req=${reqId}): HTTP ${resp.status} — ${sanitizeUpstreamError(text)}`);
+    throw new Error(`Upstream service error (req=${reqId})`);
   }
 
   const data = await resp.json();
