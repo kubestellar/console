@@ -22,8 +22,9 @@ jobs:
     steps:
       - name: Fetch ACMM badge score
         id: badge
+        env:
+          MIN_LEVEL: ${{ github.event.inputs.min_level || '5' }}
         run: |
-          MIN_LEVEL="${{ github.event.inputs.min_level || '5' }}"
           RESPONSE=$(curl -sf "https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true" || echo "")
           if [ -z "$RESPONSE" ]; then
             echo "level=0" >> "$GITHUB_OUTPUT"

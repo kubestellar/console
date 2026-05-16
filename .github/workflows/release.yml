@@ -52,10 +52,14 @@ jobs:
 
       - name: Determine release type
         id: type
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-          elif [ "${{ github.event.schedule }}" = "0 8 * * 0" ]; then
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            RELEASE_TYPE="$INPUT_RELEASE_TYPE"
+          elif [ "$EVENT_SCHEDULE" = "0 8 * * 0" ]; then
             RELEASE_TYPE="weekly"
           else
             RELEASE_TYPE="nightly"
