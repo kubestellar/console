@@ -95,7 +95,7 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
     if (mq.matches !== isNarrow) setIsNarrow(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isNarrow])
 
   const posW = card.position?.w || 4
   const posH = card.position?.h || 2

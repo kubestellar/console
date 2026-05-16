@@ -212,7 +212,7 @@ export function ActiveAlerts() {
       lastExternalFilterKeyRef.current = externalFilterKey
       goToPage(RESET_TO_FIRST_PAGE)
     }
-  })
+  }, [externalFilterKey])
 
   const handleAlertClick = (alert: Alert) => {
     if (alert.cluster) {

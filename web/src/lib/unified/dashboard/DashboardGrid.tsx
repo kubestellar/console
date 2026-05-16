@@ -215,7 +215,7 @@ function DashboardCardWrapper({
     if (mq.matches !== isNarrow) setIsNarrow(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isNarrow])
 
   const rawW = Math.min(12, Math.max(3, placement.position?.w || 4))
   const effectiveW = isNarrow && rawW < 6 ? 6 : rawW
