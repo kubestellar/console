@@ -1,4 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useStellar } from '../../hooks/useStellar'
 import {
   STELLAR_NAVIGATION_EVENT,
@@ -7,6 +9,9 @@ import {
   isStellarRailItemActive,
   type StellarRailItem,
 } from './navigation'
+import { STORAGE_KEY_STELLAR_ATTENTION_DISMISSED } from '../../lib/constants/storage'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
+import { cn } from '../../lib/cn'
 
 import '../../styles/stellar.css'
 
@@ -22,6 +27,8 @@ const STELLAR_BADGE_OFFSET_PX = -4
 const STELLAR_BADGE_PADDING_X_PX = 3
 const STELLAR_BADGE_FONT_SIZE_PX = 9
 const STELLAR_UNREAD_COUNT_CAP = 99
+const STELLAR_ATTENTION_BUBBLE_OFFSET_RIGHT_PX = 50
+const STELLAR_ATTENTION_BUBBLE_OFFSET_TOP_PX = 60
 
 function getTargetHash(target: StellarRailItem): string {
   return new URL(target.href, window.location.origin).hash
@@ -33,10 +40,23 @@ function getTargetHash(target: StellarRailItem): string {
 export function StellarSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
   const { isConnected, unreadCount } = useStellar()
   const onStellarRoute = isOnStellarRoute(location.pathname)
+  const [showAttentionBubble, setShowAttentionBubble] = useState(false)
+
+  useEffect(() => {
+    const dismissed = safeGetItem(STORAGE_KEY_STELLAR_ATTENTION_DISMISSED)
+    setShowAttentionBubble(!dismissed)
+  }, [])
 
   const handleNavigation = (target: StellarRailItem) => {
+    // Dismiss the attention bubble when user interacts with Stellar
+    if (showAttentionBubble) {
+      setShowAttentionBubble(false)
+      safeSetItem(STORAGE_KEY_STELLAR_ATTENTION_DISMISSED, 'true')
+    }
+
     const targetHash = getTargetHash(target)
     const sameTarget = location.pathname === target.route && location.hash === targetHash
 
@@ -51,85 +71,114 @@ export function StellarSidebar() {
   }
 
   return (
-    <nav
-      aria-label="Stellar shortcuts"
-      style={{
-        width: STELLAR_RAIL_WIDTH_PX,
-        flexShrink: 0,
-        height: '100%',
-        background: 'var(--s-surface)',
-        borderLeft: '1px solid var(--s-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingTop: STELLAR_RAIL_PADDING_TOP_PX,
-        gap: STELLAR_RAIL_GAP_PX,
-      }}
-    >
-      <div
+    <div style={{ position: 'relative' }}>
+      <nav
+        aria-label="Stellar shortcuts"
         style={{
-          width: STELLAR_CONNECTED_DOT_SIZE_PX,
-          height: STELLAR_CONNECTED_DOT_SIZE_PX,
-          borderRadius: '50%',
-          background: isConnected ? 'var(--s-success)' : 'var(--s-text-dim)',
-          boxShadow: isConnected ? '0 0 5px var(--s-success)' : 'none',
-          marginBottom: STELLAR_STATUS_MARGIN_BOTTOM_PX,
+          width: STELLAR_RAIL_WIDTH_PX,
+          flexShrink: 0,
+          height: '100%',
+          background: 'var(--s-surface)',
+          borderLeft: '1px solid var(--s-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          paddingTop: STELLAR_RAIL_PADDING_TOP_PX,
+          gap: STELLAR_RAIL_GAP_PX,
         }}
-        title={isConnected ? 'Stellar connected' : 'Stellar disconnected'}
-      />
-      {STELLAR_RAIL_ITEMS.map(item => {
-        const active = isStellarRailItemActive(item, location.pathname, location.hash)
-        const showUnreadBadge = item.key === 'events' && unreadCount > 0
-        const Icon = item.icon
-        return (
-          <button
-            key={item.key}
-            type="button"
-            aria-label={item.label}
-            data-testid={`stellar-rail-${item.key}`}
-            onClick={() => handleNavigation(item)}
-            title={item.label}
+      >
+        <div
+          style={{
+            width: STELLAR_CONNECTED_DOT_SIZE_PX,
+            height: STELLAR_CONNECTED_DOT_SIZE_PX,
+            borderRadius: '50%',
+            background: isConnected ? 'var(--s-success)' : 'var(--s-text-dim)',
+            boxShadow: isConnected ? '0 0 5px var(--s-success)' : 'none',
+            marginBottom: STELLAR_STATUS_MARGIN_BOTTOM_PX,
+          }}
+          title={isConnected ? 'Stellar connected' : 'Stellar disconnected'}
+        />
+        {STELLAR_RAIL_ITEMS.map(item => {
+          const active = isStellarRailItemActive(item, location.pathname, location.hash)
+          const showUnreadBadge = item.key === 'events' && unreadCount > 0
+          const Icon = item.icon
+          return (
+            <button
+              key={item.key}
+              type="button"
+              aria-label={item.label}
+              data-testid={`stellar-rail-${item.key}`}
+              onClick={() => handleNavigation(item)}
+              title={item.label}
+              style={{
+                position: 'relative',
+                width: STELLAR_NAV_BUTTON_SIZE_PX,
+                height: STELLAR_NAV_BUTTON_SIZE_PX,
+                borderRadius: 'var(--s-rs)',
+                border: 'none',
+                cursor: 'pointer',
+                background: active ? 'var(--s-brand)' : 'transparent',
+                color: active ? '#0a0e14' : onStellarRoute ? 'var(--s-text)' : 'var(--s-brand)',
+                fontSize: STELLAR_NAV_FONT_SIZE_PX,
+                lineHeight: 1,
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <Icon aria-hidden size={14} strokeWidth={2.25} />
+              {showUnreadBadge && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    top: STELLAR_BADGE_OFFSET_PX,
+                    right: STELLAR_BADGE_OFFSET_PX,
+                    minWidth: STELLAR_UNREAD_BADGE_SIZE_PX,
+                    height: STELLAR_UNREAD_BADGE_SIZE_PX,
+                    borderRadius: STELLAR_UNREAD_BADGE_SIZE_PX,
+                    padding: `0 ${STELLAR_BADGE_PADDING_X_PX}px`,
+                    background: 'var(--s-critical)',
+                    color: '#fff',
+                    fontSize: STELLAR_BADGE_FONT_SIZE_PX,
+                    fontWeight: 700,
+                    display: 'grid',
+                    placeItems: 'center',
+                  }}
+                >
+                  {unreadCount > STELLAR_UNREAD_COUNT_CAP ? `${STELLAR_UNREAD_COUNT_CAP}+` : unreadCount}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </nav>
+      
+      {/* Attention bubble for new users */}
+      {showAttentionBubble && (
+        <div
+          className={cn(
+            'absolute bg-brand text-background px-3 py-2 rounded-lg shadow-lg',
+            'animate-bounce pointer-events-none select-none',
+            'font-medium text-sm whitespace-nowrap'
+          )}
+          style={{
+            right: STELLAR_ATTENTION_BUBBLE_OFFSET_RIGHT_PX,
+            top: STELLAR_ATTENTION_BUBBLE_OFFSET_TOP_PX,
+            zIndex: 1000,
+          }}
+          aria-label={t('stellar.attentionBubble')}
+        >
+          {t('stellar.attentionBubble')}
+          <div
+            className="absolute w-3 h-3 bg-brand transform rotate-45"
             style={{
-              position: 'relative',
-              width: STELLAR_NAV_BUTTON_SIZE_PX,
-              height: STELLAR_NAV_BUTTON_SIZE_PX,
-              borderRadius: 'var(--s-rs)',
-              border: 'none',
-              cursor: 'pointer',
-              background: active ? 'var(--s-brand)' : 'transparent',
-              color: active ? '#0a0e14' : onStellarRoute ? 'var(--s-text)' : 'var(--s-brand)',
-              fontSize: STELLAR_NAV_FONT_SIZE_PX,
-              lineHeight: 1,
-              display: 'grid',
-              placeItems: 'center',
+              right: '-6px',
+              top: '50%',
+              marginTop: '-6px',
             }}
-          >
-            <Icon aria-hidden size={14} strokeWidth={2.25} />
-            {showUnreadBadge && (
-              <span
-                aria-hidden
-                style={{
-                  position: 'absolute',
-                  top: STELLAR_BADGE_OFFSET_PX,
-                  right: STELLAR_BADGE_OFFSET_PX,
-                  minWidth: STELLAR_UNREAD_BADGE_SIZE_PX,
-                  height: STELLAR_UNREAD_BADGE_SIZE_PX,
-                  borderRadius: STELLAR_UNREAD_BADGE_SIZE_PX,
-                  padding: `0 ${STELLAR_BADGE_PADDING_X_PX}px`,
-                  background: 'var(--s-critical)',
-                  color: '#fff',
-                  fontSize: STELLAR_BADGE_FONT_SIZE_PX,
-                  fontWeight: 700,
-                  display: 'grid',
-                  placeItems: 'center',
-                }}
-              >
-                {unreadCount > STELLAR_UNREAD_COUNT_CAP ? `${STELLAR_UNREAD_COUNT_CAP}+` : unreadCount}
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </nav>
+          />
+        </div>
+      )}
+    </div>
   )
 }

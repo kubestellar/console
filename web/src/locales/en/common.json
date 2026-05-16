@@ -4424,5 +4424,8 @@
     "workload": "Workload",
     "time": "Time",
     "clusters": "Clusters"
+  },
+  "stellar": {
+    "attentionBubble": "Try Stellar AI!"
   }
 }
