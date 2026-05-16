@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useLocalStorage } from './useLocalStorage'
 
 export type AIMode = 'low' | 'medium' | 'high'
 
@@ -51,36 +52,19 @@ const STORAGE_KEY = 'kubestellar-ai-mode'
 const DEFAULT_AI_MODE: AIMode = 'medium'
 const VALID_AI_MODES: ReadonlySet<string> = new Set<AIMode>(['low', 'medium', 'high'])
 
-/** Validate a persisted value against the known-good AIMode enum. */
-function isValidAIMode(value: string | null): value is AIMode {
-  return value !== null && VALID_AI_MODES.has(value)
+function deserializeAIMode(value: string): AIMode {
+  return VALID_AI_MODES.has(value) ? (value as AIMode) : DEFAULT_AI_MODE
 }
 
 export function useAIMode() {
-  const [mode, setModeState] = useState<AIMode>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (isValidAIMode(stored)) {
-        return stored
-      }
-      // Clear invalid/stale value so it doesn't persist across reloads.
-      if (stored !== null) {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-      return DEFAULT_AI_MODE
-    }
-    return DEFAULT_AI_MODE
+  const [mode, setMode] = useLocalStorage<AIMode>(STORAGE_KEY, DEFAULT_AI_MODE, {
+    serialize: (value: AIMode) => value,
+    deserialize: deserializeAIMode,
   })
 
-  // Persist mode changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, mode)
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
   }, [mode])
-
-  const setMode = (newMode: AIMode) => {
-    setModeState(newMode)
-  }
 
   const config = AI_MODE_CONFIGS[mode]
   const description = DESCRIPTIONS[mode]

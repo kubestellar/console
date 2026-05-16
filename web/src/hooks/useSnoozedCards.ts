@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { STORAGE_KEY_SNOOZED_CARDS } from '../lib/constants/storage'
 import { MS_PER_HOUR, MS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../lib/constants/time'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
+import { useLocalStorage } from './useLocalStorage'
 
 /** Default snooze duration: 1 hour */
 const DEFAULT_SNOOZE_DURATION_MS = MS_PER_HOUR
@@ -32,58 +33,60 @@ interface StoredState {
   swaps: SnoozedSwap[]
 }
 
+const DEFAULT_STATE: StoredState = { swaps: [] }
+
+function deserializeStoredState(raw: string): StoredState {
+  const parsed = safeJsonParse<StoredState>(raw, DEFAULT_STATE, 'snoozed cards')
+  const now = Date.now()
+
+  return {
+    swaps: (parsed.swaps || []).filter((swap: SnoozedSwap) => swap.snoozedUntil > now),
+  }
+}
+
+function cloneState(): StoredState {
+  return {
+    swaps: [...state.swaps],
+  }
+}
+
 // Module-level state for cross-component sharing
-let state: StoredState = { swaps: [] }
+let state: StoredState = DEFAULT_STATE
 const listeners: Set<() => void> = new Set()
 
 function notifyListeners() {
   listeners.forEach((listener) => listener())
 }
 
-function loadState(): StoredState {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_SNOOZED_CARDS)
-    if (stored) {
-      const parsed = safeJsonParse<StoredState>(stored, { swaps: [] }, 'snoozed cards')
-      // Clean up expired snoozes on load
-      const now = Date.now()
-      parsed.swaps = (parsed.swaps || []).filter(
-        (s: SnoozedSwap) => s.snoozedUntil > now
-      )
-      return parsed
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return { swaps: [] }
-}
-
-function saveState() {
-  try {
-    localStorage.setItem(STORAGE_KEY_SNOOZED_CARDS, JSON.stringify(state))
-  } catch {
-    // Ignore write errors (e.g. private browsing, quota exceeded)
-  }
-}
-
-// Initialize on module load
-state = loadState()
-
 export function useSnoozedCards() {
-  const [localState, setLocalState] = useState<StoredState>(state)
+  const [storedState, setStoredState] = useLocalStorage<StoredState>(STORAGE_KEY_SNOOZED_CARDS, DEFAULT_STATE, {
+    deserialize: deserializeStoredState,
+  })
+  const [localState, setLocalState] = useState<StoredState>(storedState)
 
   useEffect(() => {
-    const listener = () => setLocalState({ ...state })
+    state = storedState
+    setLocalState(storedState)
+  }, [storedState])
+
+  const persistState = useCallback((nextState: StoredState) => {
+    state = nextState
+    setLocalState(nextState)
+    setStoredState(nextState)
+    notifyListeners()
+  }, [setStoredState])
+
+  useEffect(() => {
+    const listener = () => setLocalState(cloneState())
     listeners.add(listener)
 
     // Periodically clean up expired snoozes
     const checkExpired = () => {
       const now = Date.now()
-      const hadExpired = state.swaps.some(s => s.snoozedUntil <= now)
-      if (hadExpired) {
-        state.swaps = state.swaps.filter(s => s.snoozedUntil > now)
-        saveState()
-        notifyListeners()
+      const activeSwaps = state.swaps.filter((swap) => swap.snoozedUntil > now)
+
+      if (activeSwaps.length !== state.swaps.length) {
+        persistState({ swaps: activeSwaps })
       }
     }
 
@@ -93,7 +96,7 @@ export function useSnoozedCards() {
       listeners.delete(listener)
       clearInterval(intervalId)
     }
-  }, [])
+  }, [persistState])
 
   const snoozeSwap = (swap: Omit<SnoozedSwap, 'id' | 'snoozedAt' | 'snoozedUntil'>, durationMs: number = DEFAULT_SNOOZE_DURATION_MS) => {
     const now = Date.now()
@@ -103,41 +106,40 @@ export function useSnoozedCards() {
       snoozedAt: now,
       snoozedUntil: now + durationMs,
     }
-    state.swaps = [...state.swaps, newSwap]
-    saveState()
-    notifyListeners()
+
+    persistState({ swaps: [...state.swaps, newSwap] })
     emitSnoozed('card')
     return newSwap
   }
 
   const unsnoozeSwap = (id: string) => {
-    const swap = state.swaps.find((s) => s.id === id)
-    state.swaps = state.swaps.filter((s) => s.id !== id)
-    saveState()
-    notifyListeners()
+    const swap = state.swaps.find((entry) => entry.id === id)
+    persistState({
+      swaps: state.swaps.filter((entry) => entry.id !== id),
+    })
     emitUnsnoozed('card')
     return swap
   }
 
   const dismissSwap = (id: string) => {
-    state.swaps = state.swaps.filter((s) => s.id !== id)
-    saveState()
-    notifyListeners()
+    persistState({
+      swaps: state.swaps.filter((entry) => entry.id !== id),
+    })
   }
 
   const getExpiredSwaps = () => {
     const now = Date.now()
-    return state.swaps.filter((s) => s.snoozedUntil <= now)
+    return state.swaps.filter((swap) => swap.snoozedUntil <= now)
   }
 
   const getActiveSwaps = () => {
     const now = Date.now()
-    return state.swaps.filter((s) => s.snoozedUntil > now)
+    return state.swaps.filter((swap) => swap.snoozedUntil > now)
   }
 
   const isCardSnoozed = (cardId: string): boolean => {
     const now = Date.now()
-    return state.swaps.some(s => s.originalCardId === cardId && s.snoozedUntil > now)
+    return state.swaps.some((swap) => swap.originalCardId === cardId && swap.snoozedUntil > now)
   }
 
   return {

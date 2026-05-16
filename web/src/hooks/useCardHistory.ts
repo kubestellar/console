@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
+import { useLocalStorage } from './useLocalStorage'
 
 export interface CardHistoryEntry {
   id: string
@@ -15,6 +16,7 @@ export interface CardHistoryEntry {
 
 const STORAGE_KEY = 'kubestellar-card-history'
 const MAX_HISTORY = 100
+const DEFAULT_HISTORY: CardHistoryEntry[] = []
 
 function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
   try {
@@ -25,23 +27,15 @@ function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
   }
 }
 
+function deserializeHistory(raw: string): CardHistoryEntry[] {
+  const parsed = safeJsonParse<unknown>(raw, [], 'card history')
+  return Array.isArray(parsed) ? (parsed as CardHistoryEntry[]) : []
+}
+
 export function useCardHistory() {
-  const [history, setHistory] = useState<CardHistoryEntry[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (!stored) return []
-
-      const parsed = safeJsonParse<CardHistoryEntry[]>(stored, [], 'card history')
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
+  const [history, setHistory] = useLocalStorage<CardHistoryEntry[]>(STORAGE_KEY, DEFAULT_HISTORY, {
+    deserialize: deserializeHistory,
   })
-
-  // Persist to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
-  }, [history])
 
   const addEntry = (entry: Omit<CardHistoryEntry, 'id' | 'timestamp'>) => {
     setHistory((prev) => {

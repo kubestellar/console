@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
+import { useLocalStorage } from './useLocalStorage'
 
 const STORAGE_KEY = 'kubestellar-snoozed-alerts'
 
@@ -35,54 +36,60 @@ interface StoredState {
   snoozed: SnoozedAlert[]
 }
 
+const DEFAULT_STATE: StoredState = { snoozed: [] }
+
+function deserializeStoredState(raw: string): StoredState {
+  const parsed = safeJsonParse<StoredState>(raw, DEFAULT_STATE, 'snoozed alerts')
+  const now = Date.now()
+
+  return {
+    snoozed: (parsed.snoozed || []).filter((snoozedAlert: SnoozedAlert) => snoozedAlert.expiresAt > now),
+  }
+}
+
+function cloneState(): StoredState {
+  return {
+    snoozed: [...state.snoozed],
+  }
+}
+
 // Module-level state for cross-component sharing
-let state: StoredState = { snoozed: [] }
+let state: StoredState = DEFAULT_STATE
 const listeners: Set<() => void> = new Set()
 
 function notifyListeners() {
   listeners.forEach((listener) => listener())
 }
 
-function loadState(): StoredState {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = safeJsonParse<StoredState>(stored, { snoozed: [] }, 'snoozed alerts')
-      // Clean up expired snoozes
-      const now = Date.now()
-      parsed.snoozed = (parsed.snoozed || []).filter(
-        (s: SnoozedAlert) => s.expiresAt > now
-      )
-      return parsed
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return { snoozed: [] }
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-}
-
-// Initialize on module load
-state = loadState()
-
 export function useSnoozedAlerts() {
-  const [localState, setLocalState] = useState<StoredState>(state)
+  const [storedState, setStoredState] = useLocalStorage<StoredState>(STORAGE_KEY, DEFAULT_STATE, {
+    deserialize: deserializeStoredState,
+  })
+  const [localState, setLocalState] = useState<StoredState>(storedState)
 
   useEffect(() => {
-    const listener = () => setLocalState({ ...state })
+    state = storedState
+    setLocalState(storedState)
+  }, [storedState])
+
+  const persistState = useCallback((nextState: StoredState) => {
+    state = nextState
+    setLocalState(nextState)
+    setStoredState(nextState)
+    notifyListeners()
+  }, [setStoredState])
+
+  useEffect(() => {
+    const listener = () => setLocalState(cloneState())
     listeners.add(listener)
 
     // Set up timer to auto-refresh when snoozes expire
     const checkExpired = () => {
       const now = Date.now()
-      const hadExpired = state.snoozed.some(s => s.expiresAt <= now)
-      if (hadExpired) {
-        state.snoozed = state.snoozed.filter(s => s.expiresAt > now)
-        saveState()
-        notifyListeners()
+      const activeSnoozes = state.snoozed.filter((snoozedAlert) => snoozedAlert.expiresAt > now)
+
+      if (activeSnoozes.length !== state.snoozed.length) {
+        persistState({ snoozed: activeSnoozes })
       }
     }
 
@@ -93,21 +100,18 @@ export function useSnoozedAlerts() {
       listeners.delete(listener)
       clearInterval(intervalId)
     }
-  }, [])
+  }, [persistState])
 
   const snoozeAlert = (alertId: string, duration: SnoozeDuration = '1h') => {
-    // Remove existing snooze if present
-    state.snoozed = state.snoozed.filter(s => s.alertId !== alertId)
-
     const now = Date.now()
+    const nextSnoozed = state.snoozed.filter((snoozedAlert) => snoozedAlert.alertId !== alertId)
     const newSnoozed: SnoozedAlert = {
       alertId,
       snoozedAt: now,
       expiresAt: now + SNOOZE_DURATIONS[duration],
       duration }
-    state.snoozed = [...state.snoozed, newSnoozed]
-    saveState()
-    notifyListeners()
+
+    persistState({ snoozed: [...nextSnoozed, newSnoozed] })
     emitSnoozed('alert', duration)
     return newSnoozed
   }
@@ -115,50 +119,43 @@ export function useSnoozedAlerts() {
   const snoozeMultiple = (alertIds: string[], duration: SnoozeDuration = '1h') => {
     const now = Date.now()
     const expiresAt = now + SNOOZE_DURATIONS[duration]
+    const remainingSnoozes = state.snoozed.filter((snoozedAlert) => !alertIds.includes(snoozedAlert.alertId))
 
-    // Remove existing snoozes for these alerts
-    state.snoozed = state.snoozed.filter(s => !alertIds.includes(s.alertId))
-
-    // Add new snoozes
-    const newSnoozed: SnoozedAlert[] = alertIds.map(alertId => ({
+    const newSnoozed: SnoozedAlert[] = alertIds.map((alertId) => ({
       alertId,
       snoozedAt: now,
       expiresAt,
       duration }))
 
-    state.snoozed = [...state.snoozed, ...newSnoozed]
-    saveState()
-    notifyListeners()
+    persistState({ snoozed: [...remainingSnoozes, ...newSnoozed] })
   }
 
   const unsnoozeAlert = (alertId: string) => {
-    state.snoozed = state.snoozed.filter(s => s.alertId !== alertId)
-    saveState()
-    notifyListeners()
+    persistState({
+      snoozed: state.snoozed.filter((snoozedAlert) => snoozedAlert.alertId !== alertId),
+    })
     emitUnsnoozed('alert')
   }
 
   const isSnoozed = useCallback((alertId: string): boolean => {
     const now = Date.now()
-    return state.snoozed.some(s => s.alertId === alertId && s.expiresAt > now)
+    return state.snoozed.some((snoozedAlert) => snoozedAlert.alertId === alertId && snoozedAlert.expiresAt > now)
   }, [localState])
 
   const getSnoozedAlert = useCallback((alertId: string): SnoozedAlert | null => {
     const now = Date.now()
-    return state.snoozed.find(s => s.alertId === alertId && s.expiresAt > now) || null
+    return state.snoozed.find((snoozedAlert) => snoozedAlert.alertId === alertId && snoozedAlert.expiresAt > now) || null
   }, [localState])
 
   const clearAllSnoozed = () => {
-    state.snoozed = []
-    saveState()
-    notifyListeners()
+    persistState(DEFAULT_STATE)
   }
 
   // Get time remaining on snooze
   const getSnoozeRemaining = (alertId: string): number | null => {
-    const snoozed = state.snoozed.find(s => s.alertId === alertId)
-    if (!snoozed) return null
-    return Math.max(0, snoozed.expiresAt - Date.now())
+    const snoozedAlert = state.snoozed.find((entry) => entry.alertId === alertId)
+    if (!snoozedAlert) return null
+    return Math.max(0, snoozedAlert.expiresAt - Date.now())
   }
 
   return {
