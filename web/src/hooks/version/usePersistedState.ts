@@ -1,4 +1,4 @@
-import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 
 interface PersistedStateOptions<T> {
   deserialize?: (raw: string) => T
@@ -17,7 +17,8 @@ export function usePersistedState<T>(
   defaultValue: T | (() => T),
   options: PersistedStateOptions<T> = {},
 ): [T, Dispatch<SetStateAction<T>>] {
-  const { deserialize, serialize, removeWhen } = options
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const [state, setState] = useState<T>(() => {
     try {
@@ -25,6 +26,7 @@ export function usePersistedState<T>(
       if (stored === null) {
         return resolveDefaultValue(defaultValue)
       }
+      const { deserialize } = optionsRef.current
       return deserialize ? deserialize(stored) : JSON.parse(stored) as T
     } catch {
       return resolveDefaultValue(defaultValue)
@@ -39,6 +41,7 @@ export function usePersistedState<T>(
           : value
 
         try {
+          const { removeWhen, serialize } = optionsRef.current
           if (removeWhen?.(next)) {
             localStorage.removeItem(key)
           } else {
@@ -52,7 +55,7 @@ export function usePersistedState<T>(
         return next
       })
     },
-    [key, removeWhen, serialize],
+    [key],
   )
 
   return [state, setPersistedState]
