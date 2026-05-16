@@ -45,9 +45,19 @@ vi.mock('../analytics-session', () => ({
 
 import {
   __testables,
+  _resetCapturedApiCalls,
+  _resetCapturedErrors,
   _resetErrorThrottles,
   _resetAnalyticsState,
+  emitError,
+  emitHttpError,
+  emitPageView,
+  getRecentBrowserErrors,
+  getRecentFailedApiCalls,
+  initAnalytics,
   markErrorReported,
+  startGlobalErrorTracking,
+  stopGlobalErrorTracking,
 } from '../analytics-core'
 
 const {
@@ -60,8 +70,12 @@ const {
 } = __testables
 
 beforeEach(() => {
+  stopGlobalErrorTracking()
+  _resetCapturedApiCalls()
+  _resetCapturedErrors()
   _resetErrorThrottles()
   _resetAnalyticsState()
+  ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = undefined
 })
 
 // ---------------------------------------------------------------------------
@@ -221,5 +235,91 @@ describe('markErrorReported / wasAlreadyReported', () => {
 
   it('returns false for unreported errors', () => {
     expect(wasAlreadyReported('never seen this')).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// public emitters / buffers
+// ---------------------------------------------------------------------------
+
+describe('emitPageView', () => {
+  it('emits page_view after init + first user interaction', () => {
+    const track = vi.fn()
+    ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = { track }
+
+    initAnalytics()
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    emitPageView('/clusters')
+
+    expect(track).toHaveBeenCalledWith(
+      'page_view',
+      expect.objectContaining({ page_path: '/clusters', ksc_demo_mode: 'false' }),
+    )
+  })
+})
+
+describe('emitHttpError / failed API ring buffer', () => {
+  it('records failed API calls for feedback payloads', () => {
+    emitHttpError('500', 'upstream 500 while fetching clusters')
+    const calls = getRecentFailedApiCalls()
+    expect(calls.length).toBe(1)
+    expect(calls[0]).toEqual(expect.objectContaining({
+      status: '500',
+      endpoint: window.location.pathname,
+    }))
+  })
+
+  it('truncates long API error detail to 500 chars', () => {
+    emitHttpError('502', 'x'.repeat(700))
+    const calls = getRecentFailedApiCalls()
+    expect(calls[0].detail?.length).toBe(500)
+  })
+})
+
+describe('emitError', () => {
+  it('emits ksc_error with inferred dimensions', () => {
+    const track = vi.fn()
+    ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = { track }
+
+    initAnalytics()
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    emitError('runtime', 'TypeError: boom', 'gpu_overview', {
+      error: new TypeError('boom'),
+      componentStack: '\n    in GpuCard (created by App)',
+      pathname: '/clusters',
+    })
+
+    expect(track).toHaveBeenCalledWith(
+      'ksc_error',
+      expect.objectContaining({
+        error_code: 'runtime',
+        error_type: 'TypeError',
+        component_name: 'gpu_overview',
+        card_id: 'gpu_overview',
+        card_type: 'gpu_overview',
+      }),
+    )
+  })
+})
+
+describe('startGlobalErrorTracking / getRecentBrowserErrors', () => {
+  it('captures console.error and console.warn entries', () => {
+    startGlobalErrorTracking()
+    console.error('console error sample')
+    console.warn('console warn sample')
+
+    const entries = getRecentBrowserErrors()
+    expect(entries.some((e) => e.source === 'console.error' && e.message.includes('console error sample'))).toBe(true)
+    expect(entries.some((e) => e.source === 'console.warn' && e.message.includes('console warn sample'))).toBe(true)
+  })
+
+  it('returns a copy of the ring buffer', () => {
+    startGlobalErrorTracking()
+    console.error('copy-check')
+
+    const snapshot = getRecentBrowserErrors()
+    snapshot.length = 0
+
+    expect(getRecentBrowserErrors().length).toBeGreaterThan(0)
   })
 })
