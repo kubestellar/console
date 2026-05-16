@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   X, Bug, Loader2, ExternalLink, Bell, Check, Clock,
   GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare,
@@ -142,6 +142,13 @@ export function UpdatesTab({
     const searchableText = `${request.title} ${request.description}`.toLowerCase()
     return searchableText.includes(normalizedSearchQuery)
   })
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (normalizedSearchQuery && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+  }, [normalizedSearchQuery])
 
   const handleRequestUpdate = async (requestId: string) => {
     try {
@@ -268,7 +275,7 @@ export function UpdatesTab({
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto">
         {/* Your Requests section */}
         <div className="border-b border-border/50 shrink-0">
           <div className="p-2">
