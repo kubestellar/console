@@ -59,7 +59,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          MIN_PRIOR_PULL_REQUESTS=1
+          MIN_PRIOR_MERGED_PRS=3
           TRUSTED=false
           TRUST_REASON='untrusted'
           USER_LOWER=$(printf '%s' "$TRUSTED_USER" | tr '[:upper:]' '[:lower:]')
@@ -92,10 +92,10 @@ jobs:
               TRUSTED=true
               TRUST_REASON='owners-file'
             else
-              PRIOR_PULL_REQUEST_COUNT=$(gh api "search/issues" -f q="repo:$REPO is:pr author:$TRUSTED_USER" --jq '.total_count' 2>/dev/null || echo '0')
-              if [ "${PRIOR_PULL_REQUEST_COUNT:-0}" -ge "$MIN_PRIOR_PULL_REQUESTS" ]; then
+              PRIOR_MERGED_PR_COUNT=$(gh api "search/issues" -f q="repo:$REPO is:pr is:merged author:$TRUSTED_USER" --jq '.total_count' 2>/dev/null || echo '0')
+              if [ "${PRIOR_MERGED_PR_COUNT:-0}" -ge "$MIN_PRIOR_MERGED_PRS" ]; then
                 TRUSTED=true
-                TRUST_REASON='prior-pr'
+                TRUST_REASON='prior-merged-pr'
               fi
             fi
           fi
@@ -104,6 +104,6 @@ jobs:
           echo "trust-reason=$TRUST_REASON" >> "$GITHUB_OUTPUT"
 
           if [ "$TRUSTED" != 'true' ]; then
-            BODY=$(printf '## 🐝 Hive interaction limited\n\nThanks @%s. I saw [your comment](%s), but Hive currently responds only to trusted contributors.\n\nI can only process requests from organization members, repository collaborators, people listed in `OWNERS` or `OWNERS_ALIASES`, or contributors with prior pull requests in this repository.\n\nIf you believe this is a mistake, please ask a maintainer to review your request or relay it on your behalf.\n' "$TRUSTED_USER" "$COMMENT_URL")
+            BODY=$(printf '## 🐝 Hive interaction limited\n\nThanks @%s. I saw [your comment](%s), but Hive currently responds only to trusted contributors.\n\nI can only process requests from organization members, repository collaborators, people listed in `OWNERS` or `OWNERS_ALIASES`, or contributors with at least %d merged pull requests in this repository.\n\nIf you believe this is a mistake, please ask a maintainer to review your request or relay it on your behalf.\n' "$TRUSTED_USER" "$COMMENT_URL" "$MIN_PRIOR_MERGED_PRS")
             gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
           fi
