@@ -51,13 +51,13 @@ export interface ConnectionEvent {
   message: string
 }
 
-const POLL_INTERVAL = 10000 // Check every 10 seconds when connected
-const DISCONNECTED_POLL_INTERVAL = 60000 // Check every 60 seconds when disconnected
-const FAILURE_THRESHOLD = 9 // Require 9 consecutive failures (~90s) before disconnecting
+const POLL_INTERVAL = 5_000 // Check every 5 seconds when connected
+const DISCONNECTED_POLL_INTERVAL = 60_000 // Check every 60 seconds when disconnected
+const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures (~10s) before disconnecting
 // Short timeout for agent health checks — a healthy agent responds in <100ms.
 // Using the default 10s timeout causes false failures when the browser's
 // HTTP/1.1 connection pool (6 per origin) is saturated by concurrent requests.
-const AGENT_HEALTH_TIMEOUT_MS = 3000
+const AGENT_HEALTH_TIMEOUT_MS = 3_000
 const HTTP_UNAUTHORIZED_STATUS = 401
 const HTTP_FORBIDDEN_STATUS = 403
 const AUTH_ERROR_STATUS_CODES = new Set([
@@ -65,9 +65,9 @@ const AUTH_ERROR_STATUS_CODES = new Set([
   HTTP_FORBIDDEN_STATUS,
 ])
 const SUCCESS_THRESHOLD = 2 // Require 2 consecutive successes before reconnecting (prevents flicker)
-const AGGRESSIVE_POLL_INTERVAL = 1000 // 1 second during aggressive detection burst
-const AGGRESSIVE_DETECT_DURATION = 10000 // 10 seconds of aggressive polling
-const BROWSER_WAKE_DEBOUNCE_MS = 1000
+const AGGRESSIVE_POLL_INTERVAL = 1_000 // 1 second during aggressive detection burst
+const AGGRESSIVE_DETECT_DURATION = 10_000 // 10 seconds of aggressive polling
+const BROWSER_WAKE_DEBOUNCE_MS = 1_000
 
 // Demo data for when agent is not connected
 const DEMO_DATA: AgentHealth = {

@@ -68,9 +68,9 @@ let isAgentConnected: typeof import('../useLocalAgent').isAgentConnected
 let isAgentUnavailable: typeof import('../useLocalAgent').isAgentUnavailable
 let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggressiveDetection
 
-const POLL_INTERVAL = 10000
-const DISCONNECTED_POLL_INTERVAL = 60000
-const FAILURE_THRESHOLD = 9
+const POLL_INTERVAL = 5_000
+const DISCONNECTED_POLL_INTERVAL = 60_000
+const FAILURE_THRESHOLD = 2
 const _SUCCESS_THRESHOLD = 2
 const UNAUTHORIZED_STATUS = 401
 
