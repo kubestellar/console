@@ -2630,6 +2630,7 @@
     "fetchFailed_one": "Failed to fetch events ({{count}} failure)",
     "fetchFailed_other": "Failed to fetch events ({{count}} failures)",
     "topReasons": "Top Reasons",
+    "others": "Others",
     "byCluster": "By Cluster"
   },
   "gatewayStatus": {
