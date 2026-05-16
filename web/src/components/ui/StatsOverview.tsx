@@ -305,7 +305,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       // substrings (e.g. "3" matching "30 nodes"). Hook name is scoped by
       // block id so each stat is individually addressable.
       data-testid={`stat-block-${block.id}`}
-      className={`group relative glass p-4 rounded-lg min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
+      className={`group relative rounded-lg border border-border/50 bg-card p-4 text-card-foreground shadow-sm min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-accent/40' : ''} ${isDemo ? 'border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
       {...(isClickable ? {
         role: 'button' as const,

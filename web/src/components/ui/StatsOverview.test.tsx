@@ -130,4 +130,16 @@ describe('StatsOverview', () => {
     expect(screen.getByTestId('stat-block-nodes-scale').textContent).toBe('33%')
     expect(screen.getByText('of 3')).toBeTruthy()
   })
+
+  it('uses semantic card classes for stat blocks', () => {
+    renderStatsOverview(
+      { id: 'storage', name: 'Storage', icon: 'HardDrive', visible: true, color: 'purple' },
+      { value: '512 GB', sublabel: 'storage' },
+    )
+
+    const block = screen.getByTestId('stat-block-storage')
+    expect(block.className).toContain('bg-card')
+    expect(block.className).toContain('text-card-foreground')
+    expect(block.className).toContain('border-border/50')
+  })
 })
