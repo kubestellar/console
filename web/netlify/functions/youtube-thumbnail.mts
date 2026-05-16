@@ -31,17 +31,10 @@ export default async (req: Request) => {
   }
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), YOUTUBE_CDN_TIMEOUT_MS);
-    let resp: Response;
-    try {
-      resp = await fetch(
-        `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-        { signal: controller.signal }
-      );
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const resp = await fetch(
+      `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+      { signal: AbortSignal.timeout(YOUTUBE_CDN_TIMEOUT_MS) }
+    );
 
     if (!resp.ok) {
       return new Response("thumbnail not found", { status: 404 });

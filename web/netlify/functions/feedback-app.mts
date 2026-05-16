@@ -166,26 +166,19 @@ async function getInstallationCred(): Promise<string> {
   }
 
   const jwt = signAppJwt(appId, privateKey);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
-  let resp: Response;
-  try {
-    resp = await fetch(
-      `${GITHUB_API}/app/installations/${installationId}/access_tokens`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "User-Agent": "KubeStellar-Console-FeedbackApp",
-        },
-        signal: controller.signal,
+  const resp = await fetch(
+    `${GITHUB_API}/app/installations/${installationId}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "KubeStellar-Console-FeedbackApp",
       },
-    );
-  } finally {
-    clearTimeout(timeout);
-  }
+      signal: AbortSignal.timeout(GH_TIMEOUT_MS),
+    },
+  );
 
   if (!resp.ok) {
     const txt = await resp.text();
@@ -216,64 +209,48 @@ async function verifyClientAuth(
   const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString(
     "base64",
   );
-  const introspectController = new AbortController();
-  const introspectTimeout = setTimeout(
-    () => introspectController.abort(),
-    GH_TIMEOUT_MS,
-  );
-  let user: { login: string; id: number };
-  try {
-    const resp = await fetch(
-      `${GITHUB_API}/applications/${clientId}/token`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          Accept: "application/vnd.github+json",
-          "Content-Type": "application/json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "User-Agent": "KubeStellar-Console-FeedbackApp",
-        },
-        body: JSON.stringify({ access_token: credential }),
-        signal: introspectController.signal,
+  const resp = await fetch(
+    `${GITHUB_API}/applications/${clientId}/token`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basicAuth}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "KubeStellar-Console-FeedbackApp",
       },
-    );
-    if (resp.status === 404 || resp.status === 422) {
-      throw new Error("credential not issued by console OAuth app");
-    }
-    if (!resp.ok) {
-      throw new Error(`introspection HTTP ${resp.status}`);
-    }
-    const data = (await resp.json()) as {
-      user?: { login?: string; id?: number };
-    };
-    if (!data.user?.login || typeof data.user.id !== "number") {
-      throw new Error("introspection response missing user");
-    }
-    user = { login: data.user.login, id: data.user.id };
-  } finally {
-    clearTimeout(introspectTimeout);
+      body: JSON.stringify({ access_token: credential }),
+      signal: AbortSignal.timeout(GH_TIMEOUT_MS),
+    },
+  );
+  if (resp.status === 404 || resp.status === 422) {
+    throw new Error("credential not issued by console OAuth app");
   }
+  if (!resp.ok) {
+    throw new Error(`introspection HTTP ${resp.status}`);
+  }
+  const data = (await resp.json()) as {
+    user?: { login?: string; id?: number };
+  };
+  if (!data.user?.login || typeof data.user.id !== "number") {
+    throw new Error("introspection response missing user");
+  }
+  const user = { login: data.user.login, id: data.user.id };
 
   // Step 2: confirm the token still works against /user. Introspection
   // can succeed for a token that was later revoked by the user; /user
   // fails in that case. This is cheap and catches the race.
-  const liveController = new AbortController();
-  const liveTimeout = setTimeout(() => liveController.abort(), GH_TIMEOUT_MS);
-  try {
-    const resp = await fetch(`${GITHUB_API}/user`, {
-      headers: {
-        Authorization: `Bearer ${credential}`,
-        Accept: "application/vnd.github+json",
-        "User-Agent": "KubeStellar-Console-FeedbackApp",
-      },
-      signal: liveController.signal,
-    });
-    if (!resp.ok) {
-      throw new Error(`liveness check HTTP ${resp.status}`);
-    }
-  } finally {
-    clearTimeout(liveTimeout);
+  const liveResp = await fetch(`${GITHUB_API}/user`, {
+    headers: {
+      Authorization: `Bearer ${credential}`,
+      Accept: "application/vnd.github+json",
+      "User-Agent": "KubeStellar-Console-FeedbackApp",
+    },
+    signal: AbortSignal.timeout(GH_TIMEOUT_MS),
+  });
+  if (!liveResp.ok) {
+    throw new Error(`liveness check HTTP ${liveResp.status}`);
   }
 
   return user;
@@ -283,26 +260,20 @@ async function getRepoPermissions(
   credential: string,
   repoSlug: string,
 ): Promise<{ push: boolean }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
-  try {
-    const resp = await fetch(`${GITHUB_API}/repos/${repoSlug}`, {
-      headers: {
-        Authorization: `Bearer ${credential}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2026-03-10",
-        "User-Agent": "KubeStellar-Console-FeedbackApp",
-      },
-      signal: controller.signal,
-    });
-    if (!resp.ok) {
-      throw new Error(`repo permissions HTTP ${resp.status}`);
-    }
-    const data = (await resp.json()) as { permissions?: { push?: boolean } };
-    return { push: data.permissions?.push === true };
-  } finally {
-    clearTimeout(timeout);
+  const resp = await fetch(`${GITHUB_API}/repos/${repoSlug}`, {
+    headers: {
+      Authorization: `Bearer ${credential}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2026-03-10",
+      "User-Agent": "KubeStellar-Console-FeedbackApp",
+    },
+    signal: AbortSignal.timeout(GH_TIMEOUT_MS),
+  });
+  if (!resp.ok) {
+    throw new Error(`repo permissions HTTP ${resp.status}`);
   }
+  const data = (await resp.json()) as { permissions?: { push?: boolean } };
+  return { push: data.permissions?.push === true };
 }
 
 async function addSubIssue(
@@ -311,30 +282,24 @@ async function addSubIssue(
   parentIssueNumber: number,
   subIssueId: number,
 ): Promise<void> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
-  try {
-    const resp = await fetch(
-      `${GITHUB_API}/repos/${repoSlug}/issues/${parentIssueNumber}/sub_issues`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${installCred}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2026-03-10",
-          "Content-Type": "application/json",
-          "User-Agent": "KubeStellar-Console-FeedbackApp",
-        },
-        body: JSON.stringify({ sub_issue_id: subIssueId }),
-        signal: controller.signal,
+  const resp = await fetch(
+    `${GITHUB_API}/repos/${repoSlug}/issues/${parentIssueNumber}/sub_issues`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${installCred}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2026-03-10",
+        "Content-Type": "application/json",
+        "User-Agent": "KubeStellar-Console-FeedbackApp",
       },
-    );
-    if (!resp.ok) {
-      const txt = await resp.text();
-      throw new Error(`sub-issue link HTTP ${resp.status}: ${txt}`);
-    }
-  } finally {
-    clearTimeout(timeout);
+      body: JSON.stringify({ sub_issue_id: subIssueId }),
+      signal: AbortSignal.timeout(GH_TIMEOUT_MS),
+    },
+  );
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`sub-issue link HTTP ${resp.status}: ${txt}`);
   }
 }
 
@@ -453,8 +418,6 @@ export default async function handler(request: Request): Promise<Response> {
     ? `${issueRequest.body}\n\n---\n*Submitted by @${user.login} via KubeStellar Console (proxied by \`kubestellar-console-bot\`).*`
     : "";
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
   try {
     if (action === "comment_issue") {
       const resp = await fetch(
@@ -469,7 +432,7 @@ export default async function handler(request: Request): Promise<Response> {
             "User-Agent": "KubeStellar-Console-FeedbackApp",
           },
           body: JSON.stringify({ body: stampedBody }),
-          signal: controller.signal,
+          signal: AbortSignal.timeout(GH_TIMEOUT_MS),
         },
       );
       if (!resp.ok) {
@@ -499,7 +462,7 @@ export default async function handler(request: Request): Promise<Response> {
             "User-Agent": "KubeStellar-Console-FeedbackApp",
           },
           body: JSON.stringify({ state: payload.state }),
-          signal: controller.signal,
+          signal: AbortSignal.timeout(GH_TIMEOUT_MS),
         },
       );
       if (!resp.ok) {
@@ -537,7 +500,7 @@ export default async function handler(request: Request): Promise<Response> {
           "User-Agent": "KubeStellar-Console-FeedbackApp",
         },
         body: JSON.stringify(issuePayload),
-        signal: controller.signal,
+        signal: AbortSignal.timeout(GH_TIMEOUT_MS),
       },
     );
     if (!resp.ok) {
@@ -573,7 +536,5 @@ export default async function handler(request: Request): Promise<Response> {
   } catch (err) {
     console.error("[feedback-app] Feedback action failed:", err instanceof Error ? err.message : err);
     return jsonResponse(request, 502, { error: "Feedback action failed" });
-  } finally {
-    clearTimeout(timeout);
   }
 }

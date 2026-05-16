@@ -73,26 +73,20 @@ async function fetchAllPages(
   while (page <= MAX_PAGES) {
     const separator = url.includes("?") ? "&" : "?";
     const fullUrl = `${url}${separator}per_page=${PER_PAGE}&page=${page}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-    try {
-      const resp = await fetch(fullUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "KubeStellar-Console-Netlify",
-        },
-        signal: controller.signal,
-      });
-      if (!resp.ok) break;
-      const data = (await resp.json()) as Record<string, unknown>[];
-      if (!Array.isArray(data) || data.length === 0) break;
-      allItems.push(...data);
-      if (data.length < PER_PAGE) break;
-      page++;
-    } finally {
-      clearTimeout(timeout);
-    }
+    const resp = await fetch(fullUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "KubeStellar-Console-Netlify",
+      },
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+    if (!resp.ok) break;
+    const data = (await resp.json()) as Record<string, unknown>[];
+    if (!Array.isArray(data) || data.length === 0) break;
+    allItems.push(...data);
+    if (data.length < PER_PAGE) break;
+    page++;
   }
   return allItems;
 }

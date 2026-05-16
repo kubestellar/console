@@ -191,14 +191,13 @@ export default async (req: Request, context: Context): Promise<Response> => {
 
     // Proxy to actual quantum service with timeout
     const targetURL = new URL(path, quantumServiceURL).toString();
-    const proxyReq = new Request(targetURL, {
+    const requestBody = req.method === "GET" ? undefined : await req.text();
+    const response = await fetch(targetURL, {
       method: req.method,
       headers: req.headers,
-      body: req.method === "GET" ? undefined : await req.text(),
+      body: requestBody,
       signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
     });
-
-    const response = await fetch(proxyReq);
     return new Response(response.body, {
       status: response.status,
       headers: response.headers,
