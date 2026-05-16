@@ -14,6 +14,8 @@
  * Requires Netlify env vars: GA4_SERVICE_ACCOUNT_JSON (base64), GA4_PROPERTY_ID
  */
 
+import { buildCorsHeaders, handlePreflight } from "./_shared";
+
 // ── Constants ─────────────────────────────────────────────────────────
 
 const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
@@ -75,28 +77,6 @@ interface ServiceAccountKey {
 interface GA4Row {
   dimensionValues: { value: string }[];
   metricValues: { value: string }[];
-}
-
-// ── CORS ──────────────────────────────────────────────────────────────
-
-const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://kubestellar.io",
-  "https://www.kubestellar.io",
-];
-
-function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
-  } catch {
-    // Malformed origin — fall through to default
-  }
-  return ALLOWED_ORIGINS[0];
 }
 
 // ── JWT / OAuth helpers (Web Crypto — no npm deps) ────────────────────
@@ -323,18 +303,14 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
 // ── Handler ───────────────────────────────────────────────────────────
 
 export default async (req: Request) => {
-  const origin = req.headers.get("origin");
   const headers: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
+    ...buildCorsHeaders(req, { methods: "GET, OPTIONS" }),
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=900",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: { ...headers, "Access-Control-Allow-Methods": "GET, OPTIONS" },
-    });
+    return handlePreflight(req, { methods: "GET, OPTIONS" });
   }
 
   try {

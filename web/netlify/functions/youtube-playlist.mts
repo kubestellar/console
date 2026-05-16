@@ -6,34 +6,10 @@
  * YouTubePlaylistHandler for Netlify deployments.
  */
 
+import { buildCorsHeaders, handlePreflight } from "./_shared"
+
 const PLAYLIST_ID = "PL1ALKGr_qZKc-xehA_8iUCdiKsCo6p6nD";
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
-const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://console-deploy-preview.kubestellar.io",
-];
-
-/**
- * Returns a CORS origin header value for the given request origin.
- * Uses exact match or parsed-hostname suffix check — not substring matching —
- * to prevent bypass via crafted origins like "evil.com?origin=kubestellar.io"
- * (CodeQL js/incomplete-url-substring-sanitization, #9119).
- */
-function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
-  // Exact match against allowlist
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  // Allow any subdomain of kubestellar.io via parsed hostname check
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
-  } catch {
-    // Malformed origin — fall through to default
-  }
-  return ALLOWED_ORIGINS[0];
-}
 
 interface PlaylistVideo {
   id: string;
@@ -71,17 +47,18 @@ function parseAtomFeed(xml: string): PlaylistVideo[] {
 }
 
 export default async (req: Request) => {
-  const origin = req.headers.get("origin");
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
+  const corsHeaders = buildCorsHeaders(req, {
+    methods: "GET, OPTIONS",
+  });
+  const headers = {
+    ...corsHeaders,
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=300",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: { ...headers, "Access-Control-Allow-Methods": "GET, OPTIONS" },
+    return handlePreflight(req, {
+      methods: "GET, OPTIONS",
     });
   }
 

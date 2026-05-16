@@ -12,63 +12,43 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
-const ALLOWED_HOSTS = new Set([
-  "console.kubestellar.io",
-  "localhost",
-  "127.0.0.1",
-]);
 const RATE_LIMIT_STORE_NAME = "analytics-collect-rate-limit";
 const ANALYTICS_RATE_LIMIT_MAX_REQUESTS = 500;
 const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
-function getAllowedCorsOrigin(origin: string): string {
-  if (!origin) return "https://console.kubestellar.io";
+function normalizeOrigin(header: string | null): string | null {
+  if (!header) return null;
   try {
-    const hostname = new URL(origin).hostname;
-    if (ALLOWED_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
-      return origin;
-    }
+    return new URL(header).origin;
   } catch {
-    /* ignore */
+    return header;
   }
-  return "https://console.kubestellar.io";
 }
 
-function isAllowedOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin") || "";
-  const referer = req.headers.get("referer") || "";
+function isAllowedAnalyticsClient(req: Request): boolean {
+  const origin = normalizeOrigin(req.headers.get("origin"));
+  const referer = normalizeOrigin(req.headers.get("referer"));
 
-  for (const header of [origin, referer]) {
-    if (!header) continue;
-    try {
-      const hostname = new URL(header).hostname;
-      if (ALLOWED_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
-        return true;
-      }
-    } catch {
-      /* ignore parse errors */
-    }
-  }
-  // Reject if neither header present — non-browser clients (curl, scripts) omit both
-  return false;
+  return [origin, referer].some((header) => isAllowedOrigin(header));
 }
 
 export default async (req: Request) => {
-  const origin = req.headers.get("origin") || "";
-  const corsOrigin = getAllowedCorsOrigin(origin);
-  const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+  const corsHeaders = buildCorsHeaders(req, {
+    methods: "GET, POST, OPTIONS",
+    headers: "Content-Type",
+  });
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return handlePreflight(req, {
+      methods: "GET, POST, OPTIONS",
+      headers: "Content-Type",
+    });
   }
 
-  if (!isAllowedOrigin(req)) {
+  if (!isAllowedAnalyticsClient(req)) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders });
   }
 

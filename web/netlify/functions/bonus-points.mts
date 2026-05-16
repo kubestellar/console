@@ -9,6 +9,8 @@
  * Query: GET /api/rewards/bonus?login=rishi-jat
  */
 
+import { buildCorsHeaders, handlePreflight } from "./_shared";
+
 const BONUS_REPO = "kubestellar/console";
 const BONUS_LABEL = "bonus-points";
 const BONUS_AUTHORIZED_USER = "clubanderson";
@@ -36,31 +38,6 @@ interface CachedBonusData {
 
 let cache: CachedBonusData | null = null;
 
-const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://kubestellar.io",
-];
-
-/**
- * Returns a CORS origin header value for the given request origin.
- * Uses exact match or parsed-hostname suffix check — not raw string endsWith —
- * to prevent bypass via crafted origins like "evil.kubestellar.io.evil.com"
- * (CodeQL js/incomplete-url-substring-sanitization, #9119).
- */
-function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
-  } catch {
-    // Malformed origin — fall through to default
-  }
-  return ALLOWED_ORIGINS[0];
-}
-
 async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
   const byLogin: Record<string, BonusEntry[]> = {};
 
@@ -75,14 +52,10 @@ async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
   }
 
   const url = `https://api.github.com/repos/${BONUS_REPO}/issues?labels=${BONUS_LABEL}&state=all&per_page=100&creator=${BONUS_AUTHORIZED_USER}`;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GITHUB_API_TIMEOUT_MS);
-  let res: Response;
-  try {
-    res = await fetch(url, { headers, signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  const res = await fetch(url, {
+    headers,
+    signal: AbortSignal.timeout(GITHUB_API_TIMEOUT_MS),
+  });
   if (!res.ok) {
     throw new Error(`GitHub API ${res.status}`);
   }
@@ -113,18 +86,14 @@ async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
 }
 
 export default async (req: Request) => {
-  const origin = req.headers.get("origin");
   const headers: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
+    ...buildCorsHeaders(req, { methods: "GET, OPTIONS" }),
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=900",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: { ...headers, "Access-Control-Allow-Methods": "GET, OPTIONS" },
-    });
+    return handlePreflight(req, { methods: "GET, OPTIONS" });
   }
 
   const url = new URL(req.url);

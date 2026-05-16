@@ -12,6 +12,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { buildCorsHeaders, handlePreflight } from "./_shared";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -79,33 +80,6 @@ const RATE_LIMIT_STORE_NAME = "nps-rate-limit";
 const NPS_RATE_LIMIT_MAX_REQUESTS = 1;
 /** Rate-limit window for NPS POSTs */
 const NPS_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://kubestellar.io",
-  "https://www.kubestellar.io",
-];
-
-/**
- * Returns a CORS origin header value for the given request origin.
- * Uses parsed-hostname checks — not raw string includes/startsWith/endsWith —
- * to prevent bypass via crafted origins (CodeQL #9119).
- */
-function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const parsed = new URL(origin);
-    const host = parsed.hostname.toLowerCase();
-    // Allow any subdomain of kubestellar.io
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
-    // Allow localhost for development (any port) — protocol must be http: exactly
-    if (parsed.protocol === "http:" && host === "localhost") return origin;
-  } catch {
-    // Malformed origin — fall through to default
-  }
-  return ALLOWED_ORIGINS[0];
-}
 
 function categorize(score: number): "promoter" | "passive" | "detractor" {
   if (score >= PROMOTER_MIN) return "promoter";
@@ -195,16 +169,19 @@ function computeAggregation(data: NPSData): NPSAggregation {
 // ── Handler ──────────────────────────────────────────────────────────
 
 export default async (req: Request) => {
-  const origin = req.headers.get("origin");
   const headers: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    ...buildCorsHeaders(req, {
+      methods: "GET, POST, OPTIONS",
+      headers: "Content-Type",
+    }),
     "Content-Type": "application/json",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers });
+    return handlePreflight(req, {
+      methods: "GET, POST, OPTIONS",
+      headers: "Content-Type",
+    });
   }
 
   const store = getStore(STORE_NAME);
