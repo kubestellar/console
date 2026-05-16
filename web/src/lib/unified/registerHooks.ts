@@ -121,7 +121,7 @@ interface CachedHookResult {
 }
 
 interface ResourceHookConfig<TResult extends HookResult = HookResult> {
-  useHook: (...args: [] | [string?] | [string?, string?]) => TResult
+  useHook: (...args: any[]) => TResult
   dataField: string
   arity: ResourceArity
   wrapRefetch?: boolean
