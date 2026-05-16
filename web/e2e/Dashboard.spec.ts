@@ -164,7 +164,15 @@ async function setupLiveDashboardMode(page: Page) {
       body: JSON.stringify([]),
     })
   )
-  await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
+  // Playwright gives each test a fresh browser context, so these live-mode
+  // tests do not need IndexedDB cleanup before navigation. Skipping the async
+  // delete avoids a WebKit/Firefox race where auth state is written after the
+  // app boots, which redirects to /login before dashboard-page can mount.
+  await setupTestStorage(page, {
+    demoMode: false,
+    agentSetupDismissed: true,
+    clearIndexedDB: false,
+  })
 }
 
 async function expectVisible(locator: Locator, reason: string, timeoutMs = CARD_DATA_TIMEOUT_MS) {
@@ -839,12 +847,16 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       })
     })
 
-    // Seed localStorage BEFORE any page script runs (#9096, #12088, #12089).
-    // Disable demo mode so the app fetches from the mocked API routes
-    // above instead of returning built-in demo data (12 clusters).
-    // Uses the shared storage helper so addInitScript does not accumulate
-    // across tests and IndexedDB cleanup finishes before rehydration.
-    await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
+    // Seed localStorage BEFORE any page script runs. These accuracy tests run
+    // in a fresh Playwright browser context, so IndexedDB cleanup is not needed
+    // here and would delay the auth/demo flags until after app startup on
+    // Firefox/WebKit, causing a redirect to /login instead of mounting the
+    // dashboard route.
+    await setupTestStorage(page, {
+      demoMode: false,
+      agentSetupDismissed: true,
+      clearIndexedDB: false,
+    })
   })
 
   test('cluster count in dashboard header matches /clusters page row count', async ({
