@@ -77,6 +77,10 @@ var ErrDashboardCardLimitReached = errors.New("dashboard card limit reached")
 // Handlers should map this error to HTTP 429 Too Many Requests.
 var ErrDailyBonusUnavailable = errors.New("daily bonus already claimed within cooldown window")
 
+// ErrNotFound is returned when a store update targets a missing row.
+// Handlers map this sentinel to HTTP 404 Not Found.
+var ErrNotFound = errors.New("not found")
+
 // MinCoinBalance is the floor for user coin balances. Negative increments
 // are clamped to this value so buggy clients cannot drive balances below
 // zero. Exported so handlers and tests can reference the same constant.
