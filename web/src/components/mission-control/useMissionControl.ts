@@ -1193,7 +1193,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
             description: 'AI-assisted fix planning',
             type: 'custom',
             initialPrompt: prompt,
-            skipReview: true })
+            skipReview: false })
           // #6834 — Update the ref synchronously so a rapid second click reads
           // the missionId before React commits the setState below.
           planningMissionIdRef.current = missionId
@@ -1365,7 +1365,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
             description: 'AI-assisted cluster assignment',
             type: 'custom',
             initialPrompt: prompt,
-            skipReview: true })
+            skipReview: false })
           setState((prev) => ({
             ...prev,
             planningMissionId: missionId,
