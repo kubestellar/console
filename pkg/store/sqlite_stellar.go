@@ -44,11 +44,11 @@ func (s *SQLiteStore) GetStellarPreferences(ctx context.Context, userID string) 
 				UpdatedAt:       time.Now().UTC(),
 			}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("get stellar preferences for user %s: %w", userID, err)
 	}
 	prefs.ProactiveMode = proactiveInt == 1
 	if err := json.Unmarshal([]byte(pinnedRaw), &prefs.PinnedClusters); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal pinned clusters: %w", err)
 	}
 	if prefs.PinnedClusters == nil {
 		prefs.PinnedClusters = []string{}
@@ -63,7 +63,7 @@ func (s *SQLiteStore) UpdateStellarPreferences(ctx context.Context, preferences 
 	}
 	pinnedJSON, err := json.Marshal(pinnedClusters)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal pinned clusters: %w", err)
 	}
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO stellar_preferences (user_id, default_provider, execution_mode, timezone, proactive_mode, pinned_clusters, updated_at)
@@ -82,7 +82,10 @@ func (s *SQLiteStore) UpdateStellarPreferences(ctx context.Context, preferences 
 		boolToInt(preferences.ProactiveMode),
 		string(pinnedJSON),
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("update stellar preferences for user %s: %w", preferences.UserID, err)
+	}
+	return nil
 }
 
 func (s *SQLiteStore) ListStellarMissions(ctx context.Context, userID string, limit, offset int) ([]StellarMission, error) {
@@ -96,7 +99,7 @@ func (s *SQLiteStore) ListStellarMissions(ctx context.Context, userID string, li
 		 LIMIT ? OFFSET ?`,
 		userID, lim, off)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list stellar missions for user %s: %w", userID, err)
 	}
 	defer rows.Close()
 
@@ -104,7 +107,7 @@ func (s *SQLiteStore) ListStellarMissions(ctx context.Context, userID string, li
 	for rows.Next() {
 		mission, err := scanStellarMissionRow(rows)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan stellar mission row: %w", err)
 		}
 		results = append(results, *mission)
 	}
@@ -142,11 +145,11 @@ func (s *SQLiteStore) GetStellarMission(ctx context.Context, userID string, miss
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("get stellar mission %s for user %s: %w", missionID, userID, err)
 	}
 	mission.Enabled = enabledInt == 1
 	if err := json.Unmarshal([]byte(toolBindingsRaw), &mission.ToolBindings); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal tool bindings for mission %s: %w", missionID, err)
 	}
 	if mission.ToolBindings == nil {
 		mission.ToolBindings = []string{}
@@ -170,7 +173,7 @@ func (s *SQLiteStore) CreateStellarMission(ctx context.Context, mission *Stellar
 	}
 	toolBindingsJSON, err := json.Marshal(toolBindings)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal tool bindings: %w", err)
 	}
 	if mission.TriggerType == "" {
 		mission.TriggerType = stellarDefaultTrigger
@@ -200,7 +203,10 @@ func (s *SQLiteStore) CreateStellarMission(ctx context.Context, mission *Stellar
 		mission.LastRunAt,
 		mission.NextRunAt,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("create stellar mission %s: %w", mission.ID, err)
+	}
+	return nil
 }
 
 func (s *SQLiteStore) UpdateStellarMission(ctx context.Context, mission *StellarMission) error {
@@ -210,7 +216,7 @@ func (s *SQLiteStore) UpdateStellarMission(ctx context.Context, mission *Stellar
 	}
 	toolBindingsJSON, err := json.Marshal(toolBindings)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal tool bindings: %w", err)
 	}
 	_, err = s.db.ExecContext(ctx,
 		`UPDATE stellar_missions
@@ -230,12 +236,18 @@ func (s *SQLiteStore) UpdateStellarMission(ctx context.Context, mission *Stellar
 		mission.UserID,
 		mission.ID,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("update stellar mission %s: %w", mission.ID, err)
+	}
+	return nil
 }
 
 func (s *SQLiteStore) DeleteStellarMission(ctx context.Context, userID string, missionID string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM stellar_missions WHERE user_id = ? AND id = ?`, userID, missionID)
-	return err
+	if err != nil {
+		return fmt.Errorf("delete stellar mission %s: %w", missionID, err)
+	}
+	return nil
 }
 
 func (s *SQLiteStore) ListStellarExecutions(ctx context.Context, userID, missionID, status string, limit, offset int) ([]StellarExecution, error) {
