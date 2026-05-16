@@ -278,5 +278,6 @@ func (s *Server) setupRoutes() {
 	s.setupGovernanceRoutes(routes)
 	s.setupIntegrationsRoutes(routes)
 	s.setupFeedbackRoutes(routes)
+	s.setupStellarRoutes(routes)
 	s.setupWebSocketStaticRoutes(routes)
 }
