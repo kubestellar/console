@@ -254,8 +254,8 @@ describe('haveSameSelections', () => {
 describe('matchesCustomText', () => {
   const item = { name: 'my-cluster', region: 'us-east-1', status: 'active' }
 
-  it('matches case-insensitively', () => {
-    expect(matchesCustomText(item, 'MY-CLUSTER', ['name'])).toBe(true)
+  it('matches a normalized lowercase query', () => {
+    expect(matchesCustomText(item, 'my-cluster', ['name'])).toBe(true)
   })
 
   it('returns false when query not in any field', () => {

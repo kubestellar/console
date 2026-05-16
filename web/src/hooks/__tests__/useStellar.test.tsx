@@ -16,24 +16,26 @@ import React from 'react'
 // Mock stellarApi
 // ---------------------------------------------------------------------------
 
-const mockStellarApi = {
-  getState: vi.fn(),
-  getNotifications: vi.fn(),
-  getActions: vi.fn(),
-  getTasks: vi.fn(),
-  getWatches: vi.fn(),
-  listSolves: vi.fn(),
-  listActivity: vi.fn(),
-  acknowledgeNotification: vi.fn(),
-  approveAction: vi.fn(),
-  rejectAction: vi.fn(),
-  updateTaskStatus: vi.fn(),
-  createTask: vi.fn(),
-  resolveWatch: vi.fn(),
-  dismissWatch: vi.fn(),
-  snoozeWatch: vi.fn(),
-  startSolve: vi.fn(),
-}
+const { mockStellarApi } = vi.hoisted(() => ({
+  mockStellarApi: {
+    getState: vi.fn(),
+    getNotifications: vi.fn(),
+    getActions: vi.fn(),
+    getTasks: vi.fn(),
+    getWatches: vi.fn(),
+    listSolves: vi.fn(),
+    listActivity: vi.fn(),
+    acknowledgeNotification: vi.fn(),
+    approveAction: vi.fn(),
+    rejectAction: vi.fn(),
+    updateTaskStatus: vi.fn(),
+    createTask: vi.fn(),
+    resolveWatch: vi.fn(),
+    dismissWatch: vi.fn(),
+    snoozeWatch: vi.fn(),
+    startSolve: vi.fn(),
+  },
+}))
 
 vi.mock('../../services/stellar', () => ({
   stellarApi: mockStellarApi,
@@ -93,11 +95,16 @@ function createMockEventSource(): MockEventSource {
 
 beforeEach(() => {
   eventSourceInstances = []
-  vi.stubGlobal('EventSource', vi.fn().mockImplementation(() => {
+  vi.useRealTimers()
+
+  const mockEventSource = vi.fn(function(this: unknown) {
     const es = createMockEventSource()
     eventSourceInstances.push(es)
     return es
-  }))
+  })
+
+  vi.stubGlobal('EventSource', mockEventSource)
+  vi.stubGlobal('crypto', { randomUUID: vi.fn(() => 'mock-random-uuid') })
 
   // Set token so SSE connects immediately (avoids 3s wait-for-token loop)
   localStorage.setItem('token', 'test-token')
@@ -126,6 +133,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.clearAllMocks()
   localStorage.clear()
