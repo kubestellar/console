@@ -20,6 +20,7 @@ import { emitPageView, emitDashboardViewed } from '../lib/analytics'
 import { fetchEnabledDashboards, getEnabledDashboardIds } from '../hooks/useSidebarConfig'
 import { DASHBOARD_CHUNKS } from '../lib/dashboardChunks'
 import { ROUTE_TITLES, pathToDashboardId } from '../routes/routeTitles'
+import { reportAppError } from '../lib/errors/handleError'
 
 // ---------------------------------------------------------------------------
 // Chunk prefetching
@@ -60,7 +61,12 @@ if (typeof window !== 'undefined') {
           timeoutId = setTimeout(() => reject(new Error('timeout')), PREFETCH_DASHBOARD_TIMEOUT_MS)
         }),
       ])
-    } catch {
+    } catch (error: unknown) {
+      reportAppError(error, {
+        context: '[AppSideEffects] Failed to prefetch enabled dashboard list',
+        level: 'warn',
+        fallbackMessage: 'prefetch dashboard list failed',
+      })
       // Timeout or error — fall through to prefetch all
     }
     const enabledIds = getEnabledDashboardIds()
@@ -74,7 +80,13 @@ if (typeof window !== 'undefined') {
 
     if (isDemoMode()) {
       // Demo mode: fire all immediately (synchronous data, no server load)
-      chunks.forEach(load => load().catch(() => {}))
+      chunks.forEach(load => load().catch((error: unknown) => {
+        reportAppError(error, {
+          context: '[AppSideEffects] Demo chunk prefetch failed',
+          level: 'warn',
+          fallbackMessage: 'demo chunk prefetch failed',
+        })
+      }))
       return
     }
 
@@ -83,7 +95,13 @@ if (typeof window !== 'undefined') {
     const loadBatch = () => {
       const batch = chunks.slice(offset, offset + PREFETCH_BATCH_SIZE)
       if (batch.length === 0) return
-      Promise.allSettled(batch.map(load => load().catch(() => {}))).then(() => {
+      Promise.allSettled(batch.map(load => load().catch((error: unknown) => {
+        reportAppError(error, {
+          context: '[AppSideEffects] Dashboard chunk prefetch failed',
+          level: 'warn',
+          fallbackMessage: 'dashboard chunk prefetch failed',
+        })
+      }))).then(() => {
         offset += PREFETCH_BATCH_SIZE
         setTimeout(loadBatch, PREFETCH_BATCH_DELAY)
       })
@@ -186,7 +204,13 @@ export function DataPrefetchInit() {
   useEffect(() => {
     if (!isAuthenticated) return
     // Dynamic import: prefetchCardData pulls in useCachedData (~92 KB)
-    import('../lib/prefetchCardData').then(m => m.prefetchCardData()).catch(() => {})
+    import('../lib/prefetchCardData').then(m => m.prefetchCardData()).catch((error: unknown) => {
+      reportAppError(error, {
+        context: '[AppSideEffects] prefetchCardData import failed',
+        level: 'warn',
+        fallbackMessage: 'prefetch card data import failed',
+      })
+    })
     // Dynamic import: cardRegistry pulls in card configs (~195 KB)
     import('../components/cards/cardRegistry').then(m => {
       // Prefetch default dashboard card chunks immediately — don't wait for
@@ -198,7 +222,13 @@ export function DataPrefetchInit() {
       } else {
         setTimeout(m.prefetchDemoCardChunks, PREFETCH_DEMO_CARDS_DELAY_MS)
       }
-    }).catch(() => {})
+    }).catch((error: unknown) => {
+      reportAppError(error, {
+        context: '[AppSideEffects] cardRegistry import failed',
+        level: 'warn',
+        fallbackMessage: 'card registry import failed',
+      })
+    })
   }, [isAuthenticated])
   return null
 }

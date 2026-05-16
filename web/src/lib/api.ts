@@ -13,6 +13,7 @@ import {
   reportBackendUnavailable,
   shouldMarkBackendUnavailable,
 } from './backendHealthEvents'
+import { reportAppError } from './errors/handleError'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
@@ -71,7 +72,13 @@ function handle429(response: Response): never {
   try {
     localStorage.setItem(STORAGE_KEY_RATE_LIMIT_UNTIL,
       String(Date.now() + effectiveRetry * 1000))
-  } catch { /* storage quota / private browsing */ }
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[API] Failed to persist rate-limit retry window',
+      level: 'warn',
+      fallbackMessage: 'rate limit storage write failed',
+    })
+  }
   throw new RateLimitError(effectiveRetry)
 }
 
@@ -119,17 +126,28 @@ function handle401(): void {
     signal: AbortSignal.timeout(SESSION_VERIFY_TIMEOUT_MS),
   }).then(verifyResponse => {
     if (verifyResponse.ok) {
-      console.warn('[API] 401 received but /api/me still 200 — endpoint-specific failure, keeping session')
+      reportAppError(new Error('[API] 401 received but /api/me still 200 — endpoint-specific failure, keeping session'), {
+        context: '[API]',
+        level: 'warn',
+      })
       handling401 = false
       return
     }
     if (verifyResponse.status === 429) {
-      console.warn('[API] 401 received but /api/me returned 429 (rate-limited) — keeping session')
+      reportAppError(new Error('[API] 401 received but /api/me returned 429 (rate-limited) — keeping session'), {
+        context: '[API]',
+        level: 'warn',
+      })
       handling401 = false
       return
     }
     performSessionExpiry()
-  }).catch(() => {
+  }).catch((error: unknown) => {
+    reportAppError(error, {
+      context: '[API] Session verify probe failed during 401 handling',
+      level: 'warn',
+      fallbackMessage: 'session verify probe failed',
+    })
     // Verify probe failed (network error / timeout / no backend). Treat the
     // 401 as authoritative and run the normal expiry flow.
     performSessionExpiry()
@@ -138,7 +156,10 @@ function handle401(): void {
 
 /** Second half of handle401: banner + cookie invalidation + redirect. */
 function performSessionExpiry(): void {
-  console.warn('[API] Received 401 Unauthorized - token invalid or expired, logging out')
+  reportAppError(new Error('[API] Received 401 Unauthorized - token invalid or expired, logging out'), {
+    context: '[API]',
+    level: 'warn',
+  })
 
   // Show an in-page notification before redirecting (DOM-injected, no React dependency)
   showSessionExpiredBanner()
@@ -161,10 +182,20 @@ function performSessionExpiry(): void {
       headers,
       credentials: 'include',
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    }).catch(() => {
+    }).catch((error: unknown) => {
+      reportAppError(error, {
+        context: '[API] Logout request failed during session expiry',
+        level: 'warn',
+        fallbackMessage: 'logout request failed',
+      })
       // Backend unreachable — cookie will expire naturally
     })
-  } catch {
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[API] Failed to initiate logout request during session expiry',
+      level: 'warn',
+      fallbackMessage: 'logout request setup failed',
+    })
     // fetch() threw synchronously (very rare) — ignore
   }
 
@@ -244,8 +275,12 @@ try {
       backendLastCheckTime = timestamp
     }
   }
-} catch {
-  // Ignore localStorage errors
+} catch (error: unknown) {
+  reportAppError(error, {
+    context: '[api] failed to load cached backend status',
+    level: 'warn',
+    fallbackMessage: 'backend status cache read failed',
+  })
 }
 
 /**
@@ -286,9 +321,19 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
           available: backendAvailable,
           timestamp: backendLastCheckTime,
         }))
-      } catch (e: unknown) { console.error('[api] failed to cache backend status:', e) }
+      } catch (error: unknown) {
+        reportAppError(error, {
+          context: '[api] failed to cache backend status',
+          fallbackMessage: 'backend status cache write failed',
+        })
+      }
       return backendAvailable
-    } catch {
+    } catch (error: unknown) {
+      reportAppError(error, {
+        context: '[api] backend availability check failed',
+        level: 'warn',
+        fallbackMessage: 'backend availability check failed',
+      })
       backendAvailable = false
       backendLastCheckTime = Date.now()
       // Only cache failures in memory — do NOT persist false to localStorage.
@@ -322,8 +367,12 @@ export async function checkOAuthConfiguredWithRetry(): Promise<{ backendUp: bool
       const result = await checkOAuthConfigured()
       lastResult = result
       if (result.backendUp) return result
-    } catch {
-      // swallow and retry
+    } catch (error: unknown) {
+      reportAppError(error, {
+        context: '[api] OAuth startup check failed; retrying',
+        level: 'warn',
+        fallbackMessage: 'oauth startup check failed',
+      })
     }
     if (attempt < OAUTH_STARTUP_RETRY_ATTEMPTS - 1) {
       await new Promise((resolve) => setTimeout(resolve, OAUTH_STARTUP_RETRY_DELAY_MS))
@@ -343,9 +392,12 @@ export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oaut
       signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
     })
     if (!response.ok) return { backendUp: false, oauthConfigured: false }
-    // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
-    // before the outer try/catch processes the rejection (microtask timing issue).
-    const data = await response.json().catch(() => null)
+    // Parse JSON through the shared helper to avoid unhandled-rejection races in
+    // Firefox and keep fallback behavior consistent.
+    const data = await safeParseJsonOrNull<{ oauth_configured?: boolean }>(
+      response,
+      '[api] /health OAuth config parse failed',
+    )
     if (!data) return { backendUp: false, oauthConfigured: false }
     return {
       // Any successful /health response means the backend is reachable.
@@ -354,7 +406,12 @@ export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oaut
       backendUp: true,
       oauthConfigured: !!data.oauth_configured,
     }
-  } catch {
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[api] OAuth configured check failed',
+      level: 'warn',
+      fallbackMessage: 'oauth configured check failed',
+    })
     return { backendUp: false, oauthConfigured: false }
   }
 }
@@ -367,7 +424,12 @@ function markBackendFailure(status?: number): void {
   // Persisting false causes fresh page loads to inherit stale "backend down" state.
   try {
     localStorage.removeItem(BACKEND_STATUS_KEY)
-  } catch (e: unknown) { console.error('[api] failed to clear backend status cache:', e) }
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[api] failed to clear backend status cache',
+      fallbackMessage: 'backend status cache clear failed',
+    })
+  }
 }
 
 function markBackendSuccess(status?: number): void {
@@ -379,13 +441,44 @@ function markBackendSuccess(status?: number): void {
       available: true,
       timestamp: backendLastCheckTime,
     }))
-  } catch (e: unknown) { console.error('[api] failed to cache backend success:', e) }
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[api] failed to cache backend success',
+      fallbackMessage: 'backend success cache write failed',
+    })
+  }
 }
 
 function createErrorWithCause(message: string, cause: unknown): Error {
   const error = new Error(message) as Error & { cause?: unknown }
   error.cause = cause
   return error
+}
+
+async function safeReadTextOrEmpty(response: Response, context: string): Promise<string> {
+  try {
+    return await response.text()
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context,
+      level: 'warn',
+      fallbackMessage: 'failed to read response text',
+    })
+    return ''
+  }
+}
+
+async function safeParseJsonOrNull<T = unknown>(response: Response, context: string): Promise<T | null> {
+  try {
+    return await response.json() as T
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context,
+      level: 'warn',
+      fallbackMessage: 'failed to parse response JSON',
+    })
+    return null
+  }
 }
 
 /**
@@ -443,11 +536,20 @@ class ApiClient {
           // Nothing else to do here on success.
           try {
             localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
-          } catch {
-            // localStorage quota — best-effort hint
+          } catch (error: unknown) {
+            reportAppError(error, {
+              context: '[api] failed to cache session marker after refresh',
+              level: 'warn',
+              fallbackMessage: 'session marker cache write failed',
+            })
           }
         }
-      } catch {
+      } catch (error: unknown) {
+        reportAppError(error, {
+          context: '[api] silent refresh failed',
+          level: 'warn',
+          fallbackMessage: 'token refresh failed',
+        })
         // Silent refresh failure is non-fatal — the current token is still valid
       } finally {
         this.refreshInProgress = null
@@ -489,7 +591,12 @@ class ApiClient {
     // JWTAuth middleware accepts it).
     try {
       return localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
-    } catch {
+    } catch (error: unknown) {
+      reportAppError(error, {
+        context: '[api] failed to read session marker',
+        level: 'warn',
+        fallbackMessage: 'session marker read failed',
+      })
       return false
     }
   }
@@ -546,13 +653,13 @@ class ApiClient {
         if (response.status === 429) {
           handle429(response)
         }
-        const errorText = await response.text().catch(() => '')
+        const errorText = await safeReadTextOrEmpty(response, `[api] GET ${path} failed to read error response body`)
         emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json().catch(() => null)
+      const data = await safeParseJsonOrNull(response, `[api] GET ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -602,13 +709,13 @@ class ApiClient {
         if (response.status === 429) {
           handle429(response)
         }
-        const errorText = await response.text().catch(() => '')
+        const errorText = await safeReadTextOrEmpty(response, `[api] POST ${path} failed to read error response body`)
         emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json().catch(() => null)
+      const data = await safeParseJsonOrNull(response, `[api] POST ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -654,13 +761,13 @@ class ApiClient {
         if (response.status === 429) {
           handle429(response)
         }
-        const errorText = await response.text().catch(() => '')
+        const errorText = await safeReadTextOrEmpty(response, `[api] PATCH ${path} failed to read error response body`)
         emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json().catch(() => null)
+      const data = await safeParseJsonOrNull(response, `[api] PATCH ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -710,13 +817,13 @@ class ApiClient {
         if (response.status === 429) {
           handle429(response)
         }
-        const errorText = await response.text().catch(() => '')
+        const errorText = await safeReadTextOrEmpty(response, `[api] PUT ${path} failed to read error response body`)
         emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-      const data = await response.json().catch(() => null)
+      const data = await safeParseJsonOrNull(response, `[api] PUT ${path} failed to parse JSON response`)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
     } catch (err: unknown) {
@@ -765,7 +872,7 @@ class ApiClient {
         if (response.status === 429) {
           handle429(response)
         }
-        const errorText = await response.text().catch(() => '')
+        const errorText = await safeReadTextOrEmpty(response, `[api] DELETE ${path} failed to read error response body`)
         emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
@@ -795,7 +902,12 @@ function extractRequestPath(input: RequestInfo | URL): string {
 
   try {
     return new URL(raw, window.location.origin).pathname
-  } catch {
+  } catch (error: unknown) {
+    reportAppError(error, {
+      context: '[api] failed to normalize request path',
+      level: 'warn',
+      fallbackMessage: 'request path normalization failed',
+    })
     return raw
   }
 }

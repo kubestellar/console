@@ -7,6 +7,7 @@
  * to hard-crash the UI for users.
  */
 import type { ZodType, ZodError } from 'zod'
+import { reportAppError } from '../errors/handleError'
 
 /** Maximum number of Zod issues to log per validation failure. */
 const MAX_LOGGED_ISSUES = 5
@@ -78,7 +79,12 @@ function logValidationWarning(label: string, error: ZodError): void {
   const truncated = error.issues.length > MAX_LOGGED_ISSUES
     ? `\n  ... and ${error.issues.length - MAX_LOGGED_ISSUES} more issues`
     : ''
-  console.warn(
-    `[Zod] API response validation failed for "${label}":\n${summary}${truncated}`,
+  reportAppError(
+    new Error(`[Zod] API response validation failed for "${label}":\n${summary}${truncated}`),
+    {
+      context: '[SchemaValidation]',
+      level: 'warn',
+      fallbackMessage: `[Zod] API response validation failed for "${label}"`,
+    },
   )
 }

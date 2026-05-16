@@ -1,4 +1,5 @@
 import { createContext, useContext, useRef, useCallback, useMemo, type ReactNode } from 'react'
+import { reportAppError } from './errors/handleError'
 
 // ============================================================================
 // Card Event Types
@@ -80,7 +81,11 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
       try {
         cb(event as never)
       } catch (err: unknown) {
-        console.error(`[CardEvents] Error in ${event.type} handler:`, err)
+        reportAppError(err, {
+          context: `[CardEvents] Error in ${event.type} handler`,
+          level: 'error',
+          fallbackMessage: 'Unhandled card event handler error',
+        })
       }
     }
   }, [])
