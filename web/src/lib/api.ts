@@ -470,7 +470,6 @@ async function safeReadTextOrEmpty(response: Response, context: string): Promise
 
 async function safeParseJsonOrNull<T = unknown>(response: Response, context: string): Promise<T | null> {
   const contentLength = response.headers.get('content-length')
-  const contentType = response.headers.get('content-type') || ''
 
   if (response.status === 204 || contentLength === '0') {
     return {} as T
