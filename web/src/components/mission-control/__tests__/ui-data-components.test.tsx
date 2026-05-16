@@ -75,6 +75,25 @@ describe('PayloadCard', () => {
     expect(screen.getByText('+1 dep')).toBeDefined()
   })
 
+  it('shows all requirement level options in the priority dropdown', () => {
+    const onUpdatePriority = vi.fn()
+    render(
+      <PayloadCard
+        project={mockProject}
+        onRemove={vi.fn()}
+        onUpdatePriority={onUpdatePriority}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'required' }))
+
+    expect(screen.getByText('recommended')).toBeDefined()
+    expect(screen.getByText('optional')).toBeDefined()
+
+    fireEvent.click(screen.getByText('optional'))
+    expect(onUpdatePriority).toHaveBeenCalledWith('optional')
+  })
+
   it('keeps the card stretched when swapped badges are present', () => {
     const swappedProject = {
       ...mockProject,

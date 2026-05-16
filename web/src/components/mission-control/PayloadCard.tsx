@@ -64,6 +64,8 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const [showDeps, setShowDeps] = useState(false)
   const [depsTooltipPosition, setDepsTooltipPosition] = useState<{ left: number, top: number } | null>(null)
+  const [priorityMenuPosition, setPriorityMenuPosition] = useState<{ right: number, bottom: number } | null>(null)
+  const priorityBtnRef = useRef<HTMLButtonElement>(null)
 
   // issue 6743 — Dismiss the priority dropdown when the user presses Escape. Without
   // this, keyboard users had no way to close the menu once opened.
@@ -242,13 +244,21 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
           )}
           </div>
 
-          {/* Priority dropdown */}
+          {/* Priority dropdown — portalled to avoid overflow:hidden clipping (issue #14093) */}
           <div className="relative shrink-0">
             <Button
+              ref={priorityBtnRef}
               variant="ghost"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
+                if (!showPriorityMenu && priorityBtnRef.current) {
+                  const rect = priorityBtnRef.current.getBoundingClientRect()
+                  setPriorityMenuPosition({
+                    right: window.innerWidth - rect.right,
+                    bottom: window.innerHeight - rect.top + 4,
+                  })
+                }
                 setShowPriorityMenu(!showPriorityMenu)
               }}
               className={cn(
@@ -260,11 +270,17 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
             >
               {project.priority}
             </Button>
-            {showPriorityMenu && (
+            {showPriorityMenu && priorityMenuPosition && createPortal(
               <>
                 {/* Backdrop to close on outside click */}
-                <div className="fixed inset-0 z-20" role="presentation" aria-hidden="true" onClick={() => setShowPriorityMenu(false)} />
-                <div className="absolute right-0 bottom-full mb-1 bg-slate-900 border border-border rounded-lg shadow-lg py-1 z-30 min-w-[100px]">
+                <div className="fixed inset-0 z-[9998]" role="presentation" aria-hidden="true" onClick={() => setShowPriorityMenu(false)} />
+                <div
+                  className="fixed bg-slate-900 border border-border rounded-lg shadow-lg py-1 z-[9999] min-w-[100px]"
+                  style={{
+                    right: priorityMenuPosition.right,
+                    bottom: priorityMenuPosition.bottom,
+                  }}
+                >
                   {(['required', 'recommended', 'optional'] as const).map((p) => (
                     <Button
                       key={p}
@@ -284,7 +300,8 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                     </Button>
                   ))}
                 </div>
-              </>
+              </>,
+              document.body
             )}
           </div>
         </div>
