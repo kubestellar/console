@@ -256,8 +256,8 @@ export function ActiveAlerts() {
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls — uses @container queries so layout
            responds to card width, not viewport width */}
-      <div className="mb-3 flex flex-col gap-2 shrink-0 @lg:flex-row @lg:items-start @lg:justify-between">
-        <div className="flex flex-wrap items-start gap-2">
+      <div className="mb-3 flex flex-col gap-2 shrink-0 @lg:flex-row @lg:items-center @lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           {stats.firing > 0 && (
             <StatusBadge color="red" variant="outline" rounded="full">
               {t('activeAlerts.firingCount', { count: stats.firing })}
@@ -327,14 +327,14 @@ export function ActiveAlerts() {
           </div>
         </div>
 
-        <div className="flex w-full flex-col items-stretch gap-2 @lg:w-auto @lg:min-w-[18rem] @lg:max-w-[20rem] @lg:items-end">
+        <div className="flex w-full flex-col items-stretch gap-2 @lg:w-auto @lg:flex-1 @lg:min-w-[14rem] @lg:max-w-[24rem] @lg:items-end">
           <CardSearchInput
             value={localSearch}
             onChange={setLocalSearch}
             placeholder={t('activeAlerts.searchAlerts')}
             className="mb-0 w-full"
           />
-          <div className="flex flex-wrap items-start gap-2 @lg:justify-end">
+          <div className="flex flex-wrap items-center gap-2 @lg:justify-end">
             {/* 1. Ack'd toggle */}
             <button
               onClick={() => setShowAcknowledged(!showAcknowledged)}
