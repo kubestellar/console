@@ -947,11 +947,11 @@ export const CardWrapper = memo(function CardWrapper({
 
             {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
             {!isCollapsed && (
-              <div className="flex-1 p-4 overflow-auto scroll-enhanced min-h-0 flex flex-col">
+              <div className="flex-1 p-4 overflow-hidden flex flex-col min-h-full">
                 {/* Container query boundary — cards use @container breakpoints
                     instead of viewport breakpoints so layouts respond to actual
                     card width (which shrinks when side panels expand).
-                    Must be INSIDE overflow-auto (CSS spec: container-type and
+                    Must be INSIDE overflow-hidden (CSS spec: container-type and
                     overflow conflict on the same element). */}
                 <div className="@container flex-1 flex flex-col min-h-0" style={CONTAINER_QUERY_STYLE}>
                 {(isVisible || isExpanded) ? (
