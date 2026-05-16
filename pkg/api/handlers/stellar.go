@@ -158,7 +158,7 @@ type StellarStore interface {
 	GetUserLastSeen(ctx context.Context, userID string) (*time.Time, error)
 	SetUserLastDigest(ctx context.Context, userID string) error
 	GetWatchByResource(ctx context.Context, userID, cluster, namespace, kind, name string) (*store.StellarWatch, error)
-	SnoozeWatch(ctx context.Context, id string, until time.Time) error
+	SnoozeWatch(ctx context.Context, id, userID string, until time.Time) error
 	GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]store.StellarWatch, error)
 	ListStellarAuditLog(ctx context.Context, limit int) ([]store.StellarAuditEntry, error)
 
