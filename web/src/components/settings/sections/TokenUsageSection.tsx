@@ -45,6 +45,8 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
 
   // Token limit value that effectively disables all AI operations
   const DISABLED_TOKEN_LIMIT = 0
+  // Maximum allowable monthly token limit for spinbutton accessibility (aria-valuemax)
+  const MAX_MONTHLY_TOKEN_LIMIT = 1000000000
 
   useEffect(() => {
     return () => clearTimeout(savedTimerRef.current)
@@ -152,6 +154,8 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
               type="number"
               value={tokenLimit}
               onChange={(e) => setTokenLimit(parseInt(e.target.value) || 0)}
+              min="0"
+              max={MAX_MONTHLY_TOKEN_LIMIT}
               aria-label={t('settings.tokens.monthlyLimit')}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
             />
