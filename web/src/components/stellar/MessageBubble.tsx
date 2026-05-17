@@ -1,4 +1,6 @@
-import ReactMarkdown from 'react-markdown'
+import { lazy, Suspense } from 'react'
+
+const ReactMarkdown = lazy(() => import('react-markdown'))
 
 interface MessageMeta {
   model: string
@@ -33,7 +35,9 @@ export function MessageBubble({ msg }: { msg: Msg }) {
           <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</div>
         ) : (
           <div className="stellar-markdown">
-            <ReactMarkdown>{msg.content}</ReactMarkdown>
+            <Suspense fallback={<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</div>}>
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </Suspense>
           </div>
         )}
       </div>
