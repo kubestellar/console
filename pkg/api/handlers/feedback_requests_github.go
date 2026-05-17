@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,8 @@ import (
 
 // docsRepoName is the GitHub repository name for console documentation issues.
 const docsRepoName = "docs"
+
+var fixesPatternRe = regexp.MustCompile(`(?i)(?:fixes|closes|resolves)\s+(?:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)?#(\d+)`)
 
 // GitHubPR represents a pull request from the GitHub API.
 type GitHubPR struct {
