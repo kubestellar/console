@@ -8,9 +8,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_k: string, d?: string) => d ?? _k }),
-}))
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (_k: string, d?: string) => d ?? _k }),
+  }
+})
 
 vi.mock('../../DashboardHealthIndicator', () => ({
   DashboardHealthIndicator: () =>
