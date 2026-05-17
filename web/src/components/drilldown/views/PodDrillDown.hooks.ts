@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useAsyncData } from '../../../hooks/useAsyncData'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useToast } from '../../ui/Toast'
@@ -335,8 +335,9 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
           return
         }
 
-        if (msg.id === requestId && msg.payload?.response) {
-          resolve(msg.payload.response)
+        const response = msg.payload?.response
+        if (msg.id === requestId && typeof response === 'string') {
+          resolve(response)
           ws.close()
           return
         }

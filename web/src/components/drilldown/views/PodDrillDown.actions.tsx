@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
-import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { useToast } from '../../ui/Toast'
 import { useTranslation } from 'react-i18next'
-import { safeSet } from './PodDrillDown.hooks'
 import type { RelatedResource } from './pod-drilldown'
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
