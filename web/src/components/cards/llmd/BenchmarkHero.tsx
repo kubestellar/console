@@ -92,7 +92,8 @@ export function BenchmarkHero() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
   const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
-  useCardLoadingState({ isLoading, hasAnyData: effectiveReports.length > 0, isDemoData: isDemoFallback, isFailed, consecutiveFailures, isRefreshing })
+  const hasData = effectiveReports.length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoFallback, isFailed, consecutiveFailures, isRefreshing })
 
   const [customDays, setCustomDays] = useState('')
   const [showCustom, setShowCustom] = useState(false)
