@@ -1,11 +1,11 @@
 /**
  * LaunchSequence — Deploy execution panel.
  *
- * Iterates deploy phases, loads KB mission JSON per project,
- * calls startMission() per cluster. Animated checklist with progress.
+ * Loads KB mission JSON per workload, merges the deployment plan into
+ * one unified mission prompt, and tracks progress for the single session.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Rocket,
@@ -90,6 +90,22 @@ function derivePhaseStatus(phase: PhaseProgress): PhaseStatus {
   return anyFailed ? 'failed' : 'completed'
 }
 
+interface UnifiedMissionWorkload {
+  projectName: string
+  uiSafeDisplayName: string
+  phase: number
+  phaseName: string
+  targetClusters: string[]
+  prompt: string
+}
+
+function getUiSafeDisplayName(project: MissionControlState['projects'][number]): string {
+  const displayNameRaw = typeof project.displayName === 'string'
+    ? project.displayName.trim()
+    : ''
+  return isSafeProjectName(displayNameRaw) ? displayNameRaw : project.name
+}
+
 export function LaunchSequence({
   state,
   onUpdateProgress,
@@ -99,7 +115,6 @@ export function LaunchSequence({
   const { startMission, missions } = useMissions()
   const [isStarted, setIsStarted] = useState(false)
   const progressRef = useRef<PhaseProgress[]>(state.launchProgress)
-  const startedMissions = useRef(new Set<string>())
   // #6632 — Track mount state so effects scheduled before unmount (phase
   // initialization, mission monitor, auto-start) can't call onUpdateProgress
   // or onComplete on a closed dialog. Without this, closing Mission Control
@@ -144,7 +159,6 @@ export function LaunchSequence({
         name,
         status: 'pending' as const })) }))
     progressRef.current = initial
-    startedMissions.current = new Set<string>()
     // #6632 — guard against firing onUpdateProgress on a closed dialog
     if (!isMountedRef.current) return
     setIsStarted(false)
@@ -159,120 +173,174 @@ export function LaunchSequence({
       onUpdateProgress(next)
     }
 
-  // Launch a single project's mission
-  const launchProject = async (projectName: string, phaseNum: number) => {
-      const project = state.projects.find((p) => p.name === projectName)
-      if (!project) return
+  const buildUnifiedMissionPlan = async (): Promise<{
+    prompt: string
+    clusters: string[]
+    workloadNames: string[]
+  }> => {
+    const seenProjects = new Set<string>()
+    const workloadPlans = await Promise.all(
+      effectivePhases
+        .flatMap((phase) => (phase.projectNames || []).map((projectName) => ({ phase, projectName })))
+        .filter(({ projectName }) => {
+          if (seenProjects.has(projectName)) return false
+          seenProjects.add(projectName)
+          return true
+        })
+        .map(async ({ phase, projectName }): Promise<UnifiedMissionWorkload | null> => {
+          const project = state.projects.find((candidate) => candidate.name === projectName)
+          if (!project) return null
 
-      // #7155 — Resolve ALL matching cluster assignments for multi-cluster
-      // missions, not just the first. Each cluster gets its own startMission
-      // call so retry operates at the cluster level.
-      const assignments = state.assignments.filter((a) =>
-        (a.projectNames || []).includes(projectName)
-      )
-      const clusterName = assignments.length > 0
-        ? assignments[0]?.clusterName ?? 'default'
-        : 'default'
-
-      // #7156 — Update status to running BEFORE any async/network calls.
-      // This ensures the progress pointer is set even if the network call
-      // fails, preventing the UI from showing 0% infinitely.
-      updateProgress((prev) =>
-        prev.map((p) =>
-          p.phase === phaseNum
-            ? {
-                ...p,
-                status: 'running',
-                projects: p.projects.map((proj) =>
-                  proj.name === projectName ? { ...proj, status: 'running' as const } : proj
-                ) }
-            : p
-        )
-      )
-
-      try {
-        // #6379 — Build the fallback prompt through a sanitizing helper so
-        // AI-supplied names can't inject instructions into the downstream
-        // LLM call. `buildInstallPromptForProject` validates the name
-        // against an allow-list and wraps it in a triple-quoted opaque
-        // literal fence.
-        const fallbackPrompt = buildInstallPromptForProject(
-          project.name,
-          project.displayName,
-        )
-        // #8482 — Pass Kubara chart name so loadMissionPrompt can embed
-        // production-tested Helm values into the install prompt.
-        const prompt = await loadMissionPrompt(
-          project.name,
-          fallbackPrompt,
-          project.kbPath ? [project.kbPath] : undefined,
-          project.kubaraChartName ? { kubaraChartName: project.kubaraChartName } : undefined,
-        )
-
-        // Derive a safe display name for UI strings too — the title is
-        // user-visible and we don't want a prompt-injection payload rendering
-        // in our own sidebar either. #6410 — `isSafeProjectName` validates
-        // the TRIMMED value (see its impl), so we must trim first and use
-        // the trimmed value for BOTH validation and the rendered label.
-        // Otherwise `'  foo  '` would validate as the trimmed form but then
-        // render with the original leading/trailing whitespace.
-        const displayNameRaw = typeof project.displayName === 'string'
-          ? project.displayName.trim()
-          : ''
-        const uiSafeDisplayName = isSafeProjectName(displayNameRaw)
-          ? displayNameRaw
-          : project.name
-        const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
-        const clusterContext = `\n\n**Target cluster:** ${clusterName}`
-
-        // #6815 — startMission is synchronous and returns the missionId
-        // immediately; updateProgress must follow in the same try block so
-        // that if any future refactor introduces a throw between the two
-        // calls, the missionId is still captured in progress (preventing an
-        // orphaned mission ref).
-        const missionId = startMission({
-          title: `${dryRunPrefix}Install ${uiSafeDisplayName}`,
-          description: `${state.isDryRun ? 'Dry-run validation' : 'Automated install'} of ${uiSafeDisplayName} as part of Mission Control deployment`,
-          type: 'deploy',
-          cluster: clusterName,
-          initialPrompt: prompt + clusterContext,
-          dryRun: state.isDryRun })
-
-        // Update with missionId — placed immediately after startMission in
-        // the same try block so the id is always persisted into progressRef.
-        updateProgress((prev) =>
-          prev.map((p) =>
-            p.phase === phaseNum
-              ? {
-                  ...p,
-                  projects: p.projects.map((proj) =>
-                    proj.name === projectName ? { ...proj, missionId } : proj
-                  ) }
-              : p
+          const fallbackPrompt = buildInstallPromptForProject(
+            project.name,
+            project.displayName,
           )
-        )
-      } catch (err: unknown) {
-        // #7143 — Capture the full error message. When `err` is an array
-        // (e.g. from Promise.all rejections or grouped validation errors),
-        // stringify each element individually to avoid losing detail.
-        const errorMessage = Array.isArray(err)
-          ? err.map(String).join('; ')
-          : String(err)
-        // Mark project as failed AND recompute phase-level status (#5507)
-        updateProgress((prev) =>
-          prev.map((p) => {
-            if (p.phase !== phaseNum) return p
-            const updatedProjects = p.projects.map((proj) =>
-              proj.name === projectName
-                ? { ...proj, status: 'failed' as const, error: errorMessage }
-                : proj
-            )
-            const updatedPhase = { ...p, projects: updatedProjects }
-            return { ...updatedPhase, status: derivePhaseStatus(updatedPhase) }
-          })
-        )
-      }
+          const prompt = await loadMissionPrompt(
+            project.name,
+            fallbackPrompt,
+            project.kbPath ? [project.kbPath] : undefined,
+            project.kubaraChartName ? { kubaraChartName: project.kubaraChartName } : undefined,
+          )
+
+          return {
+            projectName,
+            uiSafeDisplayName: getUiSafeDisplayName(project),
+            phase: phase.phase,
+            phaseName: phase.name,
+            targetClusters: state.assignments
+              .filter((assignment) => (assignment.projectNames || []).includes(projectName))
+              .map((assignment) => assignment.clusterName),
+            prompt,
+          }
+        })
+    )
+
+    const workloads = workloadPlans.filter((workload): workload is UnifiedMissionWorkload => workload !== null)
+    if (workloads.length === 0) {
+      throw new Error('Mission Control could not find any workloads to deploy.')
     }
+
+    const clusters = Array.from(new Set(workloads.flatMap((workload) => workload.targetClusters)))
+    const assignmentsJson = JSON.stringify(
+      (state.assignments || []).map((assignment) => ({
+        clusterName: assignment.clusterName,
+        clusterContext: assignment.clusterContext,
+        provider: assignment.provider,
+        projectNames: assignment.projectNames || [],
+        warnings: assignment.warnings || [],
+      })),
+      null,
+      2,
+    )
+    const phasesJson = JSON.stringify(
+      effectivePhases.map((phase) => ({
+        phase: phase.phase,
+        name: phase.name,
+        projectNames: phase.projectNames || [],
+      })),
+      null,
+      2,
+    )
+
+    const prompt = [
+      `${state.isDryRun ? 'Validate' : 'Execute'} this Mission Control deployment as ONE unified AI mission session.`,
+      'Do not split this deployment into separate mission sessions and do not ask for workload-by-workload acceptance.',
+      state.deployMode === 'phased'
+        ? 'Deployment mode: phased. Complete each phase in order and verify the workloads in a phase before moving to the next.'
+        : 'Deployment mode: yolo. You may perform independent workload deployments in parallel when safe, but keep everything inside this single mission session.',
+      '',
+      state.title ? `Mission title: ${state.title}` : '',
+      state.description ? `Mission goal: ${state.description}` : '',
+      clusters.length > 0 ? `Target clusters: ${clusters.join(', ')}` : '',
+      '',
+      'Cluster assignments:',
+      '```json',
+      assignmentsJson,
+      '```',
+      '',
+      'Deployment phases:',
+      '```json',
+      phasesJson,
+      '```',
+      '',
+      'Use the workload-specific runbooks below. The listed target clusters are authoritative.',
+      ...workloads.flatMap((workload, index) => [
+        '',
+        `## Workload ${index + 1}: ${workload.uiSafeDisplayName}`,
+        `Project key: ${workload.projectName}`,
+        `Phase: ${workload.phase} — ${workload.phaseName}`,
+        `Target clusters: ${workload.targetClusters.length > 0 ? workload.targetClusters.join(', ') : 'Unassigned'}`,
+        '',
+        workload.prompt,
+      ]),
+    ].filter(Boolean).join('\n')
+
+    return {
+      prompt,
+      clusters,
+      workloadNames: workloads.map((workload) => workload.projectName),
+    }
+  }
+
+  const startUnifiedMission = async () => {
+    updateProgress((prev) =>
+      prev.map((phase) => ({
+        ...phase,
+        status: 'running',
+        projects: phase.projects.map((project) => ({
+          ...project,
+          status: 'running' as const,
+          error: undefined,
+        })),
+      }))
+    )
+
+    try {
+      const { prompt, clusters, workloadNames } = await buildUnifiedMissionPlan()
+      const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
+      const clusterCount = clusters.length
+      const missionId = startMission({
+        title: `${dryRunPrefix}${state.title || 'Mission Control deployment'}`,
+        description: `${state.isDryRun ? 'Dry-run validation' : 'Unified deployment'} for ${workloadNames.length} workload${workloadNames.length === 1 ? '' : 's'}${clusterCount > 0 ? ` across ${clusterCount} cluster${clusterCount === 1 ? '' : 's'}` : ''}`,
+        type: 'deploy',
+        initialPrompt: prompt,
+        dryRun: state.isDryRun,
+        context: {
+          source: 'mission-control',
+          targetClusters: clusters,
+          workloads: workloadNames,
+        },
+      })
+
+      updateProgress((prev) =>
+        prev.map((phase) => ({
+          ...phase,
+          status: 'running',
+          projects: phase.projects.map((project) => ({
+            ...project,
+            missionId,
+            status: 'running' as const,
+            error: undefined,
+          })),
+        }))
+      )
+    } catch (err: unknown) {
+      const errorMessage = Array.isArray(err)
+        ? err.map(String).join('; ')
+        : String(err)
+      updateProgress((prev) =>
+        prev.map((phase) => ({
+          ...phase,
+          status: 'failed',
+          projects: phase.projects.map((project) => ({
+            ...project,
+            status: 'failed' as const,
+            error: errorMessage,
+          })),
+        }))
+      )
+    }
+  }
 
   // Monitor mission statuses and update progress
   // #7157 — Added 'cancelled' status mapping so cancelled missions are
@@ -321,120 +389,13 @@ export function LaunchSequence({
     }
   }, [missions, onUpdateProgress, onComplete])
 
-  /**
-   * Wait for a specific phase to reach a terminal status.
-   * Used by phased mode to gate sequential phase execution (#5506).
-   * #6405 — Returns the terminal status so the caller can distinguish
-   * "fully succeeded" from "terminally failed" and block dependent phases
-   * when a failure occurred.
-   */
-  const waitForPhaseCompletion = useCallback((phaseNum: number, signal?: AbortSignal): Promise<PhaseStatus> => {
-    return new Promise((resolve, reject) => {
-      /** Poll interval in ms — checks progressRef for phase terminal state */
-      const PHASE_POLL_INTERVAL_MS = 500
-      let timer: ReturnType<typeof setTimeout> | null = null
-
-      const onAbort = () => {
-        if (timer !== null) clearTimeout(timer)
-        reject(new DOMException('Phase wait aborted', 'AbortError'))
-      }
-
-      if (signal?.aborted) {
-        onAbort()
-        return
-      }
-      signal?.addEventListener('abort', onAbort, { once: true })
-
-      const check = () => {
-        // #7140 — Stop polling when the component unmounts to prevent ghost
-        // tasks consuming CPU after the dialog is closed.
-        if (!isMountedRef.current) {
-          signal?.removeEventListener('abort', onAbort)
-          reject(new DOMException('Component unmounted', 'AbortError'))
-          return
-        }
-        const phase = progressRef.current.find((p) => p.phase === phaseNum)
-        if (phase && TERMINAL_STATUSES.includes(phase.status)) {
-          signal?.removeEventListener('abort', onAbort)
-          resolve(phase.status)
-          return
-        }
-        timer = setTimeout(check, PHASE_POLL_INTERVAL_MS)
-      }
-      check()
-    })
-  }, [])
-
-  // Execute the launch sequence
-  const startLaunch = async (abortSignal?: AbortSignal) => {
-    if (isStarted) return
-    setIsStarted(true)
-
-    const isYolo = state.deployMode === 'yolo'
-
-    if (isYolo) {
-      // Launch everything at once. #6634 — collect the promises and await
-      // them with Promise.allSettled so the yolo path doesn't swallow
-      // rejections or leave unhandled-rejection warnings in the console.
-      // launchProject has its own try/catch around the failing branch, but
-      // any future refactor that throws before that catch would otherwise
-      // go unnoticed.
-      const pending: Promise<void>[] = []
-      for (const phase of effectivePhases) {
-        for (const projectName of (phase.projectNames || [])) {
-          if (!startedMissions.current.has(projectName)) {
-            startedMissions.current.add(projectName)
-            pending.push(launchProject(projectName, phase.phase))
-          }
-        }
-      }
-      await Promise.allSettled(pending)
-    } else {
-      // Phased: launch phase N, wait for completion, then phase N+1 (#5506)
-      for (const phase of effectivePhases) {
-        updateProgress((prev) =>
-          prev.map((p) =>
-            p.phase === phase.phase ? { ...p, status: 'running' } : p
-          )
-        )
-
-        // Launch all projects in this phase
-        for (const projectName of (phase.projectNames || [])) {
-          if (!startedMissions.current.has(projectName)) {
-            startedMissions.current.add(projectName)
-            await launchProject(projectName, phase.phase)
-          }
-        }
-
-        // Wait for this phase to reach a terminal state before starting the next (#5506)
-        // #6405 — Only advance on a fully-succeeded phase. A `failed` status
-        // means at least one project in this phase is terminally failed and
-        // the user is looking at a "Retry Failed" button — we must NOT
-        // auto-advance to dependent phases from that state.
-        const result = await waitForPhaseCompletion(phase.phase, abortSignal)
-        if (result !== 'completed') {
-          // Block dependent phases. The Retry Failed button will re-invoke
-          // launchProject for the failed entries; if the retry succeeds, the
-          // user can manually proceed via the normal completion path.
-          break
-        }
-      }
-    }
-  }
-
-  // Auto-start on mount — keyed on content signature (#5508)
-  // #6785 — AbortController cancels waitForPhaseCompletion polling on unmount
-  // so leaked timers and stale setState calls cannot occur.
+  // Auto-start on mount — keyed on content signature (#5508). Mission Control
+  // now launches a single unified mission session for the whole deployment.
   useEffect(() => {
-    const controller = new AbortController()
-    if (!isStarted && effectivePhases.length > 0) {
-      startLaunch(controller.signal).catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-        throw err
-      })
-    }
-    return () => { controller.abort() }
-  }, [phaseSignature])
+    if (isStarted || effectivePhases.length === 0) return
+    setIsStarted(true)
+    void startUnifiedMission()
+  }, [phaseSignature, isStarted, effectivePhases.length])
 
   const progress = state.launchProgress.length > 0 ? state.launchProgress : progressRef.current
   const allComplete = progress.length > 0 && progress.every(
@@ -534,51 +495,7 @@ export function LaunchSequence({
                     className="h-6 text-xs"
                     icon={<RotateCcw className="w-3 h-3" />}
                     onClick={() => {
-                      // #6634 — Track the retry promises so any rejection
-                      // is observed rather than dropped. Promise.allSettled
-                      // keeps the click handler from becoming `async` in a
-                      // JSX attribute (which confuses React type checks).
-                      // #7147 — After retry succeeds, resume dependent phases
-                      // that were blocked by the original failure. Without this,
-                      // the phased loop had already `break`-ed and later phases
-                      // would never start.
-                      const retries: Promise<void>[] = []
-                      phase.projects.forEach((p) => {
-                        if (p.status === 'failed') {
-                          retries.push(launchProject(p.name, phase.phase))
-                        }
-                      })
-                      void Promise.allSettled(retries).then(() => {
-                        // Resume subsequent phases if this phase now completes
-                        if (state.deployMode !== 'yolo') {
-                          const phaseIdx = effectivePhases.findIndex(
-                            (ep) => ep.phase === phase.phase
-                          )
-                          const remaining = effectivePhases.slice(phaseIdx + 1)
-                          if (remaining.length > 0) {
-                            const resumePhases = async () => {
-                              const result = await waitForPhaseCompletion(phase.phase)
-                              if (result !== 'completed') return
-                              for (const nextPhase of remaining) {
-                                updateProgress((prev) =>
-                                  prev.map((p) =>
-                                    p.phase === nextPhase.phase ? { ...p, status: 'running' } : p
-                                  )
-                                )
-                                for (const projName of (nextPhase.projectNames || [])) {
-                                  if (!startedMissions.current.has(projName)) {
-                                    startedMissions.current.add(projName)
-                                    await launchProject(projName, nextPhase.phase)
-                                  }
-                                }
-                                const nextResult = await waitForPhaseCompletion(nextPhase.phase)
-                                if (nextResult !== 'completed') break
-                              }
-                            }
-                            void resumePhases()
-                          }
-                        }
-                      })
+                      void startUnifiedMission()
                     }}
                   >
                     Retry Failed

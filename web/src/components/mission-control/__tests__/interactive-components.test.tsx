@@ -9,6 +9,11 @@ import { RequestApprovalModal } from '../RequestApprovalModal'
 import type { ClusterInfo } from '../../../hooks/mcp/types'
 import type { PayloadProject, MissionControlState } from '../types'
 
+const { mockStartMission, mockLoadMissionPrompt } = vi.hoisted(() => ({
+  mockStartMission: vi.fn(() => 'mission-123'),
+  mockLoadMissionPrompt: vi.fn((key: string) => Promise.resolve(`prompt for ${key}`)),
+}))
+
 // Mock hooks
 vi.mock('../../../hooks/mcp/clusters', () => ({
   useClusters: vi.fn(() => ({
@@ -29,7 +34,7 @@ vi.mock('../../../hooks/mcp/helm', () => ({
 
 vi.mock('../../../hooks/useMissions', () => ({
   useMissions: vi.fn(() => ({
-    startMission: vi.fn(() => 'mission-123'),
+    startMission: mockStartMission,
     missions: [],
   })),
 }))
@@ -68,7 +73,7 @@ vi.mock('react-markdown', () => ({
 
 // Mock missionLoader
 vi.mock('../cards/multi-tenancy/missionLoader', () => ({
-  loadMissionPrompt: vi.fn(() => Promise.resolve('mocked prompt')),
+  loadMissionPrompt: mockLoadMissionPrompt,
 }))
 
 // Mock fetch
@@ -205,6 +210,13 @@ describe('ClusterAssignmentPanel', () => {
 })
 
 describe('LaunchSequence', () => {
+  beforeEach(() => {
+    mockStartMission.mockReset()
+    mockStartMission.mockReturnValue('mission-123')
+    mockLoadMissionPrompt.mockReset()
+    mockLoadMissionPrompt.mockImplementation((key: string) => Promise.resolve(`prompt for ${key}`))
+  })
+
   it('initializes progress and starts launch', async () => {
     const onUpdateProgress = vi.fn()
     const stateWithAssignments: MissionControlState = {
@@ -238,6 +250,60 @@ describe('LaunchSequence', () => {
     await waitFor(() => {
       expect(onUpdateProgress).toHaveBeenCalled()
     })
+  })
+
+  it('starts one unified mission for all workloads', async () => {
+    const onUpdateProgress = vi.fn()
+    const kyvernoProject: PayloadProject = {
+      ...mockProject,
+      name: 'kyverno',
+      displayName: 'Kyverno',
+    }
+    const stateWithAssignments: MissionControlState = {
+      ...mockState,
+      projects: [mockProject, kyvernoProject],
+      assignments: [{
+        clusterName: 'cluster-1',
+        clusterContext: 'cluster-1',
+        provider: 'kind',
+        projectNames: ['falco', 'kyverno'],
+        readiness: {
+          cpuHeadroomPercent: 80,
+          memHeadroomPercent: 80,
+          storageHeadroomPercent: 80,
+          overallScore: 80,
+        },
+        warnings: ['Helm available'],
+      }],
+      phases: [
+        { phase: 1, name: 'Security', projectNames: ['falco'] },
+        { phase: 2, name: 'Policy', projectNames: ['kyverno'] },
+      ],
+    }
+
+    render(
+      <LaunchSequence
+        state={stateWithAssignments}
+        onUpdateProgress={onUpdateProgress}
+        onComplete={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(mockStartMission).toHaveBeenCalledTimes(1)
+    })
+
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'deploy',
+      initialPrompt: expect.stringContaining('ONE unified AI mission session'),
+    }))
+
+    const [missionArgs] = mockStartMission.mock.calls[0]
+    expect(missionArgs.initialPrompt).toContain('## Workload 1: Falco')
+    expect(missionArgs.initialPrompt).toContain('## Workload 2: Kyverno')
+    expect(missionArgs.initialPrompt).toContain('Helm available')
+    expect(missionArgs.initialPrompt).toContain('Do not split this deployment into separate mission sessions')
+    expect(onUpdateProgress).toHaveBeenCalled()
   })
 })
 
