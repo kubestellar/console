@@ -310,7 +310,7 @@ describe('useCRDs', () => {
     expect(headers['Authorization']).toBeUndefined()
   })
 
-  it('saves successful live data to localStorage cache', async () => {
+  it('does not write the retired legacy localStorage cache', async () => {
     mockFetch.mockResolvedValue(okResponse(LIVE_CRDS))
 
     const { result } = renderHook(() => useCRDs())
@@ -319,12 +319,7 @@ describe('useCRDs', () => {
       expect(result.current.isDemoData).toBe(false)
     })
 
-    const cached = localStorage.getItem('kc-crd-cache')
-    expect(cached).toBeTruthy()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.data).toEqual(LIVE_CRDS)
-    expect(parsed.isDemoData).toBe(false)
-    expect(typeof parsed.timestamp).toBe('number')
+    expect(localStorage.getItem('kc-crd-cache')).toBeNull()
   })
 
   it('sets lastRefresh timestamp after successful fetch', async () => {

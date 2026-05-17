@@ -197,35 +197,27 @@ describe('useArgoCDApplications', () => {
     unmount()
   })
 
-  it('caches applications to localStorage after fetch', async () => {
+  it('does not write the retired legacy applications localStorage cache', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
 
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    const cached = localStorage.getItem('kc-argocd-apps-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(true)
-    expect(parsed.data.length).toBeGreaterThan(0)
-    expect(parsed.timestamp).toBeTypeOf('number')
+    expect(localStorage.getItem('kc-argocd-apps-cache')).toBeNull()
     unmount()
   })
 
-  it('loads from cache on initialization when cache is valid', async () => {
-    // Pre-populate the cache with valid data
-    const cachedApps = [makeApp({ name: 'cached-app' })]
+  it('ignores the retired legacy applications localStorage cache on initialization', async () => {
     localStorage.setItem('kc-argocd-apps-cache', JSON.stringify({
-      data: cachedApps,
+      data: [makeApp({ name: 'cached-app' })],
       timestamp: Date.now(),
       isDemoData: false,
     }))
 
     const { result, unmount } = renderHook(() => useArgoCDApplications())
 
-    // Initial state should come from cache
-    expect(result.current.applications).toHaveLength(1)
-    expect(result.current.applications[0].name).toBe('cached-app')
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.applications.some(app => app.name === 'cached-app')).toBe(false)
     unmount()
   })
 
@@ -476,32 +468,26 @@ describe('useArgoCDHealth', () => {
     unmount()
   })
 
-  it('caches health data to localStorage', async () => {
+  it('does not write the retired legacy health localStorage cache', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
 
     const { result, unmount } = renderHook(() => useArgoCDHealth())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    const cached = localStorage.getItem('kc-argocd-health-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(true)
-    expect(parsed.data).toHaveProperty('healthy')
+    expect(localStorage.getItem('kc-argocd-health-cache')).toBeNull()
     unmount()
   })
 
-  it('loads from valid cache on initialization', async () => {
-    const cachedStats = { healthy: 5, degraded: 1, progressing: 0, missing: 0, unknown: 0 }
+  it('ignores the retired legacy health localStorage cache on initialization', async () => {
     localStorage.setItem('kc-argocd-health-cache', JSON.stringify({
-      data: cachedStats,
+      data: { healthy: 5, degraded: 1, progressing: 0, missing: 0, unknown: 0 },
       timestamp: Date.now(),
       isDemoData: false,
     }))
 
     const { result, unmount } = renderHook(() => useArgoCDHealth())
-    // Should use cached data immediately
-    expect(result.current.stats.healthy).toBe(5)
-    expect(result.current.isDemoData).toBe(false)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.stats.healthy).not.toBe(5)
     unmount()
   })
 
@@ -769,31 +755,26 @@ describe('useArgoCDSyncStatus', () => {
     unmount()
   })
 
-  it('caches sync data to localStorage', async () => {
+  it('does not write the retired legacy sync localStorage cache', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
 
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    const cached = localStorage.getItem('kc-argocd-sync-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(true)
-    expect(parsed.data).toHaveProperty('synced')
+    expect(localStorage.getItem('kc-argocd-sync-cache')).toBeNull()
     unmount()
   })
 
-  it('loads from valid cache on initialization', async () => {
-    const cachedStats = { synced: 8, outOfSync: 2, unknown: 1 }
+  it('ignores the retired legacy sync localStorage cache on initialization', async () => {
     localStorage.setItem('kc-argocd-sync-cache', JSON.stringify({
-      data: cachedStats,
+      data: { synced: 8, outOfSync: 2, unknown: 1 },
       timestamp: Date.now(),
       isDemoData: false,
     }))
 
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
-    expect(result.current.stats.synced).toBe(8)
-    expect(result.current.isDemoData).toBe(false)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.stats.synced).not.toBe(8)
     unmount()
   })
 
@@ -991,7 +972,7 @@ describe('useArgoCDHealth — additional coverage', () => {
     unmount()
   })
 
-  it('loads from cache on initialization', async () => {
+  it('ignores retired legacy health localStorage entries', async () => {
     localStorage.setItem('kc-argocd-health-cache', JSON.stringify({
       data: { healthy: 5, degraded: 1, progressing: 0, missing: 0, unknown: 0 },
       timestamp: Date.now(),
@@ -999,9 +980,9 @@ describe('useArgoCDHealth — additional coverage', () => {
     }))
 
     const { result, unmount } = renderHook(() => useArgoCDHealth())
-    // Initial state from cache
-    expect(result.current.stats.healthy).toBe(5)
-    expect(result.current.stats.degraded).toBe(1)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.stats.healthy).not.toBe(5)
+    expect(result.current.stats.degraded).not.toBe(1)
     unmount()
   })
 
@@ -1084,7 +1065,7 @@ describe('useArgoCDSyncStatus — additional coverage', () => {
     unmount()
   })
 
-  it('loads from cache on initialization', async () => {
+  it('ignores retired legacy sync localStorage entries', async () => {
     localStorage.setItem('kc-argocd-sync-cache', JSON.stringify({
       data: { synced: 7, outOfSync: 2, unknown: 1 },
       timestamp: Date.now(),
@@ -1092,8 +1073,9 @@ describe('useArgoCDSyncStatus — additional coverage', () => {
     }))
 
     const { result, unmount } = renderHook(() => useArgoCDSyncStatus())
-    expect(result.current.stats.synced).toBe(7)
-    expect(result.current.stats.outOfSync).toBe(2)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.stats.synced).not.toBe(7)
+    expect(result.current.stats.outOfSync).not.toBe(2)
     unmount()
   })
 })

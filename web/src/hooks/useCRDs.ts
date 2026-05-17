@@ -1,39 +1,26 @@
 /**
- * CRD Data Hook with real backend API and demo data fallback
+ * CRD Data Hook with real backend API and demo data fallback.
  *
  * Fetches live CRD data from GET /api/crds.
  * Falls back to demo data when the API returns 503 (no k8s client)
  * or on network error.
  *
- * Provides:
- * - localStorage cache load/save with 5 minute expiry
- * - isDemoData flag for CardWrapper demo badge
- * - Auto-refresh every 2 minutes
+ * Migrated from shadow localStorage cache to useCache infrastructure (issue #14344).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useMemo } from 'react'
 import { useClusters } from './useMCP'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { createCachedHook } from '../lib/cache'
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-/** Cache expiry time — 5 minutes */
-const CACHE_EXPIRY_MS = 300_000
-
-/** Auto-refresh interval — 2 minutes */
-
-/** Number of consecutive failures before marking as failed */
-const FAILURE_THRESHOLD = 3
-
-/** localStorage key for CRD cache */
-const CRD_CACHE_KEY = 'kc-crd-cache'
-
-/** HTTP status code returned when the backend has no k8s client */
+const CRD_CACHE_KEY = 'crds'
 const STATUS_SERVICE_UNAVAILABLE = 503
+const DEFAULT_DEMO_CLUSTERS = ['us-east-1', 'us-west-2', 'eu-central-1'] as const
 
 // ============================================================================
 // Types
@@ -59,12 +46,6 @@ interface CRDListResponse {
   isDemoData: boolean
 }
 
-interface CachedData {
-  data: CRDData[]
-  timestamp: number
-  isDemoData: boolean
-}
-
 // ============================================================================
 // Auth Helper
 // ============================================================================
@@ -74,37 +55,6 @@ function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Accept': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
-}
-
-// ============================================================================
-// Cache Helpers
-// ============================================================================
-
-function loadFromCache(): CachedData | null {
-  try {
-    const stored = localStorage.getItem(CRD_CACHE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored) as CachedData
-      if (Date.now() - parsed.timestamp < CACHE_EXPIRY_MS) {
-        return parsed
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return null
-}
-
-function saveToCache(data: CRDData[], isDemoData: boolean): void {
-  try {
-    localStorage.setItem(CRD_CACHE_KEY, JSON.stringify({
-      data,
-      timestamp: Date.now(),
-      isDemoData,
-    }))
-  } catch {
-    // Ignore storage errors (quota, etc.)
-  }
 }
 
 // ============================================================================
@@ -140,6 +90,32 @@ function getDemoCRDs(clusterNames: string[]): CRDData[] {
 }
 
 // ============================================================================
+// Fetcher
+// ============================================================================
+
+async function fetchCRDs(): Promise<CRDData[]> {
+  const res = await fetch('/api/crds', {
+    headers: authHeaders(),
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
+
+  if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+    throw new Error('Service unavailable')
+  }
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  }
+
+  const data = (await res.json()) as CRDListResponse
+  if (data.isDemoData) {
+    throw new Error('Backend returned demo data indicator')
+  }
+
+  return data.crds || []
+}
+
+// ============================================================================
 // Hook: useCRDs
 // ============================================================================
 
@@ -158,110 +134,36 @@ export interface UseCRDsResult {
 export function useCRDs(): UseCRDsResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
-  // Initialize from cache — snapshot ref value to avoid reading ref during render
-  const cachedData = useRef(loadFromCache())
-  const cachedSnapshot = cachedData.current
-  const [crds, setCRDs] = useState<CRDData[]>(cachedSnapshot?.data || [])
-  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
-  const isDemoFallback = isDemoData
-  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedSnapshot?.timestamp || null
+  const clusterNames = useMemo(
+    () => (clusters || []).filter(c => c.reachable !== false).map(c => c.name),
+    [clusters],
   )
-  const initialLoadDone = useRef(!!cachedSnapshot)
+  const demoData = useMemo(
+    () => getDemoCRDs(clusterNames.length > 0 ? clusterNames : [...DEFAULT_DEMO_CLUSTERS]),
+    [clusterNames],
+  )
 
-  // Use a ref for clusters so that refetch doesn't depend on the clusters
-  // array reference. Previously, every background cluster-list refresh
-  // created a new refetch → re-subscribed the auto-refresh interval →
-  // triggered an immediate refetch that could overwrite the cache with demo data.
-  const clustersRef = useRef(clusters)
-  clustersRef.current = clusters
+  const useCachedCRDs = createCachedHook<CRDData[]>({
+    key: CRD_CACHE_KEY,
+    category: 'operators',
+    initialData: [],
+    persist: true,
+    enabled: !clustersLoading,
+    fetcher: fetchCRDs,
+  })
+  const result = useCachedCRDs()
 
-  const refetch = useCallback(async (silent = false) => {
-    if (!silent && !initialLoadDone.current) {
-      setIsLoading(true)
-    }
-    if (silent && initialLoadDone.current) {
-      setIsRefreshing(true)
-    }
-
-    try {
-      const res = await fetch('/api/crds', {
-        headers: authHeaders(),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-
-      if (res.status === STATUS_SERVICE_UNAVAILABLE) {
-        // Backend has no k8s client — response includes isDemoData: true
-        // Fall through to demo data
-        throw new Error('Service unavailable')
-      }
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-      }
-
-      const data = (await res.json()) as CRDListResponse
-
-      if (data.isDemoData) {
-        // API returned demo data indicator — fall through to demo
-        throw new Error('Backend returned demo data indicator')
-      }
-
-      // An empty array is a legitimate result (no CRDs on cluster)
-
-      setCRDs(data.crds || [])
-      setIsDemoData(false)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-      saveToCache(data.crds || [], false)
-    } catch {
-      // API failed or returned demo indicator — fall back to demo data
-      const currentClusters = clustersRef.current
-      const clusterNames = (currentClusters || []).filter(c => c.reachable !== false).map(c => c.name)
-      const demoCRDs = getDemoCRDs(clusterNames.length > 0 ? clusterNames : ['us-east-1', 'us-west-2', 'eu-central-1'])
-      setCRDs(demoCRDs)
-      setIsDemoData(true)
-      setConsecutiveFailures(prev => prev + 1)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-      saveToCache(demoCRDs, true)
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, []) // No dependency on clusters — uses clustersRef instead
-
-  // Initial load
-  useEffect(() => {
-    if (!clustersLoading) {
-      refetch()
-    }
-  }, [clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh
-  useEffect(() => {
-    if (!initialLoadDone.current) return
-
-    const interval = setInterval(() => {
-      refetch(true)
-    }, REFRESH_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [refetch])
+  const isDemoFallback = !clustersLoading && (result.isDemoFallback || (!result.isLoading && result.error !== null))
 
   return {
-    crds,
+    crds: isDemoFallback ? demoData : result.data,
     isDemoFallback,
-    isDemoData,
-    isLoading: isLoading || clustersLoading,
-    isRefreshing,
-    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
-    consecutiveFailures,
-    lastRefresh,
-    refetch: () => refetch(false),
+    isDemoData: isDemoFallback,
+    isLoading: clustersLoading ? true : result.isLoading,
+    isRefreshing: isDemoFallback ? false : result.isRefreshing,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: isDemoFallback ? (result.lastRefresh ?? Date.now()) : result.lastRefresh,
+    refetch: result.refetch,
   }
 }

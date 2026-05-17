@@ -1,29 +1,33 @@
 /**
- * ArgoCD Data Hooks with real backend API and mock data fallback
+ * ArgoCD Data Hooks with real backend API and mock data fallback.
  *
  * These hooks:
  * 1. Try to fetch from the real backend API (/api/gitops/argocd/*)
  * 2. If the API returns real data, use it (isDemoData = false)
  * 3. If the API fails (503, network error, ArgoCD not installed), fall back
  *    to mock data generators (isDemoData = true)
- * 4. Provide localStorage caching with 5 minute expiry
- * 5. Track consecutive failures for stale-while-revalidate
+ *
+ * Migrated from shadow localStorage cache to useCache infrastructure (issue #14344).
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
-import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { useCache } from '../lib/cache'
 
-// Cache expiry time (5 minutes)
-const CACHE_EXPIRY_MS = 300_000
+// ============================================================================
+// Constants
+// ============================================================================
 
-
-// Number of consecutive failures before marking as failed
-const FAILURE_THRESHOLD = 3
+const APPS_CACHE_KEY = 'gitops:argocd:applications'
+const HEALTH_CACHE_KEY = 'gitops:argocd:health'
+const SYNC_CACHE_KEY = 'gitops:argocd:sync'
+const APPSET_CACHE_KEY = 'gitops:argocd:applicationsets'
+const EMPTY_ARGO_HEALTH: ArgoHealthData = { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
+const EMPTY_ARGO_SYNC: ArgoSyncData = { synced: 0, outOfSync: 0, unknown: 0 }
 
 // ============================================================================
 // Types
@@ -57,12 +61,6 @@ export interface ArgoSyncData {
   unknown: number
 }
 
-interface CachedData<T> {
-  data: T
-  timestamp: number
-  isDemoData: boolean
-}
-
 // ============================================================================
 // Auth Helper
 // ============================================================================
@@ -72,37 +70,6 @@ function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Accept': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
-}
-
-// ============================================================================
-// Cache Helpers
-// ============================================================================
-
-function loadFromCache<T>(key: string): CachedData<T> | null {
-  try {
-    const stored = localStorage.getItem(key)
-    if (stored) {
-      const parsed = JSON.parse(stored) as CachedData<T>
-      // Check if cache is still valid (within expiry time)
-      if (Date.now() - parsed.timestamp < CACHE_EXPIRY_MS) {
-        return parsed
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return null
-}
-
-function saveToCache<T>(key: string, data: T, isDemoData: boolean): void {
-  try {
-    localStorage.setItem(key, JSON.stringify({
-      data,
-      timestamp: Date.now(),
-      isDemoData }))
-  } catch {
-    // Ignore storage errors (quota, etc.)
-  }
 }
 
 // ============================================================================
@@ -126,7 +93,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'Synced' as const,
         healthStatus: 'Healthy' as const,
         source: {
-          repoURL: 'https://github.com/example-org/frontend-app', // EXAMPLE URL - not a real repository
+          repoURL: 'https://github.com/example-org/frontend-app',
           path: 'k8s/overlays/production',
           targetRevision: 'main' },
         lastSynced: '2 minutes ago' },
@@ -136,7 +103,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'OutOfSync' as const,
         healthStatus: 'Healthy' as const,
         source: {
-          repoURL: 'https://github.com/example-org/api-gateway', // EXAMPLE URL - not a real repository
+          repoURL: 'https://github.com/example-org/api-gateway',
           path: 'deploy',
           targetRevision: 'v2.3.0' },
         lastSynced: '15 minutes ago' },
@@ -146,7 +113,7 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'Synced' as const,
         healthStatus: 'Progressing' as const,
         source: {
-          repoURL: 'https://github.com/example-org/backend-service', // EXAMPLE URL - not a real repository
+          repoURL: 'https://github.com/example-org/backend-service',
           path: 'manifests',
           targetRevision: 'develop' },
         lastSynced: '1 minute ago' },
@@ -156,14 +123,13 @@ function getMockArgoApplications(clusters: string[]): ArgoApplication[] {
         syncStatus: 'OutOfSync' as const,
         healthStatus: 'Degraded' as const,
         source: {
-          repoURL: 'https://github.com/example-org/monitoring-stack', // EXAMPLE URL - not a real repository
+          repoURL: 'https://github.com/example-org/monitoring-stack',
           path: 'helm/prometheus',
           targetRevision: 'HEAD' },
         lastSynced: '30 minutes ago' },
     ]
 
     baseApps.forEach((app, idx) => {
-      // Only add some apps to some clusters
       if ((cluster.includes('prod') && idx < 3) ||
           (cluster.includes('staging') && idx > 1) ||
           (!cluster.includes('prod') && !cluster.includes('staging'))) {
@@ -203,8 +169,7 @@ function getMockSyncStatusData(clusterCount: number): ArgoSyncData {
 // API Fetch Helpers
 // ============================================================================
 
-/** Fetch ArgoCD applications from backend API */
-async function fetchArgoApplications(): Promise<{ items: ArgoApplication[]; isDemoData: boolean }> {
+async function fetchArgoApplications(): Promise<ArgoApplication[]> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
@@ -213,22 +178,18 @@ async function fetchArgoApplications(): Promise<{ items: ArgoApplication[]; isDe
       headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      if (body.isDemoData) {
-        return { items: [], isDemoData: true }
-      }
+      if (body.isDemoData) throw new Error('Demo data indicator from API')
       throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
     }
     const data = await res.json()
-    return {
-      items: (data.items || []) as ArgoApplication[],
-      isDemoData: data.isDemoData === true }
+    if (data.isDemoData === true) throw new Error('Demo data indicator from API')
+    return (data.items || []) as ArgoApplication[]
   } finally {
     clearTimeout(tid)
   }
 }
 
-/** Fetch ArgoCD health summary from backend API */
-async function fetchArgoHealth(): Promise<{ stats: ArgoHealthData; isDemoData: boolean }> {
+async function fetchArgoHealth(): Promise<ArgoHealthData> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
@@ -237,22 +198,18 @@ async function fetchArgoHealth(): Promise<{ stats: ArgoHealthData; isDemoData: b
       headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      if (body.isDemoData) {
-        return { stats: { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }, isDemoData: true }
-      }
+      if (body.isDemoData) throw new Error('Demo data indicator from API')
       throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
     }
     const data = await res.json()
-    return {
-      stats: (data.stats || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }) as ArgoHealthData,
-      isDemoData: data.isDemoData === true }
+    if (data.isDemoData === true) throw new Error('Demo data indicator from API')
+    return (data.stats || EMPTY_ARGO_HEALTH) as ArgoHealthData
   } finally {
     clearTimeout(tid)
   }
 }
 
-/** Fetch ArgoCD sync summary from backend API */
-async function fetchArgoSync(): Promise<{ stats: ArgoSyncData; isDemoData: boolean }> {
+async function fetchArgoSync(): Promise<ArgoSyncData> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
@@ -261,15 +218,12 @@ async function fetchArgoSync(): Promise<{ stats: ArgoSyncData; isDemoData: boole
       headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      if (body.isDemoData) {
-        return { stats: { synced: 0, outOfSync: 0, unknown: 0 }, isDemoData: true }
-      }
+      if (body.isDemoData) throw new Error('Demo data indicator from API')
       throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
     }
     const data = await res.json()
-    return {
-      stats: (data.stats || { synced: 0, outOfSync: 0, unknown: 0 }) as ArgoSyncData,
-      isDemoData: data.isDemoData === true }
+    if (data.isDemoData === true) throw new Error('Demo data indicator from API')
+    return (data.stats || EMPTY_ARGO_SYNC) as ArgoSyncData
   } finally {
     clearTimeout(tid)
   }
@@ -299,10 +253,34 @@ async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: s
 }
 
 // ============================================================================
-// Hook: useArgoCDApplications
+// Helpers
 // ============================================================================
 
-const APPS_CACHE_KEY = 'kc-argocd-apps-cache'
+function shouldUseImmediateDemoFallback(
+  ready: boolean,
+  isLoading: boolean,
+  isDemoFallback: boolean,
+  error: string | null,
+): boolean {
+  return ready && (isDemoFallback || (!isLoading && error !== null))
+}
+
+function shouldUseThresholdDemoFallback(
+  ready: boolean,
+  isLoading: boolean,
+  isDemoFallback: boolean,
+  isFailed: boolean,
+): boolean {
+  return ready && (isDemoFallback || (!isLoading && isFailed))
+}
+
+function getFallbackLastRefresh(lastRefresh: number | null, isDemoFallback: boolean): number | null {
+  return isDemoFallback ? (lastRefresh ?? Date.now()) : lastRefresh
+}
+
+// ============================================================================
+// Hook: useArgoCDApplications
+// ============================================================================
 
 interface UseArgoCDApplicationsResult {
   applications: ArgoApplication[]
@@ -320,112 +298,38 @@ interface UseArgoCDApplicationsResult {
 export function useArgoCDApplications(): UseArgoCDApplicationsResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
-  // Initialize from cache — snapshot ref value to avoid reading ref during render
-  const cachedData = useRef(loadFromCache<ArgoApplication[]>(APPS_CACHE_KEY))
-  const cachedSnapshot = cachedData.current
-  const [applications, setApplications] = useState<ArgoApplication[]>(
-    cachedSnapshot?.data || []
-  )
-  const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
-  const isDemoFallback = isDemoData
-  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedSnapshot?.timestamp || null
-  )
-  const initialLoadDone = useRef(!!cachedSnapshot)
-
   const clusterNames = useMemo(() => (clusters || []).map(c => c.name), [clusters])
+  const demoData = useMemo(() => getMockArgoApplications(clusterNames), [clusterNames])
+  const ready = !clustersLoading && clusterNames.length > 0
 
-  const refetch = useCallback(async (silent = false) => {
-    if (clusterNames.length === 0) {
-      setIsLoading(false)
-      return
-    }
+  const result = useCache<ArgoApplication[]>({
+    key: APPS_CACHE_KEY,
+    category: 'gitops',
+    initialData: [],
+    persist: true,
+    enabled: ready,
+    fetcher: fetchArgoApplications,
+  })
 
-    if (!silent) {
-      setIsRefreshing(true)
-      if (!initialLoadDone.current) {
-        setIsLoading(true)
-      }
-    }
-
-    try {
-      // Try real API first
-      const result = await fetchArgoApplications()
-
-      if (!result.isDemoData) {
-        // Real data from ArgoCD — use it even if empty (ArgoCD installed
-        // but no applications deployed yet).  Previously an empty list
-        // was treated as "no ArgoCD" which triggered mock fallback (#4201).
-        setApplications(result.items || [])
-        setIsDemoData(false)
-        setError(null)
-        setConsecutiveFailures(0)
-        setLastRefresh(Date.now())
-        initialLoadDone.current = true
-        saveToCache(APPS_CACHE_KEY, result.items || [], false)
-        return
-      }
-
-      // API explicitly indicated demo data — fall through to mock
-      throw new Error('No ArgoCD data available')
-    } catch {
-      // API failed or returned demo indicator — fall back to mock data
-      const apps = getMockArgoApplications(clusterNames)
-      setApplications(apps)
-      setIsDemoData(true)
-      setError(null)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-      saveToCache(APPS_CACHE_KEY, apps, true)
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [clusterNames])
-
-  // Initial load
-  useEffect(() => {
-    if (!clustersLoading && clusterNames.length > 0) {
-      refetch()
-    } else if (!clustersLoading) {
-      setIsLoading(false)
-    }
-  }, [clustersLoading, clusterNames.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh
-  useEffect(() => {
-    if (applications.length === 0) return
-
-    const interval = setInterval(() => {
-      refetch(true)
-    }, REFRESH_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [applications.length, refetch])
+  const isDemoFallback = shouldUseImmediateDemoFallback(ready, result.isLoading, result.isDemoFallback, result.error)
 
   return {
-    applications,
+    applications: isDemoFallback ? demoData : result.data,
     isDemoFallback,
-    isDemoData,
-    isLoading: isLoading || clustersLoading,
-    isRefreshing,
-    error,
-    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
-    consecutiveFailures,
-    lastRefresh,
-    refetch: () => refetch(false) }
+    isDemoData: isDemoFallback,
+    isLoading: clustersLoading ? true : result.isLoading,
+    isRefreshing: isDemoFallback ? false : result.isRefreshing,
+    error: isDemoFallback ? null : result.error,
+    isFailed: isDemoFallback ? false : result.isFailed,
+    consecutiveFailures: isDemoFallback ? 0 : result.consecutiveFailures,
+    lastRefresh: getFallbackLastRefresh(result.lastRefresh, isDemoFallback),
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================
 // Hook: useArgoCDHealth
 // ============================================================================
-
-const HEALTH_CACHE_KEY = 'kc-argocd-health-cache'
 
 interface UseArgoCDHealthResult {
   stats: ArgoHealthData
@@ -446,99 +350,25 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  // Initialize from cache — snapshot ref value to avoid reading ref during render
-  const cachedData = useRef(loadFromCache<ArgoHealthData>(HEALTH_CACHE_KEY))
-  const cachedHealthSnapshot = cachedData.current
-  const [stats, setStats] = useState<ArgoHealthData>(
-    cachedHealthSnapshot?.data || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
-  )
-  const [isDemoData, setIsDemoData] = useState(cachedHealthSnapshot?.isDemoData ?? true)
-  const isDemoFallback = isDemoData
-  const [isLoading, setIsLoading] = useState(!cachedHealthSnapshot)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedHealthSnapshot?.timestamp || null
-  )
-  const initialLoadDone = useRef(!!cachedHealthSnapshot)
-
   const filteredClusterCount = useMemo(() => {
     if (isAllClustersSelected) return (clusters || []).length
     return (selectedClusters || []).length
   }, [clusters, selectedClusters, isAllClustersSelected])
 
-  const refetch = useCallback(async (silent = false) => {
-    if (filteredClusterCount === 0) {
-      setIsLoading(false)
-      return
-    }
+  const ready = !clustersLoading && filteredClusterCount > 0
+  const demoStats = useMemo(() => getMockHealthData(filteredClusterCount), [filteredClusterCount])
 
-    if (!silent) {
-      setIsRefreshing(true)
-      if (!initialLoadDone.current) {
-        setIsLoading(true)
-      }
-    }
+  const result = useCache<ArgoHealthData>({
+    key: HEALTH_CACHE_KEY,
+    category: 'gitops',
+    initialData: EMPTY_ARGO_HEALTH,
+    persist: true,
+    enabled: ready,
+    fetcher: fetchArgoHealth,
+  })
 
-    try {
-      // Try real API first
-      const result = await fetchArgoHealth()
-
-      if (!result.isDemoData) {
-        // Real data from ArgoCD — use it even if totals are zero
-        // (ArgoCD installed but no applications yet).  Previously a
-        // zero total was treated as "no ArgoCD" which triggered mock
-        // fallback even when ArgoCD was running (#4201).
-        setStats(result.stats)
-        setIsDemoData(false)
-        setError(null)
-        setConsecutiveFailures(0)
-        setLastRefresh(Date.now())
-        initialLoadDone.current = true
-        saveToCache(HEALTH_CACHE_KEY, result.stats, false)
-        return
-      }
-
-      // No real data — fall through to mock
-      throw new Error('No ArgoCD health data available')
-    } catch {
-      // Fall back to mock data
-      const healthData = getMockHealthData(filteredClusterCount)
-      setStats(healthData)
-      setIsDemoData(true)
-      setError(null)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-      saveToCache(HEALTH_CACHE_KEY, healthData, true)
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [filteredClusterCount])
-
-  // Initial load
-  useEffect(() => {
-    if (!clustersLoading && filteredClusterCount > 0) {
-      refetch()
-    } else if (!clustersLoading) {
-      setIsLoading(false)
-    }
-  }, [clustersLoading, filteredClusterCount]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh
-  useEffect(() => {
-    const total = Object.values(stats).reduce((a, b) => a + b, 0)
-    if (total === 0) return
-
-    const interval = setInterval(() => {
-      refetch(true)
-    }, REFRESH_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [stats, refetch])
-
+  const isDemoFallback = shouldUseImmediateDemoFallback(ready, result.isLoading, result.isDemoFallback, result.error)
+  const stats = isDemoFallback ? demoStats : result.data
   const total = Object.values(stats).reduce((a, b) => a + b, 0)
   const healthyPercent = total > 0 ? (stats.healthy / total) * 100 : 0
 
@@ -547,14 +377,15 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     total,
     healthyPercent,
     isDemoFallback,
-    isDemoData,
-    isLoading: isLoading || clustersLoading,
-    isRefreshing,
-    error,
-    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
-    consecutiveFailures,
-    lastRefresh,
-    refetch: () => refetch(false) }
+    isDemoData: isDemoFallback,
+    isLoading: clustersLoading ? true : result.isLoading,
+    isRefreshing: isDemoFallback ? false : result.isRefreshing,
+    error: isDemoFallback ? null : result.error,
+    isFailed: isDemoFallback ? false : result.isFailed,
+    consecutiveFailures: isDemoFallback ? 0 : result.consecutiveFailures,
+    lastRefresh: getFallbackLastRefresh(result.lastRefresh, isDemoFallback),
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================
@@ -579,12 +410,10 @@ export function useArgoCDTriggerSync() {
     setIsSyncing(true)
     setLastResult(null)
     try {
-      // Try real backend API first
       const result = await triggerArgoSyncAPI(appName, namespace, cluster || '')
       setLastResult(result)
       return result
     } catch {
-      // API unreachable — simulate for demo mode
       await new Promise(resolve => setTimeout(resolve, MOCK_SYNC_DELAY_MS))
       const result: TriggerSyncResult = { success: true }
       setLastResult(result)
@@ -600,8 +429,6 @@ export function useArgoCDTriggerSync() {
 // ============================================================================
 // Hook: useArgoCDSyncStatus
 // ============================================================================
-
-const SYNC_CACHE_KEY = 'kc-argocd-sync-cache'
 
 interface UseArgoCDSyncStatusResult {
   stats: ArgoSyncData
@@ -623,100 +450,28 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
 
-  // Initialize from cache — snapshot ref value to avoid reading ref during render
-  const cachedData = useRef(loadFromCache<ArgoSyncData>(SYNC_CACHE_KEY))
-  const cachedSyncSnapshot = cachedData.current
-  const [stats, setStats] = useState<ArgoSyncData>(
-    cachedSyncSnapshot?.data || { synced: 0, outOfSync: 0, unknown: 0 }
-  )
-  const [isDemoData, setIsDemoData] = useState(cachedSyncSnapshot?.isDemoData ?? true)
-  const isDemoFallback = isDemoData
-  const [isLoading, setIsLoading] = useState(!cachedSyncSnapshot)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedSyncSnapshot?.timestamp || null
-  )
-  const initialLoadDone = useRef(!!cachedSyncSnapshot)
-
   const filteredClusterCount = useMemo(() => {
     let count = isAllClustersSelected ? (clusters || []).length : (selectedClusters || []).length
-    // Apply local cluster filter
     if ((localClusterFilter || []).length > 0) {
       count = localClusterFilter.length
     }
     return count
   }, [clusters, selectedClusters, isAllClustersSelected, localClusterFilter])
 
-  const refetch = useCallback(async (silent = false) => {
-    if (filteredClusterCount === 0) {
-      setIsLoading(false)
-      return
-    }
+  const ready = !clustersLoading && filteredClusterCount > 0
+  const demoStats = useMemo(() => getMockSyncStatusData(filteredClusterCount), [filteredClusterCount])
 
-    if (!silent) {
-      setIsRefreshing(true)
-      if (!initialLoadDone.current) {
-        setIsLoading(true)
-      }
-    }
+  const result = useCache<ArgoSyncData>({
+    key: SYNC_CACHE_KEY,
+    category: 'gitops',
+    initialData: EMPTY_ARGO_SYNC,
+    persist: true,
+    enabled: ready,
+    fetcher: fetchArgoSync,
+  })
 
-    try {
-      // Try real API first
-      const result = await fetchArgoSync()
-
-      if (!result.isDemoData) {
-        // Real data from ArgoCD — use it even if totals are zero (#4201).
-        setStats(result.stats)
-        setIsDemoData(false)
-        setError(null)
-        setConsecutiveFailures(0)
-        setLastRefresh(Date.now())
-        initialLoadDone.current = true
-        saveToCache(SYNC_CACHE_KEY, result.stats, false)
-        return
-      }
-
-      // No real data — fall through to mock
-      throw new Error('No ArgoCD sync data available')
-    } catch {
-      // Fall back to mock data
-      const syncData = getMockSyncStatusData(filteredClusterCount)
-      setStats(syncData)
-      setIsDemoData(true)
-      setError(null)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-      saveToCache(SYNC_CACHE_KEY, syncData, true)
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [filteredClusterCount])
-
-  // Initial load
-  useEffect(() => {
-    if (!clustersLoading && filteredClusterCount > 0) {
-      refetch()
-    } else if (!clustersLoading) {
-      setIsLoading(false)
-    }
-  }, [clustersLoading, filteredClusterCount]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh
-  useEffect(() => {
-    const total = stats.synced + stats.outOfSync + stats.unknown
-    if (total === 0) return
-
-    const interval = setInterval(() => {
-      refetch(true)
-    }, REFRESH_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [stats, refetch])
-
+  const isDemoFallback = shouldUseImmediateDemoFallback(ready, result.isLoading, result.isDemoFallback, result.error)
+  const stats = isDemoFallback ? demoStats : result.data
   const total = stats.synced + stats.outOfSync + stats.unknown
   const syncedPercent = total > 0 ? (stats.synced / total) * 100 : 0
   const outOfSyncPercent = total > 0 ? (stats.outOfSync / total) * 100 : 0
@@ -727,14 +482,15 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     syncedPercent,
     outOfSyncPercent,
     isDemoFallback,
-    isDemoData,
-    isLoading: isLoading || clustersLoading,
-    isRefreshing,
-    error,
-    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
-    consecutiveFailures,
-    lastRefresh,
-    refetch: () => refetch(false) }
+    isDemoData: isDemoFallback,
+    isLoading: clustersLoading ? true : result.isLoading,
+    isRefreshing: isDemoFallback ? false : result.isRefreshing,
+    error: isDemoFallback ? null : result.error,
+    isFailed: isDemoFallback ? false : result.isFailed,
+    consecutiveFailures: isDemoFallback ? 0 : result.consecutiveFailures,
+    lastRefresh: getFallbackLastRefresh(result.lastRefresh, isDemoFallback),
+    refetch: result.refetch,
+  }
 }
 
 // ============================================================================
@@ -745,18 +501,18 @@ export interface ArgoApplicationSet {
   name: string
   namespace: string
   cluster: string
-  generators: string[]  // e.g. ["list", "cluster", "git", "matrix"]
-  template: string      // Template application name
-  syncPolicy: string    // "Automated", "Manual", or ""
-  status: string        // "Healthy", "Progressing", "Error", "Unknown"
-  appCount: number      // Number of applications generated
+  generators: string[]
+  template: string
+  syncPolicy: string
+  status: string
+  appCount: number
 }
 
 // ============================================================================
 // API Fetch: ApplicationSets
 // ============================================================================
 
-async function fetchArgoApplicationSets(): Promise<{ items: ArgoApplicationSet[]; isDemoData: boolean }> {
+async function fetchArgoApplicationSets(): Promise<ArgoApplicationSet[]> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
@@ -765,15 +521,12 @@ async function fetchArgoApplicationSets(): Promise<{ items: ArgoApplicationSet[]
       headers: authHeaders() })
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
-      if (body.isDemoData) {
-        return { items: [], isDemoData: true }
-      }
+      if (body.isDemoData) throw new Error('Demo data indicator from API')
       throw new Error(`API ${res.status}: ${body.error || res.statusText}`)
     }
     const data = await res.json()
-    return {
-      items: (data.items || []) as ArgoApplicationSet[],
-      isDemoData: data.isDemoData === true }
+    if (data.isDemoData === true) throw new Error('Demo data indicator from API')
+    return (data.items || []) as ArgoApplicationSet[]
   } finally {
     clearTimeout(tid)
   }
@@ -818,7 +571,6 @@ function getMockArgoApplicationSets(clusters: string[]): ArgoApplicationSet[] {
   ]
 
   ;(clusters || []).forEach((cluster, idx) => {
-    // Distribute templates across clusters
     const startIdx = idx % 2 === 0 ? 0 : 2
     const endIdx = startIdx + 2
     templates.slice(startIdx, endIdx).forEach((tmpl) => {
@@ -836,8 +588,6 @@ function getMockArgoApplicationSets(clusters: string[]): ArgoApplicationSet[] {
 // Hook: useArgoApplicationSets
 // ============================================================================
 
-const APPSET_CACHE_KEY = 'kc-argocd-appsets-cache'
-
 interface UseArgoApplicationSetsResult {
   applicationSets: ArgoApplicationSet[]
   isDemoFallback: boolean
@@ -854,103 +604,31 @@ interface UseArgoApplicationSetsResult {
 export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
 
-  // Initialize from cache — snapshot ref value to avoid reading ref during render
-  const cachedData = useRef(loadFromCache<ArgoApplicationSet[]>(APPSET_CACHE_KEY))
-  const cachedAppSetSnapshot = cachedData.current
-  const [applicationSets, setApplicationSets] = useState<ArgoApplicationSet[]>(
-    cachedAppSetSnapshot?.data || []
-  )
-  const [isDemoData, setIsDemoData] = useState(cachedAppSetSnapshot?.isDemoData ?? true)
-  const isDemoFallback = isDemoData
-  const [isLoading, setIsLoading] = useState(!cachedAppSetSnapshot)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedAppSetSnapshot?.timestamp || null
-  )
-  const initialLoadDone = useRef(!!cachedAppSetSnapshot)
-
   const clusterNames = useMemo(() => (clusters || []).map(c => c.name), [clusters])
+  const demoData = useMemo(() => getMockArgoApplicationSets(clusterNames), [clusterNames])
+  const ready = !clustersLoading && clusterNames.length > 0
 
-  const refetch = useCallback(async (silent = false) => {
-    if (clusterNames.length === 0) {
-      setIsLoading(false)
-      return
-    }
+  const result = useCache<ArgoApplicationSet[]>({
+    key: APPSET_CACHE_KEY,
+    category: 'gitops',
+    initialData: [],
+    persist: true,
+    enabled: ready,
+    fetcher: fetchArgoApplicationSets,
+  })
 
-    if (!silent) {
-      setIsRefreshing(true)
-      if (!initialLoadDone.current) {
-        setIsLoading(true)
-      }
-    }
-
-    try {
-      // Try real API first
-      const result = await fetchArgoApplicationSets()
-
-      if (!result.isDemoData) {
-        setApplicationSets(result.items || [])
-        setIsDemoData(false)
-        setError(null)
-        setConsecutiveFailures(0)
-        setLastRefresh(Date.now())
-        initialLoadDone.current = true
-        saveToCache(APPSET_CACHE_KEY, result.items || [], false)
-        return
-      }
-
-      // API explicitly indicated demo data — fall through to mock
-      throw new Error('No ArgoCD ApplicationSet data available')
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch ApplicationSets'
-      console.error('[ArgoCD] ApplicationSets fetch failed:', errorMsg)
-      setError(errorMsg)
-      setConsecutiveFailures(prev => prev + 1)
-      // Only fall back to demo data if this is likely "not installed" (not a transient error)
-      if (consecutiveFailures >= FAILURE_THRESHOLD) {
-        const appSets = getMockArgoApplicationSets(clusterNames)
-        setApplicationSets(appSets)
-        setIsDemoData(true)
-      }
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [clusterNames, consecutiveFailures])
-
-  // Initial load
-  useEffect(() => {
-    if (!clustersLoading && clusterNames.length > 0) {
-      refetch()
-    } else if (!clustersLoading) {
-      setIsLoading(false)
-    }
-  }, [clustersLoading, clusterNames.length]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh
-  useEffect(() => {
-    if (applicationSets.length === 0) return
-
-    const interval = setInterval(() => {
-      refetch(true)
-    }, REFRESH_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [applicationSets.length, refetch])
+  const isDemoFallback = shouldUseThresholdDemoFallback(ready, result.isLoading, result.isDemoFallback, result.isFailed)
 
   return {
-    applicationSets,
+    applicationSets: isDemoFallback ? demoData : result.data,
     isDemoFallback,
-    isDemoData,
-    isLoading: isLoading || clustersLoading,
-    isRefreshing,
-    error,
-    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
-    consecutiveFailures,
-    lastRefresh,
-    refetch: () => refetch(false) }
+    isDemoData: isDemoFallback,
+    isLoading: clustersLoading ? true : result.isLoading,
+    isRefreshing: isDemoFallback ? false : result.isRefreshing,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: getFallbackLastRefresh(result.lastRefresh, isDemoFallback),
+    refetch: result.refetch,
+  }
 }

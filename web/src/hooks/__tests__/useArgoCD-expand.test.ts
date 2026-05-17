@@ -146,17 +146,16 @@ describe('useArgoCDApplications — edge cases', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
   })
 
-  // 7. Cache loads from localStorage
-  it('uses cached data from localStorage on mount', () => {
-    const cached = {
+  // 7. Legacy localStorage shadow cache is ignored
+  it('ignores retired localStorage cache entries on mount', async () => {
+    localStorage.setItem('kc-argocd-apps-cache', JSON.stringify({
       data: [{ name: 'cached-app', namespace: 'argocd', cluster: 'test', syncStatus: 'Synced', healthStatus: 'Healthy', source: { repoURL: '', path: '', targetRevision: '' } }],
       timestamp: Date.now(),
       isDemoData: false,
-    }
-    localStorage.setItem('kc-argocd-apps-cache', JSON.stringify(cached))
+    }))
     const { result } = renderHook(() => useArgoCDApplications())
-    expect(result.current.applications).toHaveLength(1)
-    expect(result.current.isLoading).toBe(false)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.applications.some((app: { name: string }) => app.name === 'cached-app')).toBe(false)
   })
 
   // 8. Expired cache is not used — the hook loads mock/fallback data instead of stale cache
@@ -279,16 +278,15 @@ describe('useArgoCDSyncStatus — edge cases', () => {
     expect(result.current.outOfSyncPercent).toBe(20)
   })
 
-  // 18. Cache load from localStorage
-  it('uses cached sync data from localStorage', () => {
-    const cached = {
+  // 18. Legacy sync localStorage shadow cache is ignored
+  it('ignores retired sync localStorage cache entries', async () => {
+    localStorage.setItem('kc-argocd-sync-cache', JSON.stringify({
       data: { synced: 5, outOfSync: 1, unknown: 0 },
       timestamp: Date.now(),
       isDemoData: false,
-    }
-    localStorage.setItem('kc-argocd-sync-cache', JSON.stringify(cached))
+    }))
     const { result } = renderHook(() => useArgoCDSyncStatus())
-    expect(result.current.stats.synced).toBe(5)
-    expect(result.current.isLoading).toBe(false)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.stats.synced).not.toBe(5)
   })
 })

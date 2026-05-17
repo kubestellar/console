@@ -267,7 +267,7 @@ describe('useArgoApplicationSets', () => {
     unmount()
   })
 
-  it('caches applicationSets to localStorage after successful fetch', async () => {
+  it('does not write the retired legacy appsets localStorage cache', async () => {
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse({ items: [makeAppSet()], isDemoData: false })
     )
@@ -275,28 +275,20 @@ describe('useArgoApplicationSets', () => {
     const { result, unmount } = renderHook(() => useArgoApplicationSets())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    const cached = localStorage.getItem('kc-argocd-appsets-cache')
-    expect(cached).not.toBeNull()
-    const parsed = JSON.parse(cached!)
-    expect(parsed.isDemoData).toBe(false)
-    expect(parsed.data).toHaveLength(1)
-    expect(parsed.timestamp).toBeTypeOf('number')
+    expect(localStorage.getItem('kc-argocd-appsets-cache')).toBeNull()
     unmount()
   })
 
-  it('loads from valid cache on initialization', () => {
-    const cachedAppSets = [makeAppSet({ name: 'cached-appset' })]
+  it('ignores the retired legacy appsets localStorage cache on initialization', async () => {
     localStorage.setItem('kc-argocd-appsets-cache', JSON.stringify({
-      data: cachedAppSets,
+      data: [makeAppSet({ name: 'cached-appset' })],
       timestamp: Date.now(),
       isDemoData: false,
     }))
 
     const { result, unmount } = renderHook(() => useArgoApplicationSets())
-    expect(result.current.applicationSets).toHaveLength(1)
-    expect(result.current.applicationSets[0].name).toBe('cached-appset')
-    expect(result.current.isDemoData).toBe(false)
-    expect(result.current.isLoading).toBe(false)
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.applicationSets.some(set => set.name === 'cached-appset')).toBe(false)
     unmount()
   })
 
