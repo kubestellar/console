@@ -39,6 +39,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 
 // Color mapping for dynamic rendering
 const COLOR_CLASSES: Record<string, string> = {
+  primary: 'text-primary',
   purple: 'text-purple-400',
   green: 'text-green-400',
   orange: 'text-orange-400',
@@ -244,7 +245,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const IconComponent = ICONS[block.icon] || Server
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
-  const hexColor = COLOR_HEX[block.color] || '#9333ea'
+  const hexColor = block.color === 'primary'
+    ? 'hsl(var(--primary))'
+    : (COLOR_HEX[block.color] || 'hsl(var(--primary))')
   const isClickable = !isLoading && data.isClickable !== false && !!data.onClick
   const isDemo = data.isDemo === true
   const mode: StatDisplayMode = block.displayMode || 'numeric'
