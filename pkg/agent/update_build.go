@@ -392,8 +392,21 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		return
 	}
 
-	// Download to temp file — use os.TempDir() for cross-platform support (#7239).
-	tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("kc-update-%s.tar.gz", release.TagName))
+	// Download to temp file — use unique temp file for race-free isolation (#14380).
+	// Sanitize TagName to prevent path traversal (#14382).
+	safeTag := sanitizeTagName(release.TagName)
+	tmpF, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("kc-update-%s-*.tar.gz", safeTag))
+	if err != nil {
+		uc.recordError(fmt.Sprintf("failed to create temp file: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Failed to create temp file",
+			Error:   "check server logs for details",
+		})
+		return
+	}
+	tmpFile := tmpF.Name()
+	tmpF.Close()
 	if err := downloadFile(assetURL, tmpFile); err != nil {
 		uc.recordError(fmt.Sprintf("download failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -410,20 +423,9 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		Progress: 50,
 	})
 
-	// Extract to staging directory — use os.TempDir() for cross-platform support (#7239).
-	stagingDir := filepath.Join(os.TempDir(), "kc-update-staging")
-	if err := os.RemoveAll(stagingDir); err != nil {
-		uc.recordError(fmt.Sprintf("failed to clean staging dir: %v", err))
-		uc.broadcast("update_progress", UpdateProgressPayload{
-			Status:  "failed",
-			Message: "Failed to prepare staging directory",
-			Error:   "check server logs for details",
-		})
-		return
-	}
-	// stagingDirMode is the permission bits for the update staging directory.
-	const stagingDirMode = 0755
-	if err := os.MkdirAll(stagingDir, stagingDirMode); err != nil {
+	// Extract to staging directory — use os.MkdirTemp for race-free isolation (#14380).
+	stagingDir, err := os.MkdirTemp(os.TempDir(), "kc-update-staging-*")
+	if err != nil {
 		uc.recordError(fmt.Sprintf("failed to create staging dir: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
@@ -735,6 +737,18 @@ func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int
 
 // --- Utility functions ---
 
+// sanitizeTagName strips path separators and parent-directory traversals from a
+// GitHub release tag name so it is safe to embed in filesystem paths (#14382).
+func sanitizeTagName(tag string) string {
+	tag = strings.ReplaceAll(tag, "/", "_")
+	tag = strings.ReplaceAll(tag, "\\", "_")
+	tag = strings.ReplaceAll(tag, "..", "_")
+	if tag == "" {
+		tag = "unknown"
+	}
+	return tag
+}
+
 type githubReleaseInfo struct {
 	TagName string `json:"tag_name"`
 	Assets  []struct {
@@ -985,6 +999,9 @@ func waitForBackendHealth() bool {
 	return false
 }
 
+// maxDownloadBytes is the upper bound for downloadFile to prevent disk exhaustion (#14379).
+const maxDownloadBytes = 512 * 1024 * 1024 // 512 MB
+
 func downloadFile(url, dest string) error {
 	client := &http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Get(url)
@@ -1003,8 +1020,15 @@ func downloadFile(url, dest string) error {
 	}
 	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
-	return err
+	limited := io.LimitReader(resp.Body, maxDownloadBytes+1)
+	n, err := io.Copy(f, limited)
+	if err != nil {
+		return err
+	}
+	if n > maxDownloadBytes {
+		return fmt.Errorf("download exceeds maximum allowed size (%d bytes)", maxDownloadBytes)
+	}
+	return nil
 }
 
 func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
