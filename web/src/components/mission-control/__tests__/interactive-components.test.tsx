@@ -454,7 +454,6 @@ describe('LaunchSequence', () => {
     })
   })
 })
-})
 
 describe('RequestApprovalModal', () => {
   beforeEach(() => {
