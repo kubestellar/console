@@ -154,7 +154,7 @@ export function StellarPage() {
       data-testid="stellar-section-overview"
       style={{
         display: 'grid',
-        gridTemplateColumns: 'minmax(260px, 320px) 1fr 1fr 1fr',
+        gridTemplateColumns: 'minmax(260px, 320px) minmax(0, 1fr)',
         gridTemplateRows: '1fr',
         gap: 0,
         height: 'calc(100vh - 56px)', // leave room for top nav
@@ -222,66 +222,82 @@ export function StellarPage() {
         </div>
       </div>
 
-      {/* Middle column — events */}
+      {/* Main content — roomier vertical sections */}
       <div
-        ref={eventsRef}
-        id={STELLAR_SECTION_ID.EVENTS}
-        tabIndex={-1}
-        data-testid="stellar-section-events"
         style={{
           display: 'flex',
           flexDirection: 'column',
           minHeight: 0,
-          borderRight: '1px solid var(--s-border)',
-          background: 'var(--s-surface)',
+          overflowY: 'auto',
+          background: 'var(--s-bg)',
+          padding: 12,
+          gap: 12,
         }}
       >
-        <EventsPanel
-          notifications={notifications}
-          pendingActions={pendingActions}
-          acknowledgeNotification={acknowledgeNotification}
-          dismissAllNotifications={dismissAllNotifications}
-          approveAction={approveAction}
-          rejectAction={rejectAction}
-          solves={solves}
-          solveProgress={solveProgress}
-          startSolve={startSolve}
-          detailNotification={detailNotification}
-          setDetailNotification={setDetailNotification}
-          onRollback={(prompt) => { setChatInput(prompt); setPendingAction(null) }}
-          onAction={(prompt, action) => {
-            setChatInput(prompt)
-            setPendingAction(action ?? null)
+        <div
+          ref={eventsRef}
+          id={STELLAR_SECTION_ID.EVENTS}
+          tabIndex={-1}
+          data-testid="stellar-section-events"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '42vh',
+            border: '1px solid var(--s-border)',
+            borderRadius: 'var(--s-rm)',
+            background: 'var(--s-surface)',
+            overflow: 'hidden',
           }}
-        />
-      </div>
+        >
+          <EventsPanel
+            notifications={notifications}
+            pendingActions={pendingActions}
+            acknowledgeNotification={acknowledgeNotification}
+            dismissAllNotifications={dismissAllNotifications}
+            approveAction={approveAction}
+            rejectAction={rejectAction}
+            solves={solves}
+            solveProgress={solveProgress}
+            startSolve={startSolve}
+            detailNotification={detailNotification}
+            setDetailNotification={setDetailNotification}
+            onRollback={(prompt) => { setChatInput(prompt); setPendingAction(null) }}
+            onAction={(prompt, action) => {
+              setChatInput(prompt)
+              setPendingAction(action ?? null)
+            }}
+          />
+        </div>
 
-      {/* Right column — chat */}
-      <div
-        ref={chatRef}
-        id={STELLAR_SECTION_ID.CHAT}
-        tabIndex={-1}
-        data-testid="stellar-section-chat"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          background: 'var(--s-surface)',
-        }}
-      >
-        <ChatPanel
-          providerSession={providerSession}
-          onProviderChange={setProviderSession}
-          nudge={nudge}
-          onDismissNudge={dismissNudge}
-          catchUp={catchUp}
-          onDismissCatchUp={dismissCatchUp}
-          initialInput={chatInput}
-          onInputConsumed={() => setChatInput('')}
-          pendingAction={pendingAction}
-          onActionConsumed={() => setPendingAction(null)}
-          createTask={(title, description, source) => createTask(title, description, source)}
-        />
+        <div
+          ref={chatRef}
+          id={STELLAR_SECTION_ID.CHAT}
+          tabIndex={-1}
+          data-testid="stellar-section-chat"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: '42vh',
+            border: '1px solid var(--s-border)',
+            borderRadius: 'var(--s-rm)',
+            background: 'var(--s-surface)',
+            overflow: 'hidden',
+          }}
+        >
+          <ChatPanel
+            providerSession={providerSession}
+            onProviderChange={setProviderSession}
+            nudge={nudge}
+            onDismissNudge={dismissNudge}
+            catchUp={catchUp}
+            onDismissCatchUp={dismissCatchUp}
+            initialInput={chatInput}
+            onInputConsumed={() => setChatInput('')}
+            pendingAction={pendingAction}
+            onActionConsumed={() => setPendingAction(null)}
+            createTask={(title, description, source) => createTask(title, description, source)}
+          />
+        </div>
       </div>
 
       {/* Audit column — audit log */}
