@@ -8,10 +8,6 @@ import {
 } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import {
-  buildEnhancedPrompt,
-  buildSystemMessages,
-} from './useMissionPromptBuilder'
-import {
   resolveMissionToolRequirements,
   getMissingTools,
   shouldAllowMissingToolWarning,

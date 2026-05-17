@@ -9,6 +9,7 @@ import {
 import {
   getMissionMessages,
   generateMessageId,
+  generateRequestId,
   isStaleAgentErrorMessage,
   resolveMissionToolRequirements,
   getMissingTools,

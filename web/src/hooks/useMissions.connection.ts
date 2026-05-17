@@ -1,7 +1,3 @@
-import type {
-  AgentSelectedPayload,
-  AgentsListPayload,
-} from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
