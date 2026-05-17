@@ -8,16 +8,21 @@ vi.mock('../mcp/shared', () => ({
 }))
 vi.mock('../useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
+  isDemoModeForced: false,
   default: vi.fn(() => false),
 }))
-vi.mock('../useLocalAgent', () => ({
-  useLocalAgent: vi.fn(() => ({ isConnected: false })),
-  isAgentUnavailable: vi.fn(() => false),
-  isAgentConnected: vi.fn(() => false),
-  reportAgentActivity: vi.fn(),
-  reportAgentDataSuccess: vi.fn(),
-  reportAgentDataError: vi.fn(),
-}))
+vi.mock('../useLocalAgent', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../useLocalAgent')>()
+  return {
+    ...actual,
+    useLocalAgent: vi.fn(() => ({ isConnected: false })),
+    isAgentUnavailable: vi.fn(() => false),
+    isAgentConnected: vi.fn(() => false),
+    reportAgentActivity: vi.fn(),
+    reportAgentDataSuccess: vi.fn(),
+    reportAgentDataError: vi.fn(),
+  }
+})
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: vi.fn((url: string) => url),
 }))
