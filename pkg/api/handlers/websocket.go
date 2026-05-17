@@ -491,6 +491,10 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	// internal connection cleanup (releaseConn).
 	var wg sync.WaitGroup
 
+	// SECURITY: cap inbound frame size to prevent memory exhaustion (#14239).
+	const wsMaxIncomingBytes = 256 * 1024 // 256 KB
+	conn.SetReadLimit(int64(wsMaxIncomingBytes))
+
 	// Set read deadline for authentication message (5 seconds)
 	conn.SetReadDeadline(time.Now().Add(wsReadDeadline))
 
