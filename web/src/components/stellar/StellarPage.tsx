@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { StellarActivity, StellarNotification } from '../../types/stellar'
 import { useStellar } from '../../hooks/useStellar'
+import { cn } from '../../lib/cn'
 import { EventsPanel } from './EventsPanel'
 import type { PendingAction } from './EventCard'
 import { ChatPanel } from './ChatPanel'
@@ -10,6 +11,7 @@ import { TasksPanel } from './TasksPanel'
 import { WatchesPanel } from './WatchesPanel'
 import { RecommendedTasksPanel } from './RecommendedTasksPanel'
 import { StellarActivityPanel } from './StellarActivityPanel'
+import { StellarAuditLogSection } from './StellarAuditLogSection'
 import {
   STELLAR_NAVIGATION_EVENT,
   STELLAR_SECTION_ID,
@@ -19,9 +21,13 @@ import {
 
 import '../../styles/stellar.css'
 
-// StellarPage — full-route view of the Stellar PA.
-// Reuses the same panels as the sidebar but in a roomier 3-column layout
-// so the user can see events, chat, and watches/tasks at once.
+const APP_TOP_NAV_OFFSET_PX = 56
+const SECTION_SCROLL_MARGIN_PX = 80
+const EVENTS_CHAT_HEIGHT_CLASS = 'min-h-[50vh] max-h-[50vh]'
+const STANDARD_SECTION_MAX_HEIGHT_CLASS = 'max-h-[24rem]'
+const SUGGESTIONS_SECTION_MAX_HEIGHT_CLASS = 'max-h-[36rem]'
+const SECTION_SHELL_CLASS = 'overflow-hidden rounded-2xl border border-[var(--s-border)] bg-[var(--s-surface)] shadow-lg shadow-black/20'
+
 function normalizeActivitySeverity(severity: StellarActivity['severity']): StellarNotification['severity'] {
   if (severity === 'critical' || severity === 'warning') {
     return severity
@@ -61,6 +67,7 @@ export function StellarPage() {
   const activityRef = useRef<HTMLDivElement | null>(null)
   const eventsRef = useRef<HTMLDivElement | null>(null)
   const chatRef = useRef<HTMLDivElement | null>(null)
+  const auditRef = useRef<HTMLDivElement | null>(null)
   const {
     isConnected,
     unreadCount,
@@ -99,6 +106,8 @@ export function StellarPage() {
           return eventsRef.current
         case STELLAR_SECTION_ID.CHAT:
           return chatRef.current
+        case STELLAR_SECTION_ID.AUDIT:
+          return auditRef.current
         case STELLAR_SECTION_ID.OVERVIEW:
         default:
           return overviewRef.current
@@ -111,7 +120,7 @@ export function StellarPage() {
 
     target.focus({ preventScroll: true })
     if (typeof target.scrollIntoView === 'function') {
-      target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [])
 
@@ -142,158 +151,138 @@ export function StellarPage() {
     setDetailNotification(found ?? buildDetailNotificationFromActivity(eventId, entry))
   }, [notifications])
 
+  const hasActiveWatches = (watches || []).some(watch => watch.status === 'active')
+
   return (
     <div
       ref={overviewRef}
       id={STELLAR_SECTION_ID.OVERVIEW}
       tabIndex={-1}
       data-testid="stellar-section-overview"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(260px, 320px) minmax(0, 1fr)',
-        gridTemplateRows: '1fr',
-        gap: 0,
-        height: 'calc(100vh - 56px)', // leave room for top nav
-        background: 'var(--s-bg, #0a0e14)',
-        fontFamily: 'var(--s-sans)',
-        color: 'var(--s-text)',
-        overflow: 'hidden',
-      }}
+      className="bg-[var(--s-bg)] text-[var(--s-text)]"
+      style={{ minHeight: `calc(100vh - ${APP_TOP_NAV_OFFSET_PX}px)` }}
     >
-      {/* Left rail — header + watches + tasks */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--s-surface)',
-          borderRight: '1px solid var(--s-border)',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <StellarHeader
-          isConnected={isConnected}
-          unreadCount={unreadCount}
-          clusterCount={state?.clustersWatching?.length ?? 0}
-          onCollapse={() => { /* no-op on page view */ }}
-        />
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-4 md:px-6 lg:px-8">
         <div
-          style={{
-            borderBottom: '2px solid var(--s-border)',
-            flexShrink: 0,
-          }}
+          className="sticky z-20 bg-[var(--s-bg)]/95 pb-2 backdrop-blur supports-[backdrop-filter]:bg-[var(--s-bg)]/80"
+          style={{ top: APP_TOP_NAV_OFFSET_PX }}
         >
+          <div className={SECTION_SHELL_CLASS}>
+            <StellarHeader
+              isConnected={isConnected}
+              unreadCount={unreadCount}
+              clusterCount={state?.clustersWatching?.length ?? 0}
+              showCollapse={false}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div
+            ref={eventsRef}
+            id={STELLAR_SECTION_ID.EVENTS}
+            tabIndex={-1}
+            data-testid="stellar-section-events"
+            className={cn(SECTION_SHELL_CLASS, EVENTS_CHAT_HEIGHT_CLASS)}
+            style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+          >
+            <EventsPanel
+              notifications={notifications}
+              pendingActions={pendingActions}
+              acknowledgeNotification={acknowledgeNotification}
+              dismissAllNotifications={dismissAllNotifications}
+              approveAction={approveAction}
+              rejectAction={rejectAction}
+              solves={solves}
+              solveProgress={solveProgress}
+              startSolve={startSolve}
+              detailNotification={detailNotification}
+              setDetailNotification={setDetailNotification}
+              onRollback={(prompt) => { setChatInput(prompt); setPendingAction(null) }}
+              onAction={(prompt, action) => {
+                setChatInput(prompt)
+                setPendingAction(action ?? null)
+              }}
+            />
+          </div>
+
+          <div
+            ref={chatRef}
+            id={STELLAR_SECTION_ID.CHAT}
+            tabIndex={-1}
+            data-testid="stellar-section-chat"
+            className={cn(SECTION_SHELL_CLASS, EVENTS_CHAT_HEIGHT_CLASS)}
+            style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+          >
+            <ChatPanel
+              providerSession={providerSession}
+              onProviderChange={setProviderSession}
+              nudge={nudge}
+              onDismissNudge={dismissNudge}
+              catchUp={catchUp}
+              onDismissCatchUp={dismissCatchUp}
+              initialInput={chatInput}
+              onInputConsumed={() => setChatInput('')}
+              pendingAction={pendingAction}
+              onActionConsumed={() => setPendingAction(null)}
+              createTask={(title, description, source) => createTask(title, description, source)}
+            />
+          </div>
+        </div>
+
+        <section className={cn(SECTION_SHELL_CLASS, STANDARD_SECTION_MAX_HEIGHT_CLASS, 'overflow-y-auto s-scroll')}>
           <TasksPanel
             tasks={tasks}
             expanded={tasksExpanded}
-            onToggle={() => setTasksExpanded(v => !v)}
+            onToggle={() => setTasksExpanded(value => !value)}
             onStatusChange={(id, status) => { void updateTaskStatus(id, status) }}
           />
-        </div>
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <div
-            ref={activityRef}
-            id={STELLAR_SECTION_ID.ACTIVITY}
-            tabIndex={-1}
-            data-testid="stellar-section-activity"
-          >
-            <StellarActivityPanel
-              activity={activity}
-              onOpenEvent={handleOpenActivityEvent}
+        </section>
+
+        {hasActiveWatches && (
+          <section className={cn(SECTION_SHELL_CLASS, STANDARD_SECTION_MAX_HEIGHT_CLASS, 'overflow-y-auto s-scroll')}>
+            <WatchesPanel
+              watches={watches}
+              allNotifications={notifications}
+              solves={solves}
+              onResolve={(id) => { void resolveWatch(id) }}
+              onDismiss={(id) => { void dismissWatch(id) }}
+              onSnooze={(id, minutes) => { void snoozeWatch(id, minutes) }}
+              onAction={(prompt, action) => {
+                setChatInput(prompt)
+                setPendingAction(action ?? null)
+              }}
             />
-          </div>
+          </section>
+        )}
+
+        <section
+          ref={activityRef}
+          id={STELLAR_SECTION_ID.ACTIVITY}
+          tabIndex={-1}
+          data-testid="stellar-section-activity"
+          className={cn(SECTION_SHELL_CLASS, STANDARD_SECTION_MAX_HEIGHT_CLASS, 'overflow-y-auto s-scroll')}
+          style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+        >
+          <StellarActivityPanel
+            activity={activity}
+            onOpenEvent={handleOpenActivityEvent}
+          />
+        </section>
+
+        <section className={cn(SECTION_SHELL_CLASS, SUGGESTIONS_SECTION_MAX_HEIGHT_CLASS, 'overflow-y-auto s-scroll')}>
           <RecommendedTasksPanel createTask={createTask} />
-          <WatchesPanel
-            watches={watches}
-            allNotifications={notifications}
-            solves={solves}
-            onResolve={(id) => { void resolveWatch(id) }}
-            onDismiss={(id) => { void dismissWatch(id) }}
-            onSnooze={(id, minutes) => { void snoozeWatch(id, minutes) }}
-            onAction={(prompt, action) => {
-              setChatInput(prompt)
-              setPendingAction(action ?? null)
-            }}
-          />
-        </div>
-      </div>
+        </section>
 
-      {/* Main content — roomier vertical sections */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          overflowY: 'auto',
-          background: 'var(--s-bg)',
-          padding: 12,
-          gap: 12,
-        }}
-      >
-        <div
-          ref={eventsRef}
-          id={STELLAR_SECTION_ID.EVENTS}
+        <section
+          ref={auditRef}
+          id={STELLAR_SECTION_ID.AUDIT}
           tabIndex={-1}
-          data-testid="stellar-section-events"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '42vh',
-            border: '1px solid var(--s-border)',
-            borderRadius: 'var(--s-rm)',
-            background: 'var(--s-surface)',
-            overflow: 'hidden',
-          }}
+          data-testid="stellar-section-audit"
+          style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
         >
-          <EventsPanel
-            notifications={notifications}
-            pendingActions={pendingActions}
-            acknowledgeNotification={acknowledgeNotification}
-            dismissAllNotifications={dismissAllNotifications}
-            approveAction={approveAction}
-            rejectAction={rejectAction}
-            solves={solves}
-            solveProgress={solveProgress}
-            startSolve={startSolve}
-            detailNotification={detailNotification}
-            setDetailNotification={setDetailNotification}
-            onRollback={(prompt) => { setChatInput(prompt); setPendingAction(null) }}
-            onAction={(prompt, action) => {
-              setChatInput(prompt)
-              setPendingAction(action ?? null)
-            }}
-          />
-        </div>
-
-        <div
-          ref={chatRef}
-          id={STELLAR_SECTION_ID.CHAT}
-          tabIndex={-1}
-          data-testid="stellar-section-chat"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '42vh',
-            border: '1px solid var(--s-border)',
-            borderRadius: 'var(--s-rm)',
-            background: 'var(--s-surface)',
-            overflow: 'hidden',
-          }}
-        >
-          <ChatPanel
-            providerSession={providerSession}
-            onProviderChange={setProviderSession}
-            nudge={nudge}
-            onDismissNudge={dismissNudge}
-            catchUp={catchUp}
-            onDismissCatchUp={dismissCatchUp}
-            initialInput={chatInput}
-            onInputConsumed={() => setChatInput('')}
-            pendingAction={pendingAction}
-            onActionConsumed={() => setPendingAction(null)}
-            createTask={(title, description, source) => createTask(title, description, source)}
-          />
-        </div>
+          <StellarAuditLogSection />
+        </section>
       </div>
     </div>
   )

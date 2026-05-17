@@ -2,10 +2,17 @@ interface Props {
   isConnected: boolean
   unreadCount: number
   clusterCount: number
-  onCollapse: () => void
+  onCollapse?: () => void
+  showCollapse?: boolean
 }
 
-export function StellarHeader({ isConnected, unreadCount, clusterCount, onCollapse }: Props) {
+export function StellarHeader({
+  isConnected,
+  unreadCount,
+  clusterCount,
+  onCollapse,
+  showCollapse = true,
+}: Props) {
   return (
     <div style={{
       display: 'flex',
@@ -67,23 +74,25 @@ export function StellarHeader({ isConnected, unreadCount, clusterCount, onCollap
         </div>
       )}
 
-      <button
-        onClick={onCollapse}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'var(--s-text-dim)',
-          fontSize: 14,
-          padding: 2,
-          lineHeight: 1,
-          borderRadius: 'var(--s-rs)',
-          transition: 'color var(--s-t)',
-        }}
-        title="Collapse"
-      >
-        ▸
-      </button>
+      {showCollapse && onCollapse && (
+        <button
+          onClick={onCollapse}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--s-text-dim)',
+            fontSize: 14,
+            padding: 2,
+            lineHeight: 1,
+            borderRadius: 'var(--s-rs)',
+            transition: 'color var(--s-t)',
+          }}
+          title="Collapse"
+        >
+          ▸
+        </button>
+      )}
     </div>
   )
 }
