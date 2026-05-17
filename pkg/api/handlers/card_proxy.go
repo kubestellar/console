@@ -34,6 +34,20 @@ const (
 	cardProxyMaxURLLen = 2048
 )
 
+var (
+	// cgnatNet is RFC 6598 Carrier-Grade NAT range (100.64.0.0/10).
+	// Not covered by net.IP.IsPrivate(), but often used for internal services.
+	_, cgnatNet, _ = net.ParseCIDR("100.64.0.0/10")
+
+	// cloudMetadataIP is the cloud instance metadata service endpoint (169.254.169.254/32).
+	// Common SSRF target for credential theft in AWS, GCP, Azure.
+	_, cloudMetadataIP, _ = net.ParseCIDR("169.254.169.254/32")
+
+	// ietfProtocolNet is RFC 6890 IETF Protocol Assignments (192.0.0.0/24).
+	// Reserved range that should not be used for external requests.
+	_, ietfProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
+)
+
 // cardProxyClient uses a custom DialContext to check resolved IPs at
 // connection time, preventing DNS rebinding / TOCTOU SSRF bypasses.
 var cardProxyClient = &http.Client{
@@ -67,9 +81,11 @@ var cardProxyClient = &http.Client{
 }
 
 // isBlockedIP returns true if the IP is in a non-public range.
+// Covers standard private ranges plus CGNAT, cloud metadata, and IETF ranges.
 func isBlockedIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified()
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
+		cgnatNet.Contains(ip) || cloudMetadataIP.Contains(ip) || ietfProtocolNet.Contains(ip)
 }
 
 // CardProxyHandler proxies external HTTP GET requests for custom card code.
