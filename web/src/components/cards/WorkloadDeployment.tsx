@@ -688,11 +688,12 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   // Fetch real workloads from cache (handles demo mode internally via useCache)
   const { data: realWorkloads, isLoading: workloadsLoading, isRefreshing: workloadsRefreshing, isFailed, consecutiveFailures, isDemoFallback, refetch: refetchWorkloads } = useCachedWorkloads()
 
-  // Report state to CardWrapper for refresh animation
+  // Keep cached workloads visible during background cluster refreshes.
+  const hasAnyData = isDemo ? DEMO_WORKLOADS.length > 0 : (realWorkloads?.length ?? 0) > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading: clustersLoading || workloadsLoading,
+    isLoading: (clustersLoading || workloadsLoading) && !hasAnyData,
     isRefreshing: workloadsRefreshing,
-    hasAnyData: isDemo ? DEMO_WORKLOADS.length > 0 : (realWorkloads?.length ?? 0) > 0,
+    hasAnyData,
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback || isDemo,

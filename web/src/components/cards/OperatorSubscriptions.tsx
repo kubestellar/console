@@ -1,6 +1,6 @@
 import { Clock, AlertTriangle, AlertCircle, Settings, RefreshCw, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { useClusters, OperatorSubscription } from '../../hooks/useMCP'
+import { OperatorSubscription } from '../../hooks/useMCP'
 import { useCachedOperatorSubscriptions } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -45,7 +45,6 @@ const FILTER_CONFIG = {
 export function OperatorSubscriptions({ config: _config }: OperatorSubscriptionsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
@@ -56,7 +55,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = rawSubscriptionsArray.length > 0
   const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
-    isLoading: (clustersLoading || subscriptionsLoading) && !hasData,
+    isLoading: subscriptionsLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
     isFailed: isFailed && !hasData,

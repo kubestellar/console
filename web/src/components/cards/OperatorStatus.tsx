@@ -1,5 +1,5 @@
 import { CheckCircle, AlertTriangle, AlertCircle, XCircle, RefreshCw, ArrowUpCircle, ChevronRight } from 'lucide-react'
-import { useClusters, Operator } from '../../hooks/useMCP'
+import { Operator } from '../../hooks/useMCP'
 import { useCachedOperators } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -49,7 +49,6 @@ const FILTER_CONFIG = {
 function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  const { isLoading: clustersLoading } = useClusters()
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch operators - pass undefined to get all clusters
@@ -60,7 +59,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   // Report card data state
   const hasData = rawOperatorsArray.length > 0
   const { showSkeleton, showEmptyState, loadingTimedOut } = useCardLoadingState({
-    isLoading: (clustersLoading || operatorsLoading) && !hasData,
+    isLoading: operatorsLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
     isFailed: isFailed && !hasData,
