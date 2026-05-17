@@ -398,6 +398,10 @@ export function LaunchSequence({
   }, [phaseSignature, isStarted, effectivePhases.length])
 
   const progress = state.launchProgress.length > 0 ? state.launchProgress : progressRef.current
+  const deploymentProjectCount = useMemo(
+    () => new Set(effectivePhases.flatMap((phase) => phase.projectNames || [])).size,
+    [effectivePhases],
+  )
   const allComplete = progress.length > 0 && progress.every(
     (p) => p.status === 'completed' || p.status === 'failed' || p.status === 'skipped'
   )
@@ -457,7 +461,7 @@ export function LaunchSequence({
         <p className="text-sm text-muted-foreground mt-1">
           {allComplete
             ? 'All deployment phases have finished.'
-            : `Deploying ${state.projects.length} projects in ${effectivePhases.length} phases`}
+            : `Deploying ${deploymentProjectCount} project${deploymentProjectCount === 1 ? '' : 's'} in ${effectivePhases.length} phase${effectivePhases.length === 1 ? '' : 's'}`}
         </p>
       </div>
 

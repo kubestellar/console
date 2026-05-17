@@ -305,6 +305,59 @@ describe('LaunchSequence', () => {
     expect(missionArgs.initialPrompt).toContain('Do not split this deployment into separate mission sessions')
     expect(onUpdateProgress).toHaveBeenCalled()
   })
+
+  it('shows deployment counts from the actual launch plan', async () => {
+    const onUpdateProgress = vi.fn()
+    const kyvernoProject: PayloadProject = {
+      ...mockProject,
+      name: 'kyverno',
+      displayName: 'Kyverno',
+    }
+    const prometheusProject: PayloadProject = {
+      ...mockProject,
+      name: 'prometheus',
+      displayName: 'Prometheus',
+    }
+    const unassignedProject: PayloadProject = {
+      ...mockProject,
+      name: 'grafana',
+      displayName: 'Grafana',
+    }
+    const stateWithExtraProject: MissionControlState = {
+      ...mockState,
+      projects: [mockProject, kyvernoProject, prometheusProject, unassignedProject],
+      assignments: [{
+        clusterName: 'cluster-1',
+        clusterContext: 'cluster-1',
+        provider: 'kind',
+        projectNames: ['falco', 'kyverno', 'prometheus'],
+        readiness: {
+          cpuHeadroomPercent: 80,
+          memHeadroomPercent: 80,
+          storageHeadroomPercent: 80,
+          overallScore: 80,
+        },
+        warnings: [],
+      }],
+      phases: [
+        { phase: 1, name: 'Deploy', projectNames: ['falco', 'kyverno', 'prometheus'] },
+      ],
+    }
+
+    render(
+      <LaunchSequence
+        state={stateWithExtraProject}
+        onUpdateProgress={onUpdateProgress}
+        onComplete={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Deploying 3 projects in 1 phase')).toBeDefined()
+
+    await waitFor(() => {
+      expect(mockStartMission).toHaveBeenCalledTimes(1)
+    })
+  })
 })
 
 describe('RequestApprovalModal', () => {
