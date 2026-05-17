@@ -651,6 +651,7 @@ function ProjectDetailPanel({
   useEffect(() => {
     if (!project.kbPath || fetchedRef.current === project.kbPath) return
     fetchedRef.current = project.kbPath
+    const controller = new AbortController()
     setLoadingSteps(true)
     const indexMission: MissionExport = {
       version: 'kc-mission-v1',
@@ -662,9 +663,10 @@ function ProjectDetailPanel({
       metadata: { source: project.kbPath }
     }
     fetchMissionContent(indexMission)
-      .then(({ mission: m }) => setMission(m))
-      .catch(() => {/* ignore */ })
-      .finally(() => setLoadingSteps(false))
+      .then(({ mission: m }) => { if (!controller.signal.aborted) setMission(m) })
+      .catch((e) => { if (e?.name !== 'AbortError' && !controller.signal.aborted) { /* ignore fetch errors */ } })
+      .finally(() => { if (!controller.signal.aborted) setLoadingSteps(false) })
+    return () => controller.abort()
   }, [project.kbPath, project.displayName, project.reason])
 
   // Look up alternatives using the original AI-suggested name (before any swaps)

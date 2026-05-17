@@ -13,7 +13,7 @@
  * - isDemoData flag for CardWrapper demo badge
  */
 
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { useCache } from '../lib/cache'
 import { STORAGE_KEY_TOKEN, DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
@@ -204,8 +204,15 @@ export function useTopology(): UseTopologyResult {
   const cachedSnapshot = cachedDataRef.current
   const cachedTopology = cachedSnapshot ? normalizeTopologyData(cachedSnapshot.data) : null
 
+  // One-time migration: clear the old bare 'topology' cache key entries so they
+  // don't shadow the new namespaced key 'kubestellar:topology:graph'.
+  useEffect(() => {
+    try { localStorage.removeItem('kc_meta:topology') } catch { /* ignore */ }
+    try { sessionStorage.removeItem('kcc:topology') } catch { /* ignore */ }
+  }, [])
+
   const result = useCache<TopologyData | null>({
-    key: 'topology',
+    key: 'kubestellar:topology:graph',
     initialData: cachedTopology,
     refreshInterval: REFRESH_INTERVAL_MS,
     fetcher: fetchTopology,
