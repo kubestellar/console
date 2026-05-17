@@ -775,7 +775,7 @@ func (s *Server) Start() error {
 	// browser reports an opaque CORS error instead of showing the 403.
 	// corsMiddleware also short-circuits OPTIONS preflight so it never
 	// reaches requireCSRF (preflight must not carry X-Requested-With).
-	handler := s.corsMiddleware(requireCSRF(mux))
+	handler := s.corsMiddleware(maxBodyMiddleware(requireCSRF(mux)))
 
 	addr := fmt.Sprintf("127.0.0.1:%d", s.config.Port)
 	slog.Info("KC Agent starting", "version", Version, "addr", addr)
