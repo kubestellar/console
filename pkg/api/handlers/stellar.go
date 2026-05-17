@@ -138,8 +138,8 @@ type StellarStore interface {
 	GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
 	CreateWatch(ctx context.Context, w *store.StellarWatch) (string, error)
 	TouchWatch(ctx context.Context, id, lastUpdate string, ts time.Time) error
-	UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error
-	ResolveWatch(ctx context.Context, id string) error
+	UpdateWatchStatus(ctx context.Context, id, status, lastUpdate, userID string) error
+	ResolveWatch(ctx context.Context, id, userID string) error
 	SetWatchLastChecked(ctx context.Context, id string, ts time.Time) error
 	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]store.StellarMemoryEntry, error)
 
