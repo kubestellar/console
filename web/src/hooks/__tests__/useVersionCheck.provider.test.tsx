@@ -29,6 +29,10 @@ vi.mock('../mcp/shared', () => ({
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
+vi.mock('../../lib/api', () => ({
+  authFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+}))
+
 vi.mock('../useLocalAgent', () => ({
     useLocalAgent: mockUseLocalAgent,
 }))
