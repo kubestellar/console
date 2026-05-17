@@ -19,6 +19,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -749,11 +750,11 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// Record zero-result browse paths for the KB gap tracker.
 	// Fires asynchronously so it never delays the response.
 	if len(entries) == 0 && h.store != nil {
-		go func() {
+		safego.GoWith("kb-gap-record", func() {
 			if err := h.store.RecordKBGap(context.Background(), path); err != nil {
 				slog.Warn("[missions] failed to record KB gap", "path", path, "error", err)
 			}
-		}()
+		})
 	}
 
 	c.Set("X-Cache", "MISS")
