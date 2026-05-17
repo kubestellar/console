@@ -489,7 +489,8 @@ export function createMissionMessageHandler(
         }
 
         const isDisconnectPattern = AGENT_DISCONNECT_ERROR_PATTERNS.some(pattern => combinedErrorText.includes(pattern))
-        if (isDisconnectPattern && mission.status === 'running' && (Date.now() - new Date(mission.updatedAt).getTime()) <= MISSION_RECONNECT_MAX_AGE_MS) {
+        const isExplicitAgentUnavailable = payload.code === 'no_agent' || payload.code === 'agent_unavailable'
+        if (isDisconnectPattern && !isExplicitAgentUnavailable && mission.status === 'running' && (Date.now() - new Date(mission.updatedAt).getTime()) <= MISSION_RECONNECT_MAX_AGE_MS) {
           return {
             ...mission,
             currentStep: 'Reconnecting...',

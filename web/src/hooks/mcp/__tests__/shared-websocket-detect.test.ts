@@ -626,7 +626,7 @@ describe('updateSingleClusterInCache — memoryUsageGB and metricsAvailable shar
     updateClusterCache({
       clusters: [
         makeCluster({ name: 'src2', server: 'https://shared-mem', memoryRequestsGB: undefined, nodeCount: 3 }),
-        makeCluster({ name: 'dst2', server: 'https://shared-mem', memoryRequestsGB: undefined, nodeCount: 0 }),
+        makeCluster({ name: 'dst2', server: 'https://shared-mem', memoryRequestsGB: undefined, nodeCount: undefined }),
       ],
       isLoading: false,
     })

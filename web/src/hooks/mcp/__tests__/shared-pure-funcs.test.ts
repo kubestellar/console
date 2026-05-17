@@ -249,8 +249,8 @@ describe('shareMetricsBetweenSameServerClusters', () => {
       server: 'https://s1',
       cpuCores: undefined,
       memoryGB: undefined,
-      nodeCount: 0,
-      podCount: 0,
+      nodeCount: undefined,
+      podCount: undefined,
     })
     const result = shareMetricsBetweenSameServerClusters([source, empty])
     const alias = result.find(c => c.name === 'alias')!
@@ -284,8 +284,8 @@ describe('shareMetricsBetweenSameServerClusters', () => {
   it('prefers cluster with highest metric score as source', () => {
     // Score: 4 for nodes, 2 for capacity, 1 for requests
     const withNodes = makeCluster({ name: 'a', server: 'https://s1', nodeCount: 5, cpuCores: undefined, cpuRequestsCores: undefined })
-    const withCapacity = makeCluster({ name: 'b', server: 'https://s1', nodeCount: 0, cpuCores: 8, cpuRequestsCores: undefined })
-    const emptyTarget = makeCluster({ name: 'c', server: 'https://s1', nodeCount: 0, cpuCores: undefined, cpuRequestsCores: undefined })
+    const withCapacity = makeCluster({ name: 'b', server: 'https://s1', nodeCount: undefined, cpuCores: 8, cpuRequestsCores: undefined })
+    const emptyTarget = makeCluster({ name: 'c', server: 'https://s1', nodeCount: undefined, cpuCores: undefined, cpuRequestsCores: undefined })
 
     const result = shareMetricsBetweenSameServerClusters([withNodes, withCapacity, emptyTarget])
     const target = result.find(c => c.name === 'c')!
@@ -295,7 +295,7 @@ describe('shareMetricsBetweenSameServerClusters', () => {
 
   it('copies healthy and reachable flags when copying node data', () => {
     const source = makeCluster({ name: 'src', server: 'https://s1', nodeCount: 3, healthy: true, reachable: true })
-    const empty = makeCluster({ name: 'dst', server: 'https://s1', nodeCount: 0, healthy: false, reachable: false })
+    const empty = makeCluster({ name: 'dst', server: 'https://s1', nodeCount: undefined, healthy: false, reachable: false })
     const result = shareMetricsBetweenSameServerClusters([source, empty])
     const dst = result.find(c => c.name === 'dst')!
     expect(dst.healthy).toBe(true)

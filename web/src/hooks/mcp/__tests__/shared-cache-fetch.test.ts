@@ -218,7 +218,7 @@ describe('updateSingleClusterInCache — metric sharing via shareMetricsBetweenS
     updateClusterCache({
       clusters: [
         makeCluster({ name: 'primary', server: 'https://shared', nodeCount: 0 }),
-        makeCluster({ name: 'alias', server: 'https://shared', nodeCount: 0 }),
+        makeCluster({ name: 'alias', server: 'https://shared', nodeCount: undefined }),
       ],
       isLoading: false,
     })

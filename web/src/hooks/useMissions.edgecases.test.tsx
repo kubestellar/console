@@ -221,7 +221,7 @@ describe('tool overlap queueing', () => {
     )
     expect(chatCallsBeforeCompletion).toHaveLength(1)
     expect(result.current.missions.find(m => m.id === secondMissionId)?.currentStep)
-      .toContain('Waiting for helm')
+      .toContain('Waiting for tools: helm')
 
     await act(async () => {
       MockWebSocket.lastInstance?.simulateMessage({
