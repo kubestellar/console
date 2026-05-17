@@ -249,7 +249,7 @@ describe('useArgoApplicationSets', () => {
     const { result, unmount } = renderHook(() => useArgoApplicationSets())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.error).toBe('Failed to fetch ApplicationSets')
+    expect(result.current.error).toBe('string-error')
     expect(result.current.consecutiveFailures).toBe(1)
     unmount()
   })
