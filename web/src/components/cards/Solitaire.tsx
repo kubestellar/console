@@ -274,7 +274,11 @@ export function Solitaire(_props: CardComponentProps) {
       if (!highScore || moves < highScore.moves || (moves === highScore.moves && time < highScore.time)) {
         const newScore = { moves, time, date: new Date().toISOString() }
         setHighScore(newScore)
-        localStorage.setItem('solitaire-high-score', JSON.stringify(newScore))
+        try {
+          localStorage.setItem('solitaire-high-score', JSON.stringify(newScore))
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
     }
   }, [game.foundations, moves, time, highScore])

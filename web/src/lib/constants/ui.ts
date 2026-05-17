@@ -91,6 +91,16 @@ export const COPY_FEEDBACK_TIMEOUT_MS = 2000
 // ── Pagination ──────────────────────────────────────────────────────────
 export const DEFAULT_PAGE_SIZE = 5
 
+// ── Spacing (4px grid system — Tailwind p-1, p-2, gap-1, gap-2, etc.) ────
+export const SPACING_XS = '2px'
+export const SPACING_SM = '4px'
+export const SPACING_MD = '8px'
+export const SPACING_LG = '12px'
+export const SPACING_XL = '16px'
+export const SPACING_2XL = '20px'
+export const SPACING_3XL = '24px'
+export const SPACING_BORDER = '1px'
+
 // ── Layout dimensions ──────────────────────────────────────────────────
 /** Height of the top navbar in pixels (h-16 = 64px) */
 export const NAVBAR_HEIGHT_PX = 64
