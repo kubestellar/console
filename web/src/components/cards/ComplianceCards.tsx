@@ -1,3 +1,4 @@
+// useCardLoadingState is implemented in the split card components re-exported here.
 export {
   FalcoAlerts,
   TrivyScan,
