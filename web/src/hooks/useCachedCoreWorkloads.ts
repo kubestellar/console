@@ -89,7 +89,12 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
 
       if (response.exitCode !== 0) return []
 
-      const data = JSON.parse(response.output)
+      let data: { items?: unknown[] }
+      try {
+        data = JSON.parse(response.output)
+      } catch {
+        return []
+      }
       const issues: SecurityIssue[] = []
 
       for (const pod of data.items || []) {
