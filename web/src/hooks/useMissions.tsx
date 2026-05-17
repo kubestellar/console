@@ -3626,9 +3626,17 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       {children}
       {/* #7087/#7101 — Global prompt-review dialog: shows the front of the
           pending review queue. When confirmed/cancelled, the next entry in
-          the queue (if any) is shown automatically. */}
+          the queue (if any) is shown automatically.
+          #14191 — key={missionId} forces React to remount the dialog for each
+          new queue entry so the internal `prompt` state (lazy-initialised from
+          `initialPrompt`) is reset to the correct per-mission value. Without
+          this, advancing from entry N to N+1 keeps the same component instance
+          and its stale prompt state, causing every subsequent mission to run
+          with the first workload's prompt (e.g. all missions launch with the
+          cert-manager prompt even when istio is next in the queue). */}
       {pendingReviewQueue.length > 0 && (
         <ConfirmMissionPromptDialog
+          key={pendingReviewQueue[0].missionId}
           open={pendingReviewQueue.length > 0}
           missionTitle={pendingReviewQueue[0].params.title}
           missionDescription={pendingReviewQueue[0].params.description}
