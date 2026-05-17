@@ -617,7 +617,7 @@ class ApiClient {
     return { controller, timeoutId }
   }
 
-  async get<T = unknown>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean }): Promise<{ data: T }> {
+  async get<T = unknown>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean; signal?: AbortSignal }): Promise<{ data: T }> {
     // Skip API calls to protected endpoints when not authenticated
     const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
     if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
@@ -635,12 +635,13 @@ class ApiClient {
 
     const headers = { ...this.getHeaders(), ...options?.headers }
     const { controller, timeoutId } = this.createAbortController(options?.timeout ?? DEFAULT_TIMEOUT)
+    const signal = options?.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal
 
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'GET',
         headers,
-        signal: controller.signal,
+        signal,
       })
       clearTimeout(timeoutId)
 

@@ -8,10 +8,30 @@ export function AuditPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    stellarApi.getAuditLog(50)
-      .then(setEntries)
-      .catch(() => setError('Failed to load audit log'))
-      .finally(() => setLoading(false))
+    let mounted = true
+    const ctrl = new AbortController()
+
+    stellarApi.getAuditLog(50, ctrl.signal)
+      .then((data) => {
+        if (mounted) {
+          setEntries(data)
+        }
+      })
+      .catch(() => {
+        if (mounted && !ctrl.signal.aborted) {
+          setError('Failed to load audit log')
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+      ctrl.abort()
+    }
   }, [])
 
   return (

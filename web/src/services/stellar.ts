@@ -242,11 +242,14 @@ export const stellarApi = {
     await api.post(`/api/stellar/watches/${encodeURIComponent(id)}/snooze`, { minutes })
   },
 
-  async getAuditLog(limit = 50): Promise<StellarAuditEntry[]> {
+  async getAuditLog(limit = 50, signal?: AbortSignal): Promise<StellarAuditEntry[]> {
     try {
-      const { data } = await api.get<{ items: StellarAuditEntry[] }>(`/api/stellar/audit?limit=${limit}`)
+      const { data } = await api.get<{ items: StellarAuditEntry[] }>(`/api/stellar/audit?limit=${limit}`, { signal })
       return data.items || []
     } catch (err) {
+      if (signal?.aborted) {
+        return []
+      }
       console.warn('stellar: getAuditLog failed:', err)
       return []
     }
