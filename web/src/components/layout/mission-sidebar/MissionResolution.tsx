@@ -6,23 +6,19 @@ import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { ResolutionErrorBoundary } from '../../missions/ResolutionErrorBoundary'
 import type { Mission } from '../../../hooks/useMissions'
 import type { MissionExport } from '../../../lib/missions/types'
+import type { Resolution, SimilarResolution } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
 import { Eye, Play, Trash2 } from 'lucide-react'
 
 export type ResolutionPanelView = 'related' | 'history'
 
-export interface RelatedResolution {
-  title: string
-  resolution: { summary: string; steps: string[]; yaml?: string }
-}
-
 interface MissionResolutionProps {
   savedMissions: Mission[]
-  relatedResolutions: RelatedResolution[]
+  relatedResolutions: SimilarResolution[]
   allResolutionsCount: number
   resolutionPanelView: ResolutionPanelView
   onSetResolutionPanelView: (view: ResolutionPanelView) => void
-  onApplyResolution: (resolution: RelatedResolution) => void
+  onApplyResolution: (resolution: Resolution) => void
   onSaveNewResolution: () => void
   onViewMission: (m: Mission) => void
   onRunMission: (id: string) => void

@@ -7,9 +7,6 @@ import { MissionTypeExplainer } from '../../missions/MissionTypeExplainer'
 import type { Mission } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
 
-/** Number of missions rendered per page in the history list (#4778) */
-const MISSIONS_PAGE_SIZE = 20
-
 interface MissionListPanelProps {
   missions: Mission[]
   savedMissions: Mission[]

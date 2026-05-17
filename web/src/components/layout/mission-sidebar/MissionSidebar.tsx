@@ -42,7 +42,7 @@ import { StandaloneOrbitDialog } from '../../missions/StandaloneOrbitDialog'
 import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
-import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
+import { useResolutions, detectIssueSignature, type Resolution } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
@@ -172,7 +172,7 @@ export function MissionSidebar() {
     return findSimilarResolutions(signature as { type: string }, { minSimilarity: 0.4, limit: 5 })
   })()
 
-  const handleApplyResolution = (resolution: { title: string; resolution: { summary: string; steps: string[]; yaml?: string } }) => {
+  const handleApplyResolution = (resolution: Resolution) => {
     if (!activeMission) return
     // Enforce lifecycle validation (#5934): resolution should never be
     // applied to a mission that is in a non-interactive state. Blocked
