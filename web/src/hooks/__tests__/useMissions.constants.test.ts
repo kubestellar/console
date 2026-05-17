@@ -20,6 +20,7 @@ import {
   WS_SEND_MAX_RETRIES,
   WS_SEND_RETRY_DELAY_MS,
   STREAM_GAP_THRESHOLD_MS,
+  isInteractiveContent,
 } from '../useMissions.constants'
 
 describe('useMissions.constants', () => {
@@ -62,5 +63,9 @@ describe('useMissions.constants', () => {
 
   it('keeps stream gap threshold stable', () => {
     expect(STREAM_GAP_THRESHOLD_MS).toBe(8_000)
+  })
+
+  it('detects next-step prompts as interactive content', () => {
+    expect(isInteractiveContent('Rollback completed successfully. What would you like to do next?')).toBe(true)
   })
 })

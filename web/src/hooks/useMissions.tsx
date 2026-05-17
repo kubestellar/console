@@ -1838,8 +1838,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         const toolsWereExecuted = !!chatPayload.toolsExecuted
         const missionRequiresTools = ['deploy', 'maintain', 'repair', 'upgrade'].includes(m.type)
         const falsePositiveCompletion = !resultIsError && missionRequiresTools && !toolsWereExecuted
+        const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
+        const resultIsInteractive = isInteractiveContent(resultContent)
 
-        if (m.status === 'running' && !resultIsError && !falsePositiveCompletion) {
+        if (!resultIsInteractive && m.status === 'running' && !resultIsError && !falsePositiveCompletion) {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
@@ -1850,15 +1852,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           window.dispatchEvent(new CustomEvent('kc-mission-completed', {
             detail: { missionId, missionType: m.type },
           }))
-        } else if (m.status === 'running' && (resultIsError || falsePositiveCompletion)) {
+        } else if (!resultIsInteractive && m.status === 'running' && (resultIsError || falsePositiveCompletion)) {
           // #13728 — Treat false-positive completions as errors in analytics
-          const errorMsg = falsePositiveCompletion 
-            ? 'Agent claimed completion without executing tools' 
+          const errorMsg = falsePositiveCompletion
+            ? 'Agent claimed completion without executing tools'
             : (chatPayload.content || 'Mission failed')
           emitMissionError(m.type, errorMsg)
         }
-
-        const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
         // Check ALL assistant messages since the last user message for streamed content
         // (streaming may split into multiple bubbles due to tool-use gaps)
         const missionMessages = getMissionMessages(m.messages)
@@ -1901,11 +1901,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             normalizedResult.includes(normalizedStreamed)
           )
 
-        // Transition to 'completed' when a result message arrives — this is the
-        // backend's final answer for the current turn. The 'waiting_input' state
-        // is only used while streaming is in progress (stream done w/o result).
-        // The UI shows a completion panel with feedback buttons when status is
-        // 'completed', so reaching this state is the correct lifecycle end (#5479).
+        // Result messages can still represent an interactive hand-off when the
+        // agent completed a step and is now asking the user what to do next.
+        // In that case the mission should remain actionable in the sidebar
+        // instead of regressing to a stale terminal state.
         //
         // #13728 — Prevent false-positive completions: if the mission type typically
         // requires tool execution (deploy, maintain, repair, upgrade) and the agent
@@ -1914,12 +1913,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // without executing any commands.
         let finalStatus: MissionStatus
         let falsePositiveWarning = ''
-        if (resultIsError) {
-          finalStatus = 'failed'
-        } else if (falsePositiveCompletion) {
+        if (falsePositiveCompletion) {
           // Agent claimed success but never executed any tools
           finalStatus = 'failed'
           falsePositiveWarning = '\n\n**⚠️ Mission Validation Failed**\n\nThe AI agent reported completion, but no tools were executed. This typically means the agent did not actually perform the requested actions (e.g., install, deploy, upgrade). Please verify the agent has the required tools available and retry the mission.'
+        } else if (resultIsInteractive) {
+          finalStatus = 'waiting_input'
+        } else if (resultIsError) {
+          finalStatus = 'failed'
         } else {
           finalStatus = 'completed'
         }

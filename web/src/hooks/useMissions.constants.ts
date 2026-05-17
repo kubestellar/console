@@ -117,6 +117,7 @@ const INTERACTIVE_CONTENT_PATTERNS = [
   /before I proceed/i,                    // common Claude phrasing
   /which (?:option|approach|method)/i,    // which option/approach
   /would you (?:like|prefer)/i,           // preference question
+  /what would you like to do next/i,      // post-action next-step prompt
 ] as const
 
 /**

@@ -860,6 +860,56 @@ describe('stream done cleanup', () => {
   })
 })
 
+// ── Result message: interactive follow-up handling ───────────────────────────
+
+describe('interactive result transitions', () => {
+  it('keeps a retried mission in waiting_input when the latest result asks what to do next', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId, requestId } = await startMissionWithConnection(result)
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'error',
+        payload: { code: 'rollback_failed', message: 'Rollback failed partway through' },
+      })
+    })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('failed')
+
+    const sendCallCount = MockWebSocket.lastInstance?.send.mock.calls.length ?? 0
+    act(() => {
+      result.current.sendMessage(missionId, 'Retry the rollback and tell me what to do next')
+    })
+
+    const retryChatCall = (MockWebSocket.lastInstance?.send.mock.calls ?? [])
+      .slice(sendCallCount)
+      .find((call: string[]) => JSON.parse(call[0]).type === 'chat')
+    expect(retryChatCall).toBeDefined()
+    const retryRequestId = JSON.parse(retryChatCall![0]).id
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: retryRequestId,
+        type: 'result',
+        payload: {
+          content: [
+            'Rollback completed successfully. What would you like to do next?',
+            '',
+            '1. Verify the workload',
+            '2. Close the mission',
+          ].join('\n'),
+          isError: true,
+          toolsExecuted: true,
+        },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('waiting_input')
+    expect(mission?.messages[mission.messages.length - 1]?.content).toContain('Rollback completed successfully')
+  })
+})
+
 // ── Result message: token usage from result without prior progress ──────────
 
 describe('result message token usage without prior progress', () => {
