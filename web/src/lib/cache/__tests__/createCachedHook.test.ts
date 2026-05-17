@@ -9,7 +9,7 @@ const { mockUseCache } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
 }))
 
-vi.mock('../index', () => ({
+vi.mock('../cacheCore', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
