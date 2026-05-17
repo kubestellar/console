@@ -106,6 +106,21 @@ describe('useFeatureRequests', () => {
     expect(result.current.isSubmitting).toBe(false)
   })
 
+  it('createRequest rewrites oversized attachment errors with a clear message', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(api.post).mockRejectedValue(new Error('{"error":"Request Entity Too Large"}'))
+
+    const { result } = renderHook(() => useFeatureRequests())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await expect(
+      act(async () => {
+        await result.current.createRequest({ title: 'Too big', description: 'Attachment payload is too large', request_type: 'bug' })
+      })
+    ).rejects.toThrow('Attachments are too large to submit. Keep each video at or below 10 MB and retry with fewer or smaller files.')
+  })
+
   it('createRequest passes timeout option through to api.post', async () => {
     localStorage.setItem('kc-auth-token', 'real-jwt-token')
     vi.mocked(api.get).mockResolvedValue({ data: [] })

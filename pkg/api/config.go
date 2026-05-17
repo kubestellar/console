@@ -1,12 +1,12 @@
 package api
 
 import (
-"log/slog"
-"os"
-"sort"
-"strconv"
+	"log/slog"
+	"os"
+	"sort"
+	"strconv"
 
-"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/settings"
 )
 
 const (
@@ -14,16 +14,30 @@ const (
 	// bodyGuard middleware on all API routes except feedback screenshot uploads.
 	apiDefaultBodyLimit = 1 * 1024 * 1024 // 1 MB — sufficient for JSON API requests
 
-	// feedbackBodyLimit is the global Fiber BodyLimit, elevated to support
-	// base64-encoded screenshot uploads in POST /api/feedback/requests.
-	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
-	feedbackBodyLimit = 5 * 1024 * 1024 // 5 MB — base64 screenshot uploads
+	// feedbackAttachmentLimitBytes matches the frontend's advertised per-file
+	// video limit. Feedback requests submit screenshots/videos as base64 data
+	// URIs, so the HTTP request body must allow for base64 expansion plus JSON.
+	feedbackAttachmentLimitBytes       = 10 * 1024 * 1024 // 10 MB raw attachment size
+	feedbackBase64ExpansionNumerator   = 4
+	feedbackBase64ExpansionDenominator = 3
+	feedbackJSONOverheadBytes          = 1 * 1024 * 1024 // issue fields, diagnostics, and data-URI prefixes
+	feedbackGuardHeadroomBytes         = 256 * 1024
+
+	// feedbackBodyLimit is the explicit request-size ceiling enforced by the
+	// feedback route. It allows one 10 MB attachment after base64 expansion,
+	// plus JSON metadata, and returns a clear 413 message when exceeded.
+	feedbackBodyLimit = ((feedbackAttachmentLimitBytes*feedbackBase64ExpansionNumerator)+(feedbackBase64ExpansionDenominator-1))/feedbackBase64ExpansionDenominator + feedbackJSONOverheadBytes
+
+	// defaultMaxBodyBytes is the global Fiber BodyLimit. Keep it slightly above
+	// feedbackBodyLimit so the feedback route can return a descriptive 413
+	// instead of the connection being reset by the framework while reading.
+	defaultMaxBodyBytes = feedbackBodyLimit + feedbackGuardHeadroomBytes
 
 	// envMaxBodyBytes is the environment variable that overrides the global
 	// Fiber BodyLimit applied to every HTTP request (#9891). When unset or
-	// invalid, the server falls back to feedbackBodyLimit so feedback screenshot
-	// uploads continue to work. Larger deployments can raise this for big
-	// form posts; smaller appliances can lower it to tighten DoS surface.
+	// invalid, the server falls back to defaultMaxBodyBytes so feedback uploads
+	// continue to work. Larger deployments can raise this for big form posts;
+	// smaller appliances can lower it to tighten the DoS surface.
 	envMaxBodyBytes = "MAX_BODY_BYTES"
 )
 
@@ -226,19 +240,19 @@ func getEnvOrDefault(key, defaultVal string) string {
 
 // resolveMaxBodyBytes returns the global Fiber BodyLimit in bytes.
 // It reads the envMaxBodyBytes environment variable and falls back to
-// feedbackBodyLimit when the value is unset, non-numeric, or non-positive.
+// defaultMaxBodyBytes when the value is unset, non-numeric, or non-positive.
 // This is the canonical cap that rejects oversized payloads before Fiber
 // buffers them, mitigating memory-exhaustion DoS (#9891).
 func resolveMaxBodyBytes() int {
 	raw := os.Getenv(envMaxBodyBytes)
 	if raw == "" {
-		return feedbackBodyLimit
+		return defaultMaxBodyBytes
 	}
 	n, err := strconv.Atoi(raw)
 	if err != nil || n <= 0 {
 		slog.Warn("invalid MAX_BODY_BYTES env var; using default",
-			"value", raw, "default_bytes", feedbackBodyLimit)
-		return feedbackBodyLimit
+			"value", raw, "default_bytes", defaultMaxBodyBytes)
+		return defaultMaxBodyBytes
 	}
 	return n
 }

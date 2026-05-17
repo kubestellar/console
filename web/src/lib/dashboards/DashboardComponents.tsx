@@ -11,6 +11,10 @@ import { useMobile } from '../../hooks/useMobile'
 
 /** Fixed desktop grid row height for dashboard cards. */
 export const DASHBOARD_CARD_ROW_HEIGHT_PX = 100
+/** Below this width, clamp small cards to half-width for readability. */
+const NARROW_LAYOUT_BREAKPOINT_PX = 1024
+/** Minimum card column span when the dashboard is width-constrained. */
+const MIN_NARROW_CARD_COL_SPAN = 6
 
 // ============================================================================
 // Icon Resolver
@@ -32,6 +36,7 @@ export interface SortableDashboardCardProps {
   lastUpdated?: Date | null
   onInsertBefore?: () => void
   onInsertAfter?: () => void
+  containerWidth?: number
 }
 
 export const SortableDashboardCard = memo(function SortableDashboardCard({
@@ -46,6 +51,7 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   lastUpdated,
   onInsertBefore: _onInsertBefore,
   onInsertAfter,
+  containerWidth = 0,
 }: SortableDashboardCardProps) {
   const {
     attributes,
@@ -58,12 +64,15 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   const { isMobile } = useMobile()
   const cardWidth = card.position?.w || 4
   const cardHeight = card.position?.h || 2
+  const effectiveCardWidth = !isMobile && containerWidth > 0 && containerWidth < NARROW_LAYOUT_BREAKPOINT_PX && cardWidth < MIN_NARROW_CARD_COL_SPAN
+    ? MIN_NARROW_CARD_COL_SPAN
+    : cardWidth
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     // Only apply multi-column span on desktop; mobile uses single column.
-    gridColumn: isMobile ? 'span 1' : `span ${cardWidth}`,
+    gridColumn: isMobile ? 'span 1' : `span ${effectiveCardWidth}`,
     // Desktop dashboards use fixed auto rows so vertical resize changes the
     // actual grid track height instead of only raising a min-height floor.
     gridRow: isMobile ? undefined : `span ${cardHeight} / span ${cardHeight}`,
@@ -92,7 +101,7 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
         cardId={card.id}
         cardType={card.card_type}
         title={card.title || formatCardTitle(card.card_type)}
-        cardWidth={cardWidth}
+        cardWidth={effectiveCardWidth}
         cardHeight={cardHeight}
         onConfigure={onConfigure}
         onRemove={onRemove}

@@ -64,8 +64,14 @@ export interface ScreenshotItem {
 /** Empty files have no uploadable content */
 export const EMPTY_FILE_SIZE_BYTES = 0
 
-/** Maximum video file size in bytes (10 MB) */
-export const MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024
+/** Number of bytes in one mebibyte. */
+export const BYTES_PER_MEBIBYTE = 1024 * 1024
+/** Maximum video file size in MiB (matches backend feedback upload validation). */
+export const MAX_VIDEO_SIZE_MIB = 10
+/** Maximum video file size in bytes (10 MiB) */
+export const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MIB * BYTES_PER_MEBIBYTE
+/** Shared helper text for attachment limits. */
+export const ATTACHMENT_HELP_TEXT = `Videos: mp4, webm, mov (max ${MAX_VIDEO_SIZE_MIB} MB each)`
 
 /** Accepted media types for file input */
 export const ACCEPTED_MEDIA_TYPES = 'image/*,video/mp4,video/webm,video/quicktime'

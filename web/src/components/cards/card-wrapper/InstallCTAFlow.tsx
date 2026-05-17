@@ -42,6 +42,11 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   const [isPreparingInstall, setIsPreparingInstall] = useState(false)
   const [installError, setInstallError] = useState<string | null>(null)
 
+  const installProjectName = installInfo?.project ?? t('cards:installFlow.componentsFallback', 'components')
+  const installCtaLabel = isPreparingInstall
+    ? t('cards:installFlow.loading', 'Loading install flow…')
+    : t('cards:installFlow.cta', { defaultValue: 'Install {{project}} for live data', project: installProjectName })
+
   const handleClick = async () => {
     if (isPreparingInstall) return
     setInstallError(null)
@@ -72,14 +77,14 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
   return (
     <>
       {/* Install CTA button */}
-      <div className="mt-auto pt-2 border-t border-yellow-500/10">
+      <div className="mt-auto border-t border-yellow-500/10 pt-2">
         <button
           onClick={(e) => { e.stopPropagation(); void handleClick() }}
           disabled={isPreparingInstall}
-          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-yellow-400/80 hover:text-yellow-300 hover:bg-yellow-500/10 rounded transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full flex-wrap items-center justify-center gap-1.5 rounded px-2 py-1.5 text-center text-xs text-yellow-400/80 transition-colors hover:bg-yellow-500/10 hover:text-yellow-300 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPreparingInstall ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-          <span>{isPreparingInstall ? 'Loading install flow…' : `Install ${installInfo?.project ?? 'components'} for live data`}</span>
+          {isPreparingInstall ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> : <Sparkles className="h-3 w-3 shrink-0" />}
+          <span className="min-w-0 whitespace-normal break-words">{installCtaLabel}</span>
         </button>
         {installError && <p className="mt-2 text-[11px] text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
       </div>

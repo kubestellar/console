@@ -278,6 +278,10 @@ export function DashboardPage({
   const insertAtIndexRef = useRef<number | null>(null)
   const [visibleCardCount, setVisibleCardCount] = useState(DASHBOARD_VIRTUALIZATION_INITIAL_COUNT)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const dashboardRef = useRef<HTMLDivElement | null>(null)
+  const [dashboardWidth, setDashboardWidth] = useState(() => (
+    typeof window !== 'undefined' ? window.innerWidth : 0
+  ))
   insertAtIndexRef.current = insertAtIndex
 
   // Card handlers
@@ -389,6 +393,19 @@ export function DashboardPage({
     return () => observer.disconnect()
   }, [cards.length, shouldVirtualizeCards, visibleCardCount])
 
+  useEffect(() => {
+    const target = dashboardRef.current
+    if (!target || typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver(([entry]) => {
+      const nextWidth = Math.round(entry.contentRect.width)
+      setDashboardWidth(prev => (prev === nextWidth ? prev : nextWidth))
+    })
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [])
+
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
     id: configuringCard.id,
@@ -407,7 +424,7 @@ export function DashboardPage({
     // fixed-position children (FAB, customizer, modals) must live OUTSIDE it
     // to avoid clipping when ancestors create a new containing block (issue 8464).
     <>
-      <div className="pt-4 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
+      <div ref={dashboardRef} className="pt-4 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
         {/* Header */}
         <DashboardHeader
           title={title}
@@ -499,6 +516,7 @@ export function DashboardPage({
                           lastUpdated={lastUpdated}
                           onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
                           onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}
+                          containerWidth={dashboardWidth}
                         />
                       ))}
                     </div>

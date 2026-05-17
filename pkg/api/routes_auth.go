@@ -219,6 +219,12 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
+	feedbackBodyGuard := func(c *fiber.Ctx) error {
+		if len(c.Body()) > feedbackBodyLimit {
+			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Feedback attachments exceed the 10 MB upload limit. Keep each video at or below 10 MB and retry with fewer or smaller attachments.")
+		}
+		return c.Next()
+	}
 	bodyGuard := func(c *fiber.Ctx) error {
 		if c.Method() == fiber.MethodPost && c.Path() == "/api/feedback/requests" {
 			return c.Next()
@@ -231,7 +237,7 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 
 	feedbackCfg := handlers.LoadFeedbackConfig()
 	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
-	app.Post("/api/feedback/requests", bodyGuard, csrfGuard, jwtAuth, feedbackLimiter, feedback.CreateFeatureRequest)
+	app.Post("/api/feedback/requests", feedbackBodyGuard, csrfGuard, jwtAuth, feedbackLimiter, feedback.CreateFeatureRequest)
 
 	apiLimiterSkipPaths := map[string]bool{
 		"/api/feedback/requests": true,

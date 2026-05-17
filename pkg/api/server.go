@@ -129,10 +129,10 @@ func NewServer(cfg Config) (*Server, error) {
 		"::1/128",        // IPv6 loopback
 	}
 
-	// BodyLimit defaults to feedbackBodyLimit (5 MB) because the feedback endpoint
-	// accepts base64-encoded screenshot uploads. Per-route enforcement is done by
-	// bodyGuard middleware (1 MB for most routes) and analyticsBodyGuard (64 KB).
-	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	// BodyLimit defaults to defaultMaxBodyBytes so POST /api/feedback/requests can
+	// accept one advertised 10 MB attachment after base64 expansion. The route's
+	// feedbackBodyGuard enforces feedbackBodyLimit with a descriptive 413, while
+	// bodyGuard still caps most API routes at 1 MB and analyticsBodyGuard at 64 KB.
 	// Deployers can override via MAX_BODY_BYTES env var (#9891) to raise the cap
 	// for large form uploads or lower it to tighten the DoS surface further.
 	// ReadTimeout (30s) further bounds the buffering window.

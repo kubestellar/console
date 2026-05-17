@@ -28,7 +28,7 @@ import { compressScreenshot } from '../../lib/imageCompression'
 import { useFeatureRequests, DiagnosticInfo } from '../../hooks/useFeatureRequests'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAuth } from '../../lib/auth'
-import { MAX_VIDEO_SIZE_BYTES, ACCEPTED_MEDIA_TYPES, ACCEPTED_VIDEO_MIME_TYPES } from './FeatureRequestTypes'
+import { MAX_VIDEO_SIZE_BYTES, ACCEPTED_MEDIA_TYPES, ACCEPTED_VIDEO_MIME_TYPES, ATTACHMENT_HELP_TEXT } from './FeatureRequestTypes'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -573,7 +573,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                         <Film className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <span className="text-xs text-muted-foreground text-center">Drop images or videos here, or click to browse</span>
-                      <span className="text-2xs text-muted-foreground/70">Videos: mp4, webm, mov (max 10 MB)</span>
+                      <span className="text-2xs text-muted-foreground/70">{ATTACHMENT_HELP_TEXT}</span>
                       <input
                         ref={fileInputRef}
                         type="file"

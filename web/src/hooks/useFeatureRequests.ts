@@ -6,6 +6,8 @@ import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 
 /** Cache TTL: 30 seconds — polling interval for status updates */
 const CACHE_TTL_MS = 30_000
+/** User-facing error for feedback attachments that exceed the request body limit. */
+const FEEDBACK_ATTACHMENT_LIMIT_ERROR = 'Attachments are too large to submit. Keep each video at or below 10 MB and retry with fewer or smaller files.'
 
 // #8291 — Post-#6590, a legitimate OAuth session can live ENTIRELY in the
 // HttpOnly kc_auth cookie with nothing in localStorage['token']. The previous
@@ -17,6 +19,12 @@ function isDemoUser(): boolean {
   if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return false
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === DEMO_TOKEN_VALUE
+}
+
+function isFeedbackBodyLimitError(message: string): boolean {
+  return message.includes('Request Entity Too Large') ||
+    message.includes('Feedback attachments exceed the 10 MB upload limit') ||
+    message.includes('413')
 }
 
 // Types
@@ -431,6 +439,9 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     } catch (err: unknown) {
       if (err instanceof RateLimitError) {
         throw new Error('Too many requests — please wait a moment and try again.')
+      }
+      if (err instanceof Error && isFeedbackBodyLimitError(err.message)) {
+        throw new Error(FEEDBACK_ATTACHMENT_LIMIT_ERROR)
       }
       throw err
     } finally {
