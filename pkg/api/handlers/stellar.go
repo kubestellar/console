@@ -296,9 +296,9 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 }
 
 func (h *StellarHandler) GetPreferences(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	prefs, err := h.store.GetStellarPreferences(c.UserContext(), userID)
 	if err != nil {
@@ -316,9 +316,9 @@ type putStellarPreferencesRequest struct {
 }
 
 func (h *StellarHandler) UpdatePreferences(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 
 	var body putStellarPreferencesRequest
@@ -367,9 +367,9 @@ func (h *StellarHandler) UpdatePreferences(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ListMissions(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	limit := readListLimit(c)
 	offset := readListOffset(c)
@@ -381,9 +381,9 @@ func (h *StellarHandler) ListMissions(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) GetMission(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	missionID := strings.TrimSpace(c.Params("id"))
 	if missionID == "" {
@@ -411,9 +411,9 @@ type upsertStellarMissionRequest struct {
 }
 
 func (h *StellarHandler) CreateMission(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	mission, err := parseMissionPayload(c)
 	if err != nil {
@@ -431,9 +431,9 @@ func (h *StellarHandler) CreateMission(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) UpdateMission(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	missionID := strings.TrimSpace(c.Params("id"))
 	if missionID == "" {
@@ -468,9 +468,9 @@ func (h *StellarHandler) UpdateMission(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) DeleteMission(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	missionID := strings.TrimSpace(c.Params("id"))
 	if missionID == "" {
@@ -483,9 +483,9 @@ func (h *StellarHandler) DeleteMission(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ListExecutions(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	limit := readListLimit(c)
 	offset := readListOffset(c)
@@ -499,9 +499,9 @@ func (h *StellarHandler) ListExecutions(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) GetExecution(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	executionID := strings.TrimSpace(c.Params("id"))
 	if executionID == "" {
@@ -528,9 +528,9 @@ type createStellarActionRequest struct {
 }
 
 func (h *StellarHandler) ListActions(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	_ = h.processDueActions(c.UserContext(), userID)
 	limit := readListLimit(c)
@@ -544,9 +544,9 @@ func (h *StellarHandler) ListActions(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) GetAction(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	actionID := strings.TrimSpace(c.Params("id"))
 	if actionID == "" {
@@ -563,9 +563,9 @@ func (h *StellarHandler) GetAction(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) CreateAction(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var body createStellarActionRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -624,9 +624,9 @@ func (h *StellarHandler) CreateAction(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	if s, ok := h.store.(store.Store); ok {
 		if err := requireEditorOrAdmin(c, s); err != nil {
@@ -692,9 +692,9 @@ type rejectActionRequest struct {
 }
 
 func (h *StellarHandler) RejectAction(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	actionID := strings.TrimSpace(c.Params("id"))
 	if actionID == "" {
@@ -726,9 +726,9 @@ func (h *StellarHandler) RejectAction(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) DeleteAction(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	actionID := strings.TrimSpace(c.Params("id"))
 	if actionID == "" {
@@ -765,9 +765,9 @@ var knownDispatchableActions = map[string]bool{
 // For known K8s action types, dispatches directly via the scheduler.
 // For "investigate" or unknown types, falls back to an LLM call.
 func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var body executeActionRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -1015,9 +1015,9 @@ func (h *StellarHandler) executeLLMAction(c *fiber.Ctx, userID string, body exec
 }
 
 func (h *StellarHandler) ListMemory(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	limit := readListLimit(c)
 	offset := readListOffset(c)
@@ -1036,9 +1036,9 @@ type searchMemoryRequest struct {
 }
 
 func (h *StellarHandler) SearchMemory(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var body searchMemoryRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -1060,9 +1060,9 @@ func (h *StellarHandler) SearchMemory(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) DeleteMemory(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	entryID := strings.TrimSpace(c.Params("id"))
 	if entryID == "" {
@@ -1075,9 +1075,9 @@ func (h *StellarHandler) DeleteMemory(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) GetState(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	_ = h.syncTimelineNotifications(c.UserContext(), userID)
 	state, err := h.buildState(c.UserContext(), userID)
@@ -1088,9 +1088,9 @@ func (h *StellarHandler) GetState(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 
 	since := time.Now().UTC().Add(-stellarDigestLookbackHours * time.Hour)
@@ -1216,9 +1216,9 @@ func parseWatchLine(content string) (string, *watchSuggestion) {
 }
 
 func (h *StellarHandler) Ask(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var body quickAskRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -1405,9 +1405,9 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ListNotifications(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	_ = h.syncTimelineNotifications(c.UserContext(), userID)
 	limit := readListLimit(c)
@@ -1420,9 +1420,9 @@ func (h *StellarHandler) ListNotifications(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) MarkNotificationRead(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	notificationID := strings.TrimSpace(c.Params("id"))
 	if notificationID == "" {
@@ -1435,9 +1435,9 @@ func (h *StellarHandler) MarkNotificationRead(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ListTasks(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	items, err := h.store.GetOpenTasks(c.UserContext(), userID)
 	if err != nil {
@@ -1447,9 +1447,9 @@ func (h *StellarHandler) ListTasks(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) CreateTask(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var body struct {
 		SessionID   string `json:"sessionId"`
@@ -1510,9 +1510,9 @@ func (h *StellarHandler) CreateTask(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) UpdateTaskStatus(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	taskID := strings.TrimSpace(c.Params("id"))
 	if taskID == "" {
@@ -1541,9 +1541,9 @@ func (h *StellarHandler) UpdateTaskStatus(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	_ = userID
 	cluster := strings.TrimSpace(c.Query("cluster"))
@@ -1556,9 +1556,9 @@ func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) Stream(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 
 	// Sprint 5: detect returning user and update last-seen
@@ -1689,9 +1689,9 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ListProviders(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	global := h.providerRegistry.ListProviderInfo(c.UserContext())
 	userItems := make([]store.StellarProviderConfig, 0)
@@ -1824,9 +1824,9 @@ func validateStellarProviderBaseURL(provider, rawBaseURL string) (string, error)
 }
 
 func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var req struct {
 		Provider    string `json:"provider"`
@@ -1875,9 +1875,9 @@ func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) DeleteProvider(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	id := strings.TrimSpace(c.Params("id"))
 	del, ok := h.store.(interface {
@@ -1893,9 +1893,9 @@ func (h *StellarHandler) DeleteProvider(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) SetDefaultProvider(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	id := strings.TrimSpace(c.Params("id"))
 	setter, ok := h.store.(interface {
@@ -1911,9 +1911,9 @@ func (h *StellarHandler) SetDefaultProvider(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) TestProvider(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	id := strings.TrimSpace(c.Params("id"))
 	providerStore, ok := h.store.(interface {
@@ -2553,9 +2553,9 @@ func truncateString(s string, n int) string {
 
 // Watch handlers
 func (h *StellarHandler) ListWatches(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	watches, err := h.store.(interface {
 		GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
@@ -2575,9 +2575,9 @@ type createWatchRequest struct {
 }
 
 func (h *StellarHandler) CreateWatch(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	var body createWatchRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -2611,9 +2611,9 @@ func (h *StellarHandler) CreateWatch(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	watchID := strings.TrimSpace(c.Params("id"))
 	if watchID == "" {
@@ -2635,9 +2635,9 @@ func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
 }
 
 func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	watchID := strings.TrimSpace(c.Params("id"))
 	if watchID == "" {
@@ -2657,9 +2657,9 @@ func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Snooze watch ───────────────────────────────────────────────────
 
 func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	watchID := strings.TrimSpace(c.Params("id"))
 	if watchID == "" {
@@ -2684,9 +2684,9 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
 func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	limit := readListLimit(c)
 	entries, err := h.store.ListStellarAuditLog(c.UserContext(), limit)
