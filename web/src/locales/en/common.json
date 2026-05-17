@@ -4059,7 +4059,7 @@
     "failing": "failing"
   },
   "deploy": {
-    "title": "KubeStellar Deploy",
+    "title": "Deploy",
     "subtitle": "Monitor deployments, GitOps, and Helm releases across clusters",
     "dashboardTitle": "Deployment Dashboard",
     "emptyDescription": "Add deployment monitoring cards! Track GitOps status, Helm releases, ArgoCD applications, and deployment health.",
