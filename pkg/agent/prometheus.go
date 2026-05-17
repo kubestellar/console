@@ -30,6 +30,11 @@ const (
 	// This prevents users from crafting arbitrarily large queries that could cause
 	// excessive resource consumption on the Prometheus server (#4721).
 	maxPromQLQueryLength = 2048
+
+	// prometheusMaxResponseBytes caps the Prometheus response body at 10 MB.
+	// Defense-in-depth against a compromised or misconfigured in-cluster
+	// Prometheus streaming excessive data within the 10s client timeout (#14407).
+	prometheusMaxResponseBytes = 10 * 1024 * 1024
 )
 
 // writePrometheusError writes a JSON error response and logs the underlying
@@ -151,9 +156,11 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	// Stream the raw Prometheus response back to the caller
+	// Stream the raw Prometheus response back to the caller, capped at
+	// prometheusMaxResponseBytes to prevent resource exhaustion (#14407).
 	w.WriteHeader(resp.StatusCode)
-	if _, copyErr := io.Copy(w, resp.Body); copyErr != nil {
+	limited := io.LimitReader(resp.Body, prometheusMaxResponseBytes)
+	if _, copyErr := io.Copy(w, limited); copyErr != nil {
 		slog.Error("failed to stream Prometheus response", "error", copyErr)
 	}
 }
