@@ -463,6 +463,6 @@ describe('Compliance dashboard component', () => {
     render(<Compliance />)
 
     const unknown = getStatValue('non_existent_stat')
-    expect(unknown.value).toBe('-')
+    expect(unknown.value).toBe('—')
   })
 })
