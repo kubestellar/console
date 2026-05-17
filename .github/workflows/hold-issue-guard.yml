@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     # Run on PR events always; on issue events only when the hold label is involved
     if: >-
-      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event_name == 'issues' && github.event.label.name == 'hold')
     steps:
       - name: Check for hold-labeled referenced issues

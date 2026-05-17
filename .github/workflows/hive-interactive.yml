@@ -17,7 +17,7 @@ jobs:
   post-directions:
     if: |
       (github.event_name == 'issues' && github.event.issue.user.type != 'Bot') ||
-      (github.event_name == 'pull_request_target' && github.event.pull_request.user.type != 'Bot')
+      (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot')
     runs-on: ubuntu-latest
     steps:
       - name: Post hive interaction directions
