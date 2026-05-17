@@ -361,13 +361,16 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 	// Method 2: Check for linked issue numbers (Fixes #123, Closes #456)
 	if request == nil {
 		linkedIssues := extractLinkedIssueNumbers(body)
-		for _, issueNum := range linkedIssues {
-			var err error
-			request, err = h.store.GetFeatureRequestByIssueNumber(ctx, issueNum)
-			if err == nil && request != nil {
+		if len(linkedIssues) > 0 {
+			requests, err := h.store.GetFeatureRequestsByIssueNumbers(ctx, linkedIssues)
+			if err == nil && len(requests) > 0 {
+				request = requests[0]
 				requestID = request.ID
+				issueNum := 0
+				if request.GitHubIssueNumber != nil {
+					issueNum = *request.GitHubIssueNumber
+				}
 				slog.Info("[Webhook] PR linked to feature request via issue", "pr", prNumber, "issue", issueNum)
-				break
 			}
 		}
 	}

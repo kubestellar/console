@@ -41,6 +41,36 @@ func (s *SQLiteStore) GetFeatureRequestByIssueNumber(ctx context.Context, issueN
 	return s.scanFeatureRequest(row)
 }
 
+func (s *SQLiteStore) GetFeatureRequestsByIssueNumbers(ctx context.Context, issueNumbers []int) ([]*models.FeatureRequest, error) {
+	if len(issueNumbers) == 0 {
+		return make([]*models.FeatureRequest, 0), nil
+	}
+	placeholders := ""
+	args := make([]interface{}, len(issueNumbers))
+	for i, n := range issueNumbers {
+		if i > 0 {
+			placeholders += ","
+		}
+		placeholders += "?"
+		args[i] = n
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, title, description, request_type, target_repo, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE github_issue_number IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]*models.FeatureRequest, 0, len(issueNumbers))
+	for rows.Next() {
+		r, err := s.scanFeatureRequestRow(ctx, rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
 func (s *SQLiteStore) GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, title, description, request_type, target_repo, github_issue_number, status, pr_number, pr_url, copilot_session_url, netlify_preview_url, closed_by_user, latest_comment, created_at, updated_at FROM feature_requests WHERE pr_number = ?`, prNumber)
 	return s.scanFeatureRequest(row)

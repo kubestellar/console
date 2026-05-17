@@ -374,6 +374,7 @@ type Store interface {
 	CreateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error
 	GetFeatureRequest(ctx context.Context, id uuid.UUID) (*models.FeatureRequest, error)
 	GetFeatureRequestByIssueNumber(ctx context.Context, issueNumber int) (*models.FeatureRequest, error)
+	GetFeatureRequestsByIssueNumbers(ctx context.Context, issueNumbers []int) ([]*models.FeatureRequest, error)
 	GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error)
 	// GetUserFeatureRequests returns a user's feature requests, newest first.
 	// #6601: limit/offset required. Pass 0 for limit to use the store default.

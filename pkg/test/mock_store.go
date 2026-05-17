@@ -246,6 +246,13 @@ func (m *MockStore) GetFeatureRequestByIssueNumber(ctx context.Context, issueNum
 	}
 	return args.Get(0).(*models.FeatureRequest), args.Error(1)
 }
+func (m *MockStore) GetFeatureRequestsByIssueNumbers(ctx context.Context, issueNumbers []int) ([]*models.FeatureRequest, error) {
+	args := m.Called(issueNumbers)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.FeatureRequest), args.Error(1)
+}
 func (m *MockStore) GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error) {
 	args := m.Called(prNumber)
 	if args.Get(0) == nil {
