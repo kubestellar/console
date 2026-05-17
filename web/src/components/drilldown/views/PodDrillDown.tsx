@@ -1,50 +1,31 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
-import { useMissions } from '../../../hooks/useMissions'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
-import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
-import { useCanI } from '../../../hooks/usePermissions'
-import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
-import { safeLazy } from '../../../lib/safeLazy'
-const PodExecTerminal = safeLazy(() => import('../../terminal/PodExecTerminal'), 'default')
-const PodLabelsTab = safeLazy(() => import('./pod-drilldown/PodLabelsTab'), 'PodLabelsTab')
-const PodRelatedTab = safeLazy(() => import('./pod-drilldown/PodRelatedTab'), 'PodRelatedTab')
-const PodOutputTab = safeLazy(() => import('./pod-drilldown/PodOutputTab'), 'PodOutputTab')
-const PodAiAnalysis = safeLazy(() => import('./pod-drilldown/PodAiAnalysis'), 'PodAiAnalysis')
-import { cn } from '../../../lib/cn'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Box, Layers, Loader2, RefreshCw, Server, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
-import {
-  filterPodIssuesForDiagnosis,
-  getIssueSeverity,
-  getPodDiagnosis,
-  UNHEALTHY_STATUSES, RAPID_REOPEN_THRESHOLD_MS,
-  getPodCache, setPodCache, cleanupPodCache,
-  PodDeleteSection
-} from './pod-drilldown'
-import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
+import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { safeLazy } from '../../../lib/safeLazy'
+import { cn } from '../../../lib/cn'
 import { copyToClipboard } from '../../../lib/clipboard'
-import { useToast } from '../../ui/Toast'
+import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
+import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { useAsyncData } from '../../../hooks/useAsyncData'
 import { PodStatusSection } from './PodStatusSection'
 import { PodLogsSection } from './PodLogsSection'
 import { PodEventsSection } from './PodEventsSection'
 import { PodYamlSection } from './PodYamlSection'
-import { computeKeyValueDiffMap } from './pod-drilldown/helpers'
 import { PodLabelsProvider } from './pod-drilldown/PodLabelsContext'
+import { computeKeyValueDiffMap } from './pod-drilldown/helpers'
+import { getIssueSeverity, PodAiAnalysis, PodDeleteSection, setPodCache, type TabType } from './pod-drilldown'
+import { safeSet, usePodData } from './PodDrillDown.hooks'
+import { usePodActions } from './PodDrillDown.actions'
+import { useContainerNames, usePodTabs } from './PodDrillDown.tabs'
 
-/** Keys that must never be used as object property names (prototype pollution prevention). */
-const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
-
-/** Safely assign a key-value pair to a plain object, rejecting prototype-polluting keys. */
-function safeSet<T>(obj: Record<string, T>, key: string, value: T): void {
-  if (!UNSAFE_KEYS.has(key)) {
-    obj[key] = value
-  }
-}
+const PodExecTerminal = safeLazy(() => import('../../terminal/PodExecTerminal'), 'default')
+const PodLabelsTab = safeLazy(() => import('./pod-drilldown/PodLabelsTab'), 'PodLabelsTab')
+const PodRelatedTab = safeLazy(() => import('./pod-drilldown/PodRelatedTab'), 'PodRelatedTab')
+const PodOutputTab = safeLazy(() => import('./pod-drilldown/PodOutputTab'), 'PodOutputTab')
 
 const DIAGNOSIS_SUMMARY_KEYS = {
   'crash-loop': 'drilldown.diagnosis.summaries.crashLoop',
@@ -52,676 +33,117 @@ const DIAGNOSIS_SUMMARY_KEYS = {
   'image-pull': 'drilldown.diagnosis.summaries.imagePull',
   'config-error': 'drilldown.diagnosis.summaries.configError',
   'probe-failure': 'drilldown.diagnosis.summaries.probeFailure',
-  'unknown': 'drilldown.diagnosis.summaries.unknown',
+  unknown: 'drilldown.diagnosis.summaries.unknown',
 } as const
 
 const DIAGNOSIS_STEP_KEYS = {
-  'crash-loop': [
-    'drilldown.diagnosis.steps.checkLogs',
-    'drilldown.diagnosis.steps.verifyCommand',
-    'drilldown.diagnosis.steps.ensureLongRunningProcess',
-  ],
-  'oom-killed': [
-    'drilldown.diagnosis.steps.checkMemoryUsage',
-    'drilldown.diagnosis.steps.raiseMemoryLimit',
-    'drilldown.diagnosis.steps.inspectRecentChanges',
-  ],
-  'image-pull': [
-    'drilldown.diagnosis.steps.verifyImageReference',
-    'drilldown.diagnosis.steps.checkRegistryAccess',
-    'drilldown.diagnosis.steps.confirmImageExists',
-  ],
-  'config-error': [
-    'drilldown.diagnosis.steps.inspectPodEvents',
-    'drilldown.diagnosis.steps.verifyReferencedConfig',
-    'drilldown.diagnosis.steps.reviewPodSpec',
-  ],
-  'probe-failure': [
-    'drilldown.diagnosis.steps.checkProbeConfiguration',
-    'drilldown.diagnosis.steps.verifyAppStartup',
-    'drilldown.diagnosis.steps.reviewRecentDeployments',
-  ],
-  'unknown': [
-    'drilldown.diagnosis.steps.checkLogs',
-    'drilldown.diagnosis.steps.inspectPodEvents',
-    'drilldown.diagnosis.steps.reviewPodSpec',
-  ],
+  'crash-loop': ['drilldown.diagnosis.steps.checkLogs', 'drilldown.diagnosis.steps.verifyCommand', 'drilldown.diagnosis.steps.ensureLongRunningProcess'],
+  'oom-killed': ['drilldown.diagnosis.steps.checkMemoryUsage', 'drilldown.diagnosis.steps.raiseMemoryLimit', 'drilldown.diagnosis.steps.inspectRecentChanges'],
+  'image-pull': ['drilldown.diagnosis.steps.verifyImageReference', 'drilldown.diagnosis.steps.checkRegistryAccess', 'drilldown.diagnosis.steps.confirmImageExists'],
+  'config-error': ['drilldown.diagnosis.steps.inspectPodEvents', 'drilldown.diagnosis.steps.verifyReferencedConfig', 'drilldown.diagnosis.steps.reviewPodSpec'],
+  'probe-failure': ['drilldown.diagnosis.steps.checkProbeConfiguration', 'drilldown.diagnosis.steps.verifyAppStartup', 'drilldown.diagnosis.steps.reviewRecentDeployments'],
+  unknown: ['drilldown.diagnosis.steps.checkLogs', 'drilldown.diagnosis.steps.inspectPodEvents', 'drilldown.diagnosis.steps.reviewPodSpec'],
 } as const
 
 function TabLoadingFallback() {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
-    </div>
-  )
+  return <div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-transparent border-t-primary" /></div>
 }
 
 export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const { t } = useTranslation()
+  const { isConnected: agentConnected } = useLocalAgent()
+  const { status: backendStatus, inCluster } = useBackendHealth()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt, errorMessage } = useApiKeyCheck()
+  const { drillToNamespace, drillToCluster, drillToDeployment, drillToReplicaSet, drillToConfigMap, drillToSecret, drillToServiceAccount, drillToPVC } = useDrillDownActions()
+  const { TABS } = usePodTabs()
+
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const podName = data.pod as string
-  const { startMission } = useMissions()
-  const { isConnected: agentConnected } = useLocalAgent()
-  const { status: backendStatus, inCluster } = useBackendHealth()
-  const { drillToNamespace, drillToCluster, drillToDeployment, drillToReplicaSet, drillToConfigMap, drillToSecret, drillToServiceAccount, drillToPVC } = useDrillDownActions()
-
-  // Get cached data - first check module-level cache, then fall back to view cache
-  const persistentCache = getPodCache(cluster, namespace, podName)
-  const viewCache = (data._cache as CachedData) || {}
-  const cache = persistentCache || viewCache
-
-  // Track if this is a fresh mount vs navigation back
-  const hasLoadedRef = useRef(false)
-  // Track if we should auto-refresh due to rapid reopen
-  const shouldAutoRefreshRef = useRef(false)
-
-  // Check if this is a rapid reopen (user looking for updated data)
-  const now = Date.now()
-  if (persistentCache && now - persistentCache.lastOpened < RAPID_REOPEN_THRESHOLD_MS) {
-    shouldAutoRefreshRef.current = true
-  }
-
-  // Update cache metadata
-  setPodCache(cluster, namespace, podName, {
-    lastOpened: now,
-    openCount: (persistentCache?.openCount || 0) + 1
-  })
-
-  // Clean up old cache entries periodically
-  cleanupPodCache()
-
-  const [activeTab, setActiveTab] = useState<TabType>((data.tab as TabType) || 'overview')
-  const { showToast } = useToast()
-  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt, errorMessage } = useApiKeyCheck()
+  const passedLabels = data.labels as Record<string, string> | undefined
+  const passedAnnotations = data.annotations as Record<string, string> | undefined
   const backendActionUnavailable = inCluster && backendStatus === 'disconnected'
   const backendUnavailableMessage = t('drilldown.status.backendUnavailableActions')
-  const [labels, setLabels] = useState<Record<string, string> | null>(cache.labels || null)
-  const [annotations, setAnnotations] = useState<Record<string, string> | null>(cache.annotations || null)
+
+  const podData = usePodData({ cluster, namespace, podName, data, agentConnected, backendActionUnavailable, backendUnavailableMessage })
+  const [activeTab, setActiveTab] = useState<TabType>((data.tab as TabType) || 'overview')
+  const [labels, setLabels] = useState<Record<string, string> | null>(podData.cache.labels || null)
+  const [annotations, setAnnotations] = useState<Record<string, string> | null>(podData.cache.annotations || null)
   const [showAllLabels, setShowAllLabels] = useState(false)
   const [showAllAnnotations, setShowAllAnnotations] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
-  const [editingLabels, setEditingLabels] = useState(false)
-  const [pendingLabelChanges, setPendingLabelChanges] = useState<Record<string, string | null>>({})
-  const [newLabelKey, setNewLabelKey] = useState('')
-  const [newLabelValue, setNewLabelValue] = useState('')
-  const [labelSaving, setLabelSaving] = useState(false)
-  const [labelError, setLabelError] = useState<string | null>(null)
-  const [editingAnnotations, setEditingAnnotations] = useState(false)
-  const [pendingAnnotationChanges, setPendingAnnotationChanges] = useState<Record<string, string | null>>({})
-  const [newAnnotationKey, setNewAnnotationKey] = useState('')
-  const [newAnnotationValue, setNewAnnotationValue] = useState('')
-  const [annotationSaving, setAnnotationSaving] = useState(false)
-  const [annotationError, setAnnotationError] = useState<string | null>(null)
-  const [relatedResources, setRelatedResources] = useState<RelatedResource[]>(cache.ownerChain || [])
-  const [relatedLoading, setRelatedLoading] = useState(false)
-  const [configMaps, setConfigMaps] = useState<string[]>(cache.configMaps || [])
-  const [secrets, setSecrets] = useState<string[]>(cache.secrets || [])
-  const [pvcs, setPvcs] = useState<string[]>(cache.pvcs || [])
-  const [serviceAccount, setServiceAccount] = useState<string | null>(cache.serviceAccount || null)
-  const [ownerChain, setOwnerChain] = useState<RelatedResource[]>(cache.ownerChain || [])
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [canDeletePod, setCanDeletePod] = useState<boolean | null>(null)
-  const [deletingPod, setDeletingPod] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [showDeletePodConfirm, setShowDeletePodConfirm] = useState(false)
-  const { checkPermission } = useCanI()
-  const { close: closeDrillDown } = useDrillDown()
-  const {
-    runKubectl,
-    openTrackedWs,
-    parseWsMessage: parseDrillDownWsMessage,
-  } = useDrillDownWebSocket(cluster)
+  const cachedOwnerChain = podData.cache.ownerChain || []
 
-  const getInvalidWsResponseError = useCallback((context: string) => (
-    `${context} failed: received an invalid response from the agent.`
-  ), [])
-
-  const parseWsMessage = useCallback((event: MessageEvent, context: string) => {
-    const message = parseDrillDownWsMessage(event)
-    if (!message) {
-      console.error(`[PodDrillDown] Failed to parse ${context} WebSocket message.`)
-      showToast(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'), 'error')
-      return null
-    }
-    return message
-  }, [parseDrillDownWsMessage, showToast, t])
-
-  // Pod data from the issue
-  const status = data.status as string
-  const restarts = (data.restarts as number) || 0
-  const reason = data.reason as string
-  const passedIssues = (data.issues as string[]) || []
-  const passedLabels = data.labels as Record<string, string> | undefined
-  const passedAnnotations = data.annotations as Record<string, string> | undefined
-
-  const invalidPodResponseError = t(
-    'drilldown.errors.invalidPodResponse',
-    'Failed to load pod details due to an invalid agent response.',
-  )
-
-  const describeFetcher = useCallback(async (): Promise<string> => {
-    const output = await runKubectl(['describe', 'pod', podName, '-n', namespace])
-    if (!output) {
-      throw new Error(invalidPodResponseError)
-    }
-    return output
-  }, [runKubectl, podName, namespace, invalidPodResponseError])
-
-  const logsFetcher = useCallback(async (): Promise<string> => {
-    const output = await runKubectl(['logs', podName, '-n', namespace, '--tail=500'])
-    if (!output) {
-      throw new Error(invalidPodResponseError)
-    }
-    return output
-  }, [runKubectl, podName, namespace, invalidPodResponseError])
-
-  const eventsFetcher = useCallback(async (): Promise<string> => {
-    const output = await runKubectl([
-      'get',
-      'events',
-      '-n',
-      namespace,
-      '--field-selector',
-      `involvedObject.name=${podName}`,
-      '-o',
-      'wide',
-    ])
-    if (!output) {
-      throw new Error(invalidPodResponseError)
-    }
-    return output
-  }, [runKubectl, podName, namespace, invalidPodResponseError])
-
-  const podStatusFetcher = useCallback(async (): Promise<string> => {
-    const ws = await openTrackedWs()
-    return new Promise((resolve, reject) => {
-      const requestId = `status-${Date.now()}`
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['get', 'pod', podName, '-n', namespace, '-o', 'wide'] },
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'pod status')
-        if (!msg) {
-          reject(new Error(getInvalidWsResponseError('Pod status')))
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId && msg.payload?.output) {
-          resolve(msg.payload.output)
-          ws.close()
-          return
-        }
-        if (msg.id === requestId) {
-          reject(new Error(getInvalidWsResponseError('Pod status')))
-          ws.close()
-          return
-        }
-      }
-
-      ws.onerror = () => {
-        ws.close()
-        reject(new Error(getInvalidWsResponseError('Pod status')))
-      }
-    })
-  }, [openTrackedWs, cluster, podName, namespace, parseWsMessage, getInvalidWsResponseError])
-
-  const yamlFetcher = useCallback(async (): Promise<string> => {
-    const ws = await openTrackedWs()
-    return new Promise((resolve, reject) => {
-      const requestId = `yaml-${Date.now()}`
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['get', 'pod', podName, '-n', namespace, '-o', 'yaml'] },
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'yaml')
-        if (!msg) {
-          reject(new Error(getInvalidWsResponseError('YAML')))
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId && msg.payload?.output) {
-          resolve(msg.payload.output)
-          ws.close()
-          return
-        }
-        if (msg.id === requestId) {
-          reject(new Error(getInvalidWsResponseError('YAML')))
-          ws.close()
-          return
-        }
-      }
-
-      ws.onerror = () => {
-        ws.close()
-        reject(new Error(getInvalidWsResponseError('YAML')))
-      }
-    })
-  }, [openTrackedWs, cluster, podName, namespace, parseWsMessage, getInvalidWsResponseError])
-
-  const {
-    data: describeOutput,
-    loading: describeLoading,
-    error: describeError,
-    refetch: refetchDescribe,
-  } = useAsyncData(describeFetcher, [describeFetcher], {
-    initialData: cache.describeOutput || null,
-    enabled: false,
-  })
-
-  const {
-    data: logsOutput,
-    loading: logsLoading,
-    error: logsError,
-    refetch: refetchLogs,
-  } = useAsyncData(logsFetcher, [logsFetcher], {
-    initialData: cache.logsOutput || null,
-    enabled: false,
-  })
-
-  const {
-    data: eventsOutput,
-    loading: eventsLoading,
-    error: eventsError,
-    refetch: refetchEvents,
-  } = useAsyncData(eventsFetcher, [eventsFetcher], {
-    initialData: cache.eventsOutput || null,
-    enabled: false,
-  })
-
-  const {
-    data: yamlOutput,
-    loading: yamlLoading,
-    error: yamlError,
-    refetch: refetchYaml,
-  } = useAsyncData(yamlFetcher, [yamlFetcher], {
-    initialData: cache.yamlOutput || null,
-    enabled: false,
-  })
-
-  const {
-    data: podStatusOutput,
-    loading: podStatusLoading,
-    error: podStatusError,
-    refetch: refetchPodStatus,
-  } = useAsyncData(podStatusFetcher, [podStatusFetcher], {
-    initialData: cache.podStatusOutput || null,
-    enabled: false,
-  })
-
-  const fetchDescribe = async (force = false): Promise<void> => {
-    if (!agentConnected || (!force && describeOutput)) return
-    await refetchDescribe()
-  }
-
-  const fetchLogs = async (force = false): Promise<void> => {
-    if (!agentConnected || (!force && logsOutput)) return
-    await refetchLogs()
-  }
-
-  const fetchEvents = async (force = false): Promise<void> => {
-    if (!agentConnected || (!force && eventsOutput)) return
-    await refetchEvents()
-  }
-
-  const fetchYaml = async (force = false): Promise<void> => {
-    if (!agentConnected || (!force && yamlOutput)) return
-    await refetchYaml()
-  }
-
-  const fetchPodStatus = async (force = false): Promise<void> => {
-    if (!agentConnected || (!force && podStatusOutput)) return
-    await refetchPodStatus()
-  }
-
-  const baseIssues = useMemo(() => {
-    const allIssues = [...passedIssues]
-
-    if (status && UNHEALTHY_STATUSES.some(s => status.toLowerCase().includes(s.toLowerCase()))) {
-      if (!allIssues.some(i => i.toLowerCase() === status.toLowerCase())) {
-        allIssues.unshift(status)
-      }
-    }
-
-    if (podStatusOutput) {
-      const lines = podStatusOutput.split('\n')
-      const dataLine = lines.find(line => line.includes(podName))
-      if (dataLine) {
-        const parts = dataLine.trim().split(/\s+/)
-        if (parts.length >= 3) {
-          const kubectlStatus = parts[2]
-          if (kubectlStatus && UNHEALTHY_STATUSES.some(s => kubectlStatus.toLowerCase().includes(s.toLowerCase()))) {
-            if (!allIssues.some(i => i.toLowerCase() === kubectlStatus.toLowerCase())) {
-              allIssues.unshift(kubectlStatus)
-            }
-          }
-          const ready = parts[1]
-          if (ready && ready.includes('/')) {
-            const [current, total] = ready.split('/')
-            if (current !== total && total !== '0') {
-              const notReadyMsg = `${current}/${total} containers ready`
-              if (!allIssues.some(i => i.includes('containers ready'))) {
-                allIssues.push(notReadyMsg)
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (reason && !allIssues.some(i => i.toLowerCase() === reason.toLowerCase())) {
-      allIssues.push(reason)
-    }
-
-    return allIssues
-  }, [passedIssues, status, reason, podStatusOutput, podName])
-
-  const podDiagnosis = useMemo(() => getPodDiagnosis({
-    status,
-    reason,
-    issues: baseIssues,
-    describeOutput,
-    eventsOutput,
-    logsOutput,
-  }), [status, reason, baseIssues, describeOutput, eventsOutput, logsOutput])
-
-  const issues = useMemo(() => {
-    const allIssues = [...baseIssues]
-
-    if (eventsOutput && !eventsOutput.includes('No resources found')) {
-      const eventLines = eventsOutput.split('\n')
-      const headerLine = eventLines[0] || ''
-      const typeIdx = headerLine.indexOf('TYPE')
-      const reasonIdx = headerLine.indexOf('REASON')
-      const messageIdx = headerLine.indexOf('MESSAGE')
-
-      const TYPE_COLUMN_FALLBACK_WIDTH = 10
-      if (typeIdx >= 0 && messageIdx >= 0) {
-        for (const line of eventLines.slice(1)) {
-          if (!line.trim()) continue
-          const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + TYPE_COLUMN_FALLBACK_WIDTH
-          const eventType = line.substring(typeIdx, typeEnd).trim()
-          if (eventType.toLowerCase() === 'warning') {
-            const message = messageIdx < line.length
-              ? line.substring(messageIdx).trim()
-              : ''
-            const REASON_COLUMN_FALLBACK_WIDTH = 30
-            const eventReason = reasonIdx >= 0
-              ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + REASON_COLUMN_FALLBACK_WIDTH).trim()
-              : ''
-            const MAX_EVENT_MSG_LENGTH = 80
-            const issueText = eventReason
-              ? `Warning: ${eventReason}${message ? ' — ' + message.substring(0, MAX_EVENT_MSG_LENGTH) : ''}`
-              : `Warning: ${message.substring(0, MAX_EVENT_MSG_LENGTH)}`
-            if (!allIssues.some(i => i.toLowerCase() === issueText.toLowerCase())) {
-              allIssues.push(issueText)
-            }
-          }
-        }
-      }
-    }
-
-    return filterPodIssuesForDiagnosis(allIssues, podDiagnosis?.kind)
-  }, [baseIssues, eventsOutput, podDiagnosis?.kind])
-
-  const aiAnalysisFetcher = useCallback(async (): Promise<string> => {
-    if (backendActionUnavailable) {
-      showToast(backendUnavailableMessage, 'error')
-      throw new Error(backendUnavailableMessage)
-    }
-
-    const [
-      podGet,
-      podDescribe,
-      podYaml,
-      podLogs,
-      podEvents,
-      namespaceEvents,
-    ] = await Promise.all([
-      runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'wide']),
-      runKubectl(['describe', 'pod', podName, '-n', namespace]),
-      runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'yaml']),
-      runKubectl(['logs', podName, '-n', namespace, '--tail=200']),
-      runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${podName}`]),
-      runKubectl(['get', 'events', '-n', namespace, '--sort-by=.lastTimestamp']),
-    ])
-
-    let ownerInfo = ''
-    const ownerMatch = podYaml.match(/ownerReferences:[\s\S]*?(?=\nspec:|$)/)
-    if (ownerMatch) {
-      const kindMatch = ownerMatch[0].match(/kind:\s*(\w+)/)
-      const nameMatch = ownerMatch[0].match(/name:\s*([\w-]+)/)
-      if (kindMatch && nameMatch) {
-        const ownerKind = kindMatch[1].toLowerCase()
-        const ownerName = nameMatch[1]
-        if (ownerKind === 'replicaset') {
-          const [rsDescribe, rsYaml] = await Promise.all([
-            runKubectl(['describe', 'replicaset', ownerName, '-n', namespace]),
-            runKubectl(['get', 'replicaset', ownerName, '-n', namespace, '-o', 'yaml']),
-          ])
-          ownerInfo = `\n--- REPLICASET INFO ---\n${rsDescribe}\n`
-
-          const deployMatch = rsYaml.match(/ownerReferences:[\s\S]*?name:\s*([\w-]+)/)
-          if (deployMatch) {
-            const deployDescribe = await runKubectl(['describe', 'deployment', deployMatch[1], '-n', namespace])
-            ownerInfo += `\n--- DEPLOYMENT INFO ---\n${deployDescribe}\n`
-          }
-        } else if (ownerKind === 'deployment') {
-          const deployDescribe = await runKubectl(['describe', 'deployment', ownerName, '-n', namespace])
-          ownerInfo += `\n--- DEPLOYMENT INFO ---\n${deployDescribe}\n`
-        } else if (ownerKind === 'job') {
-          const jobDescribe = await runKubectl(['describe', 'job', ownerName, '-n', namespace])
-          ownerInfo += `\n--- JOB INFO ---\n${jobDescribe}\n`
-        }
-      }
-    }
-
-    let nodeInfo = ''
-    const nodeMatch = podDescribe.match(/Node:\s*([\w.-]+)/)
-    if (nodeMatch && nodeMatch[1] !== '<none>') {
-      const nodeDescribe = await runKubectl(['describe', 'node', nodeMatch[1]])
-      const conditionsMatch = nodeDescribe.match(/Conditions:[\s\S]*?(?=Addresses:|$)/)
-      const capacityMatch = nodeDescribe.match(/Capacity:[\s\S]*?(?=Allocatable:|$)/)
-      const allocatableMatch = nodeDescribe.match(/Allocatable:[\s\S]*?(?=System Info:|$)/)
-      nodeInfo = `\n--- NODE INFO (${nodeMatch[1]}) ---\n`
-      if (conditionsMatch) nodeInfo += `Conditions:\n${conditionsMatch[0]}\n`
-      if (capacityMatch) nodeInfo += `${capacityMatch[0]}\n`
-      if (allocatableMatch) nodeInfo += `${allocatableMatch[0]}\n`
-    }
-
-    const analysisContext = `
-=== POD STATUS (kubectl get pod -o wide) ===
-${podGet}
-
-=== POD DESCRIBE ===
-${podDescribe}
-
-=== POD EVENTS ===
-${podEvents || 'No pod-specific events'}
-
-=== NAMESPACE RECENT EVENTS ===
-${namespaceEvents || 'No namespace events'}
-
-=== POD LOGS (last 200 lines) ===
-${podLogs || 'No logs available (pod may not have started)'}
-${ownerInfo}
-${nodeInfo}
-=== LABELS ===
-${labels ? Object.entries(labels).map(([k, v]) => `${k}=${v}`).join('\n') : 'No labels available'}
-
-=== ANNOTATIONS ===
-${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\n') : 'No annotations available'}
-`.trim()
-
-    const ws = await openTrackedWs()
-    const requestId = `ai-analyze-${Date.now()}`
-
-    return new Promise((resolve, reject) => {
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'claude',
-          payload: {
-            prompt: `You are a Kubernetes expert. Analyze this pod issue and provide a concise diagnosis.
-
-Pod: ${podName}
-Namespace: ${namespace}
-Reported Status: ${status}
-Reported Issues: ${(issues || []).join(', ')}
-
-COMPREHENSIVE POD CONTEXT:
-${analysisContext}
-
-Based on ALL the information above (status, events, logs, owner resources, node state), provide:
-1. ROOT CAUSE: What exactly happened? (Look for Evicted, OOMKilled, ImagePullBackOff, scheduling failures, resource limits, node issues, etc.)
-2. EVIDENCE: What specific data points confirm this?
-3. FIX: What's the recommended action?
-
-Be specific and reference actual values from the data. Keep response to 3-4 sentences max.`,
-          },
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'AI analysis')
-        if (!msg) {
-          const errMsg = 'AI analysis failed: received an invalid response from the agent.'
-          showToast(errMsg, 'error')
-          ws.close()
-          reject(new Error(errMsg))
-          return
-        }
-
-        if (msg.id === requestId) {
-          if (msg.payload?.content) {
-            ws.close()
-            resolve(msg.payload.content)
-            return
-          }
-          if (msg.payload?.error || msg.payload?.message) {
-            const errMsg = `Analysis unavailable: ${msg.payload.error || msg.payload.message}`
-            showToast(errMsg, 'error')
-            ws.close()
-            reject(new Error(errMsg))
-          } else {
-            ws.close()
-            resolve('Analysis complete - no specific issues identified.')
-          }
-        }
-      }
-
-      ws.onerror = () => {
-        const errMsg = 'Could not connect to AI analysis service. Please check that the agent is running and try again.'
-        showToast(errMsg, 'error')
-        ws.close()
-        reject(new Error(errMsg))
-      }
-    })
-  }, [
+  const actions = usePodActions({
+    cluster,
+    namespace,
+    podName,
+    status: podData.status,
+    restarts: podData.restarts,
+    issues: podData.issues,
+    agentConnected,
     backendActionUnavailable,
     backendUnavailableMessage,
-    runKubectl,
-    podName,
-    namespace,
-    status,
-    issues,
     labels,
     annotations,
-    openTrackedWs,
-    parseWsMessage,
-    showToast,
-  ])
+    ownerChain: cachedOwnerChain,
+    openTrackedWs: podData.openTrackedWs,
+    parseWsMessage: podData.parseWsMessage,
+  })
 
-  const {
-    data: aiAnalysis,
-    loading: aiAnalysisLoading,
-    error: aiAnalysisError,
-    refetch: refetchAiAnalysis,
-  } = useAsyncData(aiAnalysisFetcher, [aiAnalysisFetcher], {
-    initialData: cache.aiAnalysis || null,
+  const ownerChain = actions.relatedResources
+  const isManagedPod = ownerChain.some(owner => ['ReplicaSet', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job'].includes(owner.kind))
+  const containerNames = useContainerNames(podData.yamlOutput)
+  const aiAnalysisFetcher = useCallback(
+    () => podData.aiAnalysisFetcher(labels, annotations, podData.issues),
+    [podData.aiAnalysisFetcher, labels, annotations, podData.issues],
+  )
+  const { data: aiAnalysis, loading: aiAnalysisLoading, error: aiAnalysisError, refetch: refetchAiAnalysis } = useAsyncData(aiAnalysisFetcher, [aiAnalysisFetcher], {
+    initialData: podData.cache.aiAnalysis || null,
     enabled: false,
   })
 
-  const fetchAiAnalysis = async (): Promise<void> => {
+  const fetchAiAnalysis = useCallback(async () => {
     if (backendActionUnavailable || !agentConnected || aiAnalysisLoading) return
     await refetchAiAnalysis()
-  }
+  }, [backendActionUnavailable, agentConnected, aiAnalysisLoading, refetchAiAnalysis])
 
-  const filteredDisplayIssues = useMemo(
-    () => issues.filter(issue => issue.toLowerCase() !== status?.toLowerCase()),
-    [issues, status],
-  )
-
-  const labelDiffByKey = useMemo(
-    () => computeKeyValueDiffMap(labels, pendingLabelChanges),
-    [labels, pendingLabelChanges],
-  )
-
-  const annotationDiffByKey = useMemo(
-    () => computeKeyValueDiffMap(annotations, pendingAnnotationChanges),
-    [annotations, pendingAnnotationChanges],
-  )
-
+  const handleRepairPod = useCallback(() => actions.handleRepairPod(checkKeyAndRun), [actions, checkKeyAndRun])
+  const saveLabels = useCallback(() => actions.saveLabels(setLabels), [actions])
+  const saveAnnotations = useCallback(() => actions.saveAnnotations(setAnnotations), [actions])
+  const filteredDisplayIssues = useMemo(() => podData.issues.filter(issue => issue.toLowerCase() !== podData.status?.toLowerCase()), [podData.issues, podData.status])
+  const labelDiffByKey = useMemo(() => computeKeyValueDiffMap(labels, actions.pendingLabelChanges), [labels, actions.pendingLabelChanges])
+  const annotationDiffByKey = useMemo(() => computeKeyValueDiffMap(annotations, actions.pendingAnnotationChanges), [annotations, actions.pendingAnnotationChanges])
   const diagnosisEvidence = useMemo(() => {
-    if (!podDiagnosis) {
-      return []
-    }
+    if (!podData.podDiagnosis) return []
+    const items: string[] = []
+    if (podData.podDiagnosis.currentStateReason) items.push(t('drilldown.diagnosis.evidence.currentStateReason', { reason: podData.podDiagnosis.currentStateReason }))
+    if (podData.podDiagnosis.lastExitReason && podData.podDiagnosis.exitCode) items.push(t('drilldown.diagnosis.evidence.lastExitReasonWithCode', { reason: podData.podDiagnosis.lastExitReason, code: podData.podDiagnosis.exitCode }))
+    else if (podData.podDiagnosis.lastExitReason) items.push(t('drilldown.diagnosis.evidence.lastExitReason', { reason: podData.podDiagnosis.lastExitReason }))
+    if (podData.podDiagnosis.lastExitMessage) items.push(t('drilldown.diagnosis.evidence.lastExitMessage', { message: podData.podDiagnosis.lastExitMessage }))
+    if (podData.podDiagnosis.warningEvent) items.push(t('drilldown.diagnosis.evidence.warningEvent', { event: podData.podDiagnosis.warningEvent }))
+    if (podData.podDiagnosis.logSnippet) items.push(t('drilldown.diagnosis.evidence.logSnippet', { snippet: podData.podDiagnosis.logSnippet }))
+    if (items.length === 0 && podData.reason) items.push(t('drilldown.diagnosis.evidence.reportedReason', { reason: podData.reason }))
+    if (items.length === 0 && podData.status) items.push(t('drilldown.diagnosis.evidence.reportedStatus', { status: podData.status }))
+    return items
+  }, [podData.podDiagnosis, podData.reason, podData.status, t])
 
-    const evidenceItems: string[] = []
+  const handleCopy = useCallback((field: string, value: string) => {
+    copyToClipboard(value)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+  }, [])
 
-    if (podDiagnosis.currentStateReason) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.currentStateReason', { reason: podDiagnosis.currentStateReason }))
-    }
-    if (podDiagnosis.lastExitReason && podDiagnosis.exitCode) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitReasonWithCode', { reason: podDiagnosis.lastExitReason, code: podDiagnosis.exitCode }))
-    } else if (podDiagnosis.lastExitReason) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitReason', { reason: podDiagnosis.lastExitReason }))
-    }
-    if (podDiagnosis.lastExitMessage) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitMessage', { message: podDiagnosis.lastExitMessage }))
-    }
-    if (podDiagnosis.warningEvent) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.warningEvent', { event: podDiagnosis.warningEvent }))
-    }
-    if (podDiagnosis.logSnippet) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.logSnippet', { snippet: podDiagnosis.logSnippet }))
-    }
-    if (evidenceItems.length === 0 && reason) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.reportedReason', { reason }))
-    }
-    if (evidenceItems.length === 0 && status) {
-      evidenceItems.push(t('drilldown.diagnosis.evidence.reportedStatus', { status }))
-    }
-
-    return evidenceItems
-  }, [podDiagnosis, reason, status, t])
-
-  // No subscription; no cleanup needed — sync from props only
   useEffect(() => {
     if (passedLabels) setLabels(passedLabels)
     if (passedAnnotations) setAnnotations(passedAnnotations)
   }, [passedLabels, passedAnnotations])
 
   useEffect(() => {
-    if (!describeOutput || (labels && annotations)) return
-
-    const labelsMatch = describeOutput.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
-    const annotationsMatch = describeOutput.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
-
+    if (!podData.describeOutput || (labels && annotations)) return
+    const labelsMatch = podData.describeOutput.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
+    const annotationsMatch = podData.describeOutput.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
     if (labelsMatch && !labels) {
       const parsed: Record<string, string> = Object.create(null) as Record<string, string>
       labelsMatch[1].trim().split('\n').forEach(line => {
@@ -730,7 +152,6 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       })
       if (Object.keys(parsed).length > 0) setLabels(parsed)
     }
-
     if (annotationsMatch && !annotations) {
       const parsed: Record<string, string> = Object.create(null) as Record<string, string>
       annotationsMatch[1].trim().split('\n').forEach(line => {
@@ -743,1111 +164,90 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       })
       if (Object.keys(parsed).length > 0) setAnnotations(parsed)
     }
-  }, [describeOutput, labels, annotations])
+  }, [podData.describeOutput, labels, annotations])
 
-  // Pre-fetch tab data when agent connects
-  // Batched to limit concurrent WebSocket connections (max 2-3 at a time)
-  // Auto-refresh if the same pod is opened rapidly (user looking for changes)
   useEffect(() => {
-    if (!agentConnected || hasLoadedRef.current) return
-    hasLoadedRef.current = true
-
+    if (!agentConnected || podData.hasLoadedRef.current) return
+    podData.hasLoadedRef.current = true
     let cancelled = false
-    const forceRefresh = shouldAutoRefreshRef.current
-
+    const forceRefresh = podData.shouldAutoRefreshRef.current
     const loadData = async () => {
-      await Promise.all([
-        (forceRefresh || !podStatusOutput) && fetchPodStatus(forceRefresh),
-        (forceRefresh || !eventsOutput) && fetchEvents(forceRefresh),
-      ].filter(Boolean))
+      await Promise.all([(forceRefresh || !podData.podStatusOutput) && podData.fetchPodStatus(forceRefresh), (forceRefresh || !podData.eventsOutput) && podData.fetchEvents(forceRefresh)].filter(Boolean))
       if (cancelled) return
-
-      await Promise.all([
-        (forceRefresh || relatedResources.length === 0) && fetchRelatedResources(forceRefresh),
-        (forceRefresh || !describeOutput) && fetchDescribe(forceRefresh),
-      ].filter(Boolean))
+      await Promise.all([(forceRefresh || ownerChain.length === 0) && actions.fetchRelatedResources(forceRefresh), (forceRefresh || !podData.describeOutput) && podData.fetchDescribe(forceRefresh)].filter(Boolean))
       if (cancelled) return
-
-      await Promise.all([
-        (forceRefresh || !logsOutput) && fetchLogs(forceRefresh),
-        (forceRefresh || !yamlOutput) && fetchYaml(forceRefresh),
-      ].filter(Boolean))
+      await Promise.all([(forceRefresh || !podData.logsOutput) && podData.fetchLogs(forceRefresh), (forceRefresh || !podData.yamlOutput) && podData.fetchYaml(forceRefresh)].filter(Boolean))
     }
+    void loadData()
+    return () => { cancelled = true }
+  }, [agentConnected, actions, ownerChain.length, podData])
 
-    loadData()
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasLoadedRef guards against re-execution; only agentConnected triggers the initial load
-  }, [agentConnected])
-
-  // Save data to persistent cache whenever it changes
   useEffect(() => {
     setPodCache(cluster, namespace, podName, {
-      describeOutput: describeOutput || undefined,
-      logsOutput: logsOutput || undefined,
-      eventsOutput: eventsOutput || undefined,
-      yamlOutput: yamlOutput || undefined,
-      podStatusOutput: podStatusOutput || undefined,
+      describeOutput: podData.describeOutput || undefined,
+      logsOutput: podData.logsOutput || undefined,
+      eventsOutput: podData.eventsOutput || undefined,
+      yamlOutput: podData.yamlOutput || undefined,
+      podStatusOutput: podData.podStatusOutput || undefined,
       aiAnalysis: aiAnalysis || undefined,
       labels: labels || undefined,
       annotations: annotations || undefined,
-      configMaps: configMaps.length > 0 ? configMaps : undefined,
-      secrets: secrets.length > 0 ? secrets : undefined,
-      pvcs: pvcs.length > 0 ? pvcs : undefined,
-      serviceAccount: serviceAccount || undefined,
+      configMaps: actions.configMaps.length > 0 ? actions.configMaps : undefined,
+      secrets: actions.secrets.length > 0 ? actions.secrets : undefined,
+      pvcs: actions.pvcs.length > 0 ? actions.pvcs : undefined,
+      serviceAccount: actions.serviceAccount || undefined,
       ownerChain: ownerChain.length > 0 ? ownerChain : undefined,
-      fetchedAt: Date.now()
+      fetchedAt: Date.now(),
     })
-  }, [cluster, namespace, podName, describeOutput, logsOutput, eventsOutput, yamlOutput, podStatusOutput, aiAnalysis, labels, annotations, configMaps, secrets, pvcs, serviceAccount, ownerChain])
+  }, [cluster, namespace, podName, podData.describeOutput, podData.logsOutput, podData.eventsOutput, podData.yamlOutput, podData.podStatusOutput, aiAnalysis, labels, annotations, actions.configMaps, actions.secrets, actions.pvcs, actions.serviceAccount, ownerChain])
 
-  const handleRepairPod = () => {
-    if (backendActionUnavailable) {
-      showToast(backendUnavailableMessage, 'error')
-      return
-    }
-    checkKeyAndRun(() => {
-      closeDrillDown() // Close panel so mission sidebar is visible
-      startMission({
-        title: `Repair Pod ${podName}`,
-        description: `Diagnose and fix issues with pod ${podName}`,
-        type: 'repair',
-        cluster,
-        initialPrompt: `I need help diagnosing and repairing issues with pod "${podName}" in namespace "${namespace}" on cluster "${cluster}".
-
-Current Status: ${status}
-Restarts: ${restarts}
-${reason ? `Reason: ${reason}` : ''}
-${(issues || []).length > 0 ? `Issues: ${(issues || []).join(', ')}` : ''}
-
-Please:
-1. Investigate the root cause — check pod logs, events, and configuration.
-2. Tell me what you found, then ask:
-   - "Should I apply the fix?"
-   - "Show me more details first"
-3. If I say fix it, apply and verify. Then ask:
-   - "Should I check for related issues?"
-   - "All done"`,
-        context: {
-          podName,
-          namespace,
-          cluster,
-          status,
-          restarts,
-          issues
-        }
-      })
-    })
-  }
-
-  useEffect(() => {
-    let cancelled = false
-
-    const run = async () => {
-      if (backendActionUnavailable) {
-        if (!cancelled) setCanDeletePod(false)
-        return
-      }
-      try {
-        const result = await checkPermission({
-          cluster,
-          verb: 'delete',
-          resource: 'pods',
-          namespace,
-        })
-        if (!cancelled) setCanDeletePod(result.allowed)
-      } catch {
-        if (!cancelled) setCanDeletePod(false)
-      }
-    }
-
-    run()
-    return () => {
-      cancelled = true
-    }
-  }, [backendActionUnavailable, cluster, namespace, checkPermission])
-
-  // Check if pod is managed by a controller (can be safely deleted and will be recreated)
-  const isManagedPod = ownerChain.some(owner =>
-    ['ReplicaSet', 'Deployment', 'StatefulSet', 'DaemonSet', 'Job'].includes(owner.kind)
-  )
-
-  // Delete pod handler
-  const handleDeletePod = async () => {
-    if (backendActionUnavailable) {
-      setDeleteError(backendUnavailableMessage)
-      showToast(backendUnavailableMessage, 'error')
-      return
-    }
-    if (!agentConnected || !canDeletePod) return
-
-    setDeletingPod(true)
-    setDeleteError(null)
-
-    try {
-      const ws = await openTrackedWs()
-      const requestId = `delete-pod-${Date.now()}`
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['delete', 'pod', podName, '-n', namespace] }
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'delete pod')
-        if (!msg) {
-          setDeleteError(t('drilldown.errors.failedToParseResponse'))
-          setDeletingPod(false)
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId) {
-          if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
-            setDeleteError(msg.payload?.error || t('drilldown.errors.failedToDeletePod'))
-          } else {
-            // Success - close the drill down
-            closeDrillDown()
-          }
-        }
-        ws.close()
-        setDeletingPod(false)
-      }
-
-      ws.onerror = () => {
-        setDeleteError('Connection error')
-        setDeletingPod(false)
-        ws.close()
-      }
-    } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : 'Unknown error')
-      setDeletingPod(false)
-    }
-  }
-
-  const handleCopy = (field: string, value: string) => {
-    copyToClipboard(value)
-    setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
-  }
-
-  // Save label changes via kubectl
-  const saveLabels = async () => {
-    if (!agentConnected) return
-    setLabelSaving(true)
-    setLabelError(null)
-
-    try {
-      const runKubectl = async (args: string[]): Promise<{ success: boolean; error?: string }> => {
-        const ws = await openTrackedWs()
-        return new Promise((resolve) => {
-          const requestId = `label-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-          const timeout = setTimeout(() => {
-            ws.close()
-            resolve({ success: false, error: 'Command timed out' })
-          }, 10000)
-
-          ws.onopen = () => {
-            ws.send(JSON.stringify({
-              id: requestId,
-              type: 'kubectl',
-              payload: { context: cluster, args }
-            }))
-          }
-          ws.onmessage = (event: MessageEvent) => {
-            const msg = parseWsMessage(event, 'save labels')
-            if (!msg) {
-              clearTimeout(timeout)
-              ws.close()
-              resolve({ success: false, error: t('drilldown.errors.failedToParseResponse') })
-              return
-            }
-
-            if (msg.id === requestId) {
-              clearTimeout(timeout)
-              ws.close()
-              if (msg.payload?.exitCode === 0 || msg.payload?.output) {
-                resolve({ success: true })
-              } else {
-                resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
-              }
-            }
-          }
-          ws.onerror = () => {
-            clearTimeout(timeout)
-            ws.close()
-            resolve({ success: false, error: 'Connection failed' })
-          }
-        })
-      }
-
-      // Build label arguments for kubectl
-      const labelArgs: string[] = ['label', 'pod', podName, '-n', namespace, '--overwrite']
-
-      // Add new label if specified
-      if (newLabelKey.trim() && newLabelValue.trim()) {
-        labelArgs.push(`${newLabelKey.trim()}=${newLabelValue.trim()}`)
-      }
-
-      // Add pending changes (edits and removals)
-      for (const [key, value] of Object.entries(pendingLabelChanges)) {
-        if (value === null) {
-          // Remove label
-          labelArgs.push(`${key}-`)
-        } else if (value !== labels?.[key]) {
-          // Update label
-          labelArgs.push(`${key}=${value}`)
-        }
-      }
-
-      // Only run if there are actual changes
-      if (labelArgs.length > 5) {
-        const result = await runKubectl(labelArgs)
-        if (!result.success) {
-          setLabelError(result.error || t('drilldown.errors.failedToSaveLabels'))
-          setLabelSaving(false)
-          return
-        }
-      }
-
-      // Refresh labels by re-fetching describe
-      setLabels(prev => {
-        const updated = { ...prev }
-        // Apply pending changes
-        for (const [key, value] of Object.entries(pendingLabelChanges)) {
-          if (UNSAFE_KEYS.has(key)) continue
-          if (value === null) {
-            delete updated[key]
-          } else {
-            updated[key] = value
-          }
-        }
-        // Add new label
-        if (newLabelKey.trim() && newLabelValue.trim() && !UNSAFE_KEYS.has(newLabelKey.trim())) {
-          updated[newLabelKey.trim()] = newLabelValue.trim()
-        }
-        return updated
-      })
-
-      // Reset edit state
-      setEditingLabels(false)
-      setPendingLabelChanges({})
-      setNewLabelKey('')
-      setNewLabelValue('')
-    } catch (err: unknown) {
-      setLabelError(`Failed to save: ${err}`)
-    } finally {
-      setLabelSaving(false)
-    }
-  }
-
-  const cancelLabelEdit = () => {
-    setEditingLabels(false)
-    setPendingLabelChanges({})
-    setNewLabelKey('')
-    setNewLabelValue('')
-    setLabelError(null)
-  }
-
-  const handleLabelChange = (key: string, value: string) => {
-    if (UNSAFE_KEYS.has(key)) return
-    setPendingLabelChanges(prev => ({ ...prev, [key]: value }))
-  }
-
-  const handleLabelRemove = (key: string) => {
-    if (UNSAFE_KEYS.has(key)) return
-    setPendingLabelChanges(prev => ({ ...prev, [key]: null }))
-  }
-
-  const undoLabelChange = (key: string) => {
-    if (UNSAFE_KEYS.has(key)) return
-    setPendingLabelChanges(prev => {
-      const updated = { ...prev }
-      delete updated[key]
-      return updated
-    })
-  }
-
-  // Save annotation changes via kubectl
-  const saveAnnotations = async () => {
-    if (!agentConnected) return
-    setAnnotationSaving(true)
-    setAnnotationError(null)
-
-    try {
-      const runKubectl = async (args: string[]): Promise<{ success: boolean; error?: string }> => {
-        const ws = await openTrackedWs()
-        return new Promise((resolve) => {
-          const requestId = `annotate-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-          const timeout = setTimeout(() => {
-            ws.close()
-            resolve({ success: false, error: 'Command timed out' })
-          }, 10000)
-
-          ws.onopen = () => {
-            ws.send(JSON.stringify({
-              id: requestId,
-              type: 'kubectl',
-              payload: { context: cluster, args }
-            }))
-          }
-          ws.onmessage = (event: MessageEvent) => {
-            const msg = parseWsMessage(event, 'save annotations')
-            if (!msg) {
-              clearTimeout(timeout)
-              ws.close()
-              resolve({ success: false, error: t('drilldown.errors.failedToParseResponse') })
-              return
-            }
-
-            if (msg.id === requestId) {
-              clearTimeout(timeout)
-              ws.close()
-              if (msg.payload?.exitCode === 0 || msg.payload?.output) {
-                resolve({ success: true })
-              } else {
-                resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
-              }
-            }
-          }
-          ws.onerror = () => {
-            clearTimeout(timeout)
-            ws.close()
-            resolve({ success: false, error: 'Connection failed' })
-          }
-        })
-      }
-
-      // Build annotation arguments for kubectl
-      const annotateArgs: string[] = ['annotate', 'pod', podName, '-n', namespace, '--overwrite']
-
-      // Add new annotation if specified
-      if (newAnnotationKey.trim() && newAnnotationValue.trim()) {
-        annotateArgs.push(`${newAnnotationKey.trim()}=${newAnnotationValue.trim()}`)
-      }
-
-      // Add pending changes (edits and removals)
-      for (const [key, value] of Object.entries(pendingAnnotationChanges)) {
-        if (value === null) {
-          // Remove annotation
-          annotateArgs.push(`${key}-`)
-        } else if (value !== annotations?.[key]) {
-          // Update annotation
-          annotateArgs.push(`${key}=${value}`)
-        }
-      }
-
-      // Only run if there are actual changes
-      if (annotateArgs.length > 5) {
-        const result = await runKubectl(annotateArgs)
-        if (!result.success) {
-          setAnnotationError(result.error || t('drilldown.errors.failedToSaveAnnotations'))
-          setAnnotationSaving(false)
-          return
-        }
-      }
-
-      // Update local state
-      setAnnotations(prev => {
-        const updated = { ...prev }
-        // Apply pending changes
-        for (const [key, value] of Object.entries(pendingAnnotationChanges)) {
-          if (UNSAFE_KEYS.has(key)) continue
-          if (value === null) {
-            delete updated[key]
-          } else {
-            updated[key] = value
-          }
-        }
-        // Add new annotation
-        if (newAnnotationKey.trim() && newAnnotationValue.trim() && !UNSAFE_KEYS.has(newAnnotationKey.trim())) {
-          updated[newAnnotationKey.trim()] = newAnnotationValue.trim()
-        }
-        return updated
-      })
-
-      // Reset edit state
-      setEditingAnnotations(false)
-      setPendingAnnotationChanges({})
-      setNewAnnotationKey('')
-      setNewAnnotationValue('')
-    } catch (err: unknown) {
-      setAnnotationError(`Failed to save: ${err}`)
-    } finally {
-      setAnnotationSaving(false)
-    }
-  }
-
-  const cancelAnnotationEdit = () => {
-    setEditingAnnotations(false)
-    setPendingAnnotationChanges({})
-    setNewAnnotationKey('')
-    setNewAnnotationValue('')
-    setAnnotationError(null)
-  }
-
-  const handleAnnotationChange = (key: string, value: string) => {
-    if (UNSAFE_KEYS.has(key)) return
-    setPendingAnnotationChanges(prev => ({ ...prev, [key]: value }))
-  }
-
-  const handleAnnotationRemove = (key: string) => {
-    if (UNSAFE_KEYS.has(key)) return
-    setPendingAnnotationChanges(prev => ({ ...prev, [key]: null }))
-  }
-
-  const undoAnnotationChange = (key: string) => {
-    if (UNSAFE_KEYS.has(key)) return
-    setPendingAnnotationChanges(prev => {
-      const updated = { ...prev }
-      delete updated[key]
-      return updated
-    })
-  }
-
-  // Fetch related resources (owner chain, configmaps, secrets, service account)
-  const fetchRelatedResources = async (force = false) => {
-    if (!agentConnected || (!force && relatedResources.length > 0)) return
-    setRelatedLoading(true)
-
-    try {
-      const runKubectl = async (args: string[]): Promise<string> => {
-        const ws = await openTrackedWs()
-        return new Promise((resolve) => {
-          const requestId = `related-${Date.now()}-${Math.random().toString(36).slice(2)}`
-          let output = ''
-
-          const timeout = setTimeout(() => {
-            ws.close()
-            resolve(output || '')
-          }, 10000)
-
-          ws.onopen = () => {
-            ws.send(JSON.stringify({
-              id: requestId,
-              type: 'kubectl',
-              payload: { context: cluster, args }
-            }))
-          }
-          ws.onmessage = (event: MessageEvent) => {
-            const msg = parseWsMessage(event, 'related resources')
-            if (!msg) {
-              clearTimeout(timeout)
-              ws.close()
-              resolve(output)
-              return
-            }
-
-            if (msg.id === requestId && msg.payload?.output) {
-              output = msg.payload.output
-            }
-            clearTimeout(timeout)
-            ws.close()
-            resolve(output)
-          }
-          ws.onerror = () => {
-            clearTimeout(timeout)
-            ws.close()
-            resolve(output || '')
-          }
-        })
-      }
-
-      // Get pod YAML to extract references
-      const podYaml = await runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'yaml'])
-
-      // Extract service account
-      const saMatch = podYaml.match(/serviceAccountName:\s*(\S+)/)
-      if (saMatch) {
-        setServiceAccount(saMatch[1])
-      }
-
-      // Extract configmap references from volumes and envFrom
-      const configMapRefs = new Set<string>()
-      const configMapMatches = podYaml.matchAll(/configMapName:\s*(\S+)|name:\s*(\S+)\s*\n\s*configMap:/g)
-      for (const match of configMapMatches) {
-        const name = match[1] || match[2]
-        if (name) configMapRefs.add(name)
-      }
-      // Also check envFrom configMapRef
-      const envFromConfigMaps = podYaml.matchAll(/configMapRef:\s*\n\s*name:\s*(\S+)/g)
-      for (const match of envFromConfigMaps) {
-        if (match[1]) configMapRefs.add(match[1])
-      }
-      setConfigMaps(Array.from(configMapRefs))
-
-      // Extract secret references from volumes and envFrom
-      const secretRefs = new Set<string>()
-      const secretMatches = podYaml.matchAll(/secretName:\s*(\S+)/g)
-      for (const match of secretMatches) {
-        if (match[1]) secretRefs.add(match[1])
-      }
-      // Also check envFrom secretRef
-      const envFromSecrets = podYaml.matchAll(/secretRef:\s*\n\s*name:\s*(\S+)/g)
-      for (const match of envFromSecrets) {
-        if (match[1]) secretRefs.add(match[1])
-      }
-      setSecrets(Array.from(secretRefs))
-
-      // Extract PVC references from volumes
-      // Use a K8s-valid name pattern to avoid capturing quotes or YAML artifacts
-      const K8S_NAME_PATTERN = '[a-z0-9][a-z0-9._-]*[a-z0-9]|[a-z0-9]'
-      const pvcRefs = new Set<string>()
-      const pvcMatches = podYaml.matchAll(new RegExp(`claimName:\\s*"?(${K8S_NAME_PATTERN})"?`, 'g'))
-      for (const match of pvcMatches) {
-        if (match[1]) pvcRefs.add(match[1])
-      }
-      setPvcs(Array.from(pvcRefs))
-
-      // Build owner chain (pod -> replicaset -> deployment)
-      const chain: RelatedResource[] = []
-      const ownerRefMatch = podYaml.match(/ownerReferences:[\s\S]*?kind:\s*(\w+)[\s\S]*?name:\s*([\w-]+)/)
-      if (ownerRefMatch) {
-        const ownerKind = ownerRefMatch[1]
-        const ownerName = ownerRefMatch[2]
-        chain.push({ kind: ownerKind, name: ownerName, namespace })
-
-        // If ReplicaSet, get its owner (Deployment)
-        if (ownerKind === 'ReplicaSet') {
-          const rsYaml = await runKubectl(['get', 'replicaset', ownerName, '-n', namespace, '-o', 'yaml'])
-          const rsOwnerMatch = rsYaml.match(/ownerReferences:[\s\S]*?kind:\s*(\w+)[\s\S]*?name:\s*([\w-]+)/)
-          if (rsOwnerMatch) {
-            chain.push({ kind: rsOwnerMatch[1], name: rsOwnerMatch[2], namespace })
-          }
-        }
-      }
-      setOwnerChain(chain)
-      setRelatedResources([...chain])
-    } catch {
-      // Ignore errors
-    } finally {
-      setRelatedLoading(false)
-    }
-  }
-
-  // Global refresh - refreshes all data for all tabs
-  const refreshAll = async () => {
+  const refreshAll = useCallback(async () => {
     if (!agentConnected) return
     setIsRefreshing(true)
     try {
-      // Fetch all data in parallel
-      await Promise.all([
-        fetchDescribe(true),
-        fetchLogs(true),
-        fetchEvents(true),
-        fetchYaml(true),
-        fetchRelatedResources(true),
-      ])
+      await Promise.all([podData.fetchPodStatus(true), podData.fetchDescribe(true), podData.fetchLogs(true), podData.fetchEvents(true), podData.fetchYaml(true), actions.fetchRelatedResources(true)])
     } finally {
       setIsRefreshing(false)
     }
-  }
-
-  const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
-    { id: 'labels', label: t('drilldown.tabs.labels'), icon: Tag },
-    { id: 'related', label: t('drilldown.tabs.related'), icon: Layers },
-    { id: 'describe', label: t('drilldown.tabs.describe'), icon: FileText },
-    { id: 'logs', label: t('drilldown.tabs.logs'), icon: Terminal },
-    { id: 'exec', label: t('drilldown.tabs.exec'), icon: TerminalSquare },
-    { id: 'events', label: t('drilldown.tabs.events'), icon: Zap },
-    { id: 'yaml', label: t('drilldown.tabs.yaml'), icon: Code },
-  ]
-
-  // Extract container names from YAML output for exec tab
-  const containerNames = useMemo(() => {
-    if (!yamlOutput) return []
-    const names: string[] = []
-    // In kubectl YAML, container objects live under "  containers:" or "  initContainers:"
-    // and have "    name: <value>" (4-space indent, no dash prefix).
-    // Env vars/volumes use "    - name:" (with dash) — we must NOT match those.
-    const lines = yamlOutput.split('\n')
-    let inContainerSection = false
-    for (const line of lines) {
-      if (/^ {2}(?:init)?containers:\s*$/.test(line)) {
-        inContainerSection = true
-        continue
-      }
-      // Exit section at next spec-level key (2-space indent, not a list item)
-      if (inContainerSection && /^ {2}[a-z]/.test(line)) {
-        inContainerSection = false
-      }
-      if (inContainerSection) {
-        const match = line.match(/^ {4}name:\s+(.+)$/)
-        if (match) {
-          const name = match[1].trim()
-          if (name && !names.includes(name)) {
-            names.push(name)
-          }
-        }
-      }
-    }
-    return names
-  }, [yamlOutput])
+  }, [agentConnected, podData, actions])
 
   return (
-    <div className="flex flex-col -m-6">
-      {/* Pod Info Header */}
-      <div className="px-6 pt-6 pb-4">
+    <div className="-m-6 flex flex-col">
+      <div className="px-6 pb-4 pt-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6 text-sm">
-            <button
-              onClick={() => drillToNamespace(cluster, namespace)}
-              className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-            >
-              <Layers className="w-4 h-4 text-purple-400" />
-              <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
-              <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-              <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button
-              onClick={() => drillToCluster(cluster)}
-              className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-            >
-              <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
-              <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
-              <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            {restarts > 0 && (
-              <div className="flex items-center gap-2">
-                <Box className="w-4 h-4 text-yellow-400" />
-                <span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span>
-                <span className="font-mono text-yellow-400">{restarts}</span>
-              </div>
-            )}
+            <button onClick={() => drillToNamespace(cluster, namespace)} className="group flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 transition-all hover:border-purple-500/30 hover:bg-purple-500/10"><Layers className="h-4 w-4 text-purple-400" /><span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span><span className="font-mono text-purple-400 transition-colors group-hover:text-purple-300">{namespace}</span><svg className="h-3 w-3 text-purple-400/70 transition-colors group-hover:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+            <button onClick={() => drillToCluster(cluster)} className="group flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-3 py-1.5 transition-all hover:border-blue-500/30 hover:bg-blue-500/10"><Server className="h-4 w-4 text-blue-400" /><span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span><ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" /><svg className="h-3 w-3 text-blue-400/70 transition-colors group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+            {podData.restarts > 0 && <div className="flex items-center gap-2"><Box className="h-4 w-4 text-yellow-400" /><span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span><span className="font-mono text-yellow-400">{podData.restarts}</span></div>}
           </div>
-          {/* Refresh All Button */}
-          {agentConnected && (
-            <button
-              onClick={refreshAll}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-              title={t('drilldown.actions.refreshAllPodData')}
-            >
-              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-              <span className="text-sm">{isRefreshing ? t('common.refreshing') : t('common.refresh')}</span>
-            </button>
-          )}
+          {agentConnected && <button onClick={refreshAll} disabled={isRefreshing} className="flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50" title={t('drilldown.actions.refreshAllPodData')}><RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} /><span className="text-sm">{isRefreshing ? t('common.refreshing') : t('common.refresh')}</span></button>}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-border px-6">
-        <div className="flex gap-1">
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
-                  activeTab === tab.id
-                    ? 'text-primary border-primary'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
+      <div className="border-b border-border px-6"><div className="flex gap-1">{TABS.map(tab => { const Icon = tab.icon; return <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn('flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors', activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground')}><Icon className="h-4 w-4" />{tab.label}</button> })}</div></div>
+
+      <div className="space-y-6 p-6">
+        {activeTab === 'overview' && <div className="space-y-6">
+          <PodStatusSection agentConnected={agentConnected} podName={podName} namespace={namespace} output={podData.podStatusOutput} loading={podData.podStatusLoading} error={podData.podStatusError} fetchingLabel={t('drilldown.status.fetchingPodStatus')} />
+          <div>{podData.issues.length > 0 ? <div className="space-y-3">{filteredDisplayIssues.length > 0 && <div className="flex flex-wrap gap-2">{filteredDisplayIssues.map((issue, i) => { const severity = getIssueSeverity(issue); const bgColor = severity === 'critical' ? 'bg-red-500/20 text-red-400' : severity === 'warning' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'; return <span key={i} className={cn('flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium', bgColor)}><AlertTriangle className="h-3.5 w-3.5" />{issue}</span> })}</div>}</div> : (podData.podStatusLoading || podData.describeLoading || podData.eventsLoading) ? <div className="rounded-lg border border-border bg-secondary/30 p-4 text-center"><div className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /><p className="text-muted-foreground">{t('drilldown.status.analyzingPodHealth')}</p></div></div> : <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4 text-center"><p className="font-medium text-green-400">{t('drilldown.status.podHealthy')}</p><p className="mt-1 text-xs text-muted-foreground">{t('drilldown.empty.noIssuesDetected')}</p></div>}</div>
+          {podData.podDiagnosis && podData.issues.length > 0 && <div className="space-y-4 rounded-xl border border-orange-500/30 bg-orange-500/5 p-4"><div className="flex items-start justify-between gap-4"><div className="space-y-1"><div className="flex items-center gap-2 text-orange-300"><AlertTriangle className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-wide">{t('drilldown.diagnosis.title')}</span></div><h3 className="text-sm font-semibold text-foreground">{t(DIAGNOSIS_SUMMARY_KEYS[podData.podDiagnosis.kind])}</h3><p className="text-sm text-muted-foreground">{t('drilldown.diagnosis.subtitle')}</p></div>{(podData.podDiagnosis.lastExitReason || podData.podDiagnosis.exitCode) && <div className="rounded-lg border border-orange-500/30 bg-background/60 px-3 py-2 text-right"><div className="text-[11px] uppercase tracking-wide text-orange-300">{t('drilldown.diagnosis.lastExit')}</div><div className="font-mono text-sm text-foreground">{podData.podDiagnosis.lastExitReason || t('drilldown.diagnosis.unknownExit')}{podData.podDiagnosis.exitCode ? ` · ${t('drilldown.diagnosis.exitCode', { code: podData.podDiagnosis.exitCode })}` : ''}</div></div>}</div><div className="grid gap-4 lg:grid-cols-2"><div><h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('drilldown.diagnosis.evidenceTitle')}</h4><ul className="space-y-2 text-sm text-foreground">{diagnosisEvidence.map((item, index) => <li key={`${item}-${index}`} className="flex gap-2"><span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" /><span>{item}</span></li>)}</ul></div><div><h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('drilldown.diagnosis.nextStepsTitle')}</h4><ul className="space-y-2 text-sm text-foreground">{DIAGNOSIS_STEP_KEYS[podData.podDiagnosis.kind].map(stepKey => <li key={stepKey} className="flex gap-2"><span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400" /><span>{t(stepKey)}</span></li>)}</ul></div></div><div className="flex flex-wrap gap-2"><button onClick={() => setActiveTab('logs')} className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">{t('drilldown.actions.viewLogs')}</button><button onClick={() => setActiveTab('events')} className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">{t('drilldown.actions.viewEvents')}</button><button onClick={() => setActiveTab('yaml')} className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary">{t('drilldown.diagnosis.reviewSpec')}</button>{agentConnected && actions.canDeletePod && isManagedPod && <button onClick={() => actions.setShowDeletePodConfirm(true)} className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20">{t('drilldown.actions.restartResource')}</button>}</div></div>}
+          {podData.eventsOutput && <div><div className="mb-2 flex items-center justify-between"><h3 className="flex items-center gap-2 text-sm font-semibold text-foreground"><Zap className="h-4 w-4 text-yellow-400" />{t('drilldown.tabs.recentEvents')}</h3><button onClick={() => setActiveTab('events')} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">View all</button></div><pre className="max-h-32 overflow-x-auto overflow-y-auto rounded-lg border border-border bg-muted p-3 font-mono text-xs text-foreground">{podData.eventsOutput.includes('No resources found') ? `No events found for pod ${podName}` : podData.eventsOutput.split('\n').slice(0, 6).join('\n')}</pre></div>}
+        </div>}
+
+        {activeTab === 'labels' && <Suspense fallback={<TabLoadingFallback />}><PodLabelsProvider describeLoading={podData.describeLoading} agentConnected={agentConnected} copiedField={copiedField} showAllLabels={showAllLabels} setShowAllLabels={setShowAllLabels} editingLabels={actions.editingLabels} setEditingLabels={actions.setEditingLabels} pendingLabelChanges={actions.pendingLabelChanges} newLabelKey={actions.newLabelKey} setNewLabelKey={actions.setNewLabelKey} newLabelValue={actions.newLabelValue} setNewLabelValue={actions.setNewLabelValue} labelSaving={actions.labelSaving} labelError={actions.labelError} handleLabelChange={actions.handleLabelChange} handleLabelRemove={actions.handleLabelRemove} undoLabelChange={actions.undoLabelChange} saveLabels={saveLabels} cancelLabelEdit={actions.cancelLabelEdit} showAllAnnotations={showAllAnnotations} setShowAllAnnotations={setShowAllAnnotations} editingAnnotations={actions.editingAnnotations} setEditingAnnotations={actions.setEditingAnnotations} pendingAnnotationChanges={actions.pendingAnnotationChanges} newAnnotationKey={actions.newAnnotationKey} setNewAnnotationKey={actions.setNewAnnotationKey} newAnnotationValue={actions.newAnnotationValue} setNewAnnotationValue={actions.setNewAnnotationValue} annotationSaving={actions.annotationSaving} annotationError={actions.annotationError} handleAnnotationChange={actions.handleAnnotationChange} handleAnnotationRemove={actions.handleAnnotationRemove} undoAnnotationChange={actions.undoAnnotationChange} saveAnnotations={saveAnnotations} cancelAnnotationEdit={actions.cancelAnnotationEdit} handleCopy={handleCopy} labelDiffByKey={labelDiffByKey} annotationDiffByKey={annotationDiffByKey}><PodLabelsTab labels={labels} annotations={annotations} /></PodLabelsProvider></Suspense>}
+
+        {activeTab === 'related' && <Suspense fallback={<TabLoadingFallback />}><PodRelatedTab podName={podName} namespace={namespace} cluster={cluster} agentConnected={agentConnected} relatedLoading={actions.relatedLoading} ownerChain={ownerChain} configMaps={actions.configMaps} secrets={actions.secrets} pvcs={actions.pvcs} serviceAccount={actions.serviceAccount} fetchRelatedResources={actions.fetchRelatedResources} drillToDeployment={drillToDeployment} drillToReplicaSet={drillToReplicaSet} drillToConfigMap={drillToConfigMap} drillToSecret={drillToSecret} drillToServiceAccount={drillToServiceAccount} drillToPVC={drillToPVC} /></Suspense>}
+
+        {activeTab === 'describe' && <Suspense fallback={<TabLoadingFallback />}><PodOutputTab output={podData.describeOutput} loading={podData.describeLoading} agentConnected={agentConnected} error={podData.describeError} copyField="describe" copiedField={copiedField} kubectlComment={`# kubectl describe pod ${podName} -n ${namespace}`} loadingMessage={t('drilldown.status.runningDescribe')} notConnectedMessage={t('drilldown.empty.connectAgentDescribe')} emptyMessage={t('drilldown.empty.failedFetchDescribe')} handleCopy={handleCopy} onRefresh={() => podData.fetchDescribe(true)} /></Suspense>}
+        {activeTab === 'logs' && <Suspense fallback={<TabLoadingFallback />}><PodLogsSection podName={podName} namespace={namespace} output={podData.logsOutput} loading={podData.logsLoading} agentConnected={agentConnected} error={podData.logsError} copiedField={copiedField} loadingMessage={t('drilldown.status.fetchingLogs')} notConnectedMessage={t('drilldown.empty.connectAgentLogs')} emptyMessage={t('drilldown.empty.noLogsAvailable')} handleCopy={handleCopy} onRefresh={() => podData.fetchLogs(true)} /></Suspense>}
+        {activeTab === 'exec' && <div className="h-[500px] overflow-hidden rounded-lg border border-border"><Suspense fallback={<div className="flex h-full items-center justify-center text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading terminal…</div>}><PodExecTerminal cluster={cluster} namespace={namespace} pod={podName} containers={containerNames} defaultContainer={containerNames[0]} /></Suspense></div>}
+        {activeTab === 'events' && <Suspense fallback={<TabLoadingFallback />}><PodEventsSection namespace={namespace} podName={podName} output={podData.eventsOutput} loading={podData.eventsLoading} agentConnected={agentConnected} error={podData.eventsError} copiedField={copiedField} loadingMessage={t('drilldown.status.fetchingEvents')} notConnectedMessage={t('drilldown.empty.connectAgentEvents')} emptyMessage={t('drilldown.empty.noEventsFound', { resource: 'pod' })} handleCopy={handleCopy} onRefresh={() => podData.fetchEvents(true)} /></Suspense>}
+        {activeTab === 'yaml' && <Suspense fallback={<TabLoadingFallback />}><PodYamlSection podName={podName} namespace={namespace} output={podData.yamlOutput} loading={podData.yamlLoading} agentConnected={agentConnected} error={podData.yamlError} copiedField={copiedField} loadingMessage={t('drilldown.status.fetchingYaml')} notConnectedMessage={t('drilldown.empty.connectAgentYaml')} emptyMessage={t('drilldown.empty.failedFetchYaml')} handleCopy={handleCopy} onRefresh={() => podData.fetchYaml(true)} /></Suspense>}
       </div>
 
-      {/* Tab Content */}
-      <div className="p-6 space-y-6">
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <PodStatusSection
-              agentConnected={agentConnected}
-              podName={podName}
-              namespace={namespace}
-              output={podStatusOutput}
-              loading={podStatusLoading}
-              error={podStatusError}
-              fetchingLabel={t('drilldown.status.fetchingPodStatus')}
-            />
+      {agentConnected && podData.issues.length > 0 && <div className="border-t border-border bg-card">{backendActionUnavailable && <div className="px-4 pt-4"><div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"><AlertTriangle className="h-4 w-4 shrink-0" /><span>{backendUnavailableMessage}</span></div></div>}<Suspense fallback={<TabLoadingFallback />}><PodAiAnalysis aiAnalysis={aiAnalysis} aiAnalysisLoading={aiAnalysisLoading} aiAnalysisError={aiAnalysisError} actionsDisabled={backendActionUnavailable} actionsDisabledReason={backendUnavailableMessage} fetchAiAnalysis={() => { void fetchAiAnalysis() }} handleRepairPod={handleRepairPod} /></Suspense><PodDeleteSection podName={podName} agentConnected={agentConnected} backendUnavailable={backendActionUnavailable} backendUnavailableReason={backendUnavailableMessage} canDeletePod={actions.canDeletePod} deletingPod={actions.deletingPod} deleteError={actions.deleteError} showDeletePodConfirm={actions.showDeletePodConfirm} setShowDeletePodConfirm={actions.setShowDeletePodConfirm} isManagedPod={isManagedPod} handleDeletePod={actions.handleDeletePod} /></div>}
 
-            {/* Issues Section */}
-            <div>
-              {issues.length > 0 ? (
-                <div className="space-y-3">
-                  {/* Issue list - filter out status since it's shown in breadcrumb */}
-                  {filteredDisplayIssues.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {filteredDisplayIssues.map((issue, i) => {
-                          const severity = getIssueSeverity(issue)
-                          const bgColor = severity === 'critical' ? 'bg-red-500/20 text-red-400' :
-                            severity === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-blue-500/20 text-blue-400'
-
-                          return (
-                            <span key={i} className={cn('px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5', bgColor)}>
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              {issue}
-                            </span>
-                          )
-                        })}
-                    </div>
-                  )}
-
-                </div>
-              ) : (podStatusLoading || describeLoading || eventsLoading) ? (
-                <div className="p-4 rounded-lg bg-secondary/30 border border-border text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    <p className="text-muted-foreground">{t('drilldown.status.analyzingPodHealth')}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-                  <p className="text-green-400 font-medium">{t('drilldown.status.podHealthy')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{t('drilldown.empty.noIssuesDetected')}</p>
-                </div>
-              )}
-
-            </div>
-
-            {podDiagnosis && issues.length > 0 && (
-              <div className="rounded-xl border border-orange-500/30 bg-orange-500/5 p-4 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-orange-300">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-xs font-semibold tracking-wide uppercase">{t('drilldown.diagnosis.title')}</span>
-                    </div>
-                    <h3 className="text-sm font-semibold text-foreground">
-                      {t(DIAGNOSIS_SUMMARY_KEYS[podDiagnosis.kind])}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{t('drilldown.diagnosis.subtitle')}</p>
-                  </div>
-                  {(podDiagnosis.lastExitReason || podDiagnosis.exitCode) && (
-                    <div className="rounded-lg border border-orange-500/30 bg-background/60 px-3 py-2 text-right">
-                      <div className="text-[11px] uppercase tracking-wide text-orange-300">{t('drilldown.diagnosis.lastExit')}</div>
-                      <div className="font-mono text-sm text-foreground">
-                        {podDiagnosis.lastExitReason || t('drilldown.diagnosis.unknownExit')}
-                        {podDiagnosis.exitCode ? ` · ${t('drilldown.diagnosis.exitCode', { code: podDiagnosis.exitCode })}` : ''}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div>
-                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t('drilldown.diagnosis.evidenceTitle')}
-                    </h4>
-                    <ul className="space-y-2 text-sm text-foreground">
-                      {diagnosisEvidence.map((item, index) => (
-                        <li key={`${item}-${index}`} className="flex gap-2">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t('drilldown.diagnosis.nextStepsTitle')}
-                    </h4>
-                    <ul className="space-y-2 text-sm text-foreground">
-                      {DIAGNOSIS_STEP_KEYS[podDiagnosis.kind].map(stepKey => (
-                        <li key={stepKey} className="flex gap-2">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400" />
-                          <span>{t(stepKey)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setActiveTab('logs')}
-                    className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                  >
-                    {t('drilldown.actions.viewLogs')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('events')}
-                    className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                  >
-                    {t('drilldown.actions.viewEvents')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('yaml')}
-                    className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                  >
-                    {t('drilldown.diagnosis.reviewSpec')}
-                  </button>
-                  {agentConnected && canDeletePod && isManagedPod && (
-                    <button
-                      onClick={() => setShowDeletePodConfirm(true)}
-                      className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
-                    >
-                      {t('drilldown.actions.restartResource')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Events */}
-            {eventsOutput && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-yellow-400" />
-                    {t('drilldown.tabs.recentEvents')}
-                  </h3>
-                  <button
-                    onClick={() => setActiveTab('events')}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-                  >
-                    View all
-                  </button>
-                </div>
-                <pre className="p-3 rounded-lg bg-muted border border-border overflow-x-auto text-xs text-foreground font-mono max-h-32 overflow-y-auto">
-                  {eventsOutput.includes('No resources found')
-                    ? `No events found for pod ${podName}`
-                    : eventsOutput.split('\n').slice(0, 6).join('\n')}
-                </pre>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'labels' && (
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodLabelsProvider
-              describeLoading={describeLoading}
-              agentConnected={agentConnected}
-              copiedField={copiedField}
-              showAllLabels={showAllLabels}
-              setShowAllLabels={setShowAllLabels}
-              editingLabels={editingLabels}
-              setEditingLabels={setEditingLabels}
-              pendingLabelChanges={pendingLabelChanges}
-              newLabelKey={newLabelKey}
-              setNewLabelKey={setNewLabelKey}
-              newLabelValue={newLabelValue}
-              setNewLabelValue={setNewLabelValue}
-              labelSaving={labelSaving}
-              labelError={labelError}
-              handleLabelChange={handleLabelChange}
-              handleLabelRemove={handleLabelRemove}
-              undoLabelChange={undoLabelChange}
-              saveLabels={saveLabels}
-              cancelLabelEdit={cancelLabelEdit}
-              showAllAnnotations={showAllAnnotations}
-              setShowAllAnnotations={setShowAllAnnotations}
-              editingAnnotations={editingAnnotations}
-              setEditingAnnotations={setEditingAnnotations}
-              pendingAnnotationChanges={pendingAnnotationChanges}
-              newAnnotationKey={newAnnotationKey}
-              setNewAnnotationKey={setNewAnnotationKey}
-              newAnnotationValue={newAnnotationValue}
-              setNewAnnotationValue={setNewAnnotationValue}
-              annotationSaving={annotationSaving}
-              annotationError={annotationError}
-              handleAnnotationChange={handleAnnotationChange}
-              handleAnnotationRemove={handleAnnotationRemove}
-              undoAnnotationChange={undoAnnotationChange}
-              saveAnnotations={saveAnnotations}
-              cancelAnnotationEdit={cancelAnnotationEdit}
-              handleCopy={handleCopy}
-              labelDiffByKey={labelDiffByKey}
-              annotationDiffByKey={annotationDiffByKey}
-            >
-              <PodLabelsTab
-                labels={labels}
-                annotations={annotations}
-              />
-            </PodLabelsProvider>
-          </Suspense>
-        )}
-
-        {activeTab === 'related' && (
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodRelatedTab
-              podName={podName}
-              namespace={namespace}
-              cluster={cluster}
-              agentConnected={agentConnected}
-              relatedLoading={relatedLoading}
-              ownerChain={ownerChain}
-              configMaps={configMaps}
-              secrets={secrets}
-              pvcs={pvcs}
-              serviceAccount={serviceAccount}
-              fetchRelatedResources={fetchRelatedResources}
-              drillToDeployment={drillToDeployment}
-              drillToReplicaSet={drillToReplicaSet}
-              drillToConfigMap={drillToConfigMap}
-              drillToSecret={drillToSecret}
-              drillToServiceAccount={drillToServiceAccount}
-              drillToPVC={drillToPVC}
-            />
-          </Suspense>
-        )}
-
-        {activeTab === 'describe' && (
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodOutputTab
-              output={describeOutput}
-              loading={describeLoading}
-              agentConnected={agentConnected}
-              error={describeError}
-              copyField="describe"
-              copiedField={copiedField}
-              kubectlComment={`# kubectl describe pod ${podName} -n ${namespace}`}
-              loadingMessage={t('drilldown.status.runningDescribe')}
-              notConnectedMessage={t('drilldown.empty.connectAgentDescribe')}
-              emptyMessage={t('drilldown.empty.failedFetchDescribe')}
-              handleCopy={handleCopy}
-              onRefresh={() => fetchDescribe(true)}
-            />
-          </Suspense>
-        )}
-
-        {activeTab === 'logs' && (
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodLogsSection
-              podName={podName}
-              namespace={namespace}
-              output={logsOutput}
-              loading={logsLoading}
-              agentConnected={agentConnected}
-              error={logsError}
-              copiedField={copiedField}
-              loadingMessage={t('drilldown.status.fetchingLogs')}
-              notConnectedMessage={t('drilldown.empty.connectAgentLogs')}
-              emptyMessage={t('drilldown.empty.noLogsAvailable')}
-              handleCopy={handleCopy}
-              onRefresh={() => fetchLogs(true)}
-            />
-          </Suspense>
-        )}
-
-        {activeTab === 'exec' && (
-          <div className="h-[500px] rounded-lg overflow-hidden border border-border">
-            <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground"><Loader2 className="animate-spin mr-2 h-4 w-4" />Loading terminal…</div>}>
-              <PodExecTerminal
-                cluster={cluster}
-                namespace={namespace}
-                pod={podName}
-                containers={containerNames}
-                defaultContainer={containerNames[0]}
-              />
-            </Suspense>
-          </div>
-        )}
-
-        {activeTab === 'events' && (
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodEventsSection
-              namespace={namespace}
-              podName={podName}
-              output={eventsOutput}
-              loading={eventsLoading}
-              agentConnected={agentConnected}
-              error={eventsError}
-              copiedField={copiedField}
-              loadingMessage={t('drilldown.status.fetchingEvents')}
-              notConnectedMessage={t('drilldown.empty.connectAgentEvents')}
-              emptyMessage={t('drilldown.empty.noEventsFound', { resource: 'pod' })}
-              handleCopy={handleCopy}
-              onRefresh={() => fetchEvents(true)}
-            />
-          </Suspense>
-        )}
-
-        {activeTab === 'yaml' && (
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodYamlSection
-              podName={podName}
-              namespace={namespace}
-              output={yamlOutput}
-              loading={yamlLoading}
-              agentConnected={agentConnected}
-              error={yamlError}
-              copiedField={copiedField}
-              loadingMessage={t('drilldown.status.fetchingYaml')}
-              notConnectedMessage={t('drilldown.empty.connectAgentYaml')}
-              emptyMessage={t('drilldown.empty.failedFetchYaml')}
-              handleCopy={handleCopy}
-              onRefresh={() => fetchYaml(true)}
-            />
-          </Suspense>
-        )}
-      </div>
-
-      {/* AI Actions Footer - Always visible */}
-      {agentConnected && issues.length > 0 && (
-        <div className="border-t border-border bg-card">
-          {backendActionUnavailable && (
-            <div className="px-4 pt-4">
-              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{backendUnavailableMessage}</span>
-              </div>
-            </div>
-          )}
-          <Suspense fallback={<TabLoadingFallback />}>
-            <PodAiAnalysis
-              aiAnalysis={aiAnalysis}
-              aiAnalysisLoading={aiAnalysisLoading}
-              aiAnalysisError={aiAnalysisError}
-              actionsDisabled={backendActionUnavailable}
-              actionsDisabledReason={backendUnavailableMessage}
-              fetchAiAnalysis={fetchAiAnalysis}
-              handleRepairPod={handleRepairPod}
-            />
-          </Suspense>
-          <PodDeleteSection
-            podName={podName}
-            agentConnected={agentConnected}
-            backendUnavailable={backendActionUnavailable}
-            backendUnavailableReason={backendUnavailableMessage}
-            canDeletePod={canDeletePod}
-            deletingPod={deletingPod}
-            deleteError={deleteError}
-            showDeletePodConfirm={showDeletePodConfirm}
-            setShowDeletePodConfirm={setShowDeletePodConfirm}
-            isManagedPod={isManagedPod}
-            handleDeletePod={handleDeletePod}
-          />
-        </div>
-      )}
-
-      <ApiKeyPromptModal
-        isOpen={showKeyPrompt}
-        onDismiss={dismissPrompt}
-        onGoToSettings={goToSettings}
-        errorMessage={errorMessage}
-        fallbackContent={
-          eventsOutput && !eventsOutput.includes('No resources found') ? (
-            <div>
-              <p className="text-xs font-medium text-foreground mb-1.5">Pod Events (non-AI troubleshooting):</p>
-              <pre className="text-[10px] text-muted-foreground overflow-x-auto whitespace-pre-wrap max-h-32 overflow-y-auto">
-                {eventsOutput.split('\n').slice(0, 10).join('\n')}
-              </pre>
-            </div>
-          ) : null
-        }
-      />
+      <ApiKeyPromptModal isOpen={showKeyPrompt} onDismiss={dismissPrompt} onGoToSettings={goToSettings} errorMessage={errorMessage} fallbackContent={podData.eventsOutput && !podData.eventsOutput.includes('No resources found') ? <div><p className="mb-1.5 text-xs font-medium text-foreground">Pod Events (non-AI troubleshooting):</p><pre className="max-h-32 overflow-x-auto overflow-y-auto whitespace-pre-wrap text-[10px] text-muted-foreground">{podData.eventsOutput.split('\n').slice(0, 10).join('\n')}</pre></div> : null} />
     </div>
   )
 }
