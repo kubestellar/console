@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -227,7 +228,7 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 	})
 
 	h := NewAgenticDetectionRunsHandler()
-	result, err := h.fetchDetectionRuns()
+	result, err := h.fetchDetectionRuns(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, result.TotalCount, "human comment must be filtered out")
@@ -256,7 +257,7 @@ func TestFetchDetectionRuns_APIError(t *testing.T) {
 	})
 
 	h := NewAgenticDetectionRunsHandler()
-	_, err := h.fetchDetectionRuns()
+	_, err := h.fetchDetectionRuns(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "403")
 }
@@ -273,7 +274,7 @@ func TestFetchDetectionRuns_InvalidJSON(t *testing.T) {
 	})
 
 	h := NewAgenticDetectionRunsHandler()
-	_, err := h.fetchDetectionRuns()
+	_, err := h.fetchDetectionRuns(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parse")
 }

@@ -52,12 +52,12 @@ type DetectionRun struct {
 
 // DetectionRunsResponse is the API response shape.
 type DetectionRunsResponse struct {
-	Runs         []DetectionRun `json:"runs"`
-	IssueURL     string         `json:"issueUrl"`
-	TotalCount   int            `json:"totalCount"`
-	Source       string         `json:"source"`
-	CachedAt     time.Time      `json:"cachedAt"`
-	IsDemoData   bool           `json:"isDemoData"`
+	Runs       []DetectionRun `json:"runs"`
+	IssueURL   string         `json:"issueUrl"`
+	TotalCount int            `json:"totalCount"`
+	Source     string         `json:"source"`
+	CachedAt   time.Time      `json:"cachedAt"`
+	IsDemoData bool           `json:"isDemoData"`
 }
 
 // GitHubIssueComment represents a GitHub issue comment from the API.
@@ -77,7 +77,7 @@ func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
 		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())
 	}
 
-	runs, err := h.fetchDetectionRuns()
+	runs, err := h.fetchDetectionRuns(c.UserContext())
 	if err != nil {
 		slog.Error("[AgenticDetectionRuns] Failed to fetch detection runs", "error", err)
 		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())
@@ -87,7 +87,7 @@ func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
 }
 
 // fetchDetectionRuns fetches detection run data from GitHub issue comments.
-func (h *AgenticDetectionRunsHandler) fetchDetectionRuns() (*DetectionRunsResponse, error) {
+func (h *AgenticDetectionRunsHandler) fetchDetectionRuns(ctx context.Context) (*DetectionRunsResponse, error) {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
 		return nil, fmt.Errorf("GITHUB_TOKEN not configured")
@@ -97,7 +97,7 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns() (*DetectionRunsRespon
 	url := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d/comments?per_page=%d&sort=created&direction=desc",
 		awDetectionRunsRepo, awDetectionRunsIssueNumber, awMaxDetectionRuns)
 
-	ctx, cancel := context.WithTimeout(context.Background(), awDetectionRunsTimeout)
+	ctx, cancel := context.WithTimeout(ctx, awDetectionRunsTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)

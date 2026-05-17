@@ -48,7 +48,7 @@ type PlaylistVideo struct {
 
 // youtubeAtomFeed represents the YouTube RSS/Atom feed XML structure.
 type youtubeAtomFeed struct {
-	XMLName xml.Name          `xml:"feed"`
+	XMLName xml.Name           `xml:"feed"`
 	Entries []youtubeAtomEntry `xml:"entry"`
 }
 
@@ -73,21 +73,21 @@ var cache = &playlistCache{}
 // single external API call to prevent cache stampede. #7066.
 var playlistSingleflight singleflight.Group
 
-func fetchPlaylistFromYouTube() ([]PlaylistVideo, error) {
+func fetchPlaylistFromYouTube(ctx context.Context) ([]PlaylistVideo, error) {
 	// Primary: Invidious API (reliable, no auth required).
-	videos, invErr := fetchPlaylistViaInvidious()
+	videos, invErr := fetchPlaylistViaInvidious(ctx)
 	if invErr == nil && len(videos) > 0 {
 		return videos, nil
 	}
 
 	// Fallback 1: RSS feed.
-	videos, rssErr := fetchPlaylistViaRSS()
+	videos, rssErr := fetchPlaylistViaRSS(ctx)
 	if rssErr == nil && len(videos) > 0 {
 		return videos, nil
 	}
 
 	// Fallback 2: yt-dlp (handles playlists where RSS returns 404).
-	videos, ytErr := fetchPlaylistViaYTDLP()
+	videos, ytErr := fetchPlaylistViaYTDLP(ctx)
 	if ytErr == nil && len(videos) > 0 {
 		return videos, nil
 	}
@@ -120,11 +120,16 @@ type invidiousPlaylistResp struct {
 	Videos []invidiousPlaylistVideo `json:"videos"`
 }
 
-func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
+func fetchPlaylistViaInvidious(ctx context.Context) ([]PlaylistVideo, error) {
 	var lastErr error
 	for _, instance := range invidiousInstances {
 		apiURL := fmt.Sprintf("%s/api/v1/playlists/%s", instance, playlistID)
-		resp, err := youtubeHTTPClient.Get(apiURL)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+		if err != nil {
+			lastErr = fmt.Errorf("invidious %s request: %w", instance, err)
+			continue
+		}
+		resp, err := youtubeHTTPClient.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("invidious %s: %w", instance, err)
 			continue
@@ -169,10 +174,15 @@ func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
 	return nil, lastErr
 }
 
-func fetchPlaylistViaRSS() ([]PlaylistVideo, error) {
+func fetchPlaylistViaRSS(ctx context.Context) ([]PlaylistVideo, error) {
 	url := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?playlist_id=%s", playlistID)
 
-	resp, err := youtubeHTTPClient.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create playlist feed request: %w", err)
+	}
+
+	resp, err := youtubeHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playlist feed: %w", err)
 	}
@@ -210,7 +220,7 @@ type ytdlpVideoJSON struct {
 	Title string `json:"title"`
 }
 
-func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
+func fetchPlaylistViaYTDLP(ctx context.Context) ([]PlaylistVideo, error) {
 	ytdlp, err := exec.LookPath("yt-dlp")
 	if err != nil {
 		return nil, fmt.Errorf("yt-dlp not found: %w", err)
@@ -218,7 +228,7 @@ func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
 
 	playlistURL := fmt.Sprintf("https://www.youtube.com/playlist?list=%s", playlistID)
 	const ytdlpTimeout = 30 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), ytdlpTimeout)
+	ctx, cancel := context.WithTimeout(ctx, ytdlpTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, ytdlp, "--flat-playlist", "--dump-json", "--no-warnings", playlistURL)
 	out, err := cmd.Output()
@@ -244,7 +254,7 @@ func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
 	return videos, nil
 }
 
-func getPlaylistVideos() ([]PlaylistVideo, error) {
+func getPlaylistVideos(ctx context.Context) ([]PlaylistVideo, error) {
 	cache.mu.RLock()
 	if time.Since(cache.fetchedAt) < playlistCacheTTL && cache.videos != nil {
 		videos := cache.videos
@@ -265,7 +275,7 @@ func getPlaylistVideos() ([]PlaylistVideo, error) {
 		}
 		cache.mu.RUnlock()
 
-		videos, fetchErr := fetchPlaylistFromYouTube()
+		videos, fetchErr := fetchPlaylistFromYouTube(ctx)
 		if fetchErr != nil {
 			// Return stale cache if available
 			cache.mu.RLock()
@@ -294,7 +304,7 @@ func getPlaylistVideos() ([]PlaylistVideo, error) {
 // YouTubePlaylistHandler returns the videos in the KubeStellar Console
 // YouTube playlist as JSON. Public endpoint — no auth required.
 func YouTubePlaylistHandler(c *fiber.Ctx) error {
-	videos, err := getPlaylistVideos()
+	videos, err := getPlaylistVideos(c.UserContext())
 	if err != nil {
 		slog.Error("[YouTube] failed to fetch playlist", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
