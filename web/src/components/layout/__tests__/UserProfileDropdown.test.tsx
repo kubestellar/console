@@ -2,8 +2,11 @@
  * UserProfileDropdown Component Tests
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+
+const changeLanguage = vi.fn()
+const safeSetItem = vi.fn()
 
 const modalState = vi.hoisted(() => ({
   isOpen: false,
@@ -14,7 +17,7 @@ const modalState = vi.hoisted(() => ({
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en', resolvedLanguage: 'en', changeLanguage } }),
 }))
 
 vi.mock('../../../lib/modals', () => ({
@@ -52,20 +55,30 @@ vi.mock('../../../hooks/useVersionCheck', () => ({
 }))
 
 vi.mock('../../../lib/i18n', () => ({
-  languages: [{ code: 'en', name: 'English', flag: '🇺🇸' }],
+  LANGUAGE_STORAGE_KEY: 'i18nextLng',
+  languages: [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'zh', name: '中文 (简体)', flag: '🇨🇳' },
+  ],
 }))
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoModeForced: () => true,
 }))
 
+const emitLanguageChanged = vi.fn()
+
 vi.mock('../../../lib/analytics', () => ({
   emitLinkedInShare: vi.fn(),
-  emitLanguageChanged: vi.fn(),
+  emitLanguageChanged,
 }))
 
 vi.mock('../../../lib/api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ oauthConfigured: false, backendUp: false }),
+}))
+
+vi.mock('../../../lib/utils/localStorage', () => ({
+  safeSetItem,
 }))
 
 vi.mock('../../setup/SetupInstructionsDialog', () => ({
@@ -79,6 +92,10 @@ vi.mock('../../setup/DeveloperSetupDialog', () => ({
 describe('UserProfileDropdown', () => {
   beforeEach(() => {
     modalState.isOpen = false
+    changeLanguage.mockReset()
+    changeLanguage.mockResolvedValue(undefined)
+    safeSetItem.mockReset()
+    emitLanguageChanged.mockReset()
   })
 
   it('exports UserProfileDropdown', async () => {
@@ -132,5 +149,24 @@ describe('UserProfileDropdown', () => {
 
     expect(screen.getAllByText('Commander').length).toBeGreaterThan(0)
     expect(screen.queryByText('viewer')).toBeNull()
+  })
+
+  it('changes language and persists the selection', async () => {
+    modalState.isOpen = true
+    const { UserProfileDropdown } = await import('../UserProfileDropdown')
+    render(
+      <MemoryRouter>
+        <UserProfileDropdown user={{ github_login: 'testuser', email: 'test@example.com', role: 'viewer' }} onLogout={vi.fn()} />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByText('profile.language'))
+    fireEvent.click(screen.getByText('中文 (简体)'))
+
+    await waitFor(() => {
+      expect(changeLanguage).toHaveBeenCalledWith('zh')
+      expect(safeSetItem).toHaveBeenCalledWith('i18nextLng', 'zh')
+      expect(emitLanguageChanged).toHaveBeenCalledWith('zh')
+    })
   })
 })

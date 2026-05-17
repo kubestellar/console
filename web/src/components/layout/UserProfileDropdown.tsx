@@ -8,10 +8,11 @@ import { Linkedin } from '@/lib/icons'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { getContributorLevel } from '../../types/rewards'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
-import { languages } from '../../lib/i18n'
+import { LANGUAGE_STORAGE_KEY, languages } from '../../lib/i18n'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { emitLinkedInShare, emitLanguageChanged } from '../../lib/analytics'
 import { checkOAuthConfigured } from '../../lib/api'
+import { safeSetItem } from '../../lib/utils/localStorage'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
 // Lazy-load the feedback modal (~67 KB) — only needed when user opens it
@@ -27,6 +28,14 @@ interface UserProfileDropdownProps {
   } | null
   onLogout: () => void
   onPreferences?: () => void
+}
+
+function resolveActiveLanguageCode(languageCode?: string): string {
+  if (!languageCode) return languages[0].code
+  if (languages.some(lang => lang.code === languageCode)) return languageCode
+
+  const baseLanguageCode = languageCode.split('-')[0]
+  return languages.find(lang => lang.code === baseLanguageCode)?.code || languages[0].code
 }
 
 export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfileDropdownProps) {
@@ -47,11 +56,13 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   const { channel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
 
-  const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
+  const activeLanguageCode = resolveActiveLanguageCode(i18n.resolvedLanguage || i18n.language)
+  const currentLanguage = languages.find(language => language.code === activeLanguageCode) || languages[0]
   const contributorLevel = getContributorLevel(totalCoins).current
 
-  const handleLanguageChange = (langCode: string) => {
-    i18n.changeLanguage(langCode)
+  const handleLanguageChange = async (langCode: string) => {
+    await i18n.changeLanguage(langCode)
+    safeSetItem(LANGUAGE_STORAGE_KEY, langCode)
     emitLanguageChanged(langCode)
     setShowLanguageSubmenu(false)
     // Issue 9284: close the outer profile dropdown after a language is picked
@@ -255,14 +266,14 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors ${
-                        i18n.language === lang.code
+                        activeLanguageCode === lang.code
                           ? 'bg-purple-900 text-foreground'
                           : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                       }`}
                     >
                       <span>{lang.flag}</span>
                       <span>{lang.name}</span>
-                      {i18n.language === lang.code && (
+                      {activeLanguageCode === lang.code && (
                         <Check className="w-3 h-3 ml-auto text-purple-400" />
                       )}
                     </button>

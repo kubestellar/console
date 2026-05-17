@@ -3,10 +3,44 @@ import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
 // Import translations
+import commonDE from '../locales/de/common.json'
+import cardsDE from '../locales/de/cards.json'
+import statusDE from '../locales/de/status.json'
+import errorsDE from '../locales/de/errors.json'
 import commonEN from '../locales/en/common.json'
 import cardsEN from '../locales/en/cards.json'
 import statusEN from '../locales/en/status.json'
 import errorsEN from '../locales/en/errors.json'
+import commonES from '../locales/es/common.json'
+import cardsES from '../locales/es/cards.json'
+import statusES from '../locales/es/status.json'
+import errorsES from '../locales/es/errors.json'
+import commonFR from '../locales/fr/common.json'
+import cardsFR from '../locales/fr/cards.json'
+import statusFR from '../locales/fr/status.json'
+import errorsFR from '../locales/fr/errors.json'
+import commonHI from '../locales/hi/common.json'
+import cardsHI from '../locales/hi/cards.json'
+import statusHI from '../locales/hi/status.json'
+import errorsHI from '../locales/hi/errors.json'
+import commonIT from '../locales/it/common.json'
+import cardsIT from '../locales/it/cards.json'
+import statusIT from '../locales/it/status.json'
+import errorsIT from '../locales/it/errors.json'
+import commonJA from '../locales/ja/common.json'
+import cardsJA from '../locales/ja/cards.json'
+import statusJA from '../locales/ja/status.json'
+import errorsJA from '../locales/ja/errors.json'
+import commonPT from '../locales/pt/common.json'
+import cardsPT from '../locales/pt/cards.json'
+import statusPT from '../locales/pt/status.json'
+import errorsPT from '../locales/pt/errors.json'
+import commonZH from '../locales/zh/common.json'
+import cardsZH from '../locales/zh/cards.json'
+import statusZH from '../locales/zh/status.json'
+import errorsZH from '../locales/zh/errors.json'
+
+export const LANGUAGE_STORAGE_KEY = 'i18nextLng'
 
 export const resources = {
   en: {
@@ -15,61 +49,59 @@ export const resources = {
     status: statusEN,
     errors: errorsEN,
   },
-  // Placeholder for future translations - will fall back to English
   es: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonES,
+    cards: cardsES,
+    status: statusES,
+    errors: errorsES,
   },
   fr: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonFR,
+    cards: cardsFR,
+    status: statusFR,
+    errors: errorsFR,
   },
   de: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonDE,
+    cards: cardsDE,
+    status: statusDE,
+    errors: errorsDE,
   },
   ja: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonJA,
+    cards: cardsJA,
+    status: statusJA,
+    errors: errorsJA,
   },
   zh: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonZH,
+    cards: cardsZH,
+    status: statusZH,
+    errors: errorsZH,
   },
-  // New languages
   it: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonIT,
+    cards: cardsIT,
+    status: statusIT,
+    errors: errorsIT,
   },
   pt: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonPT,
+    cards: cardsPT,
+    status: statusPT,
+    errors: errorsPT,
   },
   hi: {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonHI,
+    cards: cardsHI,
+    status: statusHI,
+    errors: errorsHI,
   },
   'zh-TW': {
-    common: commonEN,
-    cards: cardsEN,
-    status: statusEN,
-    errors: errorsEN,
+    common: commonZH,
+    cards: cardsZH,
+    status: statusZH,
+    errors: errorsZH,
   },
 } as const
 
@@ -105,15 +137,16 @@ configuredI18n.init({
   ns: namespaces,
   fallbackLng: 'en',
   supportedLngs: ['en', 'es', 'fr', 'de', 'ja', 'zh', 'it', 'pt', 'hi', 'zh-TW'],
+  nonExplicitSupportedLngs: true,
 
   interpolation: {
     escapeValue: false, // React already escapes values
   },
 
   detection: {
-    // Auto-detect from browser first, then check localStorage
+    // Prefer persisted user choice before browser defaults.
     order: ['localStorage', 'navigator', 'htmlTag'],
-    lookupLocalStorage: 'i18nextLng',
+    lookupLocalStorage: LANGUAGE_STORAGE_KEY,
     caches: ['localStorage'],
   },
 
