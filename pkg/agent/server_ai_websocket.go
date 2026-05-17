@@ -523,6 +523,33 @@ func (s *Server) handleKubectlMessage(ctx context.Context, msg protocol.Message)
 		}
 	}
 
+	// Validate context and namespace inputs (#14471 — defense-in-depth against
+	// flag-injection via context names starting with "--").
+	if req.Context != "" {
+		if err := validateKubeContext(req.Context); err != nil {
+			return protocol.Message{
+				ID:   msg.ID,
+				Type: protocol.TypeError,
+				Payload: protocol.ErrorPayload{
+					Code:    "invalid_context",
+					Message: err.Error(),
+				},
+			}
+		}
+	}
+	if req.Namespace != "" {
+		if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+			return protocol.Message{
+				ID:   msg.ID,
+				Type: protocol.TypeError,
+				Payload: protocol.ErrorPayload{
+					Code:    "invalid_namespace",
+					Message: err.Error(),
+				},
+			}
+		}
+	}
+
 	// Check for destructive commands that require confirmation
 	if isDestructiveKubectlCommand(req.Args) && !req.Confirmed {
 		return protocol.Message{
