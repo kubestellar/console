@@ -187,7 +187,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(m protocol.Message, fa string) {
+			m, fa := msg, forceAgent
+			safego.GoWith("ai-ws-chat", func() {
 				defer wg.Done()
 				defer func() { <-sem }() // release slot
 				defer func() {
@@ -219,7 +220,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					}
 				}()
 				s.handleChatMessageStreaming(connCtx, conn, m, fa, writeMu, &closed)
-			}(msg, forceAgent)
+			})
 		} else if msg.Type == protocol.TypeCancelChat {
 			// Cancel an in-progress chat by session ID
 			s.handleCancelChat(conn, msg, writeMu)
@@ -233,7 +234,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(m protocol.Message) {
+			m := msg
+			safego.GoWith("ai-ws-kubectl", func() {
 				defer wg.Done()
 				defer func() { <-sem }() // release slot
 				defer func() {
@@ -282,7 +284,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					"msgID", m.ID, "type", response.Type); clearErr != nil {
 					closed.Store(true)
 				}
-			}(msg)
+			})
 		} else {
 			// Dispatch all remaining message types to a goroutine so the
 			// WebSocket read loop stays non-blocking (#9713). Previously this
@@ -296,7 +298,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(m protocol.Message) {
+			m := msg
+			safego.GoWith("ai-ws-handler", func() {
 				defer wg.Done()
 				defer func() { <-sem }() // release slot
 				defer func() {
@@ -346,7 +349,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					slog.Error("write error", "error", err)
 					closed.Store(true)
 				}
-			}(msg)
+			})
 		}
 	}
 	// --- Cleanup: signal all goroutines and wait for orderly drain (#11878) ---
