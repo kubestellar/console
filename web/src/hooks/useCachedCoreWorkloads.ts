@@ -89,7 +89,8 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
 
       if (response.exitCode !== 0) return []
 
-      let data: { items?: unknown[] }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: { items?: any[] }
       try {
         data = JSON.parse(response.output)
       } catch {
