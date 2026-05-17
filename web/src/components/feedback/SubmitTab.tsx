@@ -41,6 +41,8 @@ import {
   ACCEPTED_MEDIA_TYPES,
   ACCEPTED_VIDEO_MIME_TYPES,
   ATTACHMENT_HELP_TEXT,
+  isFeedbackRequestBodyTooLarge,
+  isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
 
 // ── Success View (shown after successful submission) ──
@@ -288,6 +290,10 @@ export function SubmitForm({
     : t('feedback.descriptionPlaceholderFeature', 'Describe the feature in your own words. See the full example below.')
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [isDragOver, setIsDragOver] = useState(false)
+  const requestBodyTooLargeMessage = t(
+    'feedback.attachmentsTooLarge',
+    'Attachments are too large to submit. Keep each video at or below 10 MB and reduce the total attachment payload before retrying.',
+  )
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [parentIssueNumber, setParentIssueNumber] = useState('')
   const [canLinkParentIssue, setCanLinkParentIssue] = useState(false)
@@ -531,18 +537,25 @@ export function SubmitForm({
         page_url: `${window.location.origin}${window.location.pathname}`,
       }
 
+      const submissionPayload: CreateFeatureRequestInput = {
+        title: extractedTitle,
+        description: extractedDesc,
+        request_type: requestType,
+        target_repo: targetRepo,
+        diagnostics,
+        ...(parsedParentIssueNumber && { parent_issue_number: parsedParentIssueNumber }),
+        ...(hasScreenshots && { screenshots: screenshotDataURIs }),
+        ...(browserErrors.length > 0 && { console_errors: browserErrors }),
+        ...(failedApiCalls.length > 0 && { failed_api_calls: failedApiCalls }),
+      }
+      if (isFeedbackRequestBodyTooLarge(submissionPayload)) {
+        setError(requestBodyTooLargeMessage)
+        showToast(requestBodyTooLargeMessage, 'error')
+        return
+      }
+
       const result = await onSubmit(
-        {
-          title: extractedTitle,
-          description: extractedDesc,
-          request_type: requestType,
-          target_repo: targetRepo,
-          diagnostics,
-          ...(parsedParentIssueNumber && { parent_issue_number: parsedParentIssueNumber }),
-          ...(hasScreenshots && { screenshots: screenshotDataURIs }),
-          ...(browserErrors.length > 0 && { console_errors: browserErrors }),
-          ...(failedApiCalls.length > 0 && { failed_api_calls: failedApiCalls }),
-        },
+        submissionPayload,
         hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined,
       )
       onSuccess({
@@ -553,12 +566,13 @@ export function SubmitForm({
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : ''
-      try {
-        const parsed = JSON.parse(message)
-        setError(parsed.error || parsed.message || t('feedback.submitFailed'))
-      } catch {
-        setError(message || t('feedback.submitFailed'))
+      const normalizedMessage = isFeedbackRequestBodyLimitError(message)
+        ? requestBodyTooLargeMessage
+        : message || t('feedback.submitFailed')
+      if (isFeedbackRequestBodyLimitError(message)) {
+        showToast(normalizedMessage, 'error')
       }
+      setError(normalizedMessage)
     }
   }
 

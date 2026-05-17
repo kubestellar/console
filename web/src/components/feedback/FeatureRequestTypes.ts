@@ -66,12 +66,36 @@ export const EMPTY_FILE_SIZE_BYTES = 0
 
 /** Number of bytes in one mebibyte. */
 export const BYTES_PER_MEBIBYTE = 1024 * 1024
+const BASE64_INPUT_BLOCK_BYTES = 3
+const BASE64_OUTPUT_BLOCK_BYTES = 4
+const FEEDBACK_BODY_SLACK_BYTES = 1 * BYTES_PER_MEBIBYTE
+const textEncoder = new TextEncoder()
+const FEEDBACK_REQUEST_TOO_LARGE_TOKENS = ['request entity too large', 'request body too large', 'payload too large']
+
 /** Maximum video file size in MiB (matches backend feedback upload validation). */
 export const MAX_VIDEO_SIZE_MIB = 10
-/** Maximum video file size in bytes (10 MiB) */
-export const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MIB * BYTES_PER_MEBIBYTE
+/** Maximum attachment file size in bytes (10 MiB). */
+export const FEEDBACK_ATTACHMENT_MAX_FILE_BYTES = MAX_VIDEO_SIZE_MIB * BYTES_PER_MEBIBYTE
+/** Maximum video file size in bytes (10 MiB). */
+export const MAX_VIDEO_SIZE_BYTES = FEEDBACK_ATTACHMENT_MAX_FILE_BYTES
 /** Shared helper text for attachment limits. */
 export const ATTACHMENT_HELP_TEXT = `Videos: mp4, webm, mov (max ${MAX_VIDEO_SIZE_MIB} MB each)`
+/** Max serialized feedback request size after base64 expansion and JSON overhead. */
+export const FEEDBACK_REQUEST_BODY_LIMIT_BYTES =
+  Math.ceil(FEEDBACK_ATTACHMENT_MAX_FILE_BYTES / BASE64_INPUT_BLOCK_BYTES) * BASE64_OUTPUT_BLOCK_BYTES + FEEDBACK_BODY_SLACK_BYTES
+
+export function estimateFeedbackRequestBodyBytes(payload: unknown): number {
+  return textEncoder.encode(JSON.stringify(payload)).length
+}
+
+export function isFeedbackRequestBodyTooLarge(payload: unknown): boolean {
+  return estimateFeedbackRequestBodyBytes(payload) > FEEDBACK_REQUEST_BODY_LIMIT_BYTES
+}
+
+export function isFeedbackRequestBodyLimitError(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return FEEDBACK_REQUEST_TOO_LARGE_TOKENS.some(token => normalized.includes(token))
+}
 
 /** Accepted media types for file input */
 export const ACCEPTED_MEDIA_TYPES = 'image/*,video/mp4,video/webm,video/quicktime'

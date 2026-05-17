@@ -28,7 +28,14 @@ import { compressScreenshot } from '../../lib/imageCompression'
 import { useFeatureRequests, DiagnosticInfo } from '../../hooks/useFeatureRequests'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAuth } from '../../lib/auth'
-import { MAX_VIDEO_SIZE_BYTES, ACCEPTED_MEDIA_TYPES, ACCEPTED_VIDEO_MIME_TYPES, ATTACHMENT_HELP_TEXT } from './FeatureRequestTypes'
+import {
+  MAX_VIDEO_SIZE_BYTES,
+  ACCEPTED_MEDIA_TYPES,
+  ACCEPTED_VIDEO_MIME_TYPES,
+  ATTACHMENT_HELP_TEXT,
+  isFeedbackRequestBodyTooLarge,
+  isFeedbackRequestBodyLimitError,
+} from './FeatureRequestTypes'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -199,6 +206,11 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     setIsSubmitting(true)
     setSubmitError(null)
 
+    const requestBodyTooLargeMessage = t(
+      'feedback.attachmentsTooLarge',
+      'Attachments are too large to submit. Keep each video at or below 10 MB and reduce the total attachment payload before retrying.',
+    )
+
     try {
       // Compress screenshots to fit within GitHub's 65K issue body limit.
       // Images are embedded as base64 and processed into rendered images
@@ -242,15 +254,22 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       // server-side token. No GitHub login required from the user.
       // Screenshots are uploaded server-side and embedded as images.
       const hasScreenshots = screenshotDataURIs.length > 0
-      const result = await createRequest({
+      const submissionPayload = {
         title: title.trim(),
         description: description.trim(),
         request_type: type,
-        target_repo: 'console',
+        target_repo: 'console' as const,
         diagnostics,
         ...(consoleErrors.length > 0 && { console_errors: consoleErrors }),
         ...(failedApiCalls.length > 0 && { failed_api_calls: failedApiCalls }),
-        ...(hasScreenshots && { screenshots: screenshotDataURIs }) }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
+        ...(hasScreenshots && { screenshots: screenshotDataURIs }),
+      }
+      if (isFeedbackRequestBodyTooLarge(submissionPayload)) {
+        setSubmitError(requestBodyTooLargeMessage)
+        showToast(requestBodyTooLargeMessage, 'error')
+        return
+      }
+      const result = await createRequest(submissionPayload, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       if (hasScreenshots) emitScreenshotUploadSuccess(screenshotDataURIs.length)
 
       emitFeedbackSubmitted(type)
@@ -268,9 +287,12 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
     } catch (err: unknown) {
       console.error('[Screenshot] Failed to submit feedback:', err)
       const message = err instanceof Error ? err.message : 'Failed to submit feedback'
-      if (screenshots.length > 0) emitScreenshotUploadFailed(message, screenshots.length)
-      setSubmitError(message)
-      showToast('Failed to submit feedback', 'error')
+      const finalMessage = isFeedbackRequestBodyLimitError(message)
+        ? requestBodyTooLargeMessage
+        : message
+      if (screenshots.length > 0) emitScreenshotUploadFailed(finalMessage, screenshots.length)
+      setSubmitError(finalMessage)
+      showToast(finalMessage, 'error')
     } finally {
       setIsSubmitting(false)
     }

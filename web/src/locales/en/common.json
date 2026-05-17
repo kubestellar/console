@@ -2199,6 +2199,7 @@
     "alreadySetUp": "Already have OAuth configured? Login with GitHub →",
     "submitFailed": "Unable to submit — GitHub login may be required.",
     "submitFailedGuidance": "You can open issues directly on GitHub. Coins will be accumulated and available in your console once you install a GitHub OAuth app.",
+    "attachmentsTooLarge": "Attachments are too large to submit. Keep each video at or below 10 MB and reduce the total attachment payload before retrying.",
     "submitInfo": "Your request will be reviewed by a maintainer before being analyzed by our AI. Once approved, the AI will attempt to create a fix automatically and you'll receive a notification when ready.",
     "submitShortcutHint": "Press Cmd/Ctrl+Enter to submit.",
     "loginBannerDemo": "Login with GitHub to submit feedback and manage requests",

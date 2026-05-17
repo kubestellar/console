@@ -1,26 +1,26 @@
 package api
 
 import (
-"context"
-"crypto/rand"
-"encoding/hex"
-"fmt"
-"log/slog"
-"net"
-"net/http"
-"os"
-"os/exec"
-"path/filepath"
-"strings"
-"sync/atomic"
-"time"
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync/atomic"
+	"time"
 
-"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 
-"github.com/kubestellar/console/pkg/api/handlers"
-"github.com/kubestellar/console/pkg/api/middleware"
-"github.com/kubestellar/console/pkg/fileutil"
-"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/fileutil"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // startLoadingServer starts a temporary HTTP server that serves a loading page.
@@ -295,6 +295,9 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 	if e, ok := err.(*fiber.Error); ok {
 		code = e.Code
 		message = e.Message
+	}
+	if code == fiber.StatusRequestEntityTooLarge && message == fiber.ErrRequestEntityTooLarge.Message {
+		message = "Request body too large"
 	}
 
 	return c.Status(code).JSON(fiber.Map{
