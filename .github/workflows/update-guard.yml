@@ -9,6 +9,9 @@ on:
     branches: [main]
     paths:
       - 'pkg/agent/update_checker.go'
+      - 'pkg/agent/update_build.go'
+      - 'pkg/agent/update_helpers.go'
+      - 'pkg/agent/update_poller.go'
       - 'pkg/agent/update_checker_test.go'
       - 'pkg/agent/server.go'
       - 'web/src/hooks/useUpdateProgress.ts'
@@ -72,11 +75,11 @@ jobs:
       - name: Verify update invariants in source
         run: |
           echo "=== Verifying critical update invariants ==="
-          CHECKER="pkg/agent/update_checker.go"
+          UPDATE_FILES="pkg/agent/update_checker.go pkg/agent/update_build.go pkg/agent/update_helpers.go pkg/agent/update_poller.go"
           ERRORS=0
 
           # 1. Atomic flag for mutual exclusion
-          if ! grep -q "atomic.CompareAndSwapInt32" "$CHECKER"; then
+          if ! grep -q "atomic.CompareAndSwapInt32" $UPDATE_FILES; then
             echo "FAIL: Missing atomic.CompareAndSwapInt32 for update mutual exclusion"
             ERRORS=$((ERRORS + 1))
           else
@@ -89,7 +92,7 @@ jobs:
           # closure that's deferred from every start path. Verify both:
           # (a) cleanup closure exists and clears the updating flag, and
           # (b) at least one `defer cleanup()` call site exists.
-          if ! grep -q "atomic.StoreInt32(&uc.updating, 0)" "$CHECKER" || ! grep -q "defer cleanup()" "$CHECKER"; then
+          if ! grep -q "atomic.StoreInt32(&uc.updating, 0)" $UPDATE_FILES || ! grep -q "defer cleanup()" $UPDATE_FILES; then
             echo "FAIL: Missing defer cleanup of updating flag"
             ERRORS=$((ERRORS + 1))
           else
@@ -98,7 +101,7 @@ jobs:
 
           # 3. Build timeouts defined
           for TIMEOUT in gitPullTimeout npmInstallTimeout frontendBuildTimeout goBuildTimeout; do
-            if ! grep -q "$TIMEOUT" "$CHECKER"; then
+            if ! grep -q "$TIMEOUT" $UPDATE_FILES; then
               echo "FAIL: Missing timeout constant: $TIMEOUT"
               ERRORS=$((ERRORS + 1))
             else
@@ -107,7 +110,7 @@ jobs:
           done
 
           # 4. Heartbeat interval defined
-          if ! grep -q "buildHeartbeatInterval" "$CHECKER"; then
+          if ! grep -q "buildHeartbeatInterval" $UPDATE_FILES; then
             echo "FAIL: Missing buildHeartbeatInterval constant"
             ERRORS=$((ERRORS + 1))
           else
@@ -115,7 +118,7 @@ jobs:
           fi
 
           # 5. Atomic binary replacement (build-to-temp-then-rename)
-          if ! grep -q "update-tmp" "$CHECKER"; then
+          if ! grep -q "update-tmp" $UPDATE_FILES; then
             echo "FAIL: Missing atomic binary replacement (.update-tmp pattern)"
             ERRORS=$((ERRORS + 1))
           else
@@ -123,7 +126,7 @@ jobs:
           fi
 
           # 6. WaitDelay for pipe cleanup
-          if ! grep -q "WaitDelay" "$CHECKER"; then
+          if ! grep -q "WaitDelay" $UPDATE_FILES; then
             echo "FAIL: Missing cmd.WaitDelay for pipe cleanup after timeout"
             ERRORS=$((ERRORS + 1))
           else
@@ -131,7 +134,7 @@ jobs:
           fi
 
           # 7. exitFunc injection for testability
-          if ! grep -q "exitFunc" "$CHECKER"; then
+          if ! grep -q "exitFunc" $UPDATE_FILES; then
             echo "FAIL: Missing exitFunc injection (needed for testing restart path)"
             ERRORS=$((ERRORS + 1))
           else
@@ -139,7 +142,7 @@ jobs:
           fi
 
           # 8. runBuildCmd helper with timeout+heartbeat
-          if ! grep -q "func.*runBuildCmd" "$CHECKER"; then
+          if ! grep -q "func.*runBuildCmd" $UPDATE_FILES; then
             echo "FAIL: Missing runBuildCmd helper"
             ERRORS=$((ERRORS + 1))
           else
@@ -147,7 +150,7 @@ jobs:
           fi
 
           # 9. Rollback functions
-          if ! grep -q "rollbackGit" "$CHECKER"; then
+          if ! grep -q "rollbackGit" $UPDATE_FILES; then
             echo "FAIL: Missing rollbackGit function"
             ERRORS=$((ERRORS + 1))
           else
