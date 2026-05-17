@@ -75,7 +75,9 @@ export default async (request: Request): Promise<Response> => {
   const projectParam = url.searchParams.get("project");
   const idParam = url.searchParams.get("id");
 
-  // Check for demo mode
+  // X-Demo-Mode header is intentionally checked WITHOUT authentication (#14500).
+  // The demo data is static/harmless (canned mission examples) and does not bypass any real auth logic.
+  // This allows unauthenticated testing clients to verify API response shape without requiring GitHub tokens.
   if (request.headers.get("X-Demo-Mode") === "true") {
     if (projectParam && idParam) {
       return jsonResponse(corsHeaders, {

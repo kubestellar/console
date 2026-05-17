@@ -16,6 +16,9 @@ const BONUS_LABEL = "bonus-points";
 const BONUS_AUTHORIZED_USER = "clubanderson";
 const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+\+(\d+)\s*(.*)/i;
 
+/** GitHub username validation — alphanumeric, hyphens allowed, 1-39 chars (#14500) */
+const GITHUB_LOGIN_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})?$/;
+
 /** Cache TTL — 15 minutes */
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
@@ -102,6 +105,13 @@ export default async (req: Request) => {
   if (!login) {
     return new Response(
       JSON.stringify({ error: "Missing ?login= parameter" }),
+      { status: 400, headers }
+    );
+  }
+
+  if (!GITHUB_LOGIN_REGEX.test(login)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid GitHub username format" }),
       { status: 400, headers }
     );
   }

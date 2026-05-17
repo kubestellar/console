@@ -45,9 +45,9 @@ interface BrowseCacheEntry {
   fetchedAt: number;
 }
 
-/** Reject path traversal patterns and URL control characters (#13230). */
+/** Reject path traversal patterns, URL control characters, and excessively long inputs (#13230, #14500). */
 function hasInvalidPathInput(value: string): boolean {
-  return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  return value.length > 1000 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
 }
 
 export default async (request: Request): Promise<Response> => {
