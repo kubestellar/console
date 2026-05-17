@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Globe, Check, X, Moon } from 'lucide-react'
+import { Globe, Check, X, Moon, ChevronDown, ChevronUp } from 'lucide-react'
 import { isBrowserNotifVerified, setBrowserNotifVerified } from '../../../lib/notificationStatus'
 import { useDoNotDisturb } from '../../../hooks/useDoNotDisturb'
 
@@ -25,6 +25,20 @@ export function detectInstructionKey(ua: string): string {
 }
 
 /**
+ * Pick browser-specific help instruction key for the "How to re-enable" section
+ */
+export function detectHowToEnableKey(ua: string): string {
+  const u = ua.toLowerCase()
+  if (u.includes('edg/') || u.includes('edge/')) return 'settings.notifications.browser.howToEnableEdge'
+  if (u.includes('firefox/')) return 'settings.notifications.browser.howToEnableFirefox'
+  if (u.includes('safari/') && !u.includes('chrome/') && !u.includes('chromium/') && !u.includes('android')) {
+    return 'settings.notifications.browser.howToEnableSafari'
+  }
+  if (u.includes('chrome/') || u.includes('chromium/')) return 'settings.notifications.browser.howToEnableChrome'
+  return 'settings.notifications.browser.howToEnableGeneric'
+}
+
+/**
  * Browser notification settings sub-section.
  * Handles permission requests, test notifications, and verification flow.
  */
@@ -33,9 +47,13 @@ export function BrowserNotificationSettings() {
   const instructionKey = detectInstructionKey(
     typeof navigator !== 'undefined' ? navigator.userAgent : '',
   )
+  const howToEnableKey = detectHowToEnableKey(
+    typeof navigator !== 'undefined' ? navigator.userAgent : '',
+  )
   const [browserNotifState, setBrowserNotifState] = useState<BrowserNotifState>(
     () => (isBrowserNotifVerified() ? 'verified' : 'idle'),
   )
+  const [showHelp, setShowHelp] = useState(false)
 
   const browserPermission =
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
@@ -161,12 +179,53 @@ export function BrowserNotificationSettings() {
       ) : (
         <div className="space-y-2">
           {browserPermission === 'denied' ? (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-              <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-400">
-                {t('settings.notifications.browser.blocked')}
-              </p>
-            </div>
+            <>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400">
+                  {t('settings.notifications.browser.blocked')}
+                </p>
+              </div>
+              
+              {/* Actionable CTA buttons */}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleRequestPermission}
+                  className="px-4 py-2 text-sm rounded-lg bg-purple-500 text-white hover:bg-purple-600 transition-colors"
+                >
+                  {t('settings.notifications.browser.requestAgain')}
+                </button>
+                
+                <button
+                  onClick={() => setShowHelp(!showHelp)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-lg bg-secondary text-muted-foreground border border-border hover:text-foreground transition-colors"
+                >
+                  {showHelp ? (
+                    <>
+                      {t('settings.notifications.browser.hideHelp')}
+                      <ChevronUp className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      {t('settings.notifications.browser.showHelp')}
+                      <ChevronDown className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Browser-specific help instructions */}
+              {showHelp && (
+                <div className="p-3 rounded-lg bg-secondary/50 border border-border">
+                  <h4 className="text-sm font-medium text-foreground mb-2">
+                    {t('settings.notifications.browser.howToEnableTitle')}
+                  </h4>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">
+                    {t(howToEnableKey as never)}
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <button
               onClick={handleRequestPermission}
