@@ -9,9 +9,14 @@ const { mockUseCache } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
 }))
 
-vi.mock('../cacheCore', () => ({
-  useCache: (...args: unknown[]) => mockUseCache(...args),
-}))
+vi.mock('../cacheCore', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../cacheCore')>()
+
+  return {
+    ...actual,
+    useCache: (...args: unknown[]) => mockUseCache(...args),
+  }
+})
 
 import { createCachedHook } from '../createCachedHook'
 import type { CreateCachedHookConfig } from '../createCachedHook'
