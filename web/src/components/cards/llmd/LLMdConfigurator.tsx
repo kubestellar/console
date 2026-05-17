@@ -8,7 +8,7 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, Zap, Split, Layers, Scale, ChevronRight, Check, Copy, ExternalLink } from 'lucide-react'
 import { getConfiguratorPresets, type ConfiguratorPreset } from '../../../lib/llmd/mockData'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardDemoState, useCardLoadingState } from '../CardDataContext'
 import { Acronym } from './shared/PortalTooltip'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -149,13 +149,17 @@ function ParameterSlider({ param, onChange }: ParameterSliderProps) {
 
 export function LLMdConfigurator() {
   const { t } = useTranslation()
-  const presets = getConfiguratorPresets()
+  const presets = useMemo(() => getConfiguratorPresets(), [])
   const [selectedPresetId, setSelectedPresetId] = useState<string>(presets[0]?.id || '')
-
-  // Report to CardWrapper that this static card is ready (never demo — uses local mock data)
-  useReportCardDataState({ isFailed: false, consecutiveFailures: 0, hasData: true, isDemoData: false, isRefreshing: false })
   const [customParams, setCustomParams] = useState<Record<string, unknown>>({})
   const [copied, setCopied] = useState(false)
+  const { showDemoBadge } = useCardDemoState({ requires: 'none' })
+  const { showEmptyState } = useCardLoadingState({
+    isLoading: false,
+    isRefreshing: false,
+    isDemoData: showDemoBadge,
+    hasAnyData: presets.length > 0,
+  })
 
   const selectedPreset = presets.find(p => p.id === selectedPresetId)
 
@@ -194,6 +198,14 @@ ${Object.entries(params).map(([k, v]) => `    ${k}: ${v}`).join('\n')}`
     copyToClipboard(yamlConfig)
     setCopied(true)
     setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center text-sm text-muted-foreground">
+        No configurator presets available
+      </div>
+    )
   }
 
   return (
