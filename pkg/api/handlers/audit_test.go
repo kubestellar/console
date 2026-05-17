@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,23 @@ func TestGetAuditLog(t *testing.T) {
 		var entries []store.AuditEntry
 		json.NewDecoder(resp.Body).Decode(&entries)
 		assert.Empty(t, entries)
+	})
+
+	t.Run("RequiresAdmin", func(t *testing.T) {
+		env := setupTestEnv(t)
+		handler := NewAuditHandler(env.Store)
+		env.App.Get("/api/audit", handler.GetAuditLog)
+
+		env.Store.(*test.MockStore).ExpectedCalls = nil
+		env.Store.(*test.MockStore).Calls = nil
+		env.Store.(*test.MockStore).On("GetUser", testAdminUserID).Return(&models.User{ID: testAdminUserID, Role: models.UserRoleViewer}, nil)
+		env.Store.(*test.MockStore).On("CountUsersByRole").Return(1, 0, 1, nil)
+
+		req := httptest.NewRequest("GET", "/api/audit", nil)
+		resp, _ := env.App.Test(req)
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		env.Store.(*test.MockStore).AssertNotCalled(t, "QueryAuditLogs", mock.Anything, mock.Anything, mock.Anything)
 	})
 
 	t.Run("Success", func(t *testing.T) {

@@ -36,6 +36,9 @@ func (h *AuditHandler) GetAuditLog(c *fiber.Ctx) error {
 	if isDemoMode(c) {
 		return c.JSON(make([]store.AuditEntry, 0))
 	}
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
 
 	limit := defaultAuditLimit
 	if q := c.Query("limit"); q != "" {
