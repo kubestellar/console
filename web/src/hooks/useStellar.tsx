@@ -126,6 +126,35 @@ function useStellarSource() {
         return
       }
       setNotifications(prev => (prev.some(n => n.id === notif.id) ? prev : sortNotificationsByCreatedAt([notif, ...prev])))
+      // Automatically trigger AI solve for incoming critical events so Stellar
+      // acts as a fully autonomous "junior k8s engineer" — not just reporting
+      // the cause but also attempting to remediate it. Uses setSolveProgress
+      // callback form to guard against duplicate solves in the same session
+      // (e.g. caused by SSE reconnects). The server also deduplicates.
+      if (notif.type === 'event' && notif.severity === 'critical') {
+        setSolveProgress(prev => {
+          if (prev[notif.id]) return prev // solve already in-flight, skip
+          return {
+            ...prev,
+            [notif.id]: {
+              solveId: 'pending',
+              eventId: notif.id,
+              step: 'reading',
+              message: 'Auto-solve triggered — Stellar is investigating…',
+              actionsTaken: 0,
+              status: 'running',
+            },
+          }
+        })
+        stellarApi.startSolve(notif.id).catch(err => {
+          console.warn('stellar: auto-solve for critical event failed:', notif.id, err)
+          setSolveProgress(prev => {
+            const copy = { ...prev }
+            delete copy[notif.id]
+            return copy
+          })
+        })
+      }
     })
     es.addEventListener('state', (e) => {
       const payload = parseStellarEvent<{ clustersWatching: string[]; unreadCount: number; pendingActionCount: number }>(e, 'state')
