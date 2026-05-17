@@ -254,38 +254,42 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
           />
 
           <MissionContentViewer
-            activeTab={activeTab}
-            selectedPath={tree.selectedPath}
-            selectedNode={tree.selectedTreeNode}
-            viewMode={viewMode}
-            searchQuery={filters.searchQuery}
-            tokenError={recommendations.tokenError}
-            missionFetchError={recommendations.missionFetchError}
-            loadingRecommendations={recommendations.loadingRecommendations}
-            searchProgress={recommendations.searchProgress}
-            hasCluster={recommendations.hasCluster}
-            recommendations={recommendations.recommendations}
-            filteredRecommendations={filters.filteredRecommendations}
-            installerMissions={recommendations.installerMissions}
-            filteredInstallers={filters.filteredInstallers}
-            loadingInstallers={recommendations.loadingInstallers}
-            installerSearch={filters.installerSearch}
-            onInstallerSearchChange={filters.handleInstallerSearchChange}
-            installerCategoryFilter={filters.installerCategoryFilter}
-            onInstallerCategoryFilterChange={filters.setInstallerCategoryFilter}
-            installerMaturityFilter={filters.installerMaturityFilter}
-            onInstallerMaturityFilterChange={filters.setInstallerMaturityFilter}
-            fixerMissions={recommendations.fixerMissions}
-            filteredFixers={filters.filteredFixers}
-            loadingFixers={recommendations.loadingFixers}
-            fixerSearch={filters.fixerSearch}
-            onFixerSearchChange={filters.handleFixerSearchChange}
-            fixerTypeFilter={filters.fixerTypeFilter}
-            onFixerTypeFilterChange={filters.setFixerTypeFilter}
-            onToggleNode={tree.toggleNode}
-            onSelectNode={handleSelectNode}
-            onClearSelectedPath={() => tree.setSelectedPath(null)}
-            onUseInMissionControl={onUseInMissionControl}
+            searchPanel={{
+              activeTab,
+              searchQuery: filters.searchQuery,
+              tokenError: recommendations.tokenError,
+              missionFetchError: recommendations.missionFetchError,
+              loadingRecommendations: recommendations.loadingRecommendations,
+              searchProgress: recommendations.searchProgress,
+              hasCluster: recommendations.hasCluster,
+              recommendations: recommendations.recommendations,
+              filteredRecommendations: filters.filteredRecommendations,
+              installerMissions: recommendations.installerMissions,
+              filteredInstallers: filters.filteredInstallers,
+              loadingInstallers: recommendations.loadingInstallers,
+              installerSearch: filters.installerSearch,
+              onInstallerSearchChange: filters.handleInstallerSearchChange,
+              installerCategoryFilter: filters.installerCategoryFilter,
+              onInstallerCategoryFilterChange: filters.setInstallerCategoryFilter,
+              installerMaturityFilter: filters.installerMaturityFilter,
+              onInstallerMaturityFilterChange: filters.setInstallerMaturityFilter,
+              fixerMissions: recommendations.fixerMissions,
+              filteredFixers: filters.filteredFixers,
+              loadingFixers: recommendations.loadingFixers,
+              fixerSearch: filters.fixerSearch,
+              onFixerSearchChange: filters.handleFixerSearchChange,
+              fixerTypeFilter: filters.fixerTypeFilter,
+              onFixerTypeFilterChange: filters.setFixerTypeFilter,
+            }}
+            filePanel={{
+              selectedPath: tree.selectedPath,
+              selectedNode: tree.selectedTreeNode,
+              viewMode,
+              onToggleNode: tree.toggleNode,
+              onSelectNode: handleSelectNode,
+              onClearSelectedPath: () => tree.setSelectedPath(null),
+              onUseInMissionControl,
+            }}
             content={content}
           />
         </div>

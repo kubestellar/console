@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { X, Check, Loader2, ChevronDown, ChevronUp, Shield, KeyRound, Cloud } from 'lucide-react'
 import { CloudProviderIcon } from '../../ui/CloudProviderIcon'
 import { CopyButton } from './CopyButton'
-import type { ConnectStep, ConnectState, CloudProvider } from './types'
+import { useConnectTabContext } from './ConnectTabContext'
+import type { ConnectStep, CloudProvider } from './types'
 
 // Cloud provider IAM auth commands — two steps: authenticate, then register cluster
 const CLOUD_IAM_COMMANDS: Record<CloudProvider, { auth: string; register: string; cliName: string }> = {
@@ -28,78 +29,43 @@ const CLOUD_IAM_COMMANDS: Record<CloudProvider, { auth: string; register: string
   },
 }
 
-interface ConnectTabProps {
-  connectStep: ConnectStep
-  setConnectStep: (step: ConnectStep) => void
-  connectState: ConnectState
-  serverUrl: string
-  setServerUrl: (url: string) => void
-  authType: 'token' | 'certificate' | 'cloud-iam'
-  setAuthType: (type: 'token' | 'certificate' | 'cloud-iam') => void
-  token: string
-  setToken: (token: string) => void
-  certData: string
-  setCertData: (data: string) => void
-  keyData: string
-  setKeyData: (data: string) => void
-  caData: string
-  setCaData: (data: string) => void
-  skipTls: boolean
-  setSkipTls: (skip: boolean) => void
-  contextName: string
-  setContextName: (name: string) => void
-  clusterName: string
-  setClusterName: (name: string) => void
-  namespace: string
-  setNamespace: (ns: string) => void
-  testResult: { reachable: boolean; serverVersion?: string; error?: string } | null
-  resetTestResult: () => void
-  connectError: string
-  showAdvanced: boolean
-  setShowAdvanced: (show: boolean) => void
-  selectedCloudProvider: CloudProvider
-  setSelectedCloudProvider: (provider: CloudProvider) => void
-  goToConnectStep: (step: ConnectStep) => void
-  handleTestConnection: () => void
-  handleAddCluster: () => void
-}
-
-export function ConnectTab({
-  connectStep,
-  setConnectStep,
-  connectState,
-  serverUrl,
-  setServerUrl,
-  authType,
-  setAuthType,
-  token,
-  setToken,
-  certData,
-  setCertData,
-  keyData,
-  setKeyData,
-  caData,
-  setCaData,
-  skipTls,
-  setSkipTls,
-  contextName,
-  setContextName,
-  clusterName,
-  setClusterName,
-  namespace,
-  setNamespace,
-  testResult,
-  resetTestResult,
-  connectError,
-  showAdvanced,
-  setShowAdvanced,
-  selectedCloudProvider,
-  setSelectedCloudProvider,
-  goToConnectStep,
-  handleTestConnection,
-  handleAddCluster,
-}: ConnectTabProps) {
+export function ConnectTab() {
   const { t } = useTranslation()
+  const {
+    connectStep,
+    setConnectStep,
+    connectState,
+    serverUrl,
+    setServerUrl,
+    authType,
+    setAuthType,
+    token,
+    setToken,
+    certData,
+    setCertData,
+    keyData,
+    setKeyData,
+    caData,
+    setCaData,
+    skipTls,
+    setSkipTls,
+    contextName,
+    setContextName,
+    clusterName,
+    setClusterName,
+    namespace,
+    setNamespace,
+    testResult,
+    resetTestResult,
+    connectError,
+    showAdvanced,
+    setShowAdvanced,
+    selectedCloudProvider,
+    setSelectedCloudProvider,
+    goToConnectStep,
+    handleTestConnection,
+    handleAddCluster,
+  } = useConnectTabContext()
 
   return (
     <div className="space-y-4">

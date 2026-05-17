@@ -34,6 +34,7 @@ import { PodLogsSection } from './PodLogsSection'
 import { PodEventsSection } from './PodEventsSection'
 import { PodYamlSection } from './PodYamlSection'
 import { computeKeyValueDiffMap } from './pod-drilldown/helpers'
+import { PodLabelsProvider } from './pod-drilldown/PodLabelsContext'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -1630,9 +1631,7 @@ Please:
 
         {activeTab === 'labels' && (
           <Suspense fallback={<TabLoadingFallback />}>
-            <PodLabelsTab
-              labels={labels}
-              annotations={annotations}
+            <PodLabelsProvider
               describeLoading={describeLoading}
               agentConnected={agentConnected}
               copiedField={copiedField}
@@ -1671,7 +1670,12 @@ Please:
               handleCopy={handleCopy}
               labelDiffByKey={labelDiffByKey}
               annotationDiffByKey={annotationDiffByKey}
-            />
+            >
+              <PodLabelsTab
+                labels={labels}
+                annotations={annotations}
+              />
+            </PodLabelsProvider>
           </Suspense>
         )}
 

@@ -37,11 +37,53 @@ vi.mock('../../../../../lib/cn', () => ({
   cn: vi.fn(),
 }))
 
+import { PodLabelsProvider } from '../PodLabelsContext'
 import { PodLabelsTab } from '../PodLabelsTab'
 
 describe('PodLabelsTab', () => {
   it('renders without crashing', () => {
-    const { container } = render(<PodLabelsTab labels={null} annotations={null} describeLoading={false} agentConnected={false} copiedField={null} showAllLabels={false} setShowAllLabels={vi.fn()} editingLabels={false} setEditingLabels={vi.fn()} labelDraft={{}} setLabelDraft={vi.fn()} labelSaveError={null} setLabelSaveError={vi.fn()} isSavingLabels={false} handleSaveLabels={vi.fn()} />)
+    const { container } = render(
+      <PodLabelsProvider
+        describeLoading={false}
+        agentConnected={false}
+        copiedField={null}
+        showAllLabels={false}
+        setShowAllLabels={vi.fn()}
+        editingLabels={false}
+        setEditingLabels={vi.fn()}
+        pendingLabelChanges={{}}
+        newLabelKey=""
+        setNewLabelKey={vi.fn()}
+        newLabelValue=""
+        setNewLabelValue={vi.fn()}
+        labelSaving={false}
+        labelError={null}
+        handleLabelChange={vi.fn()}
+        handleLabelRemove={vi.fn()}
+        undoLabelChange={vi.fn()}
+        saveLabels={vi.fn()}
+        cancelLabelEdit={vi.fn()}
+        showAllAnnotations={false}
+        setShowAllAnnotations={vi.fn()}
+        editingAnnotations={false}
+        setEditingAnnotations={vi.fn()}
+        pendingAnnotationChanges={{}}
+        newAnnotationKey=""
+        setNewAnnotationKey={vi.fn()}
+        newAnnotationValue=""
+        setNewAnnotationValue={vi.fn()}
+        annotationSaving={false}
+        annotationError={null}
+        handleAnnotationChange={vi.fn()}
+        handleAnnotationRemove={vi.fn()}
+        undoAnnotationChange={vi.fn()}
+        saveAnnotations={vi.fn()}
+        cancelAnnotationEdit={vi.fn()}
+        handleCopy={vi.fn()}
+      >
+        <PodLabelsTab labels={null} annotations={null} />
+      </PodLabelsProvider>
+    )
     expect(container).toBeTruthy()
   })
 })
