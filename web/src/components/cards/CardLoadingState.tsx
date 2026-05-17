@@ -7,6 +7,8 @@ import { CardErrorFallback } from './CardErrorFallback'
 import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 import { CardSkeleton, type CardSkeletonProps } from '@/lib/cards/CardComponents'
 
+// CardWrapper owns useCardLoadingState and passes the derived state into this presentational helper.
+
 export interface CardLoadingStateProps {
   cardId: string
   cardType: string

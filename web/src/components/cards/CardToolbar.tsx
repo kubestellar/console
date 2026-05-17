@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { CardActionMenu, type CardActionMenuProps } from './card-wrapper/CardActionMenu'
 
+// CardWrapper owns useCardLoadingState and passes the derived state into this presentational helper.
+
 export interface CardToolbarProps extends CardActionMenuProps {
   title: string
   isCollapsed: boolean

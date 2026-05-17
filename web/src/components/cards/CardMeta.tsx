@@ -4,6 +4,8 @@ import { cn } from '@/lib/cn'
 import { formatTimeAgo } from '@/lib/formatters'
 import { shouldShowLiveBadge } from './card-wrapper/badgeVisibility'
 
+// CardWrapper owns useCardLoadingState and passes the derived state into this presentational helper.
+
 export interface CardMetaProps {
   showDemoIndicator: boolean
   isDemoData: boolean
