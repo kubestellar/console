@@ -16,7 +16,7 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-vi.mock('../../DashboardHealthIndicator', () => ({
+vi.mock('../../../DashboardHealthIndicator', () => ({
   DashboardHealthIndicator: () =>
     React.createElement('div', { 'data-testid': 'dashboard-health' }),
 }))

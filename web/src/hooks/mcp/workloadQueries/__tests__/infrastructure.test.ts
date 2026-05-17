@@ -22,32 +22,32 @@ const { mockIsAgentUnavailable, mockIsClusterModeBackend, mockFetchSSE } = vi.ho
 // Module mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../lib/constants/network', () => ({
+vi.mock('../../../../lib/constants/network', () => ({
   MCP_HOOK_TIMEOUT_MS: 5000,
   LOCAL_AGENT_HTTP_URL: '',         // empty → triggers early-exit branch
   RETRY_DELAY_MS: 0,
 }))
 
-vi.mock('../../../lib/sseClient', () => ({
+vi.mock('../../../../lib/sseClient', () => ({
   fetchSSE: (...args: unknown[]) => mockFetchSSE(...args),
 }))
 
-vi.mock('../../../lib/cache/fetcherUtils', () => ({
+vi.mock('../../../../lib/cache/fetcherUtils', () => ({
   getClusterModeBaseUrl: () => 'http://localhost:8080',
   isClusterModeBackend: () => mockIsClusterModeBackend(),
 }))
 
-vi.mock('../../useLocalAgent', () => ({
+vi.mock('../../../useLocalAgent', () => ({
   reportAgentDataSuccess: vi.fn(),
   isAgentUnavailable: () => mockIsAgentUnavailable(),
 }))
 
-vi.mock('../shared', () => ({
+vi.mock('../../shared', () => ({
   agentFetch: vi.fn(),
   fetchWithRetry: vi.fn(),
 }))
 
-vi.mock('./shared', async (importOriginal) => {
+vi.mock('../shared', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
     ...actual,

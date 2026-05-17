@@ -314,16 +314,11 @@ describe('useLocalAgent', () => {
   })
 
   it('does not disconnect before reaching the failure threshold', async () => {
-    const PARTIAL_FAILURES = 5
     mockFetchReject()
     const { result } = renderHook(() => useLocalAgent())
     await flushMicrotasks()
 
-    for (let i = 1; i < PARTIAL_FAILURES; i++) {
-      await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
-      await flushMicrotasks()
-    }
-
+    // After only the initial failure (1 < FAILURE_THRESHOLD=2), should NOT be disconnected
     expect(result.current.status).not.toBe('disconnected')
   })
 

@@ -30,10 +30,10 @@ vi.mock('../../hooks/useDeepLink', () => ({
 
 vi.mock('../notifications', () => ({
   shouldDispatchBrowserNotification: vi.fn(() => true),
-  isClusterUnreachable: vi.fn(() => false),
+  isClusterUnreachable: vi.fn((cluster: { reachable?: boolean }) => cluster.reachable === false),
   dispatchNotification: vi.fn(),
   sendNotifications: vi.fn(),
-  sendBatchedNotifications: vi.fn(),
+  sendBatchedNotifications: vi.fn(() => Promise.resolve()),
   getNotificationCooldown: vi.fn(() => 300000),
   PERSISTENT_CLUSTER_CONDITIONS: new Set(['certificate_error', 'cluster_unreachable']),
 }))

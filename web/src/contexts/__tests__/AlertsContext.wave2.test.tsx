@@ -28,15 +28,27 @@ vi.mock('../../hooks/useDeepLink', () => ({
   sendNotificationWithDeepLink: vi.fn(),
 }))
 
-vi.mock('../notifications', () => ({
-  shouldDispatchBrowserNotification: vi.fn(() => true),
-  isClusterUnreachable: vi.fn(() => false),
-  dispatchNotification: vi.fn(),
-  sendNotifications: vi.fn(),
-  sendBatchedNotifications: vi.fn(),
-  getNotificationCooldown: vi.fn(() => 300000),
-  PERSISTENT_CLUSTER_CONDITIONS: new Set(['certificate_error', 'cluster_unreachable']),
-}))
+vi.mock('../notifications', () => {
+  const PERSISTENT = new Set(['certificate_error', 'cluster_unreachable'])
+  return {
+    shouldDispatchBrowserNotification: vi.fn((rule: { condition: { type: string }; channels?: Array<{ type: string; enabled: boolean }>; severity?: string }, dedupKey: string, notifiedKeys: Map<string, number>) => {
+      const hasBrowserChannel = (rule.channels || []).some(
+        (ch: { type: string; enabled: boolean }) => ch.type === 'browser' && ch.enabled
+      )
+      if (!hasBrowserChannel) return false
+      if (PERSISTENT.has(rule.condition.type)) return !notifiedKeys.has(dedupKey)
+      if (!notifiedKeys.has(dedupKey)) return true
+      const lastNotified = notifiedKeys.get(dedupKey) ?? 0
+      return (Date.now() - lastNotified) > 300000
+    }),
+    isClusterUnreachable: vi.fn((cluster: { reachable?: boolean }) => cluster.reachable === false),
+    dispatchNotification: vi.fn(),
+    sendNotifications: vi.fn(),
+    sendBatchedNotifications: vi.fn(() => Promise.resolve()),
+    getNotificationCooldown: vi.fn(() => 300000),
+    PERSISTENT_CLUSTER_CONDITIONS: PERSISTENT,
+  }
+})
 
 vi.mock('../../lib/runbooks/builtins', () => ({
   findRunbookForCondition: vi.fn(() => undefined),
