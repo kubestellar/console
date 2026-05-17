@@ -25,6 +25,17 @@ export interface StellarMissionTriggerPayload {
   prompt: string
 }
 
+function hasStellarAuthCredentials(): boolean {
+  // Check JWT token in localStorage (direct kubeconfig / dev-user auth)
+  if (localStorage.getItem('token')) return true
+  // #14308 — OAuth sessions use an HttpOnly kc_auth cookie that JS cannot read
+  // via document.cookie. The kc-has-session marker is set in localStorage after
+  // a successful /auth/refresh, and is the canonical way to detect a live
+  // cookie-based session without touching the HttpOnly cookie.
+  if (localStorage.getItem('kc-has-session') === 'true') return true
+  return false
+}
+
 function parseStellarEvent<T>(event: Event, eventName: string): T | null {
   try {
     return JSON.parse((event as MessageEvent).data) as T
@@ -349,14 +360,14 @@ function useStellarSource() {
   useEffect(() => {
     const waitForToken = (): Promise<void> => {
       return new Promise((resolve) => {
-        if (localStorage.getItem('token') || document.cookie.includes('kc_auth')) {
+        if (hasStellarAuthCredentials()) {
           resolve()
           return
         }
         let attempts = 0
         const interval = setInterval(() => {
           attempts++
-          if (localStorage.getItem('token') || document.cookie.includes('kc_auth') || attempts > STELLAR_TOKEN_POLL_MAX_ATTEMPTS) {
+          if (hasStellarAuthCredentials() || attempts > STELLAR_TOKEN_POLL_MAX_ATTEMPTS) {
             clearInterval(interval)
             resolve()
           }
