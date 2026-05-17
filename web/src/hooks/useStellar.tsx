@@ -7,6 +7,23 @@ const STELLAR_ACTIVITY_LIMIT = 200
 const STELLAR_DEFAULT_FETCH_LIMIT = 50
 const STELLAR_RECONNECT_BASE_MS = 1000
 const STELLAR_RECONNECT_MAX_MS = 30000
+export const STELLAR_TOKEN_POLL_INTERVAL_MS = 100
+export const STELLAR_TOKEN_POLL_MAX_ATTEMPTS = 30
+
+/** Dispatched on window when the shared SSE receives a mission_trigger event. */
+export const STELLAR_MISSION_TRIGGER_EVENT = 'stellar:mission_trigger'
+
+export interface StellarMissionTriggerPayload {
+  solveId: string
+  eventId: string
+  cluster: string
+  namespace: string
+  workload: string
+  reason: string
+  message: string
+  title: string
+  prompt: string
+}
 
 function parseStellarEvent<T>(event: Event, eventName: string): T | null {
   try {
@@ -316,6 +333,13 @@ function useStellarSource() {
       // Treat scheduled digest as a high-priority proactive nudge
       setNudge({ id: crypto.randomUUID(), summary: digest.content, ts: new Date().toISOString() })
     })
+    es.addEventListener('mission_trigger', (e) => {
+      const payload = parseStellarEvent<StellarMissionTriggerPayload>(e, 'mission_trigger')
+      if (!payload) {
+        return
+      }
+      window.dispatchEvent(new CustomEvent(STELLAR_MISSION_TRIGGER_EVENT, { detail: payload }))
+    })
   }, [])
 
   useEffect(() => {
@@ -332,11 +356,11 @@ function useStellarSource() {
         let attempts = 0
         const interval = setInterval(() => {
           attempts++
-          if (localStorage.getItem('token') || document.cookie.includes('kc_auth') || attempts > 30) {
+          if (localStorage.getItem('token') || document.cookie.includes('kc_auth') || attempts > STELLAR_TOKEN_POLL_MAX_ATTEMPTS) {
             clearInterval(interval)
             resolve()
           }
-        }, 100)
+        }, STELLAR_TOKEN_POLL_INTERVAL_MS)
       })
     }
 
