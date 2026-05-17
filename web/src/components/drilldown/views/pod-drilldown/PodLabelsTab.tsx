@@ -2,96 +2,55 @@ import { ChevronDown, ChevronUp, Loader2, Copy, Check, Pencil, Trash2, Plus, Sav
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../ui/Button'
 import { useTranslation } from 'react-i18next'
-import type { KeyValueDiffEntry } from './helpers'
+import { usePodLabelsContext } from './PodLabelsContext'
 
 export interface PodLabelsTabProps {
   labels: Record<string, string> | null
   annotations: Record<string, string> | null
-  describeLoading: boolean
-  agentConnected: boolean
-  copiedField: string | null
-  // Label editing state
-  showAllLabels: boolean
-  setShowAllLabels: (v: boolean) => void
-  editingLabels: boolean
-  setEditingLabels: (v: boolean) => void
-  pendingLabelChanges: Record<string, string | null>
-  newLabelKey: string
-  setNewLabelKey: (v: string) => void
-  newLabelValue: string
-  setNewLabelValue: (v: string) => void
-  labelSaving: boolean
-  labelError: string | null
-  handleLabelChange: (key: string, value: string) => void
-  handleLabelRemove: (key: string) => void
-  undoLabelChange: (key: string) => void
-  saveLabels: () => void
-  cancelLabelEdit: () => void
-  // Annotation editing state
-  showAllAnnotations: boolean
-  setShowAllAnnotations: (v: boolean) => void
-  editingAnnotations: boolean
-  setEditingAnnotations: (v: boolean) => void
-  pendingAnnotationChanges: Record<string, string | null>
-  newAnnotationKey: string
-  setNewAnnotationKey: (v: string) => void
-  newAnnotationValue: string
-  setNewAnnotationValue: (v: string) => void
-  annotationSaving: boolean
-  annotationError: string | null
-  handleAnnotationChange: (key: string, value: string) => void
-  handleAnnotationRemove: (key: string) => void
-  undoAnnotationChange: (key: string) => void
-  saveAnnotations: () => void
-  cancelAnnotationEdit: () => void
-  handleCopy: (field: string, value: string) => void
-  labelDiffByKey?: Record<string, KeyValueDiffEntry>
-  annotationDiffByKey?: Record<string, KeyValueDiffEntry>
 }
 
-export function PodLabelsTab({
-  labels,
-  annotations,
-  describeLoading,
-  agentConnected,
-  copiedField,
-  showAllLabels,
-  setShowAllLabels,
-  editingLabels,
-  setEditingLabels,
-  pendingLabelChanges,
-  newLabelKey,
-  setNewLabelKey,
-  newLabelValue,
-  setNewLabelValue,
-  labelSaving,
-  labelError,
-  handleLabelChange,
-  handleLabelRemove,
-  undoLabelChange,
-  saveLabels,
-  cancelLabelEdit,
-  showAllAnnotations,
-  setShowAllAnnotations,
-  editingAnnotations,
-  setEditingAnnotations,
-  pendingAnnotationChanges,
-  newAnnotationKey,
-  setNewAnnotationKey,
-  newAnnotationValue,
-  setNewAnnotationValue,
-  annotationSaving,
-  annotationError,
-  handleAnnotationChange,
-  handleAnnotationRemove,
-  undoAnnotationChange,
-  saveAnnotations,
-  cancelAnnotationEdit,
-  handleCopy,
-  labelDiffByKey,
-  annotationDiffByKey,
-}: PodLabelsTabProps) {
+export function PodLabelsTab({ labels, annotations }: PodLabelsTabProps) {
   const { t } = useTranslation()
+  const {
+    describeLoading,
+    agentConnected,
+    copiedField,
+    showAllLabels,
+    setShowAllLabels,
+    editingLabels,
+    setEditingLabels,
+    pendingLabelChanges,
+    newLabelKey,
+    setNewLabelKey,
+    newLabelValue,
+    setNewLabelValue,
+    labelSaving,
+    labelError,
+    handleLabelChange,
+    handleLabelRemove,
+    undoLabelChange,
+    saveLabels,
+    cancelLabelEdit,
+    showAllAnnotations,
+    setShowAllAnnotations,
+    editingAnnotations,
+    setEditingAnnotations,
+    pendingAnnotationChanges,
+    newAnnotationKey,
+    setNewAnnotationKey,
+    newAnnotationValue,
+    setNewAnnotationValue,
+    annotationSaving,
+    annotationError,
+    handleAnnotationChange,
+    handleAnnotationRemove,
+    undoAnnotationChange,
+    saveAnnotations,
+    cancelAnnotationEdit,
+    handleCopy,
+    labelDiffByKey,
+    annotationDiffByKey,
+  } = usePodLabelsContext()
 
   const labelEntries = Object.entries(labels || {})
   const annotationEntries = Object.entries(annotations || {})

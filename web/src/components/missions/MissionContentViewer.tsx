@@ -10,13 +10,11 @@ import {
 } from '../../lib/analytics'
 import type {
   MissionExport,
-  MissionMatch,
   BrowseEntry,
   FileScanResult,
 } from '../../lib/missions/types'
 import { validateMissionExport } from '../../lib/missions/types'
-import { parseFileContent, type UnstructuredPreview } from '../../lib/missions/fileParser'
-import type { ApiGroupMapping } from '../../lib/missions/apiGroupMapping'
+import { parseFileContent } from '../../lib/missions/fileParser'
 import { fullScan } from '../../lib/missions/scanner/index'
 import {
   fetchMissionContent,
@@ -24,7 +22,7 @@ import {
   fetchNodeFileContent,
   getMissionShareUrl,
 } from './browser'
-import type { TreeNode, ViewMode, BrowserTab } from './browser'
+import type { TreeNode, BrowserTab } from './browser'
 import { ScanProgressOverlay } from './ScanProgressOverlay'
 import { MissionDetailView } from './MissionDetailView'
 import { ImproveMissionDialog } from './ImproveMissionDialog'
@@ -39,14 +37,15 @@ import {
   findBestDeepLinkMatch,
 } from './missionBrowserDeepLink'
 import { filterDirectoryEntries } from './missionBrowserFilterState'
+import {
+  MissionContentProvider,
+  useMissionContentContext,
+  type MissionContentController,
+  type MissionFilePanelProps,
+  type MissionSearchPanelProps,
+  type UnstructuredContentState,
+} from './MissionContentContext'
 import { useToast } from '../ui/Toast'
-
-interface UnstructuredContentState {
-  content: string
-  format: 'yaml' | 'markdown'
-  preview: UnstructuredPreview
-  detectedProjects: ApiGroupMapping[]
-}
 
 interface UseMissionContentViewerOptions {
   isOpen: boolean
@@ -70,7 +69,7 @@ export function useMissionContentViewer({
   installerMissions,
   fixerMissions,
   revealMissionInTree,
-}: UseMissionContentViewerOptions) {
+}: UseMissionContentViewerOptions): MissionContentController {
   const { t } = useTranslation()
   const { showToast } = useToast()
   const [directoryEntries, setDirectoryEntries] = useState<BrowseEntry[]>([])
@@ -393,215 +392,177 @@ export function useMissionContentViewer({
 }
 
 interface MissionContentViewerProps {
-  activeTab: BrowserTab
-  selectedPath: string | null
-  selectedNode: TreeNode | null
-  viewMode: ViewMode
-  searchQuery: string
-  tokenError: 'rate_limited' | 'token_invalid' | null
-  missionFetchError: string | null
-  loadingRecommendations: boolean
-  searchProgress: {
-    step: string
-    detail: string
-    found: number
-    scanned: number
-  }
-  hasCluster: boolean
-  recommendations: MissionMatch[]
-  filteredRecommendations: MissionMatch[]
-  installerMissions: MissionExport[]
-  filteredInstallers: MissionExport[]
-  loadingInstallers: boolean
-  installerSearch: string
-  onInstallerSearchChange: (value: string) => void
-  installerCategoryFilter: string
-  onInstallerCategoryFilterChange: (value: string) => void
-  installerMaturityFilter: string
-  onInstallerMaturityFilterChange: (value: string) => void
-  fixerMissions: MissionExport[]
-  filteredFixers: MissionExport[]
-  loadingFixers: boolean
-  fixerSearch: string
-  onFixerSearchChange: (value: string) => void
-  fixerTypeFilter: string
-  onFixerTypeFilterChange: (value: string) => void
-  onToggleNode: (node: TreeNode) => void
-  onSelectNode: (node: TreeNode) => void
-  onClearSelectedPath: () => void
-  onUseInMissionControl?: (chartName: string) => void
-  content: ReturnType<typeof useMissionContentViewer>
+  searchPanel: MissionSearchPanelProps
+  filePanel: MissionFilePanelProps
+  content: MissionContentController
 }
 
-export function MissionContentViewer({
-  activeTab,
-  selectedPath,
-  selectedNode,
-  viewMode,
-  searchQuery,
-  tokenError,
-  missionFetchError,
-  loadingRecommendations,
-  searchProgress,
-  hasCluster,
-  recommendations,
-  filteredRecommendations,
-  installerMissions,
-  filteredInstallers,
-  loadingInstallers,
-  installerSearch,
-  onInstallerSearchChange,
-  installerCategoryFilter,
-  onInstallerCategoryFilterChange,
-  installerMaturityFilter,
-  onInstallerMaturityFilterChange,
-  fixerMissions,
-  filteredFixers,
-  loadingFixers,
-  fixerSearch,
-  onFixerSearchChange,
-  fixerTypeFilter,
-  onFixerTypeFilterChange,
-  onToggleNode,
-  onSelectNode,
-  onClearSelectedPath,
-  onUseInMissionControl,
-  content,
-}: MissionContentViewerProps) {
+function MissionFilePanel() {
+  const { searchPanel, filePanel, content } = useMissionContentContext()
+
+  if (content.selectedMission) {
+    return (
+      <>
+        <MissionDetailView
+          mission={content.selectedMission}
+          rawContent={content.rawContent}
+          showRaw={content.showRaw}
+          loading={content.isMissionLoading}
+          error={content.missionContentError}
+          onRetry={() => content.selectCardMission(content.selectedMission!)}
+          onToggleRaw={() => content.setShowRaw(!content.showRaw)}
+          onImport={() => content.handleImport(content.selectedMission!, content.rawContent ?? undefined)}
+          onBack={content.clearSelectedMission}
+          onImprove={content.selectedMission.missionClass === 'install' ? () => content.setShowImproveDialog(true) : undefined}
+          matchScore={searchPanel.recommendations.find((match) => match.mission.title === content.selectedMission?.title)?.matchPercent}
+          shareUrl={getMissionShareUrl(content.selectedMission)}
+        />
+        {content.showImproveDialog && (
+          <ImproveMissionDialog
+            mission={content.selectedMission}
+            isOpen={content.showImproveDialog}
+            onClose={() => content.setShowImproveDialog(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  if (!content.unstructuredContent) {
+    return null
+  }
+
+  const parts = filePanel.selectedPath?.split('/') ?? []
+  const kubaraChartName = filePanel.selectedPath?.startsWith('kubara/') && parts[1] && parts[1].length > 0
+    ? parts[1]
+    : undefined
+
+  return (
+    <UnstructuredFilePreview
+      content={content.unstructuredContent.content}
+      format={content.unstructuredContent.format}
+      preview={content.unstructuredContent.preview}
+      detectedProjects={content.unstructuredContent.detectedProjects}
+      fileName={filePanel.selectedPath?.split('/').pop() ?? 'file'}
+      onConvert={(mission) => {
+        content.resetContentView()
+        void content.selectCardMission(mission)
+      }}
+      onBack={() => {
+        content.resetContentView()
+        filePanel.onClearSelectedPath()
+      }}
+      kubaraChartName={kubaraChartName}
+      onUseInMissionControl={filePanel.onUseInMissionControl}
+    />
+  )
+}
+
+function MissionSearchPanel() {
+  const { searchPanel, filePanel, content, filteredEntries } = useMissionContentContext()
+
+  if (content.selectedMission || content.unstructuredContent) {
+    return null
+  }
+
+  if (searchPanel.activeTab === 'recommended') {
+    return (
+      <MissionBrowserRecommendedTab
+        tokenError={searchPanel.tokenError}
+        missionFetchError={searchPanel.missionFetchError}
+        loadingRecommendations={searchPanel.loadingRecommendations}
+        searchProgress={searchPanel.searchProgress}
+        hasCluster={searchPanel.hasCluster}
+        recommendations={searchPanel.recommendations}
+        filteredRecommendations={searchPanel.filteredRecommendations}
+        onSelectMission={content.selectCardMission}
+        onImportMission={content.handleImport}
+        onCopyLink={content.handleCopyLink}
+        loading={content.loading}
+        filteredEntries={filteredEntries}
+        selectedPath={filePanel.selectedPath}
+        selectedNode={filePanel.selectedNode}
+        viewMode={filePanel.viewMode}
+        onImportDirectoryEntry={content.handleImportDirectoryEntry}
+        onToggleNode={filePanel.onToggleNode}
+        onSelectNode={filePanel.onSelectNode}
+      />
+    )
+  }
+
+  if (searchPanel.activeTab === 'installers') {
+    return (
+      <MissionBrowserInstallersTab
+        installerMissions={searchPanel.installerMissions}
+        filteredInstallers={searchPanel.filteredInstallers}
+        loadingInstallers={searchPanel.loadingInstallers}
+        missionFetchError={searchPanel.missionFetchError}
+        installerSearch={searchPanel.installerSearch}
+        onInstallerSearchChange={searchPanel.onInstallerSearchChange}
+        globalSearchActive={Boolean(searchPanel.searchQuery)}
+        globalSearchQuery={searchPanel.searchQuery}
+        installerCategoryFilter={searchPanel.installerCategoryFilter}
+        onInstallerCategoryFilterChange={searchPanel.onInstallerCategoryFilterChange}
+        installerMaturityFilter={searchPanel.installerMaturityFilter}
+        onInstallerMaturityFilterChange={searchPanel.onInstallerMaturityFilterChange}
+        viewMode={filePanel.viewMode}
+        onSelectMission={content.selectCardMission}
+        onImportMission={content.handleImport}
+        onCopyLink={content.handleCopyLink}
+      />
+    )
+  }
+
+  if (searchPanel.activeTab === 'fixes') {
+    return (
+      <MissionBrowserFixesTab
+        fixerMissions={searchPanel.fixerMissions}
+        filteredFixers={searchPanel.filteredFixers}
+        loadingFixers={searchPanel.loadingFixers}
+        missionFetchError={searchPanel.missionFetchError}
+        fixerSearch={searchPanel.fixerSearch}
+        onFixerSearchChange={searchPanel.onFixerSearchChange}
+        globalSearchActive={Boolean(searchPanel.searchQuery)}
+        globalSearchQuery={searchPanel.searchQuery}
+        fixerTypeFilter={searchPanel.fixerTypeFilter}
+        onFixerTypeFilterChange={searchPanel.onFixerTypeFilterChange}
+        viewMode={filePanel.viewMode}
+        onSelectMission={content.selectCardMission}
+        onImportMission={content.handleImport}
+        onCopyLink={content.handleCopyLink}
+      />
+    )
+  }
+
+  return <MissionBrowserScheduleActionTab isActive={searchPanel.activeTab === 'schedule'} />
+}
+
+export function MissionContentViewer({ searchPanel, filePanel, content }: MissionContentViewerProps) {
   const filteredEntries = useMemo(
-    () => filterDirectoryEntries(content.directoryEntries, searchQuery),
-    [content.directoryEntries, searchQuery],
+    () => filterDirectoryEntries(content.directoryEntries, searchPanel.searchQuery),
+    [content.directoryEntries, searchPanel.searchQuery],
   )
 
   return (
-    <div data-testid="mission-grid" className="flex-1 flex flex-col overflow-hidden relative bg-background">
-      <ScanProgressOverlay
-        isScanning={content.isScanning}
-        result={content.scanResult}
-        onComplete={content.handleScanComplete}
-        onDismiss={content.handleScanDismiss}
-      />
+    <MissionContentProvider
+      searchPanel={searchPanel}
+      filePanel={filePanel}
+      content={content}
+      filteredEntries={filteredEntries}
+    >
+      <div data-testid="mission-grid" className="flex-1 flex flex-col overflow-hidden relative bg-background">
+        <ScanProgressOverlay
+          isScanning={content.isScanning}
+          result={content.scanResult}
+          onComplete={content.handleScanComplete}
+          onDismiss={content.handleScanDismiss}
+        />
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {content.selectedMission && (
-          <>
-            <MissionDetailView
-              mission={content.selectedMission}
-              rawContent={content.rawContent}
-              showRaw={content.showRaw}
-              loading={content.isMissionLoading}
-              error={content.missionContentError}
-              onRetry={() => content.selectCardMission(content.selectedMission!)}
-              onToggleRaw={() => content.setShowRaw(!content.showRaw)}
-              onImport={() => content.handleImport(content.selectedMission!, content.rawContent ?? undefined)}
-              onBack={content.clearSelectedMission}
-              onImprove={content.selectedMission.missionClass === 'install' ? () => content.setShowImproveDialog(true) : undefined}
-              matchScore={recommendations.find((match) => match.mission.title === content.selectedMission?.title)?.matchPercent}
-              shareUrl={getMissionShareUrl(content.selectedMission)}
-            />
-            {content.showImproveDialog && (
-              <ImproveMissionDialog
-                mission={content.selectedMission}
-                isOpen={content.showImproveDialog}
-                onClose={() => content.setShowImproveDialog(false)}
-              />
-            )}
-          </>
-        )}
-
-        {!content.selectedMission && content.unstructuredContent && (() => {
-          const parts = selectedPath?.split('/') ?? []
-          const kubaraChartName = selectedPath?.startsWith('kubara/') && parts[1] && parts[1].length > 0
-            ? parts[1]
-            : undefined
-          return (
-            <UnstructuredFilePreview
-              content={content.unstructuredContent.content}
-              format={content.unstructuredContent.format}
-              preview={content.unstructuredContent.preview}
-              detectedProjects={content.unstructuredContent.detectedProjects}
-              fileName={selectedPath?.split('/').pop() ?? 'file'}
-              onConvert={(mission) => {
-                content.resetContentView()
-                content.selectCardMission(mission)
-              }}
-              onBack={() => {
-                content.resetContentView()
-                onClearSelectedPath()
-              }}
-              kubaraChartName={kubaraChartName}
-              onUseInMissionControl={onUseInMissionControl}
-            />
-          )
-        })()}
-
-        {!content.selectedMission && !content.unstructuredContent && activeTab === 'recommended' && (
-          <MissionBrowserRecommendedTab
-            tokenError={tokenError}
-            missionFetchError={missionFetchError}
-            loadingRecommendations={loadingRecommendations}
-            searchProgress={searchProgress}
-            hasCluster={hasCluster}
-            recommendations={recommendations}
-            filteredRecommendations={filteredRecommendations}
-            onSelectMission={content.selectCardMission}
-            onImportMission={content.handleImport}
-            onCopyLink={content.handleCopyLink}
-            loading={content.loading}
-            filteredEntries={filteredEntries}
-            selectedPath={selectedPath}
-            selectedNode={selectedNode}
-            viewMode={viewMode}
-            onImportDirectoryEntry={content.handleImportDirectoryEntry}
-            onToggleNode={onToggleNode}
-            onSelectNode={onSelectNode}
-          />
-        )}
-
-        {!content.selectedMission && !content.unstructuredContent && activeTab === 'installers' && (
-          <MissionBrowserInstallersTab
-            installerMissions={installerMissions}
-            filteredInstallers={filteredInstallers}
-            loadingInstallers={loadingInstallers}
-            missionFetchError={missionFetchError}
-            installerSearch={installerSearch}
-            onInstallerSearchChange={onInstallerSearchChange}
-            globalSearchActive={Boolean(searchQuery)}
-            globalSearchQuery={searchQuery}
-            installerCategoryFilter={installerCategoryFilter}
-            onInstallerCategoryFilterChange={onInstallerCategoryFilterChange}
-            installerMaturityFilter={installerMaturityFilter}
-            onInstallerMaturityFilterChange={onInstallerMaturityFilterChange}
-            viewMode={viewMode}
-            onSelectMission={content.selectCardMission}
-            onImportMission={content.handleImport}
-            onCopyLink={content.handleCopyLink}
-          />
-        )}
-
-        {!content.selectedMission && !content.unstructuredContent && activeTab === 'fixes' && (
-          <MissionBrowserFixesTab
-            fixerMissions={fixerMissions}
-            filteredFixers={filteredFixers}
-            loadingFixers={loadingFixers}
-            missionFetchError={missionFetchError}
-            fixerSearch={fixerSearch}
-            onFixerSearchChange={onFixerSearchChange}
-            globalSearchActive={Boolean(searchQuery)}
-            globalSearchQuery={searchQuery}
-            fixerTypeFilter={fixerTypeFilter}
-            onFixerTypeFilterChange={onFixerTypeFilterChange}
-            viewMode={viewMode}
-            onSelectMission={content.selectCardMission}
-            onImportMission={content.handleImport}
-            onCopyLink={content.handleCopyLink}
-          />
-        )}
-
-        {!content.selectedMission && !content.unstructuredContent && activeTab === 'schedule' && (
-          <MissionBrowserScheduleActionTab isActive={activeTab === 'schedule'} />
-        )}
+        <div className="flex-1 overflow-y-auto p-4">
+          <MissionFilePanel />
+          <MissionSearchPanel />
+        </div>
       </div>
-    </div>
+    </MissionContentProvider>
   )
 }
