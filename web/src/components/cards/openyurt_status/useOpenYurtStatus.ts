@@ -281,6 +281,7 @@ export function useOpenYurtStatus(): UseOpenYurtStatusResult {
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData, // gate on !hasData so skeleton doesn't flash on refetch
+    isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,

@@ -10,7 +10,6 @@ import { TasksPanel } from './TasksPanel'
 import { WatchesPanel } from './WatchesPanel'
 import { RecommendedTasksPanel } from './RecommendedTasksPanel'
 import { StellarActivityPanel } from './StellarActivityPanel'
-import { AuditPage } from './AuditPage'
 import {
   STELLAR_NAVIGATION_EVENT,
   STELLAR_SECTION_ID,
@@ -62,7 +61,6 @@ export function StellarPage() {
   const activityRef = useRef<HTMLDivElement | null>(null)
   const eventsRef = useRef<HTMLDivElement | null>(null)
   const chatRef = useRef<HTMLDivElement | null>(null)
-  const auditRef = useRef<HTMLDivElement | null>(null)
   const {
     isConnected,
     unreadCount,
@@ -101,8 +99,6 @@ export function StellarPage() {
           return eventsRef.current
         case STELLAR_SECTION_ID.CHAT:
           return chatRef.current
-        case STELLAR_SECTION_ID.AUDIT:
-          return auditRef.current
         case STELLAR_SECTION_ID.OVERVIEW:
         default:
           return overviewRef.current
@@ -298,24 +294,6 @@ export function StellarPage() {
             createTask={(title, description, source) => createTask(title, description, source)}
           />
         </div>
-      </div>
-
-      {/* Audit column — audit log */}
-      <div
-        ref={auditRef}
-        id={STELLAR_SECTION_ID.AUDIT}
-        tabIndex={-1}
-        data-testid="stellar-section-audit"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          borderLeft: '1px solid var(--s-border)',
-          background: 'var(--s-surface)',
-          overflowY: 'auto',
-        }}
-      >
-        <AuditPage />
       </div>
     </div>
   )
