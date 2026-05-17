@@ -2,8 +2,11 @@ import WidgetExportModalContent from './widget-export-modal/WidgetExportModalCon
 
 type WidgetExportModalProps = Parameters<typeof WidgetExportModalContent>[0]
 
-export function WidgetExportModal(props: WidgetExportModalProps) {
-  return <WidgetExportModalContent {...props} />
+export function WidgetExportModal({ isOpen, onClose, ...rest }: WidgetExportModalProps) {
+  if (!isOpen) {
+    return null
+  }
+  return <WidgetExportModalContent isOpen={isOpen} onClose={onClose} {...rest} />
 }
 
 export default WidgetExportModal
