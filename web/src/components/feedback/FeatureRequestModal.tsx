@@ -10,7 +10,7 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
-import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE } from '../../lib/constants'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
@@ -145,23 +145,25 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     if (isDemoModeForced) return
 
     setFeedbackTokenMissing(false)
-    let isCurrent = true
+    const controller = new AbortController()
 
     fetch(`${BACKEND_DEFAULT_URL}/api/github/token/status`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      signal: controller.signal })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (isCurrent && data) {
+        if (data) {
           setFeedbackTokenMissing(!data.hasToken)
         }
       })
-      .catch(() => {
-        // Silently ignore — backend may not be reachable (e.g. demo mode)
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          // Silently ignore — backend may not be reachable (e.g. demo mode)
+        }
       })
 
     return () => {
-      isCurrent = false
+      controller.abort()
     }
   }, [isOpen, token])
 
