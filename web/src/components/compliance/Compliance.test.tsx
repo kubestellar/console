@@ -458,11 +458,11 @@ describe('Compliance dashboard component', () => {
     expect(high.value).toBe(10)
   })
 
-  it('returns default for unknown stat block IDs', () => {
+  it('returns the translated empty value for unknown stat block IDs', () => {
     setupDefaults()
     render(<Compliance />)
 
     const unknown = getStatValue('non_existent_stat')
-    expect(unknown.value).toBe('-')
+    expect(unknown.value).toBe('—')
   })
 })
