@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -19,7 +20,6 @@ type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 const STORAGE_COST_PER_GB_MONTH = 0.10
-const NO_COST_DATA_VALUE = '-'
 const CLOUD_PRICING: Record<CloudProvider, { cpu: number; memory: number; gpu: number }> = {
   estimate: { cpu: 0.05, memory: 0.01, gpu: 2.50 },
   aws: { cpu: 0.048, memory: 0.012, gpu: 3.06 },
@@ -36,7 +36,16 @@ const COST_EMPTY_STATE = {
 // Default cards for the Cost dashboard
 const DEFAULT_COST_CARDS = getDefaultCards('cost')
 
+function formatCurrencyStat(value: number | undefined, emptyValue: string): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return emptyValue
+  }
+  return `$${Math.round(Math.max(value, 0)).toLocaleString()}`
+}
+
 export function Cost() {
+  const { t } = useTranslation()
+  const emptyValue = t('labels.emptyValue')
   const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -147,22 +156,22 @@ export function Cost() {
     switch (blockId) {
       case 'total_cost':
         return reachableClusters.length === 0
-          ? { value: NO_COST_DATA_VALUE, sublabel: 'est. monthly', isClickable: false }
-          : { value: `$${Math.round(costStats.totalMonthly).toLocaleString()}`, sublabel: 'est. monthly', onClick: () => drillToCostType('total'), isClickable: costStats.totalMonthly > 0 }
+          ? { value: emptyValue, sublabel: 'est. monthly', isClickable: false }
+          : { value: formatCurrencyStat(costStats.totalMonthly, emptyValue), sublabel: 'est. monthly', onClick: () => drillToCostType('total'), isClickable: costStats.totalMonthly > 0 }
       case 'cpu_cost':
-        return { value: `$${Math.round(costStats.cpuMonthly).toLocaleString()}`, sublabel: `${costStats.totalCPU} cores`, onClick: () => drillToCostType('cpu'), isClickable: costStats.cpuMonthly > 0 }
+        return { value: formatCurrencyStat(costStats.cpuMonthly, emptyValue), sublabel: `${costStats.totalCPU} cores`, onClick: () => drillToCostType('cpu'), isClickable: costStats.cpuMonthly > 0 }
       case 'memory_cost':
-        return { value: `$${Math.round(costStats.memoryMonthly).toLocaleString()}`, sublabel: formatMemoryStat(costStats.totalMemoryGB), onClick: () => drillToCostType('memory'), isClickable: costStats.memoryMonthly > 0 }
+        return { value: formatCurrencyStat(costStats.memoryMonthly, emptyValue), sublabel: formatMemoryStat(costStats.totalMemoryGB), onClick: () => drillToCostType('memory'), isClickable: costStats.memoryMonthly > 0 }
       case 'storage_cost':
-        return { value: `$${Math.round(costStats.storageMonthly).toLocaleString()}`, sublabel: formatMemoryStat(costStats.totalStorageGB), onClick: () => drillToCostType('storage'), isClickable: costStats.storageMonthly > 0 }
+        return { value: formatCurrencyStat(costStats.storageMonthly, emptyValue), sublabel: formatMemoryStat(costStats.totalStorageGB), onClick: () => drillToCostType('storage'), isClickable: costStats.storageMonthly > 0 }
       case 'network_cost':
         return { value: '$0', sublabel: 'not tracked', isClickable: false }
       case 'gpu_cost':
-        return { value: `$${Math.round(costStats.gpuMonthly).toLocaleString()}`, sublabel: `${costStats.totalGPUs} GPUs`, onClick: () => drillToCostType('gpu'), isClickable: costStats.gpuMonthly > 0 }
+        return { value: formatCurrencyStat(costStats.gpuMonthly, emptyValue), sublabel: `${costStats.totalGPUs} GPUs`, onClick: () => drillToCostType('gpu'), isClickable: costStats.gpuMonthly > 0 }
       default:
         return { value: 0 }
     }
-  }, [costStats, drillToCost])
+  }, [costStats, drillToCost, emptyValue])
 
   return (
     <DashboardPage

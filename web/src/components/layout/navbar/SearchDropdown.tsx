@@ -29,7 +29,7 @@ import { useModalState } from '../../../lib/modals'
 const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
 
 /** Result type chip styling — higher contrast and enough padding to read quickly. */
-const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium uppercase tracking-wide text-foreground'
+const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
   page: { label: 'Dashboards', icon: LayoutDashboard },

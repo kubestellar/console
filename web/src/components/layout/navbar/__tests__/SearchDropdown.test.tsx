@@ -102,7 +102,9 @@ describe('SearchDropdown', () => {
     const chip = item.querySelector('span')
 
     expect(chip).toHaveClass('text-xs')
-    expect(chip).toHaveClass('bg-primary/10')
+    expect(chip).toHaveClass('bg-secondary')
+    expect(chip).toHaveClass('px-2')
+    expect(chip).toHaveClass('py-0.5')
     expect(chip).toHaveClass('text-foreground')
   })
 })

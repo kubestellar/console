@@ -76,6 +76,7 @@
     "loading": "Loading...",
     "loadingDashboard": "Loading dashboard...",
     "noData": "No data available",
+    "emptyValue": "—",
     "sinceFocus": "Since last focus:",
     "clusterStatus": "Cluster Status",
     "healthy": "Healthy",

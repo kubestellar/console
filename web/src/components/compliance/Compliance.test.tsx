@@ -74,7 +74,9 @@ vi.mock('../../lib/analytics', () => ({
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key === 'labels.emptyValue' ? '—' : key,
+  }),
 }))
 
 vi.mock('../../config/dashboards', () => ({
@@ -360,45 +362,45 @@ describe('Compliance dashboard component', () => {
     expect(score.isDemo).toBe(true)
   })
 
-  it('shows a dash for percentage stats when compliance tools are absent', () => {
+  it('shows an em dash for percentage stats when compliance tools are absent', () => {
     setupDefaults({ demoMode: false })
     render(<Compliance />)
     const props = getLastDashboardProps()
     expect(props.isDemoData).toBe(false)
 
     const score = getStatValue('score')
-    expect(score.value).toBe('-')
+    expect(score.value).toBe('—')
     expect(score.isDemo).toBeUndefined()
 
     const totalChecks = getStatValue('total_checks')
-    expect(totalChecks.value).toBe('-')
+    expect(totalChecks.value).toBe('—')
 
     const passing = getStatValue('checks_passing')
-    expect(passing.value).toBe('-')
+    expect(passing.value).toBe('—')
 
     const failing = getStatValue('checks_failing')
-    expect(failing.value).toBe('-')
+    expect(failing.value).toBe('—')
 
     const warning = getStatValue('warning')
-    expect(warning.value).toBe('-')
+    expect(warning.value).toBe('—')
 
     const critical = getStatValue('critical_findings')
-    expect(critical.value).toBe('-')
+    expect(critical.value).toBe('—')
 
     const cis = getStatValue('cis_score')
-    expect(cis.value).toBe('-')
+    expect(cis.value).toBe('—')
 
     const nsa = getStatValue('nsa_score')
-    expect(nsa.value).toBe('-')
+    expect(nsa.value).toBe('—')
 
     const pci = getStatValue('pci_score')
-    expect(pci.value).toBe('-')
+    expect(pci.value).toBe('—')
 
     const kubescape = getStatValue('kubescape_score')
-    expect(kubescape.value).toBe('-')
+    expect(kubescape.value).toBe('—')
 
     const trivy = getStatValue('trivy_vulns')
-    expect(trivy.value).toBe('-')
+    expect(trivy.value).toBe('—')
   })
 
   it('uses real data even in demo mode when tools are installed', () => {

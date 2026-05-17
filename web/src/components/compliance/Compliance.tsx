@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -27,13 +28,14 @@ const MOCK_CHECKS_PER_CLUSTER = 45
 /** Mock tool-specific multipliers */
 const MOCK_GATEKEEPER_PER_CLUSTER = 3.2
 const MOCK_FALCO_PER_CLUSTER = 1.5
-const NO_DATA_STAT_VALUE = '-'
 
-function formatPercentageStat(value: number | undefined): string {
-  return typeof value === 'number' ? `${value}%` : NO_DATA_STAT_VALUE
+function formatPercentageStat(value: number | undefined, emptyValue: string): string {
+  return typeof value === 'number' && Number.isFinite(value) ? `${value}%` : emptyValue
 }
 
 export function Compliance() {
+  const { t } = useTranslation()
+  const emptyValue = t('labels.emptyValue')
   const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { drillToAllSecurity, drillToCompliance } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -179,7 +181,7 @@ export function Compliance() {
           return { value: `${complianceScoreSummary.score}%`, sublabel: 'compliance score', isDemo: true, isClickable: false }
         }
         if (complianceScoreSummary.usingFallback) {
-          return { value: NO_DATA_STAT_VALUE, sublabel: 'compliance score', isClickable: false }
+          return { value: emptyValue, sublabel: 'compliance score', isClickable: false }
         }
         return { value: `${complianceScoreSummary.score}%`, sublabel: 'compliance score', onClick: () => { emitComplianceDrillDown('score'); drillToAllSecurity() }, isClickable: reachableClusters.length > 0 }
       }
@@ -187,7 +189,7 @@ export function Compliance() {
         return allDemo
           ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, isClickable: false }
           : {
-              value: hasMeasuredComplianceData ? realData.totalChecks : NO_DATA_STAT_VALUE,
+              value: hasMeasuredComplianceData ? realData.totalChecks : emptyValue,
               sublabel: 'total checks',
               onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance() },
               isClickable: realData.totalChecks > 0,
@@ -200,7 +202,7 @@ export function Compliance() {
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, isClickable: false }
           : {
-              value: hasMeasuredComplianceData ? realData.passing : NO_DATA_STAT_VALUE,
+              value: hasMeasuredComplianceData ? realData.passing : emptyValue,
               sublabel: 'passing',
               onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing') },
               isClickable: realData.passing > 0,
@@ -209,7 +211,7 @@ export function Compliance() {
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, isClickable: false }
           : {
-              value: hasMeasuredComplianceData ? realData.failing : NO_DATA_STAT_VALUE,
+              value: hasMeasuredComplianceData ? realData.failing : emptyValue,
               sublabel: 'failing',
               onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing') },
               isClickable: realData.failing > 0,
@@ -219,7 +221,7 @@ export function Compliance() {
         return allDemo
           ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'skipped', isDemo: true, isClickable: false }
           : {
-              value: hasMeasuredComplianceData ? realData.warning : NO_DATA_STAT_VALUE,
+              value: hasMeasuredComplianceData ? realData.warning : emptyValue,
               sublabel: 'skipped',
               onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning') },
               isClickable: realData.warning > 0,
@@ -229,7 +231,7 @@ export function Compliance() {
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 2.3), sublabel: 'critical findings', isDemo: true, isClickable: false }
           : {
-              value: hasMeasuredComplianceData ? realData.trivyCritical + realData.kyvernoViolations : NO_DATA_STAT_VALUE,
+              value: hasMeasuredComplianceData ? realData.trivyCritical + realData.kyvernoViolations : emptyValue,
               sublabel: 'critical findings',
               onClick: () => { emitComplianceDrillDown('critical'); drillToAllSecurity('critical') },
               isClickable: hasMeasuredComplianceData,
@@ -240,12 +242,12 @@ export function Compliance() {
         // Gatekeeper hook not yet implemented — show mock only in explicit demo mode
         return explicitDemoMode
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_GATEKEEPER_PER_CLUSTER), sublabel: 'Gatekeeper violations', isClickable: false, isDemo: true }
-          : { value: NO_DATA_STAT_VALUE, sublabel: 'Gatekeeper violations', isClickable: false }
+          : { value: emptyValue, sublabel: 'Gatekeeper violations', isClickable: false }
       case 'kyverno_violations':
         return kyvernoIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 2.8), sublabel: 'Kyverno violations', isClickable: false, isDemo: true }
           : {
-              value: realData.kyvernoMeasured ? realData.kyvernoViolations : NO_DATA_STAT_VALUE,
+              value: realData.kyvernoMeasured ? realData.kyvernoViolations : emptyValue,
               sublabel: 'Kyverno violations',
               isClickable: false,
             }
@@ -253,7 +255,7 @@ export function Compliance() {
         return kubescapeIsDemo
           ? { value: '78%', sublabel: 'Kubescape score', isClickable: false, isDemo: true }
           : {
-              value: realData.kubescapeMeasured ? `${realData.kubescapeScore}%` : NO_DATA_STAT_VALUE,
+              value: realData.kubescapeMeasured ? `${realData.kubescapeScore}%` : emptyValue,
               sublabel: 'Kubescape score',
               isClickable: false,
             }
@@ -268,7 +270,7 @@ export function Compliance() {
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 12), sublabel: 'Trivy vulnerabilities', isClickable: false, isDemo: true }
           : {
-              value: realData.trivyMeasured ? realData.trivyVulns : NO_DATA_STAT_VALUE,
+              value: realData.trivyMeasured ? realData.trivyVulns : emptyValue,
               sublabel: 'Trivy vulnerabilities',
               isClickable: false,
             }
@@ -276,7 +278,7 @@ export function Compliance() {
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 1.8), sublabel: 'critical CVEs', isClickable: false, isDemo: true }
           : {
-              value: realData.trivyMeasured ? realData.trivyCritical : NO_DATA_STAT_VALUE,
+              value: realData.trivyMeasured ? realData.trivyCritical : emptyValue,
               sublabel: 'critical CVEs',
               isClickable: false,
             }
@@ -284,7 +286,7 @@ export function Compliance() {
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 4.2), sublabel: 'high CVEs', isClickable: false, isDemo: true }
           : {
-              value: realData.trivyMeasured ? realData.trivyHigh : NO_DATA_STAT_VALUE,
+              value: realData.trivyMeasured ? realData.trivyHigh : emptyValue,
               sublabel: 'high CVEs',
               isClickable: false,
             }
@@ -295,7 +297,7 @@ export function Compliance() {
           return { value: '85%', sublabel: 'CIS benchmark', isClickable: false, isDemo: true }
         }
         return {
-          value: formatPercentageStat(realData.kubescapeMeasured ? (realData.cisScore ?? realData.kubescapeScore) : undefined),
+          value: formatPercentageStat(realData.kubescapeMeasured ? (realData.cisScore ?? realData.kubescapeScore) : undefined, emptyValue),
           sublabel: 'CIS benchmark',
           isClickable: false,
         }
@@ -304,7 +306,7 @@ export function Compliance() {
           return { value: '79%', sublabel: 'NSA hardening', isClickable: false, isDemo: true }
         }
         return {
-          value: formatPercentageStat(realData.kubescapeMeasured ? (realData.nsaScore ?? realData.kubescapeScore) : undefined),
+          value: formatPercentageStat(realData.kubescapeMeasured ? (realData.nsaScore ?? realData.kubescapeScore) : undefined, emptyValue),
           sublabel: 'NSA hardening',
           isClickable: false,
         }
@@ -312,10 +314,10 @@ export function Compliance() {
         // PCI-DSS not directly tracked by any installed tool — show mock only in explicit demo mode
         return explicitDemoMode
           ? { value: '75%', sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
-          : { value: NO_DATA_STAT_VALUE, sublabel: 'PCI-DSS', isClickable: false }
+          : { value: emptyValue, sublabel: 'PCI-DSS', isClickable: false }
 
       default:
-        return { value: '-' }
+        return { value: emptyValue }
     }
   }
 

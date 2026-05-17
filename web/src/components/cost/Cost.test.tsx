@@ -71,7 +71,10 @@ vi.mock('../../hooks/useUniversalStats', () => ({
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+  useTranslation: () => ({
+    t: (key: string) => key === 'labels.emptyValue' ? '—' : key,
+    i18n: { language: 'en' },
+  }),
 }))
 
 import { Cost } from './Cost'
@@ -102,7 +105,7 @@ describe('Cost Component', () => {
     expect(page.getAttribute('data-subtitle')).toBeTruthy()
   })
 
-  it('shows a dash for total cost when no clusters are connected', () => {
+  it('shows an em dash for total cost when no clusters are connected', () => {
     renderCost()
     const props = dashboardPageProps.current
     expect(props).toBeTruthy()
@@ -111,6 +114,6 @@ describe('Cost Component', () => {
     if (!getStatValue) {
       throw new Error('Expected getStatValue to be passed to DashboardPage')
     }
-    expect(getStatValue('total_cost').value).toBe('-')
+    expect(getStatValue('total_cost').value).toBe('—')
   })
 })
