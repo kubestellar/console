@@ -1222,28 +1222,27 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 		pods = filtered
 	}
 
-	// Collect k8s events for the deployment and its pods
-	// Use a limit to bound memory usage (#3721)
-	const maxEventsPerQuery = 50
-	allEvents := make([]corev1.Event, 0, maxEventsPerQuery*(1+len(pods.Items)))
+	// Collect k8s events for the deployment and its pods.
+	// Use a single namespace-wide query instead of N+1 per-pod calls (#14410).
+	const maxEventsTotal int64 = 500
+	allEvents := make([]corev1.Event, 0, maxEventsTotal)
 
-	// Events for the deployment itself
-	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("involvedObject.name=%s", name),
-		Limit:         maxEventsPerQuery,
-	})
-	if deployEvents != nil {
-		allEvents = append(allEvents, deployEvents.Items...)
+	// Build a set of names we care about: the deployment + all its pods.
+	relevantNames := make(map[string]struct{}, 1+len(pods.Items))
+	relevantNames[name] = struct{}{}
+	for _, pod := range pods.Items {
+		relevantNames[pod.Name] = struct{}{}
 	}
 
-	// Events for each pod
-	for _, pod := range pods.Items {
-		podEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name),
-			Limit:         maxEventsPerQuery,
-		})
-		if podEvents != nil {
-			allEvents = append(allEvents, podEvents.Items...)
+	// Single API call: fetch all events in this namespace, bounded by limit.
+	nsEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{
+		Limit: maxEventsTotal,
+	})
+	if nsEvents != nil {
+		for i := range nsEvents.Items {
+			if _, ok := relevantNames[nsEvents.Items[i].InvolvedObject.Name]; ok {
+				allEvents = append(allEvents, nsEvents.Items[i])
+			}
 		}
 	}
 
