@@ -77,6 +77,7 @@ export const EXPECTED_ERROR_PATTERNS = [
   /Access-Control-Allow-Origin.*localhost/i, // WebKit CORS variant referencing localhost origin
   /Access-Control-Allow-Origin.*127\.0\.0\.1/i, // WebKit CORS variant referencing loopback IP
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
+  /MIME type.*text\/event-stream/i, // SSE endpoint returning wrong content-type in dev mode
   /Notification prompting can only be done from a user gesture/i, // WebKit/Safari wording for notification gesture block
   /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
   /net::ERR_CONNECTION_REFUSED.*(:8585|:8080|localhost)/i, // Agent/backend ports only in demo mode (#11294)
@@ -246,6 +247,14 @@ export async function mockApiFallback(page: Page) {
       }),
     })
   })
+
+  await page.route('**/api/stellar/stream*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: ': keep-alive\n\n',
+    })
+  )
 
   // IMPORTANT: Playwright matches routes in REVERSE registration order (last registered = first matched).
   // Register the catch-all FIRST (lowest priority) so the active-users specific mock below
