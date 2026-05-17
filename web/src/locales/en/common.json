@@ -1946,7 +1946,9 @@
     "agent": "Agent",
     "started": "Started",
     "tokens": "Tokens",
-    "clusterLabel": "Cluster: {{cluster}}"
+    "clusterLabel": "Cluster: {{cluster}}",
+    "progressLabel": "Progress",
+    "progressValue": "{{progress}}%"
   },
   "agent": {
     "connectingToAgent": "Connecting to agent...",
@@ -2123,7 +2125,30 @@
     "loadMore": "Load more ({{visible}}/{{total}})",
     "loadMore_one": "Load more ({{visible}}/{{total}})",
     "loadMore_other": "Load more ({{visible}}/{{total}})",
-    "noSearchResults": "No missions match your search."
+    "noSearchResults": "No missions match your search.",
+    "backgroundMissionsRunning": "{{count}} mission running in the background",
+    "backgroundMissionsRunning_one": "{{count}} mission running in the background",
+    "backgroundMissionsRunning_other": "{{count}} missions running in the background",
+    "backgroundMissionsHint": "Missions keep running even if you close Mission Control or this panel. Open history to follow live status and progress.",
+    "backgroundMissionsPersist": "Closing this view will not stop the running missions.",
+    "viewRunningMissions": "View running missions",
+    "moreRunningMissions": "+{{count}} more running in history",
+    "moreRunningMissions_one": "+{{count}} more running in history",
+    "moreRunningMissions_other": "+{{count}} more running in history",
+    "currentStepLabel": "Current step:",
+    "progressLabel": "Progress",
+    "progressValue": "{{progress}}%",
+    "statusLabels": {
+      "pending": "Starting…",
+      "running": "Running",
+      "cancelling": "Cancelling…",
+      "cancelled": "Cancelled",
+      "waitingInput": "Waiting for input",
+      "completed": "Completed",
+      "failed": "Failed",
+      "blocked": "Blocked",
+      "saved": "Saved"
+    }
   },
   "feedback": {
     "share": "Share",

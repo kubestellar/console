@@ -65,6 +65,8 @@ const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
 // width. See issues 6388 / 6394.
 const TABLET_BREAKPOINT_PX = 1024
 const ATTENTION_MISSION_STATUSES: ReadonlySet<Mission['status']> = new Set(['waiting_input', 'blocked'])
+const BACKGROUND_EXECUTION_STATUSES: ReadonlySet<Mission['status']> = new Set(['pending', 'running', 'cancelling'])
+const BACKGROUND_MISSION_PREVIEW_LIMIT = 3
 const MISSION_BROWSER_QUERY_KEY = 'browse'
 const MISSION_BROWSER_QUERY_VALUE = 'missions'
 const MISSION_DEEP_LINK_QUERY_KEY = 'mission'
@@ -716,7 +718,22 @@ export function MissionSidebar() {
   // user could not reconcile with the visible active list.
   const needsAttention = getMissionAttentionCount(missions)
 
+  const runningMissions = missions
+    .filter(mission => BACKGROUND_EXECUTION_STATUSES.has(mission.status))
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const runningMissionPreview = runningMissions.slice(0, BACKGROUND_MISSION_PREVIEW_LIMIT)
   const runningCount = missions.filter(m => m.status === 'running').length
+  const getRunningMissionStatusLabel = (status: Mission['status']) => {
+    switch (status) {
+      case 'pending':
+        return t('missionSidebar.statusLabels.pending', { defaultValue: 'Starting…' })
+      case 'cancelling':
+        return t('missionSidebar.statusLabels.cancelling', { defaultValue: 'Cancelling…' })
+      case 'running':
+      default:
+        return t('missionSidebar.statusLabels.running', { defaultValue: 'Running' })
+    }
+  }
 
   // Auto-open history when missions need user action (#10522) so
   // waiting_input / blocked missions are not hidden behind the toggle.
@@ -1138,6 +1155,63 @@ export function MissionSidebar() {
         <div className="mx-3 mt-2 p-2.5 bg-secondary/30 border border-border rounded-lg flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
           <p className="text-xs text-muted-foreground">{t('missionSidebar.importingMission', 'Importing mission...')}</p>
+        </div>
+      )}
+
+      {runningMissions.length > 0 && !activeMission && !showHistoryPanel && (
+        <div className="mx-3 mt-2 rounded-lg border border-primary/30 bg-primary/10 p-3">
+          <div className="flex items-start gap-2">
+            <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">
+                {t('missionSidebar.backgroundMissionsRunning', { count: runningMissions.length })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('missionSidebar.backgroundMissionsHint', { defaultValue: 'Missions keep running even if you close Mission Control or this panel. Open history to follow live status and progress.' })}
+              </p>
+              <div className="mt-3 space-y-2">
+                {runningMissionPreview.map((mission) => (
+                  <button
+                    key={mission.id}
+                    type="button"
+                    onClick={() => {
+                      setLastPanelView('history')
+                      setActiveMission(mission.id)
+                    }}
+                    className="w-full rounded-md border border-primary/20 bg-background/60 px-2.5 py-2 text-left transition-colors hover:bg-background"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-xs font-medium text-foreground">{mission.title}</span>
+                      <span className="shrink-0 text-2xs text-primary">{getRunningMissionStatusLabel(mission.status)}</span>
+                    </div>
+                    <p className="mt-1 truncate text-2xs text-muted-foreground">{mission.currentStep || mission.description}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="text-2xs text-muted-foreground">
+                  {runningMissions.length > BACKGROUND_MISSION_PREVIEW_LIMIT
+                    ? t('missionSidebar.moreRunningMissions', {
+                        count: runningMissions.length - BACKGROUND_MISSION_PREVIEW_LIMIT,
+                        defaultValue: '+{{count}} more running in history',
+                      })
+                    : t('missionSidebar.backgroundMissionsPersist', {
+                        defaultValue: 'Closing this view will not stop the running missions.',
+                      })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLastPanelView('history')
+                    setShowHistoryPanel(true)
+                  }}
+                  className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+                >
+                  {t('missionSidebar.viewRunningMissions', { defaultValue: 'View running missions' })}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
