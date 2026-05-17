@@ -1,7 +1,7 @@
 import { type CSSProperties, ReactNode, Suspense, useState, useEffect, useRef } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, matchPath, useLocation } from 'react-router-dom'
 import {
   Box,
   Wifi,
@@ -52,6 +52,7 @@ import {
   NAVBAR_HEIGHT_PX,
   BANNER_HEIGHT_PX,
   MOBILE_BANNER_COLLAPSE_THRESHOLD,
+  NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR,
   SIDEBAR_CONTROLS_OFFSET_PX,
 } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
@@ -225,6 +226,12 @@ export function Layout({ children: _children }: LayoutProps) {
   const [mobileBannerStackExpanded, setMobileBannerStackExpanded] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
   const [updateToastDismissed, setUpdateToastDismissed] = useState(false)
+  const isDashboardRoute =
+    location.pathname === ROUTES.HOME ||
+    location.pathname === ROUTES.DASHBOARD_ALIAS ||
+    location.pathname === ROUTES.MISSIONS ||
+    matchPath(ROUTES.CUSTOM_DASHBOARD, location.pathname) !== null
+  const shouldReserveNavbarFilterPanelOffset = !isDashboardRoute
 
   // Allow any component to open the install dialog via a custom event
   useEffect(() => {
@@ -835,6 +842,12 @@ export function Layout({ children: _children }: LayoutProps) {
           className="relative flex-1 p-4 pb-8 pb-[calc(2rem+env(safe-area-inset-bottom))] md:p-6 md:pb-8 md:pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
           data-transition-margin="true"
         >
+          {shouldReserveNavbarFilterPanelOffset && (
+            <div
+              aria-hidden
+              style={{ height: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)` }}
+            />
+          )}
           <NavigationProgress />
           {/*
             Key the Outlet by location.pathname so route changes are a clean

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ClusterFilterPanel } from '../ClusterFilterPanel'
+import { NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR } from '../../../../lib/constants/ui'
 
 const filterMocks = {
   toggleCluster: vi.fn(),
@@ -77,6 +78,7 @@ vi.mock('../../../ui/Tooltip', () => ({
 describe('ClusterFilterPanel', () => {
   beforeEach(() => {
     Object.values(filterMocks).forEach((mockFn) => mockFn.mockReset())
+    document.documentElement.style.removeProperty(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)
   })
 
   it('exposes dialog semantics and restores focus on Escape', () => {
@@ -116,6 +118,6 @@ describe('ClusterFilterPanel', () => {
 
     const dropdown = screen.getByTestId('navbar-cluster-filter-dropdown')
     expect(dropdown).toHaveClass('absolute', 'top-full', 'right-0')
-    expect(document.documentElement.style.getPropertyValue('--navbar-filter-panel-offset')).toBe('')
+    expect(document.documentElement.style.getPropertyValue(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)).toBe('8px')
   })
 })
