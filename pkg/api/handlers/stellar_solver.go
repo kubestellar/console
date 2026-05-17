@@ -448,9 +448,19 @@ func (h *StellarHandler) CompleteAutoMission(c *fiber.Ctx) error {
 		body.Summary = "AI mission completed."
 	}
 	ctx := c.UserContext()
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	solve, err := full.GetSolveByID(ctx, body.SolveID)
+	if err != nil || solve == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "solve not found"})
+	}
+	if solve.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+	}
 	_ = full.UpdateSolveStatus(ctx, body.SolveID, body.Status, body.Summary, "", "")
 
-	solve, _ := full.GetSolveByID(ctx, body.SolveID)
 	kind := "solve_" + body.Status
 	severity := "info"
 	if body.Status == "escalated" || body.Status == "exhausted" {
