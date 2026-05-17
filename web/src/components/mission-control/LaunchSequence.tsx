@@ -25,6 +25,8 @@ import { buildInstallPromptForProject, isSafeProjectName } from './useMissionCon
 
 /** Terminal statuses that indicate a project is no longer in-flight */
 const TERMINAL_STATUSES: readonly string[] = ['completed', 'failed', 'skipped', 'cancelled']
+/** Mission statuses that mean a failed deployment has been retried and is active again. */
+const RETRIED_MISSION_STATUSES = new Set(['pending', 'running', 'waiting_input', 'cancelling'])
 
 /**
  * #6408 — Fallback phase builder used when `state.phases` is empty but
@@ -82,12 +84,20 @@ function computePhaseSignature(phases: MissionControlState['phases']): string {
  * Used by both the mission-monitor effect and the error catch path (#5507).
  */
 function derivePhaseStatus(phase: PhaseProgress): PhaseStatus {
+  if (phase.projects.some((project) => project.status === 'running')) {
+    return 'running'
+  }
   const allDone = phase.projects.length > 0 && phase.projects.every(
-    (p) => TERMINAL_STATUSES.includes(p.status)
+    (project) => TERMINAL_STATUSES.includes(project.status)
   )
-  if (!allDone) return phase.status
-  const anyFailed = phase.projects.some((p) => p.status === 'failed')
-  return anyFailed ? 'failed' : 'completed'
+  if (allDone) {
+    const anyFailed = phase.projects.some((project) => project.status === 'failed')
+    return anyFailed ? 'failed' : 'completed'
+  }
+  if (phase.projects.some((project) => project.status === 'pending')) {
+    return 'pending'
+  }
+  return phase.status
 }
 
 interface UnifiedMissionWorkload {
@@ -348,14 +358,16 @@ export function LaunchSequence({
   useEffect(() => {
     const progress = progressRef.current
     let changed = false
-    const next = progress.map((phase) => ({
-      ...phase,
-      projects: phase.projects.map((proj) => {
+    const updated = progress.map((phase) => {
+      const projects = phase.projects.map((proj) => {
         if (!proj.missionId) return proj
-        const s = proj.status as string
-        if (s === 'completed' || s === 'failed') return proj
         const mission = missions.find((m) => m.id === proj.missionId)
         if (!mission) return proj
+        if (proj.status === 'failed' && RETRIED_MISSION_STATUSES.has(mission.status)) {
+          changed = true
+          return { ...proj, status: 'running' as const, error: undefined }
+        }
+        if (proj.status === 'completed' || proj.status === 'failed') return proj
         if (mission.status === 'completed') {
           changed = true
           return { ...proj, status: 'completed' as const }
@@ -365,13 +377,17 @@ export function LaunchSequence({
           return { ...proj, status: 'failed' as const, error: mission.status === 'cancelled' ? 'Mission cancelled' : 'Mission failed' }
         }
         return proj
-      }) }))
+      })
+      const nextPhase = { ...phase, projects }
+      const nextStatus = derivePhaseStatus(nextPhase)
+      if (nextStatus !== phase.status) {
+        changed = true
+        return { ...nextPhase, status: nextStatus }
+      }
+      return nextPhase
+    })
 
     if (changed) {
-      // Update phase-level status using shared helper
-      const updated = next.map((phase) => ({
-        ...phase,
-        status: derivePhaseStatus(phase) }))
       progressRef.current = updated
       // #6632 — Don't fire onUpdateProgress / onComplete on a closed dialog.
       if (!isMountedRef.current) return

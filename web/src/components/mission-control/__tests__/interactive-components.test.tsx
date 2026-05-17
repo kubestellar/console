@@ -6,12 +6,14 @@ import { AssignmentMatrix } from '../AssignmentMatrix'
 import { ClusterAssignmentPanel } from '../ClusterAssignmentPanel'
 import { LaunchSequence } from '../LaunchSequence'
 import { RequestApprovalModal } from '../RequestApprovalModal'
+import type { Mission } from '../../../hooks/useMissions'
 import type { ClusterInfo } from '../../../hooks/mcp/types'
 import type { PayloadProject, MissionControlState } from '../types'
 
-const { mockStartMission, mockLoadMissionPrompt } = vi.hoisted(() => ({
+const { mockStartMission, mockLoadMissionPrompt, mockUseMissions } = vi.hoisted(() => ({
   mockStartMission: vi.fn(() => 'mission-123'),
   mockLoadMissionPrompt: vi.fn((key: string) => Promise.resolve(`prompt for ${key}`)),
+  mockUseMissions: vi.fn(),
 }))
 
 // Mock hooks
@@ -33,10 +35,7 @@ vi.mock('../../../hooks/mcp/helm', () => ({
 }))
 
 vi.mock('../../../hooks/useMissions', () => ({
-  useMissions: vi.fn(() => ({
-    startMission: mockStartMission,
-    missions: [],
-  })),
+  useMissions: mockUseMissions,
 }))
 
 vi.mock('../../../lib/auth', () => ({
@@ -215,6 +214,10 @@ describe('LaunchSequence', () => {
     mockStartMission.mockReturnValue('mission-123')
     mockLoadMissionPrompt.mockReset()
     mockLoadMissionPrompt.mockImplementation((key: string) => Promise.resolve(`prompt for ${key}`))
+    mockUseMissions.mockImplementation(() => ({
+      startMission: mockStartMission,
+      missions: [],
+    }))
   })
 
   it('initializes progress and starts launch', async () => {
@@ -306,6 +309,7 @@ describe('LaunchSequence', () => {
     expect(onUpdateProgress).toHaveBeenCalled()
   })
 
+<<<<<<< HEAD
   it('shows deployment counts from the actual launch plan', async () => {
     const onUpdateProgress = vi.fn()
     const kyvernoProject: PayloadProject = {
@@ -358,6 +362,99 @@ describe('LaunchSequence', () => {
       expect(mockStartMission).toHaveBeenCalledTimes(1)
     })
   })
+
+  it('resumes launch progress when a failed mission is retried from the sidebar', async () => {
+    const onUpdateProgress = vi.fn()
+    let missionsState: Mission[] = []
+    mockUseMissions.mockImplementation(() => ({
+      startMission: mockStartMission,
+      missions: missionsState,
+    }))
+
+    const stateWithAssignments: MissionControlState = {
+      ...mockState,
+      assignments: [{
+        clusterName: 'cluster-1',
+        clusterContext: 'cluster-1',
+        provider: 'kind',
+        projectNames: ['falco'],
+        readiness: {
+          cpuHeadroomPercent: 80,
+          memHeadroomPercent: 80,
+          storageHeadroomPercent: 80,
+          overallScore: 80,
+        },
+        warnings: [],
+      }],
+      phases: [{ phase: 1, name: 'Security', projectNames: ['falco'] }],
+    }
+
+    const { rerender } = render(
+      <LaunchSequence
+        state={stateWithAssignments}
+        onUpdateProgress={onUpdateProgress}
+        onComplete={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(mockStartMission).toHaveBeenCalledTimes(1)
+    })
+
+    missionsState = [{
+      id: 'mission-123',
+      title: 'Mission Control deployment',
+      description: 'Deploy falco',
+      type: 'deploy',
+      status: 'failed',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }]
+    rerender(
+      <LaunchSequence
+        state={stateWithAssignments}
+        onUpdateProgress={onUpdateProgress}
+        onComplete={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onUpdateProgress).toHaveBeenLastCalledWith(expect.arrayContaining([
+        expect.objectContaining({
+          status: 'failed',
+          projects: expect.arrayContaining([
+            expect.objectContaining({ status: 'failed', error: 'Mission failed' }),
+          ]),
+        }),
+      ]))
+    })
+
+    missionsState = [{
+      ...missionsState[0],
+      status: 'running',
+      updatedAt: new Date(),
+    }]
+    rerender(
+      <LaunchSequence
+        state={stateWithAssignments}
+        onUpdateProgress={onUpdateProgress}
+        onComplete={vi.fn()}
+      />
+    )
+
+    await waitFor(() => {
+      expect(onUpdateProgress).toHaveBeenLastCalledWith(expect.arrayContaining([
+        expect.objectContaining({
+          status: 'running',
+          projects: expect.arrayContaining([
+            expect.objectContaining({ status: 'running', error: undefined }),
+          ]),
+        }),
+      ]))
+    })
+  })
+})
 })
 
 describe('RequestApprovalModal', () => {
