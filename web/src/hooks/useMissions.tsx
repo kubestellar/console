@@ -355,7 +355,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
     const conflicts = new Set<string>()
     for (const lockedTools of missionToolLocks.current.values()) {
-      for (const tool of normalizedRequiredTools) {
+      for (const tool of (normalizedRequiredTools || [])) {
         if (lockedTools.includes(tool)) {
           conflicts.add(tool)
         }
@@ -373,7 +373,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     if (queuedMissionExecutions.current.length === 0) return
 
     const remainingQueue: QueuedMissionExecution[] = []
-    for (const entry of queuedMissionExecutions.current) {
+    for (const entry of (queuedMissionExecutions.current || [])) {
       const mission = missionsRef.current.find(candidate => candidate.id === entry.missionId)
       if (!mission) continue
       if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') continue
@@ -833,7 +833,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             (m.status === 'running' || m.status === 'waiting_input') && m.context?.needsReconnect
           )
           const now = Date.now()
-          for (const mission of reconnectCandidates) {
+          for (const mission of (reconnectCandidates || [])) {
             const ageMs = now - new Date(mission.updatedAt).getTime()
             if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
               missionsToMarkStale.add(mission.id)

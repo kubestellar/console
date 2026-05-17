@@ -151,7 +151,7 @@ export function useDrillDownWebSocket(cluster: string) {
   useEffect(() => {
     const wsSet = activeWsRef.current
     return () => {
-      for (const ws of Array.from(wsSet)) {
+      for (const ws of (Array.from(wsSet) || [])) {
         try { ws.close() } catch { /* already closed */ }
       }
       wsSet.clear()

@@ -209,7 +209,7 @@ async function fetchInClusterAIProviders(): Promise<ProviderHealthInfo[]> {
     const providerStatus: ProviderHealthInfo['status'] = status.available ? 'operational' : 'down'
     const detail = status.available ? 'API key configured' : status.reason || 'Provider backend unavailable'
 
-    for (const provider of configuredProviders) {
+    for (const provider of (configuredProviders || [])) {
       result.push(createAIProviderHealth(provider, {
         status: providerStatus,
         detail,
