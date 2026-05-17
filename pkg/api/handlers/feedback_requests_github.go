@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +21,17 @@ import (
 // docsRepoName is the GitHub repository name for console documentation issues.
 const docsRepoName = "docs"
 
-var fixesPatternRe = regexp.MustCompile(`(?i)(?:fixes|closes|resolves)\s+(?:[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)?#(\d+)`)
+// GitHubPR represents a pull request from the GitHub API.
+type GitHubPR struct {
+	Number   int        `json:"number"`
+	HTMLURL  string     `json:"html_url"`
+	State    string     `json:"state"`
+	Title    string     `json:"title"`
+	Body     string     `json:"body"`
+	Draft    bool       `json:"draft"`
+	Merged   bool       `json:"merged"`
+	MergedAt *time.Time `json:"merged_at"`
+}
 
 // resolveRepoName returns the GitHub repo name for the given target repo.
 func (h *FeedbackHandler) resolveRepoName(target models.TargetRepo) string {
