@@ -101,6 +101,32 @@ export const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
  */
 export const WAITING_INPUT_TIMEOUT_MS = 600_000
 
+// ─── Interactive Content Detection ───────────────────────────────────────────
+
+/**
+ * Patterns that indicate the assistant's last message is asking the user for
+ * input (confirmation dialog, numbered options, explicit questions). When the
+ * stream ends with interactive content, the waiting_input watchdog should NOT
+ * be started because the mission is legitimately waiting for the user to
+ * respond — not stuck waiting for a lost backend 'result' message (#14324).
+ */
+const INTERACTIVE_CONTENT_PATTERNS = [
+  /\?\s*$/m,                              // ends with a question mark
+  /\b(?:confirm|choose|select|pick)\b/i,  // confirmation keywords
+  /^\s*\d+[.)]\s+/m,                      // numbered options (1. or 1))
+  /before I proceed/i,                    // common Claude phrasing
+  /which (?:option|approach|method)/i,    // which option/approach
+  /would you (?:like|prefer)/i,           // preference question
+] as const
+
+/**
+ * Returns true if the given message content appears to be asking the user for
+ * input (e.g., a confirmation dialog with numbered options).
+ */
+export function isInteractiveContent(content: string): boolean {
+  return INTERACTIVE_CONTENT_PATTERNS.some(pattern => pattern.test(content))
+}
+
 // ─── Agent Disconnect Detection ──────────────────────────────────────────────
 
 /**

@@ -32,6 +32,7 @@ import {
   WS_SEND_MAX_RETRIES,
   WS_SEND_RETRY_DELAY_MS,
   STREAM_GAP_THRESHOLD_MS,
+  isInteractiveContent,
 } from './useMissions.constants'
 import {
   runPreflightCheck,
@@ -1788,7 +1789,15 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           clearActiveTokenCategory(missionId)
           // Start the watchdog that auto-fails the mission if no final result
           // message arrives within WAITING_INPUT_TIMEOUT_MS (#5936).
-          startWaitingInputTimeout(missionId)
+          // Skip the watchdog when the last assistant message is interactive
+          // (asking the user a question/confirmation) — the mission is
+          // legitimately waiting for user input, not stuck (#14324).
+          const lastAssistantContent = payload.content || (m.messages || [])
+            .filter(msg => msg.role === 'assistant')
+            .pop()?.content || ''
+          if (!isInteractiveContent(lastAssistantContent)) {
+            startWaitingInputTimeout(missionId)
+          }
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -3735,4 +3744,5 @@ export const __missionsTestables = {
   CANCEL_CONFIRMED_MESSAGE_TYPE,
   WAITING_INPUT_TIMEOUT_MS,
   AGENT_DISCONNECT_ERROR_PATTERNS,
+  isInteractiveContent,
 }
