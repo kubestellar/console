@@ -942,12 +942,12 @@ func (s *SQLiteStore) migrate() error {
 		// KB query gap tracker — records zero-result browse paths so maintainers
 		// know which KB content is missing from the knowledge base.
 		`CREATE TABLE IF NOT EXISTS kb_query_gaps (
-			id        INTEGER PRIMARY KEY AUTOINCREMENT,
-			path      TEXT NOT NULL,
-			queried_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			path      TEXT PRIMARY KEY,
+			hit_count INTEGER NOT NULL DEFAULT 0,
+			last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
-		"CREATE INDEX IF NOT EXISTS idx_kb_query_gaps_path ON kb_query_gaps(path)",
-		"CREATE INDEX IF NOT EXISTS idx_kb_query_gaps_ts  ON kb_query_gaps(queried_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_kb_query_gaps_last_seen ON kb_query_gaps(last_seen DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_kb_query_gaps_hits ON kb_query_gaps(hit_count DESC, last_seen DESC)",
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.ExecContext(ctx, migration); err != nil {
@@ -971,6 +971,10 @@ func (s *SQLiteStore) migrate() error {
 		}
 		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
 	}
+	if err := s.migrateKBGapsSchema(ctx); err != nil {
+		return fmt.Errorf("migrate kb_query_gaps schema: %w", err)
+	}
+
 	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
 
 	// Data migration: "pending" status is eliminated — reservations are now

@@ -285,9 +285,9 @@ type StellarAuditEntry struct {
 
 // KBQueryGap represents one row in the kb_query_gaps table.
 type KBQueryGap struct {
-	Path      string `json:"path"`
-	HitCount  int    `json:"hitCount"`
-	LastSeen  string `json:"lastSeen"`
+	Path     string    `json:"path"`
+	HitCount int       `json:"hitCount"`
+	LastSeen time.Time `json:"lastSeen"`
 }
 
 // AuditEntry represents a single row in the audit_log table (#8670 Phase 3).

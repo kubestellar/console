@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,7 @@ func TestRecordKBGap_Single(t *testing.T) {
 	require.Len(t, gaps, 1)
 	assert.Equal(t, "fixes/cert-manager", gaps[0].Path)
 	assert.Equal(t, 1, gaps[0].HitCount)
-	assert.NotEmpty(t, gaps[0].LastSeen)
+	assert.False(t, gaps[0].LastSeen.IsZero())
 }
 
 func TestListTopKBGaps_OrderByHitCount(t *testing.T) {
@@ -44,6 +45,9 @@ func TestListTopKBGaps_OrderByHitCount(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, gaps, 2)
 
+	var rowCount int
+	require.NoError(t, s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM kb_query_gaps`).Scan(&rowCount))
+	assert.Equal(t, 2, rowCount)
 	assert.Equal(t, "fixes/istio", gaps[0].Path)
 	assert.Equal(t, 3, gaps[0].HitCount)
 	assert.Equal(t, "fixes/argocd", gaps[1].Path)
@@ -95,8 +99,8 @@ func TestSweepOldKBGaps(t *testing.T) {
 
 	// Manually insert an ancient row
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO kb_query_gaps (path, queried_at) VALUES (?, datetime('now', '-100 days'))`,
-		"fixes/ancient",
+		`INSERT INTO kb_query_gaps (path, hit_count, last_seen) VALUES (?, ?, datetime('now', '-100 days'))`,
+		"fixes/ancient", 4,
 	)
 	require.NoError(t, err)
 
@@ -108,4 +112,34 @@ func TestSweepOldKBGaps(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, gaps, 1)
 	assert.Equal(t, "fixes/new", gaps[0].Path)
+}
+
+func TestMigrateKBGapsSchema_AggregatesLegacyRows(t *testing.T) {
+	s := newTestKBGapStore(t)
+	ctx := context.Background()
+
+	_, err := s.db.ExecContext(ctx, `DROP TABLE kb_query_gaps`)
+	require.NoError(t, err)
+	_, err = s.db.ExecContext(ctx, `
+		CREATE TABLE kb_query_gaps (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			path TEXT NOT NULL,
+			queried_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`)
+	require.NoError(t, err)
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO kb_query_gaps (path, queried_at) VALUES
+			('fixes/istio', datetime('now', '-2 days')),
+			('fixes/istio', datetime('now', '-1 days')),
+			('fixes/cert-manager', datetime('now', '-3 days'))`)
+	require.NoError(t, err)
+
+	require.NoError(t, s.migrateKBGapsSchema(ctx))
+
+	gaps, err := s.ListTopKBGaps(ctx, 10)
+	require.NoError(t, err)
+	require.Len(t, gaps, 2)
+	assert.Equal(t, "fixes/istio", gaps[0].Path)
+	assert.Equal(t, 2, gaps[0].HitCount)
+	assert.WithinDuration(t, time.Now().Add(-24*time.Hour), gaps[0].LastSeen, time.Minute)
 }

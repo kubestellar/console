@@ -569,8 +569,9 @@ func (m *MockStore) QueryAuditLogs(_ context.Context, limit int, userID, action 
 	return args.Get(0).([]store.AuditEntry), args.Error(1)
 }
 
-func (m *MockStore) RecordKBGap(_ context.Context, _ string) error {
-	return nil
+func (m *MockStore) RecordKBGap(_ context.Context, path string) error {
+	args := m.Called(path)
+	return args.Error(0)
 }
 
 func (m *MockStore) ListTopKBGaps(_ context.Context, n int) ([]store.KBQueryGap, error) {

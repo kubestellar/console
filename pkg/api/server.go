@@ -33,6 +33,10 @@ const (
 	portReleasePollInterval = 50 * time.Millisecond
 )
 
+type kbGapSweeper interface {
+	SweepOldKBGaps(ctx context.Context) (int64, error)
+}
+
 // Server represents the API server
 type Server struct {
 	app                 *fiber.App
@@ -260,6 +264,7 @@ func NewServer(cfg Config) (*Server, error) {
 	} else {
 		slog.Info("[Server] GPU utilization worker skipped — no Kubernetes client available")
 	}
+	server.startKBGapsSweeper(db)
 
 	slog.Info("Server initialization complete")
 
@@ -280,4 +285,34 @@ func (s *Server) setupRoutes() {
 	s.setupFeedbackRoutes(routes)
 	s.setupStellarRoutes(routes)
 	s.setupWebSocketStaticRoutes(routes)
+}
+
+func (s *Server) startKBGapsSweeper(gapStore kbGapSweeper) {
+	if gapStore == nil {
+		return
+	}
+	safego.GoWith("api/kb-gap-sweeper", func() {
+		runSweep := func() {
+			deleted, err := gapStore.SweepOldKBGaps(context.Background())
+			if err != nil {
+				slog.Warn("[Server] failed to sweep KB query gaps", "error", err)
+				return
+			}
+			if deleted > 0 {
+				slog.Info("[Server] swept old KB query gaps", "deleted", deleted)
+			}
+		}
+
+		runSweep()
+		ticker := time.NewTicker(store.KBGapSweepInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-s.done:
+				return
+			case <-ticker.C:
+				runSweep()
+			}
+		}
+	})
 }
