@@ -192,6 +192,7 @@ export function Layout({ children: _children }: LayoutProps) {
   const { t } = useTranslation()
   const { config } = useSidebarConfig()
   const { isMobile } = useMobile()
+  const location = useLocation()
   const sidebarWidthPx = isMobile
     ? 0
     : config.collapsed
