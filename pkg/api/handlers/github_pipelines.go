@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,269 +28,8 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// ---------------------------------------------------------------------------
-// Constants — mirror web/netlify/functions/github-pipelines.mts
-// ---------------------------------------------------------------------------
+// Types, constants, and shared variables are in github_pipelines_types.go
 
-const (
-	ghpCacheTTL             = 5 * time.Minute
-	ghpCacheStaleTTL        = 1 * time.Hour // Serve stale data for 1h after expiration when GitHub rate-limits
-	ghpMatrixDefaultDays    = 14
-	ghpMatrixMaxDays        = 90
-	ghpHistoryRetentionDays = 90
-	ghpFailuresLimit        = 10
-	ghpFailuresOverfetch    = 30
-	ghpLogTailLines         = 500
-	ghpMatrixRunsPerRepo    = 200
-	ghpFlowMaxRunsPerRepo   = 8
-	ghpPulseWindowDays      = 14
-	ghpGitHubAPIBase        = "https://api.github.com"
-	ghpNightlyReleaseRepo   = "kubestellar/console"
-	ghpNightlyReleaseWFFile = "release.yml"
-	ghpNightlyReleaseCron   = "0 5 * * *"
-	ghpHTTPTimeout          = 15 * time.Second
-	ghpMutationHTTPTimeout  = 15 * time.Second
-	ghpMaxErrorBodyBytes    = 10_000
-	ghpMaxLogBytes          = 10 * 1024 * 1024 // 10 MB cap on job log downloads
-	ghpMatrixSparseMinCells = 1
-	ghpReleaseOverfetch     = 10 // fetch recent releases so we can sort by published_at
-
-	// ghpMaxAllocItems is the upper bound for slice sizes derived from API
-	// responses. Prevents allocation-size-overflow if GitHub returns a
-	// malformed or unexpectedly large total_count / array (go/allocation-size-overflow).
-	ghpMaxAllocItems = 10_000
-
-	// ghGetWithRetry tuning — see issue #9059. Mirrors the retry pattern in
-	// benchmarks.go (driveGetWithRetry). Only 403/429 trigger a retry;
-	// other statuses (including 5xx) are returned as-is to the caller so
-	// existing error handling continues to work.
-	GH_RETRY_MAX_ATTEMPTS  = 3
-	GH_RETRY_BASE_DELAY_MS = 1000
-	GH_RETRY_MAX_DELAY_MS  = 10_000
-)
-
-// ghpDefaultRepos is the default when PIPELINE_REPOS env var is not set.
-var ghpDefaultRepos = []string{
-	"kubestellar/console",
-	"kubestellar/docs",
-	"kubestellar/console-kb",
-	"kubestellar/kubestellar-mcp",
-	"kubestellar/console-marketplace",
-	"kubestellar/homebrew-tap",
-}
-
-// ghpGetRepos reads the PIPELINE_REPOS env var (comma-separated owner/repo
-// list). Falls back to ghpDefaultRepos if unset. Called once at handler
-// construction time — not on every request.
-func ghpGetRepos() []string {
-	env := os.Getenv("PIPELINE_REPOS")
-	if env == "" {
-		return ghpDefaultRepos
-	}
-	repos := make([]string, 0)
-	for _, s := range strings.Split(env, ",") {
-		s = strings.TrimSpace(s)
-		if s != "" {
-			if !ghpValidRepoPattern.MatchString(s) {
-				slog.Warn("[GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping", "repo", s)
-				continue
-			}
-			repos = append(repos, s)
-		}
-	}
-	if len(repos) == 0 {
-		return ghpDefaultRepos
-	}
-	return repos
-}
-
-// ghpRepos is populated once at init from PIPELINE_REPOS env var.
-var ghpRepos = ghpGetRepos()
-
-// ghpRateLimitHeadersKey is the context key for storing GitHub API rate limit headers.
-type ghpContextKey string
-
-const ghpRateLimitHeadersKey ghpContextKey = "rateLimitHeaders"
-
-// ghpValidRepoPattern enforces strict owner/repo format to prevent path
-// traversal — the repo value is interpolated into GitHub API paths.
-var ghpValidRepoPattern = regexp.MustCompile(`^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$`)
-
-// ghpNightlyTagRe matches nightly release tags like "v0.3.21-nightly.20260417".
-// Anchored to prevent partial substring collisions on tag names that contain
-// "nightly" as a fragment of a larger word (go/regex/missing-regexp-anchor).
-var ghpNightlyTagRe = regexp.MustCompile(`(?i)^.*nightly.*$`)
-
-// ghpPRFromCommitRe extracts a PR number from merge-commit messages like
-// "feat: something (#8673)". Anchored at end only — the leading content is
-// arbitrary; the PR reference must appear at the very end of the line.
-var ghpPRFromCommitRe = regexp.MustCompile(`^.*\(#(\d+)\)\s*$`)
-
-func ghpIsAllowedRepo(repo string) bool {
-	// Accept any valid owner/repo slug — the GitHub token's permissions
-	// are the real access control. The preconfigured list only controls
-	// which repos are fetched by default (no filter), not which repos
-	// a user is allowed to query.
-	if ghpValidRepoPattern.MatchString(repo) {
-		return true
-	}
-	for _, r := range ghpRepos {
-		if r == repo {
-			return true
-		}
-	}
-	return false
-}
-
-// ---------------------------------------------------------------------------
-// Wire shapes — match the Netlify function's JSON exactly so the TS hook
-// doesn't have to know which backend served the response.
-// ---------------------------------------------------------------------------
-
-// ghpPullRequestRef is a compact reference to a PR associated with a run.
-type ghpPullRequestRef struct {
-	Number int    `json:"number"`
-	URL    string `json:"url"`
-}
-
-type ghpWorkflowRun struct {
-	ID           int64               `json:"id"`
-	Repo         string              `json:"repo"`
-	Name         string              `json:"name"`
-	WorkflowID   int64               `json:"workflowId"`
-	HeadBranch   string              `json:"headBranch"`
-	Status       string              `json:"status"`
-	Conclusion   *string             `json:"conclusion"`
-	Event        string              `json:"event"`
-	RunNumber    int                 `json:"runNumber"`
-	HTMLURL      string              `json:"htmlUrl"`
-	CreatedAt    string              `json:"createdAt"`
-	UpdatedAt    string              `json:"updatedAt"`
-	PullRequests []ghpPullRequestRef `json:"pullRequests,omitempty"`
-}
-
-type ghpStep struct {
-	Name        string  `json:"name"`
-	Status      string  `json:"status"`
-	Conclusion  *string `json:"conclusion"`
-	Number      int     `json:"number"`
-	StartedAt   string  `json:"startedAt,omitempty"`
-	CompletedAt string  `json:"completedAt,omitempty"`
-}
-
-type ghpJob struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Status      string    `json:"status"`
-	Conclusion  *string   `json:"conclusion"`
-	StartedAt   *string   `json:"startedAt"`
-	CompletedAt *string   `json:"completedAt"`
-	HTMLURL     string    `json:"htmlUrl"`
-	Steps       []ghpStep `json:"steps"`
-}
-
-type ghpPulseLastRun struct {
-	Conclusion *string `json:"conclusion"`
-	CreatedAt  string  `json:"createdAt"`
-	HTMLURL    string  `json:"htmlUrl"`
-	RunNumber  int     `json:"runNumber"`
-	ReleaseTag *string `json:"releaseTag"`
-	WeeklyTag  *string `json:"weeklyTag,omitempty"`
-}
-
-type ghpPulseRecent struct {
-	Conclusion *string `json:"conclusion"`
-	CreatedAt  string  `json:"createdAt"`
-	HTMLURL    string  `json:"htmlUrl"`
-}
-
-type ghpPulsePayload struct {
-	LastRun    *ghpPulseLastRun `json:"lastRun"`
-	Streak     int              `json:"streak"`
-	StreakKind string           `json:"streakKind"`
-	Recent     []ghpPulseRecent `json:"recent"`
-	NextCron   string           `json:"nextCron"`
-}
-
-type ghpMatrixCell struct {
-	Date       string  `json:"date"`
-	Conclusion *string `json:"conclusion"`
-	HTMLURL    string  `json:"htmlUrl"`
-}
-
-type ghpMatrixWorkflow struct {
-	Repo  string          `json:"repo"`
-	Name  string          `json:"name"`
-	Cells []ghpMatrixCell `json:"cells"`
-}
-
-type ghpMatrixPayload struct {
-	Days      int                 `json:"days"`
-	Range     []string            `json:"range"`
-	Workflows []ghpMatrixWorkflow `json:"workflows"`
-}
-
-type ghpFlowRun struct {
-	Run  ghpWorkflowRun `json:"run"`
-	Jobs []ghpJob       `json:"jobs"`
-}
-
-type ghpFlowPayload struct {
-	Runs []ghpFlowRun `json:"runs"`
-}
-
-type ghpFailedStep struct {
-	JobID    int64  `json:"jobId"`
-	JobName  string `json:"jobName"`
-	StepName string `json:"stepName"`
-}
-
-type ghpFailureRow struct {
-	Repo         string              `json:"repo"`
-	RunID        int64               `json:"runId"`
-	Workflow     string              `json:"workflow"`
-	HTMLURL      string              `json:"htmlUrl"`
-	Branch       string              `json:"branch"`
-	Event        string              `json:"event"`
-	Conclusion   *string             `json:"conclusion"`
-	CreatedAt    string              `json:"createdAt"`
-	DurationMs   int64               `json:"durationMs"`
-	FailedStep   *ghpFailedStep      `json:"failedStep"`
-	PullRequests []ghpPullRequestRef `json:"pullRequests,omitempty"`
-}
-
-type ghpFailuresPayload struct {
-	Runs []ghpFailureRow `json:"runs"`
-}
-
-type ghpLogPayload struct {
-	Lines         int    `json:"lines"`
-	TruncatedFrom int    `json:"truncatedFrom"`
-	Log           string `json:"log"`
-}
-
-// ---------------------------------------------------------------------------
-// History — in-memory rolling 90-day record of per-workflow daily outcomes.
-// Lost on process restart; re-seeded from GitHub on the next request. GitHub
-// keeps 14 days of run history, so restart means the 30/90 day views are
-// thin until the process accumulates again.
-// ---------------------------------------------------------------------------
-
-type ghpHistoryDay struct {
-	RunID      int64
-	Conclusion *string
-	HTMLURL    string
-}
-
-type ghpHistory struct {
-	mu sync.RWMutex
-	// repo -> workflow name -> dateKey (YYYY-MM-DD) -> ghpHistoryDay
-	days map[string]map[string]map[string]ghpHistoryDay
-}
-
-func newGHPHistory() *ghpHistory {
-	return &ghpHistory{days: make(map[string]map[string]map[string]ghpHistoryDay)}
-}
 
 func (h *ghpHistory) merge(runs []ghpWorkflowRun) {
 	h.mu.Lock()
@@ -376,12 +114,6 @@ type GitHubPipelinesHandler struct {
 	cache    map[string]ghpCacheEntry // cacheKey -> entry
 	fetchGrp singleflight.Group
 }
-
-type ghpCacheEntry struct {
-	body []byte
-	exp  time.Time
-}
-
 // NewGitHubPipelinesHandler constructs the handler. `githubToken` is the
 // read-only PAT. Mutation token comes from GITHUB_MUTATIONS_TOKEN env var
 // — if unset, mutations return 503.
@@ -711,27 +443,6 @@ func ghpForwardRateLimitHeaders(c *fiber.Ctx, resp *http.Response) {
 }
 
 // workflowRunsRaw is the subset of GitHub's workflow_run JSON we consume.
-type workflowRunRaw struct {
-	ID           int64   `json:"id"`
-	Name         string  `json:"name"`
-	WorkflowID   int64   `json:"workflow_id"`
-	HeadBranch   string  `json:"head_branch"`
-	Status       string  `json:"status"`
-	Conclusion   *string `json:"conclusion"`
-	Event        string  `json:"event"`
-	RunNumber    int     `json:"run_number"`
-	HTMLURL      string  `json:"html_url"`
-	CreatedAt    string  `json:"created_at"`
-	UpdatedAt    string  `json:"updated_at"`
-	PullRequests []struct {
-		Number int    `json:"number"`
-		URL    string `json:"url"`
-	} `json:"pull_requests"`
-	HeadCommit struct {
-		Message string `json:"message"`
-	} `json:"head_commit"`
-}
-
 func normalizeRunRaw(r workflowRunRaw, repo string) ghpWorkflowRun {
 	prs := make([]ghpPullRequestRef, 0)
 	for _, pr := range r.PullRequests {
@@ -766,13 +477,6 @@ func normalizeRunRaw(r workflowRunRaw, repo string) ghpWorkflowRun {
 		PullRequests: prs,
 	}
 }
-
-// ghpMaxPerPage is the GitHub API maximum for per_page.
-const ghpMaxPerPage = 100
-
-// ghpMaxPages caps pagination depth to avoid runaway API calls.
-const ghpMaxPages = 5
-
 func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query string) ([]ghpWorkflowRun, error) {
 	// Parse per_page from the query string to determine the desired total.
 	// GitHub caps per_page at 100, so we paginate if the caller asks for more.
@@ -1350,13 +1054,6 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 // ---------------------------------------------------------------------------
 
 // ghpAllPayload bundles all four pipeline views into a single response.
-type ghpAllPayload struct {
-	Pulse    any `json:"pulse"`
-	Matrix   any `json:"matrix"`
-	Failures any `json:"failures"`
-	Flow     any `json:"flow"`
-}
-
 func (h *GitHubPipelinesHandler) buildAll(c *fiber.Ctx) (any, error) {
 	pulse, pulseErr := h.buildPulse(c)
 	matrix, matrixErr := h.buildMatrixFromQuery(c)
