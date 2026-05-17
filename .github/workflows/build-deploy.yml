@@ -286,7 +286,23 @@ jobs:
             --set securityContext.runAsGroup=null \
             --atomic \
             --wait \
-            --timeout 5m
+            --timeout 10m
+
+      - name: Collect diagnostics on deploy failure
+        if: failure()
+        run: |
+          echo "::group::Pods in kc namespace"
+          kubectl get pods -n kc -o wide || true
+          echo "::endgroup::"
+          echo "::group::Deployment describe"
+          kubectl describe deployment/kc-kubestellar-console -n kc || true
+          echo "::endgroup::"
+          echo "::group::Recent pod logs"
+          for pod in $(kubectl get pods -n kc -o name 2>/dev/null | head -5); do
+            echo "--- ${pod} ---"
+            kubectl logs -n kc "${pod#pod/}" --tail=100 || true
+          done
+          echo "::endgroup::"
 
       - name: Verify deployment
         run: |
@@ -374,7 +390,23 @@ jobs:
             --set securityContext.runAsGroup=null \
             --atomic \
             --wait \
-            --timeout 8m
+            --timeout 12m
+
+      - name: Collect diagnostics on deploy failure
+        if: failure()
+        run: |
+          echo "::group::Pods in kubestellar-console namespace"
+          kubectl get pods -n kubestellar-console -o wide || true
+          echo "::endgroup::"
+          echo "::group::Deployment describe"
+          kubectl describe deployment/kc-kubestellar-console -n kubestellar-console || true
+          echo "::endgroup::"
+          echo "::group::Recent pod logs"
+          for pod in $(kubectl get pods -n kubestellar-console -o name 2>/dev/null | head -5); do
+            echo "--- ${pod} ---"
+            kubectl logs -n kubestellar-console "${pod#pod/}" --tail=100 || true
+          done
+          echo "::endgroup::"
 
       - name: Verify deployment
         run: |
