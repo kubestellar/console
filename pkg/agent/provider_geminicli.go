@@ -129,9 +129,11 @@ func (g *GeminiCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, on
 	stderrDone := make(chan struct{})
 	safego.GoWith("gemini-cli-stream", func() {
 		defer close(stderrDone)
-		if _, copyErr := io.Copy(&stderrBuf, stderr); copyErr != nil {
+		if _, copyErr := io.Copy(&stderrBuf, io.LimitReader(stderr, maxStderrBytes)); copyErr != nil {
 			slog.Error("[GeminiCLI] error reading stderr", "error", copyErr)
 		}
+		// Drain remainder to prevent pipe blocking
+		io.Copy(io.Discard, stderr)
 	})
 
 	var fullResponse strings.Builder

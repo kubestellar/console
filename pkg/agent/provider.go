@@ -4,6 +4,10 @@ import (
 	"context"
 )
 
+// maxStderrBytes is the maximum amount of stderr to capture from CLI subprocesses
+// to prevent OOM when a provider emits unlimited stderr output.
+const maxStderrBytes int64 = 1 << 20 // 1 MB
+
 // AIProvider defines the interface for AI agent providers
 type AIProvider interface {
 	// Name returns the unique identifier for this provider (e.g., "claude", "openai", "gemini")

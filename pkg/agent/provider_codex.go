@@ -133,9 +133,11 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	stderrDone := make(chan struct{})
 	safego.GoWith("codex-stream", func() {
 		defer close(stderrDone)
-		if _, copyErr := io.Copy(&stderrBuf, stderr); copyErr != nil {
+		if _, copyErr := io.Copy(&stderrBuf, io.LimitReader(stderr, maxStderrBytes)); copyErr != nil {
 			slog.Error("[Codex] error reading stderr", "error", copyErr)
 		}
+		// Drain remainder to prevent pipe blocking
+		io.Copy(io.Discard, stderr)
 	})
 
 	var fullResponse strings.Builder
