@@ -2,7 +2,6 @@ import type {
   AgentSelectedPayload,
   AgentsListPayload,
 } from '../types/agent'
-import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
@@ -21,7 +20,6 @@ import {
   generateRequestId,
   getMissionMessages,
 } from './useMissions.helpers'
-import { SELECTED_AGENT_KEY } from './useMissions.state'
 import type { MissionProviderState, MissionStateUtils } from './useMissions.state'
 import { logger } from '@/lib/logger'
 

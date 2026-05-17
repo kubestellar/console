@@ -18,14 +18,12 @@ import {
 } from './useMissions.constants'
 import {
   getMissionMessages,
-  isStaleAgentErrorMessage,
   generateMessageId,
 } from './useMissions.helpers'
 import { SELECTED_AGENT_KEY } from './useMissions.state'
 import type { MissionProviderState, MissionStateUtils } from './useMissions.state'
 import { stripInteractiveArtifacts } from './useMissionPromptBuilder'
 import type { MissionStatus } from './useMissionTypes'
-import { logger } from '@/lib/logger'
 
 export function createMissionMessageHandler(
   state: MissionProviderState,

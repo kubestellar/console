@@ -180,7 +180,8 @@ export function createMissionActions(
           ))
         }
 
-        if (allowMissingToolWarning && toolResult.error) {
+        const missingToolError = toolResult.error
+        if (allowMissingToolWarning && missingToolError) {
           state.setMissions(prev => prev.map(candidate =>
             candidate.id === missionId
               ? {
@@ -191,7 +192,7 @@ export function createMissionActions(
                     {
                       id: generateMessageId('tool-preflight-warning-retry'),
                       role: 'system' as const,
-                      content: buildMissingToolWarning(toolResult.error),
+                      content: buildMissingToolWarning(missingToolError),
                       timestamp: new Date(),
                     },
                   ],

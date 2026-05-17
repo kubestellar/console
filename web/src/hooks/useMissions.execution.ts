@@ -38,7 +38,7 @@ import {
   discoverKagentiProviderAgent,
 } from '../lib/kagentiProviderBackend'
 import { emitMissionCompleted, emitMissionError } from '../lib/analytics'
-import type { Mission, MissionStatus, StartMissionParams } from './useMissionTypes'
+import type { Mission, MissionStatus } from './useMissionTypes'
 import type { MissionProviderState, MissionStateUtils } from './useMissions.state'
 import type { MissionConnectionApi } from './useMissions.connection'
 import { logger } from '@/lib/logger'

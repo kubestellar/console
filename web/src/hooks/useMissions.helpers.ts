@@ -11,6 +11,11 @@ import type { KagentiProviderAgentDiscoveryResult } from '../lib/kagentiProvider
 import type { PreflightError } from '../lib/missions/preflightCheck'
 import { resolveRequiredTools } from '../lib/missions/preflightCheck'
 import { AGENT_DISCONNECT_ERROR_PATTERNS } from './useMissions.constants'
+import { generateMessageId } from './useMissionPromptBuilder'
+import {
+  getSelectedKagentiAgentFromStorage,
+  persistSelectedKagentiAgentToStorage,
+} from './useMissionStorage'
 
 // ─── Array Safety ────────────────────────────────────────────────────────────
 
@@ -140,4 +145,10 @@ export function buildKagentiDiscoveryErrorMessage(result: KagentiDiscoveryFailur
   }
 
   return `**${i18n.t('missions.kagenti.noAgentsTitle')}**\n\n${i18n.t('missions.kagenti.noAgentsDescription')}`
+}
+
+export {
+  generateMessageId,
+  getSelectedKagentiAgentFromStorage,
+  persistSelectedKagentiAgentToStorage,
 }
