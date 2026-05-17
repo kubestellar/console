@@ -14,10 +14,10 @@ import { motion } from 'framer-motion'
 import { X, Download, Settings, Trash2, Plus, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import yaml from 'js-yaml'
-import CodeMirror from '@uiw/react-codemirror'
 import { StreamLanguage } from '@codemirror/language'
 import { cypher } from '@codemirror/legacy-modes/mode/cypher'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { LazyCodeMirror } from './LazyCodeMirror'
 import { downloadText } from '../../../lib/download'
 import type {
   DrasiSource, DrasiQuery, LiveResultRow,
@@ -119,7 +119,7 @@ export function RowDetailDrawer({ row, onClose }: { row: LiveResultRow | null; o
         </button>
       </div>
       <div className="flex-1 overflow-hidden text-xs">
-        <CodeMirror
+        <LazyCodeMirror
           value={json}
           theme={oneDark}
           extensions={[]}
@@ -346,7 +346,7 @@ export function QueryConfigModal({
         <div>
           <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t('drasi.queryLabel')}</label>
           <div className="rounded border border-slate-700 overflow-hidden text-xs">
-            <CodeMirror
+            <LazyCodeMirror
               value={queryText}
               onChange={setQueryText}
               theme={oneDark}

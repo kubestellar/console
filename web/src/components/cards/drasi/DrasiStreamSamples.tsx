@@ -8,13 +8,13 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { X, Code2, Copy, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import CodeMirror from '@uiw/react-codemirror'
 import { StreamLanguage } from '@codemirror/language'
 import { javascript } from '@codemirror/legacy-modes/mode/javascript'
 import { python } from '@codemirror/legacy-modes/mode/python'
 import { go } from '@codemirror/legacy-modes/mode/go'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { LazyCodeMirror } from './LazyCodeMirror'
 import { STREAM_COPY_FLASH_MS } from './DrasiConstants'
 
 // ---------------------------------------------------------------------------
@@ -242,7 +242,7 @@ export function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDr
       </div>
 
       <div className="flex-1 overflow-hidden text-xs">
-        <CodeMirror
+        <LazyCodeMirror
           value={snippet}
           theme={oneDark}
           extensions={[sample.lineExt]}
