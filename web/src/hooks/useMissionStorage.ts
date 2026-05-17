@@ -9,6 +9,7 @@ import { getDemoMode } from './useDemoMode'
 import { DEMO_MISSIONS } from '../mocks/demoMissions'
 import type { Mission } from './useMissionTypes'
 import { INACTIVE_MISSION_STATUSES } from './useMissionTypes'
+import { logger } from '@/lib/logger'
 
 export const MISSIONS_STORAGE_KEY = 'kc_missions'
 /**
@@ -48,12 +49,12 @@ export function loadMissions(): Mission[] {
       try {
         parsed = JSON.parse(stored)
       } catch (parseErr: unknown) {
-        console.error('[Missions] Corrupted localStorage JSON — clearing:', parseErr)
+        logger.error('[Missions] Corrupted localStorage JSON — clearing:', parseErr)
         localStorage.removeItem(MISSIONS_STORAGE_KEY)
         return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
       }
       if (!Array.isArray(parsed)) {
-        console.warn('[Missions] localStorage value is not an array — clearing')
+        logger.warn('[Missions] localStorage value is not an array — clearing')
         localStorage.removeItem(MISSIONS_STORAGE_KEY)
         return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
       }
@@ -133,7 +134,7 @@ export function loadMissions(): Mission[] {
     // pressure corrupted it), fully clear the key instead of leaving a
     // broken entry that will keep crashing every load. The user loses
     // their history, which is strictly better than an unusable app.
-    console.error('[Missions] Failed to parse kc_missions, clearing:', e)
+    logger.error('[Missions] Failed to parse kc_missions, clearing:', e)
     try {
       localStorage.removeItem(MISSIONS_STORAGE_KEY)
     } catch {
@@ -160,7 +161,7 @@ export function saveMissions(missions: Mission[]) {
     const isQuotaError = e instanceof DOMException
       && (e.name === 'QuotaExceededError' || e.code === 22)
     if (isQuotaError) {
-      console.warn('[Missions] localStorage quota exceeded, pruning old missions')
+      logger.warn('[Missions] localStorage quota exceeded, pruning old missions')
       // Keep active missions (pending/running/cancelling/waiting_input/blocked) unconditionally
       const active = missions.filter(m =>
         m.status === 'running' || m.status === 'pending' || m.status === 'waiting_input' || m.status === 'blocked' || m.status === 'cancelling'
@@ -178,7 +179,7 @@ export function saveMissions(missions: Mission[]) {
         return
       } catch {
         // Still too large — strip chat messages from completed missions (#5695)
-        console.warn('[Missions] still full after count-pruning, stripping chat messages')
+        logger.warn('[Missions] still full after count-pruning, stripping chat messages')
         const stripped = pruned.map(m =>
           (m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled')
             ? { ...m, messages: (m.messages || []).slice(-3) } // keep only last 3 messages
@@ -189,12 +190,12 @@ export function saveMissions(missions: Mission[]) {
           return
         } catch {
           // Absolute last resort — clear missions storage
-          console.error('[Missions] localStorage still full after stripping messages, clearing missions')
+          logger.error('[Missions] localStorage still full after stripping messages, clearing missions')
           localStorage.removeItem(MISSIONS_STORAGE_KEY)
         }
       }
     } else {
-      console.error('Failed to save missions to localStorage:', e)
+      logger.error('Failed to save missions to localStorage:', e)
     }
   }
 }
@@ -209,7 +210,7 @@ export function loadUnreadMissionIds(): Set<string> {
       return new Set(parsed)
     }
   } catch (e: unknown) {
-    console.error('Failed to load unread missions from localStorage:', e)
+    logger.error('Failed to load unread missions from localStorage:', e)
   }
   return new Set()
 }
@@ -219,7 +220,7 @@ export function saveUnreadMissionIds(ids: Set<string>) {
   try {
     localStorage.setItem(UNREAD_MISSIONS_KEY, JSON.stringify([...ids]))
   } catch (e: unknown) {
-    console.error('Failed to save unread missions to localStorage:', e)
+    logger.error('Failed to save unread missions to localStorage:', e)
   }
 }
 

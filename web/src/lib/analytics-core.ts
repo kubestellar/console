@@ -38,6 +38,7 @@ import {
   SC_KEY,
   LAST_KEY,
 } from './analytics-session'
+import { logger } from '@/lib/logger'
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -388,7 +389,7 @@ function sendViaProxy(
     navigator.sendBeacon(url)
   } else {
     fetch(url, { method: 'POST', keepalive: true, signal: AbortSignal.timeout(5_000) }).catch((err) => {
-      if (import.meta.env.DEV) console.error('[analytics] beacon delivery failed:', err)
+      logger.error('[analytics] beacon delivery failed:', err)
     })
   }
 }

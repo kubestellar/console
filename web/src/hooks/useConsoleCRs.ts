@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePersistence } from './usePersistence'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
+import { logger } from '@/lib/logger'
 
 // =============================================================================
 // Types
@@ -236,7 +237,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         throw new Error('Failed to fetch')
       }
     } catch (err: unknown) {
-      console.error(`[useConsoleCR] Failed to fetch ${resourceType}:`, err)
+      logger.error(`[useConsoleCR] Failed to fetch ${resourceType}:`, err)
       if (isMounted.current) {
         setError(`Failed to load ${resourceType}`)
       }
@@ -258,7 +259,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         return await response.json()
       }
     } catch (err: unknown) {
-      console.error(`[useConsoleCR] Failed to get ${resourceType} ${name}:`, err)
+      logger.error(`[useConsoleCR] Failed to get ${resourceType} ${name}:`, err)
     }
     return null
   }
@@ -267,7 +268,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
   const createItem = async (item: Omit<T, 'metadata'> & { metadata: { name: string } }): Promise<T | null> => {
     if (!shouldUseCRs) return null
     if (!activeCluster || !persistenceNamespace) {
-      console.error(`[useConsoleCR] cannot create ${resourceType}: persistence cluster or namespace not set`)
+      logger.error(`[useConsoleCR] cannot create ${resourceType}: persistence cluster or namespace not set`)
       return null
     }
 
@@ -284,7 +285,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         return created
       }
     } catch (err: unknown) {
-      console.error(`[useConsoleCR] Failed to create ${resourceType}:`, err)
+      logger.error(`[useConsoleCR] Failed to create ${resourceType}:`, err)
     }
     return null
   }
@@ -293,7 +294,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
   const updateItem = async (name: string, item: Partial<T>): Promise<T | null> => {
     if (!shouldUseCRs) return null
     if (!activeCluster || !persistenceNamespace) {
-      console.error(`[useConsoleCR] cannot update ${resourceType}: persistence cluster or namespace not set`)
+      logger.error(`[useConsoleCR] cannot update ${resourceType}: persistence cluster or namespace not set`)
       return null
     }
 
@@ -310,7 +311,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         return updated
       }
     } catch (err: unknown) {
-      console.error(`[useConsoleCR] Failed to update ${resourceType} ${name}:`, err)
+      logger.error(`[useConsoleCR] Failed to update ${resourceType} ${name}:`, err)
     }
     return null
   }
@@ -319,7 +320,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
   const deleteItem = async (name: string): Promise<boolean> => {
     if (!shouldUseCRs) return false
     if (!activeCluster || !persistenceNamespace) {
-      console.error(`[useConsoleCR] cannot delete ${resourceType}: persistence cluster or namespace not set`)
+      logger.error(`[useConsoleCR] cannot delete ${resourceType}: persistence cluster or namespace not set`)
       return false
     }
 
@@ -333,7 +334,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         return true
       }
     } catch (err: unknown) {
-      console.error(`[useConsoleCR] Failed to delete ${resourceType} ${name}:`, err)
+      logger.error(`[useConsoleCR] Failed to delete ${resourceType} ${name}:`, err)
     }
     return false
   }
@@ -386,7 +387,7 @@ export function useWorkloadDeployments() {
   ): Promise<WorkloadDeployment | null> => {
     if (!shouldUseCRs) return null
     if (!activeCluster || !persistenceNamespace) {
-      console.error('[useWorkloadDeployments] cannot update status: persistence cluster or namespace not set')
+      logger.error('[useWorkloadDeployments] cannot update status: persistence cluster or namespace not set')
       return null
     }
 
@@ -402,7 +403,7 @@ export function useWorkloadDeployments() {
         return await response.json()
       }
     } catch (err: unknown) {
-      console.error(`[useWorkloadDeployments] Failed to update status for ${name}:`, err)
+      logger.error(`[useWorkloadDeployments] Failed to update status for ${name}:`, err)
     }
     return null
   }

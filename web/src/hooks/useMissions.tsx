@@ -80,6 +80,7 @@ import {
   buildKagentiDiscoveryErrorMessage,
 } from './useMissions.helpers'
 import i18n from '../lib/i18n'
+import { logger } from '@/lib/logger'
 
 interface QueuedMissionExecution {
   missionId: string
@@ -459,7 +460,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         }, delay)
         wsSendRetryTimers.current.add(handle)
       } else {
-        console.error('[Missions] WebSocket send failed after retries — socket not open')
+        logger.error('[Missions] WebSocket send failed after retries — socket not open')
         // #7077 — Guard against post-unmount failure callback execution.
         // wsSend retries via setTimeout; if the component unmounts before a
         // retry fires, onFailure holds a stale closure over setMissions and
@@ -587,7 +588,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         } catch (err: unknown) {
           // #6767 — Message is issue-agnostic; this branch now covers
           // #6758, #6762, and #6767 follow-ups.
-          console.warn('[Missions] Cross-tab remote reset detected — failed to clear local mission state to match:', err)
+          logger.warn('[Missions] Cross-tab remote reset detected — failed to clear local mission state to match:', err)
         }
         return
       }
@@ -610,7 +611,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           return next.size === prev.size ? prev : next
         })
       } catch (err: unknown) {
-        console.warn('[Missions] issue 6668 — failed to reload from cross-tab write:', err)
+        logger.warn('[Missions] issue 6668 — failed to reload from cross-tab write:', err)
       }
     }
     window.addEventListener('storage', onStorage)
@@ -1032,7 +1033,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   })()
                   const history = historyWithoutLastUser.slice(-MAX_RESENT_MESSAGES)
                   if (historyWithoutLastUser.length > MAX_RESENT_MESSAGES) {
-                    console.warn(
+                    logger.warn(
                       `[Missions] issue 6429 — truncated reconnect history from ${historyWithoutLastUser.length} to ${MAX_RESENT_MESSAGES} messages to avoid oversized payload`,
                     )
                   }
@@ -1082,7 +1083,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             const message = JSON.parse(event.data)
             handleAgentMessageRef.current(message)
           } catch (e: unknown) {
-            console.error('[Missions] Failed to parse message:', e)
+            logger.error('[Missions] Failed to parse message:', e)
           }
         }
 
@@ -1110,7 +1111,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               WS_RECONNECT_MAX_DELAY_MS,
             )
             wsReconnectAttempts.current = attempt + 1
-            console.warn(
+            logger.warn(
               `[Missions] WebSocket closed. Reconnecting in ${delay}ms (attempt ${attempt + 1}/${WS_RECONNECT_MAX_RETRIES})`,
             )
             wsReconnectTimer.current = setTimeout(() => {
@@ -1122,11 +1123,11 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               // in the console.
               if (unmountedRef.current) return
               ensureConnection().catch((err: unknown) => {
-                console.error('[Missions] WebSocket reconnection failed:', err)
+                logger.error('[Missions] WebSocket reconnection failed:', err)
               })
             }, delay)
           } else if (!getDemoMode()) {
-            console.warn(
+            logger.warn(
               `[Missions] WebSocket reconnection abandoned after ${WS_RECONNECT_MAX_RETRIES} attempts. ` +
               'Will retry on next user interaction.',
             )
@@ -2312,7 +2313,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     // sent to the agent (e.g. double-click during preflight window), bail out.
     if (executingMissions.current.has(missionId)) {
       releaseMissionToolLock(missionId)
-      console.debug(`[Missions] executeMission already in-flight for ${missionId}, skipping duplicate`)
+      logger.debug(`[Missions] executeMission already in-flight for ${missionId}, skipping duplicate`)
       return
     }
     executingMissions.current.add(missionId)
@@ -3396,11 +3397,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         type: 'select_agent',
         payload: { agent: agentToSend }
       }), () => {
-        console.error('[Missions] Failed to send agent selection after retries')
+        logger.error('[Missions] Failed to send agent selection after retries')
       })
     }).catch((err: unknown) => {
       selectAgentPending.current = null
-      console.error('[Missions] Failed to select agent:', err)
+      logger.error('[Missions] Failed to select agent:', err)
     })
   }
 
@@ -3411,7 +3412,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // Moved from ensureConnection so auto-reconnect preserves backoff.
     wsReconnectAttempts.current = 0
     ensureConnection().catch((err: unknown) => {
-      console.error('[Missions] Failed to connect to agent:', err)
+      logger.error('[Missions] Failed to connect to agent:', err)
     })
   }
 
@@ -3718,7 +3719,7 @@ export function useMissions() {
   const context = useContext(MissionContext)
   if (!context) {
     if (import.meta.env.DEV) {
-      console.warn('useMissions was called outside MissionProvider — returning safe fallback')
+      logger.warn('useMissions was called outside MissionProvider — returning safe fallback')
     }
     return MISSIONS_FALLBACK
   }

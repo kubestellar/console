@@ -25,6 +25,7 @@ import type {
   WizardPhase,
   OverlayMode,
   PhaseProgress } from './types'
+import { logger } from '@/lib/logger'
 
 const STORAGE_KEY = 'kc_mission_control_state'
 // Wizard state expires after 7 days to avoid persisting abandoned mission drafts
@@ -190,7 +191,7 @@ function loadPersistedState(): Partial<MissionControlState> | null {
     // a second load doesn't keep hitting this path, and log a warning so
     // users notice their wizard draft was discarded.
     if (!isPlainObject(parsedRaw)) {
-      console.warn(
+      logger.warn(
         `[MissionControl] issue 6664 — persisted state at "${STORAGE_KEY}" is not a plain object ` +
         `(typeof=${typeof parsedRaw}, isArray=${Array.isArray(parsedRaw)}); clearing.`,
       )
@@ -208,7 +209,7 @@ function loadPersistedState(): Partial<MissionControlState> | null {
         entry.schemaVersion !== undefined &&
         entry.schemaVersion !== PERSISTED_SCHEMA_VERSION
       ) {
-        console.warn(
+        logger.warn(
           `[MissionControl] issue 6664 — persisted schema version ${entry.schemaVersion} ` +
           `does not match current ${PERSISTED_SCHEMA_VERSION}; clearing.`,
         )
@@ -278,7 +279,7 @@ function persistState(state: MissionControlState) {
     // thing that just failed.
     if (isQuotaExceededError(e)) {
       const title = state.title || '(untitled mission)'
-      console.warn(
+      logger.warn(
         `[MissionControl] issue 6665 — localStorage quota exceeded while ` +
         `persisting Mission Control wizard state for "${title}". Your ` +
         `in-progress draft is not being persisted and will be lost on ` +
@@ -291,7 +292,7 @@ function persistState(state: MissionControlState) {
         quotaBannerFallbackTitle = title
       }
     } else {
-      console.error('[MissionControl] Failed to persist state:', e)
+      logger.error('[MissionControl] Failed to persist state:', e)
     }
   }
 }
@@ -517,7 +518,7 @@ function extractBalancedBlocks(
     // silently return [] without spamming the console.
     if (!oversizedWarnSet.has(key)) {
       oversizedWarnSet.add(key)
-      console.warn(
+      logger.warn(
         `[useMissionControl] extractBalancedBlocks: input too large ` +
         `(${text.length} chars > ${MAX_BALANCED_BLOCKS_INPUT}), skipping scan ` +
         `to avoid main-thread block (#6723). Further oversized inputs for ` +
@@ -705,7 +706,7 @@ export function useMissionControl() {
       // so Flight Plan regenerates them from the surviving assignments.
       phases: [] }))
     /* eslint-enable react-hooks/set-state-in-effect */
-    console.warn(
+    logger.warn(
       `[MissionControl] issue 6403 — dropped ${allStale.length} stale cluster reference(s) from persisted state: ${allStale.join(', ')}`,
     )
     return () => { isMounted = false }
@@ -791,7 +792,7 @@ export function useMissionControl() {
       const projectsRaw = parsed?.projects
       const projectsArr = Array.isArray(projectsRaw) ? projectsRaw : []
       if (projectsRaw !== undefined && !Array.isArray(projectsRaw)) {
-        console.warn(
+        logger.warn(
           '[MissionControl] issue 6725 — AI returned non-array `projects` payload; ignoring.',
         )
       }
@@ -812,11 +813,11 @@ export function useMissionControl() {
           return true
         })
         if (validProjects.length === 0) {
-          console.warn('[MissionControl] AI returned projects payload with no valid entries; skipping update.')
+          logger.warn('[MissionControl] AI returned projects payload with no valid entries; skipping update.')
           return
         }
         if (validProjects.length !== projectsArr.length) {
-          console.warn(
+          logger.warn(
             `[MissionControl] filtered ${projectsArr.length - validProjects.length} invalid project(s) from AI payload`
           )
         }
@@ -850,7 +851,7 @@ export function useMissionControl() {
       const assignmentsRaw = parsed?.assignments
       const assignmentsArr = Array.isArray(assignmentsRaw) ? assignmentsRaw : []
       if (assignmentsRaw !== undefined && !Array.isArray(assignmentsRaw)) {
-        console.warn(
+        logger.warn(
           '[MissionControl] issue 6726 — AI returned non-array `assignments` payload; ignoring.',
         )
       }
@@ -861,7 +862,7 @@ export function useMissionControl() {
         if (
           lastDispatchedGenerationRef.current !== userMutationGenerationRef.current
         ) {
-          console.warn(
+          logger.warn(
             '[MissionControl] issue 6404 — discarding stale AI assignment stream (user mutated state after dispatch)',
           )
           lastParsedContentRef.current = assistantContent
@@ -1077,7 +1078,7 @@ export function useMissionControl() {
       // that ref is updated via useEffect (runs after render). This ref is set
       // immediately (synchronously) so the second call sees it and bails.
       if (aiRequestInFlightRef.current) {
-        console.warn('[MissionControl] #6827 — askAIForSuggestions already in flight (ref guard); ignoring')
+        logger.warn('[MissionControl] #6827 — askAIForSuggestions already in flight (ref guard); ignoring')
         return
       }
       aiRequestInFlightRef.current = true
@@ -1093,7 +1094,7 @@ export function useMissionControl() {
       // updates — so early-return here too (belt-and-suspenders).
       if (currentState.aiStreaming) {
         aiRequestInFlightRef.current = false
-        console.warn('[MissionControl] issue 6406 — askAIForSuggestions called while already streaming; ignoring')
+        logger.warn('[MissionControl] issue 6406 — askAIForSuggestions called while already streaming; ignoring')
         return
       }
       const currentHelmReleases = helmReleasesRef.current
@@ -1207,7 +1208,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
         }
       } catch (err: unknown) {
         aiRequestInFlightRef.current = false
-        console.error('[MissionControl] #6811 — askAIForSuggestions failed:', err)
+        logger.error('[MissionControl] #6811 — askAIForSuggestions failed:', err)
         showToast('AI suggestion request failed — please try again', 'error')
       }
     }
@@ -1283,7 +1284,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
       // clicks within one frame both pass the aiStreaming state check because
       // that flag updates asynchronously via useEffect.
       if (aiRequestInFlightRef.current) {
-        console.warn('[MissionControl] #7111 — askAIForAssignments already in flight (ref guard); ignoring')
+        logger.warn('[MissionControl] #7111 — askAIForAssignments already in flight (ref guard); ignoring')
         return
       }
       aiRequestInFlightRef.current = true
@@ -1293,7 +1294,7 @@ Include real CNCF projects only. Consider dependencies between projects.`
       // #6406 — Early return if a planning request is already in flight.
       if (stateRef.current.aiStreaming) {
         aiRequestInFlightRef.current = false
-        console.warn('[MissionControl] issue 6406 — askAIForAssignments called while already streaming; ignoring')
+        logger.warn('[MissionControl] issue 6406 — askAIForAssignments called while already streaming; ignoring')
         return
       }
       const currentPlanningMissionId = stateRef.current.planningMissionId
@@ -1376,7 +1377,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         }
       } catch (err: unknown) {
         aiRequestInFlightRef.current = false
-        console.error('[MissionControl] #7117 — askAIForAssignments failed:', err)
+        logger.error('[MissionControl] #7117 — askAIForAssignments failed:', err)
         showToast('AI assignment request failed — please try again', 'error')
       }
     }
@@ -1796,7 +1797,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
         if (rank === undefined) {
           if (priority && !warnedUnknownPriorities.has(priority)) {
             warnedUnknownPriorities.add(priority)
-            console.warn(
+            logger.warn(
               `[MissionControl] Unknown priority "${priority}" — treating as lowest (issue 6402)`,
             )
           }
