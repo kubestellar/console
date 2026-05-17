@@ -1020,6 +1020,7 @@ export function MissionSidebar() {
           {/* + button with dropdown — outside overflow-hidden so the dropdown isn't clipped */}
           <div className="relative mr-1 shrink-0" ref={addMenuRef}>
             <button
+              type="button"
               onClick={() => setShowAddMenu(prev => !prev)}
               className={cn(
                 "p-1.5 rounded transition-colors ring-1",
@@ -1035,6 +1036,7 @@ export function MissionSidebar() {
             {showAddMenu && (
               <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-background shadow-lg py-1">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowAddMenu(false)
                     setShowNewMission(true)
@@ -1046,6 +1048,7 @@ export function MissionSidebar() {
                   New Mission
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setShowAddMenu(false); openMissionBrowser() }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
@@ -1053,6 +1056,7 @@ export function MissionSidebar() {
                   Browse Community
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setShowAddMenu(false); openFreshMissionControl() }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
@@ -1062,6 +1066,7 @@ export function MissionSidebar() {
                 {/* History toggle on mobile — desktop uses a standalone icon button (#10522) */}
                 {isMobile && listTotalMissions > 0 && (
                   <button
+                    type="button"
                     onClick={() => {
                       setShowAddMenu(false)
                       if (activeMission) {
@@ -1349,6 +1354,7 @@ export function MissionSidebar() {
           <div className="flex flex-col gap-2.5 mt-5 w-full max-w-xs">
             {!showNewMission && (
               <button
+                type="button"
                 onClick={() => {
                   setShowNewMission(true)
                   setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
@@ -1360,6 +1366,7 @@ export function MissionSidebar() {
               </button>
             )}
             <button
+              type="button"
               onClick={() => openMissionBrowser()}
               className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
             >
@@ -1367,6 +1374,7 @@ export function MissionSidebar() {
               <span className="text-left leading-snug">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
+              type="button"
               onClick={openFreshMissionControl}
               className={cn(
                 'flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
@@ -1525,6 +1533,7 @@ export function MissionSidebar() {
           <div className="mt-4 grid w-full max-w-sm grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
             {!showNewMission && (
               <button
+                type="button"
                 onClick={() => {
                   setLastPanelView('dashboard')
                   setShowNewMission(true)
@@ -1537,6 +1546,7 @@ export function MissionSidebar() {
               </button>
             )}
             <button
+              type="button"
               onClick={() => openMissionBrowser()}
               className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
             >
@@ -1544,6 +1554,7 @@ export function MissionSidebar() {
               <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
+              type="button"
               onClick={openFreshMissionControl}
               className={cn(
                 'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
@@ -1557,6 +1568,7 @@ export function MissionSidebar() {
           {/* Hint to open history when missions exist */}
           {listTotalMissions > 0 && (
             <button
+              type="button"
               onClick={toggleHistoryPanel}
               className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-primary cursor-pointer hover:underline underline-offset-2 transition-colors rounded-md px-2 py-1 -mx-2 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
             >
