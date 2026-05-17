@@ -39,41 +39,47 @@ func mockGitHubTransport(t *testing.T, fn RoundTripFunc) {
 
 func TestDetectionRunCommentPattern_Match(t *testing.T) {
 	cases := []struct {
+		name       string
 		body       string
 		wantMatch  bool
 		conclusion string
 		reason     string
 	}{
 		{
+			name:       "matches single line comment",
 			body:       "Conclusion: warning | Reason: parse_error",
 			wantMatch:  true,
 			conclusion: "warning",
 			reason:     "parse_error",
 		},
 		{
+			name:       "matches multiline comment body",
 			body:       "Some preamble\nConclusion: failure | Reason: agent_failure\nTrailing text",
 			wantMatch:  true,
 			conclusion: "failure",
 			reason:     "agent_failure",
 		},
 		{
+			name:       "trims extra whitespace around captures",
 			body:       "Conclusion:  success  |  Reason:  ok",
 			wantMatch:  true,
 			conclusion: "success",
 			reason:     "ok",
 		},
 		{
+			name:      "rejects body without conclusion marker",
 			body:      "No conclusion here",
 			wantMatch: false,
 		},
 		{
+			name:      "rejects body without reason separator",
 			body:      "Conclusion: warning without reason separator",
 			wantMatch: false,
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.body[:min(30, len(tc.body))], func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			m := detectionRunCommentPattern.FindStringSubmatch(tc.body)
 			if tc.wantMatch {
 				require.NotNil(t, m, "expected match for: %q", tc.body)
@@ -88,28 +94,32 @@ func TestDetectionRunCommentPattern_Match(t *testing.T) {
 
 func TestWorkflowRunURLPattern_Match(t *testing.T) {
 	cases := []struct {
+		name      string
 		body      string
 		wantMatch bool
 		runID     string
 	}{
 		{
+			name:      "matches repository workflow run URL in sentence",
 			body:      "See run at https://github.com/kubestellar/console/actions/runs/25864572226",
 			wantMatch: true,
 			runID:     "25864572226",
 		},
 		{
+			name:      "matches bare workflow run URL from another repository",
 			body:      "https://github.com/my-org/my-repo/actions/runs/99999",
 			wantMatch: true,
 			runID:     "99999",
 		},
 		{
+			name:      "rejects body without workflow run URL",
 			body:      "No URL here",
 			wantMatch: false,
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.body[:min(40, len(tc.body))], func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			m := workflowRunURLPattern.FindStringSubmatch(tc.body)
 			if tc.wantMatch {
 				require.NotNil(t, m, "expected URL match")
@@ -288,12 +298,4 @@ func TestGetDemoDetectionRuns_Structure(t *testing.T) {
 		assert.Contains(t, run.WorkflowURL, run.RunID, "WorkflowURL must contain RunID")
 		assert.False(t, run.CommentedAt.IsZero(), "run[%d].CommentedAt must be set", i)
 	}
-}
-
-// min is a local helper for Go versions < 1.21.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

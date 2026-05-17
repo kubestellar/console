@@ -5,11 +5,12 @@
 # them against the MissionExport schema used by the KubeStellar Console.
 #
 # Usage:
-#   bash scripts/validate-missions.sh              # validate all install missions
-#   bash scripts/validate-missions.sh --verbose     # show per-mission detail
-#   bash scripts/validate-missions.sh --local DIR   # validate local JSON files instead
+#   bash scripts/validate-missions.sh                # validate all install missions
+#   bash scripts/validate-missions.sh --verbose      # show per-mission detail
+#   bash scripts/validate-missions.sh --local DIR    # validate local JSON files instead
+#   bash scripts/validate-missions.sh --schema FILE  # also run AJV schema validation
 #
-# Requires: jq, curl (both standard on CI runners and dev machines).
+# Requires: jq, curl (plus ajv-cli + ajv-formats when --schema is used).
 #
 # Exit codes:
 #   0  All missions pass validation
@@ -37,13 +38,33 @@ CARD_INSTALL_MAP_FILE="web/src/lib/cards/cardInstallMap.ts"
 VERBOSE=false
 LOCAL_DIR=""
 SCHEMA_FILE=""
+AJV_FORMATS_PLUGIN="ajv-formats"
+AJV_TMP_DIR=".validate-missions-ajv-${BASHPID}"
+
+require_option_value() {
+  local option="$1"
+  local value="${2:-}"
+
+  if [[ -z "$value" || "$value" == --* ]]; then
+    echo "ERROR: $option requires a value." >&2
+    exit 2
+  fi
+}
 
 # ── Argument parsing ────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verbose|-v) VERBOSE=true; shift ;;
-    --local)      LOCAL_DIR="$2"; shift 2 ;;
-    --schema)     SCHEMA_FILE="$2"; shift 2 ;;
+    --local)
+      require_option_value "$1" "${2:-}"
+      LOCAL_DIR="$2"
+      shift 2
+      ;;
+    --schema)
+      require_option_value "$1" "${2:-}"
+      SCHEMA_FILE="$2"
+      shift 2
+      ;;
     --help|-h)
       sed -n '2,/^$/s/^# //p' "$0"
       exit 0
@@ -51,6 +72,48 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown option: $1"; exit 2 ;;
   esac
 done
+
+# ── Color helpers (disabled if not a terminal) ──────────────────────
+if [[ -t 1 ]]; then
+  RED='\033[0;31m'; YELLOW='\033[0;33m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+else
+  RED=''; YELLOW=''; GREEN=''; CYAN=''; BOLD=''; RESET=''
+fi
+
+# ── Fetch helper ────────────────────────────────────────────────────
+fetch_json() {
+  local url="$1"
+  curl -fsSL --max-time 15 "$url" 2>/dev/null
+}
+
+cleanup_ajv_tmp_dir() {
+  rm -rf "$AJV_TMP_DIR"
+}
+
+write_ajv_input() {
+  local prefix="$1"
+  local json_content="$2"
+  local file_path
+
+  mkdir -p "$AJV_TMP_DIR"
+  printf -v file_path '%s/%s-%s-%s.json' "$AJV_TMP_DIR" "$prefix" "$BASHPID" "$RANDOM"
+  printf '%s\n' "$json_content" > "$file_path"
+  printf '%s\n' "$file_path"
+}
+
+ajv_formats_available() {
+  [[ -n "$SCHEMA_FILE" ]] || return 1
+
+  local smoke_file
+  smoke_file=$(write_ajv_input "plugin-check" '{"version":"kc-mission-v1","title":"AJV plugin check","steps":[{"title":"Step 1","description":"Schema smoke test"}]}')
+
+  ajv validate --spec=draft7 \
+    -s "$SCHEMA_FILE" \
+    -d "$smoke_file" \
+    -c "$AJV_FORMATS_PLUGIN" >/dev/null 2>&1
+}
+
+trap cleanup_ajv_tmp_dir EXIT
 
 # ── Dependency check ────────────────────────────────────────────────
 for cmd in jq curl; do
@@ -68,14 +131,10 @@ if [[ -n "$SCHEMA_FILE" ]]; then
   if ! command -v ajv &>/dev/null; then
     echo -e "${YELLOW:-}WARNING: --schema given but 'ajv' not found; schema validation skipped (run 'npm install -g ajv-cli ajv-formats').${RESET:-}"
     SCHEMA_FILE=""
+  elif ! ajv_formats_available; then
+    echo -e "${YELLOW:-}WARNING: --schema given but '${AJV_FORMATS_PLUGIN}' is not available; schema validation skipped.${RESET:-}"
+    SCHEMA_FILE=""
   fi
-fi
-
-# ── Color helpers (disabled if not a terminal) ──────────────────────
-if [[ -t 1 ]]; then
-  RED='\033[0;31m'; YELLOW='\033[0;33m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
-else
-  RED=''; YELLOW=''; GREEN=''; CYAN=''; BOLD=''; RESET=''
 fi
 
 # ── Counters ────────────────────────────────────────────────────────
@@ -95,12 +154,6 @@ if [[ -f "$CARD_INSTALL_MAP_FILE" ]]; then
     referenced_paths["$p"]=1
   done < <(grep -oP "fixes/[^'\"]*\.json" "$CARD_INSTALL_MAP_FILE" | sort -u)
 fi
-
-# ── Fetch helper ────────────────────────────────────────────────────
-fetch_json() {
-  local url="$1"
-  curl -fsSL --max-time 15 "$url" 2>/dev/null
-}
 
 # ── Validate a single mission JSON blob ─────────────────────────────
 # Args: $1 = json string, $2 = source label (path or URL)
@@ -224,17 +277,14 @@ validate_mission() {
 
   # ── JSON Schema validation via ajv-cli ────────────────────────
   if [[ -n "$SCHEMA_FILE" ]] && command -v ajv &>/dev/null; then
-    local tmp_json
-    tmp_json=$(mktemp /tmp/mission-XXXXXX.json)
-    echo "$normalized" > "$tmp_json"
-    local ajv_out
-    if ! ajv_out=$(ajv validate --spec=draft7 -s "$SCHEMA_FILE" -d "$tmp_json" -c ajv-formats 2>&1); then
+    local ajv_input_file ajv_out
+    ajv_input_file=$(write_ajv_input "mission" "$json")
+    if ! ajv_out=$(ajv validate --spec=draft7 -s "$SCHEMA_FILE" -d "$ajv_input_file" -c "$AJV_FORMATS_PLUGIN" 2>&1); then
       local ajv_err
-      ajv_err=$(echo "$ajv_out" | grep -v '^$' | head -3 | tr '\n' ' ')
+      ajv_err=$(echo "$ajv_out" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')
       mission_issues+=("CRITICAL: Schema validation failed — ${ajv_err}")
       has_critical=true
     fi
-    rm -f "$tmp_json"
   fi
 
   # ── Tally results ─────────────────────────────────────────────

@@ -47,7 +47,16 @@ describe('validateMissionExport', () => {
     expect(result.data.version).toBe('kc-mission-v1')
   })
 
-  it('errors when title is missing', () => {
+  it('accepts name as a fallback when title is missing', () => {
+    const m = validMission() as Record<string, unknown>
+    delete m.title
+    m.name = 'runtime-aligned-mission'
+    const result = validateMissionExport(m)
+    expect(result.valid).toBe(true)
+    expect(result.data.title).toBe('Runtime Aligned Mission')
+  })
+
+  it('errors when title and name are both missing', () => {
     const m = validMission() as Record<string, unknown>
     delete m.title
     const result = validateMissionExport(m)
@@ -91,7 +100,7 @@ describe('validateMissionExport', () => {
   })
 
   it('accepts all valid mission types', () => {
-    const types = ['upgrade', 'troubleshoot', 'analyze', 'deploy', 'repair', 'custom'] as const
+    const types = ['upgrade', 'troubleshoot', 'analyze', 'deploy', 'repair', 'custom', 'maintain'] as const
     for (const type of types) {
       const m = validMission()
       m.type = type

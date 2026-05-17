@@ -4,7 +4,11 @@
   "title": "MissionExport",
   "description": "Schema for KubeStellar Console KB missions — derived from MissionExport interface in web/src/lib/missions/types.ts",
   "type": "object",
-  "required": ["version", "title", "description", "type", "tags", "steps"],
+  "required": ["version", "steps"],
+  "anyOf": [
+    { "required": ["title"] },
+    { "required": ["name"] }
+  ],
   "additionalProperties": false,
   "properties": {
     "version": { "type": "string", "minLength": 1 },
