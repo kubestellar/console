@@ -77,8 +77,12 @@ export function KubeKart() {
   const [raceTime, setRaceTime] = useState(0)
   const [position, setPosition] = useState(1)
   const [bestTime, setBestTime] = useState(() => {
-    const saved = localStorage.getItem('kubeKartBestTime')
-    return saved ? parseFloat(saved) : Infinity
+    try {
+      const saved = localStorage.getItem('kubeKartBestTime')
+      return saved ? parseFloat(saved) : Infinity
+    } catch {
+      return Infinity
+    }
   })
 
   const playerRef = useRef<Kart>({
@@ -277,7 +281,11 @@ export function KubeKart() {
         if (finalTime < bestTimeRef.current) {
           setBestTime(finalTime)
           bestTimeRef.current = finalTime
-          localStorage.setItem('kubeKartBestTime', finalTime.toString())
+          try {
+            localStorage.setItem('kubeKartBestTime', finalTime.toString())
+          } catch {
+            // Ignore storage errors (e.g. private browsing, quota exceeded)
+          }
         }
         setGameState('finished')
         setPosition(pos => {

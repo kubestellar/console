@@ -709,10 +709,14 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
 
   const persistClusterFilter = (clusters: string[]) => {
     setLocalClusterFilterState(clusters)
-    if (clusters.length === 0) {
-      localStorage.removeItem(CLUSTER_FILTER_STORAGE_KEY)
-    } else {
-      localStorage.setItem(CLUSTER_FILTER_STORAGE_KEY, JSON.stringify(clusters))
+    try {
+      if (clusters.length === 0) {
+        localStorage.removeItem(CLUSTER_FILTER_STORAGE_KEY)
+      } else {
+        localStorage.setItem(CLUSTER_FILTER_STORAGE_KEY, JSON.stringify(clusters))
+      }
+    } catch {
+      // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
   }
 
