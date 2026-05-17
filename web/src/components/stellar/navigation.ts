@@ -9,6 +9,7 @@ export const STELLAR_SECTION_ID = {
   ACTIVITY: 'stellar-activity',
   EVENTS: 'stellar-events',
   CHAT: 'stellar-chat',
+  AUDIT: 'stellar-audit',
 } as const
 
 export type StellarSectionId = (typeof STELLAR_SECTION_ID)[keyof typeof STELLAR_SECTION_ID]
@@ -29,7 +30,7 @@ export const STELLAR_NAV_HREF = {
   ACTIVITY: `${ROUTES.STELLAR}#${STELLAR_SECTION_ID.ACTIVITY}`,
   EVENTS: `${ROUTES.STELLAR}#${STELLAR_SECTION_ID.EVENTS}`,
   CHAT: `${ROUTES.STELLAR}#${STELLAR_SECTION_ID.CHAT}`,
-  AUDIT: ROUTES.STELLAR_AUDIT,
+  AUDIT: `${ROUTES.STELLAR}#${STELLAR_SECTION_ID.AUDIT}`,
 } as const
 
 export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
@@ -70,7 +71,8 @@ export const STELLAR_RAIL_ITEMS: readonly StellarRailItem[] = [
     label: 'Open Stellar audit log',
     icon: FileText,
     href: STELLAR_NAV_HREF.AUDIT,
-    route: ROUTES.STELLAR_AUDIT,
+    route: ROUTES.STELLAR,
+    sectionId: STELLAR_SECTION_ID.AUDIT,
   },
 ] as const
 
@@ -84,13 +86,15 @@ export function getStellarSectionIdFromHash(hash: string): StellarSectionId | nu
       return STELLAR_SECTION_ID.EVENTS
     case STELLAR_SECTION_ID.CHAT:
       return STELLAR_SECTION_ID.CHAT
+    case STELLAR_SECTION_ID.AUDIT:
+      return STELLAR_SECTION_ID.AUDIT
     default:
       return null
   }
 }
 
 export function isOnStellarRoute(pathname: string): boolean {
-  return pathname === ROUTES.STELLAR || pathname === ROUTES.STELLAR_AUDIT
+  return pathname === ROUTES.STELLAR
 }
 
 export function isStellarRailItemActive(item: StellarRailItem, pathname: string, hash: string): boolean {
