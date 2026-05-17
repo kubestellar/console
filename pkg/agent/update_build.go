@@ -407,6 +407,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	}
 	tmpFile := tmpF.Name()
 	tmpF.Close()
+	defer os.Remove(tmpFile) // Guaranteed cleanup on all exit paths (#14499)
 	if err := downloadFile(assetURL, tmpFile); err != nil {
 		uc.recordError(fmt.Sprintf("download failed: %v", err))
 		uc.broadcast("update_progress", UpdateProgressPayload{
@@ -434,6 +435,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		})
 		return
 	}
+	defer os.RemoveAll(stagingDir) // Guaranteed cleanup on all exit paths (#14499)
 
 	// extractTimeout bounds the tar extraction to prevent hanging on corrupt
 	// archives or stalled I/O (#7241). Use uc.updateCtx as the parent so
@@ -453,8 +455,6 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 				Status:  "cancelled",
 				Message: "Update cancelled by user during extraction",
 			})
-			os.Remove(tmpFile)
-			os.RemoveAll(stagingDir)
 			return
 		}
 		uc.recordError(fmt.Sprintf("extract failed: %v", err))
@@ -472,8 +472,6 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 			Status:  "cancelled",
 			Message: "Update cancelled by user",
 		})
-		os.Remove(tmpFile)
-		os.RemoveAll(stagingDir)
 		return
 	}
 
@@ -575,8 +573,6 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 
 	// Cleanup
 	os.Remove(backupPath)
-	os.Remove(tmpFile)
-	os.RemoveAll(stagingDir)
 
 	uc.mu.Lock()
 	uc.currentVersion = release.TagName
