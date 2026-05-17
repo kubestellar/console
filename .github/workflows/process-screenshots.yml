@@ -22,9 +22,13 @@ jobs:
       contents: write
       issues: write
     # Only run on issue comments (not PR comments) with our marker
+    # AND restrict to authorized actors (MEMBER/OWNER/COLLABORATOR)
     if: >
       !github.event.issue.pull_request &&
-      contains(github.event.comment.body, '<!-- screenshot-base64:')
+      contains(github.event.comment.body, '<!-- screenshot-base64:') &&
+      (github.event.comment.author_association == 'MEMBER' ||
+       github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'COLLABORATOR')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
