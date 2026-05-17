@@ -77,7 +77,7 @@ export function ContainerdStatus() {
     data,
     isLoading,
     isRefreshing,
-    isDemoData,
+    isDemoFallback,
     isFailed,
     consecutiveFailures,
     lastRefresh,
@@ -88,7 +88,7 @@ export function ContainerdStatus() {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
     isRefreshing,
-    isDemoData,
+    isDemoData: isDemoFallback,
     hasAnyData,
     isFailed,
     consecutiveFailures,

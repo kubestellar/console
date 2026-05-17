@@ -53,6 +53,7 @@ export interface UseACMMScanResult {
   recommendations: Recommendation[]
   isLoading: boolean
   isRefreshing: boolean
+  isDemoFallback: boolean
   isDemoData: boolean
   error: string | null
   isFailed: boolean
@@ -260,6 +261,7 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
     (cacheResult.isDemoFallback && !cacheResult.isLoading) ||
     apiUnavailable ||
     serverDemoFallback
+  const isDemoFallback = isDemoData
 
   return {
     data: effectiveData,
@@ -268,6 +270,7 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
     recommendations,
     isLoading: apiUnavailable ? false : cacheResult.isLoading,
     isRefreshing: apiUnavailable ? false : cacheResult.isRefreshing,
+    isDemoFallback,
     isDemoData,
     error: apiUnavailable ? null : cacheResult.error,
     isFailed: apiUnavailable ? false : cacheResult.isFailed,

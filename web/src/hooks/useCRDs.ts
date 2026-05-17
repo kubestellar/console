@@ -145,6 +145,7 @@ function getDemoCRDs(clusterNames: string[]): CRDData[] {
 
 export interface UseCRDsResult {
   crds: CRDData[]
+  isDemoFallback: boolean
   isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
@@ -162,6 +163,7 @@ export function useCRDs(): UseCRDsResult {
   const cachedSnapshot = cachedData.current
   const [crds, setCRDs] = useState<CRDData[]>(cachedSnapshot?.data || [])
   const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  const isDemoFallback = isDemoData
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
@@ -253,6 +255,7 @@ export function useCRDs(): UseCRDsResult {
 
   return {
     crds,
+    isDemoFallback,
     isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,

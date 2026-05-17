@@ -74,6 +74,15 @@ export interface DeployResult {
   warnings?: string[]
 }
 
+export interface UseWorkloadsResult {
+  data: Workload[] | undefined
+  isLoading: boolean
+  error: Error | null
+  isDemoFallback: boolean
+  isDemoData: boolean
+  refetch: (signal?: AbortSignal) => Promise<void>
+}
+
 export function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers: Record<string, string> = {}
@@ -225,6 +234,7 @@ export function useWorkloads(options?: {
   const [data, setData] = useState<Workload[] | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
+  const isDemoFallback = isDemoMode()
 
   // Track the current request so stale responses are discarded
   const requestIdRef = useRef(0)
@@ -335,7 +345,7 @@ export function useWorkloads(options?: {
     }
   }, [fetchData, enabled])
 
-  return { data, isLoading, error, refetch: fetchData }
+  return { data, isLoading, error, isDemoFallback, isDemoData: isDemoFallback, refetch: fetchData }
 }
 
 // Fetch cluster capabilities

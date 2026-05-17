@@ -224,6 +224,7 @@ export interface UseCachedContainerdResult {
   data: ContainerdStatusData
   isLoading: boolean
   isRefreshing: boolean
+  isDemoFallback: boolean
   isDemoData: boolean
   isFailed: boolean
   consecutiveFailures: number
@@ -250,11 +251,13 @@ export function useCachedContainerd(): UseCachedContainerdResult {
   // Never surface demo data during loading (CLAUDE.md rule).
   const isDemoData = (isDemoMode || result.isDemoFallback) && !result.isLoading
   const isRefreshing = isDemoMode ? false : result.isRefreshing
+  const isDemoFallback = isDemoData
 
   return {
     data: isDemoMode ? CONTAINERD_DEMO_DATA : result.data,
     isLoading: isDemoMode ? false : result.isLoading,
     isRefreshing,
+    isDemoFallback,
     isDemoData,
     isFailed: isDemoMode ? false : result.isFailed,
     consecutiveFailures: isDemoMode ? 0 : result.consecutiveFailures,
