@@ -510,8 +510,6 @@ class AgentManager {
     }
 
     const now = Date.now()
-    const wasIdle = this.state.activityLevel === 'idle'
-    const wasBurst = this.state.activityLevel === 'burst'
 
     // Update activity timestamp and level
     this.lastActivityAt = now
