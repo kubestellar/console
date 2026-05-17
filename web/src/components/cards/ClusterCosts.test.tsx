@@ -71,6 +71,7 @@ vi.mock('../ui/StatusBadge', () => ({
 describe('ClusterCosts', () => {
   const baseCardData = {
     items: [] as Array<Record<string, unknown>>,
+    allFilteredItems: [] as Array<Record<string, unknown>>,
     totalItems: 0,
     currentPage: 1,
     totalPages: 1,
@@ -141,7 +142,7 @@ describe('ClusterCosts', () => {
       isFailed: false,
       consecutiveFailures: 0,
     })
-    mockUseCardData.mockReturnValue({ ...baseCardData, items, totalItems: 1 })
+    mockUseCardData.mockReturnValue({ ...baseCardData, items, allFilteredItems: items, totalItems: 1 })
 
     render(<ClusterCosts />)
     expect(screen.getByText('prod')).toBeTruthy()
@@ -150,5 +151,44 @@ describe('ClusterCosts', () => {
       'prod',
       expect.objectContaining({ monthly: 1440, cpus: 8 }),
     )
+  })
+
+  it('shows totals from all filtered clusters, not just the visible page', () => {
+    // Simulate 7 clusters total, page size 5 — only 5 are in `items`, all 7 in `allFilteredItems`
+    const makeCluster = (name: string, monthly: number) => ({
+      cluster: name, name, healthy: true, cpus: 4, memory: 32, gpus: 0,
+      hourly: monthly / 720, daily: monthly / 30, monthly, provider: 'aws',
+    })
+    const page1Items = [
+      makeCluster('c1', 1000),
+      makeCluster('c2', 1000),
+      makeCluster('c3', 1000),
+      makeCluster('c4', 1000),
+      makeCluster('c5', 1000),
+    ]
+    const allItems = [
+      ...page1Items,
+      makeCluster('c6', 1000),
+      makeCluster('c7', 1000),
+    ]
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: allItems.map(c => ({
+        name: c.name, healthy: true, cpuCores: 4, nodeCount: 1, context: c.name,
+      })),
+      isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0,
+    })
+    mockUseCardData.mockReturnValue({
+      ...baseCardData,
+      items: page1Items,
+      allFilteredItems: allItems,
+      totalItems: allItems.length,
+      needsPagination: true,
+      totalPages: 2,
+    })
+
+    render(<ClusterCosts />)
+
+    // Banner must show $7,000 (all 7 clusters), not $5,000 (page 1 only)
+    expect(screen.getByText('$7,000')).toBeTruthy()
   })
 })

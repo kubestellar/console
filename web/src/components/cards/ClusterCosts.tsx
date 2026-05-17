@@ -308,6 +308,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
   // Use shared card data hook for filtering, sorting, and pagination
   const {
     items: clusterCosts,
+    allFilteredItems: allFilteredClusterCosts,
     totalItems,
     currentPage,
     totalPages,
@@ -338,21 +339,28 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
       comparators: SORT_COMPARATORS },
     defaultLimit: 5 })
 
-  const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
-  const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
+  // Aggregates use allFilteredClusterCosts (all filtered clusters, not just the current page)
+  // so the banner and cost bars reflect total spend, not just what's visible.
+  const totalMonthly = useMemo(
+    () => allFilteredClusterCosts.reduce((sum, c) => sum + c.monthly, 0),
+    [allFilteredClusterCosts]
+  )
+  const totalDaily = useMemo(
+    () => allFilteredClusterCosts.reduce((sum, c) => sum + c.daily, 0),
+    [allFilteredClusterCosts]
+  )
 
-  // Memoize provider breakdown counts to avoid recomputing in render
   const providerBreakdown = useMemo(() => {
     const counts: Record<string, number> = {}
-    for (const c of clusterCosts) {
+    for (const c of allFilteredClusterCosts) {
       counts[c.provider] = (counts[c.provider] || 0) + 1
     }
     return counts
-  }, [clusterCosts])
+  }, [allFilteredClusterCosts])
 
   const uniqueProviders = useMemo(() =>
-    Array.from(new Set(clusterCosts.map(c => c.provider))),
-    [clusterCosts]
+    Array.from(new Set(allFilteredClusterCosts.map(c => c.provider))),
+    [allFilteredClusterCosts]
   )
 
   if (isLoading && allClusters.length === 0) {
