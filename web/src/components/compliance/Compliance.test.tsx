@@ -360,15 +360,45 @@ describe('Compliance dashboard component', () => {
     expect(score.isDemo).toBe(true)
   })
 
-  it('does not show demo data when demo mode is off, even without tools', () => {
+  it('shows a dash for percentage stats when compliance tools are absent', () => {
     setupDefaults({ demoMode: false })
     render(<Compliance />)
     const props = getLastDashboardProps()
     expect(props.isDemoData).toBe(false)
 
     const score = getStatValue('score')
-    expect(score.value).toBe('0%')
+    expect(score.value).toBe('-')
     expect(score.isDemo).toBeUndefined()
+
+    const totalChecks = getStatValue('total_checks')
+    expect(totalChecks.value).toBe('-')
+
+    const passing = getStatValue('checks_passing')
+    expect(passing.value).toBe('-')
+
+    const failing = getStatValue('checks_failing')
+    expect(failing.value).toBe('-')
+
+    const warning = getStatValue('warning')
+    expect(warning.value).toBe('-')
+
+    const critical = getStatValue('critical_findings')
+    expect(critical.value).toBe('-')
+
+    const cis = getStatValue('cis_score')
+    expect(cis.value).toBe('-')
+
+    const nsa = getStatValue('nsa_score')
+    expect(nsa.value).toBe('-')
+
+    const pci = getStatValue('pci_score')
+    expect(pci.value).toBe('-')
+
+    const kubescape = getStatValue('kubescape_score')
+    expect(kubescape.value).toBe('-')
+
+    const trivy = getStatValue('trivy_vulns')
+    expect(trivy.value).toBe('-')
   })
 
   it('uses real data even in demo mode when tools are installed', () => {

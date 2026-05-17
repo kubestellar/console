@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import type { SearchItem } from '../../../../hooks/useSearchIndex'
 
 const navigateMock = vi.fn()
 const locationState = { pathname: '/' }
+const mockUseSearchIndex = vi.fn()
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -22,7 +24,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../../../../hooks/useSearchIndex', () => ({
-  useSearchIndex: () => ({ results: new Map(), totalCount: 0 }),
+  useSearchIndex: (...args: unknown[]) => mockUseSearchIndex(...args),
   CATEGORY_ORDER: ['page', 'card', 'stat', 'setting', 'cluster', 'namespace', 'deployment', 'pod', 'service', 'mission', 'dashboard', 'helm', 'node'],
 }))
 
@@ -68,6 +70,7 @@ describe('SearchDropdown', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     locationState.pathname = '/'
+    mockUseSearchIndex.mockReturnValue({ results: new Map(), totalCount: 0 })
   })
 
   it('clears the search query when the pathname changes', async () => {
@@ -82,5 +85,24 @@ describe('SearchDropdown', () => {
     rerender(<SearchDropdown />)
 
     expect(screen.getByTestId('global-search-input')).toHaveValue('')
+  })
+
+  it('renders readable type chips for search results', async () => {
+    const results = new Map<string, SearchItem[]>([
+      ['page', [{ id: 'clusters-page', name: 'Clusters', category: 'page', href: '/clusters' }]],
+    ])
+    mockUseSearchIndex.mockReturnValue({ results, totalCount: 1 })
+
+    const { SearchDropdown } = await import('../SearchDropdown')
+    render(<SearchDropdown />)
+
+    fireEvent.change(screen.getByTestId('global-search-input'), { target: { value: 'pod' } })
+
+    const item = screen.getByTestId('global-search-result-item')
+    const chip = item.querySelector('span')
+
+    expect(chip).toHaveClass('text-xs')
+    expect(chip).toHaveClass('bg-primary/10')
+    expect(chip).toHaveClass('text-foreground')
   })
 })

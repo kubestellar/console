@@ -2,6 +2,12 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
+interface DashboardPagePropsCapture {
+  getStatValue?: (blockId: string) => { value: unknown }
+}
+
+const dashboardPageProps: { current: DashboardPagePropsCapture | null } = { current: null }
+
 vi.mock('../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -20,13 +26,17 @@ vi.mock('../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('../../lib/dashboards/DashboardPage', () => ({
-  DashboardPage: ({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) => (
-    <div data-testid="dashboard-page" data-title={title} data-subtitle={subtitle}>
-      <h1>{title}</h1>
-      {subtitle && <p>{subtitle}</p>}
-      {children}
-    </div>
-  ),
+  DashboardPage: (props: { title: string; subtitle?: string; children?: React.ReactNode }) => {
+    dashboardPageProps.current = props
+    const { title, subtitle, children } = props
+    return (
+      <div data-testid="dashboard-page" data-title={title} data-subtitle={subtitle}>
+        <h1>{title}</h1>
+        {subtitle && <p>{subtitle}</p>}
+        {children}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../hooks/useMCP', () => ({
@@ -67,12 +77,14 @@ vi.mock('react-i18next', () => ({
 import { Cost } from './Cost'
 
 describe('Cost Component', () => {
-  const renderCost = () =>
-    render(
+  const renderCost = () => {
+    dashboardPageProps.current = null
+    return render(
       <MemoryRouter>
         <Cost />
       </MemoryRouter>
     )
+  }
 
   it('renders without crashing', () => {
     expect(() => renderCost()).not.toThrow()
@@ -88,5 +100,17 @@ describe('Cost Component', () => {
     renderCost()
     const page = screen.getByTestId('dashboard-page')
     expect(page.getAttribute('data-subtitle')).toBeTruthy()
+  })
+
+  it('shows a dash for total cost when no clusters are connected', () => {
+    renderCost()
+    const props = dashboardPageProps.current
+    expect(props).toBeTruthy()
+
+    const getStatValue = props?.getStatValue
+    if (!getStatValue) {
+      throw new Error('Expected getStatValue to be passed to DashboardPage')
+    }
+    expect(getStatValue('total_cost').value).toBe('-')
   })
 })

@@ -28,6 +28,9 @@ import { useModalState } from '../../../lib/modals'
 /** Routes for dashboards that are discoverable but not shown by default in the sidebar */
 const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
 
+/** Result type chip styling — higher contrast and enough padding to read quickly. */
+const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium uppercase tracking-wide text-foreground'
+
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
   page: { label: 'Dashboards', icon: LayoutDashboard },
   card: { label: 'Cards', icon: LayoutGrid },
@@ -128,7 +131,7 @@ function SearchResultsPanel({
                           <p className="text-xs text-muted-foreground truncate">{item.description}</p>
                         )}
                       </div>
-                      <span className="text-2xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground/70 shrink-0">
+                      <span className={RESULT_TYPE_CHIP_CLASS}>
                         {config.label.toLowerCase()}
                       </span>
                     </button>

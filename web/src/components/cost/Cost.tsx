@@ -19,6 +19,7 @@ type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
 const STORAGE_COST_PER_GB_MONTH = 0.10
+const NO_COST_DATA_VALUE = '-'
 const CLOUD_PRICING: Record<CloudProvider, { cpu: number; memory: number; gpu: number }> = {
   estimate: { cpu: 0.05, memory: 0.01, gpu: 2.50 },
   aws: { cpu: 0.048, memory: 0.012, gpu: 3.06 },
@@ -145,7 +146,9 @@ export function Cost() {
 
     switch (blockId) {
       case 'total_cost':
-        return { value: `$${Math.round(costStats.totalMonthly).toLocaleString()}`, sublabel: 'est. monthly', onClick: () => drillToCostType('total'), isClickable: costStats.totalMonthly > 0 }
+        return reachableClusters.length === 0
+          ? { value: NO_COST_DATA_VALUE, sublabel: 'est. monthly', isClickable: false }
+          : { value: `$${Math.round(costStats.totalMonthly).toLocaleString()}`, sublabel: 'est. monthly', onClick: () => drillToCostType('total'), isClickable: costStats.totalMonthly > 0 }
       case 'cpu_cost':
         return { value: `$${Math.round(costStats.cpuMonthly).toLocaleString()}`, sublabel: `${costStats.totalCPU} cores`, onClick: () => drillToCostType('cpu'), isClickable: costStats.cpuMonthly > 0 }
       case 'memory_cost':

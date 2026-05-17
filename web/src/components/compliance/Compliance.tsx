@@ -27,6 +27,11 @@ const MOCK_CHECKS_PER_CLUSTER = 45
 /** Mock tool-specific multipliers */
 const MOCK_GATEKEEPER_PER_CLUSTER = 3.2
 const MOCK_FALCO_PER_CLUSTER = 1.5
+const NO_DATA_STAT_VALUE = '-'
+
+function formatPercentageStat(value: number | undefined): string {
+  return typeof value === 'number' ? `${value}%` : NO_DATA_STAT_VALUE
+}
 
 export function Compliance() {
   const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
@@ -71,6 +76,7 @@ export function Compliance() {
     const kubescapeTotalControls = kubescapeStatuses.reduce((sum, s) => sum + s.totalControls, 0)
     const kubescapePassedControls = kubescapeStatuses.reduce((sum, s) => sum + s.passedControls, 0)
     const kubescapeFailedControls = kubescapeStatuses.reduce((sum, s) => sum + s.failedControls, 0)
+    const kubescapeMeasured = kubescapeTotalControls > 0
     const kubescapeScore = kubescapeTotalControls > 0
       ? Math.round((kubescapePassedControls / kubescapeTotalControls) * 100)
       : 0
@@ -87,7 +93,9 @@ export function Compliance() {
     const trivyMedium = trivyStatuses.reduce((sum, s) => sum + s.vulnerabilities.medium, 0)
     const trivyLow = trivyStatuses.reduce((sum, s) => sum + s.vulnerabilities.low, 0)
     const trivyUnknown = trivyStatuses.reduce((sum, s) => sum + s.vulnerabilities.unknown, 0)
+    const trivyTotalReports = trivyStatuses.reduce((sum, s) => sum + s.totalReports, 0)
     const trivyVulns = trivyCritical + trivyHigh + trivyMedium + trivyLow + trivyUnknown
+    const trivyMeasured = trivyTotalReports > 0
 
     // Any tool installed = we have some real data
     const hasAnyRealData = kyvernoInstalled || kubescapeInstalled || trivyInstalled
@@ -111,11 +119,10 @@ export function Compliance() {
     }
     if (trivyInstalled) {
       // Trivy reports count towards total checks
-      const totalReports = trivyStatuses.reduce((sum, s) => sum + s.totalReports, 0)
       const reportsWithCritical = trivyCritical + trivyHigh
-      totalChecks += totalReports
+      totalChecks += trivyTotalReports
       failing += reportsWithCritical
-      passing += Math.max(0, totalReports - reportsWithCritical)
+      passing += Math.max(0, trivyTotalReports - reportsWithCritical)
     }
 
     if (totalChecks > 0) {
@@ -129,15 +136,19 @@ export function Compliance() {
     return {
       hasAnyRealData,
       kyvernoInstalled,
+      kyvernoMeasured: kyvernoPolicies > 0,
       kyvernoViolations,
       kubescapeInstalled,
+      kubescapeMeasured,
       kubescapeScore,
       cisScore: cisFramework?.score,
       nsaScore: nsaFramework?.score,
       trivyInstalled,
+      trivyMeasured,
       trivyVulns,
       trivyCritical,
       trivyHigh,
+      trivyTotalReports,
       overallScore,
       totalChecks,
       passing,
@@ -146,7 +157,7 @@ export function Compliance() {
   }, [kyverno.statuses, kubescape.statuses, trivy.statuses, filteredClusterNames])
 
   // Only show demo/mock data when the user is explicitly in demo mode.
-  // When connected to a live cluster without compliance tools, show zeros — not fake numbers.
+  // When connected to a live cluster without compliance tools, show dashes — not fake numbers.
   const allDemo = explicitDemoMode && !realData.hasAnyRealData
   // Per-tool demo status: only show mock data when explicitly in demo mode AND tool is absent
   const kyvernoIsDemo = explicitDemoMode && (kyverno.isDemoData || !realData.kyvernoInstalled)
@@ -157,23 +168,30 @@ export function Compliance() {
     kyvernoStatuses: kyverno.statuses,
     selectedClusters: filteredClusters.map(cluster => cluster.name),
   }), [filteredClusters, kubescape.statuses, kyverno.statuses])
+  const hasMeasuredComplianceData = realData.totalChecks > 0
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       // Keep the overview score aligned with the Compliance Score donut card.
       case 'score': {
-        const scoreValue = allDemo || !complianceScoreSummary.usingFallback
-          ? complianceScoreSummary.score
-          : 0
-        return allDemo
-          ? { value: `${scoreValue}%`, sublabel: 'compliance score', isDemo: true, isClickable: false }
-          : { value: `${scoreValue}%`, sublabel: 'compliance score', onClick: () => { emitComplianceDrillDown('score'); drillToAllSecurity() }, isClickable: reachableClusters.length > 0 }
+        if (allDemo) {
+          return { value: `${complianceScoreSummary.score}%`, sublabel: 'compliance score', isDemo: true, isClickable: false }
+        }
+        if (complianceScoreSummary.usingFallback) {
+          return { value: NO_DATA_STAT_VALUE, sublabel: 'compliance score', isClickable: false }
+        }
+        return { value: `${complianceScoreSummary.score}%`, sublabel: 'compliance score', onClick: () => { emitComplianceDrillDown('score'); drillToAllSecurity() }, isClickable: reachableClusters.length > 0 }
       }
       case 'total_checks':
         return allDemo
           ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, isClickable: false }
-          : { value: realData.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance() }, isClickable: realData.totalChecks > 0 }
+          : {
+              value: hasMeasuredComplianceData ? realData.totalChecks : NO_DATA_STAT_VALUE,
+              sublabel: 'total checks',
+              onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance() },
+              isClickable: realData.totalChecks > 0,
+            }
       // #9717 — IDs must match COMPLIANCE_STAT_BLOCKS in StatsBlockDefinitions.ts
       // ('checks_passing' / 'checks_failing'), not the generic 'passing'/'failing'
       // used by the Operators dashboard. Mismatched IDs caused these blocks to fall
@@ -181,36 +199,64 @@ export function Compliance() {
       case 'checks_passing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, isClickable: false }
-          : { value: realData.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing') }, isClickable: realData.passing > 0 }
+          : {
+              value: hasMeasuredComplianceData ? realData.passing : NO_DATA_STAT_VALUE,
+              sublabel: 'passing',
+              onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing') },
+              isClickable: realData.passing > 0,
+            }
       case 'checks_failing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, isClickable: false }
-          : { value: realData.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing') }, isClickable: realData.failing > 0 }
+          : {
+              value: hasMeasuredComplianceData ? realData.failing : NO_DATA_STAT_VALUE,
+              sublabel: 'failing',
+              onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing') },
+              isClickable: realData.failing > 0,
+            }
       case 'warning': {
         const mockTotal = (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER
         return allDemo
           ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'skipped', isDemo: true, isClickable: false }
-          : { value: realData.warning, sublabel: 'skipped', onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning') }, isClickable: realData.warning > 0 }
+          : {
+              value: hasMeasuredComplianceData ? realData.warning : NO_DATA_STAT_VALUE,
+              sublabel: 'skipped',
+              onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning') },
+              isClickable: realData.warning > 0,
+            }
       }
       case 'critical_findings':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 2.3), sublabel: 'critical findings', isDemo: true, isClickable: false }
-          : { value: realData.trivyCritical + realData.kyvernoViolations, sublabel: 'critical findings', onClick: () => { emitComplianceDrillDown('critical'); drillToAllSecurity('critical') }, isClickable: true }
+          : {
+              value: hasMeasuredComplianceData ? realData.trivyCritical + realData.kyvernoViolations : NO_DATA_STAT_VALUE,
+              sublabel: 'critical findings',
+              onClick: () => { emitComplianceDrillDown('critical'); drillToAllSecurity('critical') },
+              isClickable: hasMeasuredComplianceData,
+            }
 
       // Policy enforcement tools — use real data when the tool is installed
       case 'gatekeeper_violations':
         // Gatekeeper hook not yet implemented — show mock only in explicit demo mode
         return explicitDemoMode
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_GATEKEEPER_PER_CLUSTER), sublabel: 'Gatekeeper violations', isClickable: false, isDemo: true }
-          : { value: 0, sublabel: 'Gatekeeper violations', isClickable: false }
+          : { value: NO_DATA_STAT_VALUE, sublabel: 'Gatekeeper violations', isClickable: false }
       case 'kyverno_violations':
         return kyvernoIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 2.8), sublabel: 'Kyverno violations', isClickable: false, isDemo: true }
-          : { value: realData.kyvernoViolations, sublabel: 'Kyverno violations', isClickable: false }
+          : {
+              value: realData.kyvernoMeasured ? realData.kyvernoViolations : NO_DATA_STAT_VALUE,
+              sublabel: 'Kyverno violations',
+              isClickable: false,
+            }
       case 'kubescape_score':
         return kubescapeIsDemo
           ? { value: '78%', sublabel: 'Kubescape score', isClickable: false, isDemo: true }
-          : { value: `${realData.kubescapeScore}%`, sublabel: 'Kubescape score', isClickable: false }
+          : {
+              value: realData.kubescapeMeasured ? `${realData.kubescapeScore}%` : NO_DATA_STAT_VALUE,
+              sublabel: 'Kubescape score',
+              isClickable: false,
+            }
 
       // Security scanning
       case 'falco_alerts':
@@ -221,30 +267,52 @@ export function Compliance() {
       case 'trivy_vulns':
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 12), sublabel: 'Trivy vulnerabilities', isClickable: false, isDemo: true }
-          : { value: realData.trivyVulns, sublabel: 'Trivy vulnerabilities', isClickable: false }
+          : {
+              value: realData.trivyMeasured ? realData.trivyVulns : NO_DATA_STAT_VALUE,
+              sublabel: 'Trivy vulnerabilities',
+              isClickable: false,
+            }
       case 'critical_vulns':
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 1.8), sublabel: 'critical CVEs', isClickable: false, isDemo: true }
-          : { value: realData.trivyCritical, sublabel: 'critical CVEs', isClickable: false }
+          : {
+              value: realData.trivyMeasured ? realData.trivyCritical : NO_DATA_STAT_VALUE,
+              sublabel: 'critical CVEs',
+              isClickable: false,
+            }
       case 'high_vulns':
         return trivyIsDemo
           ? { value: Math.floor((reachableClusters.length || 1) * 4.2), sublabel: 'high CVEs', isClickable: false, isDemo: true }
-          : { value: realData.trivyHigh, sublabel: 'high CVEs', isClickable: false }
+          : {
+              value: realData.trivyMeasured ? realData.trivyHigh : NO_DATA_STAT_VALUE,
+              sublabel: 'high CVEs',
+              isClickable: false,
+            }
 
       // Framework compliance — from Kubescape when installed
       case 'cis_score':
-        return kubescapeIsDemo
-          ? { value: '85%', sublabel: 'CIS benchmark', isClickable: false, isDemo: true }
-          : { value: `${realData.cisScore || realData.kubescapeScore}%`, sublabel: 'CIS benchmark', isClickable: false }
+        if (kubescapeIsDemo) {
+          return { value: '85%', sublabel: 'CIS benchmark', isClickable: false, isDemo: true }
+        }
+        return {
+          value: formatPercentageStat(realData.kubescapeMeasured ? (realData.cisScore ?? realData.kubescapeScore) : undefined),
+          sublabel: 'CIS benchmark',
+          isClickable: false,
+        }
       case 'nsa_score':
-        return kubescapeIsDemo
-          ? { value: '79%', sublabel: 'NSA hardening', isClickable: false, isDemo: true }
-          : { value: `${realData.nsaScore || realData.kubescapeScore}%`, sublabel: 'NSA hardening', isClickable: false }
+        if (kubescapeIsDemo) {
+          return { value: '79%', sublabel: 'NSA hardening', isClickable: false, isDemo: true }
+        }
+        return {
+          value: formatPercentageStat(realData.kubescapeMeasured ? (realData.nsaScore ?? realData.kubescapeScore) : undefined),
+          sublabel: 'NSA hardening',
+          isClickable: false,
+        }
       case 'pci_score':
         // PCI-DSS not directly tracked by any installed tool — show mock only in explicit demo mode
         return explicitDemoMode
           ? { value: '75%', sublabel: 'PCI-DSS', isClickable: false, isDemo: true }
-          : { value: '0%', sublabel: 'PCI-DSS', isClickable: false }
+          : { value: NO_DATA_STAT_VALUE, sublabel: 'PCI-DSS', isClickable: false }
 
       default:
         return { value: '-' }
