@@ -20,8 +20,8 @@
  * write the hook by hand instead.
  */
 
-import { useCache, type CachedHookResult } from './cacheCore'
-import type { RefreshCategory } from './cacheStorage'
+import { useCache, type CachedHookResult } from './index'
+import type { RefreshCategory } from './index'
 
 // ---------------------------------------------------------------------------
 // Config
