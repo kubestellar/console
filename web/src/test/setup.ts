@@ -9,7 +9,30 @@ vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
     ...actual,
-    useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+    useTranslation: () => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        // Preserve specific LaunchSequence strings used in tests
+        if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
+        if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
+        // Support Deploying X projects in Y phase with pluralization
+        if (key.includes('missionControl.launchSequence.deployingProjects')) {
+          const count = typeof options?.count === 'number' ? options!.count as number : 0
+          const phaseCount = typeof options?.phaseCount === 'number' ? options!.phaseCount as number : 0
+          return `Deploying ${count} project${count === 1 ? '' : 's'} in ${phaseCount} phase`
+        }
+        // Generic interpolation: replace {{key}} placeholders when options provided
+        if (options && typeof key === 'string') {
+          let s = key
+          for (const [k, v] of Object.entries(options)) {
+            s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
+          }
+          return s
+        }
+        // Default: return the key as a fallback
+        return key
+      },
+      i18n: { language: 'en', changeLanguage: vi.fn() },
+    }),
     Trans: ({ children }: { children: React.ReactNode }) => children,
     // initReactI18next is imported from the actual module above, so tests that import
     // i18n.ts (via vite.config.ts) don't crash
