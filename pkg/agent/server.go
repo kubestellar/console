@@ -30,8 +30,8 @@ const (
 	healthCheckTimeout   = 2 * time.Second
 	registryTimeout      = 10 * time.Second
 	consoleHealthTimeout = 5 * time.Second
-	wsPingInterval       = 30 * time.Second // how often to send WebSocket pings
-	wsPongTimeout        = 60 * time.Second // how long to wait for a pong before declaring dead
+	wsPingInterval       = 5 * time.Second  // how often to send WebSocket pings (adaptive heartbeat #14192)
+	wsPongTimeout        = 15 * time.Second // how long to wait for a pong before declaring dead (adaptive #14192)
 	wsWriteTimeout       = 10 * time.Second // deadline for a single write (prevents blocking on dead conn)
 	stabilizationDelay   = 3 * time.Second
 	startupDelay         = 500 * time.Millisecond

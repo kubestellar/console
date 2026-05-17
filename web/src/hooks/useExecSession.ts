@@ -21,6 +21,7 @@ import { useRef, useCallback, useEffect, useState } from 'react'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
+import { reportAgentActivity } from './useLocalAgent'
 
 // ============================================================================
 // Constants
@@ -248,6 +249,9 @@ export function useExecSession(): UseExecSessionResult {
       setIsStale(false)
       staleDetection.stop()
     }
+
+    // Report burst activity for exec sessions (high-frequency I/O) (#14192)
+    reportAgentActivity('burst')
 
     updateStatus('connecting')
     setError(null)

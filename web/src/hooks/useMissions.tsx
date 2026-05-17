@@ -4,7 +4,7 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { useLocalAgent } from './useLocalAgent'
+import { useLocalAgent, reportAgentActivity } from './useLocalAgent'
 import { agentFetch } from './mcp/agentFetch'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionToolMissing, emitMissionRated } from '../lib/analytics'
@@ -2284,6 +2284,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     params: { context?: Record<string, unknown>; type?: string; dryRun?: boolean },
   ) => {
     const missionType = params.type || 'custom'
+    
+    // Report active operation to increase heartbeat frequency for faster disconnect detection (#14192)
+    reportAgentActivity('active')
+    
     // #6384 item 1 (dup of #6381) — if a cancel intent is already set for
     // this missionId we must not clear it and proceed to send. This
     // scenario happens when the user clicks Cancel after preflightAndExecute
@@ -2975,6 +2979,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
   // Send a follow-up message
   const sendMessage = (missionId: string, content: string) => {
+    // Report active operation for adaptive heartbeat (#14192)
+    reportAgentActivity('active')
+    
     // Detect stop/cancel keywords — treat as a cancel action
     const STOP_KEYWORDS = ['stop', 'cancel', 'abort', 'halt', 'quit']
     const isStopCommand = STOP_KEYWORDS.some(kw => content.trim().toLowerCase() === kw)
