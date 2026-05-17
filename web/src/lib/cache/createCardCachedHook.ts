@@ -24,8 +24,8 @@
  * beyond what the factory provides, write the hook by hand instead.
  */
 
-import { useCache } from './cacheCore'
-import type { RefreshCategory } from './cacheStorage'
+import { useCache } from './index'
+import type { RefreshCategory } from './index'
 import { useCardLoadingState } from '../../components/cards/CardDataContext'
 
 // ---------------------------------------------------------------------------
