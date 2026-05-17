@@ -224,14 +224,9 @@ export function EventsPanel({
 
       <div
         ref={scrollRef}
-        className="s-scroll"
+        className="s-scroll flex min-h-0 flex-1 flex-col px-1 py-2"
         style={{
-          flex: 1,
           overflowY: 'auto',
-          padding: '8px 4px',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
         }}
       >
         {digest && (
@@ -243,7 +238,7 @@ export function EventsPanel({
         )}
 
         {activeProgress.length > 0 && (
-          <div style={{ margin: '4px 4px 8px' }}>
+          <div className="mx-1 mb-2 mt-1">
             {activeProgress.map(p => (
               <SolveProgressCard key={p.solveId + p.eventId} progress={p} />
             ))}
@@ -251,7 +246,7 @@ export function EventsPanel({
         )}
 
         {terminalSolves.length > 0 && (
-          <div style={{ margin: '0 4px 8px' }}>
+          <div className="mx-1 mb-2">
             {terminalSolves.map(s => (
               <SolveEscalatedCard key={s.id} solve={s} />
             ))}
@@ -309,10 +304,8 @@ export function EventsPanel({
         })}
 
         {stellarResolved.length > 0 && (
-          <div style={{ marginTop: 8, padding: '0 4px' }}>
-            <div style={{
-              display: 'flex', alignItems: 'baseline', gap: 8,
-              padding: '4px 6px', marginBottom: 4,
+          <div className="mt-2 px-1">
+            <div className="mb-1 flex items-baseline gap-2 px-1.5 py-1" style={{
               background: 'rgba(63,185,80,0.06)',
               borderLeft: '3px solid var(--s-success)',
               borderRadius: 'var(--s-rs)',
@@ -329,7 +322,7 @@ export function EventsPanel({
                 Fixed without waiting for approval
               </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="flex flex-col gap-1">
               {stellarResolved.map(notification => (
                 <EventCard
                   key={notification.id}
@@ -371,10 +364,8 @@ function Group({
   config, count, subtitle, children,
 }: { config: GroupConfig; count: number; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 10, padding: '0 4px' }}>
-      <div style={{
-        display: 'flex', alignItems: 'baseline', gap: 8,
-        padding: '4px 6px', marginBottom: 4,
+    <div className="mb-2.5 px-1">
+      <div className="mb-1 flex items-baseline gap-2 px-1.5 py-1" style={{
         background: config.background,
         borderLeft: `3px solid ${config.color}`,
         borderRadius: 'var(--s-rs)',
@@ -389,7 +380,7 @@ function Group({
         }}>{count}</span>
         <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>{subtitle ?? config.subtitle}</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div className="flex flex-col gap-1">
         {children}
       </div>
     </div>

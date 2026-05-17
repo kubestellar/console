@@ -148,19 +148,19 @@ export function EventCard({
           onOpenDetail?.(notification)
         }
       }}
+      className="px-2.5 py-2"
       style={{
         borderLeft: `3px solid ${color}`,
         background: notification.read ? 'transparent' : 'var(--s-surface-2)',
         border: notification.read ? '1px solid transparent' : '1px solid var(--s-border)',
         borderLeftColor: color,
         borderRadius: 'var(--s-r)',
-        padding: '8px 10px',
         opacity: notification.read ? 0.45 : 1,
         cursor: onOpenDetail ? 'pointer' : 'default',
         transition: 'background 0.1s ease',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+      <div className="flex items-baseline justify-between gap-2">
         <div className="text-xs" style={{ fontWeight: 600, color: 'var(--s-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {notification.title}
         </div>
@@ -177,7 +177,7 @@ export function EventCard({
         )}
       </div>
       {tags.length > 0 && !notification.read && (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+        <div className="mt-1 flex flex-wrap gap-1">
           {tags.map(t => (
             <span className="text-[9px] font-mono" key={t} style={{
               padding: '1px 5px', borderRadius: 6,
@@ -188,8 +188,8 @@ export function EventCard({
         </div>
       )}
       {shortReason && !notification.read && (
-        <div className="text-[11px]" style={{
-          color: color, lineHeight: 1.5, marginTop: 4,
+        <div className="mt-1 text-[11px]" style={{
+          color: color, lineHeight: 1.5,
           fontStyle: 'italic', opacity: 0.85,
         }}>
           ✦ {shortReason}
@@ -227,16 +227,16 @@ export function EventCard({
         </div>
       )}
       {attemptCount && attemptCount > 0 ? (
-        <div className="text-[10px] font-mono" style={{
-          marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4,
+        <div className="mt-1 inline-flex items-center gap-1 rounded-[10px] px-1.5 text-[10px] font-mono" style={{
           color: 'var(--s-text-muted)',
-          padding: '1px 6px', borderRadius: 10,
+          paddingTop: 1,
+          paddingBottom: 1,
           background: 'var(--s-surface)', border: '1px solid var(--s-border-muted)',
         }}>
           <span>✦ Stellar tried {attemptCount}× — see details</span>
         </div>
       ) : null}
-      <div className="text-xs" style={{ color: 'var(--s-text-muted)', lineHeight: 1.55, marginTop: 4 }}>{notification.body}</div>
+      <div className="mt-1 text-xs" style={{ color: 'var(--s-text-muted)', lineHeight: 1.55 }}>{notification.body}</div>
       {!notification.read && (() => {
         // When Stellar is autonomously solving (or already finished resolving
         // successfully), hide manual action buttons — the user shouldn't have to
@@ -261,27 +261,25 @@ export function EventCard({
           }}
           style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}
         >
-          <button className="text-[11px]" onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
+          <button className="px-2 py-0.5 text-[11px]" onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
           {showRollback && onRollback && (
             <button
-              className="text-[11px]"
+              className="px-2 py-0.5 text-[11px]"
               onClick={() => onRollback(buildRollbackPrompt(notification))}
-              style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', color: 'var(--s-text-muted)', cursor: 'pointer' }}
+              style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' }}
             >
               ↩ Undo this
             </button>
           )}
           {isEscalated && onSolve && (
             <button
-              className="text-[11px]"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px]"
               onClick={() => { void onSolve(notification.id) }}
               title="Escalate to an AI mission on your connected agent"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
                 background: 'rgba(227,179,65,0.1)',
                 border: '1px solid var(--s-warning)',
                 borderRadius: 'var(--s-rs)',
-                padding: '2px 10px',
                 color: 'var(--s-warning)', cursor: 'pointer',
                 fontWeight: 600,
               }}
@@ -294,7 +292,7 @@ export function EventCard({
             const isSolveActive = hint === 'solve' && solveStatus?.isActive
             return (
               <button
-                className="text-[11px]"
+                className="inline-flex items-center px-2 py-0.5 text-[11px]"
                 key={hint}
                 disabled={isSolveActive}
                 onClick={() => {
@@ -317,13 +315,10 @@ export function EventCard({
                 }}
                 title={isSolveActive ? 'Solve already in progress' : `${cfg.label}: ${notification.title}`}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
                   gap: 3,
                   background: 'none',
                   border: `1px solid ${cfg.color}`,
                   borderRadius: 'var(--s-rs)',
-                  padding: '2px 8px',
                   color: cfg.color,
                   cursor: isSolveActive ? 'not-allowed' : 'pointer',
                   opacity: isSolveActive ? 0.5 : 1,
