@@ -498,20 +498,24 @@ function inferMissionType(title: string, description: string): MissionExport['ty
 
 /** Fallback parser: tries JSON, then YAML */
 function parseWithFallback(content: string): ParseResult {
+  // parseJsonFile now catches JSON.parse errors internally and returns
+  // 'unstructured' instead of throwing (#14430). Check the returned type so
+  // we still fall through to YAML when JSON parsing fails.
+  const jsonResult = parseJsonFile(content)
+  if (jsonResult.type !== 'unstructured') {
+    return jsonResult
+  }
+  // JSON failed or returned empty unstructured — try YAML next
   try {
-    return parseJsonFile(content)
+    return parseYamlFile(content)
   } catch {
-    try {
-      return parseYamlFile(content)
-    } catch {
-      return makeUnstructured(content, 'yaml', {
-        detectedSections: [],
-        detectedCommands: [],
-        detectedYamlBlocks: 0,
-        detectedApiGroups: [],
-        totalLines: countLines(content),
-      })
-    }
+    return makeUnstructured(content, 'yaml', {
+      detectedSections: [],
+      detectedCommands: [],
+      detectedYamlBlocks: 0,
+      detectedApiGroups: [],
+      totalLines: countLines(content),
+    })
   }
 }
 
