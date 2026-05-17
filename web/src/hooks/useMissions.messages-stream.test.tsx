@@ -20,6 +20,7 @@ vi.mock('./useLocalAgent', () => ({
   useLocalAgent: vi.fn(() => ({ isConnected: false })),
   isAgentUnavailable: vi.fn(() => false),
   isAgentConnected: vi.fn(() => false),
+  reportAgentActivity: vi.fn(),
   reportAgentDataSuccess: vi.fn(),
   reportAgentDataError: vi.fn(),
 }))
