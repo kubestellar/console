@@ -8,7 +8,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Zap, Clock, Activity, Cpu, TrendingUp, TrendingDown, ArrowRight, CalendarDays } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 import { useCachedBenchmarkReports, resetBenchmarkStream } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports,
@@ -92,7 +92,7 @@ export function BenchmarkHero() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
   const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
-  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
+  useCardLoadingState({ isLoading, hasAnyData: effectiveReports.length > 0, isDemoData: isDemoFallback, isFailed, consecutiveFailures, isRefreshing })
 
   const [customDays, setCustomDays] = useState('')
   const [showCustom, setShowCustom] = useState(false)

@@ -8,7 +8,7 @@
 import { useState, useMemo } from 'react'
 import { LazyEChart } from '../../charts/LazyEChart'
 import { Zap, TrendingUp } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
   generateBenchmarkReports } from '../../../lib/llmd/benchmarkMockData'
@@ -39,9 +39,9 @@ export function ThroughputComparison() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
-  useReportCardDataState({
-    isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
-    hasData: effectiveReports.length > 0 })
+  useCardLoadingState({
+    isLoading, hasAnyData: effectiveReports.length > 0, isDemoData: isDemoFallback,
+    isFailed, consecutiveFailures, isRefreshing })
 
   const filterOpts = getFilterOptions(effectiveReports)
   const [category, setCategory] = useState<string>('all')

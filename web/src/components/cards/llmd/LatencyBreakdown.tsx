@@ -8,7 +8,7 @@
 import { useState, useMemo } from 'react'
 import { LazyEChart } from '../../charts/LazyEChart'
 import { Clock, AlertTriangle } from 'lucide-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useCardLoadingState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
@@ -48,11 +48,10 @@ function LatencyBreakdownInternal() {
   const { t } = useTranslation()
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = reports ?? []
-  const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
-  useReportCardDataState({
-    isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
-    hasData: effectiveReports.length > 0,
-    lastUpdated })
+  const lastRefreshMs = lastRefresh ? new Date(lastRefresh).getTime() : null
+  useCardLoadingState({
+    isLoading, hasAnyData: effectiveReports.length > 0, isDemoData: isDemoFallback,
+    isFailed, consecutiveFailures, isRefreshing, lastRefresh: lastRefreshMs })
 
   const filterOpts = getFilterOptions(effectiveReports)
   const [tab, setTab] = useState<MetricTab>('ttftP50Ms')
