@@ -56,7 +56,7 @@ const POLL_INTERVAL_IDLE = 5_000 // Check every 5 seconds when idle
 const POLL_INTERVAL_ACTIVE = 2_000 // Check every 2 seconds during active sessions (AI missions, kubectl ops)
 const POLL_INTERVAL_BURST = 1_000 // Check every 1 second during high-activity bursts
 const DISCONNECTED_POLL_INTERVAL = 60_000 // Check every 60 seconds when disconnected
-const FAILURE_THRESHOLD = 1 // Single failure detection for <2s disconnect detection (#14192)
+const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecting (prevents flicker)
 // Short timeout for agent health checks — a healthy agent responds in <100ms.
 // Using the default 10s timeout causes false failures when the browser's
 // HTTP/1.1 connection pool (6 per origin) is saturated by concurrent requests.
