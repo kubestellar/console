@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, KeyboardEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, KeyboardEvent } from 'react'
 import { Sparkles, X, Play, Pause, CheckCircle, Loader2, Copy, Download, Terminal, Send, AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
@@ -103,12 +103,23 @@ export function RemediationConsole({
   const [isComplete, setIsComplete] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [activeTab, setActiveTab] = useState<'ai' | 'shell'>('ai')
-  const [shellCommand, setShellCommand] = useState('')
-  const [commandHistory, setCommandHistory] = useState<string[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
-  const [isExecuting, setIsExecuting] = useState(false)
-  const [shellError, setShellError] = useState<string | null>(null)
-  const [lastFailedCommand, setLastFailedCommand] = useState<string>('')
+  // Shell state consolidated into a single object to prevent re-render flicker
+  // when multiple fields change together (e.g. after command execution completes).
+  const [shell, setShell] = useState({
+    command: '',
+    history: [] as string[],
+    historyIndex: -1,
+    isExecuting: false,
+    error: null as string | null,
+    lastFailedCommand: '',
+  })
+  // Convenience destructure for reads
+  const { command: shellCommand, history: commandHistory, historyIndex,
+    isExecuting, error: shellError, lastFailedCommand } = shell
+  const updateShell = useCallback(
+    (patch: Partial<typeof shell>) => setShell(prev => ({ ...prev, ...patch })),
+    [],
+  )
   const [isLoadingInitialData, setIsLoadingInitialData] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const shellInputRef = useRef<HTMLInputElement>(null)
@@ -251,8 +262,7 @@ export function RemediationConsole({
     if (!cmd.trim()) return
 
     // Add to history
-    setCommandHistory(prev => [...prev, cmd])
-    setHistoryIndex(-1)
+    updateShell({ history: [...commandHistory, cmd], historyIndex: -1 })
 
     // Log the command
     addLog({
@@ -260,8 +270,7 @@ export function RemediationConsole({
       message: `$ ${cmd}`,
     })
 
-    setIsExecuting(true)
-    setShellError(null)
+    updateShell({ isExecuting: true, error: null })
 
     const toolCall = mapCommandToMcpTool(cmd)
 
@@ -271,10 +280,7 @@ export function RemediationConsole({
         type: 'output',
         message: simulateCommandOutput(cmd),
       })
-      setShellError('This command is not supported via the MCP bridge. Use the quick commands above for supported operations.')
-      setLastFailedCommand(cmd)
-      setIsExecuting(false)
-      setShellCommand('')
+      updateShell({ error: 'This command is not supported via the MCP bridge. Use the quick commands above for supported operations.', lastFailedCommand: cmd, isExecuting: false, command: '' })
       return
     }
 
@@ -309,16 +315,14 @@ export function RemediationConsole({
     } catch (error: unknown) {
       // Fall back to simulated output when backend is unavailable
       const message = error instanceof Error ? error.message : 'Connection failed'
-      setShellError(`MCP bridge unavailable: ${message}`)
-      setLastFailedCommand(cmd)
+      updateShell({ error: `MCP bridge unavailable: ${message}`, lastFailedCommand: cmd })
       addLog({
         type: 'output',
         message: simulateCommandOutput(cmd),
       })
     }
 
-    setIsExecuting(false)
-    setShellCommand('')
+    updateShell({ isExecuting: false, command: '' })
   }
 
   // Simulate command output for demo
@@ -354,18 +358,15 @@ Labels:       app=${resourceName.split('-')[0]}
       e.preventDefault()
       if (commandHistory.length > 0) {
         const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex
-        setHistoryIndex(newIndex)
-        setShellCommand(commandHistory[commandHistory.length - 1 - newIndex] || '')
+        updateShell({ historyIndex: newIndex, command: commandHistory[commandHistory.length - 1 - newIndex] || '' })
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (historyIndex > 0) {
         const newIndex = historyIndex - 1
-        setHistoryIndex(newIndex)
-        setShellCommand(commandHistory[commandHistory.length - 1 - newIndex] || '')
+        updateShell({ historyIndex: newIndex, command: commandHistory[commandHistory.length - 1 - newIndex] || '' })
       } else {
-        setHistoryIndex(-1)
-        setShellCommand('')
+        updateShell({ historyIndex: -1, command: '' })
       }
     }
   }
@@ -605,7 +606,6 @@ Labels:       app=${resourceName.split('-')[0]}
                 {lastFailedCommand && (
                   <button
                     onClick={() => {
-                      setShellError(null)
                       executeCommand(lastFailedCommand)
                     }}
                     disabled={isExecuting}
@@ -623,7 +623,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 ref={shellInputRef}
                 type="text"
                 value={shellCommand}
-                onChange={(e) => setShellCommand(e.target.value)}
+                onChange={(e) => updateShell({ command: e.target.value })}
                 onKeyDown={handleShellKeyDown}
                 placeholder={t('remediation.enterCommand')}
                 disabled={isExecuting}
