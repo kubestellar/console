@@ -1,0 +1,63 @@
+name: Auto Test Generator
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/components/**/*.tsx'
+      - 'web/src/hooks/**/*.ts'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  detect-untested:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find new components without tests
+        id: detect
+        run: |
+          NEW_FILES=$(git diff --name-only origin/main...HEAD \
+            -- 'web/src/components/**/*.tsx' 'web/src/hooks/**/*.ts' \
+            | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' || true)
+
+          UNTESTED=""
+          for f in $NEW_FILES; do
+            BASE=$(basename "$f" .tsx)
+            BASE=$(basename "$BASE" .ts)
+            TEST_EXISTS=$(find web/src -name "${BASE}.test.*" -o -name "${BASE}.spec.*" 2>/dev/null | head -1)
+            if [ -z "$TEST_EXISTS" ]; then
+              UNTESTED="$UNTESTED $f"
+            fi
+          done
+
+          echo "untested=$UNTESTED" >> "$GITHUB_OUTPUT"
+          if [ -n "$UNTESTED" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR listing untested components
+        if: steps.detect.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const untested = `${{ steps.detect.outputs.untested }}`.trim().split(' ').filter(Boolean);
+            const list = untested.map(f => `- \`${f}\``).join('\n');
+            const body = `## Auto Test Generator\n\n` +
+              `The following new files have no corresponding test file:\n\n${list}\n\n` +
+              `Please add tests or apply the \`skip-auto-test\` label to suppress this check.`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
