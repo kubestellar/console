@@ -385,7 +385,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => {
       const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
       const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-      sendBatchedNotifications(notifications, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS, settledWithConcurrency).catch(() => {
+      void Promise.resolve(
+        sendBatchedNotifications(notifications, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS, settledWithConcurrency)
+      ).catch(() => {
         // Silent failure - notifications are best-effort
       })
     })

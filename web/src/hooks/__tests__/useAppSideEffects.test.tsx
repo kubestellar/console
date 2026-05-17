@@ -8,11 +8,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import { renderHook } from '@testing-library/react'
-import { MemoryRouter, useLocation, useNavigationType} from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import React, { useContext } from 'react'
 import { UNSAFE_LocationContext} from 'react-router-dom'
-import { Action } from 'history'
 import type { Location } from 'react-router-dom'
+
+
+type NavigationType = ReturnType<typeof import('react-router-dom').useNavigationType>
 
 
 // ---------- Mocks ----------
@@ -144,7 +146,7 @@ describe('LiveLocationProvider', () => {
       return null
     }
     render(
-      <LiveLocationProvider location={testLocation} navigationType={Action.Pop}>
+      <LiveLocationProvider location={testLocation} navigationType={'POP' as NavigationType}>
         <Consumer />
       </LiveLocationProvider>
     )
@@ -156,7 +158,7 @@ describe('LiveLocationProvider', () => {
       pathname: '/', search: '', hash: '', state: null, key: 'default',
     }as Location
     render(
-      <LiveLocationProvider location={testLocation} navigationType={Action.Push}>
+      <LiveLocationProvider location={testLocation} navigationType={'PUSH' as NavigationType}>
         <span data-testid="child">hello</span>
       </LiveLocationProvider>
     )
