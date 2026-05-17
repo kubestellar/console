@@ -36,8 +36,11 @@ export interface SortableDashboardCardProps {
   lastUpdated?: Date | null
   onInsertBefore?: () => void
   onInsertAfter?: () => void
+  useCompactGrid?: boolean
   containerWidth?: number
 }
+
+const COMPACT_GRID_MIN_COL_SPAN = 6
 
 export const SortableDashboardCard = memo(function SortableDashboardCard({
   card,
@@ -51,6 +54,7 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   lastUpdated,
   onInsertBefore: _onInsertBefore,
   onInsertAfter,
+  useCompactGrid = false,
   containerWidth = 0,
 }: SortableDashboardCardProps) {
   const {
@@ -62,7 +66,10 @@ export const SortableDashboardCard = memo(function SortableDashboardCard({
   } = useSortable({ id: card.id })
 
   const { isMobile } = useMobile()
-  const cardWidth = card.position?.w || 4
+  const rawCardWidth = card.position?.w || 4
+  const cardWidth = !isMobile && useCompactGrid && rawCardWidth < COMPACT_GRID_MIN_COL_SPAN
+    ? COMPACT_GRID_MIN_COL_SPAN
+    : rawCardWidth
   const cardHeight = card.position?.h || 2
   const effectiveCardWidth = !isMobile && containerWidth > 0 && containerWidth < NARROW_LAYOUT_BREAKPOINT_PX && cardWidth < MIN_NARROW_CARD_COL_SPAN
     ? MIN_NARROW_CARD_COL_SPAN

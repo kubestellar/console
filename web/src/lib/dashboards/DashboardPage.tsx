@@ -38,6 +38,7 @@ import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 // ============================================================================
 
 const GRID_STYLE = { gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` } as const
+const COMPACT_GRID_BREAKPOINT_PX = 1200
 
 // ============================================================================
 // Types
@@ -282,6 +283,8 @@ export function DashboardPage({
   const [dashboardWidth, setDashboardWidth] = useState(() => (
     typeof window !== 'undefined' ? window.innerWidth : 0
   ))
+  const cardsGridRef = useRef<HTMLDivElement | null>(null)
+  const [useCompactGrid, setUseCompactGrid] = useState(false)
   insertAtIndexRef.current = insertAtIndex
 
   // Card handlers
@@ -406,6 +409,27 @@ export function DashboardPage({
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    if (!showCards || cards.length === 0) return
+    const target = cardsGridRef.current
+    if (!target || typeof ResizeObserver === 'undefined') return
+
+    const syncGridMode = (width: number) => {
+      setUseCompactGrid(width < COMPACT_GRID_BREAKPOINT_PX)
+    }
+
+    syncGridMode(target.getBoundingClientRect().width)
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      syncGridMode(entry.contentRect.width)
+    })
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [cards.length, showCards])
+
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
     id: configuringCard.id,
@@ -498,6 +522,7 @@ export function DashboardPage({
                 >
                   <SortableContext items={visibleCards.map(c => c.id)} strategy={rectSortingStrategy}>
                     <div
+                      ref={cardsGridRef}
                       className="grid grid-cols-1 md:grid-cols-12 gap-2 min-w-0"
                       data-testid="dashboard-cards-grid"
                       style={GRID_STYLE}
@@ -514,6 +539,7 @@ export function DashboardPage({
                           isRefreshing={isRefreshing}
                           onRefresh={triggerRefresh}
                           lastUpdated={lastUpdated}
+                          useCompactGrid={useCompactGrid}
                           onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
                           onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}
                           containerWidth={dashboardWidth}
