@@ -46,12 +46,17 @@ interface ChartRow {
 
 function LatencyBreakdownInternal() {
   const { t } = useTranslation()
-  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = reports ?? []
-  const lastRefreshMs = lastRefresh ? new Date(lastRefresh).getTime() : null
+  const hasData = effectiveReports.length > 0
   useCardLoadingState({
-    isLoading, hasAnyData: effectiveReports.length > 0, isDemoData: isDemoFallback,
-    isFailed, consecutiveFailures, isRefreshing, lastRefresh: lastRefreshMs })
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    isRefreshing,
+  })
 
   const filterOpts = getFilterOptions(effectiveReports)
   const [tab, setTab] = useState<MetricTab>('ttftP50Ms')

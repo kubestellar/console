@@ -39,9 +39,15 @@ export function ThroughputComparison() {
   const { t } = useTranslation()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
   const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
+  const hasData = effectiveReports.length > 0
   useCardLoadingState({
-    isLoading, hasAnyData: effectiveReports.length > 0, isDemoData: isDemoFallback,
-    isFailed, consecutiveFailures, isRefreshing })
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    isRefreshing,
+  })
 
   const filterOpts = getFilterOptions(effectiveReports)
   const [category, setCategory] = useState<string>('all')
