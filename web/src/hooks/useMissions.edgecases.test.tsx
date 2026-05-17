@@ -904,9 +904,11 @@ describe('interactive result transitions', () => {
       })
     })
 
-    const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('waiting_input')
-    expect(mission?.messages[mission.messages.length - 1]?.content).toContain('Rollback completed successfully')
+    await waitFor(() => {
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('waiting_input')
+      expect(mission?.messages[mission.messages.length - 1]?.content).toContain('Rollback completed successfully')
+    })
   })
 })
 

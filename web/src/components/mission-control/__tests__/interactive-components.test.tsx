@@ -309,7 +309,6 @@ describe('LaunchSequence', () => {
     expect(onUpdateProgress).toHaveBeenCalled()
   })
 
-<<<<<<< HEAD
   it('shows deployment counts from the actual launch plan', async () => {
     const onUpdateProgress = vi.fn()
     const kyvernoProject: PayloadProject = {
@@ -363,7 +362,7 @@ describe('LaunchSequence', () => {
     })
   })
 
-  it('resumes launch progress when a failed mission is retried from the sidebar', async () => {
+  it('resumes launch progress when a failed mission reaches waiting_input after retry', async () => {
     const onUpdateProgress = vi.fn()
     let missionsState: Mission[] = []
     mockUseMissions.mockImplementation(() => ({
@@ -432,7 +431,7 @@ describe('LaunchSequence', () => {
 
     missionsState = [{
       ...missionsState[0],
-      status: 'running',
+      status: 'waiting_input',
       updatedAt: new Date(),
     }]
     rerender(
