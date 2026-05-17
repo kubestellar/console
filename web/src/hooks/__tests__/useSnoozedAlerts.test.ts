@@ -39,6 +39,27 @@ describe('useSnoozedAlerts', () => {
     expect(result.current.snoozedCount).toBe(0)
   })
 
+  it('hydrates persisted snoozes before the first render', () => {
+    const now = Date.now()
+    localStorage.setItem(
+      'kubestellar-snoozed-alerts',
+      JSON.stringify({
+        snoozed: [
+          {
+            alertId: 'persisted-alert',
+            snoozedAt: now,
+            expiresAt: now + 60 * 60 * 1000,
+            duration: '1h',
+          },
+        ],
+      })
+    )
+
+    const { result } = renderHook(() => useSnoozedAlerts())
+    expect(result.current.isSnoozed('persisted-alert')).toBe(true)
+    expect(result.current.snoozedAlerts).toHaveLength(1)
+  })
+
   // ── SNOOZE_DURATIONS constants ────────────────────────────────────────
 
   it('exports correct snooze duration values in milliseconds', () => {

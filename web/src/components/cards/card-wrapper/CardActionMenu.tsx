@@ -20,7 +20,6 @@ const WIDTH_OPTIONS = [
 
 // Card height options (in grid row spans)
 const HEIGHT_OPTIONS = [
-  { value: 1, labelKey: 'cardWrapper.heightCompact' as const, descKey: 'cardWrapper.heightCompactDesc' as const },
   { value: 2, labelKey: 'cardWrapper.heightDefault' as const, descKey: 'cardWrapper.heightDefaultDesc' as const },
   { value: 3, labelKey: 'cardWrapper.heightTall' as const, descKey: 'cardWrapper.heightTallDesc' as const },
   { value: 4, labelKey: 'cardWrapper.heightExtraTall' as const, descKey: 'cardWrapper.heightExtraTallDesc' as const },

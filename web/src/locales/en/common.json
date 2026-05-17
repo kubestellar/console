@@ -146,13 +146,13 @@
       "noDashboardsFound": "No dashboards found matching \"{{query}}\"",
       "selectAll": "Select All",
       "deselectAll": "Deselect All",
-      "dashboardsSelected": "{{count}} dashboard{{plural}} selected",
-      "dashboardsSelected_one": "{{count}} dashboard{{plural}} selected",
-      "dashboardsSelected_other": "{{count}} dashboard{{plural}} selected",
+      "dashboardsSelected": "{{count}} dashboard selected",
+      "dashboardsSelected_one": "{{count}} dashboard selected",
+      "dashboardsSelected_other": "{{count}} dashboards selected",
       "clearSelection": "Clear selection",
-      "addCount": "Add {{count}} Dashboard{{plural}}",
-      "addCount_one": "Add {{count}} Dashboard{{plural}}",
-      "addCount_other": "Add {{count}} Dashboard{{plural}}",
+      "addCount": "Add {{count}} Dashboard",
+      "addCount_one": "Add {{count}} Dashboard",
+      "addCount_other": "Add {{count}} Dashboards",
       "primaryNav": "Primary Nav",
       "secondaryNav": "Secondary Nav",
       "loadingDashboards": "Loading dashboards...",
@@ -1916,9 +1916,9 @@
     "expandFullScreen": "Expand to full screen",
     "related": "Related",
     "allSaved": "All Saved",
-    "similarResolutionsFound": "{{count}} similar resolution{{plural}} found",
-    "similarResolutionsFound_one": "{{count}} similar resolution{{plural}} found",
-    "similarResolutionsFound_other": "{{count}} similar resolution{{plural}} found",
+    "similarResolutionsFound": "{{count}} similar resolution found",
+    "similarResolutionsFound_one": "{{count}} similar resolution found",
+    "similarResolutionsFound_other": "{{count}} similar resolutions found",
     "viewInFullscreen": "View in fullscreen",
     "typeNextMessage": "Type next message...",
     "sendWillQueue": "Send (will queue until current response completes)",
@@ -1946,7 +1946,9 @@
     "agent": "Agent",
     "started": "Started",
     "tokens": "Tokens",
-    "clusterLabel": "Cluster: {{cluster}}"
+    "clusterLabel": "Cluster: {{cluster}}",
+    "progressLabel": "Progress",
+    "progressValue": "{{progress}}%"
   },
   "agent": {
     "connectingToAgent": "Connecting to agent...",
@@ -2123,7 +2125,30 @@
     "loadMore": "Load more ({{visible}}/{{total}})",
     "loadMore_one": "Load more ({{visible}}/{{total}})",
     "loadMore_other": "Load more ({{visible}}/{{total}})",
-    "noSearchResults": "No missions match your search."
+    "noSearchResults": "No missions match your search.",
+    "backgroundMissionsRunning": "{{count}} mission running in the background",
+    "backgroundMissionsRunning_one": "{{count}} mission running in the background",
+    "backgroundMissionsRunning_other": "{{count}} missions running in the background",
+    "backgroundMissionsHint": "Missions keep running even if you close Mission Control or this panel. Open history to follow live status and progress.",
+    "backgroundMissionsPersist": "Closing this view will not stop the running missions.",
+    "viewRunningMissions": "View running missions",
+    "moreRunningMissions": "+{{count}} more running in history",
+    "moreRunningMissions_one": "+{{count}} more running in history",
+    "moreRunningMissions_other": "+{{count}} more running in history",
+    "currentStepLabel": "Current step:",
+    "progressLabel": "Progress",
+    "progressValue": "{{progress}}%",
+    "statusLabels": {
+      "pending": "Starting…",
+      "running": "Running",
+      "cancelling": "Cancelling…",
+      "cancelled": "Cancelled",
+      "waitingInput": "Waiting for input",
+      "completed": "Completed",
+      "failed": "Failed",
+      "blocked": "Blocked",
+      "saved": "Saved"
+    }
   },
   "feedback": {
     "share": "Share",
@@ -2174,6 +2199,7 @@
     "alreadySetUp": "Already have OAuth configured? Login with GitHub →",
     "submitFailed": "Unable to submit — GitHub login may be required.",
     "submitFailedGuidance": "You can open issues directly on GitHub. Coins will be accumulated and available in your console once you install a GitHub OAuth app.",
+    "attachmentsTooLarge": "Attachments are too large to submit. Keep each video at or below 10 MB and reduce the total attachment payload before retrying.",
     "submitInfo": "Your request will be reviewed by a maintainer before being analyzed by our AI. Once approved, the AI will attempt to create a fix automatically and you'll receive a notification when ready.",
     "submitShortcutHint": "Press Cmd/Ctrl+Enter to submit.",
     "loginBannerDemo": "Login with GitHub to submit feedback and manage requests",
@@ -3692,7 +3718,31 @@
     "retry": "Retry",
     "noClustersAvailable": "No clusters available",
     "evaluating": "Evaluating…",
-    "runEvaluation": "Run Evaluation"
+    "runEvaluation": "Run Evaluation",
+    "licenseTitle": "License Compliance Scanner",
+    "licenseSubtitle": "Open-source license inventory with deny/warn-list violation detection",
+    "licenseScanningInventory": "Scanning license inventory…",
+    "licenseFailedToLoad": "Failed to load license data",
+    "licenseDeniedLicenses": "Denied Licenses",
+    "licenseMustRemediate": "must be remediated",
+    "licenseWarnings": "Warnings",
+    "licenseRequireLegalReview": "require legal review",
+    "licenseAllowed": "Allowed",
+    "licenseOfTotal": "of {{total}} total",
+    "licenseUniqueLicenses": "Unique Licenses",
+    "licenseWorkloadsScanned": "{{count}} workloads scanned",
+    "licenseViolationsTab": "Violations ({{count}})",
+    "licenseFullInventoryTab": "Full Inventory",
+    "licenseCategoriesTab": "License Categories",
+    "licenseNoViolations": "No license violations detected.",
+    "licensePackageHeader": "Package",
+    "licenseLicenseHeader": "License",
+    "licenseWorkloadHeader": "Workload",
+    "licenseClusterHeader": "Cluster",
+    "licenseRiskHeader": "Risk",
+    "licenseLastScanned": "Last scanned: {{date}}",
+    "licensePackageCount_one": "{{count}} package",
+    "licensePackageCount_other": "{{count}} packages"
   },
   "operators": {
     "title": "Operators",
@@ -4217,6 +4267,9 @@
       "optionalToolUnavailable": {
         "message": "This mission needs {{tools}} installed locally before it can run. Install {{tools}} and retry the mission."
       }
+    },
+    "queue": {
+      "waitingForTools": "Waiting for {{tools}} to become available from another mission..."
     },
     "detail": {
       "tabs": {

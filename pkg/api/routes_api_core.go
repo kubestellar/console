@@ -146,7 +146,7 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	api.Post("/events", events.RecordEvent)
 	api.Get("/events", events.GetEvents)
 
-	missions := handlers.NewMissionsHandler()
+	missions := handlers.NewMissionsHandler().WithStore(s.store)
 	missions.RegisterRoutes(api.Group("/missions"))
 
 	orbitDataDir := filepath.Dir(s.config.DatabasePath)

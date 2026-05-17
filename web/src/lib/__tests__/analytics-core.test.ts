@@ -49,16 +49,27 @@ import {
   _resetCapturedErrors,
   _resetErrorThrottles,
   _resetAnalyticsState,
+captureUtmParams,
+  emitChunkReloadRecoveryFailed,
   emitError,
   emitHttpError,
   emitPageView,
+  emitUserEngagement,
   getRecentBrowserErrors,
   getRecentFailedApiCalls,
   initAnalytics,
+  isAnalyticsOptedOut,
   markErrorReported,
+  send,
+  setAnalyticsOptOut,
+  setAnalyticsUserId,
+  setAnalyticsUserProperties,
   startGlobalErrorTracking,
   stopGlobalErrorTracking,
+  updateAnalyticsIds,
+  userProperties,
 } from '../analytics-core'
+import * as analyticsSession from '../analytics-session'
 
 const {
   inferErrorType,
@@ -71,11 +82,16 @@ const {
 
 beforeEach(() => {
   stopGlobalErrorTracking()
-  _resetCapturedApiCalls()
+_resetCapturedApiCalls()
   _resetCapturedErrors()
   _resetErrorThrottles()
   _resetAnalyticsState()
+  localStorage.clear()
+  document.querySelectorAll('script[src*="/api/gtag"], script[src*="googletagmanager.com/gtag/js"], script[src="/api/ksc"]').forEach((s) => s.remove())
   ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = undefined
+  vi.mocked(analyticsSession.isOptedOut).mockReturnValue(false)
+  vi.mocked(analyticsSession.peekEngagementMs).mockReturnValue(0)
+  vi.mocked(analyticsSession._loadUtmParams).mockReturnValue(undefined)
 })
 
 // ---------------------------------------------------------------------------
@@ -321,5 +337,121 @@ describe('startGlobalErrorTracking / getRecentBrowserErrors', () => {
     snapshot.length = 0
 
     expect(getRecentBrowserErrors().length).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// public analytics API coverage
+// ---------------------------------------------------------------------------
+
+describe('public analytics API', () => {
+  function setupInitializedAnalytics() {
+    const track = vi.fn()
+    ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = { track }
+    initAnalytics()
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    return track
+  }
+
+  it('send emits to Umami after initialization + interaction', () => {
+    const track = setupInitializedAnalytics()
+    send('ksc_test_event', { ok: true })
+    expect(track).toHaveBeenCalledWith('ksc_test_event', { ok: true })
+  })
+
+  it('send is blocked when analytics is opted out', () => {
+    const track = setupInitializedAnalytics()
+    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    send('ksc_opt_out_blocked', { ok: true })
+    expect(track).not.toHaveBeenCalledWith('ksc_opt_out_blocked', { ok: true })
+  })
+
+  it('send bypasses opt-out when bypassOptOut=true', () => {
+    const track = setupInitializedAnalytics()
+    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    send('ksc_forced_event', { ok: true }, { bypassOptOut: true })
+    expect(track).toHaveBeenCalledWith('ksc_forced_event', { ok: true })
+  })
+
+  it('emitUserEngagement emits only when engagement > 0', () => {
+    const track = setupInitializedAnalytics()
+    vi.mocked(analyticsSession.peekEngagementMs).mockReturnValue(250)
+    emitUserEngagement()
+    expect(track).toHaveBeenCalledWith('user_engagement', {})
+  })
+
+  it('captureUtmParams emits ksc_utm_landing when UTM values exist', () => {
+    const track = setupInitializedAnalytics()
+    vi.mocked(analyticsSession._loadUtmParams).mockReturnValue({ utm_source: 'newsletter' })
+    captureUtmParams()
+    expect(track).toHaveBeenCalledWith('ksc_utm_landing', { utm_source: 'newsletter' })
+  })
+
+  it('setAnalyticsUserId uses anonymous id for demo-user', async () => {
+    await setAnalyticsUserId('demo-user')
+    expect(analyticsSession.getOrCreateAnonymousId).toHaveBeenCalled()
+    expect(analyticsSession.hashUserId).toHaveBeenCalledWith('anon-id')
+  })
+
+  it('setAnalyticsUserId hashes explicit uid as-is', async () => {
+    await setAnalyticsUserId('real-user-123')
+    expect(analyticsSession.hashUserId).toHaveBeenCalledWith('real-user-123')
+  })
+
+  it('setAnalyticsUserProperties merges into exported userProperties', () => {
+    setAnalyticsUserProperties({ deployment_type: 'test', region: 'us-east' })
+    expect(userProperties).toEqual(expect.objectContaining({
+      deployment_type: 'test',
+      region: 'us-east',
+    }))
+  })
+
+  it('setAnalyticsOptOut(true) persists flag and clears analytics session keys', () => {
+    localStorage.setItem('kc-cid', 'cid')
+    localStorage.setItem('kc-sid', 'sid')
+    localStorage.setItem('kc-sc', 'sc')
+    localStorage.setItem('kc-last', 'last')
+
+    setAnalyticsOptOut(true)
+
+    expect(localStorage.getItem('kc-analytics-opt-out')).toBe('true')
+    expect(localStorage.getItem('kc-cid')).toBeNull()
+    expect(localStorage.getItem('kc-sid')).toBeNull()
+    expect(localStorage.getItem('kc-sc')).toBeNull()
+    expect(localStorage.getItem('kc-last')).toBeNull()
+    expect(analyticsSession.stopEngagementTracking).toHaveBeenCalled()
+  })
+
+  it('setAnalyticsOptOut(false) persists opt-in state', () => {
+    setAnalyticsOptOut(false)
+    expect(localStorage.getItem('kc-analytics-opt-out')).toBe('false')
+  })
+
+  it('isAnalyticsOptedOut reflects analytics-session state', () => {
+    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    expect(isAnalyticsOptedOut()).toBe(true)
+  })
+
+  it('updateAnalyticsIds uses provided IDs for script bootstrapping', () => {
+    updateAnalyticsIds({ ga4MeasurementId: 'G-TEST1234', umamiWebsiteId: 'umami-test-id' })
+    initAnalytics()
+    document.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    const gtagScript = document.querySelector<HTMLScriptElement>('script[src*="/api/gtag?id=G-TEST1234"]')
+    const umamiScript = document.querySelector<HTMLScriptElement>('script[src="/api/ksc"]')
+    expect(gtagScript).toBeTruthy()
+    expect(umamiScript?.dataset.websiteId).toBe('umami-test-id')
+  })
+
+  it('emitChunkReloadRecoveryFailed sends recovery failure event', () => {
+    const track = setupInitializedAnalytics()
+    emitChunkReloadRecoveryFailed('chunk stale')
+    expect(track).toHaveBeenCalledWith(
+      'ksc_chunk_reload_recovery',
+      expect.objectContaining({
+        recovery_result: 'failed',
+        error_detail: 'chunk stale',
+      }),
+    )
   })
 })

@@ -38,6 +38,7 @@ vi.mock('./TasksPanel', () => ({ TasksPanel: () => <div>Tasks panel</div> }))
 vi.mock('./WatchesPanel', () => ({ WatchesPanel: () => <div>Watches panel</div> }))
 vi.mock('./RecommendedTasksPanel', () => ({ RecommendedTasksPanel: () => <div>Recommended tasks</div> }))
 vi.mock('./StellarActivityPanel', () => ({ StellarActivityPanel: () => <div>Stellar log</div> }))
+vi.mock('./StellarAuditLogSection', () => ({ StellarAuditLogSection: () => <div>Audit log</div> }))
 
 const baseNotification: StellarNotification = {
   id: 'n1',

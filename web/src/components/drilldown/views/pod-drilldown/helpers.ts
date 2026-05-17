@@ -1,3 +1,30 @@
+/** Per-key diff state for label/annotation editing in PodLabelsTab. */
+export interface KeyValueDiffEntry {
+  currentValue: string
+  isRemoved: boolean
+  isModified: boolean
+}
+
+/** Build a diff map from base key-values and pending edits (null value = removal). */
+export function computeKeyValueDiffMap(
+  base: Record<string, string> | null,
+  pending: Record<string, string | null>,
+): Record<string, KeyValueDiffEntry> {
+  if (!base) {
+    return {}
+  }
+  const result: Record<string, KeyValueDiffEntry> = {}
+  for (const [key, value] of Object.entries(base)) {
+    const isRemoved = pending[key] === null
+    const pendingValue = pending[key]
+    const currentValue =
+      pendingValue !== undefined && pendingValue !== null ? pendingValue : value
+    const isModified = pending[key] !== undefined
+    result[key] = { currentValue, isRemoved, isModified }
+  }
+  return result
+}
+
 /** Determine issue severity for styling */
 export function getIssueSeverity(issue: string): 'critical' | 'warning' | 'info' {
   const lowerIssue = issue.toLowerCase()

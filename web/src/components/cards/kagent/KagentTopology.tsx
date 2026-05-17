@@ -57,6 +57,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
   const consecutiveFailures = Math.max(agentsFails || 0, toolsFails || 0, modelsFails || 0)
   useCardLoadingState({
     isLoading: (agentsLoading || toolsLoading || modelsLoading) && !hasData,
+    isRefreshing: agentsRefreshing || toolsRefreshing || modelsRefreshing,
     hasAnyData: hasData,
     isDemoData: agentsDemo || toolsDemo || modelsDemo,
     isFailed,

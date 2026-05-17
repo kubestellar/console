@@ -93,17 +93,17 @@ export const STAT_BLOCK_REGISTRY = {
   offline:    { id: 'offline',    name: 'Offline',    icon: 'WifiOff',      color: 'red' },
 
   // ── Compute ──────────────────────────────────────────────────────
-  nodes:      { id: 'nodes',      name: 'Nodes',      icon: 'Box',          color: 'cyan' },
+  nodes:      { id: 'nodes',      name: 'Nodes',      icon: 'Box',          color: 'primary' },
   cpus:       { id: 'cpus',       name: 'CPUs',       icon: 'Cpu',          color: 'blue' },
   memory:     { id: 'memory',     name: 'Memory',     icon: 'MemoryStick',  color: 'green' },
-  storage:    { id: 'storage',    name: 'Storage',    icon: 'HardDrive',    color: 'purple' },
+  storage:    { id: 'storage',    name: 'Storage',    icon: 'HardDrive',    color: 'primary' },
   gpus:       { id: 'gpus',       name: 'GPUs',       icon: 'Zap',          color: 'yellow' },
   tpus:       { id: 'tpus',       name: 'TPUs',       icon: 'Sparkles',     color: 'cyan' },
   aius:       { id: 'aius',       name: 'AIUs',       icon: 'Cpu',          color: 'blue' },
   xpus:       { id: 'xpus',       name: 'XPUs',       icon: 'Zap',          color: 'green' },
 
   // ── Workloads ────────────────────────────────────────────────────
-  pods:         { id: 'pods',         name: 'Pods',         icon: 'Layers',       color: 'blue' },
+  pods:         { id: 'pods',         name: 'Pods',         icon: 'Layers',       color: 'primary' },
   deployments:  { id: 'deployments',  name: 'Deployments',  icon: 'Layers',       color: 'blue' },
   namespaces:   { id: 'namespaces',   name: 'Namespaces',   icon: 'FolderTree',   color: 'purple' },
 

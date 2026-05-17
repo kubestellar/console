@@ -74,6 +74,15 @@ export interface DeployResult {
   warnings?: string[]
 }
 
+export interface UseWorkloadsResult {
+  data: Workload[] | undefined
+  isLoading: boolean
+  error: Error | null
+  isDemoFallback: boolean
+  isDemoData: boolean
+  refetch: (signal?: AbortSignal) => Promise<void>
+}
+
 export function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers: Record<string, string> = {}
@@ -225,6 +234,7 @@ export function useWorkloads(options?: {
   const [data, setData] = useState<Workload[] | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState<Error | null>(null)
+  const isDemoFallback = isDemoMode()
 
   // Track the current request so stale responses are discarded
   const requestIdRef = useRef(0)
@@ -335,7 +345,7 @@ export function useWorkloads(options?: {
     }
   }, [fetchData, enabled])
 
-  return { data, isLoading, error, refetch: fetchData }
+  return { data, isLoading, error, isDemoFallback, isDemoData: isDemoFallback, refetch: fetchData }
 }
 
 // Fetch cluster capabilities
@@ -413,9 +423,9 @@ export function useDeployWorkload() {
       // run under the user's kubeconfig via kc-agent, not the backend pod SA.
       // See #7993 Phase 1 PR B.
       const agentBase = requireLocalAgentHttp('Deploying workloads')
-      const res = await fetch(`${agentBase}/workloads/deploy`, {
+      const res = await agentFetch(`${agentBase}/workloads/deploy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -466,9 +476,9 @@ export function useScaleWorkload() {
       // go through kc-agent (user's kubeconfig), not the backend's pod SA.
       // See #7993 Phase 1 PR A.
       const agentBase = requireLocalAgentHttp('Scaling workloads')
-      const res = await fetch(`${agentBase}/scale`, {
+      const res = await agentFetch(`${agentBase}/scale`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -520,9 +530,9 @@ export function useDeleteWorkload() {
       // verb moves from DELETE-with-params to POST-with-body here.
       // See #7993 Phase 1 PR B.
       const agentBase = requireLocalAgentHttp('Deleting workloads')
-      const res = await fetch(`${agentBase}/workloads/delete`, {
+      const res = await agentFetch(`${agentBase}/workloads/delete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           cluster: params.cluster,
           namespace: params.namespace,

@@ -18,9 +18,6 @@ interface GitHubTokenSectionProps {
 const TOKEN_SOURCE_SETTINGS = 'settings'
 const TOKEN_SOURCE_ENV = 'env'
 
-/** Timeout for fetching settings from the backend */
-const AGENT_FETCH_TIMEOUT_MS = 5000
-
 /** Delay before applying deep link highlight effect */
 const HIGHLIGHT_DELAY_MS = 400
 
@@ -98,6 +95,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
   // Load GitHub token status on mount
   useEffect(() => {
+    const controller = new AbortController()
+
     const loadToken = async () => {
       // Skip if user explicitly dismissed the env token
       if (safeGetItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED) === 'true') {
@@ -108,7 +107,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       try {
         const response = await fetch('/api/github/token/status', {
           headers: authHeaders(),
-          signal: AbortSignal.timeout(AGENT_FETCH_TIMEOUT_MS),
+          signal: controller.signal,
         })
         if (response.ok) {
           const data = await response.json() as { hasToken: boolean; source: string }
@@ -121,13 +120,19 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
             await validateViaProxy()
           }
         }
-      } catch {
-        // Backend unavailable — no token available
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          // Backend unavailable — no token available
+        }
       }
 
-      setIsInitializing(false)
+      if (!controller.signal.aborted) {
+        setIsInitializing(false)
+      }
     }
     loadToken()
+
+    return () => controller.abort()
   }, [])
 
   // Handle deep link focus from hash or search param

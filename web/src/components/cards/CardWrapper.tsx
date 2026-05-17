@@ -1,14 +1,12 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
-import {
-  Maximize2, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Bug, AlertTriangle, Info, FileText, Trash2,
-} from 'lucide-react'
+import { Maximize2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { CARD_ICONS } from './cardIcons'
 import { BaseModal } from '../../lib/modals'
 import { MS_PER_HOUR } from '../../lib/constants/time'
-import { cn } from '../../lib/cn'
+import { cn } from '@/lib/cn'
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { useSnoozedCards } from '../../hooks/useSnoozedCards'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -16,17 +14,16 @@ import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
 import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
 import { ChatMessage } from './CardChat'
-import { CardSkeleton, type CardSkeletonProps } from '../../lib/cards/CardComponents'
+import type { CardSkeletonProps } from '@/lib/cards/CardComponents'
 import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
 import { useMissions } from '../../hooks/useMissions'
 import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
-import { formatTimeAgo } from '../../lib/formatters'
-import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { CardErrorFallback, CardFailureBanner } from './CardErrorFallback'
+import { CardLoadingState } from './CardLoadingState'
+import { CardMeta } from './CardMeta'
+import { CardToolbar } from './CardToolbar'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'
-import { CardActionMenu } from './card-wrapper/CardActionMenu'
 import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
-import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
-import { shouldShowFailureBanner, shouldShowLiveBadge } from './card-wrapper/badgeVisibility'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
@@ -40,9 +37,6 @@ const COLLAPSED_CARDS_STORAGE_KEY = 'kubestellar-collapsed-cards'
 
 /** CSS container query style for card content responsive breakpoints */
 const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
-
-/** Number of consecutive failures before showing the "Remove card" prompt */
-const REMOVE_CARD_FAILURE_THRESHOLD = 3
 
 /** Default snooze duration for card swaps */
 const DEFAULT_SNOOZE_MS = MS_PER_HOUR
@@ -272,7 +266,6 @@ export const CardWrapper = memo(function CardWrapper({
   }, [isExpanded])
   const [showBugReport, setShowBugReport] = useState(false)
   const [showWidgetExport, setShowWidgetExport] = useState(false)
-  const [showFailureLogs, setShowFailureLogs] = useState(false)
 
   // Register expand trigger for keyboard navigation
   useEffect(() => {
@@ -507,10 +500,6 @@ export const CardWrapper = memo(function CardWrapper({
   const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || (cardLoadingTimedOut ? 1 : 0)
   const effectiveErrorMessage = childDataState?.errorMessage || undefined
-  // Collapse the failure log panel when the card recovers
-  useEffect(() => {
-    if (!effectiveIsFailed) setShowFailureLogs(false)
-  }, [effectiveIsFailed])
   // Show loading when:
   // - Card explicitly reports isLoading: true (AND stuck-loading timeout hasn't fired), OR
   // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
@@ -565,6 +554,9 @@ export const CardWrapper = memo(function CardWrapper({
   // Cards render immediately — skeleton only used during demo↔live mode switching
   const wantsToShowSkeleton = forceSkeletonForModeSwitching
   const shouldShowSkeleton = (wantsToShowSkeleton && skeletonDelayPassed) || forceSkeletonForModeSwitching
+  const effectiveLastUpdated = lastUpdated ?? childDataState?.lastUpdated
+  const showHeaderRefreshIndicator = !onRefresh && (isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline)
+  const showInstallCta = showDemoIndicator && !shouldShowSkeleton && !DEMO_EXEMPT_CARDS.has(cardType)
 
   // Mark initial load as complete when data is ready or various timeouts pass
   // This allows the saved collapsed state to take effect only after content is ready
@@ -655,6 +647,11 @@ export const CardWrapper = memo(function CardWrapper({
     emitCardRefreshed(cardType)
   }, [onRefresh, cardType])
 
+  const handleLoadingTimeoutRetry = useCallback(() => {
+    setCardLoadingTimedOut(false)
+    onRefresh?.()
+  }, [onRefresh])
+
   const handleExpandFullscreen = useCallback(() => {
     emitCardExpanded(cardType)
     setIsExpanded(true)
@@ -669,7 +666,6 @@ export const CardWrapper = memo(function CardWrapper({
   void messages
   void onChatMessage
   void onChatMessagesChange
-  void title
   void setLocalMessages
 
   // #6149 — Memoize inline provider values so every CardWrapper re-render
@@ -729,345 +725,90 @@ export const CardWrapper = memo(function CardWrapper({
             onMouseLeave={() => setShowSummary(false)}
           >
             {/* Header */}
-            <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 px-4 py-3 border-b border-border/50">
-              <div className="flex items-center gap-2 min-w-0">
+            <div data-tour="card-header" className="flex flex-wrap items-center justify-between gap-y-2 border-b border-border/50 px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2">
                 {dragHandle}
-                {ResolvedIcon && <ResolvedIcon className={cn('w-4 h-4 shrink-0', resolvedIconColor)} />}
-                <h2 className="text-sm font-medium text-foreground truncate">{title}</h2>
+                {ResolvedIcon && <ResolvedIcon className={cn('h-4 w-4 shrink-0', resolvedIconColor)} />}
+                <h2 className="truncate text-sm font-medium text-foreground">{title}</h2>
                 <InfoTooltip text={description || t('messages.descriptionComingSoon', { title })} />
-                {/* Demo data indicator - shows if card uses demo data (respects child opt-out) */}
-                {showDemoIndicator && (
-                  <span
-                    data-testid="demo-badge"
-                    role="status"
-                    aria-live="polite"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 shrink-0"
-                    title={effectiveIsDemoData ? t('cardWrapper.demoBadgeTitle') : t('cardWrapper.demoModeTitle')}
-                  >
-                    {t('cardWrapper.demo')}
-                  </span>
-                )}
-                {/* Live data indicator - for time-series/trend cards with real data */}
-                {shouldShowLiveBadge({
-                  isLive,
-                  showDemoIndicator,
-                  isFailed: effectiveIsFailed,
-                }) && (
-                  <span
-                    role="status"
-                    aria-live="polite"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 shrink-0"
-                    title={t('cardWrapper.liveBadgeTitle')}
-                  >
-                    {t('cardWrapper.live')}
-                  </span>
-                )}
-                {/* Failure indicator */}
-                {effectiveIsFailed && (
-                  <span
-                    role="alert"
-                    aria-live="assertive"
-                    className="text-2xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 flex items-center gap-1 shrink-0"
-                    title={t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
-                  >
-                    {t('cardWrapper.refreshFailed')}
-                  </span>
-                )}
-                {/* Refresh indicator - only shows when no refresh button is present (button handles its own spin) */}
-                {!onRefresh && (isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && !effectiveIsFailed && (
-                  <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" aria-hidden="true" />
-                )}
-                {/* Last updated indicator — use prop or child-reported timestamp.
-                  * Still rendered when refresh is failing (#9104): hiding the
-                  * timestamp on failure removed the only signal about data age,
-                  * so users saw "Refresh Failed" with no idea whether the data
-                  * they were looking at was 2 minutes or 5 days old. Now it
-                  * shows the stale timestamp with an orange tint + "(stale)"
-                  * tooltip when failed, and is suppressed only during
-                  * loading/spinning (where no meaningful age exists yet). */}
-                {(() => {
-                  const effectiveLastUpdated = lastUpdated ?? childDataState?.lastUpdated
-                  if (isVisuallySpinning || effectiveIsLoading || !effectiveLastUpdated) {
-                    return null
-                  }
-                  const tooltipLabel = effectiveIsFailed
-                    ? t('cards:cardWrapper.lastRefreshedStale', { time: effectiveLastUpdated.toLocaleString() })
-                    : t('cards:cardWrapper.lastRefreshed', { time: effectiveLastUpdated.toLocaleString() })
-                  const className = effectiveIsFailed
-                    ? 'text-2xs text-orange-400 cursor-help'
-                    : 'text-2xs text-muted-foreground cursor-help'
-                  return (
-                    <span className={className} title={tooltipLabel}>
-                      {formatTimeAgo(effectiveLastUpdated, { compact: true, invalidLabel: 'Unknown' })}
-                    </span>
-                  )
-                })()}
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0" role="toolbar" aria-label={t('cardWrapper.cardControls', { title })}>
-                {/* Collapse/expand button */}
-                <button
-                  onClick={handleToggleCollapse}
-                  className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
-                  aria-expanded={!isCollapsed}
-                  title={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
-                >
-                  {isCollapsed ? <ChevronRight className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
-                </button>
-                {/* Manual refresh button */}
-                {onRefresh && (
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
-                    className={cn(
-                      'p-1.5 rounded-lg transition-colors',
-                      isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline
-                        ? 'text-blue-400 cursor-not-allowed'
-                        : effectiveIsFailed
-                          ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
-                          : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-                    )}
-                    aria-label={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
-                    title={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
-                  >
-                    <RefreshCw className={cn('w-4 h-4', (isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} aria-hidden="true" />
-                  </button>
-                )}
-                {/* Chat button - feature not yet implemented
-            <button
-              data-tour="card-chat"
-              className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-              title={t('common:buttons.askAI')}
-            >
-              <MessageCircle className="w-4 h-4" />
-            </button>
-            */}
-                <button
-                  onClick={handleExpandFullscreen}
-                  className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={t('cardWrapper.expandFullScreen')}
-                  title={t('cardWrapper.expandFullScreen')}
-                >
-                  <Maximize2 className="w-4 h-4" aria-hidden="true" />
-                </button>
-                <button
-                  onClick={handleOpenBugReport}
-                  className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={t('cardWrapper.reportIssue')}
-                  title={t('cardWrapper.reportIssue')}
-                >
-                  <Bug className="w-4 h-4" aria-hidden="true" />
-                </button>
-                <CardActionMenu
-                  cardId={cardId}
-                  cardType={cardType}
-                  cardWidth={cardWidth}
-                  cardHeight={cardHeight}
-                  onConfigure={onConfigure}
-                  onRemove={onRemove}
-                  onWidthChange={onWidthChange}
-                  onHeightChange={onHeightChange}
-                  onShowWidgetExport={() => setShowWidgetExport(true)}
+                <CardMeta
+                  showDemoIndicator={showDemoIndicator}
+                  isDemoData={effectiveIsDemoData}
+                  isLive={isLive}
+                  isFailed={effectiveIsFailed}
+                  consecutiveFailures={effectiveConsecutiveFailures}
+                  showRefreshIndicator={showHeaderRefreshIndicator}
+                  isLoading={effectiveIsLoading}
+                  isVisuallySpinning={isVisuallySpinning}
+                  lastUpdated={effectiveLastUpdated}
                 />
               </div>
+              <CardToolbar
+                title={title}
+                isCollapsed={isCollapsed}
+                onToggleCollapse={handleToggleCollapse}
+                onRefresh={onRefresh ? handleRefresh : undefined}
+                isRefreshDisabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
+                isRefreshSpinning={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
+                isFailed={effectiveIsFailed}
+                consecutiveFailures={effectiveConsecutiveFailures}
+                onExpandFullscreen={handleExpandFullscreen}
+                onOpenBugReport={handleOpenBugReport}
+                cardId={cardId}
+                cardType={cardType}
+                cardWidth={cardWidth}
+                cardHeight={cardHeight}
+                onConfigure={onConfigure}
+                onRemove={onRemove}
+                onWidthChange={onWidthChange}
+                onHeightChange={onHeightChange}
+                onShowWidgetExport={() => setShowWidgetExport(true)}
+              />
             </div>
 
-            {/* Failure detail banner — shown when card has failed to refresh */}
-            {shouldShowFailureBanner({
-              cardType,
-              isFailed: effectiveIsFailed,
-              isCollapsed,
-            }) && (
-              <div className="px-3 pt-2" data-testid="card-failure-banner">
-                <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-3 py-2 backdrop-blur-sm">
-                  <div className="flex items-start gap-2 text-xs">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300/90" aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-amber-200/90">
-                        {t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
-                      </p>
-                      {effectiveErrorMessage && (
-                        <p className="mt-0.5 truncate text-muted-foreground/90" title={effectiveErrorMessage}>
-                          {t('cardWrapper.failureReasonLabel')}: {effectiveErrorMessage}
-                        </p>
-                      )}
-                    </div>
-                    <div className="shrink-0 flex items-center gap-1.5">
-                      {effectiveErrorMessage && (
-                        <button
-                          onClick={() => setShowFailureLogs(prev => !prev)}
-                          className="no-underline flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs text-muted-foreground transition-colors hover:bg-background/40 hover:text-foreground"
-                          aria-label={showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
-                          aria-expanded={showFailureLogs}
-                        >
-                          <FileText className="h-3 w-3" aria-hidden="true" />
-                          {showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
-                          {showFailureLogs
-                            ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
-                            : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
-                        </button>
-                      )}
-                      {onRefresh && (
-                        <button
-                          onClick={onRefresh}
-                          className="no-underline flex items-center gap-1 rounded-md border border-amber-500/10 bg-background/30 px-1.5 py-0.5 text-2xs text-amber-200/90 transition-colors hover:bg-background/50 hover:text-amber-100"
-                          aria-label={t('cardWrapper.failureRetry')}
-                        >
-                          <RefreshCw className={cn('h-3 w-3', (isRefreshing || isVisuallySpinning) && 'animate-spin')} aria-hidden="true" />
-                          {t('cardWrapper.failureRetry')}
-                        </button>
-                      )}
-                      {onRemove && effectiveConsecutiveFailures >= REMOVE_CARD_FAILURE_THRESHOLD && (
-                        <button
-                          onClick={onRemove}
-                          className="no-underline flex items-center gap-1 rounded-md border border-red-500/10 bg-red-500/5 px-1.5 py-0.5 text-2xs text-red-300/90 transition-colors hover:bg-red-500/10 hover:text-red-200"
-                          aria-label={t('cardWrapper.removeCardLabel')}
-                          data-testid="card-remove-button"
-                        >
-                          <Trash2 className="h-3 w-3" aria-hidden="true" />
-                          {t('cardWrapper.removeCardButton')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {/* Expandable log detail */}
-                  {showFailureLogs && effectiveErrorMessage && (
-                    <div className="mt-2 rounded-md border border-amber-500/10 bg-background/30 p-2" data-testid="card-failure-logs">
-                      <p className="mb-1 text-2xs font-medium text-muted-foreground">
-                        {t('cardWrapper.failureLogTitle')}
-                      </p>
-                      <pre className="text-2xs whitespace-pre-wrap break-all font-mono leading-relaxed text-amber-100/80">
-                        {effectiveErrorMessage}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            <CardFailureBanner
+              cardType={cardType}
+              isFailed={effectiveIsFailed}
+              isCollapsed={isCollapsed}
+              consecutiveFailures={effectiveConsecutiveFailures}
+              errorMessage={effectiveErrorMessage}
+              onRefresh={onRefresh}
+              onRemove={onRemove}
+              isRefreshing={isRefreshing}
+              isVisuallySpinning={isVisuallySpinning}
+            />
 
             {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
             {!isCollapsed && (
-              <div className="flex-1 p-4 overflow-auto scroll-enhanced min-h-0 flex flex-col">
+              <div className="flex min-h-full flex-1 flex-col overflow-hidden p-4">
                 {/* Container query boundary — cards use @container breakpoints
                     instead of viewport breakpoints so layouts respond to actual
                     card width (which shrinks when side panels expand).
-                    Must be INSIDE overflow-auto (CSS spec: container-type and
+                    Must be INSIDE overflow-hidden (CSS spec: container-type and
                     overflow conflict on the same element). */}
-                <div className="@container flex-1 flex flex-col min-h-0" style={CONTAINER_QUERY_STYLE}>
-                {(isVisible || isExpanded) ? (
-                  <>
-                    {/* Show skeleton overlay when loading with no cached data */}
-                    {shouldShowSkeleton && (
-                      <div data-card-skeleton="true">
-                        <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader />
-                      </div>
-                    )}
-                    {/* Loading timeout fallback: if loading exceeded CARD_LOADING_TIMEOUT_MS and
-                    the child has no data, show a clear error state instead of a blank/stuck card.
-                    The child is still mounted (hidden) so it can resume if the data eventually arrives. */}
-                    {cardLoadingTimedOut && !childDataState?.hasData && (
-                      <div className="h-full flex flex-col items-center justify-center p-4 text-center" data-card-loading-timeout="true">
-                        <AlertTriangle className="w-8 h-8 text-amber-400 mb-2" />
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          {t('cardWrapper.loadingTimedOutTitle')}
-                        </p>
-                        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-                          {t('cardWrapper.loadingTimedOutMessage')}
-                        </p>
-                        {onRefresh && (
-                          <button
-                            onClick={() => {
-                              setCardLoadingTimedOut(false)
-                              onRefresh()
-                            }}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
-                            aria-label={t('cardWrapper.loadingTimedOutRetry')}
-                          >
-                            <RefreshCw className={cn('w-3 h-3', (isRefreshing || isVisuallySpinning) && 'animate-spin')} aria-hidden="true" />
-                            {t('cardWrapper.loadingTimedOutRetry')}
-                          </button>
-                        )}
-                        {onRemove && (
-                          <button
-                            onClick={onRemove}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md mt-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                            aria-label={t('cardWrapper.removeCardButton')}
-                            data-testid="card-remove-button"
-                          >
-                            <Trash2 className="w-3 h-3" aria-hidden="true" />
-                            {t('cardWrapper.removeCardButton')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {/* Fallback empty state: when a card finishes loading but has no data,
-                    show a helpful empty state instead of a blank card (#4894).
-                    This catches cards that don't implement their own showEmptyState check.
-                    Conditions: child reported state, not loading, no data, and timeout hasn't fired. */}
-                    {childDataState && !childDataState.isLoading && !childDataState.hasData && !cardLoadingTimedOut && (
-                      <div className="h-full flex flex-col items-center justify-center p-4 text-center" data-card-empty-state="true">
-                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
-                          <Info className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          {t('cardWrapper.noDataTitle')}
-                        </p>
-                        <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-                          {t('cardWrapper.noDataMessage')}
-                        </p>
-                        {onRefresh && (
-                          <button
-                            onClick={onRefresh}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
-                            aria-label={t('cardWrapper.loadingTimedOutRetry')}
-                          >
-                            <RefreshCw className={cn('w-3 h-3', (isRefreshing || isVisuallySpinning) && 'animate-spin')} aria-hidden="true" />
-                            {t('cardWrapper.loadingTimedOutRetry')}
-                          </button>
-                        )}
-                        {onRemove && (
-                          <button
-                            onClick={onRemove}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md mt-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                            aria-label={t('cardWrapper.removeCardButton')}
-                            data-testid="card-remove-button"
-                          >
-                            <Trash2 className="w-3 h-3" aria-hidden="true" />
-                            {t('cardWrapper.removeCardButton')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {/* ALWAYS render children so they can report their data state via useCardLoadingState.
-                    Hide visually when skeleton is showing, loading timed out, or empty state is shown,
-                    but keep mounted so useLayoutEffect runs.
-                    This prevents the deadlock where CardWrapper waits for hasData but children never mount.
-                    Suspense catches lazy() chunk loading so it doesn't bubble up to Layout and blank the whole page. */}
-                    <div
-                      className={cn(
-                        'min-h-0',
-                        (shouldShowSkeleton || (cardLoadingTimedOut && !childDataState?.hasData) || (childDataState && !childDataState.isLoading && !childDataState.hasData && !cardLoadingTimedOut))
-                          ? 'hidden'
-                          : 'flex flex-1 flex-col'
-                      )}
-                    >
-                      <DynamicCardErrorBoundary cardId={cardId || cardType}>
-                        <Suspense fallback={<CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />}>
-                          {children}
-                        </Suspense>
-                      </DynamicCardErrorBoundary>
-                    </div>
-                    {/* Demo CTA — install prompt for live data */}
-                    {showDemoIndicator && !shouldShowSkeleton && !DEMO_EXEMPT_CARDS.has(cardType) && (
-                      <InstallCTAFlow cardType={cardType} title={title} />
-                    )}
-                  </>
-                ) : (
-                  // Show skeleton during lazy mount (before IntersectionObserver fires)
-                  // This provides visual continuity instead of a tiny pulse loader
-                  <CardSkeleton type={effectiveSkeletonType} rows={skeletonRows || 3} showHeader={false} />
-                )}
+                <div className="@container flex min-h-0 flex-1 flex-col" style={CONTAINER_QUERY_STYLE}>
+                  <CardLoadingState
+                    cardId={cardId || cardType}
+                    cardType={cardType}
+                    title={title}
+                    isVisible={isVisible}
+                    isExpanded={isExpanded}
+                    shouldShowSkeleton={shouldShowSkeleton}
+                    skeletonType={effectiveSkeletonType}
+                    skeletonRows={skeletonRows || 3}
+                    cardLoadingTimedOut={cardLoadingTimedOut}
+                    childDataState={childDataState}
+                    onRefresh={onRefresh}
+                    onRemove={onRemove}
+                    onLoadingTimeoutRetry={onRefresh ? handleLoadingTimeoutRetry : undefined}
+                    isRefreshing={isRefreshing}
+                    isVisuallySpinning={isVisuallySpinning}
+                    showInstallCta={showInstallCta}
+                  >
+                    {children}
+                  </CardLoadingState>
                 </div>{/* Close @container query boundary */}
+
               </div>
             )}
 
@@ -1119,10 +860,10 @@ export const CardWrapper = memo(function CardWrapper({
                   : 'max-h-[calc(80vh-80px)]'
             )}>
               {/* Wrapper ensures children fill available space in expanded mode */}
-              <div ref={expandedContentRef} className="flex-1 min-h-0 flex flex-col">
-                <DynamicCardErrorBoundary cardId={cardId || cardType}>
+              <div ref={expandedContentRef} className="flex flex-1 min-h-0 flex-col">
+                <CardErrorFallback cardId={cardId || cardType}>
                   {children}
-                </DynamicCardErrorBoundary>
+                </CardErrorFallback>
               </div>
             </BaseModal.Content>
           </BaseModal>

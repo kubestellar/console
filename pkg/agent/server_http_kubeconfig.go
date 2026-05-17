@@ -43,6 +43,18 @@ func (s *Server) handleRenameContextHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// SECURITY: validate context names to prevent kubectl flag injection (#14238).
+	if err := validateKubeContext(req.OldName); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, protocol.ErrorPayload{Code: "invalid_names", Message: "invalid old context name"})
+		return
+	}
+	if err := validateKubeContext(req.NewName); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, protocol.ErrorPayload{Code: "invalid_names", Message: "invalid new context name"})
+		return
+	}
+
 	if err := s.kubectl.RenameContext(req.OldName, req.NewName); err != nil {
 		slog.Error("rename context error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)

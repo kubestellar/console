@@ -8,7 +8,7 @@
  * bridging and top-level provider composition.
  */
 import { Suspense, useEffect, useRef } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation, Outlet } from 'react-router-dom'
 import type { Location } from 'react-router-dom'
 import { CardHistoryEntry } from '../hooks/useCardHistory'
 import { Layout } from '../components/layout/Layout'
@@ -256,50 +256,19 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<SuspenseRoute><MiniDashboard /></SuspenseRoute>} />
 
-        {/* ── Enterprise Compliance Portal ─────────────────────────────
-            Dedicated sub-portal with its own sidebar, organized by
-            compliance vertical (epic). */}
-        <Route path="/enterprise" element={<ProtectedRoute><SuspenseRoute><EnterpriseLayout /></SuspenseRoute></ProtectedRoute>}>
-          <Route index element={<SuspenseRoute><EnterprisePortal /></SuspenseRoute>} />
-          {/* Epic 1: FinTech & Regulatory */}
-          <Route path="frameworks" element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
-          <Route path="change-control" element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
-          <Route path="sod" element={<SuspenseRoute><SegregationOfDuties /></SuspenseRoute>} />
-          <Route path="data-residency" element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
-          <Route path="reports" element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
-          {/* Epic 2: Healthcare & Life Sciences */}
-          <Route path="hipaa" element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
-          <Route path="gxp" element={<SuspenseRoute><GxPDashboard /></SuspenseRoute>} />
-          <Route path="baa" element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
-          {/* Epic 3: Government & Defense */}
-          <Route path="nist" element={<SuspenseRoute><NISTDashboard /></SuspenseRoute>} />
-          <Route path="stig" element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
-          <Route path="air-gap" element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
-          <Route path="fedramp" element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
-          {/* Epic 4: Identity & Access */}
-          <Route path="oidc" element={<SuspenseRoute><OIDCDashboard /></SuspenseRoute>} />
-          <Route path="rbac-audit" element={<SuspenseRoute><RBACAuditDashboard /></SuspenseRoute>} />
-          <Route path="sessions" element={<SuspenseRoute><SessionDashboard /></SuspenseRoute>} />
-          {/* Epic 5: SecOps */}
-          <Route path="siem" element={<SuspenseRoute><SIEMDashboard /></SuspenseRoute>} />
-          <Route path="incident-response" element={<SuspenseRoute><IncidentResponseDashboard /></SuspenseRoute>} />
-          <Route path="threat-intel" element={<SuspenseRoute><ThreatIntelDashboard /></SuspenseRoute>} />
-          {/* Epic 6: Supply Chain Security */}
-          <Route path="sbom" element={<SuspenseRoute><SBOMDashboard /></SuspenseRoute>} />
-          <Route path="sigstore" element={<SuspenseRoute><SigningStatusDashboard /></SuspenseRoute>} />
-          <Route path="slsa" element={<SuspenseRoute><SLSADashboard /></SuspenseRoute>} />
-          <Route path="licenses" element={<SuspenseRoute><LicenseComplianceDashboard /></SuspenseRoute>} />
-          {/* Epic 7: Enterprise Risk Management */}
-          <Route path="risk-matrix" element={<SuspenseRoute><RiskMatrixDashboard /></SuspenseRoute>} />
-          <Route path="risk-register" element={<SuspenseRoute><RiskRegisterDashboard /></SuspenseRoute>} />
-          <Route path="risk-appetite" element={<SuspenseRoute><RiskAppetiteDashboard /></SuspenseRoute>} />
-          <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
-        </Route>
-
+        {/* Authenticated app shell — StellarProvider stays mounted across Layout
+            and Enterprise navigations (#14220). Login/widget routes stay outside. */}
+        <Route element={
+          <ProtectedRoute>
+            <StellarProvider>
+              <Outlet />
+            </StellarProvider>
+          </ProtectedRoute>
+        }>
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
             warm-nav is near-instant (no unmount/remount). */}
-        <Route element={<ProtectedRoute><StellarProvider><Layout /></StellarProvider></ProtectedRoute>}>
+        <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path={ROUTES.DASHBOARD_ALIAS} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.MISSIONS} element={<Dashboard />} />
@@ -375,6 +344,47 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.FEATURE} element={<FeatureRedirect />} />
           <Route path={ROUTES.FEATURES} element={<FeatureRedirect />} />
           <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
+        </Route>
+
+        {/* ── Enterprise Compliance Portal ─────────────────────────────
+            Dedicated sub-portal with its own sidebar, organized by
+            compliance vertical (epic). */}
+        <Route path="/enterprise" element={<SuspenseRoute><EnterpriseLayout /></SuspenseRoute>}>
+          <Route index element={<SuspenseRoute><EnterprisePortal /></SuspenseRoute>} />
+          {/* Epic 1: FinTech & Regulatory */}
+          <Route path="frameworks" element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
+          <Route path="change-control" element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
+          <Route path="sod" element={<SuspenseRoute><SegregationOfDuties /></SuspenseRoute>} />
+          <Route path="data-residency" element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
+          <Route path="reports" element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
+          {/* Epic 2: Healthcare & Life Sciences */}
+          <Route path="hipaa" element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
+          <Route path="gxp" element={<SuspenseRoute><GxPDashboard /></SuspenseRoute>} />
+          <Route path="baa" element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
+          {/* Epic 3: Government & Defense */}
+          <Route path="nist" element={<SuspenseRoute><NISTDashboard /></SuspenseRoute>} />
+          <Route path="stig" element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
+          <Route path="air-gap" element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
+          <Route path="fedramp" element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
+          {/* Epic 4: Identity & Access */}
+          <Route path="oidc" element={<SuspenseRoute><OIDCDashboard /></SuspenseRoute>} />
+          <Route path="rbac-audit" element={<SuspenseRoute><RBACAuditDashboard /></SuspenseRoute>} />
+          <Route path="sessions" element={<SuspenseRoute><SessionDashboard /></SuspenseRoute>} />
+          {/* Epic 5: SecOps */}
+          <Route path="siem" element={<SuspenseRoute><SIEMDashboard /></SuspenseRoute>} />
+          <Route path="incident-response" element={<SuspenseRoute><IncidentResponseDashboard /></SuspenseRoute>} />
+          <Route path="threat-intel" element={<SuspenseRoute><ThreatIntelDashboard /></SuspenseRoute>} />
+          {/* Epic 6: Supply Chain Security */}
+          <Route path="sbom" element={<SuspenseRoute><SBOMDashboard /></SuspenseRoute>} />
+          <Route path="sigstore" element={<SuspenseRoute><SigningStatusDashboard /></SuspenseRoute>} />
+          <Route path="slsa" element={<SuspenseRoute><SLSADashboard /></SuspenseRoute>} />
+          <Route path="licenses" element={<SuspenseRoute><LicenseComplianceDashboard /></SuspenseRoute>} />
+          {/* Epic 7: Enterprise Risk Management */}
+          <Route path="risk-matrix" element={<SuspenseRoute><RiskMatrixDashboard /></SuspenseRoute>} />
+          <Route path="risk-register" element={<SuspenseRoute><RiskRegisterDashboard /></SuspenseRoute>} />
+          <Route path="risk-appetite" element={<SuspenseRoute><RiskAppetiteDashboard /></SuspenseRoute>} />
+          <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
+        </Route>
         </Route>
 
         <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />

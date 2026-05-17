@@ -448,9 +448,19 @@ func (h *StellarHandler) CompleteAutoMission(c *fiber.Ctx) error {
 		body.Summary = "AI mission completed."
 	}
 	ctx := c.UserContext()
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
+	}
+	solve, err := full.GetSolveByID(ctx, body.SolveID)
+	if err != nil || solve == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "solve not found"})
+	}
+	if solve.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
+	}
 	_ = full.UpdateSolveStatus(ctx, body.SolveID, body.Status, body.Summary, "", "")
 
-	solve, _ := full.GetSolveByID(ctx, body.SolveID)
 	kind := "solve_" + body.Status
 	severity := "info"
 	if body.Status == "escalated" || body.Status == "exhausted" {
@@ -526,9 +536,9 @@ func (h *StellarHandler) fullStore() (solveFullStore, bool) {
 // Idempotent: if a running solve already exists for that event id, returns
 // the existing solve id. Async — returns 202 with the solve id immediately.
 func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	eventID := strings.TrimSpace(c.Params("eventID"))
 	if eventID == "" {
@@ -644,9 +654,9 @@ Don't ask me first — act. I trust you.`,
 // ListSolves returns recent solves for the current user. The frontend uses
 // this to render attempt history and the "Stellar's actions" section.
 func (h *StellarHandler) ListSolves(c *fiber.Ctx) error {
-	userID := resolveStellarUserID(c)
-	if userID == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	full, ok := h.fullStore()
 	if !ok {

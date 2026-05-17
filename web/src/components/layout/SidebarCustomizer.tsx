@@ -588,7 +588,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
             className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size, plural: selectedKnownRoutes.size !== 1 ? 's' : '' })}
+            {t('sidebar.customizer.addCount', { count: selectedKnownRoutes.size })}
           </button>
         </>
       ) : !embedded ? (

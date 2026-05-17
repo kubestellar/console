@@ -1,21 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { INACTIVE_MISSION_STATUSES } from '../../hooks/useMissionTypes'
-import { useStellar } from '../../hooks/useStellar'
-
-const STELLAR_SSE_URL = '/api/stellar/stream'
-
-interface MissionTriggerPayload {
-  solveId: string
-  eventId: string
-  cluster: string
-  namespace: string
-  workload: string
-  reason: string
-  message: string
-  title: string
-  prompt: string
-}
+import {
+  STELLAR_MISSION_TRIGGER_EVENT,
+  type StellarMissionTriggerPayload,
+} from '../../hooks/useStellar'
 
 /**
  * StellarMissionBridge converts Stellar's `mission_trigger` SSE events into
@@ -23,6 +12,9 @@ interface MissionTriggerPayload {
  * the "Repair" button on ConsoleIssuesCard uses. Mounted in Layout so
  * autonomous decisions reach the mission system regardless of which page the
  * operator is on.
+ *
+ * Listens on the shared Stellar SSE connection via window CustomEvent
+ * (see useStellar connectSSE) — does not open a second EventSource (#14220).
  *
  * The bridge also watches the mission's lifecycle. When its status reaches a
  * terminal state (completed / failed / cancelled), it POSTs the matching
@@ -33,10 +25,6 @@ interface MissionTriggerPayload {
  */
 export function StellarMissionBridge() {
   const { startMission, missions } = useMissions()
-  // Pull useStellar to ensure the provider is also mounted alongside us —
-  // we don't actually consume any of its state here, but the bridge depends
-  // on Stellar being initialized so cookies/auth are in place.
-  useStellar()
 
   // Map missionId → { solveId, eventId } for missions Stellar spawned. We
   // need this so the lifecycle-watch effect knows which solves to close out
@@ -49,53 +37,46 @@ export function StellarMissionBridge() {
   // (e.g. on reconnect with the same in-flight event) don't double-spawn.
   const handled = useRef<Set<string>>(new Set())
 
-  // ── 1. Listen for backend "please trigger a mission" SSE events. ──
+  // ── 1. Listen for backend "please trigger a mission" events from shared SSE. ──
   useEffect(() => {
-    const es = new EventSource(STELLAR_SSE_URL, { withCredentials: true })
+    const onTrigger = (e: Event) => {
+      const payload = (e as CustomEvent<StellarMissionTriggerPayload>).detail
+      if (!payload?.solveId || handled.current.has(payload.solveId)) return
+      handled.current.add(payload.solveId)
 
-    const onTrigger = (e: MessageEvent) => {
-      try {
-        const payload: MissionTriggerPayload = JSON.parse(e.data)
-        if (!payload.solveId || handled.current.has(payload.solveId)) return
-        handled.current.add(payload.solveId)
-
-        // skipReview: true is the JARVIS part. No confirmation dialog —
-        // Stellar already decided this event was critical, you don't need
-        // to vouch for it. The mission sidebar will show actions as they
-        // happen, which is the operator's verification path.
-        const missionId = startMission({
-          title: payload.title,
-          description: `Stellar autonomous fix · ${payload.namespace}/${payload.workload}`,
-          type: 'repair',
+      // skipReview: true is the JARVIS part. No confirmation dialog —
+      // Stellar already decided this event was critical, you don't need
+      // to vouch for it. The mission sidebar will show actions as they
+      // happen, which is the operator's verification path.
+      const missionId = startMission({
+        title: payload.title,
+        description: `Stellar autonomous fix · ${payload.namespace}/${payload.workload}`,
+        type: 'repair',
+        cluster: payload.cluster,
+        initialPrompt: payload.prompt,
+        skipReview: true,
+        context: {
+          stellarSolveId: payload.solveId,
+          stellarEventId: payload.eventId,
           cluster: payload.cluster,
-          initialPrompt: payload.prompt,
-          skipReview: true,
-          context: {
-            stellarSolveId: payload.solveId,
-            stellarEventId: payload.eventId,
-            cluster: payload.cluster,
-            namespace: payload.namespace,
-            workload: payload.workload,
-            reason: payload.reason,
-            message: payload.message,
-          },
-        })
+          namespace: payload.namespace,
+          workload: payload.workload,
+          reason: payload.reason,
+          message: payload.message,
+        },
+      })
 
-        if (missionId) {
-          tracked.current.set(missionId, {
-            solveId: payload.solveId,
-            eventId: payload.eventId,
-          })
-        }
-      } catch {
-        // Bad payload — ignore.
+      if (missionId) {
+        tracked.current.set(missionId, {
+          solveId: payload.solveId,
+          eventId: payload.eventId,
+        })
       }
     }
 
-    es.addEventListener('mission_trigger', onTrigger)
+    window.addEventListener(STELLAR_MISSION_TRIGGER_EVENT, onTrigger)
     return () => {
-      es.removeEventListener('mission_trigger', onTrigger)
-      es.close()
+      window.removeEventListener(STELLAR_MISSION_TRIGGER_EVENT, onTrigger)
     }
   }, [startMission])
 

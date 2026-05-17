@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import type { MetricsSnapshot, TrendDirection } from '../types/predictions'
 import { useClusters, usePodIssues, useGPUNodes } from './useMCP'
 import { getPredictionSettings } from './usePredictionSettings'
@@ -263,6 +263,8 @@ export function useMetricsHistory() {
   podIssuesRef.current = podIssues
   gpuNodesRef.current = gpuNodes
 
+  const clusterIds = useMemo(() => clusters.map(c => c.name).join(','), [clusters])
+
   // Auto-capture snapshots at configured interval.
   // Reads volatile data from refs so the interval stays stable across MCP polls (#5781).
   useEffect(() => {
@@ -328,7 +330,7 @@ export function useMetricsHistory() {
       clearTimeout(initialTimeout)
       clearInterval(intervalId)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clusterIds])
 
   // Manually trigger a snapshot
   const captureNow = () => {

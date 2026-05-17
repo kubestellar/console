@@ -7,6 +7,34 @@ const STELLAR_ACTIVITY_LIMIT = 200
 const STELLAR_DEFAULT_FETCH_LIMIT = 50
 const STELLAR_RECONNECT_BASE_MS = 1000
 const STELLAR_RECONNECT_MAX_MS = 30000
+export const STELLAR_TOKEN_POLL_INTERVAL_MS = 100
+export const STELLAR_TOKEN_POLL_MAX_ATTEMPTS = 30
+
+/** Dispatched on window when the shared SSE receives a mission_trigger event. */
+export const STELLAR_MISSION_TRIGGER_EVENT = 'stellar:mission_trigger'
+
+export interface StellarMissionTriggerPayload {
+  solveId: string
+  eventId: string
+  cluster: string
+  namespace: string
+  workload: string
+  reason: string
+  message: string
+  title: string
+  prompt: string
+}
+
+function hasStellarAuthCredentials(): boolean {
+  // Check JWT token in localStorage (direct kubeconfig / dev-user auth)
+  if (localStorage.getItem('token')) return true
+  // #14308 — OAuth sessions use an HttpOnly kc_auth cookie that JS cannot read
+  // via document.cookie. The kc-has-session marker is set in localStorage after
+  // a successful /auth/refresh, and is the canonical way to detect a live
+  // cookie-based session without touching the HttpOnly cookie.
+  if (localStorage.getItem('kc-has-session') === 'true') return true
+  return false
+}
 
 function parseStellarEvent<T>(event: Event, eventName: string): T | null {
   try {
@@ -44,13 +72,38 @@ function useStellarSource() {
   const [watches, setWatches] = useState<StellarWatch[]>([])
   const [nudge, setNudge] = useState<StellarObservation | null>(null)
   const [catchUp, setCatchUp] = useState<CatchUpState | null>(null)
-  const [providerSession, setProviderSession] = useState<ProviderSession | null>(null)
+  const [providerSession, setProviderSession] = useState<ProviderSession | null>(() => {
+    // #14201 — Initialize from the user's persisted AI agent selection so
+    // Stellar uses the same default provider the user chose in the navbar
+    // or mission sidebar, without requiring manual re-selection.
+    try {
+      const persisted = localStorage.getItem('kc_selected_agent')
+      if (persisted && persisted !== 'none') {
+        return { provider: persisted, model: '', source: 'user-default' as const, isCli: true }
+      }
+    } catch { /* localStorage unavailable */ }
+    return null
+  })
   const [solves, setSolves] = useState<StellarSolve[]>([])
   const [solveProgress, setSolveProgress] = useState<Record<string, StellarSolveProgress>>({})
   const [activity, setActivity] = useState<StellarActivity[]>([])
   const esRef = useRef<EventSource | null>(null)
   const reconnectRef = useRef<() => void>(() => {})
   const reconnectDelay = useRef(STELLAR_RECONNECT_BASE_MS)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // #14201 — Sync Stellar provider with user's agent selection changes
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== 'kc_selected_agent') return
+      const agent = e.newValue
+      if (agent && agent !== 'none') {
+        setProviderSession({ provider: agent, model: '', source: 'user-default', isCli: true })
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   const refreshState = useCallback(async () => {
     const results = await Promise.allSettled([
@@ -94,7 +147,7 @@ function useStellarSource() {
       es.close()
       const delay = Math.min(reconnectDelay.current, STELLAR_RECONNECT_MAX_MS)
       reconnectDelay.current = Math.min(delay * 2, STELLAR_RECONNECT_MAX_MS)
-      setTimeout(() => reconnectRef.current(), delay)
+      reconnectTimerRef.current = setTimeout(() => reconnectRef.current(), delay)
     }
     es.addEventListener('notification', (e) => {
       const notif = parseStellarEvent<StellarNotification>(e, 'notification')
@@ -102,6 +155,35 @@ function useStellarSource() {
         return
       }
       setNotifications(prev => (prev.some(n => n.id === notif.id) ? prev : sortNotificationsByCreatedAt([notif, ...prev])))
+      // Automatically trigger AI solve for incoming critical events so Stellar
+      // acts as a fully autonomous "junior k8s engineer" — not just reporting
+      // the cause but also attempting to remediate it. Uses setSolveProgress
+      // callback form to guard against duplicate solves in the same session
+      // (e.g. caused by SSE reconnects). The server also deduplicates.
+      if (notif.type === 'event' && notif.severity === 'critical') {
+        setSolveProgress(prev => {
+          if (prev[notif.id]) return prev // solve already in-flight, skip
+          return {
+            ...prev,
+            [notif.id]: {
+              solveId: 'pending',
+              eventId: notif.id,
+              step: 'reading',
+              message: 'Auto-solve triggered — Stellar is investigating…',
+              actionsTaken: 0,
+              status: 'running',
+            },
+          }
+        })
+        stellarApi.startSolve(notif.id).catch(err => {
+          console.warn('stellar: auto-solve for critical event failed:', notif.id, err)
+          setSolveProgress(prev => {
+            const copy = { ...prev }
+            delete copy[notif.id]
+            return copy
+          })
+        })
+      }
     })
     es.addEventListener('state', (e) => {
       const payload = parseStellarEvent<{ clustersWatching: string[]; unreadCount: number; pendingActionCount: number }>(e, 'state')
@@ -262,6 +344,13 @@ function useStellarSource() {
       // Treat scheduled digest as a high-priority proactive nudge
       setNudge({ id: crypto.randomUUID(), summary: digest.content, ts: new Date().toISOString() })
     })
+    es.addEventListener('mission_trigger', (e) => {
+      const payload = parseStellarEvent<StellarMissionTriggerPayload>(e, 'mission_trigger')
+      if (!payload) {
+        return
+      }
+      window.dispatchEvent(new CustomEvent(STELLAR_MISSION_TRIGGER_EVENT, { detail: payload }))
+    })
   }, [])
 
   useEffect(() => {
@@ -271,18 +360,18 @@ function useStellarSource() {
   useEffect(() => {
     const waitForToken = (): Promise<void> => {
       return new Promise((resolve) => {
-        if (localStorage.getItem('token') || document.cookie.includes('kc_auth')) {
+        if (hasStellarAuthCredentials()) {
           resolve()
           return
         }
         let attempts = 0
         const interval = setInterval(() => {
           attempts++
-          if (localStorage.getItem('token') || document.cookie.includes('kc_auth') || attempts > 30) {
+          if (hasStellarAuthCredentials() || attempts > STELLAR_TOKEN_POLL_MAX_ATTEMPTS) {
             clearInterval(interval)
             resolve()
           }
-        }, 100)
+        }, STELLAR_TOKEN_POLL_INTERVAL_MS)
       })
     }
 
@@ -302,6 +391,10 @@ function useStellarSource() {
     void initialize()
 
     return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
       esRef.current?.close()
     }
   }, []) // Empty deps — run once on mount, never re-run

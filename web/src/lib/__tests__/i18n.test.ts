@@ -35,6 +35,13 @@ describe('i18n', () => {
       expect(resources.zh).toBeDefined()
     })
 
+    it('loads non-English resource bundles instead of English placeholders', () => {
+      expect(resources.zh.common.navigation.dashboard).toBe('仪表板')
+      expect(resources.zh.cards.titles.cluster_health).toBe('集群健康')
+      expect(resources.zh.status.cluster.healthy).toBe('健康')
+      expect(resources.zh.common.navigation.dashboard).not.toBe(resources.en.common.navigation.dashboard)
+    })
+
     it('supports Traditional Chinese locale', () => {
       expect(resources['zh-TW']).toBeDefined()
     })

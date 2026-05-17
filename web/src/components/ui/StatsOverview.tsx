@@ -39,6 +39,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 
 // Color mapping for dynamic rendering
 const COLOR_CLASSES: Record<string, string> = {
+  primary: 'text-primary',
   purple: 'text-purple-400',
   green: 'text-green-400',
   orange: 'text-orange-400',
@@ -244,7 +245,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const IconComponent = ICONS[block.icon] || Server
   const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
   const valueColor = VALUE_COLORS[block.id] || 'text-foreground'
-  const hexColor = COLOR_HEX[block.color] || '#9333ea'
+  const hexColor = block.color === 'primary'
+    ? 'hsl(var(--primary))'
+    : (COLOR_HEX[block.color] || 'hsl(var(--primary))')
   const isClickable = !isLoading && data.isClickable !== false && !!data.onClick
   const isDemo = data.isDemo === true
   const mode: StatDisplayMode = block.displayMode || 'numeric'
@@ -305,7 +308,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       // substrings (e.g. "3" matching "30 nodes"). Hook name is scoped by
       // block id so each stat is individually addressable.
       data-testid={`stat-block-${block.id}`}
-      className={`group relative glass p-4 rounded-lg min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
+      className={`group relative rounded-lg border border-border/50 bg-card p-4 text-card-foreground shadow-sm min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-accent/40' : ''} ${isDemo ? 'border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
       {...(isClickable ? {
         role: 'button' as const,

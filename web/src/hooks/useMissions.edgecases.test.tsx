@@ -4,6 +4,7 @@ import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { resolveRequiredTools } from '../lib/missions/preflightCheck'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -16,15 +17,21 @@ vi.mock('./mcp/shared', () => ({
 
 vi.mock('./useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
+  isDemoModeForced: false,
   default: vi.fn(() => false),
 }))
-vi.mock('./useLocalAgent', () => ({
-  useLocalAgent: vi.fn(() => ({ isConnected: false })),
-  isAgentUnavailable: vi.fn(() => false),
-  isAgentConnected: vi.fn(() => false),
-  reportAgentDataSuccess: vi.fn(),
-  reportAgentDataError: vi.fn(),
-}))
+vi.mock('./useLocalAgent', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./useLocalAgent')>()
+  return {
+    ...actual,
+    useLocalAgent: vi.fn(() => ({ isConnected: false })),
+    isAgentUnavailable: vi.fn(() => false),
+    isAgentConnected: vi.fn(() => false),
+    reportAgentActivity: vi.fn(),
+    reportAgentDataSuccess: vi.fn(),
+    reportAgentDataError: vi.fn(),
+  }
+})
 
 vi.mock('../lib/utils/wsAuth', () => ({
   appendWsAuthToken: vi.fn((url: string) => url),
@@ -189,6 +196,53 @@ beforeEach(() => {
 })
 
 // ── wsSend: partial retry success ────────────────────────────────────────────
+
+describe('tool overlap queueing', () => {
+  it('queues missions until conflicting tools are released', async () => {
+    vi.mocked(resolveRequiredTools).mockReturnValue(['helm'])
+    const { result } = renderHook(() => useMissions(), { wrapper })
+
+    const first = await startMissionWithConnection(result)
+
+    let secondMissionId = ''
+    act(() => {
+      secondMissionId = result.current.startMission({
+        ...defaultParams,
+        title: 'Second Mission',
+        initialPrompt: 'Install another chart',
+      })
+    })
+    await act(async () => { await Promise.resolve() })
+
+    const chatCallsBeforeCompletion = (MockWebSocket.lastInstance?.send.mock.calls ?? []).filter(
+      (call: string[]) => {
+        try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
+      },
+    )
+    expect(chatCallsBeforeCompletion).toHaveLength(1)
+    expect(result.current.missions.find(m => m.id === secondMissionId)?.currentStep)
+      .toContain('Waiting for helm')
+
+    await act(async () => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: first.requestId,
+        type: 'result',
+        payload: { content: 'done', toolsExecuted: true },
+      })
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      const chatCallsAfterCompletion = (MockWebSocket.lastInstance?.send.mock.calls ?? []).filter(
+        (call: string[]) => {
+          try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
+        },
+      )
+      expect(chatCallsAfterCompletion).toHaveLength(2)
+      expect(result.current.missions.find(m => m.id === secondMissionId)?.status).toBe('running')
+    })
+  })
+})
 
 describe('wsSend partial retry', () => {
   it('succeeds on second retry when WS opens after initial failure', async () => {
@@ -803,6 +857,56 @@ describe('stream done cleanup', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+// ── Result message: interactive follow-up handling ───────────────────────────
+
+describe('interactive result transitions', () => {
+  it('keeps a retried mission in waiting_input when the latest result asks what to do next', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId, requestId } = await startMissionWithConnection(result)
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'error',
+        payload: { code: 'rollback_failed', message: 'Rollback failed partway through' },
+      })
+    })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('failed')
+
+    const sendCallCount = MockWebSocket.lastInstance?.send.mock.calls.length ?? 0
+    act(() => {
+      result.current.sendMessage(missionId, 'Retry the rollback and tell me what to do next')
+    })
+
+    const retryChatCall = (MockWebSocket.lastInstance?.send.mock.calls ?? [])
+      .slice(sendCallCount)
+      .find((call: string[]) => JSON.parse(call[0]).type === 'chat')
+    expect(retryChatCall).toBeDefined()
+    const retryRequestId = JSON.parse(retryChatCall![0]).id
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: retryRequestId,
+        type: 'result',
+        payload: {
+          content: [
+            'Rollback completed successfully. What would you like to do next?',
+            '',
+            '1. Verify the workload',
+            '2. Close the mission',
+          ].join('\n'),
+          isError: true,
+          toolsExecuted: true,
+        },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('waiting_input')
+    expect(mission?.messages[mission.messages.length - 1]?.content).toContain('Rollback completed successfully')
   })
 })
 

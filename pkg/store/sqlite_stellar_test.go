@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -143,4 +144,48 @@ func TestStellarActionsAndNotifications(t *testing.T) {
 	count, err = s.CountUnreadStellarNotifications(ctx, userID)
 	require.NoError(t, err)
 	require.Equal(t, 0, count)
+}
+
+func TestGetActiveWatchesAutoResolvesInactiveEntries(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-watch"
+
+	inactiveAt := time.Now().UTC().Add(-(stellarWatchInactivityTimeout + time.Minute))
+	recentAt := time.Now().UTC()
+
+	_, err := s.CreateWatch(ctx, &StellarWatch{
+		UserID:       userID,
+		Cluster:      "prod-a",
+		Namespace:    "default",
+		ResourceKind: "Deployment",
+		ResourceName: "api",
+		Reason:       "recurring restarts",
+		Status:       "active",
+		LastEventAt:  &inactiveAt,
+	})
+	require.NoError(t, err)
+
+	activeID, err := s.CreateWatch(ctx, &StellarWatch{
+		UserID:       userID,
+		Cluster:      "prod-a",
+		Namespace:    "default",
+		ResourceKind: "Deployment",
+		ResourceName: "worker",
+		Reason:       "fresh event",
+		Status:       "active",
+		LastEventAt:  &recentAt,
+	})
+	require.NoError(t, err)
+
+	watches, err := s.GetActiveWatches(ctx, userID)
+	require.NoError(t, err)
+	require.Len(t, watches, 1)
+	assert.Equal(t, activeID, watches[0].ID)
+	assert.NotNil(t, watches[0].LastEventAt)
+
+	resolved, err := s.GetWatchesSince(ctx, userID, time.Now().UTC().Add(-time.Hour), "resolved")
+	require.NoError(t, err)
+	require.Len(t, resolved, 1)
+	assert.Equal(t, stellarWatchAutoResolvedLastUpdate, resolved[0].LastUpdate)
+	require.NotNil(t, resolved[0].ResolvedAt)
 }

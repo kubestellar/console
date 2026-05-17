@@ -300,7 +300,8 @@ layer(base);
 
 /* Light mode: visible but not heavy card shadows (#4254, #4880) */
 .light .glass {
-  border: 1px solid var(--glass-border);
+  background: var(--glass-background, rgba(255, 255, 255, 0.95));
+  border: 1px solid var(--glass-border, rgba(0, 0, 0, 0.12));
   box-shadow:
     0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 2px 8px -2px rgba(0, 0, 0, 0.08);

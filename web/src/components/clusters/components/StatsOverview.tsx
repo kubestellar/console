@@ -186,7 +186,7 @@ function StatBlock({ blockId, stats, onClick, color, icon }: StatBlockProps) {
 
   return (
     <div
-      className={`glass p-4 rounded-lg ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
+      className={`rounded-lg border border-border/50 bg-card p-4 text-card-foreground shadow-sm ${isClickable ? 'cursor-pointer hover:bg-accent/40' : ''} transition-colors`}
       onClick={() => isClickable && onClick?.()}
     >
       {/* Allow long labels (e.g. "Unhealthy", "Storage") to wrap to a second

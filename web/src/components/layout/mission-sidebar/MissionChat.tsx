@@ -51,6 +51,8 @@ const SCROLL_BOTTOM_THRESHOLD_PX = 50
 /** Duration in ms for the scroll-to-bottom button fade animation */
 const SCROLL_BTN_FADE_MS = 200
 const COMPACT_ACTION_BUTTON_CLASS = 'h-10 w-10 shrink-0 p-0 inline-flex items-center justify-center rounded-lg'
+const MISSION_PROGRESS_MIN = 0
+const MISSION_PROGRESS_MAX = 100
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen, onOpenOrbitDialog }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void; onOpenOrbitDialog?: (prefill: { clusters?: string[]; resourceFilters?: Record<string, OrbitResourceFilter[]> }) => void }) {
   const { t } = useTranslation('common')
@@ -440,6 +442,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const showCompletedFeedback = !mission.feedback && !feedbackDismissed.has(mission.id)
   const showSaveResolutionPrompt = mission.feedback === 'positive' && !feedbackDismissed.has(mission.id)
   const showOrbitSetupOffer = mission.importedFrom?.missionClass === 'install' || mission.type === 'deploy'
+  const progressValue = typeof mission.progress === 'number'
+    ? Math.max(MISSION_PROGRESS_MIN, Math.min(MISSION_PROGRESS_MAX, Math.round(mission.progress)))
+    : null
   const showOrbitMonitorOffer =
     mission.importedFrom?.missionClass !== 'install' &&
     mission.importedFrom?.missionClass !== 'orbit' &&
@@ -885,16 +890,32 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 className="w-4 h-4"
               />
             </div>
-            <div className="rounded-lg bg-secondary/50 flex items-center gap-2 pr-3">
-              {/* Show rotating messages if no specific currentStep */}
-              <TypingIndicator showMessage={!mission.currentStep} />
-              {mission.currentStep && (
-                <span className="text-xs text-muted-foreground">{mission.currentStep}</span>
-              )}
-              {mission.tokenUsage && mission.tokenUsage.total > 0 && (
-                <span className="text-2xs text-muted-foreground/70 font-mono">
-                  {mission.tokenUsage.total.toLocaleString()} tokens
-                </span>
+            <div className="rounded-lg bg-secondary/50 px-3 py-2">
+              <div className="flex items-center gap-2">
+                {/* Show rotating messages if no specific currentStep */}
+                <TypingIndicator showMessage={!mission.currentStep} />
+                {mission.currentStep && (
+                  <span className="text-xs text-muted-foreground">{mission.currentStep}</span>
+                )}
+                {mission.tokenUsage && mission.tokenUsage.total > 0 && (
+                  <span className="text-2xs text-muted-foreground/70 font-mono">
+                    {mission.tokenUsage.total.toLocaleString()} tokens
+                  </span>
+                )}
+              </div>
+              {progressValue !== null && (
+                <div className="mt-2 min-w-[180px]">
+                  <div className="flex items-center justify-between gap-2 text-2xs">
+                    <span className="text-muted-foreground">{t('missionChat.progressLabel', { defaultValue: 'Progress' })}</span>
+                    <span className="text-foreground">{t('missionChat.progressValue', { progress: progressValue, defaultValue: '{{progress}}%' })}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 rounded-full bg-background/60">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-300"
+                      style={{ width: `${progressValue}%` }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </div>

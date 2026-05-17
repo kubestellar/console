@@ -8,25 +8,41 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 
+const EVENT_FETCH_LIMIT = 100
+const MAX_TOP_REASONS = 5
+const MAX_TOP_CLUSTERS = 5
+const MAX_BAR_WIDTH_PERCENT = 100
+
+function getEventCount(count?: number | string): number {
+  const numericCount = Number(count)
+  return Number.isFinite(numericCount) && numericCount > 0 ? numericCount : 1
+}
+
+function getBarWidth(count: number, total: number) {
+  const width = total > 0 ? Math.min(MAX_BAR_WIDTH_PERCENT, (count / total) * MAX_BAR_WIDTH_PERCENT) : 0
+  return `${width}%`
+}
+
 export function EventSummary() {
   const { t } = useTranslation(['cards', 'common'])
   const {
     events,
     isLoading,
     isRefreshing,
-    isDemoFallback,
+    isDemoFallback: isDemoData,
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+    lastRefresh } = useCachedEvents(undefined, undefined, { limit: EVENT_FETCH_LIMIT, category: 'realtime' })
   const { filterByCluster } = useGlobalFilters()
+  const allEvents = events || []
 
   // Report state to CardWrapper for refresh animation
-  const hasData = events.length > 0
+  const hasData = allEvents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
-    isDemoData: isDemoFallback,
+    isDemoData,
     hasAnyData: hasData,
     isFailed: isFailed && !hasData,
     consecutiveFailures })
@@ -42,7 +58,7 @@ export function EventSummary() {
     storageKey: 'event-summary' })
 
   const filteredEvents = (() => {
-    let result = filterByCluster(events)
+    let result = filterByCluster(allEvents)
     if (localClusterFilter.length > 0) {
       result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
     }
@@ -50,29 +66,34 @@ export function EventSummary() {
   })()
 
   const summary = useMemo(() => {
-    const warnings = filteredEvents.filter(e => e.type === 'Warning').length
-    const normal = filteredEvents.filter(e => e.type === 'Normal').length
+    const warnings = filteredEvents.reduce((sum, event) => sum + (event.type === 'Warning' ? getEventCount(event.count) : 0), 0)
+    const normal = filteredEvents.reduce((sum, event) => sum + (event.type === 'Normal' ? getEventCount(event.count) : 0), 0)
+    const total = warnings + normal
 
     const reasonCounts: Record<string, number> = {}
-    filteredEvents.forEach(e => {
-      reasonCounts[e.reason] = (reasonCounts[e.reason] || 0) + 1
+    filteredEvents.forEach(event => {
+      const eventCount = getEventCount(event.count)
+      reasonCounts[event.reason] = (reasonCounts[event.reason] || 0) + eventCount
     })
-    const topReasons = Object.entries(reasonCounts)
+    const sortedReasons = Object.entries(reasonCounts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+    const topReasons = sortedReasons.slice(0, MAX_TOP_REASONS)
+    const visibleReasonCount = topReasons.reduce((sum, [, count]) => sum + count, 0)
+    const otherReasonsCount = Math.max(0, total - visibleReasonCount)
 
     const clusterCounts: Record<string, number> = {}
-    filteredEvents.forEach(e => {
-      if (e.cluster) {
-        const name = (e.cluster ?? '').split('/').pop() || e.cluster
-        clusterCounts[name] = (clusterCounts[name] || 0) + 1
+    filteredEvents.forEach(event => {
+      if (event.cluster) {
+        const eventCount = getEventCount(event.count)
+        const name = event.cluster.split('/').pop() || event.cluster
+        clusterCounts[name] = (clusterCounts[name] || 0) + eventCount
       }
     })
     const topClusters = Object.entries(clusterCounts)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+      .slice(0, MAX_TOP_CLUSTERS)
 
-    return { warnings, normal, topReasons, topClusters }
+    return { warnings, normal, total, topReasons, otherReasonsCount, topClusters }
   }, [filteredEvents])
 
   if (showSkeleton) {
@@ -88,7 +109,7 @@ export function EventSummary() {
     )
   }
 
-  const total = filteredEvents.length
+  const total = summary.total
 
   return (
     <div className="space-y-4">
@@ -178,13 +199,27 @@ export function EventSummary() {
                   <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
                     <div
                       className="h-full rounded-full bg-purple-500"
-                      style={{ width: `${total > 0 ? Math.min(100, (count / total) * 100) : 0}%` }}
+                      style={{ width: getBarWidth(count, total) }}
                     />
                   </div>
                   <span className="text-muted-foreground w-6 text-right">{count}</span>
                 </div>
               </div>
             ))}
+            {summary.otherReasonsCount > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
+                <span className="text-foreground truncate mr-2">{t('eventSummary.others')}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-purple-500"
+                      style={{ width: getBarWidth(summary.otherReasonsCount, total) }}
+                    />
+                  </div>
+                  <span className="text-muted-foreground w-6 text-right">{summary.otherReasonsCount}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -201,7 +236,7 @@ export function EventSummary() {
                   <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
                     <div
                       className="h-full rounded-full bg-blue-500"
-                      style={{ width: `${total > 0 ? Math.min(100, (count / total) * 100) : 0}%` }}
+                      style={{ width: getBarWidth(count, total) }}
                     />
                   </div>
                   <span className="text-muted-foreground w-6 text-right">{count}</span>

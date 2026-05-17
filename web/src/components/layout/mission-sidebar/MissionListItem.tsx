@@ -17,6 +17,19 @@ import { STATUS_CONFIG, TYPE_ICONS } from './types'
 
 /** Mission statuses that indicate the mission was interrupted or failed and may need rollback */
 const ROLLBACK_ELIGIBLE_STATUSES = new Set(['failed', 'cancelled'])
+const MISSION_PROGRESS_MIN = 0
+const MISSION_PROGRESS_MAX = 100
+const MISSION_STATUS_LABEL_KEYS: Record<Mission['status'], string> = {
+  pending: 'missionSidebar.statusLabels.pending',
+  running: 'missionSidebar.statusLabels.running',
+  cancelling: 'missionSidebar.statusLabels.cancelling',
+  cancelled: 'missionSidebar.statusLabels.cancelled',
+  waiting_input: 'missionSidebar.statusLabels.waitingInput',
+  completed: 'missionSidebar.statusLabels.completed',
+  failed: 'missionSidebar.statusLabels.failed',
+  blocked: 'missionSidebar.statusLabels.blocked',
+  saved: 'missionSidebar.statusLabels.saved',
+}
 
 type MissionListItemProps = {
   mission: Mission
@@ -38,6 +51,10 @@ function MissionListItemComponent({ mission, isActive, onClick, onDismiss, onExp
   const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending
   const StatusIcon = config.icon
   const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
+  const statusLabel = t(MISSION_STATUS_LABEL_KEYS[mission.status], { defaultValue: config.label })
+  const progressValue = typeof mission.progress === 'number'
+    ? Math.max(MISSION_PROGRESS_MIN, Math.min(MISSION_PROGRESS_MAX, Math.round(mission.progress)))
+    : null
 
   /** Whether this mission is eligible for rollback (failed or cancelled with a non-trivial history) */
   const canRollback = onRollback &&
@@ -150,7 +167,33 @@ function MissionListItemComponent({ mission, isActive, onClick, onDismiss, onExp
           className="w-full text-left px-3 pb-3 pt-1 pl-10"
         >
           <p className="text-xs text-muted-foreground truncate">{mission.description}</p>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="mt-2 rounded-md border border-border/60 bg-secondary/30 p-2">
+            <div className="flex items-center justify-between gap-2 text-2xs">
+              <span className="text-muted-foreground">{t('common.status')}</span>
+              <span className={cn('font-medium', config.color)}>{statusLabel}</span>
+            </div>
+            {mission.currentStep && (
+              <p className="mt-1 text-xs text-foreground line-clamp-2">
+                <span className="text-muted-foreground">{t('missionSidebar.currentStepLabel', { defaultValue: 'Current step:' })}</span>{' '}
+                {mission.currentStep}
+              </p>
+            )}
+            {progressValue !== null && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between gap-2 text-2xs">
+                  <span className="text-muted-foreground">{t('missionSidebar.progressLabel', { defaultValue: 'Progress' })}</span>
+                  <span className="text-foreground">{t('missionSidebar.progressValue', { progress: progressValue, defaultValue: '{{progress}}%' })}</span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-background/60">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] duration-300"
+                    style={{ width: `${progressValue}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-2">
             {mission.importedFrom?.missionClass === 'orbit' && (
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full border border-purple-500/20">
                 <Satellite className="w-2.5 h-2.5" />

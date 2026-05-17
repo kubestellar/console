@@ -306,6 +306,7 @@ const APPS_CACHE_KEY = 'kc-argocd-apps-cache'
 
 interface UseArgoCDApplicationsResult {
   applications: ArgoApplication[]
+  isDemoFallback: boolean
   isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
@@ -326,6 +327,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
     cachedSnapshot?.data || []
   )
   const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
+  const isDemoFallback = isDemoData
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -408,6 +410,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
 
   return {
     applications,
+    isDemoFallback,
     isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,
@@ -428,6 +431,7 @@ interface UseArgoCDHealthResult {
   stats: ArgoHealthData
   total: number
   healthyPercent: number
+  isDemoFallback: boolean
   isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
@@ -449,6 +453,7 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     cachedHealthSnapshot?.data || { healthy: 0, degraded: 0, progressing: 0, missing: 0, unknown: 0 }
   )
   const [isDemoData, setIsDemoData] = useState(cachedHealthSnapshot?.isDemoData ?? true)
+  const isDemoFallback = isDemoData
   const [isLoading, setIsLoading] = useState(!cachedHealthSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -541,6 +546,7 @@ export function useArgoCDHealth(): UseArgoCDHealthResult {
     stats,
     total,
     healthyPercent,
+    isDemoFallback,
     isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,
@@ -602,6 +608,7 @@ interface UseArgoCDSyncStatusResult {
   total: number
   syncedPercent: number
   outOfSyncPercent: number
+  isDemoFallback: boolean
   isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
@@ -623,6 +630,7 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     cachedSyncSnapshot?.data || { synced: 0, outOfSync: 0, unknown: 0 }
   )
   const [isDemoData, setIsDemoData] = useState(cachedSyncSnapshot?.isDemoData ?? true)
+  const isDemoFallback = isDemoData
   const [isLoading, setIsLoading] = useState(!cachedSyncSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -718,6 +726,7 @@ export function useArgoCDSyncStatus(localClusterFilter: string[] = []): UseArgoC
     total,
     syncedPercent,
     outOfSyncPercent,
+    isDemoFallback,
     isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,
@@ -831,6 +840,7 @@ const APPSET_CACHE_KEY = 'kc-argocd-appsets-cache'
 
 interface UseArgoApplicationSetsResult {
   applicationSets: ArgoApplicationSet[]
+  isDemoFallback: boolean
   isDemoData: boolean
   isLoading: boolean
   isRefreshing: boolean
@@ -851,6 +861,7 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
     cachedAppSetSnapshot?.data || []
   )
   const [isDemoData, setIsDemoData] = useState(cachedAppSetSnapshot?.isDemoData ?? true)
+  const isDemoFallback = isDemoData
   const [isLoading, setIsLoading] = useState(!cachedAppSetSnapshot)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -933,6 +944,7 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
 
   return {
     applicationSets,
+    isDemoFallback,
     isDemoData,
     isLoading: isLoading || clustersLoading,
     isRefreshing,

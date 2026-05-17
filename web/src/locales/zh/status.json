@@ -1,14 +1,14 @@
 {
   "cluster": {
-    "healthy": "Healthy",
-    "warning": "Warning",
-    "error": "Error",
-    "critical": "Critical",
-    "degraded": "Degraded",
-    "unknown": "Unknown",
-    "unreachable": "Offline",
-    "connected": "Connected",
-    "disconnected": "Disconnected"
+    "healthy": "健康",
+    "warning": "警告",
+    "error": "错误",
+    "critical": "严重",
+    "degraded": "降级",
+    "unknown": "未知",
+    "unreachable": "离线",
+    "connected": "已连接",
+    "disconnected": "已断开"
   },
   "pod": {
     "running": "Running",

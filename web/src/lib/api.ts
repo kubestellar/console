@@ -469,8 +469,18 @@ async function safeReadTextOrEmpty(response: Response, context: string): Promise
 }
 
 async function safeParseJsonOrNull<T = unknown>(response: Response, context: string): Promise<T | null> {
+  const contentLength = response.headers.get('content-length')
+
+  if (response.status === 204 || contentLength === '0') {
+    return {} as T
+  }
+
   try {
-    return await response.json() as T
+    const text = await response.text()
+    if (!text || text.trim() === '') {
+      return {} as T
+    }
+    return JSON.parse(text) as T
   } catch (error: unknown) {
     reportAppError(error, {
       context,
@@ -607,7 +617,7 @@ class ApiClient {
     return { controller, timeoutId }
   }
 
-  async get<T = unknown>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean }): Promise<{ data: T }> {
+  async get<T = unknown>(path: string, options?: { headers?: Record<string, string>; timeout?: number; requiresAuth?: boolean; signal?: AbortSignal }): Promise<{ data: T }> {
     // Skip API calls to protected endpoints when not authenticated
     const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
     if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
@@ -625,12 +635,13 @@ class ApiClient {
 
     const headers = { ...this.getHeaders(), ...options?.headers }
     const { controller, timeoutId } = this.createAbortController(options?.timeout ?? DEFAULT_TIMEOUT)
+    const signal = options?.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal
 
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'GET',
         headers,
-        signal: controller.signal,
+        signal,
       })
       clearTimeout(timeoutId)
 
@@ -660,8 +671,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await safeParseJsonOrNull<T>(response, `[api] GET ${path} failed to parse JSON response`)
-      if (data === null) throw new Error('Invalid JSON response from API')
-      return { data }
+      return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
@@ -716,8 +726,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await safeParseJsonOrNull<T>(response, `[api] POST ${path} failed to parse JSON response`)
-      if (data === null) throw new Error('Invalid JSON response from API')
-      return { data }
+      return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
@@ -768,8 +777,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await safeParseJsonOrNull<T>(response, `[api] PATCH ${path} failed to parse JSON response`)
-      if (data === null) throw new Error('Invalid JSON response from API')
-      return { data }
+      return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
@@ -824,8 +832,7 @@ class ApiClient {
       markBackendSuccess()
       this.checkTokenRefresh(response)
       const data = await safeParseJsonOrNull<T>(response, `[api] PUT ${path} failed to parse JSON response`)
-      if (data === null) throw new Error('Invalid JSON response from API')
-      return { data }
+      return { data: data ?? ({} as T) }
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {

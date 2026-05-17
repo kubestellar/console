@@ -63,7 +63,7 @@ jobs:
     if: github.repository == 'kubestellar/console'
     name: In-Place Upgrade Smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -239,6 +239,74 @@ jobs:
           curl -sf -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status | jq .
 
           echo "Upgrade smoke test PASSED"
+
+      - name: Trigger Helm rollback to baseline
+        run: |
+          DEPLOY="${{ env.RELEASE_NAME }}-kubestellar-console"
+
+          # Show Helm history so the revision is visible in CI logs
+          echo "--- Helm history before rollback ---"
+          helm history ${{ env.RELEASE_NAME }} -n ${{ env.NAMESPACE }}
+
+          # Revision 1 is always the baseline install in this workflow.
+          # The self-upgrade patches the Deployment directly (not via helm upgrade),
+          # so only one Helm revision exists. helm rollback re-applies it,
+          # reverting the image tag from :ci-head back to :ci-baseline.
+          echo "Rolling back $DEPLOY to revision 1 (:${{ env.BASELINE_TAG }})"
+          helm rollback ${{ env.RELEASE_NAME }} 1 \
+            -n ${{ env.NAMESPACE }} \
+            --wait \
+            --timeout=${{ env.HELM_INSTALL_TIMEOUT }}
+
+          kubectl -n ${{ env.NAMESPACE }} rollout status \
+            "deployment/$DEPLOY" --timeout=${{ env.ROLLOUT_TIMEOUT }}
+
+      - name: Verify post-rollback image tag
+        run: |
+          DEPLOY="${{ env.RELEASE_NAME }}-kubestellar-console"
+          IMG=$(kubectl -n ${{ env.NAMESPACE }} get deployment "$DEPLOY" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "Post-rollback image: $IMG"
+
+          case "$IMG" in
+            *":${{ env.BASELINE_TAG }}")
+              echo "Image correctly rolled back to :${{ env.BASELINE_TAG }}"
+              ;;
+            *)
+              echo "FAIL: post-rollback image is $IMG, expected *:${{ env.BASELINE_TAG }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Verify post-rollback health
+        run: |
+          # Kill any leftover port-forward and start a fresh one
+          pkill -f "port-forward.*8080" 2>/dev/null || true
+          sleep ${{ env.PORT_FORWARD_SETTLE_S }}
+          kubectl -n ${{ env.NAMESPACE }} port-forward \
+            svc/${{ env.RELEASE_NAME }}-kubestellar-console 8080:8080 &
+
+          DEADLINE=$(( $(date +%s) + ${{ env.HEALTH_TIMEOUT_S }} ))
+          echo "Waiting for post-rollback /health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
+          HEALTHY=false
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+              echo "Post-rollback pod healthy after $(( $(date +%s) - DEADLINE + ${{ env.HEALTH_TIMEOUT_S }} ))s"
+              HEALTHY=true
+              break
+            fi
+            sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
+          done
+
+          if ! $HEALTHY; then
+            echo "FAIL: post-rollback pod did not become healthy within ${{ env.HEALTH_TIMEOUT_S }}s"
+            exit 1
+          fi
+
+          echo "--- Post-rollback /health ---"
+          curl -sf http://127.0.0.1:8080/health | jq .
+
+          echo "Rollback smoke test PASSED"
 
       - name: Dump diagnostics on failure
         if: failure()

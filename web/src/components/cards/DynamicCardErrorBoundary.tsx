@@ -12,6 +12,8 @@ interface Props {
   children: ReactNode
   fallbackTitle?: string
   fallbackMessage?: string
+  fallbackRetryLabel?: (retriesLeft: number) => string
+  fallbackReloadMessage?: string
   onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 
@@ -89,7 +91,9 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
             {this.props.fallbackMessage || this.state.error?.message || 'An unexpected error occurred while rendering this card.'}
           </p>
           {retriesExhausted ? (
-            <p className="text-xs text-muted-foreground">Reload the page to try again.</p>
+            <p className="text-xs text-muted-foreground">
+              {this.props.fallbackReloadMessage || 'Reload the page to try again.'}
+            </p>
           ) : (
             <Button
               variant="secondary"
@@ -97,7 +101,7 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
               onClick={this.handleRetry}
               icon={<RotateCcw className="w-3 h-3" />}
             >
-              Retry ({retriesLeft} left)
+              {this.props.fallbackRetryLabel?.(retriesLeft) || `Retry (${retriesLeft} left)`}
             </Button>
           )}
         </div>

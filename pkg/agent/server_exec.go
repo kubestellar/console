@@ -373,7 +373,11 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeMu.Lock()
-	_ = conn.SetWriteDeadline(time.Now().Add(agentExecWriteDeadline))
+	if err := conn.SetWriteDeadline(time.Now().Add(agentExecWriteDeadline)); err != nil {
+		writeMu.Unlock()
+		slog.Warn("[AgentExec] exec_started: set write deadline failed", "error", err)
+		return
+	}
 	if writeErr := conn.WriteMessage(websocket.TextMessage, startMsg); writeErr != nil {
 		writeMu.Unlock()
 		slog.Error("[AgentExec] failed to send exec_started to client", "error", writeErr)
@@ -403,7 +407,12 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				writeMu.Lock()
-				_ = conn.SetWriteDeadline(time.Now().Add(agentExecWriteDeadline))
+				if err := conn.SetWriteDeadline(time.Now().Add(agentExecWriteDeadline)); err != nil {
+					writeMu.Unlock()
+					slog.Warn("[AgentExec] ping: set write deadline failed", "error", err)
+					execCancel()
+					return
+				}
 				err := conn.WriteMessage(websocket.PingMessage, nil)
 				writeMu.Unlock()
 				if err != nil {
@@ -502,8 +511,14 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeMu.Lock()
-	_ = conn.SetWriteDeadline(time.Now().Add(agentExecWriteDeadline))
-	_ = conn.WriteMessage(websocket.TextMessage, exitMsg)
+	if err := conn.SetWriteDeadline(time.Now().Add(agentExecWriteDeadline)); err != nil {
+		writeMu.Unlock()
+		slog.Warn("[AgentExec] exit: set write deadline failed", "error", err)
+		return
+	}
+	if err := conn.WriteMessage(websocket.TextMessage, exitMsg); err != nil {
+		slog.Warn("[AgentExec] exit: write failed", "error", err)
+	}
 	writeMu.Unlock()
 }
 

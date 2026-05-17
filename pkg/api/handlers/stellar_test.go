@@ -71,6 +71,9 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Post("/api/stellar/ask", h.Ask)
 	app.Get("/api/stellar/notifications", h.ListNotifications)
 	app.Post("/api/stellar/notifications/:id/read", h.MarkNotificationRead)
+	app.Get("/api/stellar/watches", h.ListWatches)
+	app.Post("/api/stellar/watches", h.CreateWatch)
+	app.Post("/api/stellar/watches/:id/resolve", h.ResolveWatch)
 
 	return app, sqlStore
 }
@@ -203,4 +206,42 @@ func TestStellarAskStateDigestAndNotifications(t *testing.T) {
 			require.Equal(t, http.StatusNoContent, readResp.StatusCode)
 		}
 	}
+}
+
+func TestStellarResolveWatchReturnsJSON(t *testing.T) {
+	app, _ := newStellarTestApp(t)
+
+	createBody := map[string]any{
+		"cluster":      "prod-a",
+		"namespace":    "default",
+		"resourceKind": "Deployment",
+		"resourceName": "api",
+		"reason":       "recurring failures",
+	}
+	rawCreate, _ := json.Marshal(createBody)
+	createReq, err := http.NewRequest(http.MethodPost, "/api/stellar/watches", bytes.NewReader(rawCreate))
+	require.NoError(t, err)
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp, err := app.Test(createReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, createResp.StatusCode)
+
+	var created map[string]any
+	require.NoError(t, json.NewDecoder(createResp.Body).Decode(&created))
+	watchID, ok := created["id"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, watchID)
+
+	resolveReq, err := http.NewRequest(http.MethodPost, "/api/stellar/watches/"+watchID+"/resolve", bytes.NewReader([]byte(`{}`)))
+	require.NoError(t, err)
+	resolveReq.Header.Set("Content-Type", "application/json")
+	resolveResp, err := app.Test(resolveReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resolveResp.StatusCode)
+
+	var resolved map[string]any
+	require.NoError(t, json.NewDecoder(resolveResp.Body).Decode(&resolved))
+	assert.Equal(t, watchID, resolved["id"])
+	assert.Equal(t, "resolved", resolved["status"])
+	assert.NotNil(t, resolved["inactivityTimeoutMs"])
 }

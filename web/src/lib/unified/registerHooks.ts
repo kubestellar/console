@@ -101,12 +101,30 @@ const THREE_DAYS_MS = 3 * MS_PER_DAY
 
 type ResourceArity = 'none' | 'cluster' | 'cluster+namespace'
 
+/** Base shape returned by resource hooks registered with the unified system. */
+interface HookResult {
+  isLoading: boolean
+  error?: string | null
+  refetch: () => void
+}
+
+/** Base shape returned by cached status hooks. */
+interface CachedHookResult {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+  isLoading?: boolean
+  showSkeleton?: boolean
+  error?: string | null | boolean
+  isFailed?: boolean
+  refetch?: () => void | Promise<void>
+}
+
 interface ResourceHookConfig {
-  useHook: (...args: any[]) => any
+  useHook: (...args: any[]) => HookResult // eslint-disable-line @typescript-eslint/no-explicit-any
   dataField: string
   arity: ResourceArity
   wrapRefetch?: boolean
-  extra?: (result: any) => Record<string, unknown>
+  extra?: (result: HookResult) => Record<string, unknown>
   dataFallback?: unknown
 }
 
@@ -121,9 +139,12 @@ function createUnifiedResourceHook(config: ResourceHookConfig) {
         ? config.useHook(cluster)
         : config.useHook(cluster, namespace)
 
+    // Dynamic field access by name — cast is intentional since dataField
+    // is a runtime-configured key that varies per hook registration.
+    const resultRecord = result as unknown as Record<string, unknown>
     const data = config.dataFallback !== undefined
-      ? (result[config.dataField] || config.dataFallback)
-      : result[config.dataField]
+      ? (resultRecord[config.dataField] || config.dataFallback)
+      : resultRecord[config.dataField]
 
     return {
       data,
@@ -135,15 +156,15 @@ function createUnifiedResourceHook(config: ResourceHookConfig) {
   }
 }
 
-interface CachedStatusHookConfig {
-  useCachedHook: () => any
+interface CachedStatusHookConfig<TResult extends CachedHookResult = CachedHookResult> {
+  useCachedHook: () => TResult
   dataField: string
   loadingField: 'showSkeleton' | 'isLoading'
   errorMode: 'message' | 'passthrough' | 'isFailed'
   errorMsg?: string
   wrapRefetch?: boolean
   optionalData?: boolean
-  refetchOverride?: (result: any) => (() => void | Promise<void>)
+  refetchOverride?: (result: TResult) => (() => void | Promise<void>)
 }
 
 function createUnifiedCachedHook(config: CachedStatusHookConfig) {
@@ -154,13 +175,13 @@ function createUnifiedCachedHook(config: CachedStatusHookConfig) {
       ? (result.data?.[config.dataField] ?? [])
       : result.data[config.dataField]
 
-    const isLoading = result[config.loadingField]
+    const isLoading = result[config.loadingField] ?? false
 
     let error: Error | null = null
     if (config.errorMode === 'message') {
       error = result.error ? new Error(config.errorMsg!) : null
     } else if (config.errorMode === 'passthrough') {
-      error = result.error ? new Error(result.error) : null
+      error = result.error ? new Error(String(result.error)) : null
     } else if (config.errorMode === 'isFailed') {
       error = result.isFailed ? new Error(config.errorMsg!) : null
     }
@@ -168,7 +189,7 @@ function createUnifiedCachedHook(config: CachedStatusHookConfig) {
     const refetch = config.refetchOverride
       ? config.refetchOverride(result)
       : config.wrapRefetch
-        ? () => { result.refetch() }
+        ? () => { void result.refetch?.() }
         : (result.refetch ?? (() => {}))
 
     return {
@@ -192,7 +213,7 @@ const RESOURCE_HOOKS: Array<ResourceHookConfig & { name: string }> = [
   { name: 'useHelmReleases', useHook: useHelmReleases, dataField: 'releases', arity: 'cluster' },
   { name: 'useConfigMaps', useHook: useConfigMaps, dataField: 'configmaps', arity: 'cluster+namespace' },
   { name: 'useSecrets', useHook: useSecrets, dataField: 'secrets', arity: 'cluster+namespace' },
-  { name: 'useIngresses', useHook: useIngresses, dataField: 'ingresses', arity: 'cluster+namespace', extra: (result: any) => ({ isDemoData: result.isDemoFallback }) },
+  { name: 'useIngresses', useHook: useIngresses, dataField: 'ingresses', arity: 'cluster+namespace', extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
   { name: 'useNodes', useHook: useNodes, dataField: 'nodes', arity: 'cluster' },
   { name: 'useJobs', useHook: useJobs, dataField: 'jobs', arity: 'cluster+namespace' },
   { name: 'useCronJobs', useHook: useCronJobs, dataField: 'cronJobs', arity: 'cluster+namespace' },
@@ -201,7 +222,7 @@ const RESOURCE_HOOKS: Array<ResourceHookConfig & { name: string }> = [
   { name: 'useHPAs', useHook: useHPAs, dataField: 'hpas', arity: 'cluster+namespace' },
   { name: 'useReplicaSets', useHook: useReplicaSets, dataField: 'replicaSets', arity: 'cluster+namespace' },
   { name: 'usePVs', useHook: usePVs, dataField: 'pvs', arity: 'cluster' },
-  { name: 'useResourceQuotas', useHook: useResourceQuotas, dataField: 'resourceQuotas', arity: 'cluster+namespace', extra: (result: any) => ({ isDemoData: result.isDemoFallback }) },
+  { name: 'useResourceQuotas', useHook: useResourceQuotas, dataField: 'resourceQuotas', arity: 'cluster+namespace', extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
   { name: 'useLimitRanges', useHook: useLimitRanges, dataField: 'limitRanges', arity: 'cluster+namespace' },
   { name: 'useNetworkPolicies', useHook: useNetworkPolicies, dataField: 'networkpolicies', arity: 'cluster+namespace' },
   { name: 'useNamespaces', useHook: useNamespaces, dataField: 'namespaces', arity: 'cluster' },

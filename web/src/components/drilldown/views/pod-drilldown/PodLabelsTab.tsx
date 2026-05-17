@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, Loader2, Copy, Check, Pencil, Trash2, Plus, Sav
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../ui/Button'
 import { useTranslation } from 'react-i18next'
+import type { KeyValueDiffEntry } from './helpers'
 
 export interface PodLabelsTabProps {
   labels: Record<string, string> | null
@@ -44,6 +45,8 @@ export interface PodLabelsTabProps {
   saveAnnotations: () => void
   cancelAnnotationEdit: () => void
   handleCopy: (field: string, value: string) => void
+  labelDiffByKey?: Record<string, KeyValueDiffEntry>
+  annotationDiffByKey?: Record<string, KeyValueDiffEntry>
 }
 
 export function PodLabelsTab({
@@ -85,6 +88,8 @@ export function PodLabelsTab({
   saveAnnotations,
   cancelAnnotationEdit,
   handleCopy,
+  labelDiffByKey,
+  annotationDiffByKey,
 }: PodLabelsTabProps) {
   const { t } = useTranslation()
 
@@ -145,11 +150,15 @@ export function PodLabelsTab({
                 {/* Existing labels - editable */}
                 <div className="space-y-2">
                   {labelEntries.map(([key, value]) => {
-                    const isRemoved = pendingLabelChanges[key] === null
-                    const currentValue = pendingLabelChanges[key] !== undefined && pendingLabelChanges[key] !== null
-                      ? pendingLabelChanges[key]
-                      : value
-                    const isModified = pendingLabelChanges[key] !== undefined
+                    const diff = labelDiffByKey?.[key] ?? {
+                      currentValue:
+                        pendingLabelChanges[key] !== undefined && pendingLabelChanges[key] !== null
+                          ? pendingLabelChanges[key]!
+                          : value,
+                      isRemoved: pendingLabelChanges[key] === null,
+                      isModified: pendingLabelChanges[key] !== undefined,
+                    }
+                    const { currentValue, isRemoved, isModified } = diff
 
                     return (
                       <div
@@ -320,11 +329,15 @@ export function PodLabelsTab({
                 {/* Existing annotations - editable */}
                 <div className="space-y-2">
                   {annotationEntries.map(([key, value]) => {
-                    const isRemoved = pendingAnnotationChanges[key] === null
-                    const currentValue = pendingAnnotationChanges[key] !== undefined && pendingAnnotationChanges[key] !== null
-                      ? pendingAnnotationChanges[key]
-                      : value
-                    const isModified = pendingAnnotationChanges[key] !== undefined
+                    const diff = annotationDiffByKey?.[key] ?? {
+                      currentValue:
+                        pendingAnnotationChanges[key] !== undefined && pendingAnnotationChanges[key] !== null
+                          ? pendingAnnotationChanges[key]!
+                          : value,
+                      isRemoved: pendingAnnotationChanges[key] === null,
+                      isModified: pendingAnnotationChanges[key] !== undefined,
+                    }
+                    const { currentValue, isRemoved, isModified } = diff
 
                     return (
                       <div

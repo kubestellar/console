@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect, useLayoutEffect, ReactNode } from 'react'
+import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff, Globe } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { useModalState } from '../../../lib/modals'
 import { cn } from '../../../lib/cn'
-import { NAVBAR_FILTER_PANEL_GAP_PX, NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR } from '../../../lib/constants/ui'
 import { Tooltip } from '../../ui/Tooltip'
 import { Input } from '../../ui/Input'
 
@@ -142,7 +141,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(FILTER_SET_COLORS[0])
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   // Helper to get cluster status tooltip
@@ -193,38 +191,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
     triggerRef.current?.focus()
   }
 
-  useLayoutEffect(() => {
-    const rootStyle = document.documentElement.style
-
-    if (!showDropdown || showLabel) {
-      rootStyle.removeProperty(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)
-      return undefined
-    }
-
-    const updatePanelOffset = () => {
-      const panelHeight = panelRef.current?.offsetHeight ?? 0
-      rootStyle.setProperty(
-        NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR,
-        `${panelHeight + NAVBAR_FILTER_PANEL_GAP_PX}px`
-      )
-    }
-
-    updatePanelOffset()
-    window.addEventListener('resize', updatePanelOffset)
-
-    let resizeObserver: ResizeObserver | undefined
-    if (typeof ResizeObserver !== 'undefined' && panelRef.current) {
-      resizeObserver = new ResizeObserver(() => updatePanelOffset())
-      resizeObserver.observe(panelRef.current)
-    }
-
-    return () => {
-      window.removeEventListener('resize', updatePanelOffset)
-      resizeObserver?.disconnect()
-      rootStyle.removeProperty(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)
-    }
-  }, [showDropdown, showLabel])
-
   return (
     <>
       {/* Filter icon button — isolate creates a stacking context to prevent
@@ -265,7 +231,6 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
         {showDropdown && (
           <div
             id={FILTER_PANEL_ID}
-            ref={panelRef}
             data-testid="navbar-cluster-filter-dropdown"
             className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-toast max-h-[80vh] overflow-y-auto"
             role="dialog"

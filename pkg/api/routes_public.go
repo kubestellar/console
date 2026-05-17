@@ -79,7 +79,7 @@ s.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnail
 s.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
 
 // Mission knowledge base browse/file (public — proxies to public GitHub repo)
-missions := handlers.NewMissionsHandler()
+missions := handlers.NewMissionsHandler().WithStore(s.store)
 missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
 
 // Compliance frameworks public read endpoints (no auth — needed for demo mode).

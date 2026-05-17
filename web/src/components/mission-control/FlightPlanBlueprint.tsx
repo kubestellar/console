@@ -400,13 +400,8 @@ export function FlightPlanBlueprint({
       setInfoPanel(data)
       setStickyPanel(data)
     } else {
-      // Delay hiding to allow user to move cursor to info panel
-      hidePanelTimeoutRef.current = setTimeout(() => {
-        // Only hide if mouse is not over the info panel
-        if (!isOverInfoPanelRef.current) {
-          setInfoPanel(null)
-        }
-      }, 150) // Small delay for smooth transition
+      // Clear infoPanel to show sticky panel, allowing user to interact with sidebar
+      setInfoPanel(null)
     }
   }
 
@@ -424,13 +419,8 @@ export function FlightPlanBlueprint({
       setInfoPanel(data)
       setStickyPanel(data)
     } else {
-      // Delay hiding to allow user to move cursor to info panel
-      hidePanelTimeoutRef.current = setTimeout(() => {
-        // Only hide if mouse is not over the info panel
-        if (!isOverInfoPanelRef.current) {
-          setInfoPanel(null)
-        }
-      }, 150) // Small delay for smooth transition
+      // Clear infoPanel to show sticky panel, allowing user to interact with sidebar
+      setInfoPanel(null)
     }
   }
 
@@ -446,10 +436,7 @@ export function FlightPlanBlueprint({
 
   const handleInfoPanelLeave = () => {
     isOverInfoPanelRef.current = false
-    // Hide the panel when leaving (after a small delay)
-    hidePanelTimeoutRef.current = setTimeout(() => {
-      setInfoPanel(null)
-    }, 150)
+    // Panel remains sticky — only changes when hovering a different node
   }
 
   /** Open mission preview modal for a project (fetches from KB) */

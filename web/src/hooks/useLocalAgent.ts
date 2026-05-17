@@ -51,13 +51,16 @@ export interface ConnectionEvent {
   message: string
 }
 
-const POLL_INTERVAL = 5_000 // Check every 5 seconds when connected
+// Adaptive heartbeat intervals — scale based on cluster activity
+const POLL_INTERVAL_IDLE = 5_000 // Check every 5 seconds when idle
+const POLL_INTERVAL_ACTIVE = 2_000 // Check every 2 seconds during active sessions (AI missions, kubectl ops)
+const POLL_INTERVAL_BURST = 1_000 // Check every 1 second during high-activity bursts
 const DISCONNECTED_POLL_INTERVAL = 60_000 // Check every 60 seconds when disconnected
-const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures (~10s) before disconnecting
+const FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before disconnecting (prevents flicker)
 // Short timeout for agent health checks — a healthy agent responds in <100ms.
 // Using the default 10s timeout causes false failures when the browser's
 // HTTP/1.1 connection pool (6 per origin) is saturated by concurrent requests.
-const AGENT_HEALTH_TIMEOUT_MS = 3_000
+const AGENT_HEALTH_TIMEOUT_MS = 1_500 // Reduced for faster disconnect detection (#14192)
 const HTTP_UNAUTHORIZED_STATUS = 401
 const HTTP_FORBIDDEN_STATUS = 403
 const AUTH_ERROR_STATUS_CODES = new Set([
@@ -68,6 +71,8 @@ const SUCCESS_THRESHOLD = 2 // Require 2 consecutive successes before reconnecti
 const AGGRESSIVE_POLL_INTERVAL = 1_000 // 1 second during aggressive detection burst
 const AGGRESSIVE_DETECT_DURATION = 10_000 // 10 seconds of aggressive polling
 const BROWSER_WAKE_DEBOUNCE_MS = 1_000
+const ACTIVITY_COOLDOWN_MS = 30_000 // Return to idle polling after 30 seconds of inactivity
+const BURST_COOLDOWN_MS = 10_000 // Return to active polling after 10 seconds of burst inactivity
 
 // Demo data for when agent is not connected
 const DEMO_DATA: AgentHealth = {
@@ -93,6 +98,7 @@ interface AgentState {
   connectionEvents: ConnectionEvent[]
   dataErrorCount: number
   lastDataError: string | null
+  activityLevel: 'idle' | 'active' | 'burst' // Adaptive heartbeat activity level (#14192)
 }
 
 type Listener = (state: AgentState) => void
@@ -104,13 +110,15 @@ class AgentManager {
     error: 'Demo mode - agent connection skipped',
     connectionEvents: [],
     dataErrorCount: 0,
-    lastDataError: null } : {
+    lastDataError: null,
+    activityLevel: 'idle' } : {
     status: 'connecting',
     health: null,
     error: null,
     connectionEvents: [],
     dataErrorCount: 0,
-    lastDataError: null }
+    lastDataError: null,
+    activityLevel: 'idle' }
   private listeners: Set<Listener> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
   private failureCount = 0
@@ -126,6 +134,8 @@ class AgentManager {
   private dataErrorThreshold = 3 // Errors within window to trigger degraded
   private aggressiveDetectTimeout: ReturnType<typeof setTimeout> | null = null
   private lastBrowserWakeCheckAt = 0
+  private lastActivityAt = 0 // Timestamp of last activity for adaptive polling (#14192)
+  private activityCooldownTimeout: ReturnType<typeof setTimeout> | null = null
   private readonly handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
       this.handleBrowserWake('visibilitychange')
@@ -138,7 +148,7 @@ class AgentManager {
     this.handleBrowserWake('online')
   }
 
-  private currentPollInterval = POLL_INTERVAL
+  private currentPollInterval = POLL_INTERVAL_IDLE
 
   start() {
     if (this.isStarted) return
@@ -156,7 +166,7 @@ class AgentManager {
     this.addBrowserWakeListeners()
     this.addEvent('connecting', 'Attempting to connect to local agent...')
     this.checkAgent()
-    this.currentPollInterval = POLL_INTERVAL
+    this.currentPollInterval = POLL_INTERVAL_IDLE
     this.pollInterval = setInterval(() => this.checkAgent(), this.currentPollInterval)
   }
 
@@ -169,8 +179,13 @@ class AgentManager {
       clearTimeout(this.aggressiveDetectTimeout)
       this.aggressiveDetectTimeout = null
     }
+    if (this.activityCooldownTimeout) {
+      clearTimeout(this.activityCooldownTimeout)
+      this.activityCooldownTimeout = null
+    }
     this.removeBrowserWakeListeners()
     this.lastBrowserWakeCheckAt = 0
+    this.lastActivityAt = 0
     this.isStarted = false
     this.isChecking = false // Reset so next start can check immediately
   }
@@ -318,7 +333,7 @@ class AgentManager {
 
         this.failureCount = 0
         this.successCount = 0
-        this.adjustPollInterval(POLL_INTERVAL)
+        this.adjustPollIntervalForActivity()
         if (!wasAuthError) {
           this.addEvent('error', `${authErrorMessage} (HTTP ${authResponse.status})`)
         }
@@ -347,7 +362,7 @@ class AgentManager {
         this.wasEverConnected = true
         this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
         // Reconnected - speed up polling
-        this.adjustPollInterval(POLL_INTERVAL)
+        this.adjustPollIntervalForActivity()
         this.setState({
           health: data,
           status: 'connected',
@@ -362,7 +377,7 @@ class AgentManager {
         // Initial connection - connect immediately on first success
         this.wasEverConnected = true
         this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
-        this.adjustPollInterval(POLL_INTERVAL)
+        this.adjustPollIntervalForActivity()
         this.setState({
           health: data,
           status: 'connected',
@@ -469,6 +484,73 @@ class AgentManager {
     }
   }
 
+  // Adaptive heartbeat: adjust polling interval based on activity level (#14192)
+  private adjustPollIntervalForActivity() {
+    let targetInterval: number
+    switch (this.state.activityLevel) {
+      case 'burst':
+        targetInterval = POLL_INTERVAL_BURST
+        break
+      case 'active':
+        targetInterval = POLL_INTERVAL_ACTIVE
+        break
+      case 'idle':
+      default:
+        targetInterval = POLL_INTERVAL_IDLE
+        break
+    }
+    this.adjustPollInterval(targetInterval)
+  }
+
+  // Signal that an active operation is occurring (AI mission, kubectl exec, etc.)
+  // This increases heartbeat frequency for faster disconnect detection during active sessions (#14192)
+  reportActivity(level: 'active' | 'burst' = 'active') {
+    if (this.state.status !== 'connected' && this.state.status !== 'degraded') {
+      return // No activity tracking when disconnected
+    }
+
+    const now = Date.now()
+
+    // Update activity timestamp and level
+    this.lastActivityAt = now
+    if (this.state.activityLevel !== level) {
+      this.setState({ activityLevel: level })
+      this.adjustPollIntervalForActivity()
+    }
+
+    // Clear existing cooldown timer
+    if (this.activityCooldownTimeout) {
+      clearTimeout(this.activityCooldownTimeout)
+      this.activityCooldownTimeout = null
+    }
+
+    // Schedule cooldown based on activity level
+    const cooldownDuration = level === 'burst' ? BURST_COOLDOWN_MS : ACTIVITY_COOLDOWN_MS
+    this.activityCooldownTimeout = setTimeout(() => {
+      this.activityCooldownTimeout = null
+      const timeSinceLastActivity = Date.now() - this.lastActivityAt
+
+      if (level === 'burst' && timeSinceLastActivity >= BURST_COOLDOWN_MS) {
+        // Downgrade from burst to active
+        this.setState({ activityLevel: 'active' })
+        this.adjustPollIntervalForActivity()
+        // Schedule another cooldown to potentially go to idle
+        this.activityCooldownTimeout = setTimeout(() => {
+          this.activityCooldownTimeout = null
+          const timeNow = Date.now() - this.lastActivityAt
+          if (timeNow >= ACTIVITY_COOLDOWN_MS) {
+            this.setState({ activityLevel: 'idle' })
+            this.adjustPollIntervalForActivity()
+          }
+        }, ACTIVITY_COOLDOWN_MS - BURST_COOLDOWN_MS)
+      } else if (timeSinceLastActivity >= ACTIVITY_COOLDOWN_MS) {
+        // Return to idle after inactivity
+        this.setState({ activityLevel: 'idle' })
+        this.adjustPollIntervalForActivity()
+      }
+    }, cooldownDuration)
+  }
+
   // Aggressively attempt to detect the agent.
   // Resets state to 'connecting' so isAgentUnavailable() returns false,
   // fires an immediate health check, and enters rapid 1s polling for 10s.
@@ -494,7 +576,7 @@ class AgentManager {
       if (this.state.status !== 'connected' && this.state.status !== 'degraded') {
         this.adjustPollInterval(DISCONNECTED_POLL_INTERVAL)
       } else {
-        this.adjustPollInterval(POLL_INTERVAL)
+        this.adjustPollIntervalForActivity()
       }
     }, AGGRESSIVE_DETECT_DURATION)
   }
@@ -521,6 +603,17 @@ export function reportAgentDataError(endpoint: string, error: string) {
  */
 export function reportAgentDataSuccess() {
   agentManager.reportDataSuccess()
+}
+
+/**
+ * Report active operations to the agent manager for adaptive heartbeat (#14192).
+ * Call this when starting AI missions, kubectl exec sessions, or other interactive operations
+ * to increase heartbeat frequency for faster disconnect detection.
+ * 
+ * @param level - 'active' for regular operations, 'burst' for high-frequency operations
+ */
+export function reportAgentActivity(level: 'active' | 'burst' = 'active') {
+  agentManager.reportActivity(level)
 }
 
 /**

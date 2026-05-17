@@ -143,7 +143,13 @@ afterEach(() => {
 // Import subject after mocks
 // ---------------------------------------------------------------------------
 
-import { StellarProvider, useStellar } from '../useStellar'
+import {
+  StellarProvider,
+  STELLAR_MISSION_TRIGGER_EVENT,
+  STELLAR_TOKEN_POLL_INTERVAL_MS,
+  STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
+  useStellar,
+} from '../useStellar'
 
 // ---------------------------------------------------------------------------
 // Helper: render a consumer inside StellarProvider
@@ -653,6 +659,90 @@ describe('StellarProvider — unreadCount', () => {
     // Acknowledge one
     await act(async () => { await capturedRef.current?.acknowledgeNotification('n1') })
     expect(capturedRef.current?.unreadCount).toBe(1)
+  })
+})
+
+describe('StellarProvider — SSE lifecycle (#14220)', () => {
+  it('creates exactly one EventSource on mount', async () => {
+    renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    expect(eventSourceInstances).toHaveLength(1)
+  })
+
+  it('closes EventSource on unmount', async () => {
+    const { unmount } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    const es = eventSourceInstances[0]
+    unmount()
+    expect(es.close).toHaveBeenCalled()
+  })
+
+  it('creates one new EventSource after remount', async () => {
+    const first = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    first.unmount()
+    renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    expect(eventSourceInstances).toHaveLength(2)
+  })
+
+  it('dispatches stellar:mission_trigger custom event from SSE', async () => {
+    const handler = vi.fn()
+    window.addEventListener(STELLAR_MISSION_TRIGGER_EVENT, handler)
+    renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    const es = eventSourceInstances[0]
+    const payload = {
+      solveId: 'solve-1',
+      eventId: 'evt-1',
+      cluster: 'c1',
+      namespace: 'ns',
+      workload: 'wl',
+      reason: 'crash',
+      message: 'pod failed',
+      title: 'Fix pod',
+      prompt: 'repair it',
+    }
+    await act(async () => {
+      es._triggerEvent('mission_trigger', payload)
+    })
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect((handler.mock.calls[0][0] as CustomEvent).detail).toEqual(payload)
+    window.removeEventListener(STELLAR_MISSION_TRIGGER_EVENT, handler)
+  })
+
+  it('skips init when no auth credentials are present', async () => {
+    localStorage.clear()
+    Object.defineProperty(document, 'cookie', {
+      writable: true,
+      value: '',
+    })
+    renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    expect(eventSourceInstances).toHaveLength(0)
+    expect(mockStellarApi.getState).not.toHaveBeenCalled()
+  })
+
+  it('clears token poll interval on unmount before poll completes', async () => {
+    vi.useFakeTimers()
+    localStorage.clear()
+    Object.defineProperty(document, 'cookie', {
+      writable: true,
+      value: '',
+    })
+
+    const { unmount } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    unmount()
+
+    const eventSourceCountAfterUnmount = eventSourceInstances.length
+    await act(async () => {
+      vi.advanceTimersByTime(STELLAR_TOKEN_POLL_MAX_ATTEMPTS * STELLAR_TOKEN_POLL_INTERVAL_MS)
+    })
+
+    expect(mockStellarApi.getState).not.toHaveBeenCalled()
+    expect(eventSourceInstances).toHaveLength(eventSourceCountAfterUnmount)
+    vi.useRealTimers()
   })
 })
 

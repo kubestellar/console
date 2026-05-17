@@ -77,6 +77,10 @@ var ErrDashboardCardLimitReached = errors.New("dashboard card limit reached")
 // Handlers should map this error to HTTP 429 Too Many Requests.
 var ErrDailyBonusUnavailable = errors.New("daily bonus already claimed within cooldown window")
 
+// ErrNotFound is returned when a store update targets a missing row.
+// Handlers map this sentinel to HTTP 404 Not Found.
+var ErrNotFound = errors.New("not found")
+
 // MinCoinBalance is the floor for user coin balances. Negative increments
 // are clamped to this value so buggy clients cannot drive balances below
 // zero. Exported so handlers and tests can reference the same constant.
@@ -857,6 +861,7 @@ func (s *SQLiteStore) migrate() error {
 			resource_name TEXT NOT NULL,
 			reason        TEXT NOT NULL DEFAULT '',
 			status        TEXT NOT NULL DEFAULT 'active',
+			last_event_at DATETIME,
 			last_checked  DATETIME,
 			last_update   TEXT NOT NULL DEFAULT '',
 			resolved_at   DATETIME,
@@ -876,6 +881,10 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_observations ADD COLUMN reasoning TEXT NOT NULL DEFAULT ''",
 
 		// Sprint 5: snooze support — last_checked already exists on stellar_watches
+
+		// Issue #14198: auto-resolve inactive watches after event silence.
+		"ALTER TABLE stellar_watches ADD COLUMN last_event_at DATETIME",
+		"UPDATE stellar_watches SET last_event_at = COALESCE(last_event_at, updated_at, created_at) WHERE last_event_at IS NULL",
 
 		// Stellar v2: solve sessions (headless solve loop). Each row tracks one
 		// end-to-end attempt by Stellar to resolve an event without user input.
@@ -930,6 +939,15 @@ func (s *SQLiteStore) migrate() error {
 		)`,
 		"CREATE INDEX IF NOT EXISTS idx_stellar_activity_ts ON stellar_activity(ts DESC)",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_activity_user_ts ON stellar_activity(user_id, ts DESC)",
+		// KB query gap tracker — records zero-result browse paths so maintainers
+		// know which KB content is missing from the knowledge base.
+		`CREATE TABLE IF NOT EXISTS kb_query_gaps (
+			path      TEXT PRIMARY KEY,
+			hit_count INTEGER NOT NULL DEFAULT 0,
+			last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_kb_query_gaps_last_seen ON kb_query_gaps(last_seen DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_kb_query_gaps_hits ON kb_query_gaps(hit_count DESC, last_seen DESC)",
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.ExecContext(ctx, migration); err != nil {
@@ -953,6 +971,10 @@ func (s *SQLiteStore) migrate() error {
 		}
 		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
 	}
+	if err := s.migrateKBGapsSchema(ctx); err != nil {
+		return fmt.Errorf("migrate kb_query_gaps schema: %w", err)
+	}
+
 	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
 
 	// Data migration: "pending" status is eliminated — reservations are now

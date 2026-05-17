@@ -1442,6 +1442,43 @@ func TestServer_HandleRenameContextHTTP_MissingNames(t *testing.T) {
 	}
 }
 
+// TestServer_HandleRenameContextHTTP_FlagInjection verifies that context names
+// starting with "--" are rejected, preventing kubectl flag injection (#14238).
+func TestServer_HandleRenameContextHTTP_FlagInjection(t *testing.T) {
+	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
+	execCommand = fakeExecCommand
+	execCommandContext = fakeExecCommandContext
+
+	server := &Server{
+		kubectl: &KubectlProxy{
+			config:     &api.Config{},
+			kubeconfig: "/tmp/config",
+		},
+		allowedOrigins: []string{"*"},
+	}
+
+	cases := []struct {
+		name    string
+		oldName string
+		newName string
+	}{
+		{"flag in oldName", "--kubeconfig=/etc/passwd", "new-ctx"},
+		{"flag in newName", "old-ctx", "--server=http://evil.com"},
+		{"path traversal", "../../etc/passwd", "new-ctx"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := `{"oldName":"` + tc.oldName + `","newName":"` + tc.newName + `"}`
+			req := httptest.NewRequest("POST", "/rename-context", strings.NewReader(body))
+			w := httptest.NewRecorder()
+			server.handleRenameContextHTTP(w, req)
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("Expected 400, got %d for %s", w.Code, tc.name)
+			}
+		})
+	}
+}
+
 func TestServer_HandleRenameContextHTTP_OPTIONS(t *testing.T) {
 	server := &Server{
 		allowedOrigins: []string{"http://localhost"},

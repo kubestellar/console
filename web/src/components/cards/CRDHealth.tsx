@@ -31,7 +31,7 @@ const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1,
 export function CRDHealth({ config: _config }: CRDHealthProps) {
   const { t } = useTranslation(['cards', 'common'])
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  const { crds: allCRDs, isLoading, isRefreshing, isDemoData } = useCRDs()
+  const { crds: allCRDs, isLoading, isRefreshing, isDemoFallback } = useCRDs()
 
   const [filterGroup, setFilterGroup] = useState<string>('')
 
@@ -41,7 +41,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData })
+    isDemoData: isDemoFallback })
 
   // Apply group filter before passing to useCardData
   const groupFilteredCRDs = (() => {

@@ -62,7 +62,10 @@ export function useSnoozedCards() {
   const [storedState, setStoredState] = useLocalStorage<StoredState>(STORAGE_KEY_SNOOZED_CARDS, DEFAULT_STATE, {
     deserialize: deserializeStoredState,
   })
-  const [localState, setLocalState] = useState<StoredState>(storedState)
+  const [localState, setLocalState] = useState<StoredState>(() => {
+    state = storedState
+    return storedState
+  })
 
   useEffect(() => {
     state = storedState

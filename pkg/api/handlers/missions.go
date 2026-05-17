@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +19,9 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 const (
@@ -374,6 +377,19 @@ func sanitizePath(raw string) (string, error) {
 	return result, nil
 }
 
+// validateKBBrowsePath restricts gap-tracked browse paths to simple repository
+// slugs so the public browse endpoint cannot fill the tracker with arbitrary
+// strings.
+func validateKBBrowsePath(path string) error {
+	for _, ch := range path {
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '/' || ch == '-' {
+			continue
+		}
+		return fmt.Errorf("browse path contains invalid character: %c", ch)
+	}
+	return nil
+}
+
 // sanitizeRef validates a git ref (branch/tag) parameter.
 // SECURITY: Blocks flag injection and dangerous patterns.
 func sanitizeRef(ref string) (string, error) {
@@ -396,6 +412,9 @@ func sanitizeRef(ref string) (string, error) {
 	return ref, nil
 }
 
+// kbGapsDefaultLimit is the default number of gap entries returned by GetKBGaps.
+const kbGapsDefaultLimit = 20
+
 // MissionsHandler handles mission-related API endpoints (knowledge base browsing,
 // validation, sharing).
 type MissionsHandler struct {
@@ -403,6 +422,7 @@ type MissionsHandler struct {
 	githubAPIURL string // defaults to "https://api.github.com"
 	githubRawURL string // defaults to "https://raw.githubusercontent.com"
 	cache        *missionsResponseCache
+	store        store.Store // optional; nil disables gap tracking
 }
 
 // NewMissionsHandler creates a new MissionsHandler with default settings.
@@ -415,11 +435,19 @@ func NewMissionsHandler() *MissionsHandler {
 	}
 }
 
+// WithStore attaches a store for KB query gap tracking and returns the handler
+// for chaining. Safe to omit — gap tracking is a no-op when store is nil.
+func (h *MissionsHandler) WithStore(s store.Store) *MissionsHandler {
+	h.store = s
+	return h
+}
+
 // RegisterRoutes registers all mission routes on the given Fiber router group.
 func (h *MissionsHandler) RegisterRoutes(g fiber.Router) {
 	g.Post("/validate", h.ValidateMission)
 	g.Post("/share/slack", h.ShareToSlack)
 	g.Post("/share/github", h.ShareToGitHub)
+	g.Get("/gaps", h.GetKBGaps)
 }
 
 // RegisterPublicRoutes registers unauthenticated browse/file routes (proxies to public GitHub repo).
@@ -609,6 +637,10 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		slog.Warn("[missions] invalid path parameter", "error", err)
 		return c.Status(400).JSON(fiber.Map{"error": "invalid path parameter"})
 	}
+	if err := validateKBBrowsePath(path); err != nil {
+		slog.Warn("[missions] rejected browse path", "path", path, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid path parameter"})
+	}
 	url := fmt.Sprintf("%s/repos/kubestellar/console-kb/contents/%s?ref=master", h.githubAPIURL, path)
 	cacheKey := "browse:" + path
 
@@ -725,8 +757,41 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		slog.Info("[missions] cache MISS, stored (browse)", "path", path)
 	}
 
+	// Record zero-result browse paths for the KB gap tracker.
+	// Fires asynchronously so it never delays the response.
+	if len(entries) == 0 && h.store != nil {
+		safego.GoWith("kb-gap-record", func() {
+			if err := h.store.RecordKBGap(context.Background(), path); err != nil {
+				slog.Warn("[missions] failed to record KB gap", "path", path, "error", err)
+			}
+		})
+	}
+
 	c.Set("X-Cache", "MISS")
 	return c.JSON(entries)
+}
+
+// GetKBGaps returns the top zero-result KB browse paths, ordered by hit count.
+// GET /api/missions/gaps?limit=20
+func (h *MissionsHandler) GetKBGaps(c *fiber.Ctx) error {
+	if h.store == nil {
+		return c.JSON(fiber.Map{"gaps": []store.KBQueryGap{}, "count": 0, "source": "disabled"})
+	}
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
+
+	limit := c.QueryInt("limit", kbGapsDefaultLimit)
+	gaps, err := h.store.ListTopKBGaps(c.Context(), limit)
+	if err != nil {
+		slog.Error("[missions] failed to list KB gaps", "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to retrieve KB gaps")
+	}
+
+	return c.JSON(fiber.Map{
+		"gaps":  gaps,
+		"count": len(gaps),
+	})
 }
 
 // ---------- Get a single file ----------

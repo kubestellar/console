@@ -15,14 +15,26 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Install pinned AJV tools for schema validation
+        run: npm install -g ajv-cli@5.0.0 ajv-formats@2.1.1
+
+      - name: Test mission schema validation path
+        run: |
+          chmod +x scripts/validate-missions-schema-test.sh
+          ./scripts/validate-missions-schema-test.sh
+
       - name: Validate mission structure
         run: |
           chmod +x scripts/validate-missions.sh
-          ./scripts/validate-missions.sh 2>&1 | tee validation-results.txt
+          ./scripts/validate-missions.sh \
+            --schema web/src/lib/missions/mission.schema.json \
+            2>&1 | tee validation-results.txt
 
       - name: Run KB gap tracker
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use a cross-repo token when available; the default workflow token only
+          # has repository-scoped access and may not be able to read console-kb.
+          GH_TOKEN: ${{ secrets.KB_REPO_TOKEN != '' && secrets.KB_REPO_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           chmod +x scripts/kb-query-gap-tracker.sh
           ./scripts/kb-query-gap-tracker.sh kb-gap-report.md 2>&1 | tee gap-results.txt

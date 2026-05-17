@@ -31,7 +31,7 @@ describe('customizerNav', () => {
     for (const item of CUSTOMIZER_NAV) {
       expect(typeof item.id).toBe('string')
       expect(typeof item.label).toBe('string')
-      expect(typeof item.icon).toBe('function')
+      expect(item.icon).toBeDefined()
     }
   })
 

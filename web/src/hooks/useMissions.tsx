@@ -4,7 +4,7 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { useLocalAgent } from './useLocalAgent'
+import { useLocalAgent, reportAgentActivity } from './useLocalAgent'
 import { agentFetch } from './mcp/agentFetch'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionToolMissing, emitMissionRated } from '../lib/analytics'
@@ -32,6 +32,7 @@ import {
   WS_SEND_MAX_RETRIES,
   WS_SEND_RETRY_DELAY_MS,
   STREAM_GAP_THRESHOLD_MS,
+  isInteractiveContent,
 } from './useMissions.constants'
 import {
   runPreflightCheck,
@@ -79,6 +80,13 @@ import {
   buildKagentiDiscoveryErrorMessage,
 } from './useMissions.helpers'
 import i18n from '../lib/i18n'
+
+interface QueuedMissionExecution {
+  missionId: string
+  enhancedPrompt: string
+  params: { context?: Record<string, unknown>; type?: string; dryRun?: boolean }
+  requiredTools: string[]
+}
 
 interface MissionContextValue {
   missions: Mission[]
@@ -258,6 +266,21 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     } catch { /* localStorage unavailable */ }
   }, [activeMissionId])
   useEffect(() => {
+    let releasedLock = false
+
+    for (const [missionId] of missionToolLocks.current.entries()) {
+      const mission = missions.find(candidate => candidate.id === missionId)
+      if (!mission || mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') {
+        missionToolLocks.current.delete(missionId)
+        releasedLock = true
+      }
+    }
+
+    if (releasedLock || queuedMissionExecutions.current.length > 0) {
+      drainQueuedMissionExecutions()
+    }
+  }, [missions])
+  useEffect(() => {
     isSidebarOpenRef.current = isSidebarOpen
     // Persist so the next page load restores the same state.
     try { localStorage.setItem(SIDEBAR_OPEN_STORAGE_KEY, String(isSidebarOpen)) } catch { /* ok */ }
@@ -315,6 +338,93 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   // STATUS_PROCESSING_DELAY_MS) so they can be cleared when a mission is
   // cancelled, dismissed, or the provider unmounts.
   const missionStatusTimers = useRef<Map<string, Set<ReturnType<typeof setTimeout>>>>(new Map())
+  // #14139 — Queue tool-overlapping missions so installers that share mutable
+  // local CLIs (for example `helm repo add`) do not race each other.
+  const queuedMissionExecutions = useRef<QueuedMissionExecution[]>([])
+  const missionToolLocks = useRef<Map<string, string[]>>(new Map())
+
+  const normalizeMissionTools = (tools: string[]): string[] => [...new Set(
+    tools
+      .map(tool => tool.trim().toLowerCase())
+      .filter(Boolean)
+  )]
+
+  const getMissionToolConflicts = (requiredTools: string[]): string[] => {
+    const normalizedRequiredTools = normalizeMissionTools(requiredTools)
+    if (normalizedRequiredTools.length === 0) return []
+
+    const conflicts = new Set<string>()
+    for (const lockedTools of missionToolLocks.current.values()) {
+      for (const tool of normalizedRequiredTools) {
+        if (lockedTools.includes(tool)) {
+          conflicts.add(tool)
+        }
+      }
+    }
+
+    return [...conflicts]
+  }
+
+  const releaseMissionToolLock = (missionId: string) => {
+    missionToolLocks.current.delete(missionId)
+  }
+
+  const drainQueuedMissionExecutions = () => {
+    if (queuedMissionExecutions.current.length === 0) return
+
+    const remainingQueue: QueuedMissionExecution[] = []
+    for (const entry of queuedMissionExecutions.current) {
+      const mission = missionsRef.current.find(candidate => candidate.id === entry.missionId)
+      if (!mission) continue
+      if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') continue
+      if (cancelIntents.current.has(entry.missionId)) continue
+
+      const conflicts = getMissionToolConflicts(entry.requiredTools)
+      if (conflicts.length > 0) {
+        remainingQueue.push(entry)
+        continue
+      }
+
+      if (entry.requiredTools.length > 0) {
+        missionToolLocks.current.set(entry.missionId, entry.requiredTools)
+      }
+      executeMission(entry.missionId, entry.enhancedPrompt, entry.params)
+    }
+
+    queuedMissionExecutions.current = remainingQueue
+  }
+
+  const enqueueMissionExecution = (
+    missionId: string,
+    enhancedPrompt: string,
+    params: { context?: Record<string, unknown>; type?: string; dryRun?: boolean },
+    requiredTools: string[],
+  ) => {
+    const normalizedRequiredTools = normalizeMissionTools(requiredTools)
+    const conflicts = getMissionToolConflicts(normalizedRequiredTools)
+
+    if (conflicts.length === 0) {
+      if (normalizedRequiredTools.length > 0) {
+        missionToolLocks.current.set(missionId, normalizedRequiredTools)
+      }
+      executeMission(missionId, enhancedPrompt, params)
+      return
+    }
+
+    queuedMissionExecutions.current = [
+      ...queuedMissionExecutions.current.filter(entry => entry.missionId !== missionId),
+      { missionId, enhancedPrompt, params, requiredTools: normalizedRequiredTools },
+    ]
+
+    setMissions(prev => prev.map(m =>
+      m.id === missionId
+        ? {
+            ...m,
+            currentStep: i18n.t('missions.queue.waitingForTools', { tools: conflicts.join(', ') }),
+          }
+        : m
+    ))
+  }
 
   /**
    * Send a message over the WebSocket with retry logic.
@@ -1679,7 +1789,15 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           clearActiveTokenCategory(missionId)
           // Start the watchdog that auto-fails the mission if no final result
           // message arrives within WAITING_INPUT_TIMEOUT_MS (#5936).
-          startWaitingInputTimeout(missionId)
+          // Skip the watchdog when the last assistant message is interactive
+          // (asking the user a question/confirmation) — the mission is
+          // legitimately waiting for user input, not stuck (#14324).
+          const lastAssistantContent = payload.content || (m.messages || [])
+            .filter(msg => msg.role === 'assistant')
+            .pop()?.content || ''
+          if (!isInteractiveContent(lastAssistantContent)) {
+            startWaitingInputTimeout(missionId)
+          }
           return {
             ...m,
             status: 'waiting_input' as MissionStatus,
@@ -1720,8 +1838,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         const toolsWereExecuted = !!chatPayload.toolsExecuted
         const missionRequiresTools = ['deploy', 'maintain', 'repair', 'upgrade'].includes(m.type)
         const falsePositiveCompletion = !resultIsError && missionRequiresTools && !toolsWereExecuted
+        const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
+        const resultIsInteractive = isInteractiveContent(resultContent)
 
-        if (m.status === 'running' && !resultIsError && !falsePositiveCompletion) {
+        if (!resultIsInteractive && m.status === 'running' && !resultIsError && !falsePositiveCompletion) {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
@@ -1732,15 +1852,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           window.dispatchEvent(new CustomEvent('kc-mission-completed', {
             detail: { missionId, missionType: m.type },
           }))
-        } else if (m.status === 'running' && (resultIsError || falsePositiveCompletion)) {
+        } else if (!resultIsInteractive && m.status === 'running' && (resultIsError || falsePositiveCompletion)) {
           // #13728 — Treat false-positive completions as errors in analytics
-          const errorMsg = falsePositiveCompletion 
-            ? 'Agent claimed completion without executing tools' 
+          const errorMsg = falsePositiveCompletion
+            ? 'Agent claimed completion without executing tools'
             : (chatPayload.content || 'Mission failed')
           emitMissionError(m.type, errorMsg)
         }
-
-        const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
         // Check ALL assistant messages since the last user message for streamed content
         // (streaming may split into multiple bubbles due to tool-use gaps)
         const missionMessages = getMissionMessages(m.messages)
@@ -1783,11 +1901,10 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             normalizedResult.includes(normalizedStreamed)
           )
 
-        // Transition to 'completed' when a result message arrives — this is the
-        // backend's final answer for the current turn. The 'waiting_input' state
-        // is only used while streaming is in progress (stream done w/o result).
-        // The UI shows a completion panel with feedback buttons when status is
-        // 'completed', so reaching this state is the correct lifecycle end (#5479).
+        // Result messages can still represent an interactive hand-off when the
+        // agent completed a step and is now asking the user what to do next.
+        // In that case the mission should remain actionable in the sidebar
+        // instead of regressing to a stale terminal state.
         //
         // #13728 — Prevent false-positive completions: if the mission type typically
         // requires tool execution (deploy, maintain, repair, upgrade) and the agent
@@ -1796,12 +1913,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // without executing any commands.
         let finalStatus: MissionStatus
         let falsePositiveWarning = ''
-        if (resultIsError) {
-          finalStatus = 'failed'
-        } else if (falsePositiveCompletion) {
+        if (falsePositiveCompletion) {
           // Agent claimed success but never executed any tools
           finalStatus = 'failed'
           falsePositiveWarning = '\n\n**⚠️ Mission Validation Failed**\n\nThe AI agent reported completion, but no tools were executed. This typically means the agent did not actually perform the requested actions (e.g., install, deploy, upgrade). Please verify the agent has the required tools available and retry the mission.'
+        } else if (resultIsInteractive) {
+          finalStatus = 'waiting_input'
+        } else if (resultIsError) {
+          finalStatus = 'failed'
         } else {
           finalStatus = 'completed'
         }
@@ -2058,8 +2177,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         finalizeCancellation(missionId, 'Mission cancelled by user before execution started.')
         return
       }
-      // Preflight passed — proceed to send to agent
-      executeMission(missionId, enhancedPrompt, params)
+      // Preflight passed — proceed to send to agent. Missions that need the
+      // same local tools are serialized to avoid overlapping CLI state.
+      enqueueMissionExecution(missionId, enhancedPrompt, params, requiredTools)
     }).catch((err) => {
       // Preflight itself threw unexpectedly — block the mission instead of
       // fail-open to prevent executing without validation (#5846).
@@ -2174,18 +2294,24 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     params: { context?: Record<string, unknown>; type?: string; dryRun?: boolean },
   ) => {
     const missionType = params.type || 'custom'
+    
+    // Report active operation to increase heartbeat frequency for faster disconnect detection (#14192)
+    reportAgentActivity('active')
+    
     // #6384 item 1 (dup of #6381) — if a cancel intent is already set for
     // this missionId we must not clear it and proceed to send. This
     // scenario happens when the user clicks Cancel after preflightAndExecute
     // kicked off but before executeMission started sending to the agent.
     // Finalize the cancel and return without contacting the backend.
     if (cancelIntents.current.has(missionId)) {
+      releaseMissionToolLock(missionId)
       finalizeCancellation(missionId, 'Mission cancelled by user before execution started.')
       return
     }
     // #7304 — Prevent duplicate execution: if this mission is already being
     // sent to the agent (e.g. double-click during preflight window), bail out.
     if (executingMissions.current.has(missionId)) {
+      releaseMissionToolLock(missionId)
       console.debug(`[Missions] executeMission already in-flight for ${missionId}, skipping duplicate`)
       return
     }
@@ -2863,6 +2989,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
   // Send a follow-up message
   const sendMessage = (missionId: string, content: string) => {
+    // Report active operation for adaptive heartbeat (#14192)
+    reportAgentActivity('active')
+    
     // Detect stop/cancel keywords — treat as a cancel action
     const STOP_KEYWORDS = ['stop', 'cancel', 'abort', 'halt', 'quit']
     const isStopCommand = STOP_KEYWORDS.some(kw => content.trim().toLowerCase() === kw)
@@ -3514,9 +3643,17 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       {children}
       {/* #7087/#7101 — Global prompt-review dialog: shows the front of the
           pending review queue. When confirmed/cancelled, the next entry in
-          the queue (if any) is shown automatically. */}
+          the queue (if any) is shown automatically.
+          #14191 — key={missionId} forces React to remount the dialog for each
+          new queue entry so the internal `prompt` state (lazy-initialised from
+          `initialPrompt`) is reset to the correct per-mission value. Without
+          this, advancing from entry N to N+1 keeps the same component instance
+          and its stale prompt state, causing every subsequent mission to run
+          with the first workload's prompt (e.g. all missions launch with the
+          cert-manager prompt even when istio is next in the queue). */}
       {pendingReviewQueue.length > 0 && (
         <ConfirmMissionPromptDialog
+          key={pendingReviewQueue[0].missionId}
           open={pendingReviewQueue.length > 0}
           missionTitle={pendingReviewQueue[0].params.title}
           missionDescription={pendingReviewQueue[0].params.description}
@@ -3608,4 +3745,5 @@ export const __missionsTestables = {
   CANCEL_CONFIRMED_MESSAGE_TYPE,
   WAITING_INPUT_TIMEOUT_MS,
   AGENT_DISCONNECT_ERROR_PATTERNS,
+  isInteractiveContent,
 }

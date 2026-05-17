@@ -159,6 +159,34 @@ describe('useSnoozedCards', () => {
     expect(result.current.isCardSnoozed('card-not-snoozed')).toBe(false)
   })
 
+  it('hydrates persisted snoozed cards before the first render', async () => {
+    const now = Date.now()
+    localStorageMock.setItem(
+      'kubestellar-snoozed-cards',
+      JSON.stringify({
+        swaps: [
+          {
+            id: 'snooze-persisted',
+            originalCardId: 'persisted-card',
+            originalCardType: 'cluster',
+            originalCardTitle: 'Cluster',
+            newCardType: 'pod',
+            newCardTitle: 'Pod',
+            reason: 'persisted',
+            snoozedAt: now,
+            snoozedUntil: now + 60 * 60 * 1000,
+          },
+        ],
+      })
+    )
+
+    const { useSnoozedCards } = await importHook()
+    const { result } = renderHook(() => useSnoozedCards())
+
+    expect(result.current.isCardSnoozed('persisted-card')).toBe(true)
+    expect(result.current.snoozedSwaps).toHaveLength(1)
+  })
+
   it('snoozedUntil uses duration parameter', async () => {
     const { useSnoozedCards } = await importHook()
     const { result } = renderHook(() => useSnoozedCards())

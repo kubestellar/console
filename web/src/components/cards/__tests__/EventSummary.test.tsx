@@ -153,6 +153,32 @@ describe('EventSummary', () => {
     expect(screen.getByText('ImagePullBackOff')).toBeTruthy()
     expect(screen.getByText('PodStarted')).toBeTruthy()
     expect(screen.getByText('Scheduled')).toBeTruthy()
+    expect(screen.queryByText('eventSummary.others')).toBeNull()
+  })
+
+  it('adds an Others row and uses event counts for totals', () => {
+    mockUseCachedEvents.mockReturnValue({
+      events: [
+        makeEvent({ type: 'Warning', reason: 'ImagePullBackOff', count: 4 }),
+        makeEvent({ type: 'Normal', reason: 'BackOff', count: 3 }),
+        makeEvent({ type: 'Normal', reason: 'FailedScheduling', count: 2 }),
+        makeEvent({ type: 'Normal', reason: 'Unhealthy', count: 1 }),
+        makeEvent({ type: 'Normal', reason: 'FailedMount', count: 1 }),
+        makeEvent({ type: 'Normal', reason: 'NodeNotReady', count: 1 }),
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      refetch: vi.fn(),
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+    })
+
+    render(<EventSummary />)
+
+    expect(screen.getByText('eventSummary.nEvents:12')).toBeTruthy()
+    expect(screen.getByText('eventSummary.others')).toBeTruthy()
   })
 
   it('filters events by cluster through the global filter hook', () => {

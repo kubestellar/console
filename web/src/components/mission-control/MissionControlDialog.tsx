@@ -39,6 +39,7 @@ const FlightPlanBlueprint = safeLazy(() => import('./FlightPlanBlueprint'), 'Fli
 import { LaunchSequence } from './LaunchSequence'
 import { RequestApprovalModal } from './RequestApprovalModal'
 import { decodePlan, planToState } from './missionPlanCodec'
+import { useMissions } from '../../hooks/useMissions'
 import type { WizardPhase } from './types'
 
 interface MissionControlDialogProps {
@@ -48,6 +49,8 @@ interface MissionControlDialogProps {
   initialKubaraChart?: string
   /** Base64-encoded plan from a deep link — opens in read-only review mode */
   reviewPlanEncoded?: string
+  /** Changes when sidebar CTAs should force a brand-new Mission Control session. */
+  freshSessionToken?: number
 }
 
 const PHASE_STEPS: {
@@ -79,14 +82,24 @@ const PHASE_STEPS: {
 /** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
 const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
 
-export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded }: MissionControlDialogProps) {
+export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded, freshSessionToken }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
+  const { startMission, openSidebar } = useMissions()
   const { state } = mc
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewNotes, setReviewNotes] = useState<string | undefined>()
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
   const launchSubmittingRef = useRef(false)
+
+  useEffect(() => {
+    if (!open || freshSessionToken === undefined) return
+    if (reviewPlanEncoded || initialKubaraChart) return
+    setIsReviewMode(false)
+    setReviewNotes(undefined)
+    mc.reset()
+    setHighestReached(0)
+  }, [open, freshSessionToken, reviewPlanEncoded, initialKubaraChart]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open || !reviewPlanEncoded) return
@@ -108,6 +121,33 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     }
     onClose()
   }, [isReviewMode, onClose, mc])
+
+  /** #14190 — Launch a rollback mission for failed projects */
+  const handleRollback = useCallback(() => {
+    const failedProjects = (state.launchProgress || [])
+      .flatMap(phase => (phase.projects || []).filter(p => p.status === 'failed'))
+    const projectNames = failedProjects.map(p => p.name).join(', ')
+    const clusters = (state.assignments || []).map(a => a.clusterName).filter(Boolean).join(', ')
+
+    const rollbackPrompt = [
+      `The following Mission Control deployment failed and may have left clusters in an inconsistent state.`,
+      `Failed projects: ${projectNames || 'unknown'}`,
+      clusters ? `Target clusters: ${clusters}` : '',
+      ``,
+      `Please analyze what changes were partially applied and reverse them safely.`,
+      `Check the current state of the cluster(s) first, identify any partially-applied resources,`,
+      `and roll them back. Ask me before making destructive changes.`,
+    ].filter(Boolean).join('\n')
+
+    startMission({
+      title: `Rollback: ${state.title || 'Mission Control deployment'}`,
+      description: `Reverse changes from failed deployment`,
+      type: 'repair',
+      initialPrompt: rollbackPrompt,
+    })
+    openSidebar()
+    handleClose()
+  }, [state, startMission, openSidebar, handleClose])
 
   // #8483 — Pre-populate Phase 1 with a Kubara chart when opened from Mission Browser
   // #12216 — Clear the guard when the dialog closes so every new "Use in Mission
@@ -563,6 +603,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                           mc.setPhase('complete')
                         }}
                         onClose={handleClose}
+                        onRollback={handleRollback}
                       />
                     </ChunkErrorBoundary>
                   </PhaseWrapper>

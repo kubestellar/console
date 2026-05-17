@@ -771,7 +771,14 @@
     "failureRetry": "Retry",
     "removeCardButton": "Remove card",
     "removeCardLabel": "Remove this card from the dashboard",
-    "removeCardMessage": "This card can't display data. You can remove it from your dashboard."
+    "removeCardMessage": "This card can't display data. You can remove it from your dashboard.",
+    "renderErrorTitle": "Card render error",
+    "renderErrorMessage": "An unexpected error occurred while rendering this card.",
+    "renderReloadMessage": "Reload the page to try again.",
+    "renderRetryLeft": "Retry ({{count}} left)",
+    "renderRetryLeft_one": "Retry ({{count}} left)",
+    "renderRetryLeft_other": "Retry ({{count}} left)",
+    "unknownTime": "Unknown"
   },
   "github": {
     "pullRequests": "Pull Requests",
@@ -2630,6 +2637,7 @@
     "fetchFailed_one": "Failed to fetch events ({{count}} failure)",
     "fetchFailed_other": "Failed to fetch events ({{count}} failures)",
     "topReasons": "Top Reasons",
+    "others": "Others",
     "byCluster": "By Cluster"
   },
   "gatewayStatus": {

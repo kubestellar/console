@@ -33,6 +33,10 @@ const (
 	portReleasePollInterval = 50 * time.Millisecond
 )
 
+type kbGapSweeper interface {
+	SweepOldKBGaps(ctx context.Context) (int64, error)
+}
+
 // Server represents the API server
 type Server struct {
 	app                 *fiber.App
@@ -129,10 +133,10 @@ func NewServer(cfg Config) (*Server, error) {
 		"::1/128",        // IPv6 loopback
 	}
 
-	// BodyLimit defaults to feedbackBodyLimit (5 MB) because the feedback endpoint
-	// accepts base64-encoded screenshot uploads. Per-route enforcement is done by
-	// bodyGuard middleware (1 MB for most routes) and analyticsBodyGuard (64 KB).
-	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	// BodyLimit defaults to defaultMaxBodyBytes so POST /api/feedback/requests can
+	// accept one advertised 10 MB attachment after base64 expansion. The route's
+	// feedbackBodyGuard enforces feedbackBodyLimit with a descriptive 413, while
+	// bodyGuard still caps most API routes at 1 MB and analyticsBodyGuard at 64 KB.
 	// Deployers can override via MAX_BODY_BYTES env var (#9891) to raise the cap
 	// for large form uploads or lower it to tighten the DoS surface further.
 	// ReadTimeout (30s) further bounds the buffering window.
@@ -260,6 +264,7 @@ func NewServer(cfg Config) (*Server, error) {
 	} else {
 		slog.Info("[Server] GPU utilization worker skipped — no Kubernetes client available")
 	}
+	server.startKBGapsSweeper(db)
 
 	slog.Info("Server initialization complete")
 
@@ -278,5 +283,36 @@ func (s *Server) setupRoutes() {
 	s.setupGovernanceRoutes(routes)
 	s.setupIntegrationsRoutes(routes)
 	s.setupFeedbackRoutes(routes)
+	s.setupStellarRoutes(routes)
 	s.setupWebSocketStaticRoutes(routes)
+}
+
+func (s *Server) startKBGapsSweeper(gapStore kbGapSweeper) {
+	if gapStore == nil {
+		return
+	}
+	safego.GoWith("api/kb-gap-sweeper", func() {
+		runSweep := func() {
+			deleted, err := gapStore.SweepOldKBGaps(context.Background())
+			if err != nil {
+				slog.Warn("[Server] failed to sweep KB query gaps", "error", err)
+				return
+			}
+			if deleted > 0 {
+				slog.Info("[Server] swept old KB query gaps", "deleted", deleted)
+			}
+		}
+
+		runSweep()
+		ticker := time.NewTicker(store.KBGapSweepInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-s.done:
+				return
+			case <-ticker.C:
+				runSweep()
+			}
+		}
+	})
 }

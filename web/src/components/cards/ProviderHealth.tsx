@@ -26,12 +26,16 @@ const STATUS_LABEL_KEYS = {
   unknown: 'common:common.unknown',
 } as const satisfies Record<ProviderHealthInfo['status'], string>
 
+const PROVIDER_ROW_CONTAINER_STYLE = { containerType: 'inline-size' } as const
+
 function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; onConfigure?: () => void }) {
   const { t } = useTranslation(['cards', 'common'])
   return (
-    <div className="flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-secondary/30 transition-colors">
-      {/* Icon */}
-      <div className="shrink-0">
+    <div
+      className="@container flex flex-wrap items-start gap-2 rounded-lg px-1 py-2 transition-colors hover:bg-secondary/30 @lg:flex-nowrap @lg:items-center"
+      style={PROVIDER_ROW_CONTAINER_STYLE}
+    >
+      <div className="shrink-0 pt-0.5 @lg:pt-0">
         {provider.category === 'ai' ? (
           <AgentIcon provider={provider.id} className="w-5 h-5" />
         ) : (
@@ -39,50 +43,48 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
         )}
       </div>
 
-      {/* Name & detail */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1 basis-[10rem]">
         <div className="text-sm font-medium text-foreground truncate">{provider.name}</div>
         {provider.detail && (
           <div className="text-xs text-muted-foreground truncate">{provider.detail}</div>
         )}
       </div>
 
-      {/* Status dot + label */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <div className={cn('w-2 h-2 rounded-full', STATUS_COLORS[provider.status])} />
-        <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status]))}</span>
-        {!provider.configured && (
-          <StatusBadge color="yellow" size="xs" rounded="full">
-            {t('providerHealth.noKey')}
-          </StatusBadge>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+          <div className={cn('w-2 h-2 rounded-full', STATUS_COLORS[provider.status])} />
+          <span className="text-xs text-muted-foreground">{String(t(STATUS_LABEL_KEYS[provider.status]))}</span>
+          {!provider.configured && (
+            <StatusBadge color="yellow" size="xs" rounded="full">
+              {t('providerHealth.noKey')}
+            </StatusBadge>
+          )}
+        </div>
+
+        {!provider.configured && onConfigure && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onConfigure() }}
+            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-purple-500/20 hover:text-purple-400"
+            title={t('providerHealth.configureInSettings')}
+            aria-label={t('providerHealth.configureInSettings')}
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {provider.statusUrl && (
+          <a
+            href={sanitizeUrl(provider.statusUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground"
+            title={t('providerHealth.viewStatusPage')}
+            onClick={e => e.stopPropagation()}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         )}
       </div>
-
-      {/* Configure link for unconfigured providers */}
-      {!provider.configured && onConfigure && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onConfigure() }}
-          className="shrink-0 p-1 hover:bg-purple-500/20 rounded transition-colors text-muted-foreground hover:text-purple-400"
-          title={t('providerHealth.configureInSettings')}
-          aria-label={t('providerHealth.configureInSettings')}
-        >
-          <Settings className="w-3.5 h-3.5" />
-        </button>
-      )}
-
-      {/* Status page link */}
-      {provider.statusUrl && (
-        <a
-          href={sanitizeUrl(provider.statusUrl)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 p-1 hover:bg-secondary/50 rounded transition-colors text-muted-foreground hover:text-foreground"
-          title={t('providerHealth.viewStatusPage')}
-          onClick={e => e.stopPropagation()}
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      )}
     </div>
   )
 }
@@ -126,34 +128,36 @@ export function ProviderHealth() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* AI Providers */}
-      {aiProviders.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            {t('providerHealth.aiProviders')}
-          </h3>
-          <div className="space-y-0.5">
-            {aiProviders.map(p => (
-              <ProviderRow key={p.id} provider={p} onConfigure={goToSettings} />
-            ))}
+    <div className="h-full min-h-0 overflow-y-auto pr-1">
+      <div className="space-y-4">
+        {/* AI Providers */}
+        {aiProviders.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              {t('providerHealth.aiProviders')}
+            </h3>
+            <div className="space-y-0.5">
+              {aiProviders.map(p => (
+                <ProviderRow key={p.id} provider={p} onConfigure={goToSettings} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Cloud Providers */}
-      {cloudProviders.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            {t('providerHealth.cloudProviders')}
-          </h3>
-          <div className="space-y-0.5">
-            {cloudProviders.map(p => (
-              <ProviderRow key={p.id} provider={p} />
-            ))}
+        {/* Cloud Providers */}
+        {cloudProviders.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              {t('providerHealth.cloudProviders')}
+            </h3>
+            <div className="space-y-0.5">
+              {cloudProviders.map(p => (
+                <ProviderRow key={p.id} provider={p} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

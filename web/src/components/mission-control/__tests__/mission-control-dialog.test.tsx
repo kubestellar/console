@@ -93,6 +93,12 @@ describe('MissionControlDialog', () => {
     expect(screen.getByTestId('phase-define')).toBeDefined()
   })
 
+  it('resets to a fresh session when opened from the sidebar CTA', () => {
+    render(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />)
+
+    expect(mockMC.reset).toHaveBeenCalledTimes(1)
+  })
+
   it('opens cleanly after rendering closed first', () => {
     const { rerender } = render(<MissionControlDialog open={false} onClose={vi.fn()} />)
 
@@ -166,6 +172,7 @@ describe('MissionControlDialog', () => {
       />
     )
 
+    expect(mockMC.reset).not.toHaveBeenCalled()
     expect(decodePlan).toHaveBeenCalledWith('base64data')
     expect(mockMC.hydrateFromPlan).toHaveBeenCalledWith(mockPlan)
     expect(screen.getByText('REVIEW')).toBeDefined()

@@ -18,7 +18,7 @@ interface Props {
   /** Called when the operator clicks a row that carries an eventId. Wires the
    *  log into the events panel — click a "Tried RestartDeployment" log entry
    *  and the matching event card's modal opens with the full attempt detail. */
-  onOpenEvent?: (eventId: string) => void
+  onOpenEvent?: (eventId: string, entry: StellarActivity) => void
 }
 
 const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
@@ -137,8 +137,12 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                     <span style={{ color: k.color, minWidth: 14, textAlign: 'center' }}>{k.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        fontWeight: 600, color: 'var(--s-text)',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: 'var(--s-text)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                       }}>
                         {entry.title}
                       </div>
@@ -163,7 +167,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                     key={entry.id}
                     type="button"
                     title={`${entry.detail ?? ''}\n\nClick to open the event in the events column.`}
-                    onClick={() => entry.eventId && onOpenEvent?.(entry.eventId)}
+                    onClick={() => entry.eventId && onOpenEvent?.(entry.eventId, entry)}
                     style={baseStyle}
                   >
                     {body}

@@ -1,7 +1,8 @@
 name: Coverage Gate
 
-# PR-only: fast smoke check on modified files (< 2 min)
-# Full coverage suite runs hourly in coverage-hourly.yml
+# PR-only: enforces line coverage threshold on modified files.
+# Blocks merge when any modified file OR total project coverage
+# falls below COVERAGE_THRESHOLD. Full suite runs in coverage-hourly.yml.
 
 on:
   pull_request:
@@ -48,9 +49,9 @@ jobs:
         run: npm ci || npm ci
 
       - name: Run smoke tests with coverage (modified files only)
+        id: run-tests
         working-directory: web
         run: |
-          # Get modified source files
           MODIFIED=$(git diff --name-only origin/main...HEAD -- 'web/src/**/*.ts' 'web/src/**/*.tsx' \
             | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v 'src/test/' \
             | sed 's|^web/||' || true)
@@ -61,12 +62,12 @@ jobs:
             exit 0
           fi
 
-          # Run only tests related to modified files (fast)
-          npx vitest run --coverage --reporter=verbose 2>&1 | tail -20 || true
-        continue-on-error: true
+          echo "status=run" >> "$GITHUB_OUTPUT"
+          npx vitest run --coverage --reporter=verbose 2>&1 | tail -40 || true
 
-      - name: Check coverage for modified files
+      - name: Check coverage against threshold
         id: gate
+        if: steps.run-tests.outputs.status != 'skip'
         working-directory: web
         env:
           THRESHOLD: ${{ env.COVERAGE_THRESHOLD }}
@@ -74,7 +75,7 @@ jobs:
           SUMMARY_FILE="coverage/coverage-summary.json"
 
           if [ ! -f "$SUMMARY_FILE" ]; then
-            echo "::warning::No coverage summary found"
+            echo "::warning::No coverage summary found — cannot enforce gate"
             echo "status=skip" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -93,52 +94,61 @@ jobs:
 
           while IFS= read -r file; do
             [ -z "$file" ] && continue
-            LINE_PCT=$(jq -r --arg f "$file" '(.[$f] // .["./\($f)"] // null) | if . then .lines.pct else null end' "$SUMMARY_FILE")
+            LINE_PCT=$(jq -r --arg f "$file" \
+              '(.[$f] // .["./\($f)"] // null) | if . then .lines.pct else null end' \
+              "$SUMMARY_FILE")
 
             if [ "$LINE_PCT" = "null" ] || [ -z "$LINE_PCT" ]; then
-              REPORT_LINES="${REPORT_LINES}| \`${file}\` | — | No data | :grey_question: |\n"
+              REPORT_LINES="${REPORT_LINES}| \`${file}\` | — | ${THRESHOLD}% | :grey_question: |\n"
               continue
             fi
 
             LINE_PCT_INT=$(echo "$LINE_PCT" | cut -d. -f1)
             if [ "$LINE_PCT_INT" -lt "$THRESHOLD" ]; then
-              REPORT_LINES="${REPORT_LINES}| \`${file}\` | ${LINE_PCT}% | ${THRESHOLD}% | :warning: |\n"
+              REPORT_LINES="${REPORT_LINES}| \`${file}\` | ${LINE_PCT}% | ${THRESHOLD}% | :x: |\n"
               ALL_PASS=false
             else
               REPORT_LINES="${REPORT_LINES}| \`${file}\` | ${LINE_PCT}% | ${THRESHOLD}% | :white_check_mark: |\n"
             fi
           done <<< "$MODIFIED_FILES"
 
+          TOTAL=$(jq -r '.total.lines.pct // "?"' "$SUMMARY_FILE")
+          TOTAL_INT=$(echo "$TOTAL" | grep -oE '^[0-9]+' || echo "")
+          TOTAL_FAIL=false
+          if [ -n "$TOTAL_INT" ] && [ "$TOTAL_INT" -lt "$THRESHOLD" ]; then
+            TOTAL_FAIL=true
+          fi
+
           {
-            echo "## Coverage Report"
+            echo "## Coverage Gate"
             echo "| File | Coverage | Threshold | Status |"
             echo "|------|----------|-----------|--------|"
             echo -e "$REPORT_LINES"
             if [ "$ALL_PASS" = "true" ]; then
-              echo ":tada: All modified files meet ${THRESHOLD}% threshold."
+              echo ":tada: All modified files meet the ${THRESHOLD}% line coverage threshold."
             else
-              echo ":warning: Some files below ${THRESHOLD}%. _Warning only — not blocking._"
+              echo ":x: **Merge blocked — one or more modified files are below the ${THRESHOLD}% threshold.**"
+            fi
+            echo ""
+            if [ "$TOTAL_FAIL" = "true" ]; then
+              echo "> :bar_chart: **Total project coverage: ${TOTAL}%** — below the ${THRESHOLD}% floor. Merge blocked."
+            else
+              echo "> :bar_chart: Total project coverage: **${TOTAL}%**"
             fi
           } > /tmp/coverage-report.md
 
-          TOTAL=$(jq -r '.total.lines.pct // "?"' "$SUMMARY_FILE")
           echo "total_coverage=${TOTAL}" >> "$GITHUB_OUTPUT"
 
-          # Warn when total project coverage is below the threshold floor.
-          # This is a visibility-only check — not blocking — but surfaces the gap
-          # between the per-file modified-files gate and overall project health.
-          TOTAL_INT=$(echo "$TOTAL" | grep -oE '^[0-9]+' || echo "")
-          if [ -n "$TOTAL_INT" ] && [ "$TOTAL_INT" -lt "$THRESHOLD" ]; then
-            {
-              echo ""
-              echo "> :bar_chart: **Total project coverage: ${TOTAL}%** — below the ${THRESHOLD}% threshold floor. New code meets the per-file gate, but overall coverage has room to grow."
-            } >> /tmp/coverage-report.md
+          if [ "$ALL_PASS" = "false" ] || [ "$TOTAL_FAIL" = "true" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
 
-          echo "status=$( [ \"$ALL_PASS\" = \"true\" ] && echo pass || echo warn )" >> "$GITHUB_OUTPUT"
+          echo "status=pass" >> "$GITHUB_OUTPUT"
 
       - name: Comment on PR
-        if: steps.gate.outputs.status != 'skip'
+        if: always() && steps.gate.outputs.status != 'skip' && steps.gate.outputs.status != ''
+        continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |

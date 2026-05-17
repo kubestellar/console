@@ -303,7 +303,7 @@ export function useMarketplace() {
       }
       if (changed) notifyInstalledChange()
     }).catch(() => { /* reconciliation is best-effort */ })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [installedSnapshot, notifyInstalledChange])
 
   const markInstalled = (itemId: string, entry: InstalledEntry) => {
     const next = { ...installedSnapshot, [itemId]: entry }

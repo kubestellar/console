@@ -11,7 +11,7 @@ export const alertRulesConfig: UnifiedCardConfig = {
   icon: 'Bell',
   iconColor: 'text-orange-400',
   defaultWidth: 6,
-  defaultHeight: 3,
+  defaultHeight: 4,
   dataSource: { type: 'hook', hook: 'useAlertRules' },
   filters: [
     { field: 'search', type: 'text', placeholder: 'Search rules...', searchFields: ['name', 'severity'], storageKey: 'alert-rules' },

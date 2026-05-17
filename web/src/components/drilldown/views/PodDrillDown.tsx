@@ -28,6 +28,12 @@ import { copyToClipboard } from '../../../lib/clipboard'
 import { useToast } from '../../ui/Toast'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
+import { useAsyncData } from '../../../hooks/useAsyncData'
+import { PodStatusSection } from './PodStatusSection'
+import { PodLogsSection } from './PodLogsSection'
+import { PodEventsSection } from './PodEventsSection'
+import { PodYamlSection } from './PodYamlSection'
+import { computeKeyValueDiffMap } from './pod-drilldown/helpers'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -125,25 +131,6 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   cleanupPodCache()
 
   const [activeTab, setActiveTab] = useState<TabType>((data.tab as TabType) || 'overview')
-  const [describeOutput, setDescribeOutput] = useState<string | null>(cache.describeOutput || null)
-  const [describeLoading, setDescribeLoading] = useState(false)
-  const [describeError, setDescribeError] = useState<string | null>(null)
-  const [logsOutput, setLogsOutput] = useState<string | null>(cache.logsOutput || null)
-  const [logsLoading, setLogsLoading] = useState(false)
-  const [logsError, setLogsError] = useState<string | null>(null)
-  const [eventsOutput, setEventsOutput] = useState<string | null>(cache.eventsOutput || null)
-  const [eventsLoading, setEventsLoading] = useState(false)
-  const [eventsError, setEventsError] = useState<string | null>(null)
-  const [yamlOutput, setYamlOutput] = useState<string | null>(cache.yamlOutput || null)
-  const [yamlLoading, setYamlLoading] = useState(false)
-  const [yamlError, setYamlError] = useState<string | null>(null)
-  const [podStatusOutput, setPodStatusOutput] = useState<string | null>(cache.podStatusOutput || null)
-  const [podStatusLoading, setPodStatusLoading] = useState(false)
-  const [podStatusError, setPodStatusError] = useState<string | null>(null)
-  const [aiAnalysis, setAiAnalysis] = useState<string | null>(cache.aiAnalysis || null)
-  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false)
-  // #5945 — Track AI analysis errors so failures are surfaced in the UI instead of silently swallowed
-  const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null)
   const { showToast } = useToast()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt, errorMessage } = useApiKeyCheck()
   const backendActionUnavailable = inCluster && backendStatus === 'disconnected'
@@ -206,6 +193,199 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const passedIssues = (data.issues as string[]) || []
   const passedLabels = data.labels as Record<string, string> | undefined
   const passedAnnotations = data.annotations as Record<string, string> | undefined
+
+  const invalidPodResponseError = t(
+    'drilldown.errors.invalidPodResponse',
+    'Failed to load pod details due to an invalid agent response.',
+  )
+
+  const describeFetcher = useCallback(async (): Promise<string> => {
+    const output = await runKubectl(['describe', 'pod', podName, '-n', namespace])
+    if (!output) {
+      throw new Error(invalidPodResponseError)
+    }
+    return output
+  }, [runKubectl, podName, namespace, invalidPodResponseError])
+
+  const logsFetcher = useCallback(async (): Promise<string> => {
+    const output = await runKubectl(['logs', podName, '-n', namespace, '--tail=500'])
+    if (!output) {
+      throw new Error(invalidPodResponseError)
+    }
+    return output
+  }, [runKubectl, podName, namespace, invalidPodResponseError])
+
+  const eventsFetcher = useCallback(async (): Promise<string> => {
+    const output = await runKubectl([
+      'get',
+      'events',
+      '-n',
+      namespace,
+      '--field-selector',
+      `involvedObject.name=${podName}`,
+      '-o',
+      'wide',
+    ])
+    if (!output) {
+      throw new Error(invalidPodResponseError)
+    }
+    return output
+  }, [runKubectl, podName, namespace, invalidPodResponseError])
+
+  const podStatusFetcher = useCallback(async (): Promise<string> => {
+    const ws = await openTrackedWs()
+    return new Promise((resolve, reject) => {
+      const requestId = `status-${Date.now()}`
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          id: requestId,
+          type: 'kubectl',
+          payload: { context: cluster, args: ['get', 'pod', podName, '-n', namespace, '-o', 'wide'] },
+        }))
+      }
+
+      ws.onmessage = (event: MessageEvent) => {
+        const msg = parseWsMessage(event, 'pod status')
+        if (!msg) {
+          reject(new Error(getInvalidWsResponseError('Pod status')))
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId && msg.payload?.output) {
+          resolve(msg.payload.output)
+          ws.close()
+          return
+        }
+        if (msg.id === requestId) {
+          reject(new Error(getInvalidWsResponseError('Pod status')))
+          ws.close()
+          return
+        }
+      }
+
+      ws.onerror = () => {
+        ws.close()
+        reject(new Error(getInvalidWsResponseError('Pod status')))
+      }
+    })
+  }, [openTrackedWs, cluster, podName, namespace, parseWsMessage, getInvalidWsResponseError])
+
+  const yamlFetcher = useCallback(async (): Promise<string> => {
+    const ws = await openTrackedWs()
+    return new Promise((resolve, reject) => {
+      const requestId = `yaml-${Date.now()}`
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          id: requestId,
+          type: 'kubectl',
+          payload: { context: cluster, args: ['get', 'pod', podName, '-n', namespace, '-o', 'yaml'] },
+        }))
+      }
+
+      ws.onmessage = (event: MessageEvent) => {
+        const msg = parseWsMessage(event, 'yaml')
+        if (!msg) {
+          reject(new Error(getInvalidWsResponseError('YAML')))
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId && msg.payload?.output) {
+          resolve(msg.payload.output)
+          ws.close()
+          return
+        }
+        if (msg.id === requestId) {
+          reject(new Error(getInvalidWsResponseError('YAML')))
+          ws.close()
+          return
+        }
+      }
+
+      ws.onerror = () => {
+        ws.close()
+        reject(new Error(getInvalidWsResponseError('YAML')))
+      }
+    })
+  }, [openTrackedWs, cluster, podName, namespace, parseWsMessage, getInvalidWsResponseError])
+
+  const {
+    data: describeOutput,
+    loading: describeLoading,
+    error: describeError,
+    refetch: refetchDescribe,
+  } = useAsyncData(describeFetcher, [describeFetcher], {
+    initialData: cache.describeOutput || null,
+    enabled: false,
+  })
+
+  const {
+    data: logsOutput,
+    loading: logsLoading,
+    error: logsError,
+    refetch: refetchLogs,
+  } = useAsyncData(logsFetcher, [logsFetcher], {
+    initialData: cache.logsOutput || null,
+    enabled: false,
+  })
+
+  const {
+    data: eventsOutput,
+    loading: eventsLoading,
+    error: eventsError,
+    refetch: refetchEvents,
+  } = useAsyncData(eventsFetcher, [eventsFetcher], {
+    initialData: cache.eventsOutput || null,
+    enabled: false,
+  })
+
+  const {
+    data: yamlOutput,
+    loading: yamlLoading,
+    error: yamlError,
+    refetch: refetchYaml,
+  } = useAsyncData(yamlFetcher, [yamlFetcher], {
+    initialData: cache.yamlOutput || null,
+    enabled: false,
+  })
+
+  const {
+    data: podStatusOutput,
+    loading: podStatusLoading,
+    error: podStatusError,
+    refetch: refetchPodStatus,
+  } = useAsyncData(podStatusFetcher, [podStatusFetcher], {
+    initialData: cache.podStatusOutput || null,
+    enabled: false,
+  })
+
+  const fetchDescribe = async (force = false): Promise<void> => {
+    if (!agentConnected || (!force && describeOutput)) return
+    await refetchDescribe()
+  }
+
+  const fetchLogs = async (force = false): Promise<void> => {
+    if (!agentConnected || (!force && logsOutput)) return
+    await refetchLogs()
+  }
+
+  const fetchEvents = async (force = false): Promise<void> => {
+    if (!agentConnected || (!force && eventsOutput)) return
+    await refetchEvents()
+  }
+
+  const fetchYaml = async (force = false): Promise<void> => {
+    if (!agentConnected || (!force && yamlOutput)) return
+    await refetchYaml()
+  }
+
+  const fetchPodStatus = async (force = false): Promise<void> => {
+    if (!agentConnected || (!force && podStatusOutput)) return
+    await refetchPodStatus()
+  }
 
   const baseIssues = useMemo(() => {
     const allIssues = [...passedIssues]
@@ -297,6 +477,204 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     return filterPodIssuesForDiagnosis(allIssues, podDiagnosis?.kind)
   }, [baseIssues, eventsOutput, podDiagnosis?.kind])
 
+  const aiAnalysisFetcher = useCallback(async (): Promise<string> => {
+    if (backendActionUnavailable) {
+      showToast(backendUnavailableMessage, 'error')
+      throw new Error(backendUnavailableMessage)
+    }
+
+    const [
+      podGet,
+      podDescribe,
+      podYaml,
+      podLogs,
+      podEvents,
+      namespaceEvents,
+    ] = await Promise.all([
+      runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'wide']),
+      runKubectl(['describe', 'pod', podName, '-n', namespace]),
+      runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'yaml']),
+      runKubectl(['logs', podName, '-n', namespace, '--tail=200']),
+      runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${podName}`]),
+      runKubectl(['get', 'events', '-n', namespace, '--sort-by=.lastTimestamp']),
+    ])
+
+    let ownerInfo = ''
+    const ownerMatch = podYaml.match(/ownerReferences:[\s\S]*?(?=\nspec:|$)/)
+    if (ownerMatch) {
+      const kindMatch = ownerMatch[0].match(/kind:\s*(\w+)/)
+      const nameMatch = ownerMatch[0].match(/name:\s*([\w-]+)/)
+      if (kindMatch && nameMatch) {
+        const ownerKind = kindMatch[1].toLowerCase()
+        const ownerName = nameMatch[1]
+        if (ownerKind === 'replicaset') {
+          const [rsDescribe, rsYaml] = await Promise.all([
+            runKubectl(['describe', 'replicaset', ownerName, '-n', namespace]),
+            runKubectl(['get', 'replicaset', ownerName, '-n', namespace, '-o', 'yaml']),
+          ])
+          ownerInfo = `\n--- REPLICASET INFO ---\n${rsDescribe}\n`
+
+          const deployMatch = rsYaml.match(/ownerReferences:[\s\S]*?name:\s*([\w-]+)/)
+          if (deployMatch) {
+            const deployDescribe = await runKubectl(['describe', 'deployment', deployMatch[1], '-n', namespace])
+            ownerInfo += `\n--- DEPLOYMENT INFO ---\n${deployDescribe}\n`
+          }
+        } else if (ownerKind === 'deployment') {
+          const deployDescribe = await runKubectl(['describe', 'deployment', ownerName, '-n', namespace])
+          ownerInfo += `\n--- DEPLOYMENT INFO ---\n${deployDescribe}\n`
+        } else if (ownerKind === 'job') {
+          const jobDescribe = await runKubectl(['describe', 'job', ownerName, '-n', namespace])
+          ownerInfo += `\n--- JOB INFO ---\n${jobDescribe}\n`
+        }
+      }
+    }
+
+    let nodeInfo = ''
+    const nodeMatch = podDescribe.match(/Node:\s*([\w.-]+)/)
+    if (nodeMatch && nodeMatch[1] !== '<none>') {
+      const nodeDescribe = await runKubectl(['describe', 'node', nodeMatch[1]])
+      const conditionsMatch = nodeDescribe.match(/Conditions:[\s\S]*?(?=Addresses:|$)/)
+      const capacityMatch = nodeDescribe.match(/Capacity:[\s\S]*?(?=Allocatable:|$)/)
+      const allocatableMatch = nodeDescribe.match(/Allocatable:[\s\S]*?(?=System Info:|$)/)
+      nodeInfo = `\n--- NODE INFO (${nodeMatch[1]}) ---\n`
+      if (conditionsMatch) nodeInfo += `Conditions:\n${conditionsMatch[0]}\n`
+      if (capacityMatch) nodeInfo += `${capacityMatch[0]}\n`
+      if (allocatableMatch) nodeInfo += `${allocatableMatch[0]}\n`
+    }
+
+    const analysisContext = `
+=== POD STATUS (kubectl get pod -o wide) ===
+${podGet}
+
+=== POD DESCRIBE ===
+${podDescribe}
+
+=== POD EVENTS ===
+${podEvents || 'No pod-specific events'}
+
+=== NAMESPACE RECENT EVENTS ===
+${namespaceEvents || 'No namespace events'}
+
+=== POD LOGS (last 200 lines) ===
+${podLogs || 'No logs available (pod may not have started)'}
+${ownerInfo}
+${nodeInfo}
+=== LABELS ===
+${labels ? Object.entries(labels).map(([k, v]) => `${k}=${v}`).join('\n') : 'No labels available'}
+
+=== ANNOTATIONS ===
+${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\n') : 'No annotations available'}
+`.trim()
+
+    const ws = await openTrackedWs()
+    const requestId = `ai-analyze-${Date.now()}`
+
+    return new Promise((resolve, reject) => {
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          id: requestId,
+          type: 'claude',
+          payload: {
+            prompt: `You are a Kubernetes expert. Analyze this pod issue and provide a concise diagnosis.
+
+Pod: ${podName}
+Namespace: ${namespace}
+Reported Status: ${status}
+Reported Issues: ${(issues || []).join(', ')}
+
+COMPREHENSIVE POD CONTEXT:
+${analysisContext}
+
+Based on ALL the information above (status, events, logs, owner resources, node state), provide:
+1. ROOT CAUSE: What exactly happened? (Look for Evicted, OOMKilled, ImagePullBackOff, scheduling failures, resource limits, node issues, etc.)
+2. EVIDENCE: What specific data points confirm this?
+3. FIX: What's the recommended action?
+
+Be specific and reference actual values from the data. Keep response to 3-4 sentences max.`,
+          },
+        }))
+      }
+
+      ws.onmessage = (event: MessageEvent) => {
+        const msg = parseWsMessage(event, 'AI analysis')
+        if (!msg) {
+          const errMsg = 'AI analysis failed: received an invalid response from the agent.'
+          showToast(errMsg, 'error')
+          ws.close()
+          reject(new Error(errMsg))
+          return
+        }
+
+        if (msg.id === requestId) {
+          if (msg.payload?.content) {
+            ws.close()
+            resolve(msg.payload.content)
+            return
+          }
+          if (msg.payload?.error || msg.payload?.message) {
+            const errMsg = `Analysis unavailable: ${msg.payload.error || msg.payload.message}`
+            showToast(errMsg, 'error')
+            ws.close()
+            reject(new Error(errMsg))
+          } else {
+            ws.close()
+            resolve('Analysis complete - no specific issues identified.')
+          }
+        }
+      }
+
+      ws.onerror = () => {
+        const errMsg = 'Could not connect to AI analysis service. Please check that the agent is running and try again.'
+        showToast(errMsg, 'error')
+        ws.close()
+        reject(new Error(errMsg))
+      }
+    })
+  }, [
+    backendActionUnavailable,
+    backendUnavailableMessage,
+    runKubectl,
+    podName,
+    namespace,
+    status,
+    issues,
+    labels,
+    annotations,
+    openTrackedWs,
+    parseWsMessage,
+    showToast,
+  ])
+
+  const {
+    data: aiAnalysis,
+    loading: aiAnalysisLoading,
+    error: aiAnalysisError,
+    refetch: refetchAiAnalysis,
+  } = useAsyncData(aiAnalysisFetcher, [aiAnalysisFetcher], {
+    initialData: cache.aiAnalysis || null,
+    enabled: false,
+  })
+
+  const fetchAiAnalysis = async (): Promise<void> => {
+    if (backendActionUnavailable || !agentConnected || aiAnalysisLoading) return
+    await refetchAiAnalysis()
+  }
+
+  const filteredDisplayIssues = useMemo(
+    () => issues.filter(issue => issue.toLowerCase() !== status?.toLowerCase()),
+    [issues, status],
+  )
+
+  const labelDiffByKey = useMemo(
+    () => computeKeyValueDiffMap(labels, pendingLabelChanges),
+    [labels, pendingLabelChanges],
+  )
+
+  const annotationDiffByKey = useMemo(
+    () => computeKeyValueDiffMap(annotations, pendingAnnotationChanges),
+    [annotations, pendingAnnotationChanges],
+  )
+
   const diagnosisEvidence = useMemo(() => {
     if (!podDiagnosis) {
       return []
@@ -331,381 +709,40 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     return evidenceItems
   }, [podDiagnosis, reason, status, t])
 
-  // Use passed labels/annotations if available
+  // No subscription; no cleanup needed — sync from props only
   useEffect(() => {
     if (passedLabels) setLabels(passedLabels)
     if (passedAnnotations) setAnnotations(passedAnnotations)
   }, [passedLabels, passedAnnotations])
 
-  // Fetch pod describe output via local agent
-  const fetchDescribe = async (force = false) => {
-    if (!agentConnected || (!force && describeOutput)) return
-    setDescribeError(null)
-    setDescribeLoading(true)
+  useEffect(() => {
+    if (!describeOutput || (labels && annotations)) return
 
-    try {
-      const output = await runKubectl(['describe', 'pod', podName, '-n', namespace])
+    const labelsMatch = describeOutput.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
+    const annotationsMatch = describeOutput.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
 
-      if (output) {
-        setDescribeOutput(output)
-        setDescribeError(null)
-        // Parse labels and annotations from describe output if not already set
-        if (!labels || !annotations) {
-          const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
-          const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
-
-          if (labelsMatch && !labels) {
-            const parsed: Record<string, string> = Object.create(null) as Record<string, string>
-            labelsMatch[1].trim().split('\n').forEach(line => {
-              const [key, ...valueParts] = line.trim().split('=')
-              if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
-            })
-            if (Object.keys(parsed).length > 0) setLabels(parsed)
-          }
-
-          if (annotationsMatch && !annotations) {
-            const parsed: Record<string, string> = Object.create(null) as Record<string, string>
-            annotationsMatch[1].trim().split('\n').forEach(line => {
-              const colonIdx = line.indexOf(':')
-              if (colonIdx > 0) {
-                const key = line.substring(0, colonIdx).trim()
-                const value = line.substring(colonIdx + 1).trim()
-                if (key && key !== '<none>') safeSet(parsed, key, value)
-              }
-            })
-            if (Object.keys(parsed).length > 0) setAnnotations(parsed)
-          }
-        }
-      } else {
-        setDescribeError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
-      }
-    } catch {
-      setDescribeError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
-    } finally {
-      setDescribeLoading(false)
+    if (labelsMatch && !labels) {
+      const parsed: Record<string, string> = Object.create(null) as Record<string, string>
+      labelsMatch[1].trim().split('\n').forEach(line => {
+        const [key, ...valueParts] = line.trim().split('=')
+        if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
+      })
+      if (Object.keys(parsed).length > 0) setLabels(parsed)
     }
-  }
 
-  // Fetch pod logs via local agent
-  const fetchLogs = async (force = false) => {
-    if (!agentConnected || (!force && logsOutput)) return
-    setLogsError(null)
-    setLogsLoading(true)
-
-    try {
-      const output = await runKubectl(['logs', podName, '-n', namespace, '--tail=500'])
-
-      if (output) {
-        setLogsOutput(output)
-        setLogsError(null)
-      } else {
-        setLogsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
-      }
-    } catch {
-      setLogsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
-    } finally {
-      setLogsLoading(false)
+    if (annotationsMatch && !annotations) {
+      const parsed: Record<string, string> = Object.create(null) as Record<string, string>
+      annotationsMatch[1].trim().split('\n').forEach(line => {
+        const colonIdx = line.indexOf(':')
+        if (colonIdx > 0) {
+          const key = line.substring(0, colonIdx).trim()
+          const value = line.substring(colonIdx + 1).trim()
+          if (key && key !== '<none>') safeSet(parsed, key, value)
+        }
+      })
+      if (Object.keys(parsed).length > 0) setAnnotations(parsed)
     }
-  }
-
-  // Fetch pod events via local agent
-  const fetchEvents = async (force = false) => {
-    if (!agentConnected || (!force && eventsOutput)) return
-    setEventsError(null)
-    setEventsLoading(true)
-
-    try {
-      const output = await runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${podName}`, '-o', 'wide'])
-
-      if (output) {
-        setEventsOutput(output)
-        setEventsError(null)
-      } else {
-        setEventsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
-      }
-    } catch {
-      setEventsError(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'))
-    } finally {
-      setEventsLoading(false)
-    }
-  }
-
-  // Fetch AI analysis for pod issues - gathers comprehensive context
-  const fetchAiAnalysis = async () => {
-    if (backendActionUnavailable) {
-      setAiAnalysisError(backendUnavailableMessage)
-      showToast(backendUnavailableMessage, 'error')
-      return
-    }
-    if (!agentConnected || aiAnalysisLoading) return
-    setAiAnalysisLoading(true)
-    // #5945 — Clear any previous error when starting a new analysis so stale
-    // failures don't linger in the UI while the new request is in flight.
-    setAiAnalysisError(null)
-
-    try {
-      // Gather all context in parallel
-      const [
-        podGet,
-        podDescribe,
-        podYaml,
-        podLogs,
-        podEvents,
-        namespaceEvents,
-      ] = await Promise.all([
-        runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'wide']),
-        runKubectl(['describe', 'pod', podName, '-n', namespace]),
-        runKubectl(['get', 'pod', podName, '-n', namespace, '-o', 'yaml']),
-        runKubectl(['logs', podName, '-n', namespace, '--tail=200']),
-        runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${podName}`]),
-        runKubectl(['get', 'events', '-n', namespace, '--sort-by=.lastTimestamp']),
-      ])
-
-      // Extract owner references from YAML to get deployment/replicaset info
-      let ownerInfo = ''
-      const ownerMatch = podYaml.match(/ownerReferences:[\s\S]*?(?=\nspec:|$)/)
-      if (ownerMatch) {
-        const kindMatch = ownerMatch[0].match(/kind:\s*(\w+)/)
-        const nameMatch = ownerMatch[0].match(/name:\s*([\w-]+)/)
-        if (kindMatch && nameMatch) {
-          const ownerKind = kindMatch[1].toLowerCase()
-          const ownerName = nameMatch[1]
-          if (ownerKind === 'replicaset') {
-            const [rsDescribe, rsYaml] = await Promise.all([
-              runKubectl(['describe', 'replicaset', ownerName, '-n', namespace]),
-              runKubectl(['get', 'replicaset', ownerName, '-n', namespace, '-o', 'yaml']),
-            ])
-            ownerInfo = `\n--- REPLICASET INFO ---\n${rsDescribe}\n`
-
-            // Try to get deployment from RS
-            const deployMatch = rsYaml.match(/ownerReferences:[\s\S]*?name:\s*([\w-]+)/)
-            if (deployMatch) {
-              const deployDescribe = await runKubectl(['describe', 'deployment', deployMatch[1], '-n', namespace])
-              ownerInfo += `\n--- DEPLOYMENT INFO ---\n${deployDescribe}\n`
-            }
-          } else if (ownerKind === 'deployment') {
-            const deployDescribe = await runKubectl(['describe', 'deployment', ownerName, '-n', namespace])
-            ownerInfo += `\n--- DEPLOYMENT INFO ---\n${deployDescribe}\n`
-          } else if (ownerKind === 'job') {
-            const jobDescribe = await runKubectl(['describe', 'job', ownerName, '-n', namespace])
-            ownerInfo += `\n--- JOB INFO ---\n${jobDescribe}\n`
-          }
-        }
-      }
-
-      // Extract node name and get node info if pod was scheduled
-      let nodeInfo = ''
-      const nodeMatch = podDescribe.match(/Node:\s*([\w.-]+)/)
-      if (nodeMatch && nodeMatch[1] !== '<none>') {
-        const nodeDescribe = await runKubectl(['describe', 'node', nodeMatch[1]])
-        // Just get conditions and capacity, not full describe
-        const conditionsMatch = nodeDescribe.match(/Conditions:[\s\S]*?(?=Addresses:|$)/)
-        const capacityMatch = nodeDescribe.match(/Capacity:[\s\S]*?(?=Allocatable:|$)/)
-        const allocatableMatch = nodeDescribe.match(/Allocatable:[\s\S]*?(?=System Info:|$)/)
-        nodeInfo = `\n--- NODE INFO (${nodeMatch[1]}) ---\n`
-        if (conditionsMatch) nodeInfo += `Conditions:\n${conditionsMatch[0]}\n`
-        if (capacityMatch) nodeInfo += `${capacityMatch[0]}\n`
-        if (allocatableMatch) nodeInfo += `${allocatableMatch[0]}\n`
-      }
-
-      // Build comprehensive context for AI
-      const analysisContext = `
-=== POD STATUS (kubectl get pod -o wide) ===
-${podGet}
-
-=== POD DESCRIBE ===
-${podDescribe}
-
-=== POD EVENTS ===
-${podEvents || 'No pod-specific events'}
-
-=== NAMESPACE RECENT EVENTS ===
-${namespaceEvents || 'No namespace events'}
-
-=== POD LOGS (last 200 lines) ===
-${podLogs || 'No logs available (pod may not have started)'}
-${ownerInfo}
-${nodeInfo}
-=== LABELS ===
-${labels ? Object.entries(labels).map(([k, v]) => `${k}=${v}`).join('\n') : 'No labels available'}
-
-=== ANNOTATIONS ===
-${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\n') : 'No annotations available'}
-`.trim()
-
-      // Now request AI analysis via Claude
-      const ws = await openTrackedWs()
-      const requestId = `ai-analyze-${Date.now()}`
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'claude',
-          payload: {
-            prompt: `You are a Kubernetes expert. Analyze this pod issue and provide a concise diagnosis.
-
-Pod: ${podName}
-Namespace: ${namespace}
-Reported Status: ${status}
-Reported Issues: ${(issues || []).join(', ')}
-
-COMPREHENSIVE POD CONTEXT:
-${analysisContext}
-
-Based on ALL the information above (status, events, logs, owner resources, node state), provide:
-1. ROOT CAUSE: What exactly happened? (Look for Evicted, OOMKilled, ImagePullBackOff, scheduling failures, resource limits, node issues, etc.)
-2. EVIDENCE: What specific data points confirm this?
-3. FIX: What's the recommended action?
-
-Be specific and reference actual values from the data. Keep response to 3-4 sentences max.`
-          }
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'AI analysis')
-        if (!msg) {
-          // #5945 — Even malformed WebSocket messages must be reported as a
-          // failure so the user knows the analysis did not complete.
-          const errMsg = 'AI analysis failed: received an invalid response from the agent.'
-          setAiAnalysisError(errMsg)
-          setAiAnalysis(null)
-          showToast(errMsg, 'error')
-          ws.close()
-          setAiAnalysisLoading(false)
-          return
-        }
-
-        if (msg.id === requestId) {
-          if (msg.payload?.content) {
-            // #5945 — Success path: clear any lingering error state
-            setAiAnalysis(msg.payload.content)
-            setAiAnalysisError(null)
-          } else if (msg.payload?.error || msg.payload?.message) {
-            // #5945 — Surface backend error via dedicated error state + toast
-            // so the user sees a clear failure instead of a silent no-op.
-            const errMsg = `Analysis unavailable: ${msg.payload.error || msg.payload.message}`
-            setAiAnalysisError(errMsg)
-            setAiAnalysis(null)
-            showToast(errMsg, 'error')
-          } else {
-            setAiAnalysis('Analysis complete - no specific issues identified.')
-            setAiAnalysisError(null)
-          }
-        }
-        ws.close()
-        setAiAnalysisLoading(false)
-      }
-
-      ws.onerror = () => {
-        // #5945 — Previously this only set aiAnalysis to a plain string which
-        // made the error look like a successful result. Now we route it to
-        // the error state and also show a toast so the failure is visible.
-        const errMsg = 'Could not connect to AI analysis service. Please check that the agent is running and try again.'
-        setAiAnalysisError(errMsg)
-        setAiAnalysis(null)
-        showToast(errMsg, 'error')
-        setAiAnalysisLoading(false)
-        ws.close()
-      }
-    } catch (err: unknown) {
-      // #5945 — Unexpected errors (kubectl failures, network issues, etc.)
-      // must also be surfaced so the failure is not silent.
-      const errMsg = `Failed to perform AI analysis: ${err instanceof Error ? err.message : String(err)}`
-      setAiAnalysisError(errMsg)
-      setAiAnalysis(null)
-      showToast(errMsg, 'error')
-      setAiAnalysisLoading(false)
-    }
-  }
-
-  // Fetch pod status via kubectl get
-  const fetchPodStatus = async (force = false) => {
-    if (!agentConnected || (!force && podStatusOutput)) return
-    setPodStatusError(null)
-    setPodStatusLoading(true)
-
-    try {
-      const ws = await openTrackedWs()
-      const requestId = `status-${Date.now()}`
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['get', 'pod', podName, '-n', namespace, '-o', 'wide'] }
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'pod status')
-        if (!msg) {
-          setPodStatusError(getInvalidWsResponseError('Pod status'))
-          setPodStatusLoading(false)
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId && msg.payload?.output) {
-          setPodStatusOutput(msg.payload.output)
-          setPodStatusError(null)
-        }
-        ws.close()
-        setPodStatusLoading(false)
-      }
-
-      ws.onerror = () => {
-        setPodStatusLoading(false)
-        ws.close()
-      }
-    } catch {
-      setPodStatusLoading(false)
-    }
-  }
-
-  // Fetch pod YAML via local agent
-  const fetchYaml = async (force = false) => {
-    if (!agentConnected || (!force && yamlOutput)) return
-    setYamlError(null)
-    setYamlLoading(true)
-
-    try {
-      const ws = await openTrackedWs()
-      const requestId = `yaml-${Date.now()}`
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args: ['get', 'pod', podName, '-n', namespace, '-o', 'yaml'] }
-        }))
-      }
-
-      ws.onmessage = (event: MessageEvent) => {
-        const msg = parseWsMessage(event, 'yaml')
-        if (!msg) {
-          setYamlError(getInvalidWsResponseError('YAML'))
-          setYamlLoading(false)
-          ws.close()
-          return
-        }
-
-        if (msg.id === requestId && msg.payload?.output) {
-          setYamlOutput(msg.payload.output)
-          setYamlError(null)
-        }
-        ws.close()
-        setYamlLoading(false)
-      }
-
-      ws.onerror = () => {
-        setYamlLoading(false)
-        ws.close()
-      }
-    } catch {
-      setYamlLoading(false)
-    }
-  }
+  }, [describeOutput, labels, annotations])
 
   // Pre-fetch tab data when agent connects
   // Batched to limit concurrent WebSocket connections (max 2-3 at a time)
@@ -714,23 +751,22 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
 
-    // Determine if we should force refresh (rapid reopen or no cached data)
+    let cancelled = false
     const forceRefresh = shouldAutoRefreshRef.current
 
     const loadData = async () => {
-      // Batch 1: Overview data (2 concurrent)
       await Promise.all([
         (forceRefresh || !podStatusOutput) && fetchPodStatus(forceRefresh),
         (forceRefresh || !eventsOutput) && fetchEvents(forceRefresh),
       ].filter(Boolean))
+      if (cancelled) return
 
-      // Batch 2: Related resources + describe (2 concurrent)
       await Promise.all([
         (forceRefresh || relatedResources.length === 0) && fetchRelatedResources(forceRefresh),
         (forceRefresh || !describeOutput) && fetchDescribe(forceRefresh),
       ].filter(Boolean))
+      if (cancelled) return
 
-      // Batch 3: Logs + YAML (2 concurrent, lower priority)
       await Promise.all([
         (forceRefresh || !logsOutput) && fetchLogs(forceRefresh),
         (forceRefresh || !yamlOutput) && fetchYaml(forceRefresh),
@@ -738,6 +774,9 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     }
 
     loadData()
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hasLoadedRef guards against re-execution; only agentConnected triggers the initial load
   }, [agentConnected])
 
@@ -800,29 +839,32 @@ Please:
     })
   }
 
-  // Check if user can delete pods in this namespace
-  const checkDeletePermission = useCallback(async () => {
-    if (backendActionUnavailable) {
-      setCanDeletePod(false)
-      return
+  useEffect(() => {
+    let cancelled = false
+
+    const run = async () => {
+      if (backendActionUnavailable) {
+        if (!cancelled) setCanDeletePod(false)
+        return
+      }
+      try {
+        const result = await checkPermission({
+          cluster,
+          verb: 'delete',
+          resource: 'pods',
+          namespace,
+        })
+        if (!cancelled) setCanDeletePod(result.allowed)
+      } catch {
+        if (!cancelled) setCanDeletePod(false)
+      }
     }
-    try {
-      const result = await checkPermission({
-        cluster,
-        verb: 'delete',
-        resource: 'pods',
-        namespace
-      })
-      setCanDeletePod(result.allowed)
-    } catch {
-      setCanDeletePod(false)
+
+    run()
+    return () => {
+      cancelled = true
     }
   }, [backendActionUnavailable, cluster, namespace, checkPermission])
-
-  // Check delete permission on mount
-  useEffect(() => {
-    checkDeletePermission()
-  }, [checkDeletePermission])
 
   // Check if pod is managed by a controller (can be safely deleted and will be recreated)
   const isManagedPod = ownerChain.some(owner =>
@@ -1426,38 +1468,24 @@ Please:
       <div className="p-6 space-y-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Pod Status from kubectl */}
-            {agentConnected && (
-              <div>
-                {podStatusLoading ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-card/50 border border-border">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">{t('drilldown.status.fetchingPodStatus')}</span>
-                  </div>
-                ) : podStatusError ? (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-                    {podStatusError}
-                  </div>
-                ) : podStatusOutput ? (
-                  <pre className="p-3 rounded-lg bg-muted border border-border overflow-x-auto text-xs text-foreground font-mono">
-                    <code className="text-muted-foreground"># kubectl get pod {podName} -n {namespace} -o wide</code>
-                    {'\n'}
-                    {podStatusOutput}
-                  </pre>
-                ) : null}
-              </div>
-            )}
+            <PodStatusSection
+              agentConnected={agentConnected}
+              podName={podName}
+              namespace={namespace}
+              output={podStatusOutput}
+              loading={podStatusLoading}
+              error={podStatusError}
+              fetchingLabel={t('drilldown.status.fetchingPodStatus')}
+            />
 
             {/* Issues Section */}
             <div>
               {issues.length > 0 ? (
                 <div className="space-y-3">
                   {/* Issue list - filter out status since it's shown in breadcrumb */}
-                  {issues.filter(issue => issue.toLowerCase() !== status?.toLowerCase()).length > 0 && (
+                  {filteredDisplayIssues.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {issues
-                        .filter(issue => issue.toLowerCase() !== status?.toLowerCase())
-                        .map((issue, i) => {
+                      {filteredDisplayIssues.map((issue, i) => {
                           const severity = getIssueSeverity(issue)
                           const bgColor = severity === 'critical' ? 'bg-red-500/20 text-red-400' :
                             severity === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -1641,6 +1669,8 @@ Please:
               saveAnnotations={saveAnnotations}
               cancelAnnotationEdit={cancelAnnotationEdit}
               handleCopy={handleCopy}
+              labelDiffByKey={labelDiffByKey}
+              annotationDiffByKey={annotationDiffByKey}
             />
           </Suspense>
         )}
@@ -1690,21 +1720,19 @@ Please:
 
         {activeTab === 'logs' && (
           <Suspense fallback={<TabLoadingFallback />}>
-            <PodOutputTab
+            <PodLogsSection
+              podName={podName}
+              namespace={namespace}
               output={logsOutput}
               loading={logsLoading}
               agentConnected={agentConnected}
               error={logsError}
-              copyField="logs"
               copiedField={copiedField}
-              kubectlComment={`# kubectl logs ${podName} -n ${namespace} --tail=500`}
               loadingMessage={t('drilldown.status.fetchingLogs')}
               notConnectedMessage={t('drilldown.empty.connectAgentLogs')}
               emptyMessage={t('drilldown.empty.noLogsAvailable')}
               handleCopy={handleCopy}
               onRefresh={() => fetchLogs(true)}
-              refreshIcon={Terminal}
-              refreshLabel="Refresh"
             />
           </Suspense>
         )}
@@ -1725,42 +1753,38 @@ Please:
 
         {activeTab === 'events' && (
           <Suspense fallback={<TabLoadingFallback />}>
-            <PodOutputTab
+            <PodEventsSection
+              namespace={namespace}
+              podName={podName}
               output={eventsOutput}
               loading={eventsLoading}
               agentConnected={agentConnected}
               error={eventsError}
-              copyField="events"
               copiedField={copiedField}
-              kubectlComment={`# kubectl get events -n ${namespace} --field-selector involvedObject.name=${podName}`}
               loadingMessage={t('drilldown.status.fetchingEvents')}
               notConnectedMessage={t('drilldown.empty.connectAgentEvents')}
               emptyMessage={t('drilldown.empty.noEventsFound', { resource: 'pod' })}
               handleCopy={handleCopy}
               onRefresh={() => fetchEvents(true)}
-              refreshIcon={Zap}
-              refreshLabel="Refresh"
             />
           </Suspense>
         )}
 
         {activeTab === 'yaml' && (
           <Suspense fallback={<TabLoadingFallback />}>
-            <PodOutputTab
+            <PodYamlSection
+              podName={podName}
+              namespace={namespace}
               output={yamlOutput}
               loading={yamlLoading}
               agentConnected={agentConnected}
               error={yamlError}
-              copyField="yaml"
               copiedField={copiedField}
-              kubectlComment={`# kubectl get pod ${podName} -n ${namespace} -o yaml`}
               loadingMessage={t('drilldown.status.fetchingYaml')}
               notConnectedMessage={t('drilldown.empty.connectAgentYaml')}
               emptyMessage={t('drilldown.empty.failedFetchYaml')}
               handleCopy={handleCopy}
               onRefresh={() => fetchYaml(true)}
-              refreshIcon={Code}
-              refreshLabel="Refresh"
             />
           </Suspense>
         )}

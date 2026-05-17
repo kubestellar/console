@@ -290,7 +290,8 @@ cleanup() {
     kill $BACKEND_PID 2>/dev/null || true
     kill $FRONTEND_PID 2>/dev/null || true
     kill $AGENT_LOOP_PID 2>/dev/null || true
-    kill $AGENT_PID 2>/dev/null || true
+    LATEST_AGENT_PID=$(cat "$AGENT_PID_FILE" 2>/dev/null || true)
+    [ -n "$LATEST_AGENT_PID" ] && kill "$LATEST_AGENT_PID" 2>/dev/null || true
     kill $WATCHDOG_PID 2>/dev/null || true
     kill $AGENT_BUILD_PID 2>/dev/null || true
     kill $BACKEND_BUILD_PID 2>/dev/null || true
@@ -406,7 +407,8 @@ launch_kc_agent() {
         while true; do
             "$KC_AGENT_BIN" "${KC_AGENT_ARGS[@]}" &
             CHILD=$!
-            echo "$CHILD" > "$AGENT_PID_FILE"
+            TMP_PID_FILE="${AGENT_PID_FILE}.$$"
+            echo "$CHILD" > "$TMP_PID_FILE" && mv "$TMP_PID_FILE" "$AGENT_PID_FILE"
             echo "[kc-agent] Started (PID $CHILD)"
             wait $CHILD
             EXIT_CODE=$?

@@ -11,7 +11,7 @@ export const alertsDashboardConfig: UnifiedDashboardConfig = {
   statsType: 'alerts',
   cards: [
     { id: 'active-alerts-1', cardType: 'active_alerts', position: { w: 8, h: 4 } },
-    { id: 'alert-rules-1', cardType: 'alert_rules', position: { w: 4, h: 3 } },
+    { id: 'alert-rules-1', cardType: 'alert_rules', position: { w: 4, h: 4 } },
     { id: 'falco-alerts-1', cardType: 'falco_alerts', position: { w: 6, h: 3 } },
     { id: 'warning-events-1', cardType: 'warning_events', position: { w: 6, h: 3 } },
     { id: 'event-summary-1', cardType: 'event_summary', position: { w: 6, h: 3 } },

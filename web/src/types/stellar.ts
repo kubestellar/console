@@ -125,6 +125,7 @@ export interface StellarWatch {
   resourceName: string
   reason: string
   status: 'active' | 'resolved' | 'dismissed'
+  lastEventAt?: string
   lastUpdate: string
   lastChecked?: string
   createdAt: string
