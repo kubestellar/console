@@ -40,10 +40,6 @@ func (h *AuditHandler) GetAuditLog(c *fiber.Ctx) error {
 		return err
 	}
 
-	if err := requireAdmin(c, h.store); err != nil {
-		return err
-	}
-
 	limit := defaultAuditLimit
 	if q := c.Query("limit"); q != "" {
 		if v, err := strconv.Atoi(q); err == nil && v > 0 {
