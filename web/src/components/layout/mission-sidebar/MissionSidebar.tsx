@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react'
+import { useSidebarResize } from './useSidebarResize'
+import { SidebarResizeHandle } from './SidebarResizeHandle'
+import { MissionResolution } from './MissionResolution'
+import { MissionListPanel } from './MissionListPanel'
 import { safeLazy } from '../../../lib/safeLazy'
 import { ConfirmDialog, isAnyModalOpen } from '../../../lib/modals'
 import {
@@ -20,10 +24,7 @@ import {
   CheckCircle2,
   Eye,
   ShieldOff,
-  BookOpen,
   Rocket,
-  Search,
-  Satellite,
   History } from 'lucide-react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useMissions, isActiveMission } from '../../../hooks/useMissions'
@@ -37,16 +38,10 @@ import { MissionControlDialog } from '../../mission-control/MissionControlDialog
 import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport, OrbitResourceFilter } from '../../../lib/missions/types'
 import type { Mission } from '../../../hooks/useMissions'
-import { MissionListItem } from './MissionListItem'
-import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
-import { MissionTypeExplainer } from '../../missions/MissionTypeExplainer'
 import { StandaloneOrbitDialog } from '../../missions/StandaloneOrbitDialog'
 import { MissionChat } from './MissionChat'
 import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
-import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
-import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
-import { ResolutionErrorBoundary } from '../../missions/ResolutionErrorBoundary'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
@@ -54,16 +49,6 @@ import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCac
 import { isDemoMode } from '../../../lib/demoMode'
 import { ROUTES } from '../../../config/routes'
 
-const SIDEBAR_MIN_WIDTH = 380
-const SIDEBAR_MAX_WIDTH = 800
-const SIDEBAR_DEFAULT_WIDTH = 480
-const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
-
-// Tablet breakpoint matches Tailwind's `lg` (1024px). Below this width the
-// mission sidebar is rendered as an overlay (position: fixed without pushing
-// main content) so tablet layouts don't get squeezed below the min sidebar
-// width. See issues 6388 / 6394.
-const TABLET_BREAKPOINT_PX = 1024
 const ATTENTION_MISSION_STATUSES: ReadonlySet<Mission['status']> = new Set(['waiting_input', 'blocked'])
 const BACKGROUND_EXECUTION_STATUSES: ReadonlySet<Mission['status']> = new Set(['pending', 'running', 'cancelling'])
 const BACKGROUND_MISSION_PREVIEW_LIMIT = 3
@@ -86,20 +71,6 @@ function getMissionAttentionCount(missions: Mission[]): number {
 function matchesMissionSearch(mission: Mission, normalizedQuery: string): boolean {
   if (!normalizedQuery) return true
   return mission.title.toLowerCase().includes(normalizedQuery) || mission.description.toLowerCase().includes(normalizedQuery)
-}
-
-function loadSavedWidth(): number {
-  const maxW = typeof window !== 'undefined'
-    ? Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.6)
-    : SIDEBAR_MAX_WIDTH
-  try {
-    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY)
-    if (saved) {
-      const w = Number(saved)
-      if (w >= SIDEBAR_MIN_WIDTH && w <= SIDEBAR_MAX_WIDTH) return Math.min(w, maxW)
-    }
-  } catch { /* ignore */ }
-  return Math.min(SIDEBAR_DEFAULT_WIDTH, maxW)
 }
 
 export function MissionSidebar() {
@@ -126,25 +97,12 @@ export function MissionSidebar() {
   const [visibleMissionCount, setVisibleMissionCount] = useState(MISSIONS_PAGE_SIZE)
 
   // Resizable sidebar width (desktop non-fullscreen only)
-  const [sidebarWidth, setSidebarWidth] = useState(loadSavedWidth)
-  const [isResizing, setIsResizing] = useState(false)
-  const latestWidthRef = useRef(sidebarWidth)
+  const { sidebarWidth, isResizing, isTablet, handleResizeStart } = useSidebarResize()
 
   // Track tablet range (>= mobile but < lg). In this range the sidebar is
   // rendered as an overlay that does NOT push main content — pushing at
   // tablet widths squeezes main below the sidebar min width and can cause
   // ~10px content overlap (issue 6388).
-  const [isTablet, setIsTablet] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.innerWidth < TABLET_BREAKPOINT_PX
-  })
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${TABLET_BREAKPOINT_PX - 1}px)`)
-    const onChange = (e: MediaQueryListEvent) => setIsTablet(e.matches)
-    setIsTablet(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
 
   // Publish sidebar width as a CSS custom property so Layout.tsx can
   // adjust main-content margins without needing context plumbing.
@@ -162,62 +120,6 @@ export function MissionSidebar() {
     return () => { root.style.removeProperty('--mission-sidebar-width') }
   }, [isMobile, isTablet, isSidebarOpen, isSidebarMinimized, isFullScreen, sidebarWidth])
 
-  // Re-clamp sidebar width when viewport is resized
-  useEffect(() => {
-    const onResize = () => {
-      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.6)
-      setSidebarWidth((w) => {
-        const clamped = Math.min(w, maxW)
-        latestWidthRef.current = clamped
-        return clamped
-      })
-    }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
-  const resizeCleanupRef = useRef<(() => void) | null>(null)
-
-  // Clean up resize listeners on unmount to prevent leaks if mouseup never fires
-  useEffect(() => () => { resizeCleanupRef.current?.() }, [])
-
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizing(true)
-    document.documentElement.dataset.missionResizing = '1'
-    const startX = e.clientX
-    const startWidth = sidebarWidth
-
-    const onMouseMove = (ev: MouseEvent) => {
-      // Sidebar is on the right, so dragging left increases width
-      const delta = startX - ev.clientX
-      const maxW = Math.min(SIDEBAR_MAX_WIDTH, window.innerWidth * 0.6)
-      const newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(maxW, startWidth + delta))
-      latestWidthRef.current = newWidth
-      setSidebarWidth(newWidth)
-    }
-
-    const onMouseUp = () => {
-      setIsResizing(false)
-      delete document.documentElement.dataset.missionResizing
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      resizeCleanupRef.current = null
-      // Persist final width using ref to avoid state-updater side effects
-      try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(latestWidthRef.current)) } catch { /* ignore */ }
-      // Notify child components (charts, resize observers) to recalculate
-      // their layout after the panel resize completes (#11458).
-      window.dispatchEvent(new Event('resize'))
-    }
-
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-    resizeCleanupRef.current = onMouseUp
-  }
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
@@ -816,51 +718,6 @@ export function MissionSidebar() {
     openSidebar()
   }
 
-  const fullscreenSavedMissionItems = useMemo(() => savedMissions.map(m => (
-    <div
-      key={m.id}
-      className="group p-2 rounded-lg hover:bg-purple-500/10 transition-colors cursor-pointer border border-transparent hover:border-purple-500/20"
-      onClick={() => handleViewSavedMission(m)}
-    >
-      <div className="flex items-start gap-2">
-        <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
-          {m.importedFrom?.cncfProject && (
-            <p className="text-2xs text-muted-foreground truncate">{m.importedFrom.cncfProject}</p>
-          )}
-          {m.importedFrom?.tags && m.importedFrom.tags.length > 0 && (
-            <div className="flex flex-wrap gap-0.5 mt-1">
-              {m.importedFrom.tags.slice(0, 3).map(tag => (
-                <span key={tag} className="text-[9px] px-1 py-0 bg-secondary rounded text-muted-foreground">{tag}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
-          className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
-        >
-          <Eye className="w-2.5 h-2.5" /> View
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); handleRunMission(m.id) }}
-          className="flex items-center gap-1 px-2 py-0.5 text-2xs font-medium bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-        >
-          <Play className="w-2.5 h-2.5" /> Run
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
-          className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
-        >
-          <Trash2 className="w-2.5 h-2.5" /> Remove
-        </button>
-      </div>
-    </div>
-  )), [handleRunMission, handleViewSavedMission, savedMissions])
-
   const sidebarSavedMissionItems = useMemo(() => savedMissions.map(m => (
     <div
       key={m.id}
@@ -987,16 +844,10 @@ export function MissionSidebar() {
           >
       {/* Desktop resize handle (left edge) */}
       {!isMobile && !isFullScreen && isSidebarOpen && (
-        <div
-          onMouseDown={handleResizeStart}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label={t('missionSidebar.resizeHandleTooltip')}
-          title={t('missionSidebar.resizeHandleTooltip')}
-          className="absolute top-0 left-0 bottom-0 w-1.5 cursor-col-resize z-50 group"
-        >
-          <div className="absolute inset-y-0 left-0 w-0.5 bg-border group-hover:bg-primary/50 transition-colors" />
-        </div>
+        <SidebarResizeHandle
+          onResizeStart={handleResizeStart}
+          label={t('missionSidebar.resizeHandleTooltip')}
+        />
       )}
 
       {/* Mobile drag handle */}
@@ -1393,95 +1244,19 @@ export function MissionSidebar() {
         )}>
           {/* Fullscreen: left sidebar with saved missions + related knowledge */}
           {isFullScreen && (
-            <div className={cn(
-              FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS,
-              "border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0"
-            )}>
-              <div className="flex-1 overflow-y-auto scroll-enhanced">
-                {/* Saved Missions section */}
-                {savedMissions.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-                      <Bookmark className="w-4 h-4 text-purple-400" />
-                      <span className="text-xs font-semibold text-foreground">{t('layout.missionSidebar.savedMissions')}</span>
-                      <StatusBadge color="purple" size="xs" rounded="full" className="ml-auto">{savedMissions.length}</StatusBadge>
-                    </div>
-                    <div className="p-1.5 space-y-1">
-                      {fullscreenSavedMissionItems}
-                    </div>
-                  </div>
-                )}
-
-                {/* Related Knowledge section */}
-                <div className={cn(savedMissions.length > 0 && "border-t border-border")}>
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-                    <BookOpen className="w-4 h-4 text-purple-400" />
-                    <span className="text-xs font-semibold text-foreground">{t('layout.missionSidebar.knowledge')}</span>
-                  </div>
-                  {/* Toggle tabs */}
-                  <div className="flex mx-1.5 mt-1.5 bg-secondary/50 rounded-lg p-0.5">
-                    <button
-                      onClick={() => setResolutionPanelView('related')}
-                      className={cn(
-                        "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
-                        resolutionPanelView === 'related'
-                          ? "bg-card text-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      Related
-                      {relatedResolutions.length > 0 && (
-                        <span className={cn(
-                          "px-1 py-0 text-[9px] rounded-full",
-                          resolutionPanelView === 'related'
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-muted text-muted-foreground"
-                        )}>
-                          {relatedResolutions.length}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setResolutionPanelView('history')}
-                      className={cn(
-                        "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
-                        resolutionPanelView === 'history'
-                          ? "bg-card text-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      All Saved
-                      {allResolutions.length > 0 && (
-                        <span className={cn(
-                          "px-1 py-0 text-[9px] rounded-full",
-                          resolutionPanelView === 'history'
-                            ? "bg-primary/20 text-primary"
-                            : "bg-muted text-muted-foreground"
-                        )}>
-                          {allResolutions.length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                  {/* Panel content */}
-                  <div className="min-w-0 p-1.5">
-                    <ResolutionErrorBoundary>
-                      {resolutionPanelView === 'related' ? (
-                        <ResolutionKnowledgePanel
-                          relatedResolutions={relatedResolutions}
-                          onApplyResolution={handleApplyResolution}
-                          onSaveNewResolution={() => setShowSaveResolutionDialog(true)}
-                        />
-                      ) : (
-                        <ResolutionHistoryPanel
-                          onApplyResolution={handleApplyResolution}
-                        />
-                      )}
-                    </ResolutionErrorBoundary>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <MissionResolution
+              savedMissions={savedMissions}
+              relatedResolutions={relatedResolutions}
+              allResolutionsCount={allResolutions.length}
+              resolutionPanelView={resolutionPanelView}
+              onSetResolutionPanelView={setResolutionPanelView}
+              onApplyResolution={handleApplyResolution}
+              onSaveNewResolution={() => setShowSaveResolutionDialog(true)}
+              onViewMission={handleViewSavedMission}
+              onRunMission={handleRunMission}
+              onRemoveMission={(id) => setPendingDismissMissionId(id)}
+              panelWidthClass={FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS}
+            />
           )}
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
             {/* Back to missions list.
@@ -1580,137 +1355,36 @@ export function MissionSidebar() {
           )}
         </div>
       ) : (
-        <div className={cn(
-          "flex-1 overflow-y-auto scroll-enhanced p-2 space-y-2",
-          isFullScreen && "max-w-3xl mx-auto w-full"
-        )}>
-          {/* Mission search filter (#3944) */}
-          {missions.length > 1 && (
-            <div className="relative px-1 pb-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                value={missionSearchQuery}
-                onChange={(e) => setMissionSearchQuery(e.target.value)}
-                placeholder={t('missionSidebar.searchMissions', { defaultValue: 'Search missions...' })}
-                className="w-full pl-8 pr-8 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50"
-              />
-              {missionSearchQuery && (
-                <button
-                  onClick={() => setMissionSearchQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-secondary rounded transition-colors"
-                  title={t('common.clear', { defaultValue: 'Clear' })}
-                >
-                  <X className="w-3 h-3 text-muted-foreground" />
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Mission type explainer — demo mode only */}
-          <MissionTypeExplainer />
-
-          {/* Add Orbit button — always visible above saved missions */}
-          <div className="mb-2 px-2">
-            <button
-              onClick={() => setShowOrbitDialog(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-400 border border-purple-500/30 rounded-lg hover:bg-purple-500/10 transition-colors w-full justify-center"
-              title={t('orbit.addOrbit')}
-            >
-              <Satellite className="w-3.5 h-3.5" />
-              {t('orbit.addOrbit')}
-            </button>
-          </div>
-
-          {/* Saved missions section */}
-          {savedMissions.length > 0 && (
-            <div className="mb-3">
-              <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
-                <Bookmark className="w-4 h-4 text-purple-400" />
-                <span className="text-xs font-semibold text-foreground">{t('layout.missionSidebar.savedMissions')}</span>
-                <StatusBadge color="purple" size="xs" rounded="full">{savedMissions.length}</StatusBadge>
-              </div>
-              <div className="space-y-1.5">
-                {sidebarSavedMissionItems}
-              </div>
-            </div>
-          )}
-
-          {/* Orbit reminder banner — shows when orbit missions are due/overdue */}
-          <OrbitReminderBanner
-            missions={missions}
-            onRunMission={(missionId) => {
-              setActiveMission(missionId)
-              runSavedMission(missionId)
-            }}
-          />
-
-          {/* Active missions section — paginated for performance (#4778) */}
-          {activeMissions.length > 0 && (
-            <>
-              {savedMissions.length > 0 && (
-                <div className="flex items-center gap-2 px-2 py-1.5">
-                  <span className="text-xs font-semibold text-foreground">{t('layout.missionSidebar.activeMissions')}</span>
-                  <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full">{activeMissions.length}</span>
-                </div>
-              )}
-              {visibleActiveMissions.map((mission) => (
-                <MissionListItem
-                  key={mission.id}
-                  mission={mission}
-                  isActive={false}
-                  onClick={() => {
-                    setLastPanelView('history')
-                    // Always show the mission's chat first (#4549)
-                    setActiveMission(mission.id)
-                    // Also open Mission Control dialog for planning missions
-                    if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
-                      openExistingMissionControl()
-                    }
-                  }}
-                  onDismiss={() => dismissMission(mission.id)}
-                  onTerminate={() => cancelMission(mission.id)}
-                  onRollback={handleRollback}
-                  onExpand={() => {
-                    setLastPanelView('history')
-                    setActiveMission(mission.id)
-                    setFullScreen(true)
-                    if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
-                      openExistingMissionControl()
-                    }
-                  }}
-                  isCollapsed={collapsedMissions.has(mission.id)}
-                  onToggleCollapse={() => toggleMissionCollapse(mission.id)}
-                />
-              ))}
-              {/* Load More button — renders remaining missions incrementally */}
-              {hasMoreMissions && (
-                <button
-                  onClick={() => setVisibleMissionCount(prev => prev + MISSIONS_PAGE_SIZE)}
-                  className="w-full py-2 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                >
-                  {t('missionSidebar.loadMore', {
-                    defaultValue: 'Load more ({{remaining}} remaining)',
-                    remaining: activeMissions.length - visibleMissionCount })}
-                </button>
-              )}
-            </>
-          )}
-
-          {/* Empty state when only saved missions, no active */}
-          {activeMissions.length === 0 && savedMissions.length > 0 && !missionSearchQuery && (
-            <div className="text-center py-4">
-              <p className="text-xs text-muted-foreground">{t('layout.missionSidebar.noActiveMissionsHint')}</p>
-            </div>
-          )}
-          {/* No search results */}
-          {missionSearchQuery && savedMissions.length === 0 && activeMissions.length === 0 && (
-            <div className="text-center py-6">
-              <Search className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">{t('missionSidebar.noSearchResults', { defaultValue: 'No missions match your search.' })}</p>
-            </div>
-          )}
-        </div>
+        <MissionListPanel
+          missions={missions}
+          savedMissions={savedMissions}
+          activeMissions={activeMissions}
+          visibleActiveMissions={visibleActiveMissions}
+          hasMoreMissions={hasMoreMissions}
+          visibleMissionCount={visibleMissionCount}
+          onLoadMore={() => setVisibleMissionCount(prev => prev + MISSIONS_PAGE_SIZE)}
+          missionSearchQuery={missionSearchQuery}
+          onSearchChange={setMissionSearchQuery}
+          collapsedMissions={collapsedMissions}
+          onToggleCollapse={toggleMissionCollapse}
+          onSelectMission={(id) => {
+            setLastPanelView('history')
+            setActiveMission(id)
+          }}
+          onDismissMission={dismissMission}
+          onCancelMission={cancelMission}
+          onExpandMission={(id) => {
+            setLastPanelView('history')
+            setActiveMission(id)
+            setFullScreen(true)
+          }}
+          onRollback={handleRollback}
+          onOpenMissionControl={openExistingMissionControl}
+          onOpenOrbitDialog={() => setShowOrbitDialog(true)}
+          onRunSavedMission={runSavedMission}
+          isFullScreen={isFullScreen}
+          savedMissionItems={sidebarSavedMissionItems}
+        />
       )}
           </div>
         </>
