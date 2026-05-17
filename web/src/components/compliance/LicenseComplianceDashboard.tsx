@@ -81,7 +81,7 @@ export default function LicenseComplianceDashboard() {
         authFetch('/api/supply-chain/licenses/categories'),
         authFetch('/api/supply-chain/licenses/summary'),
       ])
-      if (!pkgRes.ok || !catRes.ok || !sumRes.ok) throw new Error('Failed to load license data')
+      if (!pkgRes.ok || !catRes.ok || !sumRes.ok) throw new Error(t('compliance.licenseFailedToLoad'))
       const packages = await pkgRes.json()
       const categories = await catRes.json()
       const summaryData = await sumRes.json()
@@ -91,7 +91,7 @@ export default function LicenseComplianceDashboard() {
       setSummary(summaryData)
     } catch (e: unknown) {
       if (!mountedRef.current) return
-      setError(e instanceof Error ? e.message : 'Failed to load license data')
+      setError(e instanceof Error ? e.message : t('compliance.licenseFailedToLoad'))
     } finally {
       if (!mountedRef.current) return
       setLoading(false)
@@ -111,7 +111,7 @@ export default function LicenseComplianceDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-      <span className="ml-3 text-gray-400">Scanning license inventory…</span>
+      <span className="ml-3 text-gray-400">{t('compliance.licenseScanningInventory')}</span>
     </div>
   )
 
@@ -119,7 +119,7 @@ export default function LicenseComplianceDashboard() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('compliance.retry')}</button>
     </div>
   )
 
@@ -133,8 +133,8 @@ export default function LicenseComplianceDashboard() {
   return (
     <div className="space-y-6 p-6">
       <DashboardHeader
-        title="License Compliance Scanner"
-        subtitle="Open-source license inventory with deny/warn-list violation detection"
+        title={t('compliance.licenseTitle')}
+        subtitle={t('compliance.licenseSubtitle')}
         isFetching={loading}
         onRefresh={fetchData}
         autoRefresh={autoRefresh}
@@ -147,28 +147,28 @@ export default function LicenseComplianceDashboard() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Denied Licenses</div>
+            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseDeniedLicenses')}</div>
             <div className={`text-3xl font-bold ${summary.denied_packages > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
               {summary.denied_packages}
             </div>
-            <div className="text-xs text-gray-500 mt-1">must be remediated</div>
+            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseMustRemediate')}</div>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Warnings</div>
+            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseWarnings')}</div>
             <div className={`text-3xl font-bold ${summary.warned_packages > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
               {summary.warned_packages}
             </div>
-            <div className="text-xs text-gray-500 mt-1">require legal review</div>
+            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseRequireLegalReview')}</div>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Allowed</div>
+            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseAllowed')}</div>
             <div className="text-3xl font-bold text-emerald-400">{summary.allowed_packages}</div>
-            <div className="text-xs text-gray-500 mt-1">of {summary.total_packages} total</div>
+            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseOfTotal', { total: summary.total_packages })}</div>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Unique Licenses</div>
+            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseUniqueLicenses')}</div>
             <div className="text-3xl font-bold text-indigo-400">{summary.unique_licenses}</div>
-            <div className="text-xs text-gray-500 mt-1">{summary.workloads_scanned} workloads scanned</div>
+            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseWorkloadsScanned', { count: summary.workloads_scanned })}</div>
           </div>
         </div>
       )}
@@ -187,10 +187,10 @@ export default function LicenseComplianceDashboard() {
             }`}
           >
             {tab === 'violations'
-              ? `Violations (${violations.length + warnings.length})`
+              ? t('compliance.licenseViolationsTab', { count: violations.length + warnings.length })
               : tab === 'inventory'
-              ? 'Full Inventory'
-              : 'License Categories'}
+              ? t('compliance.licenseFullInventoryTab')
+              : t('compliance.licenseCategoriesTab')}
           </button>
         ))}
       </div>
@@ -225,17 +225,17 @@ export default function LicenseComplianceDashboard() {
             {displayPackages.length === 0 ? (
               <div className="p-8 text-center">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-                <p className="text-gray-300">No license violations detected.</p>
+                <p className="text-gray-300">{t('compliance.licenseNoViolations')}</p>
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700 text-gray-400 text-left">
-                    <th className="p-3">Package</th>
-                    <th className="p-3">License</th>
-                    <th className="p-3">Workload</th>
-                    <th className="p-3">Cluster</th>
-                    <th className="p-3">Risk</th>
+                    <th className="p-3">{t('compliance.licensePackageHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseLicenseHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseWorkloadHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseClusterHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseRiskHeader')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,7 +287,7 @@ export default function LicenseComplianceDashboard() {
                     <CatIcon className="w-5 h-5" />
                     <div>
                       <div className="font-medium text-white">{cat.name}</div>
-                      <div className="text-xs opacity-70">{cat.count} package{cat.count !== 1 ? 's' : ''}</div>
+                      <div className="text-xs opacity-70">{t('compliance.licensePackageCount', { count: cat.count })}</div>
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-xs border ${RISK_STYLES[cat.risk]}`}>
@@ -309,7 +309,7 @@ export default function LicenseComplianceDashboard() {
 
       {summary && (
         <div className="text-xs text-gray-500 text-right">
-          Last scanned: {new Date(summary.evaluated_at).toLocaleString()}
+          {t('compliance.licenseLastScanned', { date: new Date(summary.evaluated_at).toLocaleString() })}
         </div>
       )}
     </div>
