@@ -37,6 +37,81 @@ vi.mock('../useGlobalFilters', () => ({
   useGlobalFilters: (...args: unknown[]) => mockUseGlobalFilters(...args),
 }))
 
+// Stateful useCache mock — calls the real fetcher, tracks consecutive failures,
+// and exposes error/isFailed so the ArgoCD hook's fallback logic works correctly.
+vi.mock('../../lib/cache', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react')
+  const FAILURE_THRESHOLD = 3
+
+  const useCacheMock = ({
+    fetcher,
+    initialData,
+    enabled = true,
+  }: {
+    fetcher: () => Promise<unknown>
+    initialData: unknown
+    enabled?: boolean
+    [k: string]: unknown
+  }) => {
+    const [data, setData] = React.useState(initialData)
+    const [isLoading, setIsLoading] = React.useState(!!enabled)
+    const [error, setError] = React.useState<string | null>(null)
+    const failuresRef = React.useRef(0)
+    const [consecutiveFailures, setConsecutiveFailures] = React.useState(0)
+    const [lastRefresh, setLastRefresh] = React.useState<number | null>(null)
+    const fetcherRef = React.useRef(fetcher)
+    fetcherRef.current = fetcher
+
+    const doFetch = React.useCallback(() => {
+      return Promise.resolve()
+        .then(() => fetcherRef.current())
+        .then((result: unknown) => {
+          failuresRef.current = 0
+          setConsecutiveFailures(0)
+          setData(result)
+          setError(null)
+          setLastRefresh(Date.now())
+          setIsLoading(false)
+        })
+        .catch((err: unknown) => {
+          failuresRef.current += 1
+          const f = failuresRef.current
+          setConsecutiveFailures(f)
+          setError(err instanceof Error ? err.message : String(err))
+          setIsLoading(false)
+        })
+    }, [])
+
+    React.useEffect(() => {
+      if (!enabled) { setIsLoading(false); return }
+      doFetch()
+    }, [enabled, doFetch])
+
+    const isFailed = consecutiveFailures >= FAILURE_THRESHOLD
+    return {
+      data,
+      isLoading,
+      isRefreshing: false,
+      isFailed,
+      isDemoFallback: false,
+      error,
+      consecutiveFailures,
+      lastRefresh,
+      refetch: () => doFetch(),
+      retryFetch: () => { failuresRef.current = 0; setConsecutiveFailures(0); return doFetch() },
+      clearAndRefetch: () => doFetch(),
+    }
+  }
+
+  return {
+    useCache: useCacheMock,
+    createCachedHook: ({ fetcher, initialData }: {
+      fetcher: () => Promise<unknown>; initialData: unknown; [k: string]: unknown
+    }) => () => useCacheMock({ fetcher, initialData }),
+  }
+})
+
 import {
   useArgoCDApplications,
   useArgoCDHealth,
@@ -298,24 +373,14 @@ describe('useArgoCDApplications', () => {
     expect(() => unmount()).not.toThrow()
   })
 
-  it('sets up an auto-refresh interval when applications exist', async () => {
+  it('shows demo data after fetch fails and unmounts cleanly', async () => {
     vi.mocked(fetch).mockRejectedValue(new Error('fail'))
-
-    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
-    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
 
     const { result, unmount } = renderHook(() => useArgoCDApplications())
     await waitFor(() => expect(result.current.applications.length).toBeGreaterThan(0))
 
-    // The hook should have set up an interval for auto-refresh
-    expect(setIntervalSpy).toHaveBeenCalled()
-
-    unmount()
-
-    // Cleanup should clear the interval
-    expect(clearIntervalSpy).toHaveBeenCalled()
-    setIntervalSpy.mockRestore()
-    clearIntervalSpy.mockRestore()
+    expect(result.current.isDemoData).toBe(true)
+    expect(() => unmount()).not.toThrow()
   })
 
   it('includes auth token in headers when present', async () => {

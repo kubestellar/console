@@ -45,6 +45,81 @@ vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
 }))
 
+// Stateful useCache/createCachedHook mock — calls the real fetcher, tracks
+// consecutive failures, and exposes error/isFailed so useCRDs fallback works.
+vi.mock('../../lib/cache', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react')
+  const FAILURE_THRESHOLD = 3
+
+  const useCacheMock = ({
+    fetcher,
+    initialData,
+    enabled = true,
+  }: {
+    fetcher: () => Promise<unknown>
+    initialData: unknown
+    enabled?: boolean
+    [k: string]: unknown
+  }) => {
+    const [data, setData] = React.useState(initialData)
+    const [isLoading, setIsLoading] = React.useState(!!enabled)
+    const [error, setError] = React.useState<string | null>(null)
+    const failuresRef = React.useRef(0)
+    const [consecutiveFailures, setConsecutiveFailures] = React.useState(0)
+    const [lastRefresh, setLastRefresh] = React.useState<number | null>(null)
+    const fetcherRef = React.useRef(fetcher)
+    fetcherRef.current = fetcher
+
+    const doFetch = React.useCallback(() => {
+      return Promise.resolve()
+        .then(() => fetcherRef.current())
+        .then((result: unknown) => {
+          failuresRef.current = 0
+          setConsecutiveFailures(0)
+          setData(result)
+          setError(null)
+          setLastRefresh(Date.now())
+          setIsLoading(false)
+        })
+        .catch((err: unknown) => {
+          failuresRef.current += 1
+          const f = failuresRef.current
+          setConsecutiveFailures(f)
+          setError(err instanceof Error ? err.message : String(err))
+          setIsLoading(false)
+        })
+    }, [])
+
+    React.useEffect(() => {
+      if (!enabled) { setIsLoading(false); return }
+      doFetch()
+    }, [enabled, doFetch])
+
+    const isFailed = consecutiveFailures >= FAILURE_THRESHOLD
+    return {
+      data,
+      isLoading,
+      isRefreshing: false,
+      isFailed,
+      isDemoFallback: false,
+      error,
+      consecutiveFailures,
+      lastRefresh,
+      refetch: () => doFetch(),
+      retryFetch: () => { failuresRef.current = 0; setConsecutiveFailures(0); return doFetch() },
+      clearAndRefetch: () => doFetch(),
+    }
+  }
+
+  return {
+    useCache: useCacheMock,
+    createCachedHook: ({ fetcher, initialData, enabled }: {
+      fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown
+    }) => () => useCacheMock({ fetcher, initialData, enabled }),
+  }
+})
+
 // Mock global fetch
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
