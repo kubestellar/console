@@ -88,7 +88,19 @@ export function parseFileContent(content: string, fileName: string): ParseResult
 // ============================================================================
 
 function parseJsonFile(content: string): ParseResult {
-  const parsed = JSON.parse(content)
+  let parsed
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    // Malformed JSON — return as unstructured
+    return makeUnstructured(content, 'yaml', {
+      detectedSections: [],
+      detectedCommands: [],
+      detectedYamlBlocks: 0,
+      detectedApiGroups: [],
+      totalLines: countLines(content),
+    })
+  }
   const validation = validateMissionExport(parsed)
   if (validation.valid) {
     return { type: 'structured', mission: validation.data, detectedProjects: [] }
