@@ -190,6 +190,308 @@
       "yourDashboards": "Your Dashboards",
       "noChangesNeeded": "No changes needed — your sidebar already matches your usage.",
       "appliedChanges": "Applied {{count}} changes"
+    },
+    "routes": {
+      "/": {
+        "name": "Main Dashboard",
+        "description": "Customizable overview with cluster health, workloads, and events",
+        "category": "Core Dashboards"
+      },
+      "/clusters": {
+        "name": "My Clusters",
+        "description": "Detailed cluster management, health monitoring, and node status",
+        "category": "Core Dashboards"
+      },
+      "/workloads": {
+        "name": "Workloads",
+        "description": "Deployments, pods, services, and application status across clusters",
+        "category": "Core Dashboards"
+      },
+      "/compute": {
+        "name": "Compute",
+        "description": "CPU, memory, and GPU resource utilization and capacity",
+        "category": "Core Dashboards"
+      },
+      "/events": {
+        "name": "Events",
+        "description": "Real-time cluster events, warnings, and audit logs",
+        "category": "Core Dashboards"
+      },
+      "/security": {
+        "name": "Security",
+        "description": "Security policies, RBAC, vulnerabilities, and compliance",
+        "category": "Core Dashboards"
+      },
+      "/gitops": {
+        "name": "GitOps",
+        "description": "ArgoCD, Flux, Helm releases, and deployment drift detection",
+        "category": "Core Dashboards"
+      },
+      "/alerts": {
+        "name": "Alerts",
+        "description": "Active alerts, rule management, and AI-powered diagnostics",
+        "category": "Core Dashboards"
+      },
+      "/cost": {
+        "name": "Cost Management",
+        "description": "Resource costs, allocation tracking, and optimization recommendations",
+        "category": "Core Dashboards"
+      },
+      "/security-posture": {
+        "name": "Security Posture",
+        "description": "Security scanning, vulnerability assessment, and policy enforcement",
+        "category": "Core Dashboards"
+      },
+      "/data-compliance": {
+        "name": "Data Compliance",
+        "description": "GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance",
+        "category": "Core Dashboards"
+      },
+      "/gpu-reservations": {
+        "name": "GPU Reservations",
+        "description": "Schedule and manage GPU reservations with calendar and quota management",
+        "category": "Core Dashboards"
+      },
+      "/storage": {
+        "name": "Storage",
+        "description": "PVCs, storage classes, and capacity management",
+        "category": "Core Dashboards"
+      },
+      "/network": {
+        "name": "Network",
+        "description": "Network policies, ingress, and service mesh configuration",
+        "category": "Core Dashboards"
+      },
+      "/arcade": {
+        "name": "Arcade",
+        "description": "Kubernetes-themed arcade games for taking a break",
+        "category": "Core Dashboards"
+      },
+      "/deploy": {
+        "name": "KubeStellar Deploy",
+        "description": "Deployment monitoring, GitOps, Helm releases, and ArgoCD",
+        "category": "Core Dashboards"
+      },
+      "/ai-ml": {
+        "name": "AI/ML",
+        "description": "AI and machine learning workloads, GPU utilization, and model serving",
+        "category": "Core Dashboards"
+      },
+      "/ci-cd": {
+        "name": "CI/CD",
+        "description": "Continuous integration and deployment pipelines, Prow jobs, and GitHub workflows",
+        "category": "Core Dashboards"
+      },
+      "/ai-agents": {
+        "name": "AI Agents",
+        "description": "Kagenti agent platform — deploy, secure, and manage AI agents across clusters",
+        "category": "Core Dashboards"
+      },
+      "/llm-d-benchmarks": {
+        "name": "llm-d Benchmarks",
+        "description": "LLM inference benchmarks — throughput, latency, and GPU utilization across clouds and accelerators",
+        "category": "Core Dashboards"
+      },
+      "/compliance": {
+        "name": "Sec. Compliance",
+        "description": "Security compliance, regulatory audits, and policy enforcement",
+        "category": "Core Dashboards"
+      },
+      "/enterprise": {
+        "name": "Enterprise Portal",
+        "description": "Unified GRC portal — FinTech, Healthcare, Government, SecOps, Supply Chain",
+        "category": "Core Dashboards"
+      },
+      "/enterprise/frameworks": {
+        "name": "Compliance Frameworks",
+        "description": "SOC 2, ISO 27001, PCI-DSS framework management and assessment",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/change-control": {
+        "name": "Change Control",
+        "description": "Change request tracking, approval workflows, and audit trails",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/sod": {
+        "name": "Segregation of Duties",
+        "description": "SoD policy enforcement, conflict detection, and role analysis",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/data-residency": {
+        "name": "Data Residency",
+        "description": "Data sovereignty mapping, geo-fencing, and residency compliance",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/reports": {
+        "name": "Compliance Reports",
+        "description": "Automated compliance report generation and export",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/hipaa": {
+        "name": "HIPAA",
+        "description": "HIPAA Security Rule technical safeguards for PHI workloads",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/gxp": {
+        "name": "GxP Validation",
+        "description": "GxP computerized system validation for life sciences",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/baa": {
+        "name": "BAA Tracker",
+        "description": "Business Associate Agreement tracking and compliance",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/nist": {
+        "name": "NIST 800-53",
+        "description": "NIST 800-53 control mapping and assessment",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/stig": {
+        "name": "STIG Compliance",
+        "description": "Security Technical Implementation Guide checks",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/air-gap": {
+        "name": "Air-Gap Support",
+        "description": "Air-gapped environment readiness and network isolation",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/fedramp": {
+        "name": "FedRAMP",
+        "description": "FedRAMP readiness scoring and control assessment",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/oidc": {
+        "name": "OIDC Federation",
+        "description": "OIDC provider integration and federation status",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/rbac-audit": {
+        "name": "RBAC Audit",
+        "description": "Role-based access control audit and analysis",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/sessions": {
+        "name": "Session Management",
+        "description": "Active session monitoring and policy enforcement",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/siem": {
+        "name": "SIEM Integration",
+        "description": "Security event export to Splunk, Elastic, and webhooks",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/incident-response": {
+        "name": "Incident Response",
+        "description": "Incident timeline generation and event correlation",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/threat-intel": {
+        "name": "Threat Intelligence",
+        "description": "CVE risk scoring and threat intelligence overlay",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/sbom": {
+        "name": "SBOM Manager",
+        "description": "Software Bill of Materials aggregation (SPDX/CycloneDX)",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/sigstore": {
+        "name": "Sigstore Verification",
+        "description": "Container image signature verification with Cosign",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/slsa": {
+        "name": "SLSA Provenance",
+        "description": "Supply-chain Levels for Software Artifacts tracking",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/risk-matrix": {
+        "name": "Risk Matrix",
+        "description": "Likelihood × impact risk assessment matrix",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/risk-register": {
+        "name": "Risk Register",
+        "description": "Enterprise risk register with treatment plans",
+        "category": "Enterprise Compliance"
+      },
+      "/enterprise/risk-appetite": {
+        "name": "Risk Appetite",
+        "description": "Risk appetite framework and tolerance thresholds",
+        "category": "Enterprise Compliance"
+      },
+      "/karmada-ops": {
+        "name": "Karmada Ops",
+        "description": "Multi-cluster orchestration, AI inference, and data platform operations",
+        "category": "Core Dashboards"
+      },
+      "/cluster-admin": {
+        "name": "Cluster Admin",
+        "description": "Multi-cluster operations, control plane health, node debugging, and infrastructure management",
+        "category": "Core Dashboards"
+      },
+      "/multi-tenancy": {
+        "name": "Multi-Tenancy",
+        "description": "Tenant isolation with OVN-Kubernetes, KubeFlex, K3s, and KubeVirt",
+        "category": "Core Dashboards"
+      },
+      "/drasi": {
+        "name": "Drasi",
+        "description": "Reactive data pipelines — sources, continuous queries, reactions, and live results",
+        "category": "Core Dashboards"
+      },
+      "/namespaces": {
+        "name": "Namespaces",
+        "description": "Namespace management and resource allocation",
+        "category": "Resources"
+      },
+      "/nodes": {
+        "name": "Nodes",
+        "description": "Cluster node health and resource usage",
+        "category": "Resources"
+      },
+      "/pods": {
+        "name": "Pods",
+        "description": "Pod status and container details",
+        "category": "Resources"
+      },
+      "/deployments": {
+        "name": "Deployments",
+        "description": "Deployment management and scaling",
+        "category": "Resources"
+      },
+      "/services": {
+        "name": "Services",
+        "description": "Service discovery and networking",
+        "category": "Resources"
+      },
+      "/operators": {
+        "name": "Operators",
+        "description": "OLM operators and subscriptions management",
+        "category": "Operations"
+      },
+      "/helm": {
+        "name": "Helm Releases",
+        "description": "Helm chart releases and versions",
+        "category": "Operations"
+      },
+      "/logs": {
+        "name": "Logs",
+        "description": "Aggregated container and cluster logs",
+        "category": "Operations"
+      },
+      "/settings": {
+        "name": "Settings",
+        "description": "Console configuration and preferences",
+        "category": "Settings"
+      },
+      "/users": {
+        "name": "Users",
+        "description": "User management and access control",
+        "category": "Settings"
+      }
     }
   },
   "settings": {
@@ -4480,5 +4782,32 @@
   },
   "stellar": {
     "attentionBubble": "Try Stellar AI!"
+  },
+  "missionControl": {
+    "launchSequence": {
+      "noProjectsTitle": "No projects to deploy",
+      "noProjectsDescription": "Your mission has no cluster assignments. Go back to the Chart Course phase to assign projects before launching.",
+      "dryRunCompleteTitle": "Dry Run Complete!",
+      "missionCompleteTitle": "Mission Complete!",
+      "dryRunIssuesTitle": "Dry Run Completed with Issues",
+      "missionIssuesTitle": "Mission Completed with Issues",
+      "dryRunInProgressTitle": "Dry Run In Progress",
+      "launchInProgressTitle": "Launch Sequence In Progress",
+      "allPhasesFinished": "All deployment phases have finished.",
+      "deployingProjects": "Deploying {{count}} project in {{phaseCount}} phase",
+      "deployingProjects_one": "Deploying {{count}} project in {{phaseCount}} phase",
+      "deployingProjects_other": "Deploying {{count}} projects in {{phaseCount}} phase",
+      "deployingProjectsPlural": "Deploying {{count}} project in {{phaseCount}} phases",
+      "deployingProjectsPlural_one": "Deploying {{count}} project in {{phaseCount}} phases",
+      "deployingProjectsPlural_other": "Deploying {{count}} projects in {{phaseCount}} phases",
+      "phaseLabel": "Phase {{phase}}:",
+      "retryFailed": "Retry Failed",
+      "missionCancelled": "Mission cancelled",
+      "missionFailed": "Mission failed",
+      "defaultMissionTitle": "Mission Control deployment",
+      "dryRunPrefix": "[DRY RUN] ",
+      "dryRunValidation": "Dry-run validation",
+      "unifiedDeployment": "Unified deployment"
+    }
   }
 }

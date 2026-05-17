@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -115,79 +115,88 @@ interface KnownRoute {
   category: string
 }
 
-const KNOWN_ROUTES: KnownRoute[] = [
-  // Core Dashboards
-  { href: '/', name: 'Main Dashboard', description: 'Customizable overview with cluster health, workloads, and events', icon: 'LayoutDashboard', category: 'Core Dashboards' },
-  { href: '/clusters', name: 'My Clusters', description: 'Detailed cluster management, health monitoring, and node status', icon: 'Server', category: 'Core Dashboards' },
-  { href: '/workloads', name: 'Workloads', description: 'Deployments, pods, services, and application status across clusters', icon: 'Box', category: 'Core Dashboards' },
-  { href: '/compute', name: 'Compute', description: 'CPU, memory, and GPU resource utilization and capacity', icon: 'Cpu', category: 'Core Dashboards' },
-  { href: '/events', name: 'Events', description: 'Real-time cluster events, warnings, and audit logs', icon: 'Activity', category: 'Core Dashboards' },
-  { href: '/security', name: 'Security', description: 'Security policies, RBAC, vulnerabilities, and compliance', icon: 'Shield', category: 'Core Dashboards' },
-  { href: '/gitops', name: 'GitOps', description: 'ArgoCD, Flux, Helm releases, and deployment drift detection', icon: 'GitBranch', category: 'Core Dashboards' },
-  { href: '/alerts', name: 'Alerts', description: 'Active alerts, rule management, and AI-powered diagnostics', icon: 'Bell', category: 'Core Dashboards' },
-  { href: '/cost', name: 'Cost Management', description: 'Resource costs, allocation tracking, and optimization recommendations', icon: 'DollarSign', category: 'Core Dashboards' },
-  { href: '/security-posture', name: 'Security Posture', description: 'Security scanning, vulnerability assessment, and policy enforcement', icon: 'ShieldCheck', category: 'Core Dashboards' },
-  { href: '/data-compliance', name: 'Data Compliance', description: 'GDPR, HIPAA, PCI-DSS, and SOC 2 data protection compliance', icon: 'Database', category: 'Core Dashboards' },
-  { href: '/gpu-reservations', name: 'GPU Reservations', description: 'Schedule and manage GPU reservations with calendar and quota management', icon: 'Zap', category: 'Core Dashboards' },
-  { href: '/storage', name: 'Storage', description: 'PVCs, storage classes, and capacity management', icon: 'HardDrive', category: 'Core Dashboards' },
-  { href: '/network', name: 'Network', description: 'Network policies, ingress, and service mesh configuration', icon: 'Network', category: 'Core Dashboards' },
-  { href: '/arcade', name: 'Arcade', description: 'Kubernetes-themed arcade games for taking a break', icon: 'Gamepad2', category: 'Core Dashboards' },
-  { href: '/deploy', name: 'KubeStellar Deploy', description: 'Deployment monitoring, GitOps, Helm releases, and ArgoCD', icon: 'Rocket', category: 'Core Dashboards' },
-  { href: '/ai-ml', name: 'AI/ML', description: 'AI and machine learning workloads, GPU utilization, and model serving', icon: 'Brain', category: 'Core Dashboards' },
-  { href: '/ci-cd', name: 'CI/CD', description: 'Continuous integration and deployment pipelines, Prow jobs, and GitHub workflows', icon: 'GitPullRequest', category: 'Core Dashboards' },
-  { href: '/ai-agents', name: 'AI Agents', description: 'Kagenti agent platform — deploy, secure, and manage AI agents across clusters', icon: 'Bot', category: 'Core Dashboards' },
-  { href: '/llm-d-benchmarks', name: 'llm-d Benchmarks', description: 'LLM inference benchmarks — throughput, latency, and GPU utilization across clouds and accelerators', icon: 'TrendingUp', category: 'Core Dashboards' },
-  { href: '/compliance', name: 'Sec. Compliance', description: 'Security compliance, regulatory audits, and policy enforcement', icon: 'ClipboardCheck', category: 'Core Dashboards' },
-  { href: '/enterprise', name: 'Enterprise Portal', description: 'Unified GRC portal — FinTech, Healthcare, Government, SecOps, Supply Chain', icon: 'Building2', category: 'Core Dashboards' },
-  // Enterprise Compliance — Epic 1: FinTech & Regulatory
-  { href: '/enterprise/frameworks', name: 'Compliance Frameworks', description: 'SOC 2, ISO 27001, PCI-DSS framework management and assessment', icon: 'ClipboardCheck', category: 'Enterprise Compliance' },
-  { href: '/enterprise/change-control', name: 'Change Control', description: 'Change request tracking, approval workflows, and audit trails', icon: 'GitPullRequest', category: 'Enterprise Compliance' },
-  { href: '/enterprise/sod', name: 'Segregation of Duties', description: 'SoD policy enforcement, conflict detection, and role analysis', icon: 'Users', category: 'Enterprise Compliance' },
-  { href: '/enterprise/data-residency', name: 'Data Residency', description: 'Data sovereignty mapping, geo-fencing, and residency compliance', icon: 'Globe', category: 'Enterprise Compliance' },
-  { href: '/enterprise/reports', name: 'Compliance Reports', description: 'Automated compliance report generation and export', icon: 'FileText', category: 'Enterprise Compliance' },
-  // Enterprise Compliance — Epic 2: Healthcare
-  { href: '/enterprise/hipaa', name: 'HIPAA', description: 'HIPAA Security Rule technical safeguards for PHI workloads', icon: 'Heart', category: 'Enterprise Compliance' },
-  { href: '/enterprise/gxp', name: 'GxP Validation', description: 'GxP computerized system validation for life sciences', icon: 'FlaskConical', category: 'Enterprise Compliance' },
-  { href: '/enterprise/baa', name: 'BAA Tracker', description: 'Business Associate Agreement tracking and compliance', icon: 'Handshake', category: 'Enterprise Compliance' },
-  // Enterprise Compliance — Epic 3: Government & Defense
-  { href: '/enterprise/nist', name: 'NIST 800-53', description: 'NIST 800-53 control mapping and assessment', icon: 'Shield', category: 'Enterprise Compliance' },
-  { href: '/enterprise/stig', name: 'STIG Compliance', description: 'Security Technical Implementation Guide checks', icon: 'ShieldCheck', category: 'Enterprise Compliance' },
-  { href: '/enterprise/air-gap', name: 'Air-Gap Support', description: 'Air-gapped environment readiness and network isolation', icon: 'WifiOff', category: 'Enterprise Compliance' },
-  { href: '/enterprise/fedramp', name: 'FedRAMP', description: 'FedRAMP readiness scoring and control assessment', icon: 'Landmark', category: 'Enterprise Compliance' },
-  // Enterprise Compliance — Epic 4: Identity & Access
-  { href: '/enterprise/oidc', name: 'OIDC Federation', description: 'OIDC provider integration and federation status', icon: 'KeyRound', category: 'Enterprise Compliance' },
-  { href: '/enterprise/rbac-audit', name: 'RBAC Audit', description: 'Role-based access control audit and analysis', icon: 'UserCheck', category: 'Enterprise Compliance' },
-  { href: '/enterprise/sessions', name: 'Session Management', description: 'Active session monitoring and policy enforcement', icon: 'Clock', category: 'Enterprise Compliance' },
-  // Enterprise Compliance — Epic 5: SecOps
-  { href: '/enterprise/siem', name: 'SIEM Integration', description: 'Security event export to Splunk, Elastic, and webhooks', icon: 'Radar', category: 'Enterprise Compliance' },
-  { href: '/enterprise/incident-response', name: 'Incident Response', description: 'Incident timeline generation and event correlation', icon: 'AlertTriangle', category: 'Enterprise Compliance' },
-  { href: '/enterprise/threat-intel', name: 'Threat Intelligence', description: 'CVE risk scoring and threat intelligence overlay', icon: 'Eye', category: 'Enterprise Compliance' },
-  // Enterprise Compliance — Epic 6: Supply Chain
-  { href: '/enterprise/sbom', name: 'SBOM Manager', description: 'Software Bill of Materials aggregation (SPDX/CycloneDX)', icon: 'Package', category: 'Enterprise Compliance' },
-  { href: '/enterprise/sigstore', name: 'Sigstore Verification', description: 'Container image signature verification with Cosign', icon: 'Lock', category: 'Enterprise Compliance' },
-  { href: '/enterprise/slsa', name: 'SLSA Provenance', description: 'Supply-chain Levels for Software Artifacts tracking', icon: 'Container', category: 'Enterprise Compliance' },
-  // Enterprise Compliance — Epic 7: Enterprise Risk Management
-  { href: '/enterprise/risk-matrix', name: 'Risk Matrix', description: 'Likelihood × impact risk assessment matrix', icon: 'Grid3x3', category: 'Enterprise Compliance' },
-  { href: '/enterprise/risk-register', name: 'Risk Register', description: 'Enterprise risk register with treatment plans', icon: 'ClipboardList', category: 'Enterprise Compliance' },
-  { href: '/enterprise/risk-appetite', name: 'Risk Appetite', description: 'Risk appetite framework and tolerance thresholds', icon: 'Scale', category: 'Enterprise Compliance' },
-  { href: '/karmada-ops', name: 'Karmada Ops', description: 'Multi-cluster orchestration, AI inference, and data platform operations', icon: 'Globe', category: 'Core Dashboards' },
-  { href: '/cluster-admin', name: 'Cluster Admin', description: 'Multi-cluster operations, control plane health, node debugging, and infrastructure management', icon: 'ShieldAlert', category: 'Core Dashboards' },
-  { href: '/multi-tenancy', name: 'Multi-Tenancy', description: 'Tenant isolation with OVN-Kubernetes, KubeFlex, K3s, and KubeVirt', icon: 'Users', category: 'Core Dashboards' },
-  { href: '/drasi', name: 'Drasi', description: 'Reactive data pipelines — sources, continuous queries, reactions, and live results', icon: 'GitBranch', category: 'Core Dashboards' },
-  // Resource Pages
-  { href: '/namespaces', name: 'Namespaces', description: 'Namespace management and resource allocation', icon: 'FolderTree', category: 'Resources' },
-  { href: '/nodes', name: 'Nodes', description: 'Cluster node health and resource usage', icon: 'HardDrive', category: 'Resources' },
-  { href: '/pods', name: 'Pods', description: 'Pod status and container details', icon: 'Package', category: 'Resources' },
-  { href: '/deployments', name: 'Deployments', description: 'Deployment management and scaling', icon: 'Rocket', category: 'Resources' },
-  { href: '/services', name: 'Services', description: 'Service discovery and networking', icon: 'Network', category: 'Resources' },
-  // Operations
-  { href: '/operators', name: 'Operators', description: 'OLM operators and subscriptions management', icon: 'Cog', category: 'Operations' },
-  { href: '/helm', name: 'Helm Releases', description: 'Helm chart releases and versions', icon: 'Ship', category: 'Operations' },
-  { href: '/logs', name: 'Logs', description: 'Aggregated container and cluster logs', icon: 'FileText', category: 'Operations' },
-  // Settings
-  { href: '/settings', name: 'Settings', description: 'Console configuration and preferences', icon: 'Settings', category: 'Settings' },
-  { href: '/users', name: 'Users', description: 'User management and access control', icon: 'Users', category: 'Settings' },
-]
+// Route-to-icon mapping (icons don't need i18n)
+const ROUTE_ICONS: Record<string, string> = {
+  '/': 'LayoutDashboard',
+  '/clusters': 'Server',
+  '/workloads': 'Box',
+  '/compute': 'Cpu',
+  '/events': 'Activity',
+  '/security': 'Shield',
+  '/gitops': 'GitBranch',
+  '/alerts': 'Bell',
+  '/cost': 'DollarSign',
+  '/security-posture': 'ShieldCheck',
+  '/data-compliance': 'Database',
+  '/gpu-reservations': 'Zap',
+  '/storage': 'HardDrive',
+  '/network': 'Network',
+  '/arcade': 'Gamepad2',
+  '/deploy': 'Rocket',
+  '/ai-ml': 'Brain',
+  '/ci-cd': 'GitPullRequest',
+  '/ai-agents': 'Bot',
+  '/llm-d-benchmarks': 'TrendingUp',
+  '/compliance': 'ClipboardCheck',
+  '/enterprise': 'Building2',
+  '/enterprise/frameworks': 'ClipboardCheck',
+  '/enterprise/change-control': 'GitPullRequest',
+  '/enterprise/sod': 'Users',
+  '/enterprise/data-residency': 'Globe',
+  '/enterprise/reports': 'FileText',
+  '/enterprise/hipaa': 'Heart',
+  '/enterprise/gxp': 'FlaskConical',
+  '/enterprise/baa': 'Handshake',
+  '/enterprise/nist': 'Shield',
+  '/enterprise/stig': 'ShieldCheck',
+  '/enterprise/air-gap': 'WifiOff',
+  '/enterprise/fedramp': 'Landmark',
+  '/enterprise/oidc': 'KeyRound',
+  '/enterprise/rbac-audit': 'UserCheck',
+  '/enterprise/sessions': 'Clock',
+  '/enterprise/siem': 'Radar',
+  '/enterprise/incident-response': 'AlertTriangle',
+  '/enterprise/threat-intel': 'Eye',
+  '/enterprise/sbom': 'Package',
+  '/enterprise/sigstore': 'Lock',
+  '/enterprise/slsa': 'Container',
+  '/enterprise/risk-matrix': 'Grid3x3',
+  '/enterprise/risk-register': 'ClipboardList',
+  '/enterprise/risk-appetite': 'Scale',
+  '/karmada-ops': 'Globe',
+  '/cluster-admin': 'ShieldAlert',
+  '/multi-tenancy': 'Users',
+  '/drasi': 'GitBranch',
+  '/namespaces': 'FolderTree',
+  '/nodes': 'HardDrive',
+  '/pods': 'Package',
+  '/deployments': 'Rocket',
+  '/services': 'Network',
+  '/operators': 'Cog',
+  '/helm': 'Ship',
+  '/logs': 'FileText',
+  '/settings': 'Settings',
+  '/users': 'Users',
+}
+
+/**
+ * Build KNOWN_ROUTES from i18n translations.
+ * This ensures all route names and descriptions use t() and can be localized.
+ */
+function buildKnownRoutes(t: (key: string) => string): KnownRoute[] {
+  const routes: KnownRoute[] = []
+  
+  for (const [href, icon] of Object.entries(ROUTE_ICONS)) {
+    const key = `sidebar.routes["${href}"]`
+    const name = t(`${key}.name`)
+    const description = t(`${key}.description`)
+    const category = t(`${key}.category`)
+    
+    routes.push({ href, name, description, icon, category })
+  }
+  
+  return routes
+}
 
 // Group routes by category
 // ROUTE_CATEGORIES removed — search-to-add replaces category browsing
@@ -259,6 +268,9 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   const [routeSearch, setRouteSearch] = useState('')
   // expandedSection removed — all sections now always visible
   // Dashboard cards section removed — cards are managed via Console Studio's Cards tab
+
+  // Build KNOWN_ROUTES from i18n translations (memoized to avoid rebuilding on every render)
+  const KNOWN_ROUTES = useMemo(() => buildKnownRoutes(t), [t])
 
   // Handle adding all selected routes
   const handleAddSelectedRoutes = () => {

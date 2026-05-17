@@ -16,6 +16,7 @@ import {
   RotateCcw,
   PartyPopper,
   Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useMissions } from '../../hooks/useMissions'
@@ -122,6 +123,7 @@ export function LaunchSequence({
   onComplete,
   onClose,
   onRollback }: LaunchSequenceProps) {
+  const { t } = useTranslation('common')
   const { startMission, missions } = useMissions()
   const [isStarted, setIsStarted] = useState(false)
   const progressRef = useRef<PhaseProgress[]>(state.launchProgress)
@@ -307,11 +309,11 @@ export function LaunchSequence({
 
     try {
       const { prompt, clusters, workloadNames } = await buildUnifiedMissionPlan()
-      const dryRunPrefix = state.isDryRun ? '[DRY RUN] ' : ''
+      const dryRunPrefix = state.isDryRun ? t('missionControl.launchSequence.dryRunPrefix') : ''
       const clusterCount = clusters.length
       const missionId = startMission({
-        title: `${dryRunPrefix}${state.title || 'Mission Control deployment'}`,
-        description: `${state.isDryRun ? 'Dry-run validation' : 'Unified deployment'} for ${workloadNames.length} workload${workloadNames.length === 1 ? '' : 's'}${clusterCount > 0 ? ` across ${clusterCount} cluster${clusterCount === 1 ? '' : 's'}` : ''}`,
+        title: `${dryRunPrefix}${state.title || t('missionControl.launchSequence.defaultMissionTitle')}`,
+        description: `${state.isDryRun ? t('missionControl.launchSequence.dryRunValidation') : t('missionControl.launchSequence.unifiedDeployment')} for ${workloadNames.length} workload${workloadNames.length === 1 ? '' : 's'}${clusterCount > 0 ? ` across ${clusterCount} cluster${clusterCount === 1 ? '' : 's'}` : ''}`,
         type: 'deploy',
         initialPrompt: prompt,
         dryRun: state.isDryRun,
@@ -374,7 +376,7 @@ export function LaunchSequence({
         }
         if (mission.status === 'failed' || mission.status === 'cancelled') {
           changed = true
-          return { ...proj, status: 'failed' as const, error: mission.status === 'cancelled' ? 'Mission cancelled' : 'Mission failed' }
+          return { ...proj, status: 'failed' as const, error: mission.status === 'cancelled' ? t('missionControl.launchSequence.missionCancelled') : t('missionControl.launchSequence.missionFailed') }
         }
         return proj
       })
@@ -432,15 +434,14 @@ export function LaunchSequence({
           <div className="inline-flex p-3 rounded-2xl bg-amber-500/20 mb-3">
             <AlertTriangle className="w-8 h-8 text-amber-400" />
           </div>
-          <h2 className="text-2xl font-bold">No projects to deploy</h2>
+          <h2 className="text-2xl font-bold">{t('missionControl.launchSequence.noProjectsTitle')}</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Your mission has no cluster assignments. Go back to the Chart
-            Course phase to assign projects before launching.
+            {t('missionControl.launchSequence.noProjectsDescription')}
           </p>
         </div>
         <div className="flex justify-center gap-3 pt-2">
           <Button variant="secondary" size="sm" onClick={() => onClose ? onClose() : onComplete()}>
-            Close
+            {t('actions.close')}
           </Button>
         </div>
       </div>
@@ -470,14 +471,16 @@ export function LaunchSequence({
         <h2 className="text-2xl font-bold">
           {allComplete
             ? allSuccess
-              ? state.isDryRun ? 'Dry Run Complete!' : 'Mission Complete!'
-              : state.isDryRun ? 'Dry Run Completed with Issues' : 'Mission Completed with Issues'
-            : state.isDryRun ? 'Dry Run In Progress' : 'Launch Sequence In Progress'}
+              ? t(state.isDryRun ? 'missionControl.launchSequence.dryRunCompleteTitle' : 'missionControl.launchSequence.missionCompleteTitle')
+              : t(state.isDryRun ? 'missionControl.launchSequence.dryRunIssuesTitle' : 'missionControl.launchSequence.missionIssuesTitle')
+            : t(state.isDryRun ? 'missionControl.launchSequence.dryRunInProgressTitle' : 'missionControl.launchSequence.launchInProgressTitle')}
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           {allComplete
-            ? 'All deployment phases have finished.'
-            : `Deploying ${deploymentProjectCount} project${deploymentProjectCount === 1 ? '' : 's'} in ${effectivePhases.length} phase${effectivePhases.length === 1 ? '' : 's'}`}
+            ? t('missionControl.launchSequence.allPhasesFinished')
+            : effectivePhases.length === 1
+              ? t(deploymentProjectCount === 1 ? 'missionControl.launchSequence.deployingProjects_one' : 'missionControl.launchSequence.deployingProjects_other', { count: deploymentProjectCount, phaseCount: effectivePhases.length })
+              : t(deploymentProjectCount === 1 ? 'missionControl.launchSequence.deployingProjectsPlural_one' : 'missionControl.launchSequence.deployingProjectsPlural_other', { count: deploymentProjectCount, phaseCount: effectivePhases.length })}
         </p>
       </div>
 
@@ -518,7 +521,7 @@ export function LaunchSequence({
                       void startUnifiedMission()
                     }}
                   >
-                    Retry Failed
+                    {t('missionControl.launchSequence.retryFailed')}
                   </Button>
                 )}
               </div>
