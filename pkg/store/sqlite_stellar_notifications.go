@@ -185,6 +185,26 @@ func (s *SQLiteStore) GetNotificationsSince(ctx context.Context, since time.Time
 	return out, rows.Err()
 }
 
+// GetUserNotificationsSince returns notifications for a specific user since the given time.
+// Use this instead of GetNotificationsSince when serving data to a specific user session.
+func (s *SQLiteStore) GetUserNotificationsSince(ctx context.Context, userID string, since time.Time) ([]StellarNotification, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, read, created_at
+		FROM stellar_notifications WHERE user_id = ? AND created_at >= ? ORDER BY created_at ASC`, userID, since.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarNotification, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarNotificationRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
 
 func (s *SQLiteStore) UnreadCount(ctx context.Context) (int, error) {
 	var count int

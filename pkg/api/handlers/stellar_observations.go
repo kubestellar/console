@@ -538,7 +538,7 @@ func (h *StellarHandler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer
 	// Give SSE stream 2 seconds to establish before pushing
 	time.Sleep(2 * time.Second)
 
-	notifications, _ := h.store.GetNotificationsSince(ctx, since)
+	notifications, _ := h.store.GetUserNotificationsSince(ctx, userID, since)
 	resolvedWatches, _ := h.store.GetWatchesSince(ctx, userID, since, "resolved")
 	activeWatches, _ := h.store.GetActiveWatches(ctx, userID)
 	memories, _ := h.store.GetRecentMemoryEntries(ctx, userID, "", 5)

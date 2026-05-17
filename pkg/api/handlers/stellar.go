@@ -147,6 +147,7 @@ type StellarStore interface {
 
 	// Sprint 5
 	GetNotificationsSince(ctx context.Context, since time.Time) ([]store.StellarNotification, error)
+	GetUserNotificationsSince(ctx context.Context, userID string, since time.Time) ([]store.StellarNotification, error)
 	GetExecutionsSince(ctx context.Context, since time.Time) ([]store.StellarExecution, error)
 	UpsertUserLastSeen(ctx context.Context, userID string) error
 	GetUserLastSeen(ctx context.Context, userID string) (*time.Time, error)
