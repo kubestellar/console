@@ -61,7 +61,19 @@ vi.mock('framer-motion', () => ({
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (str: string) => str,
+    t: (key: string, options?: { count?: number; phaseCount?: number }) => {
+      // Handle pluralization and interpolation for LaunchSequence strings
+      if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
+      if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
+      if (key === 'missionControl.launchSequence.deployingProjects_one' && options) {
+        return `Deploying ${options.count} project in ${options.phaseCount} phase`
+      }
+      if (key === 'missionControl.launchSequence.deployingProjects_other' && options) {
+        return `Deploying ${options.count} projects in ${options.phaseCount} phase`
+      }
+      // Default: return the key as-is
+      return key
+    },
   }),
 }))
 
