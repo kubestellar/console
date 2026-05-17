@@ -270,7 +270,8 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   // Dashboard cards section removed — cards are managed via Console Studio's Cards tab
 
   // Build KNOWN_ROUTES from i18n translations (memoized to avoid rebuilding on every render)
-  const KNOWN_ROUTES = useMemo(() => buildKnownRoutes(t), [t])
+  // Cast t to simple function signature to avoid TypeScript overload resolution crash
+  const KNOWN_ROUTES = useMemo(() => buildKnownRoutes(t as (key: string) => string), [t])
 
   // Handle adding all selected routes
   const handleAddSelectedRoutes = () => {
