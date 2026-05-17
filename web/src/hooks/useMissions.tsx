@@ -420,7 +420,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       m.id === missionId
         ? {
             ...m,
-            currentStep: i18n.t('missions.queue.waitingForTools', { tools: conflicts.join(', ') }),
+            currentStep: i18n.t('missions.queue.waitingForTools', { tools: (conflicts || []).join(', ') }),
           }
         : m
     ))
