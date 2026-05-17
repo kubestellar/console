@@ -364,13 +364,22 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 		if len(linkedIssues) > 0 {
 			requests, err := h.store.GetFeatureRequestsByIssueNumbers(ctx, linkedIssues)
 			if err == nil && len(requests) > 0 {
-				request = requests[0]
-				requestID = request.ID
-				issueNum := 0
-				if request.GitHubIssueNumber != nil {
-					issueNum = *request.GitHubIssueNumber
+				// Match results back to PR-body order so the first linked
+				// issue always wins, regardless of SQL row ordering.
+				requestMap := make(map[int]*models.FeatureRequest, len(requests))
+				for _, r := range requests {
+					if r.GitHubIssueNumber != nil {
+						requestMap[*r.GitHubIssueNumber] = r
+					}
 				}
-				slog.Info("[Webhook] PR linked to feature request via issue", "pr", prNumber, "issue", issueNum)
+				for _, issueNum := range linkedIssues {
+					if r, ok := requestMap[issueNum]; ok {
+						request = r
+						requestID = r.ID
+						slog.Info("[Webhook] PR linked to feature request via issue", "pr", prNumber, "issue", issueNum)
+						break
+					}
+				}
 			}
 		}
 	}
