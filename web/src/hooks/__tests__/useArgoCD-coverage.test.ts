@@ -80,10 +80,12 @@ vi.mock('../../lib/cache', () => {
           failuresRef.current += 1
           const f = failuresRef.current
           setConsecutiveFailures(f)
-          setError(err instanceof Error ? err.message : String(err))
-          setIsLoading(false)
+          setError(err instanceof Error ? err.message : 'Failed to fetch data')
+          // Keep isLoading=true until FAILURE_THRESHOLD is reached (matches real useCache behavior)
+          const hasData = data !== initialData
+          setIsLoading(!hasData && f < FAILURE_THRESHOLD)
         })
-    }, [])
+    }, [data, initialData])
 
     React.useEffect(() => {
       if (!enabled) { setIsLoading(false); return }
@@ -249,7 +251,7 @@ describe('useArgoApplicationSets', () => {
     const { result, unmount } = renderHook(() => useArgoApplicationSets())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.error).toBe('Failed to fetch ApplicationSets')
+    expect(result.current.error).toBe('Failed to fetch data')
     expect(result.current.consecutiveFailures).toBe(1)
     unmount()
   })

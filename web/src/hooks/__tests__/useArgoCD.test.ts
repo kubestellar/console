@@ -79,9 +79,11 @@ vi.mock('../../lib/cache', () => {
           const f = failuresRef.current
           setConsecutiveFailures(f)
           setError(err instanceof Error ? err.message : String(err))
-          setIsLoading(false)
+          // Keep isLoading=true until FAILURE_THRESHOLD is reached (matches real useCache behavior)
+          const hasData = data !== initialData
+          setIsLoading(!hasData && f < FAILURE_THRESHOLD)
         })
-    }, [])
+    }, [data, initialData])
 
     React.useEffect(() => {
       if (!enabled) { setIsLoading(false); return }
