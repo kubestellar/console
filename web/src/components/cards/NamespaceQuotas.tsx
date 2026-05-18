@@ -443,17 +443,17 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   }, [resourceQuotas, selectedCluster, selectedNamespace])
 
   // Get unique quotas for edit/delete actions
-  const uniqueQuotas = (() => {
+  const uniqueQuotas = useMemo(() => {
     const quotaMap = new Map<string, ResourceQuota>()
     resourceQuotas.forEach(q => {
       const key = `${q.cluster}/${q.namespace}/${q.name}`
       quotaMap.set(key, q)
     })
     return Array.from(quotaMap.values())
-  })()
+  }, [resourceQuotas])
 
   // Transform LimitRanges for display (pre-filter by selectors only)
-  const limitRangeItems = (() => {
+  const limitRangeItems = useMemo(() => {
     const items: LimitRangeItem[] = []
 
     // Filter limit ranges based on selection
@@ -475,7 +475,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       })
 
     return items
-  })()
+  }, [limitRanges, selectedCluster, selectedNamespace])
 
   // useCardData for Quotas tab
   const {

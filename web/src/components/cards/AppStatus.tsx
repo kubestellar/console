@@ -100,7 +100,7 @@ export function AppStatus(_props: AppStatusProps) {
 
   // Pre-filter by global cluster filter and custom text filter
   // (useCardData's clusterField doesn't support array fields, so we handle it here)
-  const preFilteredApps = (() => {
+  const preFilteredApps = useMemo(() => {
     let filtered = rawApps
 
     // Filter by global selected clusters (clusters is an array field)
@@ -122,7 +122,7 @@ export function AppStatus(_props: AppStatusProps) {
     }
 
     return filtered
-  })()
+  }, [rawApps, isAllClustersSelected, globalSelectedClusters, customFilter])
 
   // Use shared card data hook for search, cluster filter, sorting, and pagination
   const {

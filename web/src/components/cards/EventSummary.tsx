@@ -57,13 +57,13 @@ export function EventSummary() {
     clusterFilterRef } = useChartFilters({
     storageKey: 'event-summary' })
 
-  const filteredEvents = (() => {
+  const filteredEvents = useMemo(() => {
     let result = filterByCluster(allEvents)
     if (localClusterFilter.length > 0) {
       result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
     }
     return result
-  })()
+  }, [filterByCluster, allEvents, localClusterFilter])
 
   const summary = useMemo(() => {
     const warnings = filteredEvents.reduce((sum, event) => sum + (event.type === 'Warning' ? getEventCount(event.count) : 0), 0)

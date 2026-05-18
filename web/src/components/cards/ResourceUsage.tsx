@@ -40,10 +40,10 @@ function ResourceUsageInternal() {
     clusterFilterRef } = useChartFilters({ storageKey: 'resource-usage' })
 
   // Filter GPU nodes to match the currently displayed clusters
-  const gpuNodes = (() => {
+  const gpuNodes = useMemo(() => {
     const clusterNames = new Set(clusters.map(c => c.name))
     return allGPUNodes.filter(n => clusterNames.has((n.cluster ?? '').split('/')[0]))
-  })()
+  }, [clusters, allGPUNodes])
 
   // Calculate totals from real cluster data.
   // For the "used" numerator we prefer metrics-server actual usage (cpuUsageCores /

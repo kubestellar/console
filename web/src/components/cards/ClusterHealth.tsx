@@ -149,14 +149,14 @@ export function ClusterHealth() {
   const isLoading = showSkeleton
 
   // Calculate GPU counts per cluster
-  const gpuByCluster = (() => {
+  const gpuByCluster = useMemo(() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  })()
+  }, [gpuNodes])
 
   // Stats based on globally filtered clusters (not affected by local search/cluster filter)
   const filteredForStats = isAllClustersSelected
