@@ -130,7 +130,7 @@ import { setFullFetchClustersImpl } from './sharedImpl.connection'
 setFullFetchClustersImpl(fullFetchClustersFunc)
 
 // ===== HMR Support =====
-import { initialFetchStarted as initialFetchStartedRef, clusterCache as clusterCacheRef, dataSubscribers as dataSubscribersRef, uiSubscribers as uiSubscribersRef, clusterSubscribers as clusterSubscribersRef, setInitialFetchStarted as setInitialFetchStartedFunc } from './sharedImpl.state'
+import { clusterCache as clusterCacheRef, dataSubscribers as dataSubscribersRef, uiSubscribers as uiSubscribersRef, clusterSubscribers as clusterSubscribersRef, setInitialFetchStarted as setInitialFetchStartedFunc } from './sharedImpl.state'
 import { cleanupSharedWebSocket as cleanupSharedWebSocketFunc } from './sharedImpl.connection'
 import { setHealthCheckFailures } from './sharedImpl.health'
 

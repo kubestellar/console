@@ -1,7 +1,7 @@
 // Data fetching functions for cluster list and health
 
-import { api, isBackendUnavailable } from '../../lib/api'
-import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
+import { api } from '../../lib/api'
+import { reportAgentDataError, reportAgentDataSuccess } from '../useLocalAgent'
 import { isNetlifyDeployment } from '../../lib/demoMode'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import { MCP_PROBE_TIMEOUT_MS } from '../../lib/constants/network'

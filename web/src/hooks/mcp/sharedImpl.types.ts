@@ -1,5 +1,7 @@
 // Type definitions for cluster cache and shared state
 
+import type { ClusterInfo } from './types'
+
 export interface ClusterCache {
   // --- Data slice (heavy; notified inside startTransition) ---
   clusters: ClusterInfo[]
