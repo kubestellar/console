@@ -1,108 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  X, Bug, Loader2, ExternalLink, Bell, Check, Clock,
-  GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare,
-  Lightbulb, AlertCircle, AlertTriangle, Trophy, Search,
-} from 'lucide-react'
-import { Github, Linkedin } from '@/lib/icons'
-import { StatusBadge } from '../ui/StatusBadge'
-import { isTriaged } from '../../hooks/useFeatureRequests'
-import type { CloseRequestInput, FeatureRequest, ReopenRequestInput } from '../../hooks/useFeatureRequests'
-import { emitLinkedInShare } from '../../lib/analytics'
-import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
-import { MS_PER_SECOND } from '../../lib/constants/time'
-import { ContributorBanner } from '../rewards/ContributorLadder'
-import { GITHUB_REWARD_LABELS } from '../../types/rewards'
-import type { GitHubContribution } from '../../types/rewards'
-import {
-  formatRelativeTime,
-  getStatusInfo,
-  GitHubContributionIcon,
-  PREVIEW_WARMUP_SECONDS,
-} from './FeatureRequestTypes'
-import type { PreviewResult } from './FeatureRequestTypes'
+import { AlertTriangle, Bug, ExternalLink, Loader2, RefreshCw, Search, Trophy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { getStatusDescription } from '../../hooks/useFeatureRequests'
-import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
-import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
+import { ContributorBanner } from '../rewards/ContributorLadder'
+import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import type { CloseRequestInput, ReopenRequestInput } from '../../hooks/useFeatureRequests'
+import type { PreviewResult } from './FeatureRequestTypes'
 import { cn } from '../../lib/cn'
-
-const REOPEN_COMMENT_ROWS = 3
-const REOPEN_COMMENT_MAX_LENGTH = 1000
-const VERIFIED_FIX_STORAGE_KEY_PREFIX = 'ks-console:verified-fix'
-
-type RequestCardState = 'awaiting_verification' | FeatureRequest['status']
-
-function getVerifiedFixStorageKey(request: FeatureRequest): string {
-  const issueId = request.github_issue_number ?? request.id
-  const fixId = request.pr_number ?? 'no-pr'
-
-  return `${VERIFIED_FIX_STORAGE_KEY_PREFIX}:${issueId}:${fixId}`
-}
-
-function readVerifiedFixState(storageKey: string): boolean {
-  if (typeof window === 'undefined') {
-    return false
-  }
-
-  try {
-    return window.localStorage.getItem(storageKey) === 'true'
-  } catch {
-    return false
-  }
-}
-
-function writeVerifiedFixState(storageKey: string, isVerified: boolean): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  try {
-    if (isVerified) {
-      window.localStorage.setItem(storageKey, 'true')
-      return
-    }
-
-    window.localStorage.removeItem(storageKey)
-  } catch {
-    // Ignore storage failures so the verification flow still works.
-  }
-}
-
-interface UpdatesTabProps {
-  requests: FeatureRequest[]
-  requestsLoading: boolean
-  isRefreshing: boolean
-  isInDemoMode: boolean
-  canPerformActions: boolean
-  currentGitHubLogin: string
-  githubRewards: {
-    breakdown?: {
-      prs_merged: number
-      prs_opened: number
-      bug_issues: number
-      feature_issues: number
-      other_issues: number
-    }
-    contributions?: GitHubContribution[]
-    from_cache?: boolean
-    cached_at: string
-  } | null
-  githubPoints: number
-  token: string | null
-  showToast: (message: string, type: 'success' | 'error' | 'info') => void
-  onRefreshRequests: () => void
-  onRefreshNotifications: () => void
-  onRefreshGitHub: () => void
-  isGitHubRefreshing: boolean
-  onRequestUpdate: (id: string) => Promise<unknown>
-  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<unknown>
-  onReopenRequest: (id: string, input: ReopenRequestInput) => Promise<unknown>
-  getUnreadCountForRequest: (id: string) => number
-  markRequestNotificationsAsRead: (id: string) => void
-  onShowLoginPrompt: () => void
-}
-
+import { RequestItem } from './UpdatesTabRequestItem'
+import { GitHubContributionsSection } from './UpdatesTabGitHubContributionsSection'
+import type { UpdatesTabProps } from './UpdatesTab.types'
 
 export function UpdatesTab({
   requests,
@@ -134,7 +40,7 @@ export function UpdatesTab({
   const [previewResults, setPreviewResults] = useState<Record<number, PreviewResult>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
-  const filteredRequests = (requests || []).filter(request => {
+  const filteredRequests = (requests || []).filter((request) => {
     if (!normalizedSearchQuery) {
       return true
     }
@@ -156,9 +62,9 @@ export function UpdatesTab({
       setActionError(null)
       await onRequestUpdate(requestId)
     } catch {
-      const errorMsg = 'Failed to request update'
-      setActionError(errorMsg)
-      showToast(errorMsg, 'error')
+      const errorMessage = 'Failed to request update'
+      setActionError(errorMessage)
+      showToast(errorMessage, 'error')
     } finally {
       setActionLoading(null)
     }
@@ -172,11 +78,9 @@ export function UpdatesTab({
       setConfirmClose(null)
       return true
     } catch {
-      const errorMsg = input?.user_verified
-        ? t('feedback.verifyFixFailed')
-        : t('feedback.closeRequestFailed')
-      setActionError(errorMsg)
-      showToast(errorMsg, 'error')
+      const errorMessage = input?.user_verified ? t('feedback.verifyFixFailed') : t('feedback.closeRequestFailed')
+      setActionError(errorMessage)
+      showToast(errorMessage, 'error')
       return false
     } finally {
       setActionLoading(null)
@@ -190,10 +94,10 @@ export function UpdatesTab({
       await onReopenRequest(requestId, input)
       showToast(t('feedback.reopenRequestSubmitted'), 'success')
     } catch {
-      const errorMsg = t('feedback.reopenRequestFailed')
-      setActionError(errorMsg)
-      showToast(errorMsg, 'error')
-      throw new Error(errorMsg)
+      const errorMessage = t('feedback.reopenRequestFailed')
+      setActionError(errorMessage)
+      showToast(errorMessage, 'error')
+      throw new Error(errorMessage)
     } finally {
       setActionLoading(null)
     }
@@ -201,23 +105,26 @@ export function UpdatesTab({
 
   const handleCheckPreview = async (prNumber: number) => {
     setPreviewChecking(prNumber)
+
     try {
       const headers: Record<string, string> = {}
       if (token) {
         headers.Authorization = `Bearer ${token}`
       }
-      const res = await fetch(`${BACKEND_DEFAULT_URL}/api/feedback/preview/${prNumber}`, {
+
+      const response = await fetch(`${BACKEND_DEFAULT_URL}/api/feedback/preview/${prNumber}`, {
         headers,
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
-      if (res.ok) {
-        const data = await res.json()
-        setPreviewResults(prev => ({ ...prev, [prNumber]: data }))
+
+      if (response.ok) {
+        const data = await response.json()
+        setPreviewResults((previous) => ({ ...previous, [prNumber]: data }))
       } else {
-        setPreviewResults(prev => ({ ...prev, [prNumber]: { status: 'error', message: `HTTP ${res.status}` } }))
+        setPreviewResults((previous) => ({ ...previous, [prNumber]: { status: 'error', message: `HTTP ${response.status}` } }))
       }
     } catch {
-      setPreviewResults(prev => ({ ...prev, [prNumber]: { status: 'error', message: 'Failed to check' } }))
+      setPreviewResults((previous) => ({ ...previous, [prNumber]: { status: 'error', message: 'Failed to check' } }))
     } finally {
       setPreviewChecking(null)
     }
@@ -231,15 +138,12 @@ export function UpdatesTab({
           className="flex items-start gap-2 border-b border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400"
         >
           <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          <span>
-            {t('feedback.demoDataBanner')}
-          </span>
+          <span>{t('feedback.demoDataBanner')}</span>
         </div>
       )}
-      {/* Contributor banner */}
+
       <ContributorBanner />
 
-      {/* Link to full leaderboard on docs site */}
       <div className="border-b border-border/50 px-3 py-2">
         <a
           href="https://kubestellar.io/leaderboard"
@@ -253,13 +157,8 @@ export function UpdatesTab({
         </a>
       </div>
 
-      {/* Actions header */}
       <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
-        {actionError ? (
-          <span className="text-xs text-red-400">{actionError}</span>
-        ) : (
-          <span />
-        )}
+        {actionError ? <span className="text-xs text-red-400">{actionError}</span> : <span />}
         <button
           onClick={() => {
             setActionError(null)
@@ -276,7 +175,6 @@ export function UpdatesTab({
       </div>
 
       <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto">
-        {/* Your Requests section */}
         <div className="border-b border-border/50 shrink-0">
           <div className="p-2">
             <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -302,6 +200,7 @@ export function UpdatesTab({
             </div>
           )}
         </div>
+
         {requestsLoading && (requests || []).length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
@@ -319,7 +218,7 @@ export function UpdatesTab({
             <p className="text-sm">{t('feedback.noMatchingRequests')}</p>
           </div>
         ) : (
-          filteredRequests.map(request => (
+          filteredRequests.map((request) => (
             <RequestItem
               key={request.id}
               request={request}
@@ -341,7 +240,6 @@ export function UpdatesTab({
           ))
         )}
 
-        {/* GitHub Contributions section */}
         <GitHubContributionsSection
           currentGitHubLogin={currentGitHubLogin}
           githubRewards={githubRewards}
@@ -353,850 +251,5 @@ export function UpdatesTab({
         />
       </div>
     </div>
-  )
-}
-
-// ── Request Item ──
-
-interface RequestItemProps {
-  request: FeatureRequest
-  currentGitHubLogin: string
-  canPerformActions: boolean
-  actionLoading: string | null
-  confirmClose: string | null
-  previewChecking: number | null
-  previewResults: Record<number, PreviewResult>
-  getUnreadCountForRequest: (id: string) => number
-  markRequestNotificationsAsRead: (id: string) => void
-  onRequestUpdate: (id: string) => Promise<void>
-  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<boolean>
-  onReopenRequest: (id: string, input: ReopenRequestInput) => Promise<void>
-  onSetConfirmClose: (id: string | null) => void
-  onCheckPreview: (prNumber: number) => Promise<void>
-  onShowLoginPrompt: () => void
-}
-
-function RequestItem({
-  request,
-  currentGitHubLogin,
-  canPerformActions,
-  actionLoading,
-  confirmClose,
-  previewChecking,
-  previewResults,
-  getUnreadCountForRequest,
-  markRequestNotificationsAsRead,
-  onRequestUpdate,
-  onCloseRequest,
-  onReopenRequest,
-  onSetConfirmClose,
-  onCheckPreview,
-  onShowLoginPrompt,
-}: RequestItemProps) {
-  const { t } = useTranslation()
-  const [isReopenFormVisible, setIsReopenFormVisible] = useState(false)
-  const [reopenComment, setReopenComment] = useState('')
-  const isLoading = actionLoading === request.id
-  const showConfirm = confirmClose === request.id
-  const verificationStorageKey = getVerifiedFixStorageKey(request)
-  const [isLocallyVerified, setIsLocallyVerified] = useState(() => readVerifiedFixState(verificationStorageKey))
-  const isOwnedByUser = request.github_login
-    ? request.github_login === currentGitHubLogin
-    : request.user_id === currentGitHubLogin
-  const isVerified = Boolean(request.closed_by_user || isLocallyVerified)
-  const displayState: RequestCardState = request.status === 'fix_complete' && isOwnedByUser && !isVerified
-    ? 'awaiting_verification'
-    : request.status
-  const statusInfo = getStatusInfo(request.status, request.closed_by_user)
-  const shouldBlur = !isTriaged(request.status) && !isOwnedByUser
-  const requestUnreadCount = getUnreadCountForRequest(request.id)
-  const isAwaitingVerification = displayState === 'awaiting_verification'
-
-  useEffect(() => {
-    setIsLocallyVerified(readVerifiedFixState(verificationStorageKey))
-  }, [verificationStorageKey])
-
-  const handleVerify = async () => {
-    const didVerify = await onCloseRequest(request.id, { user_verified: true })
-    if (!didVerify) {
-      return
-    }
-
-    writeVerifiedFixState(verificationStorageKey, true)
-    setIsLocallyVerified(true)
-  }
-
-  const handleReopenSubmit = async () => {
-    const trimmedComment = reopenComment.trim()
-    if (!trimmedComment) {
-      return
-    }
-    try {
-      await onReopenRequest(request.id, { comment: trimmedComment })
-      writeVerifiedFixState(verificationStorageKey, false)
-      setIsLocallyVerified(false)
-      setIsReopenFormVisible(false)
-      setReopenComment('')
-    } catch {
-      // Parent handles the toast; keep the form open so the user can retry.
-    }
-  }
-
-  return (
-    <div
-      className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors ${
-        requestUnreadCount > 0 ? 'bg-purple-500/5' : ''
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${
-              request.request_type === 'bug' ? 'bg-red-500/20 text-red-400' : 'bg-purple-500/20 text-purple-400'
-            }`}>
-              {request.request_type === 'bug' ? 'Bug' : 'Feature'}
-            </span>
-            {request.github_issue_number && (
-              <span className="text-xs text-muted-foreground">
-                #{request.github_issue_number}
-              </span>
-            )}
-            {isOwnedByUser && (
-              <StatusBadge color="blue" size="xs">Yours</StatusBadge>
-            )}
-            {requestUnreadCount > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  markRequestNotificationsAsRead(request.id)
-                }}
-                className="flex items-center gap-1 px-1.5 py-0.5 text-2xs font-medium rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
-                title="Click to clear updates"
-              >
-                <Bell className="w-3 h-3" />
-                {requestUnreadCount} update{requestUnreadCount !== 1 ? 's' : ''}
-                <X className="w-3 h-3 ml-0.5 hover:text-purple-300" />
-              </button>
-            )}
-          </div>
-
-          {/* Status-dependent content */}
-          {!isTriaged(request.status) ? (
-            <UntriagedRequestContent
-              request={request}
-              isOwnedByUser={isOwnedByUser}
-              statusInfo={statusInfo}
-            />
-          ) : (
-            <TriagedRequestContent
-              request={request}
-              shouldBlur={shouldBlur}
-              statusInfo={statusInfo}
-              isAwaitingVerification={isAwaitingVerification}
-            />
-          )}
-
-          {/* PR links */}
-          {request.status === 'feasibility_study' && request.pr_url && (
-            <a href={sanitizeUrl(request.pr_url)} target="_blank" rel="noopener noreferrer"
-              className="text-xs flex items-center gap-1 mt-1.5 text-purple-400 hover:text-purple-300"
-              onClick={e => e.stopPropagation()}>
-              <GitPullRequest className="w-3 h-3" />
-              PR #{request.pr_number}
-            </a>
-          )}
-          {request.status === 'fix_ready' && request.pr_url && (
-            <a href={sanitizeUrl(request.pr_url)} target="_blank" rel="noopener noreferrer"
-              className="text-xs flex items-center gap-1 mt-1.5 text-green-400 hover:text-green-300"
-              onClick={e => e.stopPropagation()}>
-              <GitPullRequest className="w-3 h-3" />
-              View PR #{request.pr_number}
-            </a>
-          )}
-
-          {/* Merged celebration for fix_complete */}
-          {request.status === 'fix_complete' && (
-            <FixCompleteBanner
-              request={request}
-              isAwaitingVerification={isAwaitingVerification}
-              isVerified={isVerified}
-            />
-          )}
-          {isAwaitingVerification && (
-            <FixVerificationPrompt
-              requestId={request.id}
-              canPerformActions={canPerformActions}
-              isLoading={isLoading}
-              isReopenFormVisible={isReopenFormVisible}
-              reopenComment={reopenComment}
-              onVerify={() => void handleVerify()}
-              onToggleReopenForm={() => setIsReopenFormVisible(prev => !prev)}
-              onReopenCommentChange={setReopenComment}
-              onReopenSubmit={() => void handleReopenSubmit()}
-              onShowLoginPrompt={onShowLoginPrompt}
-            />
-          )}
-
-          {/* Latest comment for unable_to_fix */}
-          {request.status === 'unable_to_fix' && request.latest_comment && (
-            <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-muted-foreground">
-              <div className="flex items-center gap-1 text-red-400 mb-1">
-                <MessageSquare className="w-3 h-3" />
-                <span className="font-medium">{t('drilldown.fields.reason')}</span>
-              </div>
-              <p className="line-clamp-3">{request.latest_comment}</p>
-            </div>
-          )}
-
-          {/* Preview section */}
-          {(request.status === 'fix_ready' || request.status === 'fix_complete') && (
-            <PreviewSection
-              request={request}
-              previewChecking={previewChecking}
-              previewResults={previewResults}
-              onCheckPreview={onCheckPreview}
-            />
-          )}
-
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatRelativeTime(request.created_at)}
-            </span>
-            {request.github_issue_url && (
-              <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                onClick={e => e.stopPropagation()}>
-                <ExternalLink className="w-3 h-3" />
-                GitHub
-              </a>
-            )}
-          </div>
-
-          {/* Actions */}
-          {isOwnedByUser && request.status !== 'closed' && request.status !== 'fix_complete' && (
-            <RequestActions
-              requestId={request.id}
-              canPerformActions={canPerformActions}
-              isLoading={isLoading}
-              showConfirm={showConfirm}
-              onRequestUpdate={onRequestUpdate}
-              onCloseRequest={onCloseRequest}
-              onSetConfirmClose={onSetConfirmClose}
-              onShowLoginPrompt={onShowLoginPrompt}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Untriaged Request Content ──
-
-function UntriagedRequestContent({
-  request,
-  isOwnedByUser,
-  statusInfo,
-}: {
-  request: FeatureRequest
-  isOwnedByUser: boolean
-  statusInfo: { label: string; color: string; bgColor: string }
-}) {
-  return isOwnedByUser ? (
-    <>
-      <p className="text-sm font-medium text-foreground mt-1 truncate blur-xs select-none">
-        {request.request_type === 'bug' ? '\uD83D\uDC1B ' : '\u2728 '}{request.title}
-      </p>
-      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-        <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
-          {statusInfo.label}
-        </span>
-        {request.github_issue_url && (
-          <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-            onClick={e => e.stopPropagation()}>
-            <ExternalLink className="w-3 h-3" />
-            View on GitHub
-          </a>
-        )}
-      </div>
-      <p className="text-xs text-muted-foreground italic mt-1.5">
-        Details will be visible to you once we accept triage
-      </p>
-    </>
-  ) : (
-    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-      <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
-        {statusInfo.label}
-      </span>
-      <span className="text-xs text-muted-foreground italic">
-        Awaiting maintainer attention
-      </span>
-      {request.github_issue_number && (
-        <span className="text-xs text-muted-foreground">
-          #{request.github_issue_number}
-        </span>
-      )}
-      {request.github_issue_url && (
-        <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
-          className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-          onClick={e => e.stopPropagation()}>
-          <ExternalLink className="w-3 h-3" />
-          View on GitHub
-        </a>
-      )}
-    </div>
-  )
-}
-
-// ── Triaged Request Content ──
-
-function TriagedRequestContent({
-  request,
-  shouldBlur,
-  statusInfo,
-  isAwaitingVerification,
-}: {
-  request: FeatureRequest
-  shouldBlur: boolean
-  statusInfo: { label: string; color: string; bgColor: string }
-  isAwaitingVerification: boolean
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <>
-      <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-xs select-none' : ''}`}>
-        {request.request_type === 'bug' ? '\uD83D\uDC1B ' : '\u2728 '}{request.title}
-      </p>
-      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-        <span className={`px-1.5 py-0.5 text-2xs font-medium rounded ${statusInfo.bgColor} ${statusInfo.color}`}>
-          {statusInfo.label}
-        </span>
-        {request.status === 'fix_complete' && (
-          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-gray-500/20 text-muted-foreground">
-            Closed
-          </span>
-        )}
-        {isAwaitingVerification && (
-          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-blue-500/20 text-blue-300">
-            {t('feedback.awaitingVerificationBadge')}
-          </span>
-        )}
-        {getStatusDescription(request.status, request.closed_by_user) && (
-          <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-xs select-none' : ''}`}>
-            {getStatusDescription(request.status, request.closed_by_user)}
-          </span>
-        )}
-      </div>
-    </>
-  )
-}
-
-// ── Fix Complete Banner ──
-
-function FixCompleteBanner({
-  request,
-  isAwaitingVerification,
-  isVerified,
-}: {
-  request: FeatureRequest
-  isAwaitingVerification: boolean
-  isVerified: boolean
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-      <div className="flex items-center gap-2 mb-1 flex-wrap">
-        <div className="flex items-center gap-1.5">
-          <Check className="w-4 h-4 text-green-400" />
-          <span className="text-xs font-semibold text-green-400">{t('feedback.fixMerged')}</span>
-        </div>
-        {isVerified && (
-          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-green-500/20 text-green-300">
-            {t('feedback.verifiedByYou')}
-          </span>
-        )}
-        {isAwaitingVerification && (
-          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-blue-500/20 text-blue-300">
-            {t('feedback.awaitingVerificationBadge')}
-          </span>
-        )}
-      </div>
-      <p className="text-xs text-green-300/80 mb-2">
-        {isVerified
-          ? t('feedback.verificationRecorded')
-          : t('feedback.fixMergedDescription', {
-            requestType: request.request_type === 'bug'
-              ? t('feedback.requestTypeBugFix')
-              : t('feedback.requestTypeFeature'),
-          })}
-      </p>
-      <div className="flex items-center gap-3 flex-wrap">
-        <a href="https://github.com/kubestellar/console/releases" target="_blank" rel="noopener noreferrer"
-          className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
-          onClick={e => e.stopPropagation()}>
-          <ExternalLink className="w-3 h-3" />
-          {t('feedback.releases')}
-        </a>
-        {request.pr_url && (
-          <a href={sanitizeUrl(request.pr_url)} target="_blank" rel="noopener noreferrer"
-            className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
-            onClick={e => e.stopPropagation()}>
-            <GitPullRequest className="w-3 h-3" />
-            PR #{request.pr_number}
-          </a>
-        )}
-        {request.github_issue_url && (
-          <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
-            className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
-            onClick={e => e.stopPropagation()}>
-            <ExternalLink className="w-3 h-3" />
-            Issue #{request.github_issue_number}
-          </a>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function FixVerificationPrompt({
-  requestId,
-  canPerformActions,
-  isLoading,
-  isReopenFormVisible,
-  reopenComment,
-  onVerify,
-  onToggleReopenForm,
-  onReopenCommentChange,
-  onReopenSubmit,
-  onShowLoginPrompt,
-}: {
-  requestId: string
-  canPerformActions: boolean
-  isLoading: boolean
-  isReopenFormVisible: boolean
-  reopenComment: string
-  onVerify: () => void
-  onToggleReopenForm: () => void
-  onReopenCommentChange: (value: string) => void
-  onReopenSubmit: () => void
-  onShowLoginPrompt: () => void
-}) {
-  const { t } = useTranslation()
-  const isCommentEmpty = reopenComment.trim().length === 0
-
-  return (
-    <div className="mt-2 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3" data-testid={`awaiting-verification-${requestId}`}>
-      <p className="text-sm font-medium text-blue-200">{t('feedback.awaitingVerificationQuestion')}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <button
-          onClick={canPerformActions ? onVerify : onShowLoginPrompt}
-          disabled={canPerformActions && isLoading}
-          className="px-2.5 py-1.5 text-xs rounded bg-green-500/20 hover:bg-green-500/30 text-green-300 transition-colors disabled:opacity-50"
-        >
-          {canPerformActions && isLoading ? t('feedback.verifyingFix') : t('feedback.verifyFix')}
-        </button>
-        <button
-          onClick={canPerformActions ? onToggleReopenForm : onShowLoginPrompt}
-          className="px-2.5 py-1.5 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
-        >
-          {t('feedback.stillBroken')}
-        </button>
-      </div>
-      {isReopenFormVisible && (
-        <div className="mt-3 space-y-2">
-          <textarea
-            value={reopenComment}
-            onChange={event => onReopenCommentChange(event.target.value.slice(0, REOPEN_COMMENT_MAX_LENGTH))}
-            rows={REOPEN_COMMENT_ROWS}
-            maxLength={REOPEN_COMMENT_MAX_LENGTH}
-            className="w-full rounded-md border border-border bg-background/70 px-3 py-2 text-sm text-foreground outline-none focus:border-blue-400"
-            placeholder={t('feedback.stillBrokenPlaceholder')}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={onReopenSubmit}
-              disabled={isLoading || isCommentEmpty}
-              className="px-2.5 py-1.5 text-xs rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? t('feedback.submittingReopen') : t('feedback.submitStillBroken')}
-            </button>
-            <button
-              onClick={onToggleReopenForm}
-              className="px-2.5 py-1.5 text-xs rounded bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
-            >
-              {t('actions.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Preview Section ──
-
-function PreviewSection({
-  request,
-  previewChecking,
-  previewResults,
-  onCheckPreview,
-}: {
-  request: FeatureRequest
-  previewChecking: number | null
-  previewResults: Record<number, PreviewResult>
-  onCheckPreview: (prNumber: number) => Promise<void>
-}) {
-  const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
-  const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
-  const safePreviewUrl = isValidPreviewUrl(previewUrl) ? previewUrl : null
-  const isCheckingThis = previewChecking === request.pr_number
-
-  const readyAt = checkedPreview?.ready_at ? new Date(checkedPreview.ready_at) : null
-  const secondsSinceReady = readyAt ? (Date.now() - readyAt.getTime()) / MS_PER_SECOND : Infinity
-  const isWarmingUp = secondsSinceReady < PREVIEW_WARMUP_SECONDS
-
-  if (safePreviewUrl && request.status === 'fix_ready') {
-    if (isWarmingUp) {
-      const secondsLeft = Math.ceil(PREVIEW_WARMUP_SECONDS - secondsSinceReady)
-      return (
-        <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 text-yellow-400 animate-spin" />
-            <span className="text-xs text-yellow-400 font-medium">Preview warming up... ({secondsLeft}s)</span>
-          </div>
-        </div>
-      )
-    }
-    return (
-      <div className="mt-2 p-2 bg-green-500/10 border border-green-500/30 rounded">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-green-400" />
-            <span className="text-xs text-green-400 font-medium">Preview Available</span>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              if (isValidPreviewUrl(safePreviewUrl)) {
-                window.open(safePreviewUrl, '_blank', 'noopener,noreferrer')
-              }
-            }}
-            className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1">
-            <ExternalLink className="w-3 h-3" />
-            Try It
-          </button>
-        </div>
-      </div>
-    )
-  }
-  if (safePreviewUrl) {
-    return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          if (isValidPreviewUrl(safePreviewUrl)) {
-            window.open(safePreviewUrl, '_blank', 'noopener,noreferrer')
-          }
-        }}
-        className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1 bg-transparent border-0 p-0 cursor-pointer">
-        <Eye className="w-3 h-3" />
-        Preview
-      </button>
-    )
-  }
-  if (request.pr_number && request.status === 'fix_ready') {
-    return (
-      <div className="mt-1.5 flex items-center gap-2">
-        <button
-          onClick={e => { e.stopPropagation(); void onCheckPreview(request.pr_number!) }}
-          disabled={isCheckingThis}
-          className="text-xs text-muted-foreground hover:text-green-400 flex items-center gap-1 transition-colors disabled:opacity-50"
-        >
-          {isCheckingThis ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Eye className="w-3 h-3" />
-          )}
-          Check Preview
-        </button>
-        {checkedPreview && checkedPreview.status !== 'ready' && (
-          <span className="text-2xs text-muted-foreground">
-            {checkedPreview.status === 'pending' ? 'Building...' : checkedPreview.message || checkedPreview.status}
-          </span>
-        )}
-      </div>
-    )
-  }
-  return null
-}
-
-// ── Request Actions ──
-
-function RequestActions({
-  requestId,
-  canPerformActions,
-  isLoading,
-  showConfirm,
-  onRequestUpdate,
-  onCloseRequest,
-  onSetConfirmClose,
-  onShowLoginPrompt,
-}: {
-  requestId: string
-  canPerformActions: boolean
-  isLoading: boolean
-  showConfirm: boolean
-  onRequestUpdate: (id: string) => Promise<void>
-  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<boolean>
-  onSetConfirmClose: (id: string | null) => void
-  onShowLoginPrompt: () => void
-}) {
-  return (
-    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
-      {!canPerformActions ? (
-        <>
-          <button
-            onClick={() => onShowLoginPrompt()}
-            className="px-2 py-1 text-xs rounded bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors flex items-center gap-1"
-            title="Please login to request updates"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Request Update
-          </button>
-          <button
-            onClick={() => onShowLoginPrompt()}
-            className="px-2 py-1 text-xs rounded text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-            title="Please login to close requests"
-          >
-            Close
-          </button>
-        </>
-      ) : showConfirm ? (
-        <>
-          <span className="text-xs text-muted-foreground">Close this request?</span>
-          <button
-            onClick={() => void onCloseRequest(requestId)}
-            disabled={isLoading}
-            className="px-2 py-1 text-xs rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors disabled:opacity-50"
-          >
-            {isLoading ? 'Closing...' : 'Confirm'}
-          </button>
-          <button
-            onClick={() => onSetConfirmClose(null)}
-            className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
-          >
-            Cancel
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            onClick={() => void onRequestUpdate(requestId)}
-            disabled={isLoading}
-            className="px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors flex items-center gap-1 disabled:opacity-50"
-          >
-            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-            Request Update
-          </button>
-          <button
-            onClick={() => onSetConfirmClose(requestId)}
-            className="px-2 py-1 text-xs rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            Close
-          </button>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ── GitHub Contributions Section ──
-
-interface GitHubContributionsSectionProps {
-  currentGitHubLogin: string
-  githubRewards: UpdatesTabProps['githubRewards']
-  githubPoints: number
-  isGitHubRefreshing: boolean
-  onRefreshGitHub: () => void
-  requests: FeatureRequest[]
-  requestsLoading: boolean
-}
-
-/** Width and height for the LinkedIn share popup window */
-const LINKEDIN_POPUP_SIZE = 600
-
-function GitHubContributionsSection({
-  currentGitHubLogin,
-  githubRewards,
-  githubPoints,
-  isGitHubRefreshing,
-  onRefreshGitHub,
-  requests,
-  requestsLoading,
-}: GitHubContributionsSectionProps) {
-  return (
-    <>
-      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
-        <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-          <Github className="w-3 h-3" />
-          {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
-          {githubRewards && (
-            <span className="ml-1 text-yellow-400 font-bold">{githubPoints.toLocaleString()} coins</span>
-          )}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {githubRewards && githubPoints > 0 && (
-            <button
-              onClick={() => {
-                const bd = githubRewards.breakdown
-                const prCount = (bd?.prs_merged ?? 0) + (bd?.prs_opened ?? 0)
-                const issueCount = (bd?.bug_issues ?? 0) + (bd?.feature_issues ?? 0) + (bd?.other_issues ?? 0)
-                const text = `I've earned ${githubPoints.toLocaleString()} contributor coins on the KubeStellar Console! ${prCount > 0 ? `${prCount} PRs` : ''}${prCount > 0 && issueCount > 0 ? ' and ' : ''}${issueCount > 0 ? `${issueCount} issues` : ''} contributed to the open-source KubeStellar project.`
-                const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://kubestellar.io')}&summary=${encodeURIComponent(text)}`
-                window.open(linkedInUrl, '_blank', `noopener,noreferrer,width=${LINKEDIN_POPUP_SIZE},height=${LINKEDIN_POPUP_SIZE}`)
-                emitLinkedInShare('feature_request')
-              }}
-              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-linkedin transition-colors"
-              title={`Share ${githubPoints.toLocaleString()} coins on LinkedIn`}
-            >
-              <Linkedin className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <button
-            onClick={onRefreshGitHub}
-            disabled={isGitHubRefreshing}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 ${isGitHubRefreshing ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div>
-
-      {githubRewards && githubRewards.breakdown && (
-        // These badges count every issue/PR you authored across our orgs
-        // (kubestellar, llm-d) — NOT only items submitted via this console.
-        // The Rewards panel's "Submitted via console" line counts a different
-        // (smaller) population. See kubestellar/console#8893 for context.
-        <div className="px-3 py-2 border-b border-border/50 shrink-0">
-          <div className="flex flex-wrap gap-1.5">
-            {githubRewards.breakdown.prs_merged > 0 && (
-              <StatusBadge color="purple" size="xs" rounded="full" icon={<GitMerge className="w-2.5 h-2.5" />}>
-                {githubRewards.breakdown.prs_merged} Merged
-              </StatusBadge>
-            )}
-            {githubRewards.breakdown.prs_opened > 0 && (
-              <StatusBadge color="green" size="xs" rounded="full" icon={<GitPullRequest className="w-2.5 h-2.5" />}>
-                {githubRewards.breakdown.prs_opened} PRs
-              </StatusBadge>
-            )}
-            {githubRewards.breakdown.bug_issues > 0 && (
-              <StatusBadge
-                color="red"
-                size="xs"
-                rounded="full"
-                icon={<Bug className="w-2.5 h-2.5" />}
-                title="All bug-labeled GitHub issues you authored across our orgs. The Rewards panel's 'Report Bugs' counter only includes bugs submitted through this console and will be smaller."
-              >
-                {githubRewards.breakdown.bug_issues} Bugs
-              </StatusBadge>
-            )}
-            {githubRewards.breakdown.feature_issues > 0 && (
-              <StatusBadge
-                color="yellow"
-                size="xs"
-                rounded="full"
-                icon={<Lightbulb className="w-2.5 h-2.5" />}
-                title="All feature-labeled GitHub issues you authored across our orgs. The Rewards panel's 'Suggest Features' counter only includes features submitted through this console and will be smaller."
-              >
-                {githubRewards.breakdown.feature_issues} Features
-              </StatusBadge>
-            )}
-            {githubRewards.breakdown.other_issues > 0 && (
-              <StatusBadge color="purple" size="xs" rounded="full" className="bg-gray-500/20! text-muted-foreground!" icon={<AlertCircle className="w-2.5 h-2.5" />}>
-                {githubRewards.breakdown.other_issues} Issues
-              </StatusBadge>
-            )}
-          </div>
-        </div>
-      )}
-
-      {!githubRewards ? (
-        <div className="p-6 text-center text-muted-foreground">
-          <Github className="w-6 h-6 mx-auto mb-2 opacity-50" />
-          <p className="text-xs">Log in with GitHub to see contributions</p>
-        </div>
-      ) : !githubRewards.contributions?.length ? (
-        <div className="p-6 text-center text-muted-foreground">
-          <Github className="w-6 h-6 mx-auto mb-2 opacity-50" />
-          <p className="text-xs">No contributions found — open issues or PRs to earn points</p>
-        </div>
-      ) : (
-        (() => {
-          const requestsReady = !requestsLoading && requests.length > 0
-          const untriagedIssueNumbers = new Set(
-            (requests || [])
-              .filter(r => !isTriaged(r.status) && r.github_issue_number)
-              .map(r => r.github_issue_number)
-          )
-          return githubRewards.contributions.map((contrib: GitHubContribution, idx: number) => {
-            const isConsoleIssue = contrib.type.startsWith('issue_') && contrib.repo?.includes('console')
-            const isUntriaged = requestsReady
-              ? untriagedIssueNumbers.has(contrib.number)
-              : isConsoleIssue
-            return (
-              <a
-                key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
-                href={sanitizeUrl(contrib.url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-2.5 border-b border-border/50 hover:bg-secondary/30 transition-colors group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <GitHubContributionIcon type={contrib.type} />
-                  <div className="min-w-0 flex-1">
-                    <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-xs select-none' : ''}`}>
-                      {contrib.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      @{currentGitHubLogin} · {contrib.repo} #{contrib.number} · {GITHUB_REWARD_LABELS[contrib.type]}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
-                  <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </a>
-            )
-          })
-        })()
-      )}
-
-      {githubRewards && currentGitHubLogin && (
-        <div className="p-2.5 border-t border-border/50 text-center">
-          <a
-            href={`https://github.com/search?q=author:${encodeURIComponent(currentGitHubLogin)}+org:kubestellar+org:llm-d+org:clubanderson&type=issues&s=updated&o=desc`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            View all contributions on GitHub
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      )}
-
-      {githubRewards?.from_cache && (
-        <div className="p-2 border-t border-border/50">
-          <p className="text-2xs text-muted-foreground text-center">
-            Cached {new Date(githubRewards.cached_at).toLocaleTimeString()}
-          </p>
-        </div>
-      )}
-    </>
   )
 }
