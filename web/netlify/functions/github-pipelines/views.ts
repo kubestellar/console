@@ -15,7 +15,7 @@ import type {
   Job,
   Status,
   Conclusion,
-} from "./github-pipelines-types";
+} from "./types";
 import {
   NIGHTLY_RELEASE_REPO,
   NIGHTLY_RELEASE_WORKFLOW,
@@ -29,9 +29,11 @@ import {
   FAILURES_OVERFETCH,
   FAILURES_LIMIT,
   LOG_TAIL_LINES,
-} from "./github-pipelines-constants";
-import { gh, isValidRepo, normalizeRun, jsonResponse } from "./github-pipelines-helpers";
-import { readHistory, writeHistory, mergeIntoHistory } from "./github-pipelines-history";
+} from "./constants";
+import { gh } from "./fetchers";
+import { isValidRepo, jsonResponse } from "./helpers";
+import { normalizeRun } from "./transform";
+import { readHistory, writeHistory, mergeIntoHistory } from "./history";
 
 const REPOS = getRepos();
 

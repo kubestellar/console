@@ -29,10 +29,10 @@ import {
   MATRIX_DEFAULT_DAYS,
   MATRIX_MAX_DAYS,
   getRepos,
-} from "./github-pipelines-constants";
-import { corsOrigin, jsonResponse, readCache, writeCache, isValidRepo } from "./github-pipelines-helpers";
-import { buildPulse, buildMatrix, buildFlow, buildFailures, buildLog } from "./github-pipelines-views";
-import { mutate } from "./github-pipelines-mutations";
+} from "./github-pipelines/constants";
+import { corsOrigin, jsonResponse, readCache, writeCache, isValidRepo } from "./github-pipelines/helpers";
+import { buildPulse, buildMatrix, buildFlow, buildFailures, buildLog } from "./github-pipelines/views";
+import { mutate } from "./github-pipelines/mutations";
 
 const REPOS = getRepos();
 

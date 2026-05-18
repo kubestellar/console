@@ -1,9 +1,10 @@
 /**
  * Mutation handling (rerun/cancel) for GitHub Pipelines Dashboard
  */
-import { enforceSimpleRateLimit } from "./_shared/rate-limit";
-import { STORE_NAME, getRepos } from "./github-pipelines-constants";
-import { gh, isValidRepo, jsonResponse } from "./github-pipelines-helpers";
+import { enforceSimpleRateLimit } from "../_shared/rate-limit";
+import { STORE_NAME, getRepos } from "./constants";
+import { gh } from "./fetchers";
+import { isValidRepo, jsonResponse } from "./helpers";
 
 const REPOS = getRepos();
 
