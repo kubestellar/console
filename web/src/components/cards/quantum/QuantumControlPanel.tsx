@@ -333,8 +333,7 @@ export const QuantumControlPanel: React.FC = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="p-4">
+    <div>
       <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-blue-500" />
           Quantum Demonstration Controls
@@ -348,40 +347,38 @@ export const QuantumControlPanel: React.FC = () => {
       )}
 
       <div className="space-y-4">
-          {/* IBM Credentials Button */}
-          <button
-            onClick={handleOpenCredentialsDialog}
-            className="w-full px-3 py-2 flex items-center justify-between rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">IBM Credentials</span>
-            </div>
-            <div className={`flex items-center gap-1 text-xs font-semibold ${ibmAuthenticated ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
-              {ibmAuthenticated ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Configured
-                </>
-              ) : (
-                'Not configured'
-              )}
-            </div>
-          </button>
-
-          {/* Clear Credentials Button */}
-          {ibmAuthenticated && (
+          {/* IBM Credentials Button with Clear Option */}
+          <div className="flex gap-2 items-stretch">
             <button
-              onClick={() => setShowClearCredentialsDialog(true)}
-              disabled={isClearing}
-              className="w-full px-3 py-2 flex items-center justify-between rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+              onClick={handleOpenCredentialsDialog}
+              className="flex-1 px-3 py-2 flex items-center justify-between rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium text-red-700 dark:text-red-300">Clear Credentials</span>
+                <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">IBM Credentials</span>
+              </div>
+              <div className={`flex items-center gap-1 text-xs font-semibold ${ibmAuthenticated ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {ibmAuthenticated ? (
+                  <>
+                    <Check className="w-3 h-3" />
+                    Configured
+                  </>
+                ) : (
+                  'Not configured'
+                )}
               </div>
             </button>
-          )}
+            {ibmAuthenticated && (
+              <button
+                onClick={() => setShowClearCredentialsDialog(true)}
+                disabled={isClearing}
+                className="px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 flex items-center"
+                title="Clear IBM Credentials"
+              >
+                <Trash2 className={`w-4 h-4 ${isClearing ? 'text-gray-400' : 'text-red-600 dark:text-red-400'}`} />
+              </button>
+            )}
+          </div>
 
           {/* Clear Credentials Confirmation Dialog */}
           {showClearCredentialsDialog && (
@@ -452,8 +449,8 @@ export const QuantumControlPanel: React.FC = () => {
           })()}
 
           {/* Shots Configuration */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
               Shots
             </label>
             <input
@@ -468,38 +465,36 @@ export const QuantumControlPanel: React.FC = () => {
                 }
               }}
               disabled={control.executing}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50"
+              className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs disabled:opacity-50"
             />
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setControl(prev => ({ ...prev, shots: 100 }))}
-                disabled={control.executing}
-                className="flex-1 px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
-              >
-                100
-              </button>
-              <button
-                onClick={() => setControl(prev => ({ ...prev, shots: 256 }))}
-                disabled={control.executing}
-                className="flex-1 px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
-              >
-                256
-              </button>
-              <button
-                onClick={() => setControl(prev => ({ ...prev, shots: 512 }))}
-                disabled={control.executing}
-                className="flex-1 px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
-              >
-                512
-              </button>
-              <button
-                onClick={() => setControl(prev => ({ ...prev, shots: 1024 }))}
-                disabled={control.executing}
-                className="flex-1 px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
-              >
-                1024
-              </button>
-            </div>
+            <button
+              onClick={() => setControl(prev => ({ ...prev, shots: 100 }))}
+              disabled={control.executing}
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+            >
+              100
+            </button>
+            <button
+              onClick={() => setControl(prev => ({ ...prev, shots: 256 }))}
+              disabled={control.executing}
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+            >
+              256
+            </button>
+            <button
+              onClick={() => setControl(prev => ({ ...prev, shots: 512 }))}
+              disabled={control.executing}
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+            >
+              512
+            </button>
+            <button
+              onClick={() => setControl(prev => ({ ...prev, shots: 1024 }))}
+              disabled={control.executing}
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+            >
+              1024
+            </button>
           </div>
 
           {/* QASM File */}
@@ -562,36 +557,33 @@ export const QuantumControlPanel: React.FC = () => {
           </div>
 
           {/* Loop Mode Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-            <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${control.loop_mode ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Loop Mode</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{control.loop_mode ? 'Enabled - Continuous execution' : 'Disabled - Single execution'}</p>
-              </div>
-            </div>
+          {/* Execute Button + Loop Mode Toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleExecute}
+              disabled={control.executing}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+            >
+              <Play className="w-4 h-4" />
+              <span className="text-sm">{control.executing ? 'Executing...' : control.loop_mode ? 'Update' : 'Execute'}</span>
+            </button>
             <button
               onClick={handleLoopModeToggle}
               disabled={control.executing}
-              className={`relative w-12 h-7 rounded-full transition-colors ${control.loop_mode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'} disabled:opacity-50`}
+              className="px-3 py-2 rounded-lg border transition-colors flex items-center gap-2"
+              title={control.loop_mode ? 'Disable loop mode' : 'Enable loop mode — continuous execution'}
+              style={{
+                backgroundColor: control.loop_mode ? 'rgb(59, 130, 246)' : 'rgb(229, 231, 235)',
+                borderColor: control.loop_mode ? 'rgb(37, 99, 235)' : 'rgb(209, 213, 219)',
+                color: control.loop_mode ? 'white' : 'rgb(55, 65, 81)',
+              }}
             >
-              <div className={`absolute top-1 left-1 w-5 h-5 bg-background rounded-full transition-transform ${control.loop_mode ? 'translate-x-5' : ''}`} />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-xs font-medium">{control.loop_mode ? 'ON' : 'OFF'}</span>
             </button>
           </div>
-
-          {/* Execute Button */}
-          <button
-            onClick={handleExecute}
-            disabled={control.executing}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
-          >
-            <Play className="w-4 h-4" />
-            {control.executing ? 'Executing...' : control.loop_mode ? 'Update Parameters' : 'Execute Circuit'}
-          </button>
 
           {/* Status Display */}
           <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
@@ -709,7 +701,6 @@ export const QuantumControlPanel: React.FC = () => {
             setShowCustomQasmModal(false)
           }}
       />
-      </div>
     </div>
   )
 }
