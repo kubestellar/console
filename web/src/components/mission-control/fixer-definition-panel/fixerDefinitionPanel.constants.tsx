@@ -71,15 +71,15 @@ export const ALTERNATIVES: Record<string, ProjectAlternative[]> = {
 }
 
 export const ALTERNATIVES_DISPLAY: Record<string, ProjectAlternative> = {
-  falco: { displayName: 'Falco', reason: 'Runtime threat detection via syscall monitoring' },
-  'open-policy-agent': { displayName: 'OPA Gatekeeper', reason: 'Rego-based policy engine for admission control' },
-  kyverno: { displayName: 'Kyverno', reason: 'Kubernetes-native policy engine' },
-  istio: { displayName: 'Istio', reason: 'Full-featured service mesh with Envoy proxy' },
-  linkerd: { displayName: 'Linkerd', reason: 'Lightweight service mesh' },
-  prometheus: { displayName: 'Prometheus', reason: 'CNCF monitoring and alerting toolkit' },
-  cilium: { displayName: 'Cilium', reason: 'eBPF-based networking and security' },
-  'cert-manager': { displayName: 'cert-manager', reason: 'Automated TLS certificate management' },
-  'trivy-operator': { displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' },
+  falco: { name: 'falco', displayName: 'Falco', reason: 'Runtime threat detection via syscall monitoring' },
+  'open-policy-agent': { name: 'open-policy-agent', displayName: 'OPA Gatekeeper', reason: 'Rego-based policy engine for admission control' },
+  kyverno: { name: 'kyverno', displayName: 'Kyverno', reason: 'Kubernetes-native policy engine' },
+  istio: { name: 'istio', displayName: 'Istio', reason: 'Full-featured service mesh with Envoy proxy' },
+  linkerd: { name: 'linkerd', displayName: 'Linkerd', reason: 'Lightweight service mesh' },
+  prometheus: { name: 'prometheus', displayName: 'Prometheus', reason: 'CNCF monitoring and alerting toolkit' },
+  cilium: { name: 'cilium', displayName: 'Cilium', reason: 'eBPF-based networking and security' },
+  'cert-manager': { name: 'cert-manager', displayName: 'cert-manager', reason: 'Automated TLS certificate management' },
+  'trivy-operator': { name: 'trivy-operator', displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' },
 }
 
 const CATEGORY_ICONS: Record<string, ReactNode> = {

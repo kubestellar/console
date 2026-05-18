@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
-import { isTriaged, getStatusDescription, type CloseRequestInput, type FeatureRequest, type ReopenRequestInput } from '../../hooks/useFeatureRequests'
+import { isTriaged, getStatusDescription, type CloseRequestInput, type FeatureRequest } from '../../hooks/useFeatureRequests'
 import { formatRelativeTime, getStatusInfo, PREVIEW_WARMUP_SECONDS, type PreviewResult } from './FeatureRequestTypes'
 import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
