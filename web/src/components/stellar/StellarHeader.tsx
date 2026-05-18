@@ -1,3 +1,9 @@
+import { useEffect, useState } from 'react'
+
+import { getNextBatchCountdown } from './lib/time'
+
+const BATCH_COUNTDOWN_REFRESH_MS = 1000
+
 interface Props {
   isConnected: boolean
   unreadCount: number
@@ -13,6 +19,16 @@ export function StellarHeader({
   onCollapse,
   showCollapse = true,
 }: Props) {
+  const [nextBatchCountdown, setNextBatchCountdown] = useState(() => getNextBatchCountdown())
+
+  useEffect(() => {
+    const intervalID = window.setInterval(() => {
+      setNextBatchCountdown(getNextBatchCountdown())
+    }, BATCH_COUNTDOWN_REFRESH_MS)
+
+    return () => window.clearInterval(intervalID)
+  }, [])
+
   return (
     <div style={{
       display: 'flex',
@@ -58,6 +74,13 @@ export function StellarHeader({
       )}
 
       <div style={{ flex: 1 }} />
+
+      <span className="text-[10px] text-muted-foreground" style={{
+        fontFamily: 'var(--s-mono)',
+        flexShrink: 0,
+      }}>
+        Next batch: {nextBatchCountdown}
+      </span>
 
       {unreadCount > 0 && (
         <div style={{

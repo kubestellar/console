@@ -1,5 +1,6 @@
 import type { StellarNotification } from '../../types/stellar'
 import { countRelated, deriveImportance, deriveShortReason, deriveTags, importanceColor, type SolveStatus } from './lib/derive'
+import { formatRelativeTime } from './lib/time'
 
 export interface PendingAction {
   prompt: string
@@ -136,6 +137,7 @@ export function EventCard({
   const importance = deriveImportance(notification, relatedCount)
   const importanceCol = importanceColor(importance.label)
   const shortReason = deriveShortReason(notification)
+  const relativeCreatedAt = formatRelativeTime(notification.createdAt)
 
   return (
     <div
@@ -164,17 +166,22 @@ export function EventCard({
         <div className="text-xs" style={{ fontWeight: 600, color: 'var(--s-text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {notification.title}
         </div>
-        {!notification.read && (
-          <span className="text-[9px] font-mono" title={`importance score: ${importance.score}`} style={{
-            fontWeight: 700,
-            letterSpacing: '0.05em', textTransform: 'uppercase',
-            color: importanceCol, border: `1px solid ${importanceCol}`,
-            borderRadius: 8, padding: '0 5px', flexShrink: 0,
-          }}>{importance.label}</span>
-        )}
-        {onOpenDetail && (
-          <span className="text-[10px] font-mono" style={{ color: 'var(--s-text-dim)', flexShrink: 0 }}>details →</span>
-        )}
+        <div className="flex items-baseline justify-end gap-2">
+          {!notification.read && (
+            <span className="text-[9px] font-mono" title={`importance score: ${importance.score}`} style={{
+              fontWeight: 700,
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+              color: importanceCol, border: `1px solid ${importanceCol}`,
+              borderRadius: 8, padding: '0 5px', flexShrink: 0,
+            }}>{importance.label}</span>
+          )}
+          {onOpenDetail && (
+            <span className="text-[10px] font-mono" style={{ color: 'var(--s-text-dim)', flexShrink: 0 }}>details →</span>
+          )}
+          {relativeCreatedAt && (
+            <span className="text-[10px] text-muted-foreground" style={{ flexShrink: 0 }}>{relativeCreatedAt}</span>
+          )}
+        </div>
       </div>
       {tags.length > 0 && !notification.read && (
         <div className="mt-1 flex flex-wrap gap-1">

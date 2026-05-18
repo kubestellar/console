@@ -540,7 +540,7 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	eventID := strings.TrimSpace(c.Params("eventID"))
+	eventID := strings.TrimSpace(c.Params("id"))
 	if eventID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "eventID required"})
 	}
