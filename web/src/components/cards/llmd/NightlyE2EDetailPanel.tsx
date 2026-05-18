@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useDemoMode } from '../../../lib/demoMode'
 import { motion } from 'framer-motion'
 import { ExternalLink, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -390,6 +391,7 @@ export function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
   onRunHover: (run: NightlyRun | null) => void
 }) {
   const { t } = useTranslation(['cards', 'common'])
+  const { isDemoMode } = useDemoMode()
   const completedRuns = guide.runs.filter(r => r.status === 'completed')
   const passed = completedRuns.filter(r => r.conclusion === 'success').length
   const failedAll = completedRuns.filter(r => r.conclusion === 'failure')
@@ -559,6 +561,7 @@ export function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
               key={run.id}
               run={run}
               guide={guide}
+              isDemoMode={isDemoMode}
               isHighlighted={hoveredRun?.id === run.id}
               onMouseEnter={() => onRunHover(run)}
               onMouseLeave={() => onRunHover(null)}
