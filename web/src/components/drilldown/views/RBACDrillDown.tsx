@@ -3,7 +3,7 @@ import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Code, Info, Loader2, Copy, Check, Server, Shield, ShieldCheck, User, RefreshCw } from 'lucide-react'
+import { FileText, Code, Info, Loader2, Copy, Check, Server, Shield, ShieldCheck, User, RefreshCw, AlertTriangle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
@@ -57,6 +57,7 @@ export function RBACDrillDown({ data }: Props) {
   const [clusterBindings, setClusterBindings] = useState<RoleBinding[]>([])
   const [roleBindings, setRoleBindings] = useState<RoleBinding[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [describeOutput, setDescribeOutput] = useState<string | null>(null)
   const [describeLoading, setDescribeLoading] = useState(false)
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
@@ -119,16 +120,24 @@ export function RBACDrillDown({ data }: Props) {
   const fetchBindings = useCallback(async () => {
     if (!agentConnected) return
     setLoading(true)
+    setLoadError(null)
 
-    const [crbOut, rbOut] = await Promise.all([
-      runKubectl(['get', 'clusterrolebindings', '-o', 'json']),
-      namespace
-        ? runKubectl(['get', 'rolebindings', '-n', namespace, '-o', 'json'])
-        : runKubectl(['get', 'rolebindings', '--all-namespaces', '-o', 'json']),
-    ])
+    try {
+      const [crbOut, rbOut] = await Promise.all([
+        runKubectl(['get', 'clusterrolebindings', '-o', 'json']),
+        namespace
+          ? runKubectl(['get', 'rolebindings', '-n', namespace, '-o', 'json'])
+          : runKubectl(['get', 'rolebindings', '--all-namespaces', '-o', 'json']),
+      ])
 
-    setClusterBindings(parseBindings(crbOut, 'ClusterRoleBinding'))
-    setRoleBindings(parseBindings(rbOut, 'RoleBinding'))
+      setClusterBindings(parseBindings(crbOut, 'ClusterRoleBinding'))
+      setRoleBindings(parseBindings(rbOut, 'RoleBinding'))
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to fetch bindings'
+      setLoadError(errMsg)
+      setClusterBindings([])
+      setRoleBindings([])
+    }
     setLoading(false)
   }, [agentConnected, namespace, parseBindings, runKubectl])
 
@@ -290,6 +299,12 @@ export function RBACDrillDown({ data }: Props) {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {loadError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span className="text-sm">{loadError}</span>
+              </div>
+            )}
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />

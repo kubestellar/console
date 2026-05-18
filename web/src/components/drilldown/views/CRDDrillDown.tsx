@@ -102,8 +102,10 @@ export function CRDDrillDown({ data }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [versions, setVersions] = useState<CRDVersion[] | null>(null)
   const [versionsLoading, setVersionsLoading] = useState(false)
+  const [versionsError, setVersionsError] = useState<string | null>(null)
   const [instances, setInstances] = useState<CRDInstance[] | null>(null)
   const [instancesLoading, setInstancesLoading] = useState(false)
+  const [instancesError, setInstancesError] = useState<string | null>(null)
   const [conditions, setConditions] = useState<CRDCondition[] | null>(null)
   const [schema, setSchema] = useState<Record<string, unknown> | null>(null)
   const [schemaLoading, setSchemaLoading] = useState(false)
@@ -144,6 +146,7 @@ export function CRDDrillDown({ data }: Props) {
   const fetchCRDDetails = async () => {
     if (!agentConnected || versions) return
     setVersionsLoading(true)
+    setVersionsError(null)
     try {
       const output = await runKubectl([
         'get', 'crd', crdName, '-o', 'json'
@@ -155,6 +158,7 @@ export function CRDDrillDown({ data }: Props) {
         } catch {
           setVersions([])
           setConditions([])
+          setVersionsError('Failed to parse CRD data')
           return
         }
         // Get versions
@@ -183,9 +187,11 @@ export function CRDDrillDown({ data }: Props) {
           setSchema(servedVersion.schema.openAPIV3Schema)
         }
       }
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to fetch CRD details'
       setVersions([])
       setConditions([])
+      setVersionsError(errMsg)
     }
     setVersionsLoading(false)
   }
@@ -194,6 +200,7 @@ export function CRDDrillDown({ data }: Props) {
   const fetchInstances = async () => {
     if (!agentConnected || instances) return
     setInstancesLoading(true)
+    setInstancesError(null)
     try {
       // Get the plural form from the CRD name (before the first dot)
       const plural = crdName.split('.')[0]
@@ -206,6 +213,7 @@ export function CRDDrillDown({ data }: Props) {
           data = JSON.parse(output)
         } catch {
           setInstances([])
+          setInstancesError('Failed to parse instances data')
           return
         }
         const items = data.items || []
@@ -215,8 +223,10 @@ export function CRDDrillDown({ data }: Props) {
           creationTimestamp: item.metadata?.creationTimestamp,
         })))
       }
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to fetch instances'
       setInstances([])
+      setInstancesError(errMsg)
     }
     setInstancesLoading(false)
   }
@@ -464,6 +474,12 @@ Please:
         {activeTab === 'versions' && (
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">API Versions</h4>
+            {versionsError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span className="text-sm">{versionsError}</span>
+              </div>
+            )}
             {versionsLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -513,6 +529,12 @@ Please:
         {activeTab === 'instances' && (
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Custom Resource Instances ({instances?.length || 0})</h4>
+            {instancesError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span className="text-sm">{instancesError}</span>
+              </div>
+            )}
             {instancesLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

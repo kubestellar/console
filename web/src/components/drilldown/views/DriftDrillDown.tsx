@@ -91,6 +91,7 @@ export function DriftDrillDown({ data }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [changes, setChanges] = useState<DriftChange[] | null>(null)
   const [changesLoading, setChangesLoading] = useState(false)
+  const [changesError, setChangesError] = useState<string | null>(null)
   const [selectedChange, setSelectedChange] = useState<DriftChange | null>(null)
   const [aiAnalysis] = useState<string | null>(null)
   const [aiAnalysisLoading] = useState(false)
@@ -128,6 +129,7 @@ export function DriftDrillDown({ data }: Props) {
   const fetchDriftDetails = async () => {
     if (!agentConnected || changes) return
     setChangesLoading(true)
+    setChangesError(null)
     try {
       // Try to get drift from Flux or ArgoCD
       // First try Flux Kustomization
@@ -141,6 +143,7 @@ export function DriftDrillDown({ data }: Props) {
             ksList = JSON.parse(output)
           } catch {
             setChanges([])
+            setChangesError('Failed to parse drift data')
             return
           }
           const items = ksList.items || []
@@ -179,6 +182,7 @@ export function DriftDrillDown({ data }: Props) {
           appList = JSON.parse(argoOutput)
         } catch {
           setChanges([])
+          setChangesError('Failed to parse ArgoCD data')
           return
         }
         const apps = appList.items || []
@@ -206,8 +210,10 @@ export function DriftDrillDown({ data }: Props) {
       } else {
         setChanges([])
       }
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to fetch drift details'
       setChanges([])
+      setChangesError(errMsg)
     }
     setChangesLoading(false)
   }
@@ -456,6 +462,12 @@ Please:
         {activeTab === 'changes' && (
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Drifted Resources ({changes?.length || 0})</h4>
+            {changesError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span className="text-sm">{changesError}</span>
+              </div>
+            )}
             {changesLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
