@@ -103,10 +103,11 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	body := make([]byte, 0)
 	if len(inner) > 2 && inner[0] == '{' {
 		const ghpMaxMergedBodyBytes = 100 * 1024 * 1024
-		if len(inner)+len(reposJSON)+12 > ghpMaxMergedBodyBytes {
+		mergedSize := len(inner) + len(reposJSON) + 12
+		if mergedSize > ghpMaxMergedBodyBytes || mergedSize < 0 {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "response too large"})
 		}
-		body = make([]byte, 0, len(inner)+len(reposJSON)+12)
+		body = make([]byte, 0, mergedSize)
 		body = append(body, inner[:len(inner)-1]...)
 		body = append(body, `,"repos":`...)
 		body = append(body, reposJSON...)
