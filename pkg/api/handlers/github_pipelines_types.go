@@ -255,7 +255,6 @@ type ghpLogPayload struct {
 	Log           string `json:"log"`
 }
 
-
 // History — in-memory rolling 90-day record of per-workflow daily outcomes.
 // Lost on process restart; re-seeded from GitHub on the next request. GitHub
 // keeps 14 days of run history, so restart means the 30/90 day views are
@@ -276,6 +275,70 @@ type ghpHistory struct {
 
 func newGHPHistory() *ghpHistory {
 	return &ghpHistory{days: make(map[string]map[string]map[string]ghpHistoryDay)}
+}
+
+func (h *ghpHistory) merge(runs []ghpWorkflowRun) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, r := range runs {
+		if len(r.CreatedAt) < 10 {
+			continue
+		}
+		day := r.CreatedAt[:10]
+		byRepo, ok := h.days[r.Repo]
+		if !ok {
+			byRepo = make(map[string]map[string]ghpHistoryDay)
+			h.days[r.Repo] = byRepo
+		}
+		byWF, ok := byRepo[r.Name]
+		if !ok {
+			byWF = make(map[string]ghpHistoryDay)
+			byRepo[r.Name] = byWF
+		}
+		conclusion := r.Conclusion
+		if conclusion == nil && (r.Status == "in_progress" || r.Status == "queued") {
+			inProg := "in_progress"
+			conclusion = &inProg
+		}
+		existing, had := byWF[day]
+		if !had || r.ID > existing.RunID {
+			byWF[day] = ghpHistoryDay{RunID: r.ID, Conclusion: conclusion, HTMLURL: r.HTMLURL}
+		}
+	}
+	cutoff := time.Now().UTC().AddDate(0, 0, -ghpHistoryRetentionDays).Format("2006-01-02")
+	for repo, byRepo := range h.days {
+		for wf, byWF := range byRepo {
+			for d := range byWF {
+				if d < cutoff {
+					delete(byWF, d)
+				}
+			}
+			if len(byWF) == 0 {
+				delete(byRepo, wf)
+			}
+		}
+		if len(byRepo) == 0 {
+			delete(h.days, repo)
+		}
+	}
+}
+
+func (h *ghpHistory) snapshot() map[string]map[string]map[string]ghpHistoryDay {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make(map[string]map[string]map[string]ghpHistoryDay, len(h.days))
+	for repo, byRepo := range h.days {
+		rMap := make(map[string]map[string]ghpHistoryDay, len(byRepo))
+		out[repo] = rMap
+		for wf, byWF := range byRepo {
+			wMap := make(map[string]ghpHistoryDay, len(byWF))
+			rMap[wf] = wMap
+			for d, v := range byWF {
+				wMap[d] = v
+			}
+		}
+	}
+	return out
 }
 
 // ghpCacheEntry holds a cached response with expiration time.
