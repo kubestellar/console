@@ -153,10 +153,15 @@ export interface ClusterHealth {
   cpuCores?: number
   cpuRequestsMillicores?: number
   cpuRequestsCores?: number
+  cpuUsageMillicores?: number
+  cpuUsageCores?: number
   memoryBytes?: number
   memoryGB?: number
   memoryRequestsBytes?: number
   memoryRequestsGB?: number
+  memoryUsageBytes?: number
+  memoryUsageGB?: number
+  metricsAvailable?: boolean
   storageBytes?: number
   storageGB?: number
   pvcCount?: number
