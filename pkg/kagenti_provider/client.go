@@ -17,7 +17,7 @@ import (
 // Draining before close allows the underlying TCP connection to be reused.
 func drainAndClose(body io.ReadCloser) {
 	if body != nil {
-		io.Copy(io.Discard, body)
+		io.Copy(io.Discard, io.LimitReader(body, 1<<20))
 		body.Close()
 	}
 }
