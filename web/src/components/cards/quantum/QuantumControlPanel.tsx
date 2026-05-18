@@ -566,7 +566,7 @@ export const QuantumControlPanel: React.FC = () => {
               className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
             >
               <Play className="w-4 h-4" />
-              <span className="text-sm">{control.executing ? 'Executing...' : control.loop_mode ? 'Update' : 'Execute'}</span>
+              <span className="text-sm">{control.executing ? 'Executing...' : control.loop_mode ? 'Update Parameters' : 'Execute Circuit'}</span>
             </button>
             <button
               onClick={handleLoopModeToggle}
