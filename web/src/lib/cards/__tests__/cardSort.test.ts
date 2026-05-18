@@ -43,7 +43,7 @@ describe('commonComparators', () => {
     it('handles falsy values in field', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cmp = commonComparators.string<{ name: any }>('name')
-      expect(cmp({ name: 0 }, { name: 1 })).toBe(0) // both coerce to '0'/'1', 0 < 1
+      expect(cmp({ name: 0 }, { name: 1 })).toBeLessThan(0) // 0 coerces to '' and sorts before '1'
     })
   })
 
