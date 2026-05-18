@@ -159,7 +159,14 @@ export function BuildpackDrillDown({ data }: Props) {
         'json',
       ])
       if (output) {
-        const parsed = JSON.parse(output)
+        let parsed
+        try {
+          parsed = JSON.parse(output)
+        } catch {
+          setImageInfo(null)
+          showToast(t('drilldown.errors.parseKubectlOutput', 'Failed to parse kubectl output'), 'error')
+          return
+        }
         setImageInfo(parsed)
       }
     } catch (error: unknown) {
@@ -204,7 +211,14 @@ export function BuildpackDrillDown({ data }: Props) {
         'json',
       ])
       if (output) {
-        const parsed = JSON.parse(output)
+        let parsed
+        try {
+          parsed = JSON.parse(output)
+        } catch {
+          setBuilds([])
+          showToast(t('drilldown.errors.parseKubectlOutput', 'Failed to parse kubectl output'), 'error')
+          return
+        }
         setBuilds(parsed.items || [])
       }
     } catch (error: unknown) {
@@ -234,7 +248,14 @@ export function BuildpackDrillDown({ data }: Props) {
           'json',
         ])
         if (output) {
-          const parsed = JSON.parse(output)
+          let parsed
+          try {
+            parsed = JSON.parse(output)
+          } catch {
+            setBuilds([])
+            showToast(t('drilldown.errors.parseKubectlOutput', 'Failed to parse kubectl output'), 'error')
+            return
+          }
           currentBuilds = parsed.items || []
           setBuilds(currentBuilds)
         }

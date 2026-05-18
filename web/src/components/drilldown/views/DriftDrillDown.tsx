@@ -136,7 +136,13 @@ export function DriftDrillDown({ data }: Props) {
           'get', 'kustomization', '-n', namespace, '-o', 'json'
         ])
         if (output) {
-          const ksList = JSON.parse(output)
+          let ksList
+          try {
+            ksList = JSON.parse(output)
+          } catch {
+            setChanges([])
+            return
+          }
           const items = ksList.items || []
           const driftChanges: DriftChange[] = []
 
@@ -168,7 +174,13 @@ export function DriftDrillDown({ data }: Props) {
         'get', 'applications.argoproj.io', '-A', '-o', 'json'
       ])
       if (argoOutput) {
-        const appList = JSON.parse(argoOutput)
+        let appList
+        try {
+          appList = JSON.parse(argoOutput)
+        } catch {
+          setChanges([])
+          return
+        }
         const apps = appList.items || []
         const driftChanges: DriftChange[] = []
 

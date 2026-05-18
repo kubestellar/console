@@ -167,7 +167,13 @@ export function HelmReleaseDrillDown({ data }: Props) {
     try {
       const output = await runHelm(['status', releaseName, '-n', namespace, '-o', 'json'])
       if (output) {
-        const info = JSON.parse(output)
+        let info
+        try {
+          info = JSON.parse(output)
+        } catch {
+          setReleaseInfo(null)
+          return
+        }
         setReleaseInfo({
           name: info.name,
           namespace: info.namespace,
@@ -203,7 +209,13 @@ export function HelmReleaseDrillDown({ data }: Props) {
     try {
       const output = await runHelm(['history', releaseName, '-n', namespace, '-o', 'json'])
       if (output) {
-        const history = JSON.parse(output)
+        let history
+        try {
+          history = JSON.parse(output)
+        } catch {
+          setReleaseHistory([])
+          return
+        }
         setReleaseHistory(history.map((h: HelmHistoryRaw) => ({
           revision: h.revision,
           updated: h.updated,

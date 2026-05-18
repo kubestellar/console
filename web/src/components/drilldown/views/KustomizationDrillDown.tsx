@@ -125,7 +125,14 @@ export function KustomizationDrillDown({ data }: Props) {
         'get', 'kustomization', kustomizationName, '-n', namespace, '-o', 'json'
       ])
       if (output) {
-        const ks = JSON.parse(output)
+        let ks
+        try {
+          ks = JSON.parse(output)
+        } catch {
+          setAppliedResources([])
+          setConditions([])
+          return
+        }
         // Get applied resources from inventory
         const inventory = ks.status?.inventory?.entries || []
         setAppliedResources(inventory.map((entry: InventoryEntryRaw) => {

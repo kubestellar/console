@@ -181,7 +181,14 @@ export function DeploymentDrillDown({ data }: Props) {
     try {
       const output = await runKubectl(['get', 'deployment', deploymentName, '-n', namespace, '-o', 'json'])
       if (output) {
-        const deploy = JSON.parse(output)
+        let deploy
+        try {
+          deploy = JSON.parse(output)
+        } catch {
+          setPods([])
+          setReplicaSets([])
+          return
+        }
         const liveReplicas = deploy.spec?.replicas || 0
         const liveReady = deploy.status?.readyReplicas || 0
         setReplicas(liveReplicas)
@@ -218,7 +225,13 @@ export function DeploymentDrillDown({ data }: Props) {
           ? await runKubectl(['get', 'replicasets', '-n', namespace, '-l', rsSelector, '-o', 'json'])
           : null
         if (rsOutput) {
-          const rsList = JSON.parse(rsOutput)
+          let rsList
+          try {
+            rsList = JSON.parse(rsOutput)
+          } catch {
+            setReplicaSets([])
+            return
+          }
           const rsInfo = rsList.items?.map((rs: { metadata: { name: string }; spec: { replicas: number }; status: { readyReplicas?: number } }) => ({
             name: rs.metadata.name,
             replicas: rs.spec?.replicas || 0,
@@ -235,7 +248,13 @@ export function DeploymentDrillDown({ data }: Props) {
         if (selector) {
           const podsOutput = await runKubectl(['get', 'pods', '-n', namespace, '-l', selector, '-o', 'json'])
           if (podsOutput) {
-            const podList = JSON.parse(podsOutput)
+            let podList
+            try {
+              podList = JSON.parse(podsOutput)
+            } catch {
+              setPods([])
+              return
+            }
             const podInfo = podList.items?.map((p: { metadata: { name: string }; status: { phase: string; containerStatuses?: Array<{ restartCount: number }> } }) => ({
               name: p.metadata.name,
               status: p.status.phase,

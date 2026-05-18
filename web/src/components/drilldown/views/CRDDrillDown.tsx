@@ -149,7 +149,14 @@ export function CRDDrillDown({ data }: Props) {
         'get', 'crd', crdName, '-o', 'json'
       ])
       if (output) {
-        const crd = JSON.parse(output)
+        let crd
+        try {
+          crd = JSON.parse(output)
+        } catch {
+          setVersions([])
+          setConditions([])
+          return
+        }
         // Get versions
         const vers = crd.spec?.versions || []
         setVersions(vers.map((v: CRDVersionRaw) => ({
@@ -194,7 +201,13 @@ export function CRDDrillDown({ data }: Props) {
         'get', plural, '-A', '-o', 'json'
       ])
       if (output) {
-        const data = JSON.parse(output)
+        let data
+        try {
+          data = JSON.parse(output)
+        } catch {
+          setInstances([])
+          return
+        }
         const items = data.items || []
         setInstances(items.slice(0, 50).map((item: CRDInstanceRaw) => ({
           name: item.metadata?.name || 'Unknown',
@@ -217,7 +230,13 @@ export function CRDDrillDown({ data }: Props) {
         'get', 'crd', crdName, '-o', 'json'
       ])
       if (output) {
-        const crd = JSON.parse(output)
+        let crd
+        try {
+          crd = JSON.parse(output)
+        } catch {
+          setSchema(null)
+          return
+        }
         const vers = crd.spec?.versions || []
         const servedVersion = vers.find((v: CRDVersionRaw) => v.served)
         if (servedVersion?.schema?.openAPIV3Schema) {

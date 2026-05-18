@@ -123,7 +123,13 @@ export function AlertDrillDown({ data }: Props) {
         '-A', '-o', 'json'
       ])
       if (output) {
-        const rules = JSON.parse(output)
+        let rules
+        try {
+          rules = JSON.parse(output)
+        } catch {
+          setSourceRule(t('drilldown.errors.parseKubectlOutput', 'Failed to parse kubectl output'))
+          return
+        }
         // Find the rule that matches
         for (const rule of rules.items || []) {
           for (const group of rule.spec?.groups || []) {

@@ -49,7 +49,14 @@ export function PVCDrillDown({ data }: Props) {
     try {
       const output = await runKubectl(['get', 'pvc', pvcName, '-n', namespace, '-o', 'json'])
       if (output) {
-        const pvc = JSON.parse(output)
+        let pvc
+        try {
+          pvc = JSON.parse(output)
+        } catch {
+          setLabels(null)
+          setAnnotations(null)
+          return
+        }
         setStatus(pvc.status?.phase || '')
         setCapacity(pvc.status?.capacity?.storage || pvc.spec?.resources?.requests?.storage || '')
         setAccessModes(pvc.spec?.accessModes || [])

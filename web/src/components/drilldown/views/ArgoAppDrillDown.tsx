@@ -168,7 +168,13 @@ export function ArgoAppDrillDown({ data }: Props) {
         'get', 'application.argoproj.io', appName, '-n', namespace, '-o', 'json'
       ])
       if (output) {
-        const app = JSON.parse(output)
+        let app
+        try {
+          app = JSON.parse(output)
+        } catch {
+          setAppResources([])
+          return
+        }
         const resources = app.status?.resources || []
         setAppResources(resources.map((r: ArgoResourceRaw) => ({
           kind: r.kind,
@@ -193,7 +199,13 @@ export function ArgoAppDrillDown({ data }: Props) {
         'get', 'application.argoproj.io', appName, '-n', namespace, '-o', 'json'
       ])
       if (output) {
-        const app = JSON.parse(output)
+        let app
+        try {
+          app = JSON.parse(output)
+        } catch {
+          setSyncHistory([])
+          return
+        }
         const history = app.status?.history || []
         setSyncHistory(history.map((h: SyncHistoryRaw) => ({
           revision: h.revision?.substring(0, 7) || 'Unknown',

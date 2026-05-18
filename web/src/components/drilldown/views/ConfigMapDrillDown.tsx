@@ -66,7 +66,14 @@ export function ConfigMapDrillDown({ data }: Props) {
     try {
       const output = await runKubectl(['get', 'configmap', configmapName, '-n', namespace, '-o', 'json'])
       if (output) {
-        const cm = JSON.parse(output)
+        let cm
+        try {
+          cm = JSON.parse(output)
+        } catch {
+          setConfigmapData({})
+          setLabels({})
+          return
+        }
         setConfigmapData(cm.data || {})
         setLabels(cm.metadata?.labels || {})
       }
