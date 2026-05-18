@@ -9,6 +9,7 @@ import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
+import { useClusterResourceQuery } from './useClusterResourceQuery'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
 // ---------------------------------------------------------------------------
@@ -547,171 +548,46 @@ export function usePVs(cluster?: string) {
 // Returns `isDemoFallback: true` when the hook is serving demo data so callers
 // can render the Demo badge only for true demo output. See Issue 9356.
 export function useResourceQuotas(cluster?: string, namespace?: string, forceLive = false) {
-  const [resourceQuotas, setResourceQuotas] = useState<ResourceQuota[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isDemoFallback, setIsDemoFallback] = useState(false)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const result = useClusterResourceQuery<ResourceQuota>({
+    resourceKey: 'resourceQuotas',
+    endpoint: 'resourcequotas',
+    dataField: 'resourceQuotas',
+    getDemoData: getDemoResourceQuotas,
+    filterFn: (item, c, ns) => (!c || item.cluster === c) && (!ns || item.namespace === ns),
+    cluster,
+    namespace,
+    forceLive,
+    silentErrors: true,
+  })
 
-  const refetch = useCallback(async () => {
-    // If demo mode is enabled, use demo data (unless forceLive overrides)
-    if (!forceLive && isDemoMode()) {
-      const demoQuotas = getDemoResourceQuotas().filter(q =>
-        (!cluster || q.cluster === cluster) && (!namespace || q.namespace === namespace)
-      )
-      setResourceQuotas(demoQuotas)
-      setIsDemoFallback(true)
-      setIsLoading(false)
-      setError(null)
-      return
-    }
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      if (isClusterModeBackend()) {
-        try {
-          const response = await fetch(`/api/mcp/resourcequotas?${params}`, {
-            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-          })
-          if (response.ok) {
-            const data = await response.json()
-            setResourceQuotas(data.resourceQuotas || [])
-            setIsDemoFallback(false)
-            setError(null)
-            setConsecutiveFailures(0)
-            setIsLoading(false)
-            return
-          }
-        } catch (err) {
-          console.warn('[resourcequotas] Backend fetch failed:', err)
-        }
-        setIsLoading(false)
-        return
-      }
-      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const data = await resp.json()
-      setResourceQuotas(data.resourceQuotas || [])
-      setIsDemoFallback(false)
-      setError(null)
-      setConsecutiveFailures(0)
-    } catch {
-      // Don't show error - ResourceQuotas are optional
-      setError(null)
-      // Don't fall back to demo data - show empty instead
-      setResourceQuotas([])
-      setIsDemoFallback(false)
-      setConsecutiveFailures(prev => prev + 1)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [cluster, namespace, forceLive])
-
-  useEffect(() => {
-    refetch()
-    // Poll for resource quota updates (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
-      `resourceQuotas:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
-      () => refetch(),
-    )
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`resource-quotas:${cluster || 'all'}:${namespace || 'all'}`, () => {
-      refetch()
-    })
-
-    return () => {
-      unsubscribePolling()
-      unregisterRefetch()
-    }
-  }, [refetch, cluster, namespace, consecutiveFailures])
-
-  return { resourceQuotas, isLoading, error, refetch, isDemoFallback }
+  return {
+    resourceQuotas: result.data,
+    isLoading: result.isLoading,
+    error: result.error,
+    refetch: result.refetch,
+    isDemoFallback: result.isDemoFallback,
+  }
 }
 
 // Hook to get LimitRanges
 export function useLimitRanges(cluster?: string, namespace?: string) {
-  const [limitRanges, setLimitRanges] = useState<LimitRange[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const result = useClusterResourceQuery<LimitRange>({
+    resourceKey: 'limitRanges',
+    endpoint: 'limitranges',
+    dataField: 'limitRanges',
+    getDemoData: getDemoLimitRanges,
+    filterFn: (item, c, ns) => (!c || item.cluster === c) && (!ns || item.namespace === ns),
+    cluster,
+    namespace,
+    silentErrors: true,
+  })
 
-  const refetch = useCallback(async () => {
-    // If demo mode is enabled, use demo data
-    if (isDemoMode()) {
-      const demoRanges = getDemoLimitRanges().filter(lr =>
-        (!cluster || lr.cluster === cluster) && (!namespace || lr.namespace === namespace)
-      )
-      setLimitRanges(demoRanges)
-      setIsLoading(false)
-      setError(null)
-      return
-    }
-    setIsLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      if (namespace) params.append('namespace', namespace)
-      if (isClusterModeBackend()) {
-        try {
-          const response = await fetch(`/api/mcp/limitranges?${params}`, {
-            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-          })
-          if (response.ok) {
-            const data = await response.json()
-            setLimitRanges(data.limitRanges || [])
-            setError(null)
-            setConsecutiveFailures(0)
-            setIsLoading(false)
-            return
-          }
-        } catch (err) {
-          console.warn('[limitranges] Backend fetch failed:', err)
-        }
-        setIsLoading(false)
-        return
-      }
-      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/limitranges?${params}`)
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const data = await resp.json()
-      setLimitRanges(data.limitRanges || [])
-      setError(null)
-      setConsecutiveFailures(0)
-    } catch {
-      // Don't show error - LimitRanges are optional
-      setError(null)
-      // Don't fall back to demo data - show empty instead
-      setLimitRanges([])
-      setConsecutiveFailures(prev => prev + 1)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [cluster, namespace])
-
-  useEffect(() => {
-    refetch()
-    // Poll for limit range updates (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
-      `limitRanges:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
-      () => refetch(),
-    )
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`limit-ranges:${cluster || 'all'}:${namespace || 'all'}`, () => {
-      refetch()
-    })
-
-    return () => {
-      unsubscribePolling()
-      unregisterRefetch()
-    }
-  }, [refetch, cluster, namespace, consecutiveFailures])
-
-  return { limitRanges, isLoading, error, refetch }
+  return {
+    limitRanges: result.data,
+    isLoading: result.isLoading,
+    error: result.error,
+    refetch: result.refetch,
+  }
 }
 
 // Create or update a ResourceQuota
