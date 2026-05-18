@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from 'react'
+import { useState, useEffect, useRef, useMemo, useSyncExternalStore } from 'react'
+import { createCachedHook } from '@/lib/cache'
 import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
-import { MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
+import { MS_PER_DAY } from '../lib/constants/time'
 import { isCardTypeRegistered } from '../components/cards/cardRegistry'
 import { getDefaultCardSize } from '../components/dashboard/dashboardUtils'
 
@@ -17,8 +18,7 @@ interface DashboardSummary {
 }
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
-const CACHE_KEY = 'kc-marketplace-registry'
-const CACHE_TTL_MS = MS_PER_HOUR // 1 hour
+const MARKETPLACE_CACHE_KEY = 'marketplace-registry'
 const INSTALLED_KEY = 'kc-marketplace-installed'
 
 export type MarketplaceItemType = 'dashboard' | 'card-preset' | 'theme'
@@ -65,11 +65,6 @@ interface MarketplaceRegistry {
   items: MarketplaceItem[]
   /** Card presets, themes, and CNCF project presets — separate key in the registry */
   presets?: MarketplaceItem[]
-}
-
-interface CachedRegistry {
-  data: MarketplaceRegistry
-  fetchedAt: number
 }
 
 /**
@@ -145,6 +140,23 @@ function mergeRegistryItems(registry: MarketplaceRegistry): MarketplaceItem[] {
   return reconcileImplementedCards([...(registry.items || []), ...(registry.presets || [])])
 }
 
+const INITIAL_MARKETPLACE_ITEMS: MarketplaceItem[] = []
+
+async function fetchMarketplaceItems(): Promise<MarketplaceItem[]> {
+  const response = await fetch(REGISTRY_URL, {
+    signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+  if (!response.ok) throw new Error(`Registry fetch failed: ${response.status}`)
+  const data: MarketplaceRegistry = await response.json()
+  return mergeRegistryItems(data)
+}
+
+const useCachedMarketplaceItems = createCachedHook<MarketplaceItem[]>({
+  key: MARKETPLACE_CACHE_KEY,
+  category: 'costs',
+  initialData: INITIAL_MARKETPLACE_ITEMS,
+  fetcher: fetchMarketplaceItems,
+})
+
 interface InstalledEntry {
   dashboardId?: string
   installedAt: string
@@ -205,80 +217,13 @@ export interface InstallResult {
 }
 
 export function useMarketplace() {
-  const [items, setItems] = useState<MarketplaceItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, isLoading, error, refetch } = useCachedMarketplaceItems()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<MarketplaceItemType | null>(null)
   const [showHelpWanted, setShowHelpWanted] = useState(false)
   // Use cross-tab-aware external store for installed items (#7542)
   const installedItems: InstalledMap = useSyncExternalStore(subscribeInstalled, getInstalledSnapshot, () => emptyInstalledMap)
-
-  const fetchRegistry = useCallback(async (skipCache = false) => {
-    setIsLoading(true)
-    setError(null)
-
-    // On manual refresh, clear the localStorage cache so stale data never persists
-    if (skipCache) {
-      try { localStorage.removeItem(CACHE_KEY) } catch { /* non-critical */ }
-    }
-
-    // Check localStorage cache (skip on manual refresh)
-    if (!skipCache) {
-      try {
-        const cached = localStorage.getItem(CACHE_KEY)
-        if (cached) {
-          const parsed: CachedRegistry = JSON.parse(cached)
-          if (Date.now() - parsed.fetchedAt < CACHE_TTL_MS) {
-            setItems(mergeRegistryItems(parsed.data))
-            setIsLoading(false)
-            return
-          }
-        }
-      } catch {
-        // Cache read failed — continue to fetch
-      }
-    }
-
-    try {
-      const response = await fetch(REGISTRY_URL, {
-        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
-      if (!response.ok) throw new Error(`Registry fetch failed: ${response.status}`)
-      const data: MarketplaceRegistry = await response.json()
-      setItems(mergeRegistryItems(data))
-
-      // Cache the result
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data,
-          fetchedAt: Date.now() }))
-      } catch {
-        // Cache write failed — non-critical
-      }
-    } catch (err: unknown) {
-      // #7543: On fetch failure, keep cached/current items with a stale indicator
-      // instead of clearing to empty which falsely implies no items exist.
-      const staleMsg = err instanceof Error ? err.message : 'Failed to load marketplace'
-      setError(staleMsg)
-      // Only fall back to empty if we truly have nothing to show
-      if (items.length === 0) {
-        try {
-          const cached = localStorage.getItem(CACHE_KEY)
-          if (cached) {
-            const parsed: CachedRegistry = JSON.parse(cached)
-            setItems(mergeRegistryItems(parsed.data))
-          }
-        } catch { /* no cached fallback available */ }
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [items.length])
-
-  useEffect(() => {
-    fetchRegistry()
-  }, [fetchRegistry])
 
   // #7539: Reconcile installed-dashboard state against the backend so items
   // deleted outside the marketplace are no longer shown as "installed".
@@ -501,7 +446,7 @@ export function useMarketplace() {
     removeItem,
     isInstalled,
     getInstalledDashboardId,
-    refresh: () => fetchRegistry(true) }
+    refresh: refetch }
 }
 
 // --- Author Profile Hook ---
