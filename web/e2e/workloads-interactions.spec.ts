@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import {
   setupDemoAndNavigate,
   waitForSubRoute,
@@ -21,41 +21,71 @@ const CLUSTERS_OVERVIEW_HEADING = 'Clusters Overview'
 /** Timeout for navigation to settle after click */
 const CLICK_NAV_TIMEOUT_MS = 10_000
 
+/** Restart toast content shown after clicking the restart action */
+const RESTART_TOAST_PATTERN = /Restarting deployment|Restart triggered|Failed to restart deployment/
+
+/** Cluster status text rendered by StatusIndicator */
+const CLUSTER_STATUS_PATTERN = /Healthy|Error|Warning|Offline/
+
+async function setupWorkloadsPage(page: Page) {
+  await page.context().clearCookies()
+  await page.addInitScript(() => {
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+  await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
+  await waitForSubRoute(page)
+}
+
+async function getFirstWorkloadRowOrSkip(page: Page) {
+  const workloadRow = page.getByTestId('workload-row').first()
+  const rowVisible = await workloadRow
+    .waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    .then(() => true)
+    .catch(() => false)
+
+  test.skip(!rowVisible, 'No workload rows found in demo mode')
+  await expect(workloadRow).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+  return workloadRow
+}
+
+async function getActionButtonOrSkip(page: Page, testId: string, skipReason: string) {
+  await getFirstWorkloadRowOrSkip(page)
+
+  const actionButton = page.getByTestId(testId).first()
+  const buttonVisible = await actionButton
+    .waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    .then(() => true)
+    .catch(() => false)
+
+  test.skip(!buttonVisible, skipReason)
+  await expect(actionButton).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+  return actionButton
+}
+
 // ---------------------------------------------------------------------------
 // Tests — Workload Row Drill-Down Navigation (#12475)
 // ---------------------------------------------------------------------------
 
 test.describe('Workload Row Drill-Down Navigation (#12475)', () => {
   test.beforeEach(async ({ page }) => {
-    await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
-    await waitForSubRoute(page)
+    await setupWorkloadsPage(page)
   })
 
   test('clicking a workload row opens a drill-down panel', async ({ page }) => {
-    // In demo mode, workload rows render with the .border-l-4 class
-    const workloadRow = page.locator('.border-l-4').first()
-    const rowExists = (await workloadRow.count()) > 0
+    const workloadRow = await getFirstWorkloadRowOrSkip(page)
 
-    if (rowExists) {
-      // Click the first workload row
-      await workloadRow.click()
+    await workloadRow.click()
 
-      // Drill-down should render — it overlays as a panel with role=dialog or a specific container
-      // The drilldown container uses class "drilldown" or has a heading with namespace/deployment name
-      const drillDown = page.locator('[data-testid="drilldown-panel"], .drilldown-overlay, [role="dialog"]').first()
-      await expect(drillDown).toBeVisible({ timeout: CLICK_NAV_TIMEOUT_MS })
-    }
+    const drillDown = page.getByTestId('drilldown-modal')
+    await expect(drillDown).toBeVisible({ timeout: CLICK_NAV_TIMEOUT_MS })
   })
 
   test('workload row shows chevron indicating it is clickable', async ({ page }) => {
-    const workloadRow = page.locator('.border-l-4').first()
-    const rowExists = (await workloadRow.count()) > 0
+    const workloadRow = await getFirstWorkloadRowOrSkip(page)
+    const chevron = workloadRow.locator('svg').last()
 
-    if (rowExists) {
-      // Each row has a ChevronRight icon at the end
-      const chevron = workloadRow.locator('svg').last()
-      await expect(chevron).toBeVisible()
-    }
+    await expect(chevron).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 })
 
@@ -65,35 +95,35 @@ test.describe('Workload Row Drill-Down Navigation (#12475)', () => {
 
 test.describe('Add Workload Button Navigation (#12476)', () => {
   test.beforeEach(async ({ page }) => {
-    await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
-    await waitForSubRoute(page)
+    await setupWorkloadsPage(page)
   })
 
   test('Add Workload button is visible in page header', async ({ page }) => {
-    const addBtn = page.locator('button', { hasText: 'Add Workload' })
+    const addBtn = page.getByTestId('add-workload-btn')
     await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 
   test('clicking Add Workload navigates to deploy page', async ({ page }) => {
-    const addBtn = page.locator('button', { hasText: 'Add Workload' })
+    const addBtn = page.getByTestId('add-workload-btn')
     await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await addBtn.click()
 
-    // Should navigate to /deploy
     await page.waitForURL(`**${DEPLOY_ROUTE}*`, { timeout: CLICK_NAV_TIMEOUT_MS })
     expect(page.url()).toContain(DEPLOY_ROUTE)
   })
 
   test('empty state also has a deploy button that navigates', async ({ page }) => {
-    // If empty state is visible, it also has a "Deploy a Workload" button
-    const deployBtn = page.locator('button', { hasText: 'Deploy a Workload' })
-    const isVisible = await deployBtn.isVisible().catch(() => false)
+    const deployBtn = page.getByRole('button', { name: 'Deploy a Workload' })
+    const buttonVisible = await deployBtn
+      .waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+      .then(() => true)
+      .catch(() => false)
 
-    if (isVisible) {
-      await deployBtn.click()
-      await page.waitForURL(`**${DEPLOY_ROUTE}*`, { timeout: CLICK_NAV_TIMEOUT_MS })
-      expect(page.url()).toContain(DEPLOY_ROUTE)
-    }
+    test.skip(!buttonVisible, 'Empty state deploy button is not shown when workloads exist')
+
+    await deployBtn.click()
+    await page.waitForURL(`**${DEPLOY_ROUTE}*`, { timeout: CLICK_NAV_TIMEOUT_MS })
+    expect(page.url()).toContain(DEPLOY_ROUTE)
   })
 })
 
@@ -103,71 +133,70 @@ test.describe('Add Workload Button Navigation (#12476)', () => {
 
 test.describe('Action Buttons in Demo Mode (#12477)', () => {
   test.beforeEach(async ({ page }) => {
-    await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
-    await waitForSubRoute(page)
+    await setupWorkloadsPage(page)
   })
 
   test('action buttons (Restart/Logs/Delete) are visible on deployment rows', async ({ page }) => {
-    // Action buttons only appear on individual deployment rows (not namespace groups)
-    // They have specific aria-labels
-    const restartBtn = page.locator('button[aria-label="Restart deployment"]').first()
-    const logsBtn = page.locator('button[aria-label="View logs"]').first()
-    const deleteBtn = page.locator('button[aria-label="Delete deployment"]').first()
+    const restartBtn = await getActionButtonOrSkip(
+      page,
+      'action-btn-restart',
+      'No deployment rows with Restart button found'
+    )
+    const logsBtn = await getActionButtonOrSkip(
+      page,
+      'action-btn-logs',
+      'No deployment rows with Logs button found'
+    )
+    const deleteBtn = await getActionButtonOrSkip(
+      page,
+      'action-btn-delete',
+      'No deployment rows with Delete button found'
+    )
 
-    const hasRestart = await restartBtn.isVisible().catch(() => false)
-
-    if (hasRestart) {
-      await expect(restartBtn).toBeVisible()
-      await expect(logsBtn).toBeVisible()
-      await expect(deleteBtn).toBeVisible()
-    }
+    await expect(restartBtn).toBeVisible()
+    await expect(logsBtn).toBeVisible()
+    await expect(deleteBtn).toBeVisible()
   })
 
   test('Restart button click shows toast notification', async ({ page }) => {
-    const restartBtn = page.locator('button[aria-label="Restart deployment"]').first()
-    const hasRestart = await restartBtn.isVisible().catch(() => false)
+    const restartBtn = await getActionButtonOrSkip(
+      page,
+      'action-btn-restart',
+      'No deployment rows with Restart button found'
+    )
 
-    if (hasRestart) {
-      await restartBtn.click()
+    await restartBtn.click()
 
-      // Toast should appear with "Restarting" or restart message
-      const toast = page.locator('[role="alert"], [data-testid="toast"], .toast').first()
-      const toastVisible = await toast.isVisible().catch(() => false)
-      // In demo mode the action may show toast or may silently succeed
-      // At minimum, clicking should not crash the page
-      const header = page.getByTestId('dashboard-header')
-      await expect(header).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-    }
+    const toast = page.getByRole('status').filter({ hasText: RESTART_TOAST_PATTERN }).first()
+    await expect(toast).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(toast).toContainText(RESTART_TOAST_PATTERN)
   })
 
   test('Delete button opens confirmation dialog', async ({ page }) => {
-    const deleteBtn = page.locator('button[aria-label="Delete deployment"]').first()
-    const hasDelete = await deleteBtn.isVisible().catch(() => false)
+    const deleteBtn = await getActionButtonOrSkip(
+      page,
+      'action-btn-delete',
+      'No deployment rows with Delete button found'
+    )
 
-    if (hasDelete) {
-      await deleteBtn.click()
+    await deleteBtn.click()
 
-      // Confirmation dialog should appear
-      const dialog = page.locator('[role="dialog"], [data-testid="confirm-dialog"]').first()
-      await expect(dialog).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-
-      // Dialog should contain "Delete" confirmation button
-      const confirmBtn = dialog.locator('button', { hasText: 'Delete' })
-      await expect(confirmBtn).toBeVisible()
-    }
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Delete Deployment' })
+    await expect(dialog).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(dialog.getByRole('button', { name: 'Delete' })).toBeVisible()
   })
 
   test('Logs button navigates to drill-down with pods tab', async ({ page }) => {
-    const logsBtn = page.locator('button[aria-label="View logs"]').first()
-    const hasLogs = await logsBtn.isVisible().catch(() => false)
+    const logsBtn = await getActionButtonOrSkip(
+      page,
+      'action-btn-logs',
+      'No deployment rows with Logs button found'
+    )
 
-    if (hasLogs) {
-      await logsBtn.click()
+    await logsBtn.click()
 
-      // Should open drill-down panel
-      const drillDown = page.locator('[data-testid="drilldown-panel"], .drilldown-overlay, [role="dialog"]').first()
-      await expect(drillDown).toBeVisible({ timeout: CLICK_NAV_TIMEOUT_MS })
-    }
+    const drillDown = page.getByTestId('drilldown-modal')
+    await expect(drillDown).toBeVisible({ timeout: CLICK_NAV_TIMEOUT_MS })
   })
 })
 
@@ -177,57 +206,37 @@ test.describe('Action Buttons in Demo Mode (#12477)', () => {
 
 test.describe('Clusters Overview Section (#12482)', () => {
   test.beforeEach(async ({ page }) => {
-    await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
-    await waitForSubRoute(page)
+    await setupWorkloadsPage(page)
   })
 
   test('Clusters Overview heading is visible', async ({ page }) => {
-    const heading = page.locator('h2', { hasText: CLUSTERS_OVERVIEW_HEADING })
+    const heading = page.getByRole('heading', { name: CLUSTERS_OVERVIEW_HEADING })
     await expect(heading).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 
   test('Clusters Overview section shows cluster cards', async ({ page }) => {
-    const heading = page.locator('h2', { hasText: CLUSTERS_OVERVIEW_HEADING })
-    const isVisible = await heading.isVisible().catch(() => false)
+    const clustersGrid = page.getByTestId('clusters-overview-grid')
+    await expect(clustersGrid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-    if (isVisible) {
-      // The clusters grid is the sibling of the heading
-      const clustersGrid = heading.locator('..').locator('.grid')
-      await expect(clustersGrid).toBeVisible()
-
-      // Should have at least one cluster card (demo mode provides clusters)
-      const clusterCards = clustersGrid.locator('.glass')
-      const count = await clusterCards.count()
-      expect(count).toBeGreaterThan(0)
-    }
+    const clusterCards = clustersGrid.getByTestId('cluster-card')
+    const count = await clusterCards.count()
+    expect(count).toBeGreaterThan(0)
   })
 
   test('cluster cards display pod and node counts', async ({ page }) => {
-    const heading = page.locator('h2', { hasText: CLUSTERS_OVERVIEW_HEADING })
-    const isVisible = await heading.isVisible().catch(() => false)
+    const clustersGrid = page.getByTestId('clusters-overview-grid')
+    await expect(clustersGrid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-    if (isVisible) {
-      const clustersGrid = heading.locator('..').locator('.grid')
-      const firstCard = clustersGrid.locator('.glass').first()
-      const cardText = await firstCard.textContent()
-
-      // Each cluster card shows "X pods • Y nodes"
-      expect(cardText).toMatch(/pods/)
-      expect(cardText).toMatch(/nodes/)
-    }
+    const firstCard = clustersGrid.getByTestId('cluster-card').first()
+    await expect(firstCard).toContainText(/pods/)
+    await expect(firstCard).toContainText(/nodes/)
   })
 
   test('cluster cards show status indicators', async ({ page }) => {
-    const heading = page.locator('h2', { hasText: CLUSTERS_OVERVIEW_HEADING })
-    const isVisible = await heading.isVisible().catch(() => false)
+    const clustersGrid = page.getByTestId('clusters-overview-grid')
+    await expect(clustersGrid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-    if (isVisible) {
-      const clustersGrid = heading.locator('..').locator('.grid')
-      const firstCard = clustersGrid.locator('.glass').first()
-
-      // StatusIndicator renders as a colored dot/circle
-      const statusDot = firstCard.locator('[class*="rounded-full"], svg').first()
-      await expect(statusDot).toBeVisible()
-    }
+    const firstCard = clustersGrid.getByTestId('cluster-card').first()
+    await expect(firstCard).toContainText(CLUSTER_STATUS_PATTERN)
   })
 })
