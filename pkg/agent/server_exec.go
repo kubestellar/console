@@ -76,6 +76,12 @@ import (
 // execMaxStdinBytes; protects against a runaway paste from exhausting memory.
 const agentExecMaxStdinBytes = 1 * 1024 * 1024 // 1 MiB
 
+// agentExecMaxReadBytes is the maximum WebSocket message size accepted by the
+// exec handler. Keeping this aligned with other WebSocket handlers prevents a
+// client from sending oversized init/stdin/resize frames that could exhaust
+// memory before validation runs.
+const agentExecMaxReadBytes = 64 * 1024
+
 // agentExecPingInterval is how often the server sends a WebSocket ping to
 // detect dead peers. Matches the backend's execPingInterval.
 const agentExecPingInterval = 30 * time.Second
@@ -261,6 +267,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		slog.Error("[AgentExec] WebSocket upgrade failed", "error", err)
 		return
 	}
+	conn.SetReadLimit(agentExecMaxReadBytes)
 	defer conn.Close()
 
 	// Keepalive — mirrors the backend handler's ping/pong scheme (#6891).
