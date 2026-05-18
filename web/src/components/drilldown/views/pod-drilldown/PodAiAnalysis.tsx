@@ -98,7 +98,7 @@ export function PodAiAnalysis({
             'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
             actionsDisabled
               ? 'bg-secondary/30 text-muted-foreground border border-border cursor-not-allowed opacity-60 shadow-none'
-              : 'bg-purple-600/20 text-purple-200 hover:bg-purple-500/30 border border-purple-500/50 shadow-[0_0_15px_rgba(147,51,234,0.2)] hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]',
+              : 'bg-purple-600/20 text-purple-200 hover:bg-purple-500/30 border border-purple-500/50 shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30',
             aiAnalysisLoading && 'opacity-70 cursor-wait'
           )}
         >
@@ -125,7 +125,7 @@ export function PodAiAnalysis({
             'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
             actionsDisabled
               ? 'bg-secondary/30 text-muted-foreground border border-border cursor-not-allowed opacity-60 shadow-none'
-              : 'bg-orange-600/20 text-orange-200 hover:bg-orange-500/30 border border-orange-500/50 shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]'
+              : 'bg-orange-600/20 text-orange-200 hover:bg-orange-500/30 border border-orange-500/50 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30'
           )}
         >
           <div className="relative">
