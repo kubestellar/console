@@ -163,10 +163,7 @@ export function StellarPage() {
       style={{ minHeight: `calc(100vh - ${APP_TOP_NAV_OFFSET_PX}px)` }}
     >
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-4 md:px-6 lg:px-8">
-        <div
-          className="sticky z-20 bg-[var(--s-bg)]/95 pb-2 backdrop-blur supports-[backdrop-filter]:bg-[var(--s-bg)]/80"
-          style={{ top: APP_TOP_NAV_OFFSET_PX }}
-        >
+        <div className="pb-2">
           <div className={SECTION_SHELL_CLASS}>
             <StellarHeader
               isConnected={isConnected}
