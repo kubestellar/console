@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"encoding/base64"
-	"os"
 	"strings"
 	"testing"
 )
@@ -96,16 +94,8 @@ func TestMaskAPIKey_ExactlyNine(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// EncryptAPIKey / DecryptAPIKey — require STELLAR_ENCRYPTION_KEY env var
+// EncryptAPIKey / DecryptAPIKey
 // ---------------------------------------------------------------------------
-
-func makeTestKey() string {
-	b := make([]byte, 32)
-	for i := range b {
-		b[i] = byte(i + 1)
-	}
-	return base64.StdEncoding.EncodeToString(b)
-}
 
 func TestEncryptDecrypt_RoundTrip(t *testing.T) {
 	// Save and restore original key state.
@@ -167,16 +157,9 @@ func TestDecryptAPIKey_TooShort(t *testing.T) {
 	}
 }
 
-func TestEncryptAPIKey_ViaEnv(t *testing.T) {
-	// Test the init() path indirectly: set env before we modify the key.
-	// This test verifies that a valid key produces different ciphertext each call
-	// (nonce is random → non-deterministic).
+func TestEncryptAPIKey_RandomNonceProducesDifferentCiphertext(t *testing.T) {
 	origKey := encryptionKey
 	defer func() { encryptionKey = origKey }()
-	defer os.Unsetenv("STELLAR_ENCRYPTION_KEY")
-
-	key := makeTestKey()
-	_ = key
 
 	b := make([]byte, 32)
 	for i := range b {
@@ -189,7 +172,6 @@ func TestEncryptAPIKey_ViaEnv(t *testing.T) {
 	if err1 != nil || err2 != nil {
 		t.Fatalf("EncryptAPIKey errors: %v, %v", err1, err2)
 	}
-	// Ciphertexts should differ (random nonce).
 	if string(c1) == string(c2) {
 		t.Error("two encryptions of same plaintext should produce different ciphertext (random nonce)")
 	}

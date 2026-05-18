@@ -61,11 +61,8 @@ func TestTailLines_TrailingNewline(t *testing.T) {
 
 func TestTailLines_NIsZero(t *testing.T) {
 	got := tailLines("a\nb\nc", 0)
-	if got != "c" {
-		// last 0 lines from a 3-line input: slice [3:] = "" but join = ""
-		// Actually strings.Split gives ["a","b","c"], len=3, n=0, so return last 0 = ""
-		// Let's just check it doesn't panic.
-		_ = got
+	if got != "" {
+		t.Errorf("tailLines with n=0 should return empty string; got %q", got)
 	}
 }
 
