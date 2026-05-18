@@ -74,7 +74,7 @@ export const FeedItemsList = memo(function FeedItemsList({
             {item.thumbnail && item.thumbnail.startsWith('http') && (
               <img
                 src={item.thumbnail}
-                alt={item.title || RSS_UI_STRINGS.feedThumbnailAlt}
+                alt={item.title || 'Feed item thumbnail'}
                 className="w-16 h-16 object-cover rounded shrink-0"
                 loading="lazy"
                 width={64}

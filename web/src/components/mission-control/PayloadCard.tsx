@@ -113,7 +113,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
             {!imgFailed ? (
               <img
                 src={getAvatarUrl(project)}
-                alt={project.displayName}
+                alt={`${project.displayName} payload image`}
                 className="w-8 h-8 rounded object-contain"
                 onError={() => setImgFailed(true)}
                 loading="lazy"

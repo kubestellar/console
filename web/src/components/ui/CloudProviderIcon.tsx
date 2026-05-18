@@ -215,7 +215,7 @@ const KIND_ICON_STYLE: React.CSSProperties = { objectFit: 'contain' }
 const KindIcon: React.FC<{ size: number; className?: string }> = ({ size, className }) => (
   <img
     src="/kind-logo.png"
-    alt="Kind"
+    alt="Kind logo"
     width={size}
     height={size}
     className={className}

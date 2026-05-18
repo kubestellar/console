@@ -647,7 +647,7 @@ function ConsoleUsersTab({
                 {user.avatar_url ? (
                   <img
                     src={user.avatar_url}
-                    alt={isBlurred ? '' : user.github_login}
+                    alt={user.name || 'User avatar'}
                     className="w-8 h-8 rounded-full"
                     loading="lazy"
                     width={32}

@@ -25,7 +25,7 @@ export function LogoWithStar({ className, logoClassName, alt, showStar }: LogoWi
     <div className={cn('relative inline-flex items-center justify-center', className)}>
       <img
         src={logoUrl}
-        alt={alt || appShortName}
+        alt={alt || 'KubeStellar logo'}
         className={cn('w-full h-full', logoClassName)}
         loading="lazy"
       />

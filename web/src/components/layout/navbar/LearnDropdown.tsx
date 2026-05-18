@@ -203,7 +203,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
                   <div className="relative w-24 h-14 rounded overflow-hidden bg-muted shrink-0">
                     <img
                       src={getYouTubeThumbnailUrl(video.id)}
-                      alt={video.title}
+                      alt={`${video.title || 'Learn resource'} thumbnail`}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />

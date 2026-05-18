@@ -268,7 +268,7 @@ export function ProjectNode({
           {!imgFailed ? (
             <img
               src={getAvatarUrl(name)}
-              alt={displayName}
+              alt={`${displayName} project icon`}
               style={{
                 width: iconSize,
                 height: iconSize,
