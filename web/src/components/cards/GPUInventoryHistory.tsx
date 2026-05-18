@@ -1,7 +1,8 @@
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { useMemo, useState, useRef, useEffect } from 'react'
+import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
-  BarChart3, Table2, ChevronDown, ArrowUpDown } from 'lucide-react'
+  BarChart3, Table2, ChevronDown, ArrowUpDown,
+} from 'lucide-react'
 import { useMetricsHistory } from '../../hooks/useMetricsHistory'
 import type { MetricsSnapshot } from '../../types/predictions'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -14,7 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { CHART_HEIGHT_STANDARD } from '../../lib/constants'
 import { MS_PER_MINUTE, MINUTES_PER_HOUR } from '../../lib/constants/time'
-import { useMemo, useState, useRef, useEffect } from 'react'
+import {
   MIN_TREND_SNAPSHOTS, RECENT_SNAPSHOT_WINDOW, TREND_CHANGE_THRESHOLD,
   HIGH_USAGE_PCT, MEDIUM_USAGE_PCT,
   GPU_INVENTORY_HISTORY_CHART_CONTAINER_STYLE,
