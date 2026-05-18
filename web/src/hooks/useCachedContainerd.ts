@@ -16,8 +16,7 @@
  * Upstream issue: kubestellar/console-marketplace#4
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
-import { useDemoMode } from './useDemoMode'
+import { createCachedHook, type CachedHookResult } from '../lib/cache'
 import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
 import { MS_PER_SECOND, SECONDS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../lib/constants/time'
@@ -220,49 +219,27 @@ async function fetchContainerdStatus(): Promise<ContainerdStatusData> {
 // Hook return type
 // ---------------------------------------------------------------------------
 
-export interface UseCachedContainerdResult {
-  data: ContainerdStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
+export type UseCachedContainerdResult = CachedHookResult<ContainerdStatusData> & {
   isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
 }
 
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
+const useCachedContainerdBase = createCachedHook<ContainerdStatusData>({
+  key: CACHE_KEY_CONTAINERD,
+  initialData: INITIAL_DATA,
+  demoData: CONTAINERD_DEMO_DATA,
+  fetcher: fetchContainerdStatus,
+})
+
 export function useCachedContainerd(): UseCachedContainerdResult {
-  const { isDemoMode } = useDemoMode()
-
-  const result = useCache<ContainerdStatusData>({
-    key: CACHE_KEY_CONTAINERD,
-    category: 'default' as RefreshCategory,
-    initialData: INITIAL_DATA,
-    demoData: CONTAINERD_DEMO_DATA,
-    persist: true,
-    fetcher: fetchContainerdStatus,
-  })
-
-  // Never surface demo data during loading (CLAUDE.md rule).
-  const isDemoData = (isDemoMode || result.isDemoFallback) && !result.isLoading
-  const isRefreshing = isDemoMode ? false : result.isRefreshing
-  const isDemoFallback = isDemoData
+  const result = useCachedContainerdBase()
 
   return {
-    data: isDemoMode ? CONTAINERD_DEMO_DATA : result.data,
-    isLoading: isDemoMode ? false : result.isLoading,
-    isRefreshing,
-    isDemoFallback,
-    isDemoData,
-    isFailed: isDemoMode ? false : result.isFailed,
-    consecutiveFailures: isDemoMode ? 0 : result.consecutiveFailures,
-    lastRefresh: isDemoMode ? Date.now() : result.lastRefresh,
-    refetch: result.refetch,
+    ...result,
+    isDemoData: result.isDemoFallback,
   }
 }
 
