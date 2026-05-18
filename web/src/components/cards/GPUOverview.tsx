@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -71,36 +71,35 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     defaultLimit: 'unlimited' })
 
   // Get all unique GPU types for filter dropdown (from raw data)
-  const allGpuTypes = (() => {
+  const allGpuTypes = useMemo(() => {
     const types = new Set<string>()
     rawNodes.forEach(n => types.add(n.gpuType))
     return Array.from(types).sort()
-  })()
+  }, [rawNodes])
 
   // Check if any selected clusters are reachable
-  const filteredClusters = (() => {
+  const filteredClusters = useMemo(() => {
     if (isAllClustersSelected) return clusters
     return clusters.filter(c => selectedClusters.includes(c.name))
-  })()
-
-  // Get set of unreachable cluster names to filter out their GPU nodes
-  const unreachableClusterNames = new Set(
-      filteredClusters
-        .filter(c => c.reachable === false || (c.nodeCount === undefined && c.reachable !== true))
-        .map(c => c.name)
-    )
+  }, [clusters, isAllClustersSelected, selectedClusters])
 
   const hasReachableClusters = filteredClusters.some(c => c.reachable !== false) || (isDemoMode || isDemoFallback)
 
   // Apply GPU type filter on top of useCardData filtered nodes
   // Also filter out nodes from unreachable clusters
-  const nodes = (() => {
+  const nodes = useMemo(() => {
+    const unreachableClusterNames = new Set(
+      filteredClusters
+        .filter(c => c.reachable === false || (c.nodeCount === undefined && c.reachable !== true))
+        .map(c => c.name),
+    )
+
     let result = filteredNodes.filter(n => !unreachableClusterNames.has(n.cluster))
     if (selectedGpuType !== 'all') {
       result = result.filter(n => n.gpuType === selectedGpuType)
     }
     return result
-  })()
+  }, [filteredClusters, filteredNodes, selectedGpuType])
 
   if (isLoading && hasReachableClusters) {
     return (

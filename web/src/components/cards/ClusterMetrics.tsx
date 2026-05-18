@@ -227,13 +227,13 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
   }, [timeRange])
 
   // Build translated metric config and time range options
-  const metricConfig = (() => {
+  const metricConfig = useMemo(() => {
     const result: Record<MetricType, { label: string; color: string; unit: string; baseValue: number; variance: number }> = {} as typeof result
     for (const [key, val] of Object.entries(metricConfigBase)) {
       result[key as MetricType] = { ...val, label: String(t(val.labelKey)) }
     }
     return result
-  })()
+  }, [t])
 
   const TIME_RANGE_OPTIONS = SUPPORTED_TIME_RANGE_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
 
@@ -358,7 +358,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
   }))
 
   // Generate per-cluster data for comparison mode
-  const perClusterData = (() => {
+  const perClusterData = useMemo(() => {
     if (chartMode !== 'per-cluster') return { data: [], series: [] }
 
     const clusterHistory = filteredHistory.filter(point => point.clusters)
@@ -400,13 +400,13 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     })
 
     return { data: chartData, series }
-  })()
+  }, [chartMode, filteredHistory, selectedMetric])
 
   const config = metricConfig[selectedMetric]
   // Use real current value if non-zero, otherwise fall back to the last
   // known non-null chart value so the header stays in sync with the chart
   // instead of showing a misleading 0 during temporary data loss (#6875).
-  const currentValue = (() => {
+  const currentValue = useMemo(() => {
     if (isDemoMode && data.length > 0) {
       return data[data.length - 1]?.value ?? 0
     }
@@ -418,7 +418,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
       if (data[i]?.value != null && data[i].value > 0) return data[i].value
     }
     return 0
-  })()
+  }, [data, hasRealData, isDemoMode, realValues, selectedMetric])
 
   return (
     <div className="h-full flex flex-col">

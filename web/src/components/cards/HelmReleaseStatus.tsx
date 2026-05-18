@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server, Package } from 'lucide-react'
 import { formatTimeAgo } from '../../lib/formatters'
 import { useClusters } from '../../hooks/useMCP'
@@ -87,16 +87,16 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     })
 
   // Pre-filter by namespace before passing to useCardData
-  const namespacedReleases = (() => {
+  const namespacedReleases = useMemo(() => {
     if (!selectedNamespace) return allReleases
     return allReleases.filter(r => r.namespace === selectedNamespace)
-  })()
+  }, [allReleases, selectedNamespace])
 
   // Get unique namespaces (from full unfiltered set)
-  const namespaces = (() => {
+  const namespaces = useMemo(() => {
     const nsSet = new Set(allReleases.map(r => r.namespace))
     return Array.from(nsSet).sort()
-  })()
+  }, [allReleases])
 
   const statusOrder: Record<string, number> = { failed: 0, pending: 1, uninstalling: 2, superseded: 3, deployed: 4 }
 

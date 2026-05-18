@@ -57,7 +57,7 @@ export function NodeConditions() {
     return 'healthy'
   }
 
-  const summary = (() => {
+  const summary = useMemo(() => {
     let healthy = 0, cordoned = 0, pressure = 0
     for (const n of nodes) {
       const bucket = classify(n)
@@ -66,7 +66,7 @@ export function NodeConditions() {
       else pressure++
     }
     return { total: nodes.length, healthy, cordoned, pressure }
-  })()
+  }, [nodes])
 
   const filtered = useMemo(() => {
     if (filter === 'all') return nodes

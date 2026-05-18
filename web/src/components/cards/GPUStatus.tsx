@@ -61,17 +61,17 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const [selectedGpuType, setSelectedGpuType] = useState<string>('all')
 
   // Get all unique GPU types for filter dropdown
-  const gpuTypes = (() => {
+  const gpuTypes = useMemo(() => {
     const types = new Set<string>()
     rawNodes.forEach(n => types.add(n.gpuType))
     return Array.from(types).sort()
-  })()
+  }, [rawNodes])
 
   // Step 1: Pre-filter nodes by GPU type (card-specific filter)
-  const preFilteredNodes = (() => {
+  const preFilteredNodes = useMemo(() => {
     if (selectedGpuType === 'all') return rawNodes
     return rawNodes.filter(n => n.gpuType.toLowerCase().includes(selectedGpuType.toLowerCase()))
-  })()
+  }, [rawNodes, selectedGpuType])
 
   // Step 2: Aggregate to cluster-level stats
   // Don't apply cluster/search filters here - useCardData handles that

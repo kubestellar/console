@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { GitBranch, AlertTriangle, Plus, Minus, RefreshCw, Loader2, ChevronRight, Server } from 'lucide-react'
 import { GitOpsDrift as GitOpsDriftType } from '../../hooks/useMCP'
 import { useCachedGitOpsDrifts } from '../../hooks/useCachedData'
@@ -95,7 +95,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   }
 
   // Pre-filter by severity and global custom filter (outside useCardData)
-  const severityFilteredDrifts = (() => {
+  const severityFilteredDrifts = useMemo(() => {
     let result = drifts
 
     // Apply global severity filter
@@ -118,7 +118,7 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
     }
 
     return result
-  })()
+  }, [customFilter, drifts, isAllSeveritiesSelected, selectedSeverities])
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {

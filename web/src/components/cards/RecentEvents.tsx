@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Clock, AlertTriangle, CheckCircle2, Activity, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -47,13 +48,13 @@ export function RecentEvents() {
     consecutiveFailures })
 
   // Pre-filter to events within the last hour (before handing to useCardData)
-  const recentEventsCandidates = (() => {
+  const recentEventsCandidates = useMemo(() => {
     const cutoff = Date.now() - EVENT_CUTOFF_MS
     return filterByCluster(events).filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= cutoff
     })
-  })()
+  }, [events, filterByCluster])
 
   const {
     items: paginatedItems,

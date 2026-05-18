@@ -35,7 +35,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     customFilter } = useGlobalFilters()
 
   // Apply global filters
-  const clusters = (() => {
+  const clusters = useMemo(() => {
     let result = allClusters
 
     if (!isAllClustersSelected) {
@@ -51,7 +51,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     }
 
     return result
-  })()
+  }, [allClusters, customFilter, globalSelectedClusters, isAllClustersSelected])
 
   // Detect when the selected cluster is hidden by global filters
   const isSelectedClusterFiltered = selectedCluster !== '' &&
