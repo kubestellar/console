@@ -38,7 +38,7 @@ func TestValidateProviderURL_ValidHTTPS(t *testing.T) {
 func TestValidateProviderURL_InvalidScheme(t *testing.T) {
 	err := ValidateProviderURL("ftp://example.com", "")
 	if err == nil {
-		t.Error("ftp scheme should be rejected")
+		t.Fatal("ftp scheme should be rejected")
 	}
 	if !strings.Contains(err.Error(), "scheme") {
 		t.Errorf("error should mention scheme, got: %v", err)
