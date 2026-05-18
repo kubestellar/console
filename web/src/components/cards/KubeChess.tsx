@@ -7,10 +7,10 @@ import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
 // Chess piece types
 import {
-  type PieceType, type Color, type Piece, type Board, type Move, type GameState,
-  PIECE_SYMBOLS, STORAGE_KEY, STORAGE_KEY_STATS,
-  positionKey, createInitialBoard, createInitialState,
-  getPieceMoves, findKing, isInCheck, makeMove, getAllLegalMoves,
+  type PieceType, type Color, type GameState,
+  AI_THINK_DELAY_MS, PIECE_SYMBOLS, STORAGE_KEY, STORAGE_KEY_STATS,
+  positionKey, createInitialState,
+  getPieceMoves, isInCheck, makeMove,
   getGameResult, findBestMove,
 } from './KubeChess.engine'
 

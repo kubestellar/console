@@ -247,7 +247,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
               }`}
             >
               <lens.icon className="w-3.5 h-3.5" />
-              {t(lens.translationKey)}
+              {t(lens.translationKey as never)}
               {lens.showCount && totalIssueCounts.total > 0 && (
                 <StatusBadge color="red" size="xs" rounded="full" className="ml-0.5">
                   {totalIssueCounts.total}

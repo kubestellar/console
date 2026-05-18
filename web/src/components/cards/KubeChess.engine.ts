@@ -657,7 +657,7 @@ function findBestMove(state: GameState, depth: number): { from: { row: number; c
 
 
 export {
-  PIECE_SYMBOLS, STORAGE_KEY, STORAGE_KEY_STATS,
+  AI_THINK_DELAY_MS, PIECE_SYMBOLS, STORAGE_KEY, STORAGE_KEY_STATS,
   positionKey, createInitialBoard, createInitialState, isValidSquare,
   isSquareAttackedBy, getPieceMoves, findKing, isInCheck,
   makeMove, getAllLegalMoves, getGameResult, evaluateBoard,
