@@ -14,7 +14,7 @@ import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
-import { KUBECTL_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+import { KUBECTL_DEFAULT_TIMEOUT_MS, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 const OPA_LIST_TIMEOUT_MS = 25_000
 const MIN_POLICY_PATH_PARTS = 4
 import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
@@ -201,6 +201,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   useEffect(() => {
     if (shouldUseDemoData) return
     const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_DEFAULT_TIMEOUT_MS)
     agentFetch(`${LOCAL_AGENT_HTTP_URL}/clusters`, { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
@@ -210,7 +211,8 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
         }
       })
       .catch(() => { /* agent not available or request aborted */ })
-    return () => controller.abort()
+      .finally(() => clearTimeout(timeoutId))
+    return () => { clearTimeout(timeoutId); controller.abort() }
   }, [shouldUseDemoData])
 
   // Use agent clusters if shared state is empty - memoize for stability
