@@ -65,6 +65,7 @@ const (
 var drasiBlockedCIDRs = func() []*net.IPNet {
 	cidrs := []string{
 		"10.0.0.0/8",         // RFC 1918 private
+		"100.64.0.0/10",      // RFC 6598 CGNAT
 		"172.16.0.0/12",      // RFC 1918 private
 		"192.168.0.0/16",     // RFC 1918 private
 		"169.254.169.254/32", // cloud metadata
