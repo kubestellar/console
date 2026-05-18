@@ -101,14 +101,15 @@ jobs:
           npx wait-on http://localhost:4173 --timeout 120000
 
       - name: Run Playwright tests
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+          SPEC_FILTER: ${{ inputs.spec_filter }}
         run: |
-          if [ -n "${{ inputs.spec_filter }}" ]; then
-            npx playwright test --project=chromium --timeout=75000 --retries=2 --shard=${{ matrix.shard }}/4 "${{ inputs.spec_filter }}"
+          if [ -n "$SPEC_FILTER" ]; then
+            npx playwright test --project=chromium --timeout=75000 --retries=2 --shard=${{ matrix.shard }}/4 "$SPEC_FILTER"
           else
             npx playwright test --project=chromium --shard=${{ matrix.shard }}/4
           fi
-        env:
-          PLAYWRIGHT_BASE_URL: http://localhost:4173
 
       - name: Upload blob report
         if: always()

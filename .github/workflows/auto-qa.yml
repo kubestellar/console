@@ -107,8 +107,10 @@ jobs:
 
       - name: Determine daily focus
         id: focus
+        env:
+          FOCUS_OVERRIDE: ${{ inputs.focus_override }}
         run: |
-          OVERRIDE="${{ inputs.focus_override }}"
+          OVERRIDE="$FOCUS_OVERRIDE"
           if [ -n "$OVERRIDE" ] && [ "$OVERRIDE" != "none" ]; then
             echo "area=$OVERRIDE" >> "$GITHUB_OUTPUT"
             echo "Focus override: $OVERRIDE"
