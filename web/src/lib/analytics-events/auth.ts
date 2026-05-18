@@ -2,7 +2,7 @@ import { emitError, send, setAnalyticsUserProperties } from '../analytics-core'
 import { getDeploymentType } from '../analytics-session'
 import { isDemoMode } from '../demoMode'
 
-Auth // ── ───────────────────────────────────────────────────────
+// ── Auth ───────────────────────────────────────────────────────
 
 export function emitLogin(method: string) {
   send('login', { method })

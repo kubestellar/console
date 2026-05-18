@@ -1,7 +1,7 @@
 import { send } from '../analytics-core'
 import type { InstallCopySource } from '../analytics-types'
 
-Marketplace // ── ───────────
+// ── Marketplace ──────────────────────────────────────
 
 export function emitMarketplaceInstall(itemType: string, itemName: string) {
   send('ksc_marketplace_install', { item_type: itemType, item_name: itemName })
