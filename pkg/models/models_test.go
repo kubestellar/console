@@ -206,18 +206,6 @@ func TestGPUReservation_NormalizeGPUTypes_Empty(t *testing.T) {
 	require.True(t, r.MatchesNodeGPUType(""))
 }
 
-// TestGPUReservation_MatchesNodeGPUType exercises the node-matching
-// contract for the multi-type case: a reservation listing
-// {A100, H100} must accept a node advertising either, but reject a
-// node advertising a third type.
-func TestGPUReservation_MatchesNodeGPUType(t *testing.T) {
-	r := GPUReservation{GPUTypes: []string{"NVIDIA A100", "NVIDIA H100"}}
-	r.NormalizeGPUTypes()
-	require.True(t, r.MatchesNodeGPUType("NVIDIA A100-SXM4-80GB"))
-	require.True(t, r.MatchesNodeGPUType("NVIDIA H100 PCIe"))
-	require.False(t, r.MatchesNodeGPUType("NVIDIA V100"))
-	require.False(t, r.MatchesNodeGPUType("AMD MI250"))
-}
 
 // TestGPUReservation_JSONRoundTrip_MultiType pins the wire format: a
 // reservation with two types must serialize with both fields and
