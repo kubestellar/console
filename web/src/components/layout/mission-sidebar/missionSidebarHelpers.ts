@@ -1,4 +1,4 @@
-import type { Mission } from '../../../hooks/useMissions'
+import type { Mission, SaveMissionParams } from '../../../hooks/useMissions'
 import type { MissionExport } from '../../../lib/missions/types'
 import type { Resolution } from '../../../hooks/useResolutions'
 import { SAVED_TOAST_MS } from '../../../lib/constants/network'
@@ -64,20 +64,11 @@ export function handleRollback(
 
 export function handleImportMission(
   mission: MissionExport,
-  saveMission: (params: {
-    type: 'deploy' | 'troubleshoot' | 'upgrade' | 'custom'
-    title: string
-    description: string
-    missionClass?: string
-    cncfProject?: string
-    steps?: Array<{ title: string; description: string }>
-    tags?: string[]
-    initialPrompt?: string
-  }) => string,
+  saveMission: (params: SaveMissionParams) => string,
   openSidebar: () => void,
   setActiveMission: (id: string) => void,
   setShowSavedToast: (title: string) => void,
-  setToastCountdown: (count: number) => void,
+  setToastCountdown: (updater: number | ((prev: number) => number)) => void,
   toastIntervalRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>
 ) {
   const missionType = mission.missionClass === 'install' ? 'deploy' as const
