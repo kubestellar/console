@@ -28,11 +28,19 @@ export interface PreflightError {
   details?: Record<string, unknown>
 }
 
+export interface RequiredOperation {
+  verb: string
+  resource: string
+  namespace?: string
+}
+
 export interface PreflightResult {
   ok: boolean
   error?: PreflightError
   /** The cluster context that was checked */
   context?: string
+  /** Mission-specific operations that were denied during preflight */
+  deniedOps?: RequiredOperation[]
 }
 
 // ============================================================================
@@ -628,19 +636,90 @@ interface KubectlExecFn {
   }>
 }
 
+interface AllowedPermission {
+  resource: string
+  verbs: string[]
+}
+
+function parseBracketedItems(value: string): string[] {
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return []
+  }
+
+  return trimmed
+    .slice(1, -1)
+    .split(/\s+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function parseAllowedPermissions(output: string): AllowedPermission[] {
+  return output
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const columns = line.split(/\s{2,}/).map(column => column.trim()).filter(Boolean)
+      if (columns.length < 2) {
+        return null
+      }
+
+      const resource = columns[0]
+      const verbs = parseBracketedItems(columns[columns.length - 1])
+      if (!resource || verbs.length === 0) {
+        return null
+      }
+
+      return { resource, verbs }
+    })
+    .filter((entry): entry is AllowedPermission => entry !== null)
+}
+
+function buildDeniedOperationError(
+  deniedOps: RequiredOperation[],
+  allowedPermissions: AllowedPermission[],
+): PreflightError {
+  const firstDenied = deniedOps[0]
+  if (!firstDenied) {
+    return {
+      code: 'RBAC_DENIED',
+      message: 'Your Kubernetes user does not have permission to perform the required operations.',
+    }
+  }
+
+  const matchingPermission = allowedPermissions.find(permission => permission.resource === firstDenied.resource)
+
+  return {
+    code: 'RBAC_DENIED',
+    message: deniedOps.length === 1
+      ? `Your Kubernetes user does not have permission to ${firstDenied.verb} ${firstDenied.resource}${firstDenied.namespace ? ` in namespace "${firstDenied.namespace}"` : ''}.`
+      : 'Your Kubernetes user does not have permission to perform one or more required mission operations.',
+    details: {
+      verb: firstDenied.verb,
+      resource: firstDenied.resource,
+      namespace: firstDenied.namespace,
+      deniedOps,
+      allowedVerbsForResource: matchingPermission?.verbs,
+    },
+  }
+}
+
 /**
  * Run a preflight permission check against a cluster context.
  *
  * Executes `kubectl auth can-i --list` to verify the agent has access to the
- * cluster. If that fails, the error is classified into a structured error code
- * with remediation actions.
+ * cluster. When mission-specific operations are provided, each one is validated
+ * with `kubectl auth can-i <verb> <resource> [-n <namespace>]`.
  *
  * @param kubectlExec - Function to execute kubectl commands (typically kubectlProxy.exec)
  * @param context     - Optional cluster context to check
+ * @param requiredOps - Optional mission-specific operations that must be allowed
  */
 export async function runPreflightCheck(
   kubectlExec: KubectlExecFn,
   context?: string,
+  requiredOps?: RequiredOperation[],
 ): Promise<PreflightResult> {
   try {
     const args = ['auth', 'can-i', '--list', '--no-headers']
@@ -657,6 +736,48 @@ export async function runPreflightCheck(
         result.exitCode,
       )
       return { ok: false, error, context }
+    }
+
+    if (!requiredOps || requiredOps.length === 0) {
+      return { ok: true, context }
+    }
+
+    const allowedPermissions = parseAllowedPermissions(result.output || '')
+    const deniedOps: RequiredOperation[] = []
+
+    for (const requiredOp of requiredOps) {
+      const canIArgs = ['auth', 'can-i', requiredOp.verb, requiredOp.resource]
+      if (requiredOp.namespace) {
+        canIArgs.push('-n', requiredOp.namespace)
+      }
+
+      const permissionResult = await kubectlExec(canIArgs, {
+        context,
+        timeout: 10_000,
+        priority: true,
+      })
+
+      if (permissionResult.exitCode !== 0) {
+        const error = classifyKubectlError(
+          permissionResult.error || '',
+          permissionResult.output || '',
+          permissionResult.exitCode,
+        )
+        return { ok: false, error, context }
+      }
+
+      if ((permissionResult.output || '').trim().toLowerCase() !== 'yes') {
+        deniedOps.push(requiredOp)
+      }
+    }
+
+    if (deniedOps.length > 0) {
+      return {
+        ok: false,
+        error: buildDeniedOperationError(deniedOps, allowedPermissions),
+        context,
+        deniedOps,
+      }
     }
 
     return { ok: true, context }

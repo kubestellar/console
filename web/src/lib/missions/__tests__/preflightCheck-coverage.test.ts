@@ -454,6 +454,24 @@ describe('runPreflightCheck — catch branch coverage', () => {
     expect(result.ok).toBe(false)
     expect(result.context).toBe('my-context')
   })
+
+  it('returns structured error when a required operation check itself fails', async () => {
+    const exec = vi.fn()
+      .mockResolvedValueOnce({
+        output: 'pods  []  []  [get list]',
+        exitCode: 0,
+      })
+      .mockResolvedValueOnce({
+        output: '',
+        exitCode: 1,
+        error: 'Error from server (Forbidden): User "test" cannot delete resource "pods" in API group "" in the namespace "team-a"',
+      })
+
+    const result = await runPreflightCheck(exec, 'my-context', [{ verb: 'delete', resource: 'pods', namespace: 'team-a' }])
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('RBAC_DENIED')
+    expect(result.context).toBe('my-context')
+  })
 })
 
 // ============================================================================

@@ -180,6 +180,51 @@ describe('runPreflightCheck', () => {
     expect(result.context).toBe('prod')
   })
 
+  it('checks each required operation with kubectl auth can-i', async () => {
+    const exec = vi.fn()
+      .mockResolvedValueOnce({
+        output: 'deployments.apps  []  []  [get create]\npods  []  []  [get list]',
+        exitCode: 0,
+      })
+      .mockResolvedValueOnce({ output: 'yes', exitCode: 0 })
+      .mockResolvedValueOnce({ output: 'yes', exitCode: 0 })
+
+    const result = await runPreflightCheck(exec, 'prod', [
+      { verb: 'create', resource: 'deployments.apps' },
+      { verb: 'get', resource: 'pods', namespace: 'team-a' },
+    ])
+
+    expect(result).toEqual({ ok: true, context: 'prod' })
+    expect(exec).toHaveBeenNthCalledWith(
+      2,
+      ['auth', 'can-i', 'create', 'deployments.apps'],
+      { context: 'prod', timeout: 10_000, priority: true },
+    )
+    expect(exec).toHaveBeenNthCalledWith(
+      3,
+      ['auth', 'can-i', 'get', 'pods', '-n', 'team-a'],
+      { context: 'prod', timeout: 10_000, priority: true },
+    )
+  })
+
+  it('returns denied operations when a required permission is missing', async () => {
+    const exec = vi.fn()
+      .mockResolvedValueOnce({
+        output: 'pods  []  []  [get list]',
+        exitCode: 0,
+      })
+      .mockResolvedValueOnce({ output: 'no', exitCode: 0 })
+
+    const deniedOp = { verb: 'delete', resource: 'pods', namespace: 'team-a' }
+    const result = await runPreflightCheck(exec, 'prod', [deniedOp])
+
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('RBAC_DENIED')
+    expect(result.deniedOps).toEqual([deniedOp])
+    expect(result.error?.details?.deniedOps).toEqual([deniedOp])
+    expect(result.error?.message).toContain('delete pods')
+  })
+
   it('handles connection-level exceptions as CLUSTER_UNREACHABLE', async () => {
     const exec = vi.fn().mockRejectedValue(new Error('Not connected to local agent'))
 
