@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
+  Server,
   Plus,
-  Trash2,
   Check,
   X,
   Zap,
@@ -10,21 +10,18 @@ import {
   Tag,
   Filter } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { ClusterBadge } from '../ui/ClusterBadge'
 import {
   useClusterGroups,
   type ClusterGroup,
   type ClusterGroupKind,
-  type ClusterFilter } from '../../hooks/useClusterGroups'
+  type ClusterFilter,
+  type ClusterGroupQuery } from '../../hooks/useClusterGroups'
 import { useTranslation } from 'react-i18next'
-import { StatusBadge } from '../ui/StatusBadge'
 import {
   GROUP_COLORS,
   FILTER_FIELDS,
   TEXT_OPERATORS,
   NUM_OPERATORS,
-  getGroupColor,
-  formatFilter,
 } from './ClusterGroups.constants'
 
 // Create Group Form

@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { LazyEChart } from '../charts/LazyEChart'
-import type { MetricsSnapshot } from '../../types/predictions'
 import {
   CHART_HEIGHT_STANDARD,
   CHART_GRID_STROKE,
@@ -10,7 +9,7 @@ import {
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
-import { MS_PER_HOUR, MS_PER_MINUTE, MINUTES_PER_HOUR } from '../../lib/constants/time'
+import { MS_PER_HOUR } from '../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers

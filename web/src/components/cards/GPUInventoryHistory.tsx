@@ -19,12 +19,11 @@ import {
   MIN_TREND_SNAPSHOTS, RECENT_SNAPSHOT_WINDOW, TREND_CHANGE_THRESHOLD,
   HIGH_USAGE_PCT, MEDIUM_USAGE_PCT,
   GPU_INVENTORY_HISTORY_CHART_CONTAINER_STYLE,
-  PERCENT_MULTIPLIER, UNKNOWN_GPU_TYPE,
+  PERCENT_MULTIPLIER,
   DEFAULT_SNAPSHOT_INTERVAL_MIN, MIN_CHURN_SNAPSHOTS, TABLE_PAGE_SIZE, MAX_CHART_SERIES,
-  GPU_TYPE_COLORS, FREE_AREA_COLOR,
-  generateDemoData, generateDemoTableRows, resolveGPUType, getTypeColor,
+  generateDemoData, generateDemoTableRows, resolveGPUType,
   GPUInventoryChart,
-  type ViewMode, type ChartMode, type GPUHistoryDataPoint, type NodeTableRow, type ChurnMetrics,
+  type ViewMode, type ChartMode, type GPUHistoryDataPoint, type ChurnMetrics, type TranslateFn,
 } from './GPUInventoryHistory.parts'
 
 export function GPUInventoryHistory() {

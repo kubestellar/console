@@ -1,8 +1,7 @@
-import { useState, useMemo, useImperativeHandle, memo, type Ref } from 'react'
-import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
-import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
+import { useState, useMemo, useImperativeHandle, type Ref } from 'react'
+import { GitPullRequest, Star, Users, Package, Settings, X, Plus, Check } from 'lucide-react'
+import { MS_PER_DAY } from '../../lib/constants/time'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
-import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -16,13 +15,10 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
-import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
-// Types for GitHub activity data
-import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor, GitHubRepo, GitHubActivityConfig, ViewMode, SortByOption, GitHubItem, GitHubItemUnknown, GitHubActivityData } from './GitHubActivity.types'
+import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor, GitHubRepo, GitHubActivityConfig, ViewMode, SortByOption, GitHubItem, GitHubItemUnknown } from './GitHubActivity.types'
 import { PRItem, IssueItem, ReleaseItem, ContributorItem } from './GitHubActivityItems'
-import { isStale, getSavedRepos, saveRepos, getDemoGitHubData } from './GitHubActivity.utils'
-
+import { isStale, getSavedRepos, saveRepos, getDemoGitHubData, DEFAULT_REPO, githubFetchError } from './GitHubActivity.utils'
 
 const SORT_OPTIONS = [
   { value: 'date' as const, label: 'Date' },
@@ -36,8 +32,6 @@ const TIME_RANGES = [
   { value: '90d' as const, label: '90 Days' },
   { value: '1y' as const, label: '1 Year' },
 ]
-
-const GITHUB_ACTIVITY_MAX_AGE_MS = 30 * MS_PER_DAY
 
 interface GitHubActivityData {
   repoInfo: GitHubRepo | null

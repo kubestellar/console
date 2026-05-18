@@ -91,4 +91,4 @@ function getDemoGitHubData(repoName: string) {
 
 // Custom hook for GitHub data fetching via useCache (SWR, demo fallback, persistence)
 
-export { isStale, getSavedRepos, saveRepos, getDemoGitHubData }
+export { isStale, getSavedRepos, saveRepos, getDemoGitHubData, DEFAULT_REPO, githubFetchError }

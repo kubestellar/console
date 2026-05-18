@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import {
-  Server,
   Plus,
   Trash2,
   Edit2,
@@ -28,7 +27,7 @@ import { ConfirmDialog } from '../../lib/modals'
 import { useFederationAwareness, getProviderLabel } from '../../hooks/useFederation'
 import { useToast } from '../ui/Toast'
 import { formatTimeAgo } from '../../lib/formatters'
-import { GROUP_COLORS, MAX_INLINE_BADGES, getGroupColor, formatFilter } from './ClusterGroups.constants'
+import { MAX_INLINE_BADGES, getGroupColor, formatFilter } from './ClusterGroups.constants'
 import { CreateGroupForm, EditGroupForm } from './ClusterGroupsForms'
 
 interface ClusterGroupsProps {
@@ -377,16 +376,6 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
   )
 }
 
-// ============================================================================
-// Create Group Form
-// ============================================================================
-
-interface CreateGroupFormProps {
-  availableClusters: string[]
-  clusterHealthMap: Map<string, boolean | undefined>
-  onSave: (group: ClusterGroup) => void
-  onCancel: () => void
-}
 
 
 export default ClusterGroups
