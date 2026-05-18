@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
-  Bug, Sparkles, Loader2, ExternalLink,
+  Bug, Sparkles, ExternalLink,
   Eye, Pencil, Settings, Maximize2,
   AlertTriangle, Monitor, BookOpen, FileText, Lock,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import { buildGitHubIssueUrl } from '@/lib/githubUrls'
 import { Button } from '../ui/Button'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
@@ -27,9 +26,8 @@ import remarkBreaks from 'remark-breaks'
 import { REWARD_ACTIONS } from '../../types/rewards'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import type { CreateFeatureRequestInput } from '../../hooks/useFeatureRequests'
-import type { RequestType, TargetRepo, ScreenshotItem, SuccessState, TabType } from './FeatureRequestTypes'
+import type { RequestType, TargetRepo, ScreenshotItem, SuccessState } from './FeatureRequestTypes'
 import {
-  MIN_DRAFT_LENGTH,
   MIN_TITLE_LENGTH,
   MIN_DESCRIPTION_LENGTH,
   MIN_DESCRIPTION_WORDS,

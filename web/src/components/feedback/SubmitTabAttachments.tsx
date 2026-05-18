@@ -87,30 +87,6 @@ export function SubmitTabAttachments({
     }
   }
 
-  /** Handle paste events to capture screenshots pasted into content areas */
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-    const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'))
-    if (imageItems.length === 0) return
-    e.preventDefault()
-    imageItems.forEach(item => {
-      const file = item.getAsFile()
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-          setScreenshots(prev => [...prev, { file, preview: ev.target?.result as string, mediaType: 'image' }])
-        }
-        reader.onerror = (err) => {
-          console.error('[Attachment] Paste FileReader failed:', err)
-          showToast('Failed to read pasted image. Try attaching the file instead.', 'error')
-        }
-        reader.readAsDataURL(file)
-      }
-    })
-    showToast(`Screenshot${imageItems.length > 1 ? 's' : ''} added`, 'success')
-  }, [setScreenshots, showToast])
-
   return (
     <div>
       <label className="block text-xs font-medium text-muted-foreground mb-1.5">

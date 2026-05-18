@@ -23,6 +23,7 @@
  * animations, and named constants for all positions/sizes/colors.
  */
 import { useId } from 'react'
+import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../../CardDataContext'
 import { DEMO_TENANT_TOPOLOGY } from './demoData'

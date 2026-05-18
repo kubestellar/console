@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import type { ServerMetrics } from '../../../lib/llmd/mockData'
 import { getLoadColors, getHorseshoeColor } from './shared/colorUtils'
-import { Acronym } from './shared/PortalTooltip'
 
 export const NODE_POSITIONS = {
   client: { x: 10, y: 50 },

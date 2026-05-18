@@ -19,7 +19,6 @@ import { formatTimeAgo } from '../../../lib/formatters'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { ApiKeyPromptModal, useApiKeyCheck } from '../console-missions/shared'
-import { PLATFORM_COLORS } from './nightlyE2E.constants'
 
 export function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
   run: NightlyRun
