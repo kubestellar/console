@@ -256,7 +256,7 @@ describe('buildContainerdData', () => {
 
 describe('fetchContainerdStatus (fetcher)', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockAgentFetch.mockReset()
   })
 
   function captureFetcher(): () => Promise<unknown> {
