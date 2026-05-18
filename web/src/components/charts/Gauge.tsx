@@ -1,7 +1,9 @@
-/** Status colors — Tailwind equivalents used in SVG strokes */
-const GAUGE_SUCCESS_COLOR = '#22c55e'   // green-500   // ai-quality-ignore
-const GAUGE_WARNING_COLOR = '#eab308'   // yellow-500  // ai-quality-ignore
-const GAUGE_CRITICAL_COLOR = '#ef4444'  // red-500     // ai-quality-ignore
+import { GREEN_500_BRIGHT, YELLOW_500, RED_500 } from '../../lib/theme/chartColors'
+
+/** Status colors — from centralized chartColors constants */
+const GAUGE_SUCCESS_COLOR = GREEN_500_BRIGHT
+const GAUGE_WARNING_COLOR = YELLOW_500
+const GAUGE_CRITICAL_COLOR = RED_500
 
 interface GaugeProps {
   value: number

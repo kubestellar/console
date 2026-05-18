@@ -1,9 +1,10 @@
 import { cn } from '../../lib/cn'
+import { PURPLE_600, RED_500, YELLOW_500, GREEN_500_BRIGHT } from '../../lib/theme/chartColors'
 
-const DEFAULT_PROGRESS_COLOR = '#9333ea'
-const THRESHOLD_CRITICAL_COLOR = '#ef4444'
-const THRESHOLD_WARNING_COLOR = '#eab308'
-const THRESHOLD_OK_COLOR = '#22c55e'
+const DEFAULT_PROGRESS_COLOR = PURPLE_600
+const THRESHOLD_CRITICAL_COLOR = RED_500
+const THRESHOLD_WARNING_COLOR = YELLOW_500
+const THRESHOLD_OK_COLOR = GREEN_500_BRIGHT
 
 function resolveThresholdColor(
   percentage: number,

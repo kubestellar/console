@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import type { StellarNotification, StellarSolve, StellarWatch } from '../../types/stellar'
 import type { PendingAction } from './EventCard'
 import { getWatchAttemptSummary } from './lib/derive'
+import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
 
 const EVENT_TIMELINE_LIMIT = 10
 const STALE_THRESHOLD_MS = 10 * 60 * 1000
@@ -142,7 +143,7 @@ export function WatchDetailModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 720, maxHeight: '90vh',
-          background: 'var(--s-bg, #0a0e14)',
+          background: `var(--s-bg, ${STELLAR_DARK_BG})`,
           border: `1px solid var(--s-border)`,
           borderLeft: `4px solid ${color}`,
           borderRadius: 'var(--s-r)',

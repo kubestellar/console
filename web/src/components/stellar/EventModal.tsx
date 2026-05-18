@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import type { StellarAction, StellarNotification, StellarSolve } from '../../types/stellar'
 import type { PendingAction } from './EventCard'
 import { countSolveAttempts } from './lib/derive'
+import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
 
 const RELATED_EVENT_LIMIT = 6
 const RECURRING_RELATED_THRESHOLD = 2
@@ -302,7 +303,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 720, maxHeight: '90vh',
-          background: 'var(--s-bg, #0a0e14)',
+          background: `var(--s-bg, ${STELLAR_DARK_BG})`,
           border: `1px solid var(--s-border)`,
           borderLeft: `4px solid ${color}`,
           borderRadius: 'var(--s-r)',

@@ -7,6 +7,7 @@ import {
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TOOLTIP_TEXT_COLOR,
 } from '../../lib/constants'
+import { CLUSTER_CHART_PALETTE, TREEMAP_BORDER } from '../../lib/theme/chartColors'
 
 interface TreeMapItem {
   name: string
@@ -25,18 +26,7 @@ interface TreeMapProps {
   formatValue?: (value: number) => string
 }
 
-const DEFAULT_COLORS = [
-  '#9333ea',
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#06b6d4',
-  '#84cc16',
-  '#f97316',
-  '#ec4899',
-]
+const DEFAULT_COLORS = CLUSTER_CHART_PALETTE as unknown as string[]
 
 export function TreeMap({
   data,
@@ -50,7 +40,7 @@ export function TreeMap({
     const coloredData = data.map((item, index) => ({
       name: item.name,
       value: item.value,
-      itemStyle: { color: item.color || colorScale[index % colorScale.length], borderColor: '#1a1a2e', borderWidth: 2, borderRadius: 4 },
+      itemStyle: { color: item.color || colorScale[index % colorScale.length], borderColor: TREEMAP_BORDER, borderWidth: 2, borderRadius: 4 },
     }))
 
     return {
@@ -82,9 +72,9 @@ export function TreeMap({
           },
           minMargin: 4,
         },
-        itemStyle: { borderColor: '#1a1a2e', borderWidth: 2, gapWidth: 2 },
+        itemStyle: { borderColor: TREEMAP_BORDER, borderWidth: 2, gapWidth: 2 },
         levels: [{
-          itemStyle: { borderColor: '#1a1a2e', borderWidth: 2, gapWidth: 2 },
+          itemStyle: { borderColor: TREEMAP_BORDER, borderWidth: 2, gapWidth: 2 },
         }],
       }],
     }
@@ -128,7 +118,7 @@ export function NestedTreeMap({
       return items.map((item, index) => ({
         name: item.name,
         value: item.value,
-        itemStyle: { color: item.color || colorScale[(depth * 3 + index) % colorScale.length], borderColor: '#1a1a2e', borderWidth: 2 },
+        itemStyle: { color: item.color || colorScale[(depth * 3 + index) % colorScale.length], borderColor: TREEMAP_BORDER, borderWidth: 2 },
         ...(item.children ? { children: assignColors(item.children, depth + 1) } : {}),
       }))
     }
@@ -163,7 +153,7 @@ export function NestedTreeMap({
             value: { color: CHART_TEXT_WHITE, fontSize: CHART_AXIS_FONT_SIZE, opacity: 0.7, lineHeight: 14 },
           },
         },
-        itemStyle: { borderColor: '#1a1a2e', borderWidth: 2, gapWidth: 2 },
+        itemStyle: { borderColor: TREEMAP_BORDER, borderWidth: 2, gapWidth: 2 },
       }],
     }
   }, [data, colorScale, formatValue])

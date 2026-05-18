@@ -8,6 +8,7 @@ import { localAgentChat } from '../../lib/localAgentChat'
 import { ProactiveNudge } from './ProactiveNudge'
 import { CatchUpBanner } from './CatchUpBanner'
 import type { CatchUpState } from '../../hooks/useStellar'
+import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
 import type { PendingAction } from './EventCard'
 
 interface Msg {
@@ -343,7 +344,7 @@ export function ChatPanel({
             disabled={!input.trim() || busy}
             style={{
               background: input.trim() && !busy ? 'var(--s-brand)' : 'var(--s-surface)',
-              color: input.trim() && !busy ? '#0a0e14' : 'var(--s-text-dim)',
+              color: input.trim() && !busy ? STELLAR_DARK_BG : 'var(--s-text-dim)',
               border: 'none',
               borderRadius: 'var(--s-rs)',
               padding: '4px 10px',

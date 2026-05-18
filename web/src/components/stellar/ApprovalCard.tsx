@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { StellarAction } from '../../types/stellar'
+import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
 
 export function ApprovalCard({
   action,
@@ -26,7 +27,7 @@ export function ApprovalCard({
             onApprove(action.confirmToken).catch((e) => setError(e instanceof Error ? e.message : 'approval failed')).finally(() => setBusy(false))
           }}
           disabled={busy}
-          style={{ background: 'var(--s-success)', color: '#0a0e14', border: 'none', borderRadius: 'var(--s-rs)', padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          style={{ background: 'var(--s-success)', color: STELLAR_DARK_BG, border: 'none', borderRadius: 'var(--s-rs)', padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
         >
           {busy ? '...' : 'Approve'}
         </button>

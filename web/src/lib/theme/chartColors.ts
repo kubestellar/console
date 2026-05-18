@@ -79,6 +79,16 @@ export const EMERALD_300 = '#6ee7b7'
 /** Tailwind sky-500 */
 export const SKY_500 = '#0ea5e9'
 
+// ── Stellar UI dark tokens ───────────────────────────────────────────────────
+
+/** Stellar dark background fallback (#0a0e14) — used as text-on-brand and modal BG */
+export const STELLAR_DARK_BG = '#0a0e14'
+
+// ── Chart layout tokens ──────────────────────────────────────────────────────
+
+/** TreeMap cell border / gap color — dark navy */
+export const TREEMAP_BORDER = '#1a1a2e'
+
 // ── Utility colors ───────────────────────────────────────────────────────────
 
 /** Pure white */
