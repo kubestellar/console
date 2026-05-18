@@ -19,23 +19,34 @@ const { mockAgentFetch, mockUseCache } = vi.hoisted(() => ({
     refetch: vi.fn(),
   })),
 }))
-vi.mock('../mcp/shared', () => ({
-    createCachedHook: vi.fn(), agentFetch: mockAgentFetch }))
+
+const mockCreateCachedHook = vi.hoisted(() => vi.fn())
+
+vi.mock('../mcp/shared', () => ({ agentFetch: mockAgentFetch }))
 
 vi.mock('../../lib/constants/network', () => ({
-    createCachedHook: vi.fn(),
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
 }))
 
 vi.mock('../useDemoMode', () => ({
-    createCachedHook: vi.fn(),
   useDemoMode: () => ({ isDemoMode: false }),
   isDemoModeForced: false,
 }))
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(), useCache: (...args: unknown[]) => mockUseCache(...args) }))
+  createCachedHook: (config: Record<string, unknown>) => {
+    mockCreateCachedHook(config)
+    return () => {
+      const result = mockUseCache(config)
+      return {
+        ...result,
+        isDemoFallback: result.isDemoFallback && !result.isLoading,
+      }
+    }
+  },
+  useCache: (...args: unknown[]) => mockUseCache(...args),
+}))
 
 import { __testables, useCachedContainerd } from '../useCachedContainerd'
 
@@ -250,7 +261,7 @@ describe('fetchContainerdStatus (fetcher)', () => {
 
   function captureFetcher(): () => Promise<unknown> {
     renderHook(() => useCachedContainerd())
-    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    const config = mockCreateCachedHook.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
     return config.fetcher
   }
 

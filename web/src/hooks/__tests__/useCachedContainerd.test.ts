@@ -5,18 +5,27 @@ import { renderHook } from '@testing-library/react'
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockUseCache, mockUseDemoMode, mockAgentFetch } = vi.hoisted(() => ({
+const { mockUseCache, mockAgentFetch } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
-  mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
   mockAgentFetch: vi.fn(),
 }))
 
 vi.mock('../../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
+  createCachedHook: (config: Record<string, unknown>) => {
+    // Return a hook that calls mockUseCache with the config then applies suppression
+    return () => {
+      const result = mockUseCache(config)
+      return {
+        ...result,
+        isDemoFallback: result.isDemoFallback && !result.isLoading,
+      }
+    }
+  },
 }))
 
 vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => mockUseDemoMode(),
+  useDemoMode: () => ({ isDemoMode: false }),
 }))
 
 vi.mock('../mcp/shared', () => ({
@@ -61,7 +70,6 @@ function defaultCacheResult(data: unknown = null) {
 beforeEach(() => {
   vi.clearAllMocks()
   mockUseCache.mockReturnValue(defaultCacheResult())
-  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
 })
 
 // ---------------------------------------------------------------------------
@@ -103,22 +111,25 @@ describe('useCachedContainerd hook', () => {
     expect(result.current.isDemoData).toBe(false)
   })
 
-  it('returns demo data in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+  it('returns demo data when cache reports isDemoFallback', () => {
+    mockUseCache.mockReturnValue({
+      ...defaultCacheResult(),
+      isDemoFallback: true,
+      isLoading: false,
+    })
     const { result } = renderHook(() => useCachedContainerd())
     expect(result.current.isDemoData).toBe(true)
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isFailed).toBe(false)
   })
 
-  it('isRefreshing is false in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true })
+  it('isRefreshing passes through from cache result', () => {
     mockUseCache.mockReturnValue({
       ...defaultCacheResult(),
       isRefreshing: true,
     })
     const { result } = renderHook(() => useCachedContainerd())
-    expect(result.current.isRefreshing).toBe(false)
+    expect(result.current.isRefreshing).toBe(true)
   })
 })
 
