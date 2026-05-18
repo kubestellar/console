@@ -579,7 +579,7 @@ export const QuantumControlPanel: React.FC = () => {
               disabled={control.executing}
               className={`relative w-12 h-7 rounded-full transition-colors ${control.loop_mode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'} disabled:opacity-50`}
             >
-              <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${control.loop_mode ? 'translate-x-5' : ''}`} />
+              <div className={`absolute top-1 left-1 w-5 h-5 bg-background rounded-full transition-transform ${control.loop_mode ? 'translate-x-5' : ''}`} />
             </button>
           </div>
 

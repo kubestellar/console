@@ -120,7 +120,7 @@ export function PVCDrillDown({ data }: Props) {
     if (s === 'bound') return 'bg-green-500/20 text-green-400'
     if (s === 'pending') return 'bg-yellow-500/20 text-yellow-400'
     if (s === 'lost') return 'bg-red-500/20 text-red-400'
-    return 'bg-gray-500/20 text-gray-400'
+    return 'bg-muted text-muted-foreground'
   })()
 
   const tabs: { id: TabType; label: string; icon: typeof Info }[] = [
