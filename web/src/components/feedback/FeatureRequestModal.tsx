@@ -34,6 +34,7 @@ const DATA_URI_PREFIX = 'data:'
 const DATA_URI_BASE64_MARKER = ';base64'
 const DEFAULT_DRAFT_ATTACHMENT_MIME_TYPE = 'image/png'
 const DEFAULT_DRAFT_ATTACHMENT_EXTENSION = 'png'
+const SUBMIT_TIMEOUT_MS = 10_000
 
 function getDraftAttachmentMediaType(mimeType: string): ScreenshotItem['mediaType'] {
   return mimeType.startsWith('video/') ? 'video' : 'image'
@@ -145,11 +146,11 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     if (isDemoModeForced) return
 
     setFeedbackTokenMissing(false)
-    const controller = new AbortController()
 
     fetch(`${BACKEND_DEFAULT_URL}/api/github/token/status`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: controller.signal })
+      signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+    })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
@@ -161,10 +162,6 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           // Silently ignore — backend may not be reachable (e.g. demo mode)
         }
       })
-
-    return () => {
-      controller.abort()
-    }
   }, [isOpen, token])
 
   const handleRefreshGitHub = async () => {
