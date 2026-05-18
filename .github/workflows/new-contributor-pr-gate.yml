@@ -23,6 +23,12 @@ jobs:
         run: |
           MIN_ACCOUNT_AGE_DAYS=30
 
+          # Validate author login against GitHub username constraints
+          if [[ ! "$AUTHOR" =~ ^[a-zA-Z0-9-]+$ ]]; then
+            echo "Invalid author login format" >&2
+            exit 1
+          fi
+
           # Skip bots and known automation
           if [[ "$AUTHOR" == *"[bot]"* ]] || [[ "$AUTHOR" == "dependabot"* ]]; then
             echo "Bot account — skipping gate."
