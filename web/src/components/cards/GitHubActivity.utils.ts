@@ -1,5 +1,7 @@
 import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
-import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor, GitHubActivityData } from './GitHubActivity.types'
+import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor, GitHubRepo } from './GitHubActivity.types'
+
+const GITHUB_ACTIVITY_MAX_AGE_MS = 14 * MS_PER_DAY
 
 function isStale(date: string): boolean {
   const ageMs = Date.now() - new Date(date).getTime()
@@ -91,4 +93,4 @@ function getDemoGitHubData(repoName: string) {
 
 // Custom hook for GitHub data fetching via useCache (SWR, demo fallback, persistence)
 
-export { isStale, getSavedRepos, saveRepos, getDemoGitHubData, DEFAULT_REPO, githubFetchError }
+export { isStale, getSavedRepos, saveRepos, getDemoGitHubData, DEFAULT_REPO, CURRENT_REPO_STORAGE_KEY, githubFetchError }

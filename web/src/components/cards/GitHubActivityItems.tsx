@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge } from 'lucide-react'
+import { GitPullRequest, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge } from 'lucide-react'
 import { formatTimeAgo } from '../../lib/formatters'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'

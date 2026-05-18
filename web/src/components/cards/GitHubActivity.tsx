@@ -1,5 +1,5 @@
 import { useState, useMemo, useImperativeHandle, type Ref } from 'react'
-import { GitPullRequest, Star, Users, Package, Settings, X, Plus, Check } from 'lucide-react'
+import { GitPullRequest, GitBranch, Star, Users, Package, Settings, X, Plus, Check, AlertCircle } from 'lucide-react'
 import { MS_PER_DAY } from '../../lib/constants/time'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { Button } from '../ui/Button'
@@ -18,7 +18,7 @@ import { RepoSubtitle } from './pipelines/RepoSubtitle'
 
 import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor, GitHubRepo, GitHubActivityConfig, ViewMode, SortByOption, GitHubItem, GitHubItemUnknown } from './GitHubActivity.types'
 import { PRItem, IssueItem, ReleaseItem, ContributorItem } from './GitHubActivityItems'
-import { isStale, getSavedRepos, saveRepos, getDemoGitHubData, DEFAULT_REPO, githubFetchError } from './GitHubActivity.utils'
+import { isStale, getSavedRepos, saveRepos, getDemoGitHubData, DEFAULT_REPO, CURRENT_REPO_STORAGE_KEY, githubFetchError } from './GitHubActivity.utils'
 
 const SORT_OPTIONS = [
   { value: 'date' as const, label: 'Date' },
