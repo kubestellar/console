@@ -81,7 +81,6 @@ export function Layout({ children: _children }: LayoutProps) {
   )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] = useState(false)
-  const [mobileBannerStackExpanded, setMobileBannerStackExpanded] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
   const [updateToastDismissed, setUpdateToastDismissed] = useState(false)
   const isDashboardRoute =
