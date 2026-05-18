@@ -19,9 +19,9 @@ interface MissionChatMessagesProps {
   isFullScreen: boolean
   isSavedPreRun: boolean
   messageAreaProps?: Parameters<typeof MissionChatSavedPreRun>[0]
-  messagesContainerRef: React.RefObject<HTMLDivElement>
-  messagesContentRef: React.RefObject<HTMLDivElement>
-  messagesEndRef: React.RefObject<HTMLDivElement>
+  messagesContainerRef: React.RefObject<HTMLDivElement | null>
+  messagesContentRef: React.RefObject<HTMLDivElement | null>
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
   mission: Mission
   progressValue: number | null
   shouldAutoScroll: boolean

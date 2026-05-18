@@ -4,7 +4,7 @@ import type { Mission } from '../../../../hooks/useMissions'
 import { cn } from '../../../../lib/cn'
 
 interface MissionChatSavedPreRunProps {
-  descriptionRef: React.RefObject<HTMLTextAreaElement>
+  descriptionRef: React.RefObject<HTMLTextAreaElement | null>
   editDescription: string
   editSteps: Array<{ title: string; description: string }>
   isEditingMission: boolean

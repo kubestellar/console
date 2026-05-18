@@ -9,7 +9,7 @@ interface MissionChatInputProps {
   compactActionButtonClass: string
   input: string
   inputError: string | null
-  inputRef: React.RefObject<HTMLInputElement>
+  inputRef: React.RefObject<HTMLInputElement | null>
   mission: Mission
   statusLabel: string
   statusColor: string

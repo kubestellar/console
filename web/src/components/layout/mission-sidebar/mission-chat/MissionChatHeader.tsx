@@ -15,7 +15,7 @@ interface MissionChatHeaderProps {
   mission: Mission
   relatedResolutionCount: number
   showHeaderStatus: boolean
-  titleInputRef: React.RefObject<HTMLInputElement>
+  titleInputRef: React.RefObject<HTMLInputElement | null>
   onCancelEditTitle: () => void
   onCancelMission: () => void
   onDeleteMission: () => void
