@@ -328,11 +328,23 @@ export function DrillDownModal() {
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-modal p-2 md:p-4"
       onClick={close}
+      onKeyDown={e => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          close()
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={t('drilldown.close')}
     >
       <div
         data-testid="drilldown-modal"
         className="glass w-full md:w-[90vw] max-w-[1200px] h-[95vh] md:h-[80vh] rounded-xl flex flex-col overflow-hidden"
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={currentView.title}
       >
         {/* Header with breadcrumbs */}
         <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
