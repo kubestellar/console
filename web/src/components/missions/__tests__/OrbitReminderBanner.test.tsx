@@ -171,7 +171,7 @@ describe('OrbitReminderBanner', () => {
     expect(screen.getByText('orbit.dueIn:time=less than 1 hour')).toBeInTheDocument()
   })
 
-  it('shows due-soon reminders in hours when due later the same day', () => {
+  it('shows due-soon reminders as less than one hour inside the grace window', () => {
     render(
       <OrbitReminderBanner
         missions={[createMission({ id: 'hours-away', title: 'Hours away', lastRunHoursAgo: 166 })]}
@@ -179,7 +179,7 @@ describe('OrbitReminderBanner', () => {
       />,
     )
 
-    expect(screen.getByText('orbit.dueIn:time=2h')).toBeInTheDocument()
+    expect(screen.getByText('orbit.dueIn:time=less than 1 hour')).toBeInTheDocument()
   })
 
   it('falls back to the weekly cadence when a mission has an unknown cadence', () => {

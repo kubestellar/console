@@ -99,6 +99,12 @@ function renderComponent(overrides?: Partial<ComponentProps<typeof OrbitSetupOff
   return { ...view, props, onCreateOrbit, onDashboardCreated, onSkip }
 }
 
+function getTemplateToggle(title: string) {
+  const toggleLabel = screen.getByText(title).closest('label')
+  expect(toggleLabel).not.toBeNull()
+  return toggleLabel as HTMLLabelElement
+}
+
 describe('OrbitSetupOffer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -159,8 +165,8 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     renderComponent()
 
-    await user.click(screen.getByLabelText('Health Check'))
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Health Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
 
     expect(screen.getByRole('button', { name: 'orbit.setupOrbit' })).toBeDisabled()
   })
@@ -169,9 +175,9 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     renderComponent()
 
-    await user.click(screen.getByLabelText('Health Check'))
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
-    await user.click(screen.getByLabelText('Health Check'))
+    await user.click(getTemplateToggle('Health Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Health Check'))
 
     expect(screen.getByRole('button', { name: 'orbit.setupOrbit' })).toBeEnabled()
   })
@@ -222,7 +228,7 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     const { onCreateOrbit } = renderComponent()
 
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
     await user.click(screen.getByRole('button', { name: 'orbit.setupOrbit' }))
 
     await waitFor(() => expect(onCreateOrbit).toHaveBeenCalledTimes(1))
@@ -241,7 +247,7 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     renderComponent()
 
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
     await user.click(screen.getByRole('button', { name: 'orbit.setupOrbit' }))
 
     await waitFor(() => expect(mockEmitOrbitMissionCreated).toHaveBeenCalledWith('health-check', 'weekly'))
@@ -264,7 +270,7 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     const { onCreateOrbit } = renderComponent()
 
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
     await user.click(screen.getByLabelText('orbit.autoRunDescription'))
     await user.click(screen.getByRole('button', { name: 'orbit.setupOrbit' }))
 
@@ -300,7 +306,7 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     renderComponent()
 
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
     await user.click(screen.getByLabelText('orbit.groundControlDescription'))
     await user.click(screen.getByRole('button', { name: 'orbit.setupOrbit' }))
 
@@ -331,7 +337,7 @@ describe('OrbitSetupOffer', () => {
     const user = userEvent.setup()
     const { onDashboardCreated } = renderComponent({ projects: [] })
 
-    await user.click(screen.getByLabelText('Certificate Rotation Check'))
+    await user.click(getTemplateToggle('Certificate Rotation Check'))
     await user.click(screen.getByRole('button', { name: 'orbit.setupOrbit' }))
 
     await waitFor(() => expect(screen.getByText(/1 orbit configured \(weekly\)\./)).toBeInTheDocument())
