@@ -1,21 +1,19 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
-  Bug, Sparkles, Loader2, ExternalLink, Bell,
-  Check, Eye, Pencil, Settings, Maximize2,
-  ImagePlus, Trash2, Copy, AlertTriangle, Monitor, BookOpen, FileText, Save, Lock,
-  Film,
+  Bug, Sparkles, Loader2, ExternalLink,
+  Eye, Pencil, Settings, Maximize2,
+  AlertTriangle, Monitor, BookOpen, FileText, Lock,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { buildGitHubIssueUrl } from '@/lib/githubUrls'
 import { Button } from '../ui/Button'
 import { isDemoModeForced } from '../../lib/demoMode'
-import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { api } from '../../lib/api'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS } from '../../lib/constants/github-token'
 import { compressScreenshot } from '../../lib/imageCompression'
-import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
@@ -36,176 +34,25 @@ import {
   MIN_DESCRIPTION_LENGTH,
   MIN_DESCRIPTION_WORDS,
   MAX_TITLE_LENGTH,
-  MAX_VIDEO_SIZE_BYTES,
   EMPTY_FILE_SIZE_BYTES,
-  ACCEPTED_MEDIA_TYPES,
-  ACCEPTED_VIDEO_MIME_TYPES,
-  ATTACHMENT_HELP_TEXT,
   isFeedbackRequestBodyTooLarge,
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
 
-// ── Success View (shown after successful submission) ──
+import {
+  ALL_CLUSTERS_CONTEXT_LABEL,
+  buildDirectIssueUrl,
+  DESCRIPTION_EDITOR_HEIGHT_CLASS,
+  DESCRIPTION_EXAMPLE_MAX_HEIGHT_CLASS,
+  getSubmitErrorDetails,
+  MAX_AGENT_CONNECTION_LOG_LINES,
+  MIN_PARENT_ISSUE_NUMBER,
+  preventModalScrollChaining,
+} from './submitTab.utils'
 
-interface SuccessViewProps {
-  success: SuccessState
-  screenshots: ScreenshotItem[]
-  onViewUpdates: () => void
-}
+import { SubmitTabAttachments } from './SubmitTabAttachments'
 
-export function SuccessView({ success, screenshots, onViewUpdates }: SuccessViewProps) {
-  const { t } = useTranslation()
-  return (
-    <div className="p-6 text-center flex-1 overflow-y-auto min-h-0">
-      <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
-        <Sparkles className="w-6 h-6 text-green-400" />
-      </div>
-      <h3 className="text-lg font-medium text-foreground mb-2">
-        {t('feedback.requestSubmitted')}
-      </h3>
-      <p className="text-sm text-muted-foreground mb-2">
-        Your request has been submitted for review.
-      </p>
-      <p className="text-xs text-muted-foreground mb-4">
-        Once a maintainer accepts triage, check the Activity tab for updates — our AI will start working on a fix.
-      </p>
-      <div className="flex items-center justify-center gap-3">
-        {success.issueUrl && (
-          <a
-            href={sanitizeUrl(success.issueUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
-          >
-            View on GitHub
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
-        <button
-          onClick={onViewUpdates}
-          className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
-        >
-          <Bell className="w-3 h-3" />
-          View Updates
-        </button>
-      </div>
-
-      {/* Attachment status */}
-      {screenshots.length > 0 && (success.screenshotsUploaded ?? 0) > 0 && (
-        <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-          <p className="text-xs text-green-400 font-medium">
-            {(success.screenshotsUploaded ?? 0) === 1
-              ? 'Attachment uploaded to the issue successfully.'
-              : `${success.screenshotsUploaded} attachments uploaded to the issue successfully.`}
-          </p>
-        </div>
-      )}
-      {screenshots.length > 0 && (success.screenshotsFailed ?? 0) > 0 && (
-        <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <p className="text-xs text-yellow-400 font-medium">
-            {success.screenshotsFailed === 1
-              ? 'Attachment could not be uploaded — unsupported format or too large.'
-              : `${success.screenshotsFailed} attachments could not be uploaded — unsupported format or too large.`}
-          </p>
-        </div>
-      )}
-      {success.warning && (
-        <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <p className="text-xs text-yellow-400 font-medium">{success.warning}</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-const MIN_PARENT_ISSUE_NUMBER = 1
-const MAX_AGENT_CONNECTION_LOG_LINES = 10
-const ALL_CLUSTERS_CONTEXT_LABEL = 'all clusters'
-const DESCRIPTION_EDITOR_HEIGHT_CLASS = 'h-56'
-const DESCRIPTION_EXAMPLE_MAX_HEIGHT_CLASS = 'max-h-56'
-const SCROLL_EDGE_TOLERANCE_PX = 1
-
-type SubmitErrorAction = 'reauthenticate' | 'setup' | null
-
-interface SubmitErrorDetails {
-  message: string
-  guidance: string
-  action: SubmitErrorAction
-}
-
-function splitDraftForIssue(description: string): { title: string; body: string } {
-  const trimmed = description.trim()
-  if (!trimmed) return { title: '', body: '' }
-
-  const lines = trimmed.split('\n')
-  const title = lines[0].trim().substring(0, MAX_TITLE_LENGTH)
-  const body = lines.length > 1 ? lines.slice(1).join('\n').trim() : ''
-  return { title, body }
-}
-
-function buildDirectIssueUrl(targetRepo: TargetRepo, description: string): string {
-  const repoName = targetRepo === 'docs' ? 'docs' : 'console'
-  const { title, body } = splitDraftForIssue(description)
-
-  return buildGitHubIssueUrl({
-    owner: 'kubestellar',
-    repo: repoName,
-    title,
-    body,
-  })
-}
-
-function getSubmitErrorDetails(
-  error: string,
-  canPerformActions: boolean,
-  t: (key: string, defaultValue?: string) => string,
-): SubmitErrorDetails {
-  const normalized = error.toLowerCase()
-  const needsGitHubReauth =
-    normalized.includes('resource not accessible by personal access token') ||
-    normalized.includes('current token does not have permission to open issues in this repository') ||
-    (normalized.includes('github api returned 403') && normalized.includes('create github issue'))
-
-  if (needsGitHubReauth) {
-    return {
-      message: t(
-        'feedback.submitPermissionDenied',
-        'GitHub could not create the issue because the current token does not have permission to open issues in this repository. Re-authenticate with GitHub OAuth and try again.',
-      ),
-      guidance: canPerformActions
-        ? t(
-          'feedback.submitPermissionDeniedGuidance',
-          'Reconnect your GitHub account to refresh the OAuth session, or open the issue directly on GitHub if you need to file it right now.',
-        )
-        : t('feedback.submitFailedGuidance'),
-      action: canPerformActions ? 'reauthenticate' : 'setup',
-    }
-  }
-
-  return {
-    message: error,
-    guidance: t('feedback.submitFailedGuidance'),
-    action: !canPerformActions ? 'setup' : null,
-  }
-}
-
-function preventModalScrollChaining(event: React.WheelEvent<HTMLElement>) {
-  const element = event.currentTarget
-  const { scrollTop, scrollHeight, clientHeight } = element
-
-  if (scrollHeight <= clientHeight) {
-    return
-  }
-
-  const isScrollingDown = event.deltaY > 0
-  const isAtTop = scrollTop <= SCROLL_EDGE_TOLERANCE_PX
-  const isAtBottom = scrollTop + clientHeight >= scrollHeight - SCROLL_EDGE_TOLERANCE_PX
-  const canScrollWithinElement = isScrollingDown ? !isAtBottom : !isAtTop
-
-  if (canScrollWithinElement) {
-    event.stopPropagation()
-  }
-}
+export { SuccessView } from './SubmitTabSuccessView'
 
 // ── Submit Form ──
 
@@ -289,16 +136,13 @@ export function SubmitForm({
     ? t('feedback.descriptionPlaceholderBug', 'Describe the bug in your own words. See the full example below.')
     : t('feedback.descriptionPlaceholderFeature', 'Describe the feature in your own words. See the full example below.')
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
-  const [isDragOver, setIsDragOver] = useState(false)
   const requestBodyTooLargeMessage = t(
     'feedback.attachmentsTooLarge',
     'Attachments are too large to submit. Keep each video at or below 10 MB and reduce the total attachment payload before retrying.',
   )
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [parentIssueNumber, setParentIssueNumber] = useState('')
   const [canLinkParentIssue, setCanLinkParentIssue] = useState(false)
   const [isCheckingParentIssueAccess, setIsCheckingParentIssueAccess] = useState(false)
-  const screenshotInputRef = useRef<HTMLInputElement>(null)
 
   // Close fullscreen preview on Escape key
   const handleFullscreenKeyDown = useCallback((e: KeyboardEvent) => {
@@ -381,63 +225,7 @@ export function SubmitForm({
     showToast(`Screenshot${imageItems.length > 1 ? 's' : ''} added`, 'success')
   }
 
-  const handleScreenshotFiles = (files: FileList | null) => {
-    if (!files) return
-    const mediaFiles = Array.from(files).filter(f =>
-      f.type.startsWith('image/') || ACCEPTED_VIDEO_MIME_TYPES.has(f.type)
-    )
-    mediaFiles.forEach(file => {
-      const isVideo = ACCEPTED_VIDEO_MIME_TYPES.has(file.type)
-      if (isVideo && file.size > MAX_VIDEO_SIZE_BYTES) {
-        showToast(`Video "${file.name}" exceeds 10 MB limit. Please use a shorter or lower-resolution recording.`, 'error')
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        setScreenshots(prev => [...prev, {
-          file,
-          preview: ev.target?.result as string,
-          mediaType: isVideo ? 'video' : 'image',
-        }])
-      }
-      reader.onerror = (err) => {
-        console.error(`[Attachment] FileReader failed for ${file.name}:`, err)
-        showToast(`Failed to read file "${file.name}". Try a different file.`, 'error')
-      }
-      reader.readAsDataURL(file)
-    })
-  }
 
-  const handleScreenshotDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(true)
-  }
-  const handleScreenshotDragLeave = () => setIsDragOver(false)
-  const handleScreenshotDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    handleScreenshotFiles(e.dataTransfer.files)
-  }
-
-  const removeScreenshot = (index: number) => {
-    setScreenshots(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const copyScreenshotToClipboard = async (preview: string, index: number) => {
-    try {
-      const res = await fetch(preview, { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      const blob = await res.blob()
-      const ok = await copyBlobToClipboard(blob)
-      if (!ok) {
-        showToast('Could not copy image to clipboard (browser may not support image copy)', 'error')
-        return
-      }
-      setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_TIMEOUT_MS)
-    } catch {
-      showToast('Could not copy image to clipboard', 'error')
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -913,103 +701,12 @@ export function SubmitForm({
         </div>
 
         {/* Attachment Upload (images & videos) */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-            Attachments <span className="font-normal">(optional — images &amp; videos)</span>
-          </label>
-          <div
-            onDragOver={inputsDisabled ? undefined : handleScreenshotDragOver}
-            onDragLeave={inputsDisabled ? undefined : handleScreenshotDragLeave}
-            onDrop={inputsDisabled ? undefined : handleScreenshotDrop}
-            onClick={inputsDisabled ? undefined : () => screenshotInputRef.current?.click()}
-            aria-disabled={inputsDisabled}
-            className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-dashed transition-colors ${
-              inputsDisabled
-                ? 'cursor-not-allowed opacity-60 border-border'
-                : `cursor-pointer ${isDragOver
-                  ? 'border-purple-400 bg-purple-500/10'
-                  : 'border-border hover:border-muted-foreground'}`
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <ImagePlus className="w-5 h-5 text-muted-foreground" />
-              <Film className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <span className="text-xs text-muted-foreground text-center">Drop images or videos here, or click to browse</span>
-            <span className="text-2xs text-muted-foreground/70">{ATTACHMENT_HELP_TEXT}</span>
-            <input
-              ref={screenshotInputRef}
-              type="file"
-              accept={ACCEPTED_MEDIA_TYPES}
-              multiple
-              disabled={inputsDisabled}
-              onChange={e => handleScreenshotFiles(e.target.files)}
-              className="hidden"
-            />
-          </div>
-          {screenshots.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {screenshots.map((s, i) => (
-                <div key={i} className="relative group w-20 h-20 shrink-0">
-                  {s.mediaType === 'video' ? (
-                    <div className="w-20 h-20 rounded-lg border border-border bg-black flex items-center justify-center overflow-hidden">
-                      <video
-                        src={s.preview}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                      />
-                      <Film className="absolute w-5 h-5 text-white/80 drop-shadow-md" />
-                    </div>
-                  ) : (
-                    <img
-                      src={s.preview}
-                      alt={`Attachment ${i + 1}`}
-                      className="w-20 h-20 object-cover rounded-lg border border-border"
-                      loading="lazy"
-                      width={80}
-                      height={80}
-                    />
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); setPreviewImageSrc(s.preview) }}
-                      className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
-                      title={s.mediaType === 'video' ? 'Preview video' : 'Preview image'}
-                      aria-label={s.mediaType === 'video' ? 'Preview video' : 'Preview image'}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-                    {s.mediaType !== 'video' && (
-                      <button
-                        type="button"
-                        onClick={e => { e.stopPropagation(); void copyScreenshotToClipboard(s.preview, i) }}
-                        className="p-1.5 rounded-md bg-secondary/80 text-foreground hover:bg-secondary transition-colors"
-                        title="Copy to clipboard"
-                      >
-                        {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={e => { e.stopPropagation(); removeScreenshot(i) }}
-                      className="p-1.5 rounded-md bg-secondary/80 text-red-400 hover:bg-red-500/20 transition-colors"
-                      title="Remove attachment"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {screenshots.length > 0 && (
-            <p className="text-2xs text-muted-foreground mt-1">
-              Attachments will be uploaded and embedded directly in the GitHub issue.
-            </p>
-          )}
-        </div>
+        <SubmitTabAttachments
+          screenshots={screenshots}
+          setScreenshots={setScreenshots}
+          setPreviewImageSrc={setPreviewImageSrc}
+          inputsDisabled={inputsDisabled}
+        />
 
         {/* Error with actionable guidance */}
         {errorDetails && (
@@ -1063,129 +760,5 @@ export function SubmitForm({
   )
 }
 
-// ── Submit Footer (buttons at bottom of modal when on Submit tab) ──
 
-interface SubmitFooterProps {
-  activeTab: TabType
-  success: SuccessState | null
-  description: string
-  isSubmitting: boolean
-  canPerformActions: boolean
-  feedbackTokenMissing: boolean
-  editingDraftId: string | null
-  requestType: RequestType
-  onClose: () => void
-  onSaveDraft: () => void
-  onShowLoginPrompt: () => void
-  onSetActiveTab: (tab: TabType) => void
-}
-
-export function SubmitFooter({
-  activeTab,
-  success,
-  description,
-  isSubmitting,
-  canPerformActions,
-  feedbackTokenMissing,
-  editingDraftId,
-  requestType,
-  onClose,
-  onSaveDraft,
-  onShowLoginPrompt,
-  onSetActiveTab,
-}: SubmitFooterProps) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="flex items-center gap-2">
-      {activeTab === 'submit' && !success ? (
-        <>
-          <Button
-            variant="secondary"
-            size="lg"
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="border border-border"
-          >
-            Cancel
-          </Button>
-          {description.trim().length >= MIN_DRAFT_LENGTH && (
-            <button
-              type="button"
-              onClick={onSaveDraft}
-              disabled={isSubmitting}
-              className="px-3 py-2 text-sm rounded-lg border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 transition-colors disabled:opacity-50 flex items-center gap-1.5"
-              title={editingDraftId ? 'Update saved draft' : 'Save as draft for later'}
-            >
-              <Save className="w-3.5 h-3.5" />
-              {editingDraftId ? 'Update Draft' : 'Save Draft'}
-            </button>
-          )}
-          {canPerformActions ? (
-            <button
-              type="submit"
-              form="feedback-form"
-              disabled={isSubmitting || feedbackTokenMissing}
-              title={feedbackTokenMissing ? 'FEEDBACK_GITHUB_TOKEN is not configured — set it in .env or Settings' : undefined}
-              className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t('feedback.submitting')}
-                </>
-              ) : (
-                <>
-                  Submit
-                  <span className="text-white/60 text-xs font-normal">
-                    +{requestType === 'bug' ? REWARD_ACTIONS.bug_report.coins : REWARD_ACTIONS.feature_suggestion.coins}
-                  </span>
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onShowLoginPrompt}
-              className="px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center gap-2"
-              title="Please login to submit feedback"
-            >
-              Login to Submit
-            </button>
-          )}
-        </>
-      ) : activeTab === 'drafts' ? (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onSetActiveTab('submit')}
-            className="px-3 py-2 text-sm rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1.5"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            New Report
-          </button>
-          <Button
-            variant="secondary"
-            size="lg"
-            type="button"
-            onClick={onClose}
-            className="border border-border"
-          >
-            Close
-          </Button>
-        </div>
-      ) : (
-        <Button
-          variant="secondary"
-          size="lg"
-          type="button"
-          onClick={onClose}
-          className="border border-border"
-        >
-          Close
-        </Button>
-      )}
-    </div>
-  )
-}
+export { SubmitFooter } from './SubmitTabFooter'

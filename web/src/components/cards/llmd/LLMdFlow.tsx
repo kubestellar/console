@@ -13,552 +13,37 @@
  * colors, not surface chrome, and are designed to read on both light and
  * dark backgrounds. They are not candidates for `dark:` variants.
  */
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { CircleDot } from 'lucide-react'
-import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
-import { Acronym } from './shared/PortalTooltip'
-import { getLoadColors, getHorseshoeColor } from './shared/colorUtils'
-import { useOptionalStack } from '../../../contexts/StackContext'
-import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
-import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
-import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
+import { useOptionalStack } from '../../../contexts/StackContext'
+import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
 import { POLL_INTERVAL_FAST_MS } from '../../../lib/constants/network'
+import { generateServerMetrics, type ServerMetrics } from '../../../lib/llmd/mockData'
+import { useCardExpanded } from '../CardWrapper'
+import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { StatusBadge } from '../../ui/StatusBadge'
-
+import { Acronym } from './shared/PortalTooltip'
+import {
+  COLORS,
+  CONNECTIONS,
+  FlowConnection,
+  HorseshoeFlowNode,
+  METRIC_LOAD_COLOR,
+  METRIC_QUEUE_COLOR,
+  NODE_POSITIONS,
+  PremiumNode,
+  Sparkline,
+  type Connection,
+} from './LLMdFlowNodes'
 type ViewMode = 'default' | 'horseshoe'
-
-// Node positions for the flow diagram (coordinates in viewBox units)
-const NODE_POSITIONS = {
-  client: { x: 10, y: 50 },
-  gateway: { x: 28, y: 50 },
-  epp: { x: 48, y: 50 },
-  prefill0: { x: 70, y: 18 },
-  prefill1: { x: 70, y: 50 },
-  prefill2: { x: 70, y: 82 },
-  decode0: { x: 92, y: 34 },
-  decode1: { x: 92, y: 66 } }
-
-// Node styling constants
-const NODE_RADIUS = 6
-const STROKE_WIDTH = 1.5
-const TRACK_WIDTH = 1
-
-// Connection between nodes
-interface Connection {
-  from: keyof typeof NODE_POSITIONS
-  to: keyof typeof NODE_POSITIONS
-  type: 'prefill' | 'decode' | 'kv-transfer'
-  trafficPercent: number
-}
-
-const CONNECTIONS: Connection[] = [
-  { from: 'client', to: 'gateway', type: 'prefill', trafficPercent: 100 },
-  { from: 'gateway', to: 'epp', type: 'prefill', trafficPercent: 100 },
-  { from: 'epp', to: 'prefill0', type: 'prefill', trafficPercent: 27 },
-  { from: 'epp', to: 'prefill1', type: 'prefill', trafficPercent: 26 },
-  { from: 'epp', to: 'prefill2', type: 'prefill', trafficPercent: 21 },
-  { from: 'epp', to: 'decode0', type: 'decode', trafficPercent: 14 },
-  { from: 'epp', to: 'decode1', type: 'decode', trafficPercent: 12 },
-  { from: 'prefill0', to: 'decode0', type: 'decode', trafficPercent: 50 },
-  { from: 'prefill0', to: 'decode1', type: 'decode', trafficPercent: 50 },
-  { from: 'prefill1', to: 'decode0', type: 'decode', trafficPercent: 50 },
-  { from: 'prefill1', to: 'decode1', type: 'decode', trafficPercent: 50 },
-  { from: 'prefill2', to: 'decode0', type: 'decode', trafficPercent: 50 },
-  { from: 'prefill2', to: 'decode1', type: 'decode', trafficPercent: 50 },
-]
-
-// Color palette
-const COLORS = {
-  prefill: '#9333ea',
-  decode: '#22c55e',
-  'kv-transfer': '#06b6d4',
-  gateway: '#3b82f6',
-  epp: '#f59e0b' }
-
-// Metric colors
-const METRIC_LOAD_COLOR = '#f59e0b'
-const METRIC_QUEUE_COLOR = '#06b6d4'
-
-// Premium gauge node with glowing arc
-interface PremiumNodeProps {
-  id: string
-  label: string
-  metrics?: ServerMetrics
-  nodeColor: string
-  isSelected?: boolean
-  onClick?: () => void
-  uniqueId: string
-  nodePositions: Record<string, { x: number; y: number }>
-  isGhost?: boolean  // For scaled-to-0 autoscaler nodes
-}
-
-function PremiumNode({ id, label, metrics, nodeColor, isSelected, onClick, uniqueId, nodePositions, isGhost }: PremiumNodeProps) {
-  const pos = nodePositions[id]
-  if (!pos) return null
-  const load = isGhost ? 0 : (metrics?.load || 0)
-  const loadColors = isGhost ? { start: '#475569', end: '#64748b', glow: '#475569' } : getLoadColors(load)
-
-  // Arc calculation (270 degrees, bottom open)
-  const startAngle = -225
-  const endAngle = 45
-  const totalAngle = endAngle - startAngle
-  const valueAngle = startAngle + (load / 100) * totalAngle
-
-  const polarToCartesian = (angle: number, r: number) => {
-    const rad = ((angle - 90) * Math.PI) / 180
-    return { x: pos.x + r * Math.cos(rad), y: pos.y + r * Math.sin(rad) }
-  }
-
-  const createArc = (r: number, start: number, end: number) => {
-    const s = polarToCartesian(end, r)
-    const e = polarToCartesian(start, r)
-    const large = end - start > 180 ? 1 : 0
-    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y}`
-  }
-
-  const filterIdGlow = `glow-${uniqueId}-${id}`
-  const gradientId = `gradient-${uniqueId}-${id}`
-  const innerGlowId = `inner-glow-${uniqueId}-${id}`
-  const centerGradientId = `center-${uniqueId}-${id}`
-
-  return (
-    <motion.g
-      className="cursor-pointer"
-      onClick={onClick}
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-    >
-      <defs>
-        {/* Glow filter - subtle */}
-        <filter id={filterIdGlow} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="0.4" result="blur" />
-          <feFlood floodColor={loadColors.glow} floodOpacity="0.5" result="color" />
-          <feComposite in="color" in2="blur" operator="in" result="glow" />
-          <feMerge>
-            <feMergeNode in="glow" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-
-        {/* Arc gradient */}
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={loadColors.start} />
-          <stop offset="100%" stopColor={loadColors.end} />
-        </linearGradient>
-
-        {/* Inner ambient glow - subtle */}
-        <radialGradient id={innerGlowId} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={loadColors.glow} stopOpacity="0.2" />
-          <stop offset="60%" stopColor={loadColors.glow} stopOpacity="0.08" />
-          <stop offset="100%" stopColor={loadColors.glow} stopOpacity="0" />
-        </radialGradient>
-
-        {/* Dark center gradient for depth */}
-        <radialGradient id={centerGradientId} cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#1e293b" />
-          <stop offset="100%" stopColor="#0f172a" />
-        </radialGradient>
-      </defs>
-
-      {/* Outer glow ring - uses node color for identity */}
-      <circle
-        cx={pos.x}
-        cy={pos.y}
-        r={NODE_RADIUS + 0.5}
-        fill="none"
-        stroke={metrics ? loadColors.glow : nodeColor}
-        strokeWidth="0.3"
-        opacity={0.3}
-        style={{ filter: `blur(1px)` }}
-      />
-
-      {/* Selection highlight ring */}
-      {isSelected && (
-        <motion.circle
-          cx={pos.x}
-          cy={pos.y}
-          r={NODE_RADIUS + 1.5}
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="0.3"
-          opacity={0.5}
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        />
-      )}
-
-      {/* Track background (270 degree arc) - dashed for ghost nodes */}
-      <path
-        d={createArc(NODE_RADIUS, startAngle, endAngle)}
-        fill="none"
-        stroke={isGhost ? '#475569' : '#1e293b'}
-        strokeWidth={TRACK_WIDTH}
-        strokeLinecap="round"
-        strokeDasharray={isGhost ? '1 1' : undefined}
-        opacity={isGhost ? 0.5 : 0.9}
-      />
-
-      {/* Load arc with glow */}
-      {load > 0 && (
-        <motion.path
-          d={createArc(NODE_RADIUS, startAngle, valueAngle)}
-          fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth={STROKE_WIDTH}
-          strokeLinecap="round"
-          filter={`url(#${filterIdGlow})`}
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-        />
-      )}
-
-      {/* Dark center fill with gradient for depth */}
-      <circle
-        cx={pos.x}
-        cy={pos.y}
-        r={NODE_RADIUS - 1.8}
-        fill={isGhost ? 'transparent' : `url(#${centerGradientId})`}
-        stroke={isGhost ? '#475569' : undefined}
-        strokeWidth={isGhost ? 0.5 : undefined}
-        strokeDasharray={isGhost ? '1 1' : undefined}
-        opacity={isGhost ? 0.4 : 1}
-      />
-
-      {/* Inner ambient glow overlay */}
-      {!isGhost && (
-        <circle
-          cx={pos.x}
-          cy={pos.y}
-          r={NODE_RADIUS - 1.8}
-          fill={`url(#${innerGlowId})`}
-        />
-      )}
-
-      {/* Load percentage inside gauge - primary metric */}
-      {isGhost ? (
-        <>
-          {/* Pause icon for ghost nodes */}
-          <text
-            x={pos.x}
-            y={pos.y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#64748b"
-            fontSize="3"
-          >
-            ⏸
-          </text>
-        </>
-      ) : metrics && (
-        <>
-          <text
-            x={pos.x}
-            y={pos.y - 0.5}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#ffffff"
-            fontSize="3.2"
-            fontWeight="700"
-            style={{ textShadow: `0 0 4px ${loadColors.glow}` }}
-          >
-            {load}%
-          </text>
-          {/* RPS inside gauge - secondary metric */}
-          <text
-            x={pos.x}
-            y={pos.y + 2.5}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#94a3b8"
-            fontSize="1.8"
-          >
-            {metrics.throughputRps}
-          </text>
-        </>
-      )}
-
-      {/* Label below gauge */}
-      <text
-        x={pos.x}
-        y={pos.y + NODE_RADIUS + 3}
-        textAnchor="middle"
-        fill={isGhost ? '#64748b' : '#e5e5e5'}
-        fontSize={isGhost ? '2' : '2.5'}
-        fontWeight="600"
-        fontStyle={isGhost ? 'italic' : undefined}
-      >
-        {label}
-      </text>
-    </motion.g>
-  )
-}
-
-// Connection line with animated flow - sleek design
-function FlowConnection({
-  connection,
-  isAnimating,
-  nodePositions }: {
-  connection: Connection
-  isAnimating: boolean
-  nodePositions: Record<string, { x: number; y: number }>
-}) {
-  const from = nodePositions[connection.from]
-  const to = nodePositions[connection.to]
-  if (!from || !to) return null
-  const color = COLORS[connection.type]
-  // Thinner lines - max 0.8px
-  const strokeWidth = Math.max(0.2, connection.trafficPercent / 150)
-
-  const midX = (from.x + to.x) / 2
-  const midY = (from.y + to.y) / 2
-  const curve = Math.abs(from.y - to.y) > 20 ? 8 : 3
-  const pathD = `M ${from.x} ${from.y} Q ${midX} ${midY - curve} ${to.x} ${to.y}`
-
-  return (
-    <g>
-      {/* Subtle glow underneath */}
-      <path
-        d={pathD}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth + 0.5}
-        opacity={0.05}
-        style={{ filter: `blur(1px)` }}
-      />
-      {/* Main line - very subtle */}
-      <path d={pathD} fill="none" stroke={color} strokeWidth={strokeWidth} opacity={0.18} />
-      {/* Animated flowing dots - slower and subtler */}
-      {isAnimating && (
-        <motion.path
-          d={pathD}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth * 1.2}
-          strokeDasharray="0.4 4"
-          strokeLinecap="round"
-          opacity={0.5}
-          animate={{ strokeDashoffset: [0, -8] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-        />
-      )}
-      {/* Percentage label - smaller and more subtle */}
-      {connection.trafficPercent >= 20 && (
-        <text x={midX} y={midY - 1.5} textAnchor="middle" fill={color} fontSize="2" opacity={0.6} fontWeight="500">
-          {connection.trafficPercent}%
-        </text>
-      )}
-    </g>
-  )
-}
-
-// Horseshoe node for alternative view
-interface HorseshoeFlowNodeProps {
-  id: string
-  label: string
-  metrics?: ServerMetrics
-  isSelected?: boolean
-  onClick?: () => void
-  uniqueId: string
-  nodePositions: Record<string, { x: number; y: number }>
-  isGhost?: boolean
-}
-
-function HorseshoeFlowNode({ id, label, metrics, isSelected, onClick, uniqueId, nodePositions, isGhost }: HorseshoeFlowNodeProps) {
-  const pos = nodePositions[id]
-  if (!pos) return null
-  const load = isGhost ? 0 : (metrics?.load || 0)
-  const color = isGhost ? '#475569' : getHorseshoeColor(load)
-  const filterId = `hsf-glow-${uniqueId}-${id}`
-
-  const radius = 8
-  const strokeWidth = 2.5
-  const cx = pos.x
-  const cy = pos.y
-
-  const startAngle = 135
-  const endAngle = 45
-  const totalSweep = 270
-  const valueSweep = (load / 100) * totalSweep
-  const valueEndAngle = startAngle + valueSweep
-
-  const toCartesian = (angleDeg: number, r: number) => {
-    const rad = (angleDeg * Math.PI) / 180
-    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
-  }
-
-  const createArc = (r: number, fromAngle: number, toAngle: number, sweep: number) => {
-    const start = toCartesian(fromAngle, r)
-    const end = toCartesian(toAngle, r)
-    const largeArc = sweep > 180 ? 1 : 0
-    return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`
-  }
-
-  return (
-    <motion.g
-      className="cursor-pointer"
-      onClick={onClick}
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-    >
-      <defs>
-        <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="0.8" result="blur" />
-          <feFlood floodColor={color} floodOpacity="0.5" result="color" />
-          <feComposite in="color" in2="blur" operator="in" result="glow" />
-          <feMerge>
-            <feMergeNode in="glow" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      {isSelected && (
-        <motion.circle
-          cx={cx}
-          cy={cy}
-          r={radius + 1.5}
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="0.3"
-          opacity={0.6}
-          animate={{ opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        />
-      )}
-
-      <path
-        d={createArc(radius, startAngle, endAngle, totalSweep)}
-        fill="none"
-        stroke="#374151"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-      />
-
-      {load > 0 && (
-        <motion.path
-          d={createArc(radius, startAngle, valueEndAngle, valueSweep)}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          filter={`url(#${filterId})`}
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-        />
-      )}
-
-      <circle cx={cx} cy={cy} r={radius - 3} fill="#0f172a" />
-
-      {metrics && (
-        <>
-          <text
-            x={cx}
-            y={cy - 0.5}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#ffffff"
-            fontSize="4"
-            fontWeight="700"
-            style={{ textShadow: `0 0 4px ${color}` }}
-          >
-            {load}%
-          </text>
-          <text
-            x={cx}
-            y={cy + 3}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#94a3b8"
-            fontSize="2"
-          >
-            {metrics.throughputRps}
-          </text>
-        </>
-      )}
-
-      <text
-        x={cx}
-        y={cy + radius + 4}
-        textAnchor="middle"
-        fill="#e5e5e5"
-        fontSize="2.5"
-        fontWeight="600"
-      >
-        {label}
-      </text>
-    </motion.g>
-  )
-}
-
-// Mini sparkline for time-series data
-function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
-  // Filter out NaN/undefined values and ensure we have enough data points
-  const validData = data.filter(v => Number.isFinite(v))
-  if (validData.length < 2) return null
-
-  const max = Math.max(...validData, 1)
-  const min = Math.min(...validData, 0)
-  const range = max - min || 1
-
-  const points = validData.map((v, i) => {
-    const x = (i / (validData.length - 1)) * width
-    const y = height - ((v - min) / range) * (height - 4) - 2
-    return `${x},${y}`
-  }).join(' ')
-
-  const areaPath = `M 0,${height} L ${points} L ${width},${height} Z`
-
-  return (
-    <svg width={width} height={height} className="overflow-visible">
-      <defs>
-        <linearGradient id="sparkline-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-        <filter id="sparkline-glow-line" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="1" result="blur" />
-          <feFlood floodColor={color} floodOpacity="0.6" />
-          <feComposite in2="blur" operator="in" />
-          <feMerge>
-            <feMergeNode />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <path d={areaPath} fill="url(#sparkline-fill)" />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        filter="url(#sparkline-glow-line)"
-      />
-      <circle
-        cx={width}
-        cy={height - ((validData[validData.length - 1] - min) / range) * (height - 4) - 2}
-        r="2"
-        fill={color}
-        filter="url(#sparkline-glow-line)"
-      />
-    </svg>
-  )
-}
-
-
 type MetricType = 'load' | 'queue' | 'rps'
-
 interface MetricsHistoryData {
   rps: number[]
   load: number[]
   queue: number[]
 }
-
 export function LLMdFlow() {
   const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
@@ -569,22 +54,13 @@ export function LLMdFlow() {
   const [selectedMetricTypes, setSelectedMetricTypes] = useState<MetricType[]>(['rps'])
   const [viewMode, setViewMode] = useState<ViewMode>('default')
   const uniqueId = `flow-${Math.random().toString(36).substr(2, 9)}`
-
-  // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()
-
-  // Get selected stack from context and centralized demo state
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
-
-  // Prometheus metrics for the selected stack (null when unavailable or no stack)
   const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing } = usePrometheusMetrics(
     selectedStack?.cluster,
     selectedStack?.namespace,
   )
-
-  // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
   useReportCardDataState({
     isDemoData: showDemoBadge,
     isRefreshing: (stackContext?.isRefreshing ?? false) || metricsRefreshing,
@@ -592,10 +68,7 @@ export function LLMdFlow() {
     consecutiveFailures: 0,
     hasData: true,
   })
-
-  // Build dynamic node positions based on actual stack topology
   const { nodePositions: rawPositions, connections, nodeLabels } = useMemo(() => {
-    // Only show demo topology if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return {
         nodePositions: NODE_POSITIONS,
@@ -610,42 +83,31 @@ export function LLMdFlow() {
           decode0: 'Decode-0',
           decode1: 'Decode-1' } as Record<string, string> }
     }
-
-    // In live mode with no stack selected, return empty state
     if (!selectedStack) {
       return {
         nodePositions: {} as Record<string, { x: number; y: number }>,
         connections: [] as Connection[],
         nodeLabels: {} as Record<string, string> }
     }
-
-    // Live topology from stack
     const prefillCount = selectedStack.components.prefill.reduce((sum, c) => sum + c.replicas, 0)
     const decodeCount = selectedStack.components.decode.reduce((sum, c) => sum + c.replicas, 0)
     const unifiedCount = selectedStack.components.both.reduce((sum, c) => sum + c.replicas, 0)
     const hasDisaggregation = prefillCount > 0 && decodeCount > 0
-
     const positions: Record<string, { x: number; y: number }> = {
       client: { x: 10, y: 50 },
       gateway: { x: 28, y: 50 },
       epp: { x: 48, y: 50 } }
-
     const labels: Record<string, string> = {
       client: 'Clients',
       gateway: 'Gateway',
       epp: 'EPP' }
-
     const conns: Connection[] = [
       { from: 'client', to: 'gateway', type: 'prefill', trafficPercent: 100 },
       { from: 'gateway', to: 'epp', type: 'prefill', trafficPercent: 100 },
     ]
-
     if (hasDisaggregation) {
-      // Disaggregated topology (both prefill AND decode)
       const maxPrefill = Math.min(prefillCount, 10) // Show up to 3 prefill
       const maxDecode = Math.min(decodeCount, 10)   // Show up to 2 decode
-
-      // Position prefill nodes - spread from y=18 to y=82
       for (let i = 0; i < maxPrefill; i++) {
         const key = `prefill${i}`
         const y = maxPrefill === 1 ? 50 : 5 + (90 * i) / (maxPrefill - 1)
@@ -657,20 +119,16 @@ export function LLMdFlow() {
           type: 'prefill',
           trafficPercent: Math.round(100 / maxPrefill) })
       }
-
-      // Position decode nodes - spread from y=5 to y=95 (full vertical range)
       for (let i = 0; i < maxDecode; i++) {
         const key = `decode${i}`
         const y = maxDecode === 1 ? 50 : 5 + (90 * i) / (maxDecode - 1)
         positions[key] = { x: 92, y }
         labels[key] = `Decode-${i}`
-        // Direct EPP to decode connections (for cached KV)
         conns.push({
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
           type: 'decode',
           trafficPercent: Math.round(20 / maxDecode) })
-        // Prefill to decode connections
         for (let j = 0; j < maxPrefill; j++) {
           conns.push({
             from: `prefill${j}` as keyof typeof NODE_POSITIONS,
@@ -680,7 +138,6 @@ export function LLMdFlow() {
         }
       }
     } else if (decodeCount > 0) {
-      // Decode-only topology - spread from y=18 to y=82
       const maxDecode = Math.min(decodeCount, 10)
       for (let i = 0; i < maxDecode; i++) {
         const key = `decode${i}`
@@ -694,7 +151,6 @@ export function LLMdFlow() {
           trafficPercent: Math.round(100 / maxDecode) })
       }
     } else if (prefillCount > 0) {
-      // Prefill-only topology - spread from y=18 to y=82
       const maxPrefill = Math.min(prefillCount, 10)
       for (let i = 0; i < maxPrefill; i++) {
         const key = `prefill${i}`
@@ -708,7 +164,6 @@ export function LLMdFlow() {
           trafficPercent: Math.round(100 / maxPrefill) })
       }
     } else if (unifiedCount > 0) {
-      // Unified serving topology - spread from y=18 to y=82
       const maxServers = Math.min(unifiedCount, 10)
       for (let i = 0; i < maxServers; i++) {
         const key = `server${i}`
@@ -722,7 +177,6 @@ export function LLMdFlow() {
           trafficPercent: Math.round(100 / maxServers) })
       }
     } else if (selectedStack.autoscaler) {
-      // Scaled to 0 but has autoscaler - show ghost nodes
       const maxReplicas = selectedStack.autoscaler.maxReplicas || 3
       const ghostCount = Math.min(maxReplicas, 3) // Show up to 3 ghost nodes
       for (let i = 0; i < ghostCount; i++) {
@@ -730,7 +184,6 @@ export function LLMdFlow() {
         const y = ghostCount === 1 ? 50 : 18 + (64 * i) / (ghostCount - 1)
         positions[key] = { x: 78, y }
         labels[key] = `(scaled to 0)`
-        // Dashed connection to ghost node
         conns.push({
           from: 'epp',
           to: key as keyof typeof NODE_POSITIONS,
@@ -739,34 +192,25 @@ export function LLMdFlow() {
         })
       }
     }
-
     return { nodePositions: positions, connections: conns, nodeLabels: labels }
   }, [selectedStack, isDemoMode])
-
-  // Scale node positions wider when in fullscreen to fill the wider SVG viewBox (240w vs 120w)
   const nodePositions = (() => {
     if (!isExpanded || Object.keys(rawPositions).length === 0) return rawPositions
     const scaled: Record<string, { x: number; y: number }> = {}
     for (const [key, pos] of Object.entries(rawPositions)) {
-      // Map from original x range (10-92) to expanded range (10-210)
       scaled[key] = { x: 10 + (pos.x - 10) * (200 / 82), y: pos.y }
     }
     return scaled
   })()
-
-  // Toggle metric selection
   const toggleMetric = (metric: MetricType) => {
     setSelectedMetricTypes(prev => {
       if (prev.includes(metric)) {
-        // Don't allow removing the last metric
         if (prev.length === 1) return prev
         return prev.filter(m => m !== metric)
       }
       return [...prev, metric]
     })
   }
-
-  // Helper: get average Prometheus metric across pods matching a component
   const getPromMetrics = (podNames?: string[]) => {
     if (!prometheusMetrics || !podNames?.length) return null
     const matched = podNames.filter(p => prometheusMetrics[p])
@@ -779,23 +223,16 @@ export function LLMdFlow() {
       activeConnections: Math.round(avg(p => prometheusMetrics[p].requestsRunning)),
       throughputTps: Math.round(avg(p => prometheusMetrics[p].throughputTps)) }
   }
-
-  // Generate metrics based on stack data, using Prometheus when available
   const generateLiveMetrics = (): ServerMetrics[] => {
-    // Only show demo metrics if demo mode is ON
     if (!selectedStack && isDemoMode) {
       return generateServerMetrics()
     }
-    // In live mode with no stack, return empty
     if (!selectedStack) {
       return []
     }
-
     const now = Date.now()
     const wave = Math.sin(now / 5000)
     const metrics: ServerMetrics[] = []
-
-    // Gateway metrics (no vLLM metrics — always simulated)
     if (selectedStack.components.gateway) {
       metrics.push({
         name: 'Istio Gateway',
@@ -806,8 +243,6 @@ export function LLMdFlow() {
         activeConnections: Math.round(120 + Math.random() * 30),
         throughputRps: Math.round(450 + wave * 50) })
     }
-
-    // EPP metrics (no vLLM metrics — always simulated)
     if (selectedStack.components.epp) {
       metrics.push({
         name: 'EPP Scheduler',
@@ -818,8 +253,6 @@ export function LLMdFlow() {
         activeConnections: Math.round(450 + Math.random() * 50),
         throughputRps: Math.round(448 + wave * 48) })
     }
-
-    // Prefill metrics
     selectedStack.components.prefill.forEach((comp, i) => {
       const isHealthy = comp.readyReplicas > 0
       const prom = getPromMetrics(comp.podNames)
@@ -832,8 +265,6 @@ export function LLMdFlow() {
         activeConnections: prom?.activeConnections ?? Math.round(100 + Math.random() * 20),
         throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 100 : 10) + wave * 15) })
     })
-
-    // Decode metrics
     selectedStack.components.decode.forEach((comp, i) => {
       const isHealthy = comp.readyReplicas > 0
       const prom = getPromMetrics(comp.podNames)
@@ -846,8 +277,6 @@ export function LLMdFlow() {
         activeConnections: prom?.activeConnections ?? Math.round(180 + Math.random() * 30),
         throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 180 : 10) + wave * 20) })
     })
-
-    // Unified server metrics
     selectedStack.components.both.forEach((comp, i) => {
       const isHealthy = comp.readyReplicas > 0
       const prom = getPromMetrics(comp.podNames)
@@ -860,11 +289,8 @@ export function LLMdFlow() {
         activeConnections: prom?.activeConnections ?? Math.round(150 + Math.random() * 25),
         throughputRps: prom?.throughputTps ?? Math.round((isHealthy ? 150 : 10) + wave * 18) })
     })
-
     return metrics
   }
-
-  // Update metrics periodically and track history for all metric types
   const flowMetricsInitRef = useRef(false)
   useEffect(() => {
     if (flowMetricsInitRef.current) return
@@ -872,8 +298,6 @@ export function LLMdFlow() {
     const updateMetrics = () => {
       const newMetrics = generateLiveMetrics()
       setServerMetrics(newMetrics)
-
-      // Update history for each node and each metric type
       setMetricsHistory(prev => {
         const updated = { ...prev }
         newMetrics.forEach(m => {
@@ -889,51 +313,37 @@ export function LLMdFlow() {
         return updated
       })
     }
-
     updateMetrics()
     const interval = setInterval(updateMetrics, POLL_INTERVAL_FAST_MS)
     return () => clearInterval(interval)
   }, [generateLiveMetrics])
-
   const getMetricsForNode = (nodeId: string): ServerMetrics | undefined => {
-    // Dynamic name mapping based on node labels
     const name = nodeLabels[nodeId]
     if (!name) return undefined
-
-    // Map node labels to metric names
     if (name === 'Gateway') return serverMetrics.find(m => m.name === 'Istio Gateway')
     if (name === 'EPP') return serverMetrics.find(m => m.name === 'EPP Scheduler')
     return serverMetrics.find(m => m.name === name)
   }
-
   const getHistoryForNode = (nodeId: string, metricType: MetricType): number[] => {
     const name = nodeLabels[nodeId]
     if (!name) return []
-
-    // Map node labels to history keys
     let historyKey = name
     if (name === 'Gateway') historyKey = 'Istio Gateway'
     if (name === 'EPP') historyKey = 'EPP Scheduler'
-
     const history = metricsHistory[historyKey]
     if (!history) return []
     return history[metricType] || []
   }
-
   const totalThroughput = serverMetrics
       .filter(m => m.type === 'prefill' || m.type === 'decode')
       .reduce((sum, m) => sum + m.throughputRps, 0)
-
   const avgLoad = (() => {
     const relevant = serverMetrics.filter(m => m.type === 'prefill' || m.type === 'decode')
     return relevant.length > 0
       ? Math.round(relevant.reduce((sum, m) => sum + m.load, 0) / relevant.length)
       : 0
   })()
-
   const selectedMetrics = selectedNode ? getMetricsForNode(selectedNode) : undefined
-
-  // Get color for any node
   const getNodeColor = (nodeId: string | null) => {
     if (!nodeId) return COLORS.gateway
     if (nodeId.startsWith('prefill')) return COLORS.prefill
@@ -943,18 +353,13 @@ export function LLMdFlow() {
     if (nodeId === 'client' || nodeId === 'gateway') return COLORS.gateway
     return COLORS.gateway
   }
-
   const metricConfig: Record<MetricType, { label: string; color: string; unit: string }> = {
     load: { label: 'Load', color: METRIC_LOAD_COLOR, unit: '%' },
     queue: { label: 'Queue', color: METRIC_QUEUE_COLOR, unit: '' },
     rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' } }
-
-  // Show empty state when no stack selected in live mode
   const showEmptyState = !selectedStack && !isDemoMode
-
   return (
     <div className={`relative w-full h-full flex-1 flex flex-col bg-linear-to-br from-background/50 to-secondary/30 rounded-lg ${isExpanded ? 'min-h-0' : 'min-h-[300px]'}`}>
-      {/* Empty state overlay */}
       {showEmptyState && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-xs">
           <div className="w-12 h-12 rounded-full border-2 border-border border-t-purple-500 animate-spin mb-4" />
@@ -962,10 +367,8 @@ export function LLMdFlow() {
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
         </div>
       )}
-      {/* Header */}
       <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center justify-between gap-y-2 z-10">
         <div className="flex items-center gap-4">
-          {/* Stack info */}
           {selectedStack && (
             <div className="flex items-center gap-1.5 text-xs">
               <span className={`px-1.5 py-0.5 rounded font-medium truncate max-w-[180px] ${
@@ -974,7 +377,6 @@ export function LLMdFlow() {
                 {selectedStack.name}
               </span>
               <span className="text-muted-foreground">{selectedStack.cluster}</span>
-              {/* Autoscaler indicator */}
               {selectedStack.autoscaler && (
                 <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${
                   selectedStack.autoscaler.type === 'WVA' ? 'bg-purple-500/20 text-purple-400' :
@@ -984,7 +386,6 @@ export function LLMdFlow() {
                   {selectedStack.autoscaler.type}: {selectedStack.autoscaler.currentReplicas ?? 0}→{selectedStack.autoscaler.desiredReplicas ?? '?'}
                 </span>
               )}
-              {/* Scaled to 0 indicator */}
               {selectedStack.autoscaler && selectedStack.totalReplicas === 0 && (
                 <span className="px-1.5 py-0.5 rounded bg-secondary/50 text-muted-foreground text-2xs italic">
                   ⏸ Scaled to 0
@@ -1006,7 +407,6 @@ export function LLMdFlow() {
             </span>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode(viewMode === 'default' ? 'horseshoe' : 'default')}
@@ -1031,8 +431,6 @@ export function LLMdFlow() {
           </button>
         </div>
       </div>
-
-      {/* Legend */}
       <div className="absolute bottom-2 left-3 flex items-center gap-4 text-xs z-10">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS.prefill, boxShadow: `0 0 6px ${COLORS.prefill}` }} />
@@ -1047,15 +445,12 @@ export function LLMdFlow() {
           <span className="text-muted-foreground"><Acronym term="KV" /> Transfer</span>
         </div>
       </div>
-
-      {/* SVG Flow Diagram - overflow visible allows labels to extend beyond viewBox */}
       <svg
         viewBox={isExpanded ? '-10 -10 240 120' : '-5 -10 120 140'}
         className={`w-full overflow-visible ${isExpanded ? 'flex-1 min-h-0 mt-2' : 'h-[calc(100%-2rem)] mt-8'}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ overflow: 'visible' }}
       >
-        {/* Connections - use dynamic connections */}
         {connections.map((conn, i) => (
           <FlowConnection
             key={`${conn.from}-${conn.to}-${i}`}
@@ -1064,8 +459,6 @@ export function LLMdFlow() {
             nodePositions={nodePositions}
           />
         ))}
-
-        {/* Nodes - render dynamically based on topology */}
         {viewMode === 'horseshoe' ? (
           <>
             {Object.keys(nodePositions).map(nodeId => (
@@ -1101,8 +494,6 @@ export function LLMdFlow() {
           </>
         )}
       </svg>
-
-      {/* Selected node details panel - LEFT side with clickable metrics */}
       <AnimatePresence>
         {selectedNode && selectedMetrics && (
           <motion.div
@@ -1123,8 +514,6 @@ export function LLMdFlow() {
                 {selectedMetrics.status.charAt(0).toUpperCase() + selectedMetrics.status.slice(1)}
               </span>
             </div>
-
-            {/* Clickable metrics - toggle to show time-series */}
             <div className="flex gap-1 mb-3">
               {(['load', 'queue', 'rps'] as MetricType[]).map(metric => (
                 <button
@@ -1147,8 +536,6 @@ export function LLMdFlow() {
                 </button>
               ))}
             </div>
-
-            {/* Time-series graphs - side by side based on selection */}
             <div className={`grid gap-2 ${
               selectedMetricTypes.length === 1 ? 'grid-cols-1' :
               selectedMetricTypes.length === 2 ? 'grid-cols-2' :
@@ -1172,8 +559,6 @@ export function LLMdFlow() {
                 </div>
               ))}
             </div>
-
-            {/* Hint text */}
             <div className="text-[9px] text-muted-foreground mt-2 text-center">
               Click metrics above to compare
             </div>
@@ -1183,5 +568,4 @@ export function LLMdFlow() {
     </div>
   )
 }
-
 export default LLMdFlow
