@@ -105,7 +105,7 @@ export function emitGroundControlCardRequestOpened(project: string) {
   send('ksc_ground_control_card_request', { project })
 }
 
-Deploy // ── ───────────────────
+// ── Deploy ──────────────────────────────────────────────────────────
 
 export function emitDeployWorkload(workloadName: string, clusterGroup: string) {
   send('ksc_deploy_workload', { workload_name: workloadName, cluster_group: clusterGroup })
@@ -115,7 +115,7 @@ export function emitDeployTemplateApplied(templateName: string) {
   send('ksc_deploy_template_applied', { template_name: templateName })
 }
 
-Compliance // ── ──────────
+// ── Compliance ──────────────────────────────────────────────────
 
 export function emitComplianceDrillDown(statType: string) {
   send('ksc_compliance_drill_down', { stat_type: statType })

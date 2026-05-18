@@ -10,7 +10,7 @@ export function emitDrillDownClosed(viewType: string, depth: number) {
   send('ksc_drill_down_closed', { view_type: viewType, depth })
 }
 
- Global Filters ──────────────────────────────────────────────────// 
+// --- Global Filters ---
 
 export function emitGlobalClusterFilterChanged(selectedCount: number, totalCount: number) {
   send('ksc_global_cluster_filter_changed', { selected_count: selectedCount, total_count: totalCount })

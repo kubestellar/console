@@ -1,6 +1,6 @@
 import { send } from '../analytics-core'
 
-Tour // ── ───────────────────
+// ── Tour ───────────────────────────────────────────────────────────
 
 export function emitTourStarted() {
   send('ksc_tour_started')
@@ -14,7 +14,7 @@ export function emitTourSkipped(atStep: number) {
   send('ksc_tour_skipped', { at_step: atStep })
 }
 
-Settings // ── ─────────────────────────────────────────────
+// ── Settings ────────────────────────────────────────────────────
 
 export function emitThemeChanged(themeId: string, source: string) {
   send('ksc_theme_changed', { theme_id: themeId, source })
@@ -40,7 +40,7 @@ export function emitConsensusModeToggled(enabled: boolean) {
   send('ksc_consensus_mode_toggled', { enabled: String(enabled) })
 }
 
-Updates // ── ──────────
+// ── Updates ─────────────────────────────────────────────────────
 
 export function emitUpdateChecked() {
   send('ksc_update_checked')
@@ -66,7 +66,7 @@ export function emitUpdateStalled() {
   send('ksc_update_stalled')
 }
 
-What's New ───────────────────────────────────────────── ── //
+// ── What's New ──────────────────────────────────────────────────
 
 export function emitWhatsNewModalOpened(tag: string) {
   send('ksc_whats_new_modal_opened', { release_tag: tag })
