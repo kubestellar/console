@@ -71,6 +71,18 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
   commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
+vi.mock('../../../lib/utils/sanitizeUrl', () => ({
+  sanitizeUrl: (url: string) => url,
+}))
+
+vi.mock('../../../lib/utils/localStorage', () => ({
+  safeGetJSON: vi.fn(() => null),
+  safeSetJSON: vi.fn(() => true),
+  safeRemoveItem: vi.fn(() => true),
+  safeGetItem: vi.fn(() => null),
+  safeSetItem: vi.fn(() => true),
+}))
+
 import { ClusterCosts } from '../ClusterCosts'
 
 describe('ClusterCosts', () => {
