@@ -49,7 +49,13 @@ export function ReplicaSetDrillDown({ data }: Props) {
     try {
       const output = await runKubectl(['get', 'replicaset', replicasetName, '-n', namespace, '-o', 'json'])
       if (output) {
-        const rs = JSON.parse(output)
+        let rs
+        try {
+          rs = JSON.parse(output)
+        } catch {
+          console.warn('[ReplicaSetDrillDown] Failed to parse ReplicaSet JSON output')
+          return
+        }
         setReplicas(rs.spec?.replicas || 0)
         setReadyReplicas(rs.status?.readyReplicas || 0)
         setLabels(rs.metadata?.labels || {})
@@ -67,7 +73,14 @@ export function ReplicaSetDrillDown({ data }: Props) {
         if (selector) {
           const podsOutput = await runKubectl(['get', 'pods', '-n', namespace, '-l', selector, '-o', 'json'])
           if (podsOutput) {
-            const podList = JSON.parse(podsOutput)
+            let podList
+            try {
+              podList = JSON.parse(podsOutput)
+            } catch {
+              console.warn('[ReplicaSetDrillDown] Failed to parse Pods JSON output')
+              setPods([])
+              return
+            }
             const podInfo = podList.items?.map((p: { metadata: { name: string }; status: { phase: string; containerStatuses?: Array<{ restartCount: number }> } }) => ({
               name: p.metadata.name,
               status: p.status.phase,
@@ -78,7 +91,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
         }
       }
     } catch {
-      // Ignore parse errors
+      // Ignore fetch errors
     }
   }
 

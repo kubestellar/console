@@ -138,7 +138,19 @@ export function OperatorDrillDown({ data }: Props) {
         'get', 'clusterserviceversion', csvName, '-n', namespace, '-o', 'json'
       ])
       if (output) {
-        const csv = JSON.parse(output)
+        let csv
+        try {
+          csv = JSON.parse(output)
+        } catch {
+          console.warn('[OperatorDrillDown] Failed to parse CSV JSON output')
+          setCsvInfo({
+            name: currentCSV || operatorName,
+            displayName: operatorName,
+            version: 'Unknown',
+            phase: operatorPhase,
+          })
+          return
+        }
         setCsvInfo({
           name: csv.metadata?.name || csvName,
           displayName: csv.spec?.displayName || csv.metadata?.name || csvName,
@@ -174,7 +186,14 @@ export function OperatorDrillDown({ data }: Props) {
         'get', 'clusterserviceversion', csvName, '-n', namespace, '-o', 'json'
       ])
       if (output) {
-        const csv = JSON.parse(output)
+        let csv
+        try {
+          csv = JSON.parse(output)
+        } catch {
+          console.warn('[OperatorDrillDown] Failed to parse CRD JSON output')
+          setOperatorCRDs([])
+          return
+        }
         const crds = csv.spec?.customresourcedefinitions?.owned || []
         setOperatorCRDs(crds.map((crd: CRDRaw) => ({
           name: crd.name,
