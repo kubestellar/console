@@ -5,6 +5,7 @@ import {
   STELLAR_MISSION_TRIGGER_EVENT,
   type StellarMissionTriggerPayload,
 } from '../../hooks/useStellar'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 
 /**
  * StellarMissionBridge converts Stellar's `mission_trigger` SSE events into
@@ -110,6 +111,7 @@ export function StellarMissionBridge() {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
         },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         body: JSON.stringify({
           solveId: link.solveId,
           eventId: link.eventId,
