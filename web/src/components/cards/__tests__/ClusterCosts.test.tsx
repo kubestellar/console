@@ -63,6 +63,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: () => ({
     items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
+    allFilteredItems: [],
     goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
     filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
     sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
