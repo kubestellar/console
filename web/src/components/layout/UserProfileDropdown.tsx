@@ -159,7 +159,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         {user.avatar_url ? (
           <img
             src={user.avatar_url}
-            alt={user?.name || 'User avatar'}
+            alt={user?.github_login || 'User avatar'}
             className="w-6 h-6 rounded-full"
             loading="lazy"
             width={24}
@@ -185,7 +185,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               {user.avatar_url ? (
                 <img
                   src={user.avatar_url}
-                  alt={user?.name || 'User avatar'}
+                  alt={user?.github_login || 'User avatar'}
                   className="w-12 h-12 rounded-full"
                   loading="lazy"
                   width={48}
