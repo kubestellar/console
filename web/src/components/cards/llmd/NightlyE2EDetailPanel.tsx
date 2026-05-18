@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useDemoMode } from '../../../lib/demoMode'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { motion } from 'framer-motion'
 import { ExternalLink, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
