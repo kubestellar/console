@@ -13,6 +13,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POPUP_HIDE_DELAY_MS } from '../../../lib/constants/network'
 import { formatTimeAgo } from '../../../lib/formatters'
@@ -34,6 +35,7 @@ export function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }
   const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null)
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const { isDemoMode } = useDemoMode()
   const isRunning = run.status !== 'completed'
   const isFailed = run.conclusion === 'failure'
   const isGPUFailure = isFailed && run.failureReason === 'gpu_unavailable'
@@ -110,20 +112,26 @@ export function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }
     checkKeyAndRun(async () => {
       setIsDiagnosing(true)
       try {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
-        const resp = await fetch(
-          `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`,
-          { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
-        )
         let logsContent = 'Failed to fetch logs — analyze using the GitHub URL below.'
-        if (resp.ok) {
-          const data = await resp.json()
-          if (data.jobs?.length) {
-            logsContent = data.jobs.map((j: { name: string; conclusion: string; log: string }) =>
-              `### Job: ${j.name} (${j.conclusion})\n\`\`\`\n${j.log}\n\`\`\``
-            ).join('\n\n')
-          } else {
-            logsContent = 'No failed job logs returned.'
+        
+        // In demo mode, show demo message instead of making API call
+        if (isDemoMode) {
+          logsContent = 'Demo mode: Log fetching is disabled. In live mode, this would fetch actual GitHub Actions logs for diagnosis.'
+        } else {
+          const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
+          const resp = await fetch(
+            `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`,
+            { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
+          )
+          if (resp.ok) {
+            const data = await resp.json()
+            if (data.jobs?.length) {
+              logsContent = data.jobs.map((j: { name: string; conclusion: string; log: string }) =>
+                `### Job: ${j.name} (${j.conclusion})\n\`\`\`\n${j.log}\n\`\`\``
+              ).join('\n\n')
+            } else {
+              logsContent = 'No failed job logs returned.'
+            }
           }
         }
 
