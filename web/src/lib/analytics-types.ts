@@ -13,7 +13,7 @@ export type DeploymentType =
   | 'netlify-preview'
   | 'unknown'
 
-// ── Install Copy Source ────────────────────────────────────────────
+// ── Install Copy Source ────────────────────────────
 
 /** Source labels for install command copy events */
 export type InstallCopySource =
@@ -30,7 +30,7 @@ export type InstallCopySource =
   | 'feature_inspektorgadget'
   | 'white_label'
 
-// ── UTM ───────────────────────────────────────────────────────────
+// ── UTM ───────────────────────────────────────────
 
 export interface UtmParams {
   utm_source?: string
@@ -40,7 +40,7 @@ export interface UtmParams {
   utm_content?: string
 }
 
-// ── Agent Provider ─────────────────────────────────────────────────
+// ── Agent Provider ───────────────────────────────────
 
 export interface ProviderSummary {
   name: string
@@ -51,6 +51,40 @@ export interface ProviderSummary {
 /** Capability bitmask values matching Go ProviderCapability constants */
 export const CAPABILITY_CHAT = 1
 export const CAPABILITY_TOOL_EXEC = 2
+
+// ── Analytics core types ───────────────────────────────────────────
+
+export type AnalyticsEventParams = Record<string, string | number | boolean>
+
+export interface AnalyticsIdOverrides {
+  ga4MeasurementId?: string
+  umamiWebsiteId?: string
+}
+
+export interface PendingRecoveryEvent {
+  latencyMs: number
+  page: string
+}
+
+export interface EmitErrorExtra {
+  error?: unknown
+  componentStack?: string
+  pathname?: string
+}
+
+export interface CapturedError {
+  timestamp: string
+  level: 'error' | 'warn'
+  message: string
+  source?: string
+}
+
+export interface CapturedApiCall {
+  timestamp: string
+  status: number | string
+  endpoint: string
+  detail?: string
+}
 
 // ── Send options ───────────────────────────────────────────────────
 

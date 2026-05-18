@@ -5,10 +5,16 @@
  * imports from 'lib/analytics' continue to work without change.
  *
  * Implementation is split into focused modules:
- *   analytics-types.ts   — shared types, interfaces, window augmentation
- *   analytics-session.ts — bot detection, client/session identity, engagement tracking, UTM
- *   analytics-core.ts    — send pipeline (gtag/proxy/umami), init, opt-out, error tracking
- *   analytics-events.ts  — domain-specific emit* functions
+ *   analytics-types.ts       — shared types, interfaces, window augmentation
+ *   analytics-session.ts     — bot detection, client/session identity, engagement tracking, UTM
+ *   analytics-core.ts        — thin compatibility barrel
+ *   analytics-core-state.ts  — shared runtime state
+ *   analytics-dispatch.ts    — send gating and engagement flush
+ *   analytics-engine.ts      — init, page views, user identity, configuration
+ *   analytics-providers.ts   — GA/Umami provider delivery
+ *   analytics-consent.ts     — opt-out and storage cleanup
+ *   analytics-errors.ts      — error tracking and diagnostics buffers
+ *   analytics-events.ts      — domain-specific emit* functions
  */
 
 // ── Core lifecycle & configuration ────────────────────────────────
