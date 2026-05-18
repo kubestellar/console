@@ -500,15 +500,18 @@ func (b *Bridge) parseClustersResult(result *CallToolResult) ([]ClusterInfo, err
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	// Parse the text content as JSON
-	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	clusters := make([]ClusterInfo, 0)
+	parsed := false
 	for _, content := range result.Content {
 		if content.Type == "text" {
+			parsed = true
 			if err := json.Unmarshal([]byte(content.Text), &clusters); err != nil {
 				return nil, fmt.Errorf("failed to parse clusters response: %w", err)
 			}
 		}
+	}
+	if !parsed || len(clusters) == 0 {
+		return nil, fmt.Errorf("tool returned no parseable text content")
 	}
 	return clusters, nil
 }
@@ -528,15 +531,17 @@ func (b *Bridge) parseHealthResult(result *CallToolResult) (*ClusterHealth, erro
 	}
 
 	var health ClusterHealth
+	parsed := false
 	for _, content := range result.Content {
 		if content.Type == "text" {
+			parsed = true
 			if err := json.Unmarshal([]byte(content.Text), &health); err != nil {
-				// JSON parse failed — treat as unhealthy rather than false positive
-				health.Healthy = false
-				health.ErrorMessage = fmt.Sprintf("failed to parse health response: %v", err)
-				return &health, nil
+				return nil, fmt.Errorf("failed to parse health response: %w", err)
 			}
 		}
+	}
+	if !parsed {
+		return nil, fmt.Errorf("tool returned no parseable text content")
 	}
 	return &health, nil
 }
@@ -549,14 +554,18 @@ func (b *Bridge) parsePodsResult(result *CallToolResult) ([]PodInfo, error) {
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	pods := make([]PodInfo, 0)
+	parsed := false
 	for _, content := range result.Content {
 		if content.Type == "text" {
+			parsed = true
 			if err := json.Unmarshal([]byte(content.Text), &pods); err != nil {
 				return nil, fmt.Errorf("failed to parse pods response: %w", err)
 			}
 		}
+	}
+	if !parsed || len(pods) == 0 {
+		return nil, fmt.Errorf("tool returned no parseable text content")
 	}
 	return pods, nil
 }
@@ -569,14 +578,18 @@ func (b *Bridge) parsePodIssuesResult(result *CallToolResult) ([]PodIssue, error
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	issues := make([]PodIssue, 0)
+	parsed := false
 	for _, content := range result.Content {
 		if content.Type == "text" {
+			parsed = true
 			if err := json.Unmarshal([]byte(content.Text), &issues); err != nil {
 				return nil, fmt.Errorf("failed to parse pod issues response: %w", err)
 			}
 		}
+	}
+	if !parsed || len(issues) == 0 {
+		return nil, fmt.Errorf("tool returned no parseable text content")
 	}
 	return issues, nil
 }
@@ -589,14 +602,18 @@ func (b *Bridge) parseEventsResult(result *CallToolResult) ([]Event, error) {
 		return nil, fmt.Errorf("tool error: %s", result.Content[0].Text)
 	}
 
-	// #7399 — Surface unmarshal errors instead of silently returning empty slices
 	events := make([]Event, 0)
+	parsed := false
 	for _, content := range result.Content {
 		if content.Type == "text" {
+			parsed = true
 			if err := json.Unmarshal([]byte(content.Text), &events); err != nil {
 				return nil, fmt.Errorf("failed to parse events response: %w", err)
 			}
 		}
+	}
+	if !parsed || len(events) == 0 {
+		return nil, fmt.Errorf("tool returned no parseable text content")
 	}
 	return events, nil
 }

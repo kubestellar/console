@@ -374,6 +374,54 @@ func TestBridge_ParseResults(t *testing.T) {
 		require.Contains(t, parsed[0].Issues, "CrashLoopBackOff")
 	})
 
+	t.Run("parseClustersResult errors on empty JSON array", func(t *testing.T) {
+		result := &CallToolResult{Content: []ContentItem{{Type: "text", Text: "[]"}}}
+
+		_, err := bridge.parseClustersResult(result)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no parseable text content")
+	})
+
+	t.Run("parseHealthResult errors when text content is missing", func(t *testing.T) {
+		result := &CallToolResult{Content: []ContentItem{{Type: "resource", Text: "ignored"}}}
+
+		_, err := bridge.parseHealthResult(result)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no parseable text content")
+	})
+
+	t.Run("parseHealthResult errors on malformed JSON", func(t *testing.T) {
+		result := &CallToolResult{Content: []ContentItem{{Type: "text", Text: "{"}}}
+
+		_, err := bridge.parseHealthResult(result)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to parse health response")
+	})
+
+	t.Run("parsePodsResult errors on empty JSON array", func(t *testing.T) {
+		result := &CallToolResult{Content: []ContentItem{{Type: "text", Text: "[]"}}}
+
+		_, err := bridge.parsePodsResult(result)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no parseable text content")
+	})
+
+	t.Run("parsePodIssuesResult errors on empty JSON array", func(t *testing.T) {
+		result := &CallToolResult{Content: []ContentItem{{Type: "text", Text: "[]"}}}
+
+		_, err := bridge.parsePodIssuesResult(result)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no parseable text content")
+	})
+
+	t.Run("parseEventsResult errors on empty JSON array", func(t *testing.T) {
+		result := &CallToolResult{Content: []ContentItem{{Type: "text", Text: "[]"}}}
+
+		_, err := bridge.parseEventsResult(result)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no parseable text content")
+	})
+
 	t.Run("parseClustersFromText returns empty slice for non-JSON", func(t *testing.T) {
 		result := bridge.parseClustersFromText("some plain text output")
 		require.Empty(t, result)
