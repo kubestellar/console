@@ -1,26 +1,19 @@
-import { type CSSProperties, ReactNode, Suspense, useState, useEffect, useRef } from 'react'
-import { safeLazy } from '../../lib/safeLazy'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 import {
+  AlertTriangle,
   Box,
+  ExternalLink,
+  Plug,
+  Rocket,
+  Settings,
   Wifi,
   WifiOff,
   X,
-  Settings,
-  Rocket,
-  RotateCcw,
-  Check,
-  Loader2,
-  RefreshCw,
-  Plug,
-  AlertTriangle,
-  ExternalLink,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
-import { Navbar } from './navbar/index'
-import { Sidebar } from './Sidebar'
 import {
   useSidebarConfig,
   SIDEBAR_COLLAPSED_WIDTH_PX,
@@ -31,8 +24,8 @@ import { useNavigationHistory } from '../../hooks/useNavigationHistory'
 import { useLastRoute } from '../../hooks/useLastRoute'
 import {
   useDemoMode,
-  isDemoModeForced,
   hasRealToken,
+  isDemoModeForced,
 } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
 import { hasApprovedAgents } from '../agent/AgentApprovalDialog'
@@ -40,152 +33,40 @@ import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { emitClusterInventory } from '../../lib/analytics'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
-import { useBackendHealth, WATCHDOG_STAGE_LABELS } from '../../hooks/useBackendHealth'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useKagentBackend } from '../../hooks/useKagentBackend'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
-import { safeGetItem, safeSetItem, safeRemoveItem } from '../../lib/utils/localStorage'
-import { MS_PER_DAY } from '../../lib/constants/time'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import {
-  NAVBAR_HEIGHT_PX,
   BANNER_HEIGHT_PX,
   MOBILE_BANNER_COLLAPSE_THRESHOLD,
-  NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR,
-  SIDEBAR_CONTROLS_OFFSET_PX,
 } from '../../lib/constants/ui'
-import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
+import { UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED } from '../../lib/constants/storage'
-import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { InClusterAgentDialog } from '../setup/InClusterAgentDialog'
 import { AgentSetupDialog } from '../agent/AgentSetupDialog'
-import { Outlet } from 'react-router-dom'
-import { PageErrorBoundary } from '../PageErrorBoundary'
-import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
 import { copyToClipboard } from '../../lib/clipboard'
 import { ROUTES } from '../../config/routes'
+import { NavigationShell, type LayoutBanner } from './NavigationShell'
+import { ProgressToast, type RestartState } from './ProgressToast'
+import { useStaleCacheCleanup } from './useStaleCacheCleanup'
 
-// Lazy-load the AI mission sidebar so react-markdown and remark plugins are
-// not part of the initial bundle — they only load when the sidebar is first rendered.
-const MissionSidebar = safeLazy(() => import('./mission-sidebar'), 'MissionSidebar')
-const MissionSidebarToggle = safeLazy(() => import('./mission-sidebar'), 'MissionSidebarToggle')
-const StellarSidebar = safeLazy(() => import('../stellar'), 'StellarSidebar')
-// StellarToastBridge is loaded EAGERLY (not lazy) so it mounts before SSE
-// starts delivering notifications. A lazy bridge had a startup race where
-// every initial event was marked "already seen" and no toast fired.
-import { StellarToastBridge } from '../stellar/StellarToastBridge'
-import { StellarMissionBridge } from '../stellar/StellarMissionBridge'
+export { ContentLoadingSkeleton } from './LoadingSkeleton'
+export { getStaleCacheMetaKeys } from './useStaleCacheCleanup'
 
-// Module-level constant — computed once, never changes on re-render.
-// Prevents star field from flickering when Layout re-renders due to hooks.
-const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
-  width: Math.random() * 2 + 1 + 'px',
-  height: Math.random() * 2 + 1 + 'px',
-  left: Math.random() * 100 + '%',
-  top: Math.random() * 100 + '%',
-  animationDelay: Math.random() * 3 + 's',
-}))
-
+const AGENT_CONNECT_GRACE_MS = 8000
 const UPDATE_TOAST_DONE_DISMISS_MS = 5000
 const UPDATE_TOAST_TERMINAL_DISMISS_MS = 8000
-const CACHE_META_PREFIX = 'kc_meta:'
-const STALE_META_THRESHOLD_MS = MS_PER_DAY
-const CACHE_META_TIMESTAMP_FIELDS = [
-  'lastSuccessfulRefresh',
-  'lastUpdated',
-  'timestamp',
-  'updatedAt',
-] as const
+const HIVE_DASHBOARD_URL = 'https://kubestellar.io/live/hive'
 
-type CacheMetaTimestampField = typeof CACHE_META_TIMESTAMP_FIELDS[number]
-type CacheMetaStorageValue = Partial<Record<CacheMetaTimestampField, number>>
-
-function getCacheMetaTimestamp(value: unknown): number | null {
-  if (!value || typeof value !== 'object') return null
-
-  const meta = value as CacheMetaStorageValue
-  for (const field of CACHE_META_TIMESTAMP_FIELDS) {
-    const timestamp = meta[field]
-    if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0) {
-      return timestamp
-    }
-  }
-
-  return null
-}
-
-export function getStaleCacheMetaKeys(now: number = Date.now()): string[] {
-  try {
-    const keysToRemove: string[] = []
-
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (!key?.startsWith(CACHE_META_PREFIX)) continue
-
-      const raw = safeGetItem(key)
-      if (!raw) {
-        keysToRemove.push(key)
-        continue
-      }
-
-      try {
-        const parsed: unknown = JSON.parse(raw)
-        const timestamp = getCacheMetaTimestamp(parsed)
-        if (timestamp === null || now - timestamp > STALE_META_THRESHOLD_MS) {
-          keysToRemove.push(key)
-        }
-      } catch {
-        keysToRemove.push(key)
-      }
-    }
-
-    return keysToRemove
-  } catch {
-    return []
-  }
-}
-
-// Thin progress bar shown during route transitions so the user
-// gets immediate visual feedback that navigation is happening.
-function NavigationProgress() {
-  const location = useLocation()
-  const [isNavigating, setIsNavigating] = useState(false)
-  const prevPath = useRef(location.pathname)
-
-  useEffect(() => {
-    if (location.pathname !== prevPath.current) {
-      setIsNavigating(true)
-      prevPath.current = location.pathname
-      const timer = setTimeout(() => setIsNavigating(false), CLOSE_ANIMATION_MS)
-      return () => clearTimeout(timer)
-    }
-  }, [location.pathname])
-
-  if (!isNavigating) return null
-  return <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary z-50" />
-}
-
-// Lightweight fallback shown while a lazy route chunk loads.
-export function ContentLoadingSkeleton() {
-  const { t } = useTranslation()
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-6 w-6 border-2 border-muted border-t-foreground rounded-full animate-spin" />
-        <span className="text-sm text-muted-foreground">
-          {t('labels.loading')}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-interface LayoutProps {
+type LayoutProps = {
   children?: ReactNode
 }
 
@@ -199,14 +80,11 @@ export function Layout({ children: _children }: LayoutProps) {
     : config.collapsed
       ? SIDEBAR_COLLAPSED_WIDTH_PX
       : (config.width ?? SIDEBAR_DEFAULT_WIDTH_PX)
-  // Mission sidebar width is communicated via CSS custom property --mission-sidebar-width
-  // set by MissionSidebar.tsx — no need to read sidebar state from the hook here.
   const { isDemoMode, toggleDemoMode } = useDemoMode()
   const { showToast } = useToast()
   const { status: agentStatus } = useLocalAgent()
   const { deduplicatedClusters } = useClusters()
-  const { progress: updateProgress, dismiss: dismissUpdateProgress } =
-    useUpdateProgress()
+  const { progress: updateProgress, dismiss: dismissUpdateProgress } = useUpdateProgress()
   const { isOnline, wasOffline } = useNetworkStatus()
   const {
     status: backendStatus,
@@ -218,38 +96,33 @@ export function Layout({ children: _children }: LayoutProps) {
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
   const [autonomousBannerDismissed, setAutonomousBannerDismissed] = useState(
-    () => safeGetItem(STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED) === 'true'
+    () => safeGetItem(STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED) === 'true',
   )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
-  const [showInClusterAgentDialog, setShowInClusterAgentDialog] =
-    useState(false)
+  const [showInClusterAgentDialog, setShowInClusterAgentDialog] = useState(false)
   const [mobileBannerStackExpanded, setMobileBannerStackExpanded] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
   const [updateToastDismissed, setUpdateToastDismissed] = useState(false)
   const isDashboardRoute =
-    location.pathname === ROUTES.HOME ||
-    location.pathname === ROUTES.DASHBOARD_ALIAS ||
-    location.pathname === ROUTES.MISSIONS ||
-    matchPath(ROUTES.CUSTOM_DASHBOARD, location.pathname) !== null
+    location.pathname === ROUTES.HOME
+    || location.pathname === ROUTES.DASHBOARD_ALIAS
+    || location.pathname === ROUTES.MISSIONS
+    || matchPath(ROUTES.CUSTOM_DASHBOARD, location.pathname) !== null
   const shouldReserveNavbarFilterPanelOffset = !isDashboardRoute
 
-  // Allow any component to open the install dialog via a custom event
   useEffect(() => {
     const handler = () => setShowSetupDialog(true)
     window.addEventListener('open-install', handler)
     return () => window.removeEventListener('open-install', handler)
   }, [])
 
-  // Surface cache-reset failures from modeTransition.ts as user-facing toasts
   useEffect(() => {
     const handler = () => showToast(t('errors.cacheResetFailed'), 'warning')
     window.addEventListener('cache-reset-error', handler)
     return () => window.removeEventListener('cache-reset-error', handler)
   }, [showToast, t])
 
-  const [restartState, setRestartState] = useState<
-    'idle' | 'restarting' | 'waiting' | 'copied'
-  >('idle')
+  const [restartState, setRestartState] = useState<RestartState>('idle')
   const [restartError, setRestartError] = useState<string | null>(null)
 
   const handleCopyFallback = async () => {
@@ -258,6 +131,7 @@ export function Layout({ children: _children }: LayoutProps) {
       setRestartState('copied')
       setTimeout(() => setRestartState('idle'), UI_FEEDBACK_TIMEOUT_MS)
     } catch {
+      setRestartError('Could not copy command — please run ./startup-oauth.sh manually')
       setRestartState('idle')
     }
   }
@@ -273,8 +147,6 @@ export function Layout({ children: _children }: LayoutProps) {
       if (resp.ok) {
         const data = await resp.json()
         if (data.success) {
-          // Agent confirmed restart — show "waiting for connection"
-          // until backendDown becomes false (health check succeeds)
           setRestartState('waiting')
           return
         }
@@ -286,81 +158,60 @@ export function Layout({ children: _children }: LayoutProps) {
     }
   }
 
-  // Clear stale cache failure metadata on fresh page load so previous-session
-  // "Refresh failed" badges don't persist across restarts.
-  useEffect(() => {
-    getStaleCacheMetaKeys().forEach((key) => {
-      safeRemoveItem(key)
-    })
-  }, [])
+  useStaleCacheCleanup()
 
-  // Auto-enable demo mode when agent is confirmed disconnected and not in cluster mode.
-  // This prevents the "Offline" state on localhost — users get demo data instead of empty screens.
-  // When agent comes back online, auto-disable demo (but only if it was auto-enabled, not manual).
-  // Grace period: when user manually toggles demo off, wait 8s for agent to connect before
-  // re-enabling demo. The pill shows "connecting" → "disconnected" during this window.
   const demoAutoEnabledRef = useRef(false)
   const demoReEnableTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const prevDemoModeRef = useRef(isDemoMode)
   const userToggledOffRef = useRef(false)
-  const AGENT_CONNECT_GRACE_MS = 8000
 
-  // Detect manual toggle-off: isDemoMode went from true → false while agent is still disconnected
   useEffect(() => {
     if (prevDemoModeRef.current && !isDemoMode && agentStatus !== 'connected') {
       userToggledOffRef.current = true
     }
     prevDemoModeRef.current = isDemoMode
-  }, [isDemoMode, agentStatus])
+  }, [agentStatus, isDemoMode])
 
   useEffect(() => {
     if (
-      agentStatus === 'disconnected' &&
-      !isInClusterMode &&
-      !isDemoMode &&
-      !isDemoModeForced
+      agentStatus === 'disconnected'
+      && !isInClusterMode
+      && !isDemoMode
+      && !isDemoModeForced
     ) {
       if (userToggledOffRef.current) {
-        // User manually toggled off — give agent time to connect before re-enabling
         demoReEnableTimerRef.current = setTimeout(() => {
           userToggledOffRef.current = false
           demoAutoEnabledRef.current = true
           setDemoMode(true)
         }, AGENT_CONNECT_GRACE_MS)
-      } else if (wasAgentEverConnected()) {
-        // Agent was previously connected and went offline — preserve cached data.
-        // Do NOT auto-enable demo mode; cards keep showing stale cached data
-        // with their normal refresh/failure indicators (#10470).
-      } else {
-        // Initial load with no agent — enable demo immediately so user sees content
+      } else if (!wasAgentEverConnected()) {
         demoAutoEnabledRef.current = true
         setDemoMode(true)
       }
     } else if (
-      agentStatus === 'connected' &&
-      isDemoMode &&
-      demoAutoEnabledRef.current &&
-      hasApprovedAgents()
+      agentStatus === 'connected'
+      && isDemoMode
+      && demoAutoEnabledRef.current
+      && hasApprovedAgents()
     ) {
-      // Only auto-switch from demo → agent if user has previously approved agents
       demoAutoEnabledRef.current = false
       userToggledOffRef.current = false
-      if (demoReEnableTimerRef.current)
+      if (demoReEnableTimerRef.current) {
         clearTimeout(demoReEnableTimerRef.current)
+      }
       setDemoMode(false, true)
-    } else {
-      // Agent connected or demo manually re-enabled — cancel pending timer
-      if (demoReEnableTimerRef.current)
-        clearTimeout(demoReEnableTimerRef.current)
+    } else if (demoReEnableTimerRef.current) {
+      clearTimeout(demoReEnableTimerRef.current)
     }
-    return () => {
-      if (demoReEnableTimerRef.current)
-        clearTimeout(demoReEnableTimerRef.current)
-    }
-  }, [agentStatus, isInClusterMode, isDemoMode])
 
-  // Emit cluster inventory when cluster count changes (counts only, never names).
-  // Sets GA4 user property "cluster_count" so you can compute averages across users.
+    return () => {
+      if (demoReEnableTimerRef.current) {
+        clearTimeout(demoReEnableTimerRef.current)
+      }
+    }
+  }, [agentStatus, isDemoMode, isInClusterMode])
+
   const prevClusterCountRef = useRef<number>(-1)
   useEffect(() => {
     const total = deduplicatedClusters.length
@@ -372,16 +223,16 @@ export function Layout({ children: _children }: LayoutProps) {
     let unreachable = 0
     const distributions: Record<string, number> = {}
 
-    for (const c of deduplicatedClusters) {
-      if (c.reachable === false) {
+    for (const cluster of deduplicatedClusters) {
+      if (cluster.reachable === false) {
         unreachable++
-      } else if (c.healthy === false) {
+      } else if (cluster.healthy === false) {
         unhealthy++
       } else {
         healthy++
       }
-      const dist = c.distribution || 'unknown'
-      distributions[dist] = (distributions[dist] || 0) + 1
+      const distribution = cluster.distribution || 'unknown'
+      distributions[distribution] = (distributions[distribution] || 0) + 1
     }
 
     emitClusterInventory({
@@ -393,36 +244,21 @@ export function Layout({ children: _children }: LayoutProps) {
     })
   }, [deduplicatedClusters])
 
-  // Startup snackbar — shows while backend health is in initial 'connecting' state
-  const showStartupSnackbar =
-    !isDemoModeForced && backendStatus === 'connecting'
-
-  // Show network banner when browser detects no network, or briefly after reconnecting
+  const showStartupSnackbar = !isDemoModeForced && backendStatus === 'connecting'
   const showNetworkBanner = !isOnline || wasOffline
   const showDemoBanner = isDemoMode && !demoBannerDismissed
-  // Show offline banner only when agent is confirmed disconnected (not during 'connecting' state)
-  // This prevents flickering during initial connection attempts
   const showOfflineBanner =
-    !isDemoMode &&
-    agentStatus === 'disconnected' &&
-    backendStatus !== 'connected' &&
-    !offlineBannerDismissed
-  // Show in-cluster agent banner when running in a cluster (Helm) and no agent connection detected.
-  // This is distinct from the offline banner (which requires backend to be down too).
+    !isDemoMode
+    && agentStatus === 'disconnected'
+    && backendStatus !== 'connected'
+    && !offlineBannerDismissed
   const hasInClusterAIBackend = kagentAvailable || kagentiAvailable
   const showInClusterBanner =
-    isInClusterMode &&
-    agentStatus === 'disconnected' &&
-    !isDemoMode &&
-    !hasInClusterAIBackend
+    isInClusterMode
+    && agentStatus === 'disconnected'
+    && !isDemoMode
+    && !hasInClusterAIBackend
   const isAuthenticatedNoAgent = hasRealToken() && agentStatus !== 'connected'
-
-  type LayoutBanner = {
-    id: string
-    className: string
-    style?: CSSProperties
-    content: ReactNode
-  }
 
   const activeBanners: LayoutBanner[] = []
 
@@ -468,16 +304,14 @@ export function Layout({ children: _children }: LayoutProps) {
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
           {isAuthenticatedNoAgent
             ? <Plug className="w-4 h-4 text-yellow-400" aria-hidden="true" />
-            : <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
-          }
+            : <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />}
           <span className="text-sm text-yellow-400 font-medium">
             {isAuthenticatedNoAgent ? t('layout.agentNotConnected') : t('layout.demoMode')}
           </span>
           <span className="hidden md:inline text-xs text-yellow-400/70">
             {isAuthenticatedNoAgent
               ? t('layout.sampleDataConnectAgent')
-              : t('layout.sampleDataInstallLocally')
-            }
+              : t('layout.sampleDataInstallLocally')}
           </span>
           <Button
             variant="accent"
@@ -532,9 +366,7 @@ export function Layout({ children: _children }: LayoutProps) {
             className="hidden sm:flex ml-2 rounded-full"
           >
             <Plug className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="hidden lg:inline">
-              {t('layout.setupGuide')}
-            </span>
+            <span className="hidden lg:inline">{t('layout.setupGuide')}</span>
             <span className="lg:hidden">{t('layout.setup')}</span>
           </Button>
           <button
@@ -543,10 +375,7 @@ export function Layout({ children: _children }: LayoutProps) {
             aria-label={t('layout.openAgentSetupGuide')}
             title={t('layout.openAgentSetupGuide')}
           >
-            <Plug
-              className="w-3.5 h-3.5 text-blue-400"
-              aria-hidden="true"
-            />
+            <Plug className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
           </button>
         </div>
       ),
@@ -566,14 +395,7 @@ export function Layout({ children: _children }: LayoutProps) {
               {t('common.offline')}
             </span>
             <span className="hidden lg:inline text-xs text-orange-400/70 truncate">
-              — Install:{' '}
-              <code className="bg-orange-500/20 px-1 rounded">
-                brew install kubestellar/tap/kc-agent
-              </code>{' '}
-              → run{' '}
-              <code className="bg-orange-500/20 px-1 rounded">
-                kc-agent
-              </code>
+              — Install: <code className="bg-orange-500/20 px-1 rounded">brew install kubestellar/tap/kc-agent</code> → run <code className="bg-orange-500/20 px-1 rounded">kc-agent</code>
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -582,17 +404,13 @@ export function Layout({ children: _children }: LayoutProps) {
               className="flex items-center gap-1 text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
             >
               <Settings className="w-3 h-3" />
-              <span className="hidden sm:inline">
-                {t('navigation.settings')}
-              </span>
+              <span className="hidden sm:inline">{t('navigation.settings')}</span>
             </Link>
             <button
               onClick={toggleDemoMode}
               className="text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap min-h-11 min-w-11"
             >
-              <span className="hidden sm:inline">
-                {t('layout.switchTo')}{' '}
-              </span>
+              <span className="hidden sm:inline">{t('layout.switchTo')} </span>
               {t('layout.demo')}
             </button>
             <button
@@ -609,7 +427,6 @@ export function Layout({ children: _children }: LayoutProps) {
   }
 
   if (!autonomousBannerDismissed) {
-    const HIVE_DASHBOARD_URL = 'https://kubestellar.io/live/hive'
     activeBanners.push({
       id: 'autonomous',
       className: 'right-0 z-10 bg-purple-500/10 border-b border-purple-500/20',
@@ -669,54 +486,51 @@ export function Layout({ children: _children }: LayoutProps) {
 
   const visibleBanners: LayoutBanner[] = showMobileBannerSummary
     ? [{
-      id: 'mobile-banner-summary',
-      className: 'right-0 z-40 bg-background border-b border-yellow-500/20',
-      content: (
-        <div className="flex items-center justify-between gap-3 py-1.5 px-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" aria-hidden="true" />
-            <span className="text-sm text-yellow-400 font-medium truncate">
-              {t('layout.activeAlerts', { count: activeBanners.length })}
-            </span>
+        id: 'mobile-banner-summary',
+        className: 'right-0 z-40 bg-background border-b border-yellow-500/20',
+        content: (
+          <div className="flex items-center justify-between gap-3 py-1.5 px-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" aria-hidden="true" />
+              <span className="text-sm text-yellow-400 font-medium truncate">
+                {t('layout.activeAlerts', { count: activeBanners.length })}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileBannerStackExpanded(expanded => !expanded)}
+              className="text-xs px-2 py-2 min-h-11 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
+              aria-expanded={mobileBannerStackExpanded}
+            >
+              {mobileBannerStackExpanded ? t('layout.hideAlerts') : t('layout.reviewAlerts')}
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setMobileBannerStackExpanded(expanded => !expanded)}
-            className="text-xs px-2 py-2 min-h-11 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
-            aria-expanded={mobileBannerStackExpanded}
-          >
-            {mobileBannerStackExpanded ? t('layout.hideAlerts') : t('layout.reviewAlerts')}
-          </button>
-        </div>
-      ),
-    }, ...(mobileBannerStackExpanded ? activeBanners : [])]
+        ),
+      }, ...(mobileBannerStackExpanded ? activeBanners : [])]
     : activeBanners
 
   const totalBannerHeight = visibleBanners.length * BANNER_HEIGHT_PX
-
-  // Show bottom snackbar when backend is down, or briefly after reconnecting.
-  // Suppress during active updates — the backend is expected to be down while restarting.
   const backendDown = backendStatus === 'disconnected'
   const isUpdateInProgress =
-    updateProgress != null &&
-    !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
+    updateProgress != null
+    && !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
   const showBackendBanner =
     (backendDown || wasBackendDown)
     && !isUpdateInProgress
     && !isDemoModeForced
     && !isInClusterMode
   const backendRecovering = backendDown && (
-    Boolean(watchdogStage) ||
-    restartState === 'restarting' ||
-    restartState === 'waiting' ||
-    restartState === 'copied'
+    Boolean(watchdogStage)
+    || restartState === 'restarting'
+    || restartState === 'waiting'
+    || restartState === 'copied'
   )
   const backendUnavailable = backendDown && !backendRecovering
   const prevBackendDown = useRef(backendDown)
+
   useEffect(() => {
     const wasDown = prevBackendDown.current
     prevBackendDown.current = backendDown
-    // Detect transition: was disconnected → now connected
     if (wasDown && !backendDown) {
       setRestartState('idle')
       setWasBackendDown(true)
@@ -725,18 +539,20 @@ export function Layout({ children: _children }: LayoutProps) {
     }
   }, [backendDown])
 
-  // Reset update toast dismissal when a new update starts
   const prevUpdateStatus = useRef(updateProgress?.status)
   useEffect(() => {
-    const cur = updateProgress?.status
-    const prev = prevUpdateStatus.current
-    prevUpdateStatus.current = cur
-    if (cur && ['pulling', 'building', 'checking'].includes(cur) && prev !== cur) {
+    const currentStatus = updateProgress?.status
+    const previousStatus = prevUpdateStatus.current
+    prevUpdateStatus.current = currentStatus
+    if (
+      currentStatus
+      && ['pulling', 'building', 'checking'].includes(currentStatus)
+      && previousStatus !== currentStatus
+    ) {
       setUpdateToastDismissed(false)
     }
   }, [updateProgress?.status])
 
-  // Auto-dismiss update toast on terminal states
   useEffect(() => {
     if (!updateProgress) return
     const { status } = updateProgress
@@ -754,305 +570,47 @@ export function Layout({ children: _children }: LayoutProps) {
     && updateProgress.status !== 'idle'
     && !updateToastDismissed
 
-  // Track navigation for behavior analysis
   useNavigationHistory()
-
-  // Persist and restore last route and scroll position
   useLastRoute()
-
-  // Handle deep links from notifications (opens drilldowns based on URL params)
   useDeepLink()
 
   return (
     <VersionCheckProvider>
       <TourProvider>
-        <div className="h-screen bg-background overflow-hidden flex flex-col">
-          {/* Dev mode indicator removed — now shown as a badge in the Navbar */}
-
-          {/* Skip to content link for keyboard users and screen readers */}
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-purple-500 focus:text-white focus:rounded-lg"
-          >
-            {t('actions.skipToContent')}
-          </a>
-
-          {/* Tour overlay and prompt */}
-          <TourOverlay />
-          <TourPrompt />
-
-          {/* Star field background — positions are stable (module-level constant) */}
-          <div className="star-field">
-            {STAR_POSITIONS.map((style, i) => (
-              <div key={i} className="star" style={style} />
-            ))}
-          </div>
-
-          <Navbar />
-
-          {/* Auto-Update Progress Banner */}
-          <UpdateProgressBanner
-            progress={updateProgress}
-            onDismiss={dismissUpdateProgress}
-          />
-
-          {/* Status banners — collapse to a single summary row on mobile when too many alerts are active. */}
-          {visibleBanners.map((banner, index) => (
-            <div
-              key={banner.id}
-              style={{
-                top: NAVBAR_HEIGHT_PX + (index * BANNER_HEIGHT_PX),
-                minHeight: BANNER_HEIGHT_PX,
-                left: sidebarWidthPx,
-                ...banner.style,
-              }}
-              className={cn(
-                'fixed transition-[left,right] duration-300',
-                banner.className,
-              )}
-            >
-              {banner.content}
-            </div>
-          ))}
-
-          <div
-            className="flex flex-1 overflow-hidden transition-[padding-top] duration-300"
-            style={{ paddingTop: NAVBAR_HEIGHT_PX + totalBannerHeight }}
-          >
-            {/* Wrap Sidebar in PageErrorBoundary so stale-chunk errors
-            (e.g. "Can't find variable: handleSidebarMouseEnter" from cached
-            old bundles) are caught at page level instead of propagating to
-            AppErrorBoundary and crashing the entire application. */}
-        <PageErrorBoundary>
-          <Sidebar />
-        </PageErrorBoundary>
-        <main
-          id="main-content"
-          style={{
-            marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
-            marginRight: isMobile ? 0 : 'var(--mission-sidebar-width, 0px)' }}
-          // overflow-x-hidden prevents stray wide children from pushing the
-          // entire main column past the viewport at narrow breakpoints
-          // (issues 6385, 6387, 6394). Individual scrollable children
-          // (tables, code blocks) still scroll horizontally inside wrappers.
-          // pb-8 is the baseline so browsers without env() support
-          // still get valid bottom padding; the calc(...env()) variants
-          // extend it by the safe-area inset when supported. If the whole
-          // calc() value were invalid it would drop padding entirely (#6548).
-          className="relative flex-1 p-4 pb-8 pb-[calc(2rem+env(safe-area-inset-bottom))] md:p-6 md:pb-8 md:pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
-          data-transition-margin="true"
+        <NavigationShell
+          dismissUpdateProgress={dismissUpdateProgress}
+          isMobile={isMobile}
+          pathname={location.pathname}
+          shouldReserveNavbarFilterPanelOffset={shouldReserveNavbarFilterPanelOffset}
+          sidebarWidthPx={sidebarWidthPx}
+          totalBannerHeight={totalBannerHeight}
+          updateProgress={updateProgress}
+          visibleBanners={visibleBanners}
         >
-          {shouldReserveNavbarFilterPanelOffset && (
-            <div
-              aria-hidden
-              style={{ height: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)` }}
-            />
-          )}
-          <NavigationProgress />
-          {/*
-            Key the Outlet by location.pathname so route changes are a clean
-            unmount/mount instead of a transition. React 18's startTransition
-            (used internally by React Router for navigation) keeps the OLD
-            route visible until the new one is "ready" — but on cluster-heavy
-            source pages (Dashboard, My Clusters) the steady trickle of
-            cluster cache / per-card data updates keeps the transition's
-            "ready" check from ever passing, so the new route never commits
-            (the "needs 2 clicks" symptom from issue 7865). The key forces
-            React to discard the old subtree synchronously when the URL
-            changes, sidestepping the transition entirely.
-          */}
-          <div key={location.pathname} className="contents">
-            <Outlet />
-          </div>
-        </main>
-        <Suspense fallback={null}>
-          <StellarSidebar />
-        </Suspense>
-        <StellarToastBridge />
-        <StellarMissionBridge />
-      </div>
-
-          {/* AI Mission sidebar — lazy loaded to keep react-markdown out of initial bundle */}
-          <Suspense fallback={null}>
-            <MissionSidebar />
-            <MissionSidebarToggle />
-          </Suspense>
-
-          {/* Setup Instructions Dialog — also shown when user tries to exit forced demo mode */}
           <SetupInstructionsDialog
             isOpen={showSetupDialog}
             onClose={() => setShowSetupDialog(false)}
           />
-
-          {/* In-Cluster Agent Dialog — install agent or configure CORS */}
           <InClusterAgentDialog
             isOpen={showInClusterAgentDialog}
             onClose={() => setShowInClusterAgentDialog(false)}
           />
-
-          {/* Agent Setup Dialog — shown when agent not connected; also triggered by open-agent-setup event */}
           <AgentSetupDialog />
-
-      {/* Backend connection lost / restarting snackbar — fixed bottom center */}
-      {showBackendBanner && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className={cn(
-            "flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg text-sm",
-            backendDown
-              ? backendUnavailable
-                ? 'bg-red-950/90 border-red-800/50 text-red-200'
-                : 'bg-blue-950/90 border-blue-800/50 text-blue-200'
-              : 'bg-green-900/80 border-green-700/50 text-green-200'
-          )}>
-            {backendDown ? (
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-2">
-                  {backendUnavailable ? (
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                  ) : (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                  )}
-                  <span>{backendUnavailable
-                    ? t('layout.backendUnavailable')
-                    : watchdogStage
-                      ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.consoleRestarting', { defaultValue: 'Console restarting…' })
-                      : t('layout.consoleRestarting')}</span>
-                  {!watchdogStage && (
-                    restartState === 'restarting' ? (
-                      <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        {t('layout.restarting')}
-                      </button>
-                    ) : restartState === 'waiting' ? (
-                      <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        {t('layout.restartedWaiting')}
-                      </span>
-                    ) : restartState === 'copied' ? (
-                      <span className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-green-800/50 text-green-300 rounded text-xs">
-                        <Check className="w-3 h-3" />
-                        {t('layout.copiedRestartCommand')}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={handleRestartBackend}
-                        className="ml-1 flex items-center gap-1.5 px-2.5 py-2 bg-muted hover:bg-muted/80 text-foreground rounded text-xs transition-colors min-h-11 min-w-11"
-                        title={t('layout.restartBackendServer')}
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        {t('layout.restart')}
-                      </button>
-                    )
-                  )}
-                </div>
-                {!watchdogStage && (restartError ? (
-                  <span className="text-xs text-muted-foreground">{restartError}</span>
-                ) : (
-                  <span className={cn(
-                    'text-xs',
-                    backendUnavailable ? 'text-red-300/70' : 'text-blue-300/70'
-                  )}>{backendUnavailable ? t('layout.backendUnavailableHint') : t('layout.consoleRestartingHint')}</span>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-                {t('layout.reconnected')}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Update progress toast — persistent during the entire update lifecycle */}
-      {showUpdateToast && updateProgress && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className={cn(
-            "flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm min-w-[320px] max-w-[480px]",
-            updateProgress.status === 'done'
-              ? "bg-green-900/80 border-green-700/50 text-green-200"
-              : updateProgress.status === 'failed' || updateProgress.status === 'cancelled'
-                ? "bg-red-950/90 border-red-800/50 text-red-200"
-                : "bg-blue-950/90 border-blue-800/50 text-blue-200"
-          )}>
-            {updateProgress.status === 'done' ? (
-              <>
-                <Check className="w-4 h-4 text-green-400 shrink-0" />
-                <span className="flex-1">{t('layout.updateComplete')}</span>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                  className="ml-1 rounded"
-                >
-                  {t('layout.reload')}
-                </Button>
-              </>
-            ) : updateProgress.status === 'failed' || updateProgress.status === 'cancelled' ? (
-              <>
-                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                <span className="flex-1 truncate">
-                  {updateProgress.status === 'cancelled'
-                    ? t('layout.updateCancelled')
-                    : t('layout.updateFailed')}
-                  {updateProgress.message ? ` — ${updateProgress.message}` : ''}
-                </span>
-                <button
-                  onClick={() => setUpdateToastDismissed(true)}
-                  className="p-2 hover:bg-secondary/50 rounded shrink-0 min-h-11 min-w-11"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </>
-            ) : (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
-                <span className="flex-1 truncate">
-                  {updateProgress.status === 'restarting' && watchdogStage
-                    ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.updateInProgress', { defaultValue: t('layout.updateInProgress') })
-                    : updateProgress.message ?? t('layout.updateInProgress')}
-                </span>
-                <div className="w-20 bg-secondary rounded-full h-1.5 shrink-0">
-                  <div
-                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${updateProgress.progress ?? 0}%` }}
-                  />
-                </div>
-                <span className="text-xs text-blue-300/60 tabular-nums shrink-0">
-                  {updateProgress.progress ?? 0}%
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Startup snackbar — non-blocking info while backend initializes */}
-      {showStartupSnackbar && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
-            <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-            <span>{t('layout.startingUp')}</span>
-          </div>
-        </div>
-      )}
-
-          {/* Version changed snackbar — persistent until user reloads */}
-          {versionChanged && !showStartupSnackbar && !showBackendBanner && !showUpdateToast && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
-                <RefreshCw className="w-4 h-4 text-blue-400" />
-                <span>{t('layout.newVersionAvailable')}</span>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => window.location.reload()}
-                  className="ml-1 rounded"
-                >
-                  {t('layout.reload')}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+          <ProgressToast
+            backendDown={backendDown}
+            backendUnavailable={backendUnavailable}
+            onDismissUpdateToast={() => setUpdateToastDismissed(true)}
+            onRestartBackend={handleRestartBackend}
+            restartError={restartError}
+            restartState={restartState}
+            showBackendBanner={showBackendBanner}
+            showStartupSnackbar={showStartupSnackbar}
+            showUpdateToast={showUpdateToast}
+            updateProgress={updateProgress}
+            versionChanged={versionChanged}
+            watchdogStage={watchdogStage}
+          />
+        </NavigationShell>
       </TourProvider>
     </VersionCheckProvider>
   )
