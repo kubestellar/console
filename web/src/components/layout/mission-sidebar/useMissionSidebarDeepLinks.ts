@@ -243,11 +243,13 @@ export function useDirectImport(
     const tryImport = async () => {
       setIsDirectImporting(true)
       const controller = new AbortController()
+      const timeoutSignal = AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS)
+      const combinedSignal = AbortSignal.any([controller.signal, timeoutSignal])
       let found: MissionExport | null = null
       try {
         found = await Promise.any(paths.map(async (path) => {
           const response = await fetch(`/api/missions/file?path=${encodeURIComponent(path)}`, {
-            signal: controller.signal,
+            signal: combinedSignal,
           })
           if (!response.ok) {
             throw new Error('not found')
