@@ -136,9 +136,11 @@ export function useWorkloadMonitor(
   const initRef = useRef(false)
   useEffect(() => {
     if (initRef.current) return
-    initRef.current = true
-
     if (!enabledRef.current) return
+
+    // Only mark init as done when we're actually starting a fetch,
+    // so components that mount with enabled=false can later enable fetching.
+    initRef.current = true
 
     fetchData()
 

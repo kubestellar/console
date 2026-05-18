@@ -366,6 +366,7 @@ export function useStackDiscovery(clusters: string[]) {
   const initialLoadDone = useRef(isCacheValid || false)
   const hasStacksRef = useRef(hasCachedStacks) // Track if we have any data to show
   const isRefetching = useRef(false) // Guard against concurrent refetches
+  const refetchGenRef = useRef(0) // Incremented on each new refetch to detect stale in-flight runs
 
   // Stable key for cluster list — avoids complex expressions in dependency arrays
   const clustersKey = (clusters || []).join(',')
@@ -386,10 +387,9 @@ export function useStackDiscovery(clusters: string[]) {
       return
     }
 
-    // Prevent concurrent refetches
-    if (isRefetching.current) {
-      return
-    }
+    // Abort any in-flight refetch and restart with the current cluster set.
+    // Incrementing the generation signals the running loop to bail out.
+    const gen = ++refetchGenRef.current
     isRefetching.current = true
 
     if (!silent) {
@@ -443,6 +443,8 @@ export function useStackDiscovery(clusters: string[]) {
 
       // Progressive discovery: process clusters sequentially, update UI after each phase
       for (const cluster of (clusters || [])) {
+        // Bail out if a newer refetch has started (clusters changed mid-flight)
+        if (gen !== refetchGenRef.current) return
         try {
           // ════════════════════════════════════════════════════════════════
           // Phase 1: Fast discovery — labeled pods, InferencePools, and
@@ -703,6 +705,8 @@ export function useStackDiscovery(clusters: string[]) {
         }
       }
 
+      // Only commit final state if no newer refetch has superseded this one
+      if (gen !== refetchGenRef.current) return
       setError(null)
       setLastRefresh(new Date())
       initialLoadDone.current = true
@@ -714,9 +718,12 @@ export function useStackDiscovery(clusters: string[]) {
       }
       setError(err instanceof Error ? err.message : 'Failed to discover stacks')
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-      isRefetching.current = false
+      // Only clear flags if we're still the current run
+      if (gen === refetchGenRef.current) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        isRefetching.current = false
+      }
     }
   }, [clustersKey])
 
