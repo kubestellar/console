@@ -111,13 +111,6 @@ export function AIML() {
           isClickable: false,
           isDemo: isDemoData,
         }
-      case 'memory':
-        return {
-          value: Math.round(totalMemoryGB),
-          sublabel: t('aiml.totalMemory'),
-          isClickable: false,
-          isDemo: isDemoData,
-        }
       case 'ml_workloads':
         return {
           value: mlWorkloadCount,
