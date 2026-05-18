@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -622,8 +622,8 @@ export function Marketplace() {
   }
 
   // Sort items
-  const sortedItems = (() => {
-    const sorted = [...items].sort((a, b) => {
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
       let cmp = 0
       switch (sortField) {
         case 'name': cmp = a.name.localeCompare(b.name); break
@@ -637,11 +637,10 @@ export function Marketplace() {
       }
       return sortOrder === 'asc' ? cmp : -cmp
     })
-    return sorted
-  })()
+  }, [items, sortField, sortOrder])
 
   // Group items by CNCF category when help-wanted is active
-  const groupedItems = (() => {
+  const groupedItems = useMemo(() => {
     if (!showHelpWanted) return null
     const groups: Record<string, MarketplaceItem[]> = {}
     for (const item of sortedItems) {
@@ -650,7 +649,7 @@ export function Marketplace() {
       groups[cat].push(item)
     }
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b))
-  })()
+  }, [showHelpWanted, sortedItems])
 
   const handleInstall = async (item: MarketplaceItem) => {
     try {

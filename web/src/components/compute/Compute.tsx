@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { GitCompare, CheckSquare, Square, ChevronDown, ChevronRight, AlertCircle } from 'lucide-react'
 import { Button } from '../ui/Button'
@@ -133,17 +133,17 @@ export function Compute() {
   }
 
   // Calculate utilization from available data
-  const cpuUtilization = (() => {
+  const cpuUtilization = useMemo(() => {
     const totalCPU = reachableClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
     const requestedCPU = reachableClusters.reduce((sum, c) => sum + (c.cpuRequestsCores || 0), 0)
     return totalCPU > 0 ? Math.round((requestedCPU / totalCPU) * 100) : 0
-  })()
+  }, [reachableClusters])
 
-  const memoryUtilization = (() => {
+  const memoryUtilization = useMemo(() => {
     const totalMemory = reachableClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
     const requestedMemory = reachableClusters.reduce((sum, c) => sum + (c.memoryRequestsGB || 0), 0)
     return totalMemory > 0 ? Math.round((requestedMemory / totalMemory) * 100) : 0
-  })()
+  }, [reachableClusters])
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = (blockId: string): StatBlockValue => {

@@ -63,7 +63,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
   }, [card?.card_type])
 
   // Filter by search query
-  const filteredCards = (() => {
+  const filteredCards = useMemo(() => {
     if (!searchQuery.trim()) return cardTypes
     const q = searchQuery.toLowerCase()
     return cardTypes.filter(
@@ -72,7 +72,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
            c.category.toLowerCase().includes(q) ||
            c.type.toLowerCase().includes(q)
     )
-  })()
+  }, [searchQuery, cardTypes])
 
   if (!card) return null
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Server, Cpu, MemoryStick, Box, Activity, AlertCircle, GitBranch } from 'lucide-react'
 import { useClusters, useNodes, ClusterInfo } from '../../hooks/useMCP'
@@ -24,10 +25,9 @@ export function ClusterComparisonPage() {
   const { nodes: allNodes } = useNodes()
 
   // Get cluster names from URL
-  const clusterNames = (() => {
-    const names = searchParams.get('clusters')?.split(',').filter(Boolean) || []
-    return names
-  })()
+  const clusterNames = useMemo(() => {
+    return searchParams.get('clusters')?.split(',').filter(Boolean) || []
+  }, [searchParams])
 
   // Filter to only the clusters we're comparing
   const clustersToCompare = clusters.filter(c => clusterNames.includes(c.name))

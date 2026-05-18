@@ -135,7 +135,7 @@ export function Security() {
   const complianceChecks = isDemoMode ? getMockComplianceData() : []
 
   // Issues after global filter (before local severity filter)
-  const globalFilteredIssues = (() => {
+  const globalFilteredIssues = useMemo(() => {
     let result = securityIssues
 
     // Apply global cluster filter
@@ -158,27 +158,27 @@ export function Security() {
     }
 
     return result
-  })()
+  }, [securityIssues, isAllClustersSelected, globalSelectedClusters, filterBySeverity, customFilter])
 
-  const filteredIssues = (() => {
+  const filteredIssues = useMemo(() => {
     let result = globalFilteredIssues
     // Apply local severity filter
     if (severityFilter !== 'all') {
       result = result.filter(issue => issue.severity === severityFilter)
     }
     return result
-  })()
+  }, [globalFilteredIssues, severityFilter])
 
   // Filter RBAC and compliance based on clusters
-  const filteredRBAC = (() => {
+  const filteredRBAC = useMemo(() => {
     if (isAllClustersSelected) return rbacBindings
     return rbacBindings.filter(b => globalSelectedClusters.includes(b.cluster))
-  })()
+  }, [isAllClustersSelected, rbacBindings, globalSelectedClusters])
 
-  const filteredCompliance = (() => {
+  const filteredCompliance = useMemo(() => {
     if (isAllClustersSelected) return complianceChecks
     return complianceChecks.filter(c => globalSelectedClusters.includes(c.cluster))
-  })()
+  }, [isAllClustersSelected, complianceChecks, globalSelectedClusters])
 
   const stats = useMemo(() => {
     const high = globalFilteredIssues.filter(i => i.severity === 'high').length

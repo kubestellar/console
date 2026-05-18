@@ -112,13 +112,13 @@ export function SmartCardSuggestions({
   }, [clusters])
 
   // Generate suggestions based on cluster context, excluding existing cards
-  const suggestions: Suggestion[] = (() => {
+  const suggestions: Suggestion[] = useMemo(() => {
     const existing = new Set(existingCardTypes)
     return SUGGESTION_RULES
       .filter(([cardType, , condition]) => !existing.has(cardType) && condition(clusterContext))
       .map(([cardType, reason]) => ({ cardType, reason }))
       .slice(0, MAX_SUGGESTIONS)
-  })()
+  }, [existingCardTypes, clusterContext])
 
   // Emit analytics when suggestions are first shown
   useEffect(() => {
