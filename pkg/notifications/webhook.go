@@ -178,7 +178,7 @@ func (w *WebhookNotifier) Send(alert Alert) error {
 	}
 	defer func() {
 		// Drain body so the underlying TCP connection can be reused.
-		io.Copy(io.Discard, resp.Body)
+		io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 		resp.Body.Close()
 	}()
 

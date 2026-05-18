@@ -79,7 +79,7 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 		slog.Info("[missions] GitHub token returned error, retrying without auth", "status", resp.StatusCode, "url", url)
 		// #6823 — Drain the body before closing so the underlying TCP
 		// connection is returned to the pool for reuse (HTTP/1.1 keep-alive).
-		io.Copy(io.Discard, resp.Body) //nolint:errcheck // best-effort drain
+		io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20)) //nolint:errcheck // best-effort drain
 		resp.Body.Close()
 		retryReq, err := http.NewRequest("GET", url, nil)
 		if err != nil {

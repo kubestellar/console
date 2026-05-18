@@ -158,7 +158,7 @@ func (s *SlackNotifier) sendSlackMessage(msg slackMessage) error {
 	}
 	defer func() {
 		// Drain the body so the underlying TCP connection can be reused.
-		io.Copy(io.Discard, resp.Body)
+		io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 		resp.Body.Close()
 	}()
 

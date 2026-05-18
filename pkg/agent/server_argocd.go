@@ -257,7 +257,7 @@ func tryArgoRESTSync(ctx context.Context, argoServerURL, argoToken, appName stri
 	// Drain the response body before closing to avoid HTTP connection pool
 	// exhaustion from partially-read bodies (#7746).
 	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 		resp.Body.Close()
 	}()
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {

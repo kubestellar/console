@@ -173,7 +173,7 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 		// #6817 — Drain the response body before returning so the underlying
 		// TCP connection can be reused by the transport pool. defer Close()
 		// alone does not guarantee the body is fully consumed.
-		_, _ = io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("slack returned status %d", resp.StatusCode)})
 	}
 	return c.JSON(fiber.Map{"success": true})
@@ -260,7 +260,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	if forkResp.StatusCode < 200 || forkResp.StatusCode >= 300 {
 		// #7137 — Drain response body so the TCP connection returns to the pool.
-		io.Copy(io.Discard, forkResp.Body) //nolint:errcheck // best-effort drain
+		io.Copy(io.Discard, io.LimitReader(forkResp.Body, 1<<20)) //nolint:errcheck // best-effort drain
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub fork failed with status %d", forkResp.StatusCode)})
 	}
 	var forkData map[string]interface{}
@@ -308,7 +308,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 					}
 				} else {
 					// #7137 — Drain on non-200 so TCP connection is reused.
-					io.Copy(io.Discard, upstreamResp.Body) //nolint:errcheck
+					io.Copy(io.Discard, io.LimitReader(upstreamResp.Body, 1<<20)) //nolint:errcheck
 				}
 			}
 		}
@@ -408,7 +408,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 		// #6835 — Eagerly drain the response body so the underlying HTTP/1.1
 		// connection is returned to the pool immediately instead of waiting for
 		// the deferred Close at function return (which may be 3+ HTTP calls later).
-		io.Copy(io.Discard, branchResp.Body) //nolint:errcheck // best-effort drain
+		io.Copy(io.Discard, io.LimitReader(branchResp.Body, 1<<20)) //nolint:errcheck // best-effort drain
 		if branchResp.StatusCode != http.StatusUnprocessableEntity {
 			return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub branch creation failed with status %d", branchResp.StatusCode)})
 		}
@@ -440,7 +440,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	// Validate commit response status (#2384) and content (#2381)
 	if fileResp.StatusCode < 200 || fileResp.StatusCode >= 300 {
 		// #7137 — Drain response body so the TCP connection returns to the pool.
-		io.Copy(io.Discard, fileResp.Body) //nolint:errcheck // best-effort drain
+		io.Copy(io.Discard, io.LimitReader(fileResp.Body, 1<<20)) //nolint:errcheck // best-effort drain
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub commit failed with status %d", fileResp.StatusCode)})
 	}
 	var commitData map[string]interface{}
@@ -481,7 +481,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	// Validate PR creation response (#2384)
 	if prResp.StatusCode < 200 || prResp.StatusCode >= 300 {
 		// #7137 — Drain response body so the TCP connection returns to the pool.
-		io.Copy(io.Discard, prResp.Body) //nolint:errcheck // best-effort drain
+		io.Copy(io.Discard, io.LimitReader(prResp.Body, 1<<20)) //nolint:errcheck // best-effort drain
 		return c.Status(502).JSON(fiber.Map{"error": fmt.Sprintf("GitHub PR creation failed with status %d", prResp.StatusCode)})
 	}
 	var prData map[string]interface{}

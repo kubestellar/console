@@ -396,7 +396,7 @@ func (h *GitHubPipelinesHandler) ghGetWithRetry(ctx context.Context, path string
 			"maxAttempts", GH_RETRY_MAX_ATTEMPTS,
 			"backoff", backoff,
 		)
-		io.Copy(io.Discard, resp.Body)
+		io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 		resp.Body.Close()
 		select {
 		case <-time.After(backoff):

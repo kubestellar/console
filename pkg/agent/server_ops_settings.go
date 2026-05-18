@@ -885,7 +885,7 @@ func checkStatuspageHealth(client *http.Client, apiURL string) string {
 		return "unknown"
 	}
 	defer func() {
-		io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
 		resp.Body.Close()
 	}()
 
