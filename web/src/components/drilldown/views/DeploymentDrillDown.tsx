@@ -11,6 +11,7 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { PageErrorBoundary } from '../../PageErrorBoundary'
 
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
@@ -126,7 +127,7 @@ function buildLabelSelector(
   return parts.join(',')
 }
 
-export function DeploymentDrillDown({ data }: Props) {
+function DeploymentDrillDownContent({ data }: Props) {
   const { t } = useTranslation()
   const cluster = (data.cluster as string) || ''
   const namespace = (data.namespace as string) || ''
@@ -787,5 +788,13 @@ export function DeploymentDrillDown({ data }: Props) {
         )}
       </div>
     </div>
+  )
+}
+
+export function DeploymentDrillDown(props: Props) {
+  return (
+    <PageErrorBoundary>
+      <DeploymentDrillDownContent {...props} />
+    </PageErrorBoundary>
   )
 }

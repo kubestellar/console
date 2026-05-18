@@ -52,7 +52,7 @@ function isWebGLAvailable(): boolean {
   }
 }
 
-const GlobeAnimation = ({
+const GlobeAnimationContent = ({
   width = "100%",
   height = "600px",
   className = "",
@@ -131,7 +131,7 @@ const GlobeAnimation = ({
           <div className="w-32 h-32 rounded-full bg-linear-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30" />
         </div>
       ) : null}
-      {hasWebGL && <GlobeErrorBoundary>
+      {hasWebGL && (
         <Canvas className="w-full h-full bg-transparent">
         {/* Camera */}
         <PerspectiveCamera
@@ -169,9 +169,15 @@ const GlobeAnimation = ({
           <NetworkGlobe isLoaded={isLoaded} />
         </Suspense>
       </Canvas>
-      </GlobeErrorBoundary>}
+      )}
     </div>
   )
 }
+
+const GlobeAnimation = (props: GlobeAnimationProps) => (
+  <GlobeErrorBoundary>
+    <GlobeAnimationContent {...props} />
+  </GlobeErrorBoundary>
+)
 
 export default GlobeAnimation

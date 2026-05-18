@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
 import { DashboardHeader } from '../shared/DashboardHeader'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 import { RotatingTip } from '../ui/RotatingTip'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
@@ -144,7 +145,7 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
 /** Interval between auto-refresh ticks in milliseconds */
 const AUTO_REFRESH_INTERVAL_MS = 30_000
 
-export default function EnterprisePortal() {
+function EnterprisePortalContent() {
   const navigate = useNavigate()
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(() => new Date())
@@ -253,5 +254,13 @@ export default function EnterprisePortal() {
         </button>
       </div>
     </div>
+  )
+}
+
+export default function EnterprisePortal() {
+  return (
+    <PageErrorBoundary>
+      <EnterprisePortalContent />
+    </PageErrorBoundary>
   )
 }

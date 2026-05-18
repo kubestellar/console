@@ -21,6 +21,7 @@ import { Navbar } from '../layout/navbar/index'
 import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
 import { FloatingDashboardActions } from '../dashboard/FloatingDashboardActions'
 import { DashboardCustomizer } from '../dashboard/customizer/DashboardCustomizer'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 import type { CardSuggestion } from '../dashboard/shared/cardCatalog'
 import type { DashboardCardPlacement } from '../../lib/unified/types'
 
@@ -94,7 +95,7 @@ function readExistingPlacements(storageKey: string): DashboardCardPlacement[] {
 const MissionSidebar = safeLazy(() => import('../layout/mission-sidebar'), 'MissionSidebar')
 const MissionSidebarToggle = safeLazy(() => import('../layout/mission-sidebar'), 'MissionSidebarToggle')
 
-export default function EnterpriseLayout() {
+function EnterpriseLayoutContent() {
   const { config } = useSidebarConfig()
   const { isMobile } = useMobile()
   const location = useLocation()
@@ -242,5 +243,13 @@ export default function EnterpriseLayout() {
         </Suspense>
       </div>
     </VersionCheckProvider>
+  )
+}
+
+export default function EnterpriseLayout() {
+  return (
+    <PageErrorBoundary>
+      <EnterpriseLayoutContent />
+    </PageErrorBoundary>
   )
 }

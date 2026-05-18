@@ -18,6 +18,7 @@ import {
   type ResourceContext,
 } from '../../modals'
 import { useTranslation } from 'react-i18next'
+import { PageErrorBoundary } from '../../PageErrorBoundary'
 
 interface Props {
   data: Record<string, unknown>
@@ -84,7 +85,7 @@ interface CRDConditionRaw {
   lastTransitionTime?: string
 }
 
-export function CRDDrillDown({ data }: Props) {
+function CRDDrillDownContent({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const crdName = data.crd as string
@@ -647,5 +648,13 @@ Please:
         )}
       </div>
     </div>
+  )
+}
+
+export function CRDDrillDown(props: Props) {
+  return (
+    <PageErrorBoundary>
+      <CRDDrillDownContent {...props} />
+    </PageErrorBoundary>
   )
 }

@@ -8,6 +8,7 @@ import { authFetch } from '../../lib/api'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../lib/clipboard'
 import { downloadText } from '../../lib/download'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 
 interface LogEntry {
   id: string
@@ -88,7 +89,7 @@ const REMEDIATION_FLOWS: Record<string, Array<{ type: LogEntry['type']; message:
   ],
 }
 
-export function RemediationConsole({
+function RemediationConsoleContent({
   isOpen,
   onClose,
   resourceType,
@@ -709,5 +710,13 @@ Labels:       app=${resourceName.split('-')[0]}
         </div>
       </div>
     </div>
+  )
+}
+
+export function RemediationConsole(props: RemediationConsoleProps) {
+  return (
+    <PageErrorBoundary>
+      <RemediationConsoleContent {...props} />
+    </PageErrorBoundary>
   )
 }

@@ -21,9 +21,10 @@ import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { ApiKeyPromptModal, useApiKeyCheck } from '../console-missions/shared'
 
-export function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }: {
+export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, onMouseLeave }: {
   run: NightlyRun
   guide?: NightlyGuideStatus
+  isDemoMode: boolean
   isHighlighted?: boolean
   onMouseEnter?: () => void
   onMouseLeave?: () => void
@@ -35,7 +36,6 @@ export function RunDot({ run, guide, isHighlighted, onMouseEnter, onMouseLeave }
   const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null)
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
-  const { isDemoMode } = useDemoMode()
   const isRunning = run.status !== 'completed'
   const isFailed = run.conclusion === 'failure'
   const isGPUFailure = isFailed && run.failureReason === 'gpu_unavailable'
@@ -295,6 +295,7 @@ export function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }:
   onMouseEnter: () => void
   onRunHover: (run: NightlyRun | null) => void
 }) {
+  const { isDemoMode } = useDemoMode()
   const workflowUrl = `https://github.com/${guide.repo}/actions/workflows/${guide.workflowFile}`
   const StatusIcon = guide.latestConclusion === 'success'
     ? CheckCircle
@@ -329,7 +330,7 @@ export function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }:
       </span>
       <div className="flex items-center gap-1.5 shrink-0">
         {guide.runs.map((run) => (
-          <RunDot key={run.id} run={run} guide={guide}
+          <RunDot key={run.id} run={run} guide={guide} isDemoMode={isDemoMode}
             onMouseEnter={() => { onMouseEnter(); onRunHover(run) }}
             onMouseLeave={() => onRunHover(null)}
           />
