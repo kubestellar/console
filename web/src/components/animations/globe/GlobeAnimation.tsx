@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber"
 import { OrbitControls, PerspectiveCamera } from "@react-three/drei"
 import NetworkGlobe from "./NetworkGlobe"
 import GlobeLoader from "./GlobeLoader"
+import { GlobeErrorBoundary } from "./GlobeErrorBoundary"
 
 interface GlobeAnimationProps {
   width?: string
@@ -130,7 +131,8 @@ const GlobeAnimation = ({
           <div className="w-32 h-32 rounded-full bg-linear-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30" />
         </div>
       ) : null}
-      {hasWebGL && <Canvas className="w-full h-full bg-transparent">
+      {hasWebGL && <GlobeErrorBoundary>
+        <Canvas className="w-full h-full bg-transparent">
         {/* Camera */}
         <PerspectiveCamera
           makeDefault
@@ -166,7 +168,8 @@ const GlobeAnimation = ({
         <Suspense fallback={null}>
           <NetworkGlobe isLoaded={isLoaded} />
         </Suspense>
-      </Canvas>}
+      </Canvas>
+      </GlobeErrorBoundary>}
     </div>
   )
 }
