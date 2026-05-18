@@ -17,6 +17,20 @@ import (
 // pooling and reduce per-request allocation overhead.
 var githubHTTPClient = &http.Client{Timeout: githubAPITimeout}
 
+type githubReleaseInfo struct {
+	TagName string `json:"tag_name"`
+	Assets  []struct {
+		Name               string `json:"name"`
+		BrowserDownloadURL string `json:"browser_download_url"`
+	} `json:"assets"`
+}
+
+type githubRefResponse struct {
+	Object struct {
+		SHA string `json:"sha"`
+	} `json:"object"`
+}
+
 func githubRepo() string {
 	if v := os.Getenv("GITHUB_REPO"); v != "" {
 		return v
@@ -235,10 +249,7 @@ func fetchGitHubReleases() ([]githubReleaseInfo, error) {
 	return releases, nil
 }
 
-// renameOrCopy attempts os.Rename first. When that fails with EXDEV
-// (cross-device link — common when /tmp is tmpfs), it falls back to a
-// copy-then-remove strategy so auto-update works regardless of filesystem
-// layout (#7242).
+// short returns a 7-character prefix for commit SHAs used in update logs.
 func short(sha string) string {
 	if len(sha) > 7 {
 		return sha[:7]
