@@ -87,7 +87,9 @@ async function expectDashboardNavigation(page: Page, href: string, expectedTitle
     () => new URL(page.url()).pathname,
     { timeout: SIDEBAR_TIMEOUT_MS },
   ).toBe(href)
-  await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+  // Use dashboard-title as the page-loaded indicator — it's present on all pages
+  // via DashboardHeader, whereas dashboard-page testid varies per route.
+  await expect(page.getByTestId('dashboard-title')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
   await expect(page.getByTestId('dashboard-title')).toContainText(expectedTitle, { timeout: SIDEBAR_TIMEOUT_MS })
 }
 

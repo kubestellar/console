@@ -137,7 +137,7 @@ export function DashboardPage({
   emptyState,
   isDemoData = false,
   onDragEnd: externalDragEnd,
-  testId }: DashboardPageProps) {
+  testId = 'dashboard-page' }: DashboardPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   // Capture the route path at mount time — KeepAlive keeps this component alive
