@@ -164,11 +164,15 @@ async function setupLiveDashboardMode(page: Page) {
       body: JSON.stringify([]),
     })
   )
-  // Playwright gives each test a fresh browser context, so these live-mode
-  // tests do not need IndexedDB cleanup before navigation. Skipping the async
-  // delete avoids a WebKit/Firefox race where auth state is written after the
-  // app boots, which redirects to /login before dashboard-page can mount.
+  // Use an opaque non-demo token so the auth flow hits the normal /api/me
+  // path instead of the DEMO_TOKEN_VALUE branch in refreshUser(). When the
+  // token equals 'demo-token' and demoMode is explicitly false, refreshUser
+  // calls checkOAuthConfigured() → sees oauth_configured:true → clears the
+  // token → redirects to /login. An opaque token (not a parseable JWT) is
+  // treated as "not expired" so ProtectedRoute renders children immediately
+  // and refreshUser fetches /api/me (mocked above) to populate the user.
   await setupTestStorage(page, {
+    token: 'live-test-token',
     demoMode: false,
     agentSetupDismissed: true,
     clearIndexedDB: false,
@@ -852,7 +856,11 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     // here and would delay the auth/demo flags until after app startup on
     // Firefox/WebKit, causing a redirect to /login instead of mounting the
     // dashboard route.
+    // Use an opaque non-demo token (not 'demo-token') so refreshUser() hits
+    // the normal /api/me path instead of the DEMO_TOKEN_VALUE branch which
+    // clears the token when oauth_configured is true.
     await setupTestStorage(page, {
+      token: 'live-test-token',
       demoMode: false,
       agentSetupDismissed: true,
       clearIndexedDB: false,
