@@ -159,7 +159,7 @@ export function useClusterResourceQuery<T>(
     return () => {
       unsubscribePolling()
     }
-  }, [refetch, cluster, namespace, consecutiveFailures, resourceKey])
+  }, [refetch, cluster, namespace, resourceKey])
 
   useEffect(() => {
     const unregisterRefetch = registerRefetch(
