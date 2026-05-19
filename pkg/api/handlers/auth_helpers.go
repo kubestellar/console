@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -108,11 +107,6 @@ func requireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
 // but sensitive enough to warrant this check (#6022).
 func requireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
 	if s == nil {
-		return nil
-	}
-	// Widget requests bypass JWT auth and have no user context.
-	// Grant read-only (viewer) access to match the JWTAuth bypass.
-	if c.Method() == fiber.MethodGet && strings.Contains(c.Query("source"), "widget") {
 		return nil
 	}
 	userID := middleware.GetUserID(c)
