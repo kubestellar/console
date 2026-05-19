@@ -589,7 +589,7 @@ func (h *MCPHandlers) GetProviderHealthStub(c *fiber.Ctx) error {
 	}
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return c.JSON(fiber.Map{"providers": []any{}, "error": err.Error()})
+		return c.JSON(fiber.Map{"providers": []any{}, "error": "error checking cluster health"})
 	}
 	type providerInfo struct {
 		Name    string `json:"name"`
