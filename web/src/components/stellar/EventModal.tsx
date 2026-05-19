@@ -281,6 +281,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   const recommendations = deriveRecommendations(notification)
   const color = severityColor(notification.severity)
   const resourceName = extractResourceName(notification)
+  const titleId = `event-detail-title-${notification.id}`
 
   // Esc to close
   useEffect(() => {
@@ -292,6 +293,9 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   return (
     <div
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0, 0, 0, 0.6)',
@@ -319,7 +323,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
               <div style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
                 {notification.severity} · {notification.type} · {formatRelative(notification.createdAt)}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>{notification.title}</div>
+              <div id={titleId} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>{notification.title}</div>
               {(notification.cluster || notification.namespace || resourceName) && (
                 <div style={{ fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', marginTop: 4 }}>
                   {notification.cluster}{notification.namespace ? ` / ${notification.namespace}` : ''}{resourceName ? ` / ${resourceName}` : ''}
@@ -330,6 +334,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
               onClick={onClose}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)', padding: 2 }}
               title="Close (Esc)"
+              aria-label="Close"
             >✕</button>
           </div>
           {/* Tag row */}

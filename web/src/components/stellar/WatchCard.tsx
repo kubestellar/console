@@ -75,6 +75,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       onClick={() => onOpenDetail?.(watch)}
       role="button"
       tabIndex={0}
+      aria-label={`Open watch details for ${watch.namespace}/${watch.resourceName}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -97,6 +98,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
         onClick={(e) => e.stopPropagation()}
         role="button"
         tabIndex={0}
+        aria-label={`Quick actions for ${watch.namespace}/${watch.resourceName}`}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -226,6 +228,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           onClick={(e) => e.stopPropagation()}
           role="button"
           tabIndex={0}
+          aria-label={`Watch actions for ${watch.namespace}/${watch.resourceName}`}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()

@@ -129,10 +129,14 @@ export function WatchDetailModal({
     `Restart the deployment for ${watch.namespace}/${deploymentName} on cluster ${watch.cluster}.`
 
   const canRestart = watch.resourceKind === 'Pod' || watch.resourceKind === 'Deployment'
+  const titleId = `watch-detail-title-${watch.id}`
 
   return (
     <div
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0, 0, 0, 0.6)',
@@ -160,7 +164,7 @@ export function WatchDetailModal({
               <div style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
                 Watch · {watch.resourceKind} · watching for {formatDuration(watchAgeMs)}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>
+              <div id={titleId} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>
                 {watch.namespace}/{watch.resourceName}
               </div>
               <div style={{ fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', marginTop: 4 }}>
@@ -171,6 +175,7 @@ export function WatchDetailModal({
               onClick={onClose}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)', padding: 2 }}
               title="Close (Esc)"
+              aria-label="Close"
             >✕</button>
           </div>
 
