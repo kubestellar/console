@@ -72,14 +72,16 @@ jobs:
         env:
           GA4_SERVICE_ACCOUNT_KEY: ${{ secrets.GA4_SERVICE_ACCOUNT_KEY }}
           GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          INPUT_LOOKBACK_DAYS: ${{ inputs.lookback_days }}
+          INPUT_MIN_MOBILE_PCT: ${{ inputs.min_mobile_pct }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { google } = require('googleapis');
 
             // ── Config ──
-            const lookbackDays = parseInt('${{ inputs.lookback_days }}' || process.env.LOOKBACK_DAYS);
-            const minMobilePct = parseFloat('${{ inputs.min_mobile_pct }}' || process.env.MIN_MOBILE_PCT);
+            const lookbackDays = parseInt(process.env.INPUT_LOOKBACK_DAYS || process.env.LOOKBACK_DAYS);
+            const minMobilePct = parseFloat(process.env.INPUT_MIN_MOBILE_PCT || process.env.MIN_MOBILE_PCT);
             const consecutiveThreshold = parseInt(process.env.CONSECUTIVE_DAYS_THRESHOLD);
             const minDailySessions = parseInt(process.env.MIN_DAILY_SESSIONS);
             const tag = process.env.ISSUE_TAG;
