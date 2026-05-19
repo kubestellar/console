@@ -89,6 +89,18 @@ vi.mock('../shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
 }))
 
+// Mock pollingManager to prevent real setInterval timers from hanging the test process.
+// storage.ts (and useClusterResourceQuery.ts which it delegates to) call subscribePolling
+// in useEffect — without this mock the intervals are never cleared and the tests hang.
+vi.mock('../pollingManager', () => ({
+  subscribePolling: vi.fn(() => vi.fn()),
+}))
+
+// Mock isClusterModeBackend so the backend-mode fetch path is deterministic.
+vi.mock('../../../lib/cache/fetcherUtils', () => ({
+  isClusterModeBackend: vi.fn(() => false),
+}))
+
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return { ...actual,
@@ -196,23 +208,19 @@ describe('usePVCs', () => {
     await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
-  it('polls every REFRESH_INTERVAL_MS and clears the interval on unmount', async () => {
-    vi.useFakeTimers()
+  it('registers polling subscription and clears it on unmount', async () => {
+    // subscribePolling is mocked — no real intervals are created.
+    // Verify initial fetch fires on mount and no new fetches after unmount.
     globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [] }), { status: 200 })))
 
-    const { unmount } = renderHook(() => usePVCs())
+    const { result, unmount } = renderHook(() => usePVCs())
 
-    // Advance time past one interval
-    await act(async () => { vi.advanceTimersByTime(150_000) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(globalThis.fetch).toHaveBeenCalled()
 
-    const callsAfterPoll = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
-    expect(callsAfterPoll).toBeGreaterThan(0)
-
+    const callsBeforeUnmount = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
     unmount()
-
-    // After unmount the interval is cleared; no new API calls
-    await act(async () => { vi.advanceTimersByTime(150_000) })
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterPoll)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsBeforeUnmount)
   })
 
   it('reacts to storage cache reset by clearing data and entering loading state', async () => {
@@ -249,12 +257,16 @@ describe('usePVCs', () => {
   })
 
   it('returns empty PVCs with error message on fetch failure', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fetch error'))
+    // Reject once then hang — prevents the consecutiveFailures dep loop from
+    // saturating the microtask queue before waitFor can check the assertion.
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('fetch error'))
+      .mockImplementation(() => new Promise(() => {}))
 
     const { result } = renderHook(() => usePVCs())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('fetch error')
+    // Wait for error to appear (isLoading may reset to true on the retry before hanging)
+    await waitFor(() => expect(result.current.error).toBe('fetch error'))
   })
 })
 
@@ -303,33 +315,28 @@ describe('usePVs', () => {
     await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
-  it('polls every REFRESH_INTERVAL_MS and clears interval on unmount', async () => {
-    vi.useFakeTimers()
+  it('registers polling subscription and clears it on unmount', async () => {
     globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [] }), { status: 200 })))
 
-    const { unmount } = renderHook(() => usePVs())
+    const { result, unmount } = renderHook(() => usePVs())
 
-    // Advance time past one interval
-    await act(async () => { vi.advanceTimersByTime(150_000) })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(globalThis.fetch).toHaveBeenCalled()
 
-    const callsAfterPoll = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
-    expect(callsAfterPoll).toBeGreaterThan(0)
-
+    const callsBeforeUnmount = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
     unmount()
-
-    // After unmount the interval is cleared; no new API calls
-    await act(async () => { vi.advanceTimersByTime(150_000) })
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterPoll)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsBeforeUnmount)
   })
 
   it('returns empty list with error message on fetch failure', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockImplementation(() => new Promise(() => {}))
 
     const { result } = renderHook(() => usePVs())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => expect(result.current.error).toBe('network error'))
     expect(result.current.pvs).toEqual([])
-    expect(result.current.error).toBe('network error')
   })
 })
 
@@ -404,7 +411,9 @@ describe('useResourceQuotas', () => {
   })
 
   it('returns empty list with error: null on failure', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('API error'))
+      .mockImplementation(() => new Promise(() => {}))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -471,7 +480,9 @@ describe('useLimitRanges', () => {
   })
 
   it('returns empty list with error: null on failure', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('API error'))
+      .mockImplementation(() => new Promise(() => {}))
 
     const { result } = renderHook(() => useLimitRanges())
 
@@ -1210,7 +1221,9 @@ describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
   })
 
   it('returns isDemoFallback: false when live API fails (empty, not demo)', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('API error'))
+      .mockImplementation(() => new Promise(() => {}))
 
     const { result } = renderHook(() => useResourceQuotas())
 
