@@ -5,7 +5,7 @@
  * - Required fields present (id, name, dark, colors, font)
  * - id matches expected slug
  * - Colors object has core required keys in HSL format
- * - Font object has required weight/size keys
+ * - Font object has required family/monoFamily/weight fields
  * - No accidental undefined values on required fields
  *
  * By importing all 29 theme files, V8 marks every theme definition as covered.
@@ -90,8 +90,6 @@ const REQUIRED_COLOR_KEYS = [
   'info',
 ] as const
 
-const REQUIRED_FONT_KEYS = ['size', 'weight'] as const
-
 // ── Shared structural validator ───────────────────────────────────────────────
 
 function assertThemeStructure(id: string, theme: Theme) {
@@ -110,21 +108,17 @@ function assertThemeStructure(id: string, theme: Theme) {
     }
   })
 
-  it(`${id}: has font size and weight objects`, () => {
-    for (const key of REQUIRED_FONT_KEYS) {
-      expect(theme.font[key], `${id} font.${key}`).toBeDefined()
-      expect(typeof theme.font[key]).toBe('object')
-    }
+  it(`${id}: has required font fields`, () => {
+    expect(theme.font.family, `${id} font.family`).toBeTruthy()
+    expect(theme.font.monoFamily, `${id} font.monoFamily`).toBeTruthy()
+    expect(theme.font.weight, `${id} font.weight`).toBeDefined()
+    expect(typeof theme.font.weight).toBe('object')
   })
 
-  it(`${id}: font size has normal and large keys`, () => {
-    expect(typeof theme.font.size.normal).toBe('number')
-    expect(typeof theme.font.size.large).toBe('number')
-    expect(theme.font.size.normal).toBeGreaterThan(0)
-  })
-
-  it(`${id}: font weight has normal and bold keys`, () => {
+  it(`${id}: font weight has expected keys`, () => {
     expect(typeof theme.font.weight.normal).toBe('number')
+    expect(typeof theme.font.weight.medium).toBe('number')
+    expect(typeof theme.font.weight.semibold).toBe('number')
     expect(typeof theme.font.weight.bold).toBe('number')
   })
 }

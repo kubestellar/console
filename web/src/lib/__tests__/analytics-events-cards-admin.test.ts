@@ -6,11 +6,11 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../analytics-core', () => ({
+vi.mock('../analytics-core', () => ({
   send: vi.fn(),
 }))
 
-import { send } from '../../analytics-core'
+import { send } from '../analytics-core'
 
 import {
   emitCardAdded,
@@ -37,7 +37,7 @@ import {
   emitCardCategoryBrowsed,
   emitRecommendedCardShown,
   emitCardRefreshed,
-} from '../../analytics-events/cards'
+} from '../analytics-events/cards'
 
 import {
   emitModalOpened,
@@ -49,7 +49,7 @@ import {
   emitSidebarNavigated,
   emitGameStarted,
   emitGameEnded,
-} from '../../analytics-events/admin'
+} from '../analytics-events/admin'
 
 const mockSend = vi.mocked(send)
 

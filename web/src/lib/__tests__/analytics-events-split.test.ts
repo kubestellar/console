@@ -11,11 +11,11 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../analytics-core', () => ({
+vi.mock('../analytics-core', () => ({
   send: vi.fn(),
 }))
 
-import { send } from '../../analytics-core'
+import { send } from '../analytics-core'
 
 import {
   emitMissionStarted,
@@ -29,7 +29,7 @@ import {
   emitACMMScanned,
   emitACMMMissionLaunched,
   emitACMMLevelMissionLaunched,
-} from '../../analytics-events/missions'
+} from '../analytics-events/missions'
 
 import {
   emitWidgetLoaded,
@@ -47,7 +47,7 @@ import {
   emitInsightAcknowledged,
   emitStreakDay,
   emitBlogPostClicked,
-} from '../../analytics-events/engagement'
+} from '../analytics-events/engagement'
 
 import {
   emitMarketplaceInstall,
@@ -59,7 +59,7 @@ import {
   emitLocalClusterCreated,
   emitWelcomeViewed,
   emitWelcomeActioned,
-} from '../../analytics-events/marketplace'
+} from '../analytics-events/marketplace'
 
 import {
   emitFeedbackSubmitted,
@@ -71,7 +71,7 @@ import {
   emitNPSDismissed,
   emitLinkedInShare,
   emitPredictionFeedbackSubmitted,
-} from '../../analytics-events/feedback'
+} from '../analytics-events/feedback'
 
 const mockSend = vi.mocked(send)
 
