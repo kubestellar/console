@@ -10,11 +10,14 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
 const (
-	quantumProxyTimeout        = 30 * time.Second
-	maxQuantumResponseBytes    = 10 << 20 // 10 MB
+	quantumProxyTimeout     = 30 * time.Second
+	maxQuantumResponseBytes = 10 << 20 // 10 MB
+	quantumBearerScheme     = "Bearer "
 )
 
 // quantumClient uses a shared HTTP client with timeout to prevent hanging requests
@@ -35,9 +38,10 @@ var safeHeadersToForward = map[string]bool{
 
 type QuantumProxyHandler struct {
 	quantumServiceURL string
+	jwtSecret         string
 }
 
-func NewQuantumProxyHandler() *QuantumProxyHandler {
+func NewQuantumProxyHandler(jwtSecret string) *QuantumProxyHandler {
 	// Get service URL from env, default to localhost port-forward
 	// The port-forward bridges kubectl to localhost:5000 in dev environments
 	url := os.Getenv("QUANTUM_SERVICE_URL")
@@ -46,6 +50,7 @@ func NewQuantumProxyHandler() *QuantumProxyHandler {
 	}
 	return &QuantumProxyHandler{
 		quantumServiceURL: url,
+		jwtSecret:         jwtSecret,
 	}
 }
 
@@ -186,6 +191,27 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	return c.Send(body)
 }
 
+func (h *QuantumProxyHandler) requireBearerToken(c *fiber.Ctx) error {
+	trimmedHeader := strings.TrimSpace(c.Get("Authorization"))
+	if len(trimmedHeader) <= len(quantumBearerScheme) || !strings.EqualFold(trimmedHeader[:len(quantumBearerScheme)], quantumBearerScheme) {
+		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
+	}
+
+	tokenString := strings.TrimSpace(trimmedHeader[len(quantumBearerScheme):])
+	if tokenString == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
+	}
+
+	claims, err := middleware.ValidateJWT(tokenString, h.jwtSecret)
+	if err != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	}
+
+	c.Locals("userID", claims.UserID)
+	c.Locals("githubLogin", claims.GitHubLogin)
+	return nil
+}
+
 // ProxyPostRequest handles POST requests to quantum endpoints
 func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	endpoint := c.Params("*")
@@ -193,6 +219,10 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	// SECURITY: Validate against allowed paths (includes path traversal check)
 	if !isAllowedQuantumPath(endpoint) {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
+	if err := h.requireBearerToken(c); err != nil {
+		return err
 	}
 
 	// Prepend /api/ to the endpoint path to match quantum backend API structure

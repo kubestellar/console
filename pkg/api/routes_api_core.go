@@ -130,7 +130,7 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	cardProxy := handlers.NewCardProxyHandler(s.store)
 	api.Get("/card-proxy", cardProxy.Proxy)
 
-	quantumProxy := handlers.NewQuantumProxyHandler()
+	quantumProxy := handlers.NewQuantumProxyHandler(s.config.JWTSecret)
 	api.Get("/quantum/*", quantumProxy.ProxyRequest)
 	api.Post("/quantum/*", quantumProxy.ProxyPostRequest)
 	api.Delete("/quantum/*", quantumProxy.ProxyRequest)
