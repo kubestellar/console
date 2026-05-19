@@ -352,11 +352,9 @@ func JWTAuth(secret string) fiber.Handler {
 		// trivial bypasses; path prefix guard prevents access to sensitive routes
 		// (settings, users, dashboards, K8s proxy, etc.). See #14875.
 		if c.Method() == fiber.MethodGet && c.Query("source") == "ubersicht-widget" {
-			// Widgets run on the user's local machine (Übersicht on macOS) and
-			// hit localhost only. The exact-match "ubersicht-widget" check +
-			// GET-only guard prevents abuse. MCP/cluster paths are safe here
-			// because the data is the user's own kubeconfig — same as opening
-			// the console in a browser.
+			// SECURITY: Only paths that serve the same public data as Netlify
+			// Functions are allowed here. NEVER add paths that proxy K8s
+			// resources (mcp/*, namespaces, gitops/*) — those require auth.
 			widgetPublicPrefixes := []string{
 				"/api/public/",
 				"/api/youtube/",
@@ -367,12 +365,6 @@ func JWTAuth(secret string) fiber.Handler {
 				"/api/rewards/",
 				"/api/issue-stats",
 				"/api/github-pipelines",
-				"/api/mcp/",
-				"/api/alerts",
-				"/api/providers/health",
-				"/api/gitops/operators",
-				"/api/gitops/helm-releases",
-				"/api/namespaces",
 			}
 			for _, prefix := range widgetPublicPrefixes {
 				if strings.HasPrefix(c.Path(), prefix) {
