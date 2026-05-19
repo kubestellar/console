@@ -57,7 +57,7 @@ export const ClusterCardCompact = memo(function ClusterCardCompact({
             className="text-xs font-medium text-foreground truncate flex-1 min-w-0"
             title={cluster.aliases && cluster.aliases.length > 0 ? `${cluster.context || cluster.name}
 
-aka: ${cluster.aliases.join(', ')}` : cluster.context || cluster.name}
+aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
           >
             {cluster.context || cluster.name.split('/').pop()}
           </span>

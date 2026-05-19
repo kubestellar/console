@@ -118,7 +118,7 @@ export const ClusterCardFull = memo(function ClusterCardFull({
                   className="flex-1 min-w-0 font-semibold text-foreground truncate"
                   title={cluster.aliases && cluster.aliases.length > 0 ? `${cluster.context || cluster.name}
 
-aka: ${cluster.aliases.join(', ')}` : cluster.context || cluster.name}
+aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
                 >
                   {cluster.context || cluster.name.split('/').pop()}
                 </h3>
