@@ -81,13 +81,13 @@ export const ClusterCardList = memo(function ClusterCardList({
               className="font-medium text-foreground truncate flex-1 min-w-0"
               title={cluster.aliases && cluster.aliases.length > 0 ? `${cluster.context || cluster.name}
 
-aka: ${cluster.aliases.join(', ')}` : cluster.context || cluster.name}
+aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             >
               {cluster.context || cluster.name.split('/').pop()}
             </span>
             <ClusterAuthBadges cluster={cluster} className="text-[9px] px-1 py-0.5 rounded shrink-0" />
             {cluster.aliases && cluster.aliases.length > 0 && (
-              <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
+              <span title={`Also known as: ${(cluster.aliases || []).join(', ')}`}>
                 <StatusBadge color="purple" size="xs" className="shrink-0">
                   +{cluster.aliases.length}
                 </StatusBadge>

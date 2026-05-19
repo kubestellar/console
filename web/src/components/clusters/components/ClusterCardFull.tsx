@@ -118,13 +118,13 @@ export const ClusterCardFull = memo(function ClusterCardFull({
                   className="flex-1 min-w-0 font-semibold text-foreground truncate"
                   title={cluster.aliases && cluster.aliases.length > 0 ? `${cluster.context || cluster.name}
 
-aka: ${cluster.aliases.join(', ')}` : cluster.context || cluster.name}
+aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
                 >
                   {cluster.context || cluster.name.split('/').pop()}
                 </h3>
                 <ClusterAuthBadges cluster={cluster} className="text-2xs px-1.5 py-0.5 rounded shrink-0" />
                 {cluster.aliases && cluster.aliases.length > 0 && (
-                  <span title={`Also known as: ${cluster.aliases.join(', ')}`}>
+                  <span title={`Also known as: ${(cluster.aliases || []).join(', ')}`}>
                     <StatusBadge color="purple" size="xs" className="shrink-0">
                       +{cluster.aliases.length} alias{cluster.aliases.length > 1 ? 'es' : ''}
                     </StatusBadge>
