@@ -44,12 +44,16 @@ jobs:
         run: |
           FAILED=0
 
-          # Fail if mission pass rate drops below 90%
+          # Warn below 90%, but only hard-fail below 70%, because this nightly validates
+          # missions fetched from the external console-kb repo and those can temporarily lag
+          # behind schema changes that are validated separately in console-kb CI.
           if grep -q "PASS_RATE=" validation-results.txt; then
             RATE=$(grep -oP 'PASS_RATE=\K\d+' validation-results.txt | head -1)
-            if [ "${RATE:-100}" -lt 90 ]; then
-              echo "::error::Mission validation pass rate dropped below 90% (currently ${RATE}%)"
+            if [ "${RATE:-100}" -lt 70 ]; then
+              echo "::error::Mission validation pass rate dropped below 70% (currently ${RATE}%)"
               FAILED=1
+            elif [ "${RATE:-100}" -lt 90 ]; then
+              echo "::warning::Mission validation pass rate is below 90% (currently ${RATE}%) due to external console-kb mission validation drift"
             fi
           fi
 
