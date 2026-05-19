@@ -346,6 +346,12 @@ const bearerScheme = "Bearer "
 // Token resolution order: Authorization header -> HttpOnly cookie -> _token query param (SSE only).
 func JWTAuth(secret string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		// Übersicht desktop widgets use curl without auth tokens.
+		// Allow read-only access when source=widget is present (#widget-auth).
+		if c.Method() == fiber.MethodGet && strings.Contains(c.Query("source"), "widget") {
+			return c.Next()
+		}
+
 		authHeader := c.Get("Authorization")
 		var tokenString string
 

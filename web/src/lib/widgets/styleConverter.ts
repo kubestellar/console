@@ -311,6 +311,17 @@ export function generateWidgetStyles(): string {
     color: 'rgba(255,255,255,0.3)',
     letterSpacing: '2px',
   },
+  issueBtn: {
+    background: 'none',
+    border: '1px solid rgba(255,255,255,0.15)',
+    borderRadius: '4px',
+    color: '#9ca3af',
+    fontSize: '10px',
+    padding: '2px 6px',
+    cursor: 'pointer',
+    marginTop: '8px',
+    pointerEvents: 'auto',
+  },
 };`
 }
 
@@ -332,13 +343,13 @@ const getStoredPosition = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored);
-  } catch (e: unknown) {
+  } catch (e) {
     console.debug('[Widget] failed to load stored position:', e);
   }
   return { top: 20, left: 20 };
 };
 const savePosition = (pos) => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch (e: unknown) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch (e) {
     console.debug('[Widget] failed to save position:', e);
   }
 };
@@ -374,6 +385,12 @@ const WIDGET_UTM = 'utm_source=widget&utm_medium=ubersicht&utm_campaign=widget-u
 const openConsole = (path = '') => {
   const sep = path.includes('?') ? '&' : '?';
   run(\`open "\${CONSOLE_URL}\${path}\${sep}\${WIDGET_UTM}"\`);
+};
+const WIDGET_NAME = '${widgetName}';
+const openIssue = (errorMsg) => {
+  const title = encodeURIComponent('[Widget] ' + WIDGET_NAME + ': ' + (errorMsg || 'unknown error'));
+  const body = encodeURIComponent('**Widget:** ' + WIDGET_NAME + '\\n**Error:** ' + (errorMsg || 'unknown') + '\\n**Platform:** Übersicht (macOS)\\n\\n_Describe what you were doing when this happened:_\\n');
+  run(\`open "https://github.com/kubestellar/console/issues/new?title=\${title}&body=\${body}&labels=kind/bug,area/widgets"\`);
 };
 
 export const className = css\`

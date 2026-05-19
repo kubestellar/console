@@ -17,13 +17,18 @@ export interface WidgetConfig {
   theme: 'dark' | 'light'
 }
 
+// Übersicht widgets run outside the browser, so curl needs a full URL.
+// When the API endpoint is empty (same-origin in-browser), fall back to localhost:8080.
+const UBERSICHT_FALLBACK_URL = 'http://localhost:8080'
+
 // Resolve the API endpoint for widget curl commands.
 // For nightly E2E, use the public (no-auth) endpoint so widgets work without JWT.
 function resolveWidgetEndpoint(apiEndpoint: string, cardApiPath: string): string {
+  const base = apiEndpoint || UBERSICHT_FALLBACK_URL
   if (cardApiPath === '/api/nightly-e2e/runs') {
-    return `${apiEndpoint}/api/public/nightly-e2e/runs`
+    return `${base}/api/public/nightly-e2e/runs`
   }
-  return `${apiEndpoint}${cardApiPath}`
+  return `${base}${cardApiPath}`
 }
 
 // Generate Übersicht widget code for a single card
@@ -41,8 +46,7 @@ export function generateCardWidget(
   /** Append source param so the backend can attribute traffic from exported widgets */
   const curlUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'source=ubersicht-widget'
   const widgetName = cardType.replace(/_/g, '-')
-  // Use the API endpoint origin as the console URL (backend serves the frontend)
-  const consoleUrl = apiEndpoint.replace(/\/api$/, '')
+  const consoleUrl = (apiEndpoint || UBERSICHT_FALLBACK_URL).replace(/\/api$/, '')
   const shellCode = generateWidgetShell(widgetName, consoleUrl)
 
   return `/**
@@ -83,7 +87,7 @@ function generateCardRenderFunction(cardType: string, displayName?: string): str
     } else {
       data = JSON.parse(trimmed);
     }
-  } catch (e: unknown) {
+  } catch (e) {
     error = 'Parse error';
   }
 
@@ -109,6 +113,9 @@ function generateCardRenderFunction(cardType: string, displayName?: string): str
     </div>
   );`
 
+  const issueButton = `
+        <button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button>`
+
   switch (cardType) {
     case 'cluster_health':
       return `
@@ -119,7 +126,7 @@ export const render = ({ output }) => {${parseBlock}
           <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
           ${card.displayName}
         </div>
-        <span style={{color: styles.colors.error}}>Error: {error}</span>${wrapClose}
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 
   const clusters = data?.clusters || [];
@@ -151,7 +158,7 @@ export const render = ({ output }) => {${parseBlock}
           <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
           ${card.displayName}
         </div>
-        <span style={{color: styles.colors.error}}>Error: {error}</span>${wrapClose}
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 
   const issues = data?.issues || data || [];
@@ -200,7 +207,7 @@ export const render = ({ output }) => {${parseBlock}
           <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
           Nightly E2E Status
         </div>
-        <span style={{color: styles.colors.error}}>Error: {error}</span>${wrapClose}
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 
   const guides = data?.guides || [];
@@ -255,9 +262,9 @@ ${wrapOpen}
                   if (h < 24) return h + 'h ago';
                   return Math.floor(h / 24) + 'd ago';
                 };
-                const tooltip = g.guide + ' (' + platform + ')\\n' +
-                  'Pass rate: ' + g.passRate + '% (' + passed + '/' + completed.length + ')\\n' +
-                  (failed > 0 ? 'Failed: ' + failed + '\\n' : '') +
+                const tooltip = g.guide + ' (' + platform + ')\\\\n' +
+                  'Pass rate: ' + g.passRate + '% (' + passed + '/' + completed.length + ')\\\\n' +
+                  (failed > 0 ? 'Failed: ' + failed + '\\\\n' : '') +
                   (lastRun ? 'Last run: ' + (lastRun.conclusion || lastRun.status) + ' ' + timeAgo(lastRun.updatedAt || lastRun.createdAt) : '');
                 return (
                 <div key={g.guide + g.platform} style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px'}}>
@@ -391,7 +398,7 @@ export const render = ({ output }) => {${parseBlock}
           <span style={{...styles.statusDot, backgroundColor: styles.colors.error}} />
           ${card.displayName}
         </div>
-        <span style={{color: styles.colors.error}}>Error: {error}</span>${wrapClose}
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 
   const nodes = data?.nodes || data || [];
@@ -431,7 +438,7 @@ export const render = ({ output }) => {${parseBlock}
 
   if (error) {${wrapOpen}
         <div style={styles.cardTitle}>${safeTitleExpr}</div>
-        <span style={{color: styles.colors.error}}>Error: {error}</span>${wrapClose}
+        <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 ${wrapOpen}
         <div style={styles.cardTitle}>${safeTitleExpr}</div>
@@ -455,8 +462,8 @@ export function generateStatWidget(
     throw new Error('No valid stat IDs provided')
   }
 
-  // For stats we use the first endpoint (most stat widgets share one)
-  const endpoint = `${apiEndpoint}${stats[0].apiEndpoint}`
+  const base = apiEndpoint || UBERSICHT_FALLBACK_URL
+  const endpoint = `${base}${stats[0].apiEndpoint}`
 
   return `/**
  * Stats Widget
@@ -489,12 +496,12 @@ export const render = ({ output }) => {
     } else {
       data = JSON.parse(trimmed);
     }
-  } catch (e: unknown) {
+  } catch (e) {
     error = 'Parse error';
   }
 
   if (error) {
-    return <div style={styles.row}><span style={{color: styles.colors.error}}>Error</span></div>;
+    return <div style={styles.row}><span style={{color: styles.colors.error}}>Error</span><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>;
   }
 
   // Extract values from API responses.
@@ -590,7 +597,8 @@ export function generateTemplateWidget(
       `Template "${templateId}" has no resolvable data endpoint (no cards and no stat.apiEndpoint)`,
     )
   }
-  const curlUrl = `${apiEndpoint}${firstEndpoint}`
+  const base = apiEndpoint || UBERSICHT_FALLBACK_URL
+  const curlUrl = `${base}${firstEndpoint}`
 
   return `/**
  * ${template.displayName} Widget
@@ -622,12 +630,12 @@ export const render = ({ output }) => {
     } else {
       data = JSON.parse(trimmed);
     }
-  } catch (e: unknown) {
+  } catch (e) {
     error = 'Parse error';
   }
 
   if (error) {
-    return <div style={styles.card}><span style={{color: styles.colors.error}}>Error: {error}</span></div>;
+    return <div style={styles.card}><span style={{color: styles.colors.error}}>Error: {error}</span><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>;
   }
 
   return (
