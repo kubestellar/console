@@ -79,6 +79,7 @@ const ALLOWED_PATHS = new Set([
 ]);
 
 const PROXY_TIMEOUT_MS = 15_000;
+const ALLOWED_METHODS = new Set(["GET", "POST"]);
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -95,6 +96,17 @@ function isAllowedPath(path: string): boolean {
 export default async (req: Request, context: Context): Promise<Response> => {
   const url = new URL(req.url);
   const path = url.pathname.replace("/.netlify/functions/quantum-proxy", "");
+
+  // Only allow GET and POST methods
+  if (!ALLOWED_METHODS.has(req.method)) {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      {
+        status: 405,
+        headers: { "Content-Type": "application/json", "Allow": "GET, POST" },
+      }
+    );
+  }
 
   // Validate path against allowlist to prevent SSRF
   if (!isAllowedPath(path)) {
@@ -131,10 +143,8 @@ export default async (req: Request, context: Context): Promise<Response> => {
   }
 
   // Determine if we have a real quantum service
-  const quantumServiceURL =
-    context.env.QUANTUM_SERVICE_URL ||
-    "http://quantum-kc-demo.quantum.svc.cluster.local:5000";
-  const isDemo = !context.env.QUANTUM_SERVICE_URL;
+  const quantumServiceURL = context.env.QUANTUM_SERVICE_URL;
+  const isDemo = !quantumServiceURL;
 
   try {
     if (isDemo) {
@@ -189,12 +199,25 @@ export default async (req: Request, context: Context): Promise<Response> => {
       }
     }
 
-    // Proxy to actual quantum service with timeout
+    // Proxy to actual quantum service — requires QUANTUM_SERVICE_URL
+    if (!quantumServiceURL) {
+      return new Response(
+        JSON.stringify({ error: "Quantum service not configured" }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const targetURL = new URL(path, quantumServiceURL).toString();
     const requestBody = req.method === "GET" ? undefined : await req.text();
     const response = await fetch(targetURL, {
       method: req.method,
-      headers: req.headers,
+      headers: {
+        "Content-Type": req.headers.get("Content-Type") ?? "application/json",
+        Accept: req.headers.get("Accept") ?? "application/json",
+      },
       body: requestBody,
       signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
     });
