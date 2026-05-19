@@ -196,7 +196,7 @@ export const WIDGET_CARDS: Record<string, WidgetCardDefinition> = {
     cardType: 'namespace_overview',
     displayName: 'Namespace Overview',
     description: 'Summary of resources within a namespace',
-    apiEndpoints: ['/api/mcp/namespaces'],
+    apiEndpoints: ['/api/mcp/namespaces/overview'],
     supportsTheme: true,
     minRefreshInterval: 30000,
     defaultSize: { width: 250, height: 180 },

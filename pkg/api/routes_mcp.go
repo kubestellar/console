@@ -78,6 +78,7 @@ api.Get("/mcp/security", mcpHandlers.CheckSecurityIssues)
 api.Get("/mcp/storage", mcpHandlers.GetPVCs)
 api.Get("/mcp/network", mcpHandlers.GetNetworkPolicies)
 api.Get("/mcp/namespaces", namespaces.ListNamespaces)
+api.Get("/mcp/namespaces/overview", mcpHandlers.GetNamespacesOverview)
 // Widget aliases for cards that reference top-level /api/* paths.
 // These reuse existing handlers to avoid the SPA catch-all.
 api.Get("/alerts", mcpHandlers.GetWarningEvents)

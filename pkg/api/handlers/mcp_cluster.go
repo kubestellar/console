@@ -524,6 +524,52 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	return errNoClusterAccess(c)
 }
 
+// GetNamespacesOverview returns namespace counts across all healthy clusters.
+// Used by the namespace-overview widget which doesn't specify a single cluster.
+func (h *MCPHandlers) GetNamespacesOverview(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.JSON(fiber.Map{"namespaces": []any{}})
+	}
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+	if err != nil {
+		return handleK8sError(c, err)
+	}
+
+	type nsEntry struct {
+		Name    string `json:"name"`
+		Cluster string `json:"cluster"`
+	}
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	allNS := make([]nsEntry, 0)
+
+	clusterCtx, clusterCancel := context.WithCancel(c.Context())
+	defer clusterCancel()
+
+	for _, cl := range clusters {
+		wg.Add(1)
+		safego.Go(func() {
+			defer wg.Done()
+			clusterName := cl.Name
+			ctx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
+			defer cancel()
+
+			nsList, err := h.k8sClient.ListNamespacesWithDetails(ctx, clusterName)
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			for _, ns := range nsList {
+				allNS = append(allNS, nsEntry{Name: ns.Name, Cluster: clusterName})
+			}
+			mu.Unlock()
+		})
+	}
+
+	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+	return c.JSON(fiber.Map{"namespaces": allNS})
+}
+
 // GetCostStub returns an empty cost allocation response.
 // OpenCost integration is not yet implemented — this stub prevents the
 // widget from receiving an HTML SPA fallback instead of JSON.
