@@ -288,7 +288,7 @@ function ScaleToZeroConfirmDialog({
   const { t } = useTranslation()
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
       <BaseModal.Header
         title={t('workloads.scaleToZero.title')}
         description={t('workloads.scaleToZero.description')}
