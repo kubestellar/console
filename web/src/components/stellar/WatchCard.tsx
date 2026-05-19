@@ -74,6 +74,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
     <div
       onClick={() => onOpenDetail?.(watch)}
       role="button"
+      aria-label={`Open watch details for ${watch.deployment}`}
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -96,6 +97,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       <div
         onClick={(e) => e.stopPropagation()}
         role="button"
+        aria-label="Watch header actions"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -225,6 +227,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
         <div
           onClick={(e) => e.stopPropagation()}
           role="button"
+          aria-label="Watch actions"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

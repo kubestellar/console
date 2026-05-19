@@ -149,6 +149,7 @@ export function EventCard({
     <div
       onClick={() => onOpenDetail?.(notification)}
       role="button"
+      aria-label={`Open event details for ${notification.title}`}
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -265,6 +266,7 @@ export function EventCard({
         <div
           onClick={(e) => e.stopPropagation()}
           role="button"
+          aria-label="Event actions"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {

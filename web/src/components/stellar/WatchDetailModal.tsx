@@ -142,6 +142,8 @@ export function WatchDetailModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
         style={{
           width: '100%', maxWidth: 720, maxHeight: '90vh',
           background: `var(--s-bg, ${STELLAR_DARK_BG})`,
