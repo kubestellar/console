@@ -45,6 +45,7 @@ import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/stora
 import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { getSidebarCardCount } from './sidebarCardCount'
+import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -658,7 +659,13 @@ export function SidebarShell({
 
         {/* Section items */}
         {(isOpen || !section.collapsible) && (
-          <nav data-testid={`sidebar-${section.id}-nav`} className="space-y-1">
+          <nav
+            data-testid={`sidebar-${section.id}-nav`}
+            className="space-y-1"
+            onKeyDown={(event) => {
+              moveFocusByKey(event, { selector: 'a[data-testid="sidebar-item"]', orientation: 'vertical' })
+            }}
+          >
             {section.items.map(item => renderNavItem(item, section.id))}
           </nav>
         )}

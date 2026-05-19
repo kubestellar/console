@@ -7,6 +7,7 @@ import type { ClusterErrorType } from '../../lib/errorClassifier'
 import { cn } from '../../lib/cn'
 import { Button } from './Button'
 import { useModalState } from '../../lib/modals'
+import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 
 interface ClusterInfo {
   name: string
@@ -38,7 +39,7 @@ export function ClusterSelect({
   className,
 }: ClusterSelectProps) {
   const { t } = useTranslation()
-  const { isOpen, close, toggle } = useModalState()
+  const { isOpen, open, close, toggle } = useModalState()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
@@ -60,6 +61,15 @@ export function ClusterSelect({
       setDropdownPos(null)
     }
   }, [isOpen, calculatePosition])
+
+  useEffect(() => {
+    if (!isOpen || !dropdownPos) return
+
+    const focusTarget = dropdownRef.current?.querySelector<HTMLElement>(
+      'button[role="option"][aria-selected="true"], button[role="option"]:not([disabled])',
+    )
+    focusTarget?.focus()
+  }, [dropdownPos, isOpen])
 
   // Close on click outside
   useEffect(() => {
@@ -106,6 +116,11 @@ export function ClusterSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => !disabled && toggle()}
+        onKeyDown={(event) => {
+          if (disabled || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return
+          event.preventDefault()
+          open()
+        }}
         disabled={disabled}
         className={cn(
           'rounded-md border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50 text-left',
@@ -125,13 +140,14 @@ export function ClusterSelect({
           className="fixed max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
           style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
           onMouseDown={e => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-            e.preventDefault()
-            const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-            const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-            if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-            else items[Math.max(idx - 1, 0)]?.focus()
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              close()
+              buttonRef.current?.focus()
+              return
+            }
+
+            moveFocusByKey(event, { selector: 'button[role="option"]:not([disabled])', orientation: 'vertical' })
           }}
         >
           <div className="p-1">

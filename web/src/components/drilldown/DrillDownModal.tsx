@@ -1,4 +1,4 @@
-import { Component, useEffect, Suspense, type ReactNode, type ErrorInfo } from 'react'
+import { Component, useEffect, Suspense, type ReactNode, type ErrorInfo, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
 import { useEscapeLayer } from '../../lib/modals'
+import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 // Lazy load large components (>300 lines) for better performance
 const ClusterDrillDown = safeLazy(() => import('./views/ClusterDrillDown'), 'ClusterDrillDown')
 const OperatorDrillDown = safeLazy(() => import('./views/OperatorDrillDown'), 'OperatorDrillDown')
@@ -316,6 +317,14 @@ export function DrillDownModal() {
     }
   }
 
+  const handleBreadcrumbKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const nextTab = moveFocusByKey(event, { selector: '[role="tab"]', orientation: 'horizontal' })
+    const nextIndex = Number(nextTab?.dataset.index)
+    if (!Number.isNaN(nextIndex)) {
+      goTo(nextIndex)
+    }
+  }
+
   // Render the modal at document.body so it sits after the Layout sidebar
   // in DOM order. Both the sidebar and drill-down use z-modal; with equal
   // z-index the later sibling paints on top. Without the portal, the
@@ -355,7 +364,7 @@ export function DrillDownModal() {
             </button>
 
             {/* Breadcrumbs */}
-            <nav data-testid="drilldown-tabs" className="flex items-center gap-1 min-w-0 overflow-x-auto">
+            <nav data-testid="drilldown-tabs" className="flex items-center gap-1 min-w-0 overflow-x-auto" role="tablist" aria-label={t('drilldown.navigationHistory', 'Navigation history')} onKeyDown={handleBreadcrumbKeyDown}>
               {state.stack.map((view, index) => {
                 const isLast = index === state.stack.length - 1
                 const isPod = view.type === 'pod'
@@ -370,6 +379,12 @@ export function DrillDownModal() {
                     )}
                     <button
                       onClick={() => goTo(index)}
+                      id={`drilldown-tab-${index}`}
+                      data-index={index}
+                      role="tab"
+                      tabIndex={isLast ? 0 : -1}
+                      aria-selected={isLast}
+                      aria-controls={`drilldown-panel-${index}`}
                       aria-label={t('drilldown.navigateTo', 'Navigate to {{title}}', { title: view.title })}
                       className={`px-2 py-1 rounded text-sm transition-colors flex items-center gap-1.5 ${
                         isLast
@@ -406,7 +421,7 @@ export function DrillDownModal() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div id={`drilldown-panel-${state.stack.length - 1}`} role="tabpanel" tabIndex={0} aria-labelledby={`drilldown-tab-${state.stack.length - 1}`} className="flex-1 overflow-y-auto p-4 md:p-6">
           <DrillDownErrorBoundary onClose={close}>
             <Suspense fallback={<DrillDownLoading />}>
               {renderView()}

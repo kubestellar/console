@@ -296,30 +296,36 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
 
       {/* Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
-        <div
+        <button
+          type="button"
           className={`text-center ${totalGPUs > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => totalGPUs > 0 && drillToResources()}
+          disabled={totalGPUs === 0}
           title={totalGPUs > 0 ? t('gpuOverview.totalGPUsTitle', { count: totalGPUs }) : t('gpuOverview.noGPUsAvailable')}
         >
           <p className="text-lg font-bold text-foreground">{totalGPUs}</p>
           <p className="text-xs text-muted-foreground">{t('gpuOverview.totalGPUs')}</p>
-        </div>
-        <div
+        </button>
+        <button
+          type="button"
           className={`text-center ${allocatedGPUs > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => allocatedGPUs > 0 && drillToResources()}
+          disabled={allocatedGPUs === 0}
           title={allocatedGPUs > 0 ? t('gpuOverview.allocatedGPUsTitle', { count: allocatedGPUs }) : t('gpuOverview.noGPUsAllocated')}
         >
           <p className="text-lg font-bold text-purple-400">{allocatedGPUs}</p>
           <p className="text-xs text-muted-foreground">{t('common:common.allocated')}</p>
-        </div>
-        <div
+        </button>
+        <button
+          type="button"
           className={`text-center ${clusterCount > 0 ? 'cursor-pointer hover:bg-secondary/50 rounded-lg' : 'cursor-default'} transition-colors p-1`}
           onClick={() => clusterCount > 0 && drillToResources()}
+          disabled={clusterCount === 0}
           title={clusterCount > 0 ? t('gpuOverview.clustersWithGPUsTitle', { count: clusterCount }) : t('gpuOverview.noClustersWithGPUs')}
         >
           <p className="text-lg font-bold text-green-400">{clusterCount}</p>
           <p className="text-xs text-muted-foreground">{t('common:common.clusters')}</p>
-        </div>
+        </button>
       </div>
 
       {/* GPU Types */}
@@ -328,15 +334,16 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           <p className="text-xs text-muted-foreground mb-2">{t('gpuOverview.gpuTypes')}</p>
           <div ref={containerRef} className="space-y-1" style={containerStyle}>
             {sortedGpuTypes.map(([type, count]) => (
-              <div
+              <button
                 key={type}
-                className="flex flex-wrap items-center justify-between gap-y-2 text-sm cursor-pointer hover:bg-secondary/50 rounded px-1 transition-colors"
+                type="button"
+                className="flex w-full flex-wrap items-center justify-between gap-y-2 text-sm cursor-pointer hover:bg-secondary/50 rounded px-1 transition-colors"
                 onClick={() => drillToResources()}
                 title={t('gpuOverview.gpuTypeRowTitle', { count, type })}
               >
                 <span className="text-foreground">{type}</span>
                 <span className="text-muted-foreground">{count}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

@@ -11,6 +11,7 @@ import { ClusterStatusDot, getClusterState, type ClusterState } from '../../comp
 import { emitCardSearchUsed, emitCardClusterFilterChanged, emitCardListItemClicked, emitCardPaginationUsed } from '../analytics'
 import { useCardType } from '../../components/cards/CardWrapper'
 import type { ClusterWithHealth } from './cardHooks'
+import { moveFocusByKey } from '../a11y/rovingFocus'
 
 // ============================================================================
 // CardSkeleton - Loading state for cards
@@ -293,6 +294,7 @@ export function CardClusterFilter({
   minClusters = 2 }: CardClusterFilterProps) {
   const cardType = useCardType()
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
@@ -315,6 +317,15 @@ export function CardClusterFilter({
     return () => window.removeEventListener('scroll', handleScroll, true)
   }, [isOpen, setIsOpen])
 
+  useEffect(() => {
+    if (!isOpen || !dropdownPos) return
+
+    const focusTarget = dropdownRef.current?.querySelector<HTMLElement>(
+      'button[aria-pressed="true"], button:not([disabled])',
+    )
+    focusTarget?.focus()
+  }, [dropdownPos, isOpen])
+
   if (availableClusters.length < minClusters) return null
 
   return (
@@ -322,6 +333,11 @@ export function CardClusterFilter({
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+          event.preventDefault()
+          setIsOpen(true)
+        }}
         className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${selectedClusters.length > 0
           ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
           : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
@@ -334,20 +350,23 @@ export function CardClusterFilter({
 
       {isOpen && dropdownPos && createPortal(
         <div
+          ref={dropdownRef}
           className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-dropdown"
           style={{ top: dropdownPos.top, left: dropdownPos.left }}
           onMouseDown={e => e.stopPropagation()}
-          onKeyDown={(e) => {
-            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-            e.preventDefault()
-            const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-            const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-            if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-            else items[Math.max(idx - 1, 0)]?.focus()
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setIsOpen(false)
+              buttonRef.current?.focus()
+              return
+            }
+
+            moveFocusByKey(event, { selector: 'button:not([disabled])', orientation: 'vertical' })
           }}
         >
           <div className="p-1">
             <button
+              aria-pressed={selectedClusters.length === 0}
               onClick={() => { onClear(); emitCardClusterFilterChanged(0, availableClusters.length, cardType) }}
               className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${selectedClusters.length === 0
                 ? 'bg-purple-500/20 text-purple-400'
@@ -383,6 +402,7 @@ export function CardClusterFilter({
               return (
                 <button
                   key={cluster.name}
+                  aria-pressed={selectedClusters.includes(cluster.name)}
                   onClick={() => {
                     if (!isUnreachable) {
                       onToggle(cluster.name)

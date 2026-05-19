@@ -16,9 +16,10 @@ import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES } from '../../../lib/widge
 import { generateWidget, getWidgetFilename, type WidgetConfig } from '../../../lib/widgets/codeGenerator'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { safeRevokeObjectURL } from '../../../lib/download'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { CardItem, StatItem, TemplateCard } from './WidgetExportModalSelectionItems'
 import { WidgetPreview, getWidgetPreviewDimensions, getWidgetPreviewScale } from './WidgetExportModalPreview'
+import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 
 interface WidgetExportModalProps {
   isOpen: boolean
@@ -66,6 +67,14 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const [isLoading, setIsLoading] = useState(false)
   const isOnPublicSite = window.location.hostname === 'console.kubestellar.io' || window.location.hostname.includes('netlify')
   const cardListRef = useRef<HTMLDivElement>(null)
+
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const nextTab = moveFocusByKey(event, { selector: '[role="tab"]', orientation: 'horizontal' })
+    const nextValue = nextTab?.dataset.tab as ExportTab | undefined
+    if (nextValue) {
+      setActiveTab(nextValue)
+    }
+  }
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
@@ -167,11 +176,13 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const widgetContent = (
       <div className="flex flex-col h-full min-h-0">
         {/* Tabs */}
-        <div className="flex border-b border-border mb-4" role="tablist" aria-label={t('widgets.exportDesktopWidget')}>
+        <div className="flex border-b border-border mb-4" role="tablist" aria-label={t('widgets.exportDesktopWidget')} onKeyDown={handleTabKeyDown}>
           <button
             onClick={() => setActiveTab('templates')}
             id={EXPORT_TAB_IDS.templates}
+            data-tab="templates"
             role="tab"
+            tabIndex={activeTab === 'templates' ? 0 : -1}
             aria-selected={activeTab === 'templates'}
             aria-controls={EXPORT_PANEL_IDS.templates}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -185,7 +196,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           <button
             onClick={() => setActiveTab('card')}
             id={EXPORT_TAB_IDS.card}
+            data-tab="card"
             role="tab"
+            tabIndex={activeTab === 'card' ? 0 : -1}
             aria-selected={activeTab === 'card'}
             aria-controls={EXPORT_PANEL_IDS.card}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -199,7 +212,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           <button
             onClick={() => setActiveTab('stats')}
             id={EXPORT_TAB_IDS.stats}
+            data-tab="stats"
             role="tab"
+            tabIndex={activeTab === 'stats' ? 0 : -1}
             aria-selected={activeTab === 'stats'}
             aria-controls={EXPORT_PANEL_IDS.stats}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -220,6 +235,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               ref={cardListRef}
               className="flex-1 overflow-y-auto pr-2"
               role="tabpanel"
+              tabIndex={0}
               aria-labelledby={EXPORT_TAB_IDS[activeTab]}
             >
               {activeTab === 'templates' && (

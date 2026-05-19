@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -6,6 +6,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box, Minus, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
@@ -441,6 +442,14 @@ function DeploymentDrillDownContent({ data }: Props) {
     { id: 'yaml', label: t('drilldown.tabs.yaml', 'YAML'), icon: Code },
   ]
 
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const nextTab = moveFocusByKey(event, { selector: '[role="tab"]', orientation: 'horizontal' })
+    const nextTabId = nextTab?.dataset.tabId as TabType | undefined
+    if (nextTabId) {
+      setActiveTab(nextTabId)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
@@ -485,12 +494,18 @@ function DeploymentDrillDownContent({ data }: Props) {
 
       {/* Tabs */}
       <div className="border-b border-border px-6">
-        <div className="flex gap-1">
+        <div className="flex gap-1" role="tablist" aria-label={t('drilldown.deployment.tabs', 'Deployment tabs')} onKeyDown={handleTabKeyDown}>
           {TABS.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
+                id={`deployment-tab-${tab.id}`}
+                data-tab-id={tab.id}
+                role="tab"
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                aria-selected={activeTab === tab.id}
+                aria-controls={`deployment-panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
                   'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
@@ -508,7 +523,13 @@ function DeploymentDrillDownContent({ data }: Props) {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div
+        id={`deployment-panel-${activeTab}`}
+        role="tabpanel"
+        tabIndex={0}
+        aria-labelledby={`deployment-tab-${activeTab}`}
+        className="flex-1 overflow-y-auto p-6 space-y-6"
+      >
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Status */}

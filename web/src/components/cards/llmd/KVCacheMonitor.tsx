@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { KV_CACHE_UPDATE_INTERVAL_MS } from '../../../lib/constants/network'
 import { StatusBadge } from '../../ui/StatusBadge'
 import type { CSSProperties } from 'react'
+import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 
 // Inline style constants
 const KVCACHE_MONITOR_DIV_STYLE_1: CSSProperties = { textShadow: '0 0 10px rgba(34,197,94,0.5)' }
@@ -586,8 +587,24 @@ export function KVCacheMonitor() {
           )}
 
           {/* Aggregation toggle */}
-          <div className="flex bg-secondary/80 rounded-lg p-0.5 backdrop-blur-xs">
+          <div
+            className="flex bg-secondary/80 rounded-lg p-0.5 backdrop-blur-xs"
+            role="tablist"
+            aria-label={t('llmd.aggregationMode', 'Aggregation mode')}
+            onKeyDown={(event) => {
+              const nextTab = moveFocusByKey(event, { selector: '[role="tab"]', orientation: 'horizontal' })
+              const nextMode = nextTab?.dataset.mode as AggregationMode | undefined
+              if (nextMode) {
+                setAggregationMode(nextMode)
+              }
+            }}
+          >
             <button
+              type="button"
+              data-mode="aggregated"
+              role="tab"
+              tabIndex={aggregationMode === 'aggregated' ? 0 : -1}
+              aria-selected={aggregationMode === 'aggregated'}
               onClick={() => setAggregationMode('aggregated')}
               className={`px-2 py-1 text-xs rounded transition-all ${
                 aggregationMode === 'aggregated'
@@ -599,6 +616,11 @@ export function KVCacheMonitor() {
               {t('llmd.agg')}
             </button>
             <button
+              type="button"
+              data-mode="disaggregated"
+              role="tab"
+              tabIndex={aggregationMode === 'disaggregated' ? 0 : -1}
+              aria-selected={aggregationMode === 'disaggregated'}
               onClick={() => setAggregationMode('disaggregated')}
               className={`px-2 py-1 text-xs rounded transition-all ${
                 aggregationMode === 'disaggregated'
@@ -806,11 +828,14 @@ export function KVCacheMonitor() {
                   ? (stats.length <= GRID_BREAKPOINT_FEW ? 200 : stats.length <= GRID_BREAKPOINT_MEDIUM ? 180 : stats.length <= GRID_BREAKPOINT_LARGE ? 160 : 140)
                   : (stats.length <= GRID_BREAKPOINT_FEW ? 120 : stats.length <= GRID_BREAKPOINT_SMALL ? 130 : stats.length <= GRID_BREAKPOINT_LARGE ? 110 : stats.length <= GRID_BREAKPOINT_DENSE ? 100 : 85)
                 return (
-                  <div
+                  <button
                     key={stat.podName}
+                    type="button"
                     ref={(el) => { gaugeRefs.current[stat.podName] = el }}
                     className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-full' : ''}`}
                     onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
+                    aria-pressed={selectedPod === stat.podName}
+                    aria-label={t('llmd.openPodDetails', 'Show details for {{podName}}', { podName: stat.podName })}
                   >
                     <PremiumGauge
                       value={stat.utilizationPercent}
@@ -819,7 +844,7 @@ export function KVCacheMonitor() {
                       sublabel={gaugeSize >= 100 ? `${stat.usedGB}/${stat.totalCapacityGB}GB` : undefined}
                       size={gaugeSize}
                     />
-                  </div>
+                  </button>
                 )
               })}
             </motion.div>
@@ -846,11 +871,14 @@ export function KVCacheMonitor() {
                   ? (stats.length <= GRID_BREAKPOINT_FEW ? 240 : stats.length <= GRID_BREAKPOINT_MEDIUM ? 200 : stats.length <= GRID_BREAKPOINT_LARGE ? 180 : 160)
                   : (stats.length <= GRID_BREAKPOINT_FEW ? 180 : stats.length <= GRID_BREAKPOINT_SMALL ? 160 : stats.length <= GRID_BREAKPOINT_LARGE ? 140 : 120)
                 return (
-                  <div
+                  <button
                     key={stat.podName}
+                    type="button"
                     ref={(el) => { gaugeRefs.current[stat.podName] = el }}
                     className={`cursor-pointer transition-transform hover:scale-105 ${selectedPod === stat.podName ? 'ring-2 ring-cyan-500/50 rounded-lg' : ''}`}
                     onClick={() => handleGaugeClick(stat.podName, gaugeRefs.current[stat.podName])}
+                    aria-pressed={selectedPod === stat.podName}
+                    aria-label={t('llmd.openPodDetails', 'Show details for {{podName}}', { podName: stat.podName })}
                   >
                     <HorseshoeGauge
                       value={stat.utilizationPercent}
@@ -861,7 +889,7 @@ export function KVCacheMonitor() {
                       secondaryRight={gaugeSize >= 140 ? { value: `${(stat.totalCapacityGB - stat.usedGB).toFixed(1)}`, label: 'FREE' } : undefined}
                       size={gaugeSize}
                     />
-                  </div>
+                  </button>
                 )
               })}
             </motion.div>

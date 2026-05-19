@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type FocusEvent as ReactFocusEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
@@ -20,6 +20,7 @@ import { formatTimeAgo } from '../../../lib/formatters'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { ApiKeyPromptModal, useApiKeyCheck } from '../console-missions/shared'
+import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 
 export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, onMouseLeave }: {
   run: NightlyRun
@@ -31,7 +32,8 @@ export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, on
 }) {
   const [showPopup, setShowPopup] = useState(false)
   const [isDiagnosing, setIsDiagnosing] = useState(false)
-  const dotRef = useRef<HTMLDivElement>(null)
+  const dotRef = useRef<HTMLAnchorElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null)
   const { startMission } = useMissions()
@@ -102,6 +104,22 @@ export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, on
   const handleDotLeave = () => {
     scheduleHide()
     onMouseLeave?.()
+  }
+
+  const handleDotBlur = (event: ReactFocusEvent<HTMLAnchorElement>) => {
+    const nextTarget = event.relatedTarget as Node | null
+    if (nextTarget && popupRef.current?.contains(nextTarget)) {
+      return
+    }
+    handleDotLeave()
+  }
+
+  const handlePopupBlur = (event: ReactFocusEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget as Node | null
+    if (nextTarget && (popupRef.current?.contains(nextTarget) || dotRef.current?.contains(nextTarget))) {
+      return
+    }
+    handleDotLeave()
   }
 
   const handleDiagnose = (e: React.MouseEvent) => {
@@ -177,16 +195,19 @@ Please provide:
 
   return (
     <div
-      ref={dotRef}
       className="group relative"
       onMouseEnter={handleDotEnter}
       onMouseLeave={handleDotLeave}
     >
       <a
+        ref={dotRef}
+        data-run-dot="true"
         href={sanitizeUrl(run.htmlUrl)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Run #${run.runNumber}: ${title}`}
+        onFocus={handleDotEnter}
+        onBlur={handleDotBlur}
         onClick={e => e.stopPropagation()}
       >
         <div className={`w-3 h-3 rounded-full ${color} ${isRunning ? 'animate-pulse' : ''} ${
@@ -195,11 +216,15 @@ Please provide:
       </a>
       {showPopup && popupPos && createPortal(
         <div
-          role="tooltip"
+          ref={popupRef}
+          role="dialog"
+          aria-label={`Run ${run.runNumber} details`}
           className="fixed z-dropdown"
           style={{ top: popupPos.top, left: popupPos.left, transform: 'translate(-50%, -100%)' }}
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
+          onFocus={cancelHide}
+          onBlur={handlePopupBlur}
         >
           <div className="mb-1.5 bg-secondary border border-border rounded-lg shadow-xl px-2.5 py-1.5 text-2xs">
             {/* Run status line */}
@@ -328,7 +353,14 @@ export function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }:
         <span className="font-mono font-semibold text-muted-foreground mr-1.5">{guide.acronym}</span>
         {guide.guide}
       </span>
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div
+        className="flex items-center gap-1.5 shrink-0"
+        role="group"
+        aria-label={`Recent runs for ${guide.guide}`}
+        onKeyDown={(event) => {
+          moveFocusByKey(event, { selector: 'a[data-run-dot="true"]', orientation: 'horizontal' })
+        }}
+      >
         {guide.runs.map((run) => (
           <RunDot key={run.id} run={run} guide={guide} isDemoMode={isDemoMode}
             onMouseEnter={() => { onMouseEnter(); onRunHover(run) }}
@@ -345,7 +377,7 @@ export function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }:
         href={sanitizeUrl(workflowUrl)}
         target="_blank"
         rel="noopener noreferrer"
-        className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-secondary"
+        className="ml-auto opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity p-0.5 rounded hover:bg-secondary"
         onClick={e => e.stopPropagation()}
       >
         <ExternalLink size={12} className="text-muted-foreground" />

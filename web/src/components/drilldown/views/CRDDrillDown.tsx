@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
@@ -10,6 +10,7 @@ import {
   FileText, Code, Database, List
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -331,6 +332,21 @@ Please:
     { id: 'ai', label: 'AI Analysis', icon: Stethoscope },
   ]
 
+  const selectTab = (tabId: TabType) => {
+    setActiveTab(tabId)
+    if (tabId === 'schema' && !schema) {
+      fetchSchema()
+    }
+  }
+
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const nextTab = moveFocusByKey(event, { selector: '[role="tab"]', orientation: 'horizontal' })
+    const nextTabId = nextTab?.dataset.tabId as TabType | undefined
+    if (nextTabId) {
+      selectTab(nextTabId)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
@@ -374,18 +390,19 @@ Please:
 
       {/* Tabs */}
       <div className="border-b border-border px-6">
-        <div className="flex gap-1">
+        <div className="flex gap-1" role="tablist" aria-label={t('drilldown.crd.tabs', 'CRD tabs')} onKeyDown={handleTabKeyDown}>
           {TABS.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id)
-                  if (tab.id === 'schema' && !schema) {
-                    fetchSchema()
-                  }
-                }}
+                id={`crd-tab-${tab.id}`}
+                data-tab-id={tab.id}
+                role="tab"
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                aria-selected={activeTab === tab.id}
+                aria-controls={`crd-panel-${tab.id}`}
+                onClick={() => selectTab(tab.id)}
                 className={cn(
                   'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
                   activeTab === tab.id
@@ -402,7 +419,13 @@ Please:
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div
+        id={`crd-panel-${activeTab}`}
+        role="tabpanel"
+        tabIndex={0}
+        aria-labelledby={`crd-tab-${activeTab}`}
+        className="flex-1 overflow-y-auto p-6 space-y-6"
+      >
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* CRD Info Card */}
