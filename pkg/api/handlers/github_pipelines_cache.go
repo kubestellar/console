@@ -72,6 +72,13 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	}
 
 	v, err, _ := h.fetchGrp.Do(key, func() (any, error) {
+		// Detach from the triggering HTTP request context so the fetch
+		// survives if the caller disconnects.  Singleflight coalesces
+		// concurrent callers; if the "winner" disconnects, a request-tied
+		// context would cancel the in-flight GitHub API calls for everyone.
+		detachedCtx, cancel := context.WithTimeout(context.Background(), ghpFetchTimeout)
+		defer cancel()
+		c.SetUserContext(detachedCtx)
 		return build(c)
 	})
 	if err != nil {

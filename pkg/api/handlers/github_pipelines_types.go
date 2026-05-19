@@ -35,6 +35,7 @@ const (
 	ghpNightlyReleaseWFFile = "release.yml"
 	ghpNightlyReleaseCron   = "0 5 * * *"
 	ghpHTTPTimeout          = 15 * time.Second
+	ghpFetchTimeout         = 45 * time.Second
 	ghpMutationHTTPTimeout  = 15 * time.Second
 	ghpMaxErrorBodyBytes    = 10_000
 	ghpMaxLogBytes          = 10 * 1024 * 1024 // 10 MB cap on job log downloads
