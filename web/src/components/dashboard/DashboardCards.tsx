@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { memo, useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout, AlertTriangle } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
@@ -34,6 +34,46 @@ interface DashboardCardsProps {
   /** Start collapsed? */
   defaultCollapsed?: boolean
 }
+
+const EMPTY_CONFIG: Record<string, unknown> = {}
+
+interface CardSlotProps {
+  card: DashboardCard
+  onConfigure: (cardId: string) => void
+  onRemove: (cardId: string) => void
+}
+
+const CardSlot = memo(function CardSlot({ card, onConfigure, onRemove }: CardSlotProps) {
+  const CardComponent = CARD_COMPONENTS[card.card_type]
+  const handleConfigure = useCallback(() => {
+    onConfigure(card.id)
+  }, [onConfigure, card.id])
+  const handleRemove = useCallback(() => {
+    onRemove(card.id)
+  }, [onRemove, card.id])
+
+  return (
+    <CardWrapper
+      cardId={card.id}
+      cardType={card.card_type}
+      title={formatCardTitle(card.card_type)}
+      onConfigure={handleConfigure}
+      onRemove={handleRemove}
+      isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
+      isLive={LIVE_DATA_CARDS.has(card.card_type)}
+    >
+      {CardComponent ? (
+        <CardComponent config={card.config ?? EMPTY_CONFIG} />
+      ) : (
+        <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
+          <AlertTriangle className="w-6 h-6 text-yellow-500" />
+          <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
+          <p className="text-xs">This card type is not registered. You can remove it.</p>
+        </div>
+      )}
+    </CardWrapper>
+  )
+})
 
 export function DashboardCards({
   cards,
@@ -75,6 +115,10 @@ export function DashboardCards({
     setSelectedCardId(cardId)
     configureModal.open()
   }, [configureModal])
+
+  const handleRemoveCard = useCallback((cardId: string) => {
+    onRemoveCard(cardId)
+  }, [onRemoveCard])
 
   const handleSaveConfig = useCallback((cardId: string, config: Record<string, unknown>, _title?: string) => {
     onUpdateCardConfig(cardId, config)
@@ -165,31 +209,14 @@ export function DashboardCards({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {cards.map(card => {
-                const CardComponent = CARD_COMPONENTS[card.card_type]
-                return (
-                  <CardWrapper
-                    key={card.id}
-                    cardId={card.id}
-                    cardType={card.card_type}
-                    title={formatCardTitle(card.card_type)}
-                    onConfigure={() => handleConfigureCard(card.id)}
-                    onRemove={() => onRemoveCard(card.id)}
-                    isDemoData={DEMO_DATA_CARDS.has(card.card_type)}
-                    isLive={LIVE_DATA_CARDS.has(card.card_type)}
-                  >
-                    {CardComponent ? (
-                      <CardComponent config={card.config ?? {}} />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground p-4">
-                        <AlertTriangle className="w-6 h-6 text-yellow-500" />
-                        <p className="text-sm font-medium">Unknown card type: {card.card_type}</p>
-                        <p className="text-xs">This card type is not registered. You can remove it.</p>
-                      </div>
-                    )}
-                  </CardWrapper>
-                )
-              })}
+              {cards.map(card => (
+                <CardSlot
+                  key={card.id}
+                  card={card}
+                  onConfigure={handleConfigureCard}
+                  onRemove={handleRemoveCard}
+                />
+              ))}
             </div>
           )}
         </>
