@@ -114,7 +114,7 @@ function generateCardRenderFunction(cardType: string, displayName?: string): str
   );`
 
   const issueButton = `
-        <button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button>`
+        <div style={{marginTop: '8px'}}><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>`
 
   switch (cardType) {
     case 'cluster_health':
@@ -501,7 +501,7 @@ export const render = ({ output }) => {
   }
 
   if (error) {
-    return <div style={styles.row}><span style={{color: styles.colors.error}}>Error</span><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>;
+    return <div style={{...styles.column}}><div style={styles.row}><span style={{color: styles.colors.error}}>Error</span></div><div><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div></div>;
   }
 
   // Extract values from API responses.
@@ -635,7 +635,7 @@ export const render = ({ output }) => {
   }
 
   if (error) {
-    return <div style={styles.card}><span style={{color: styles.colors.error}}>Error: {error}</span><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>;
+    return <div style={styles.card}><span style={{color: styles.colors.error}}>Error: {error}</span><div style={{marginTop: '8px'}}><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div></div>;
   }
 
   return (

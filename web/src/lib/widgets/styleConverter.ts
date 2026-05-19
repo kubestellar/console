@@ -319,7 +319,6 @@ export function generateWidgetStyles(): string {
     fontSize: '10px',
     padding: '2px 6px',
     cursor: 'pointer',
-    marginTop: '8px',
     pointerEvents: 'auto',
   },
 };`
