@@ -464,6 +464,7 @@ export function generateStatWidget(
 
   const base = apiEndpoint || UBERSICHT_FALLBACK_URL
   const endpoint = `${base}${stats[0].apiEndpoint}`
+  const curlUrl = endpoint + (endpoint.includes('?') ? '&' : '?') + 'source=ubersicht-widget'
 
   return `/**
  * Stats Widget
@@ -473,11 +474,18 @@ export function generateStatWidget(
  */
 
 // Fetch data via curl (Übersicht's WebKit does not support fetch)
-export const command = \`/usr/bin/curl -s --connect-timeout 5 ${endpoint} 2>/dev/null || echo '{"error":"Load failed"}'\`;
+export const command = \`/usr/bin/curl -s --connect-timeout 5 ${curlUrl} 2>/dev/null || echo '{"error":"Load failed"}'\`;
 
 export const refreshFrequency = ${refreshInterval};
 
 ${generateWidgetStyles()}
+
+const WIDGET_NAME = 'stats-widget';
+const openIssue = (errorMsg) => {
+  const title = encodeURIComponent('[Widget] ' + WIDGET_NAME + ': ' + (errorMsg || 'unknown error'));
+  const body = encodeURIComponent('**Widget:** ' + WIDGET_NAME + '\\n**Error:** ' + (errorMsg || 'unknown') + '\\n**Platform:** Übersicht (macOS)\\n\\n_Describe what you were doing when this happened:_\\n');
+  run(\`open "https://github.com/kubestellar/console/issues/new?title=${title}&body=${body}&labels=kind/bug,area/widgets"\`);
+};
 
 const StatBlock = ({ value, label, color }) => (
   <div style={{...styles.statBlock, borderTop: \`3px solid \${color}\`}}>
