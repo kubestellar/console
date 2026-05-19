@@ -393,8 +393,8 @@ export const CardWrapper = memo(function CardWrapper({
   // Track whether initial data load has completed AND content has been visible
   // Skip the delay entirely if the card has a saved collapsed state — the user
   // explicitly collapsed it, so we should respect that immediately across navigations.
-  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(checkIsDemoMode || hasSavedCollapseState)
-  const [collapseDelayPassed, setCollapseDelayPassed] = useState(checkIsDemoMode || hasSavedCollapseState)
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(() => checkIsDemoMode() || hasSavedCollapseState)
+  const [collapseDelayPassed, setCollapseDelayPassed] = useState(() => checkIsDemoMode() || hasSavedCollapseState)
 
   // Allow external control to override hook state
   // IMPORTANT: Don't collapse until initial data load is complete AND a brief delay has passed
