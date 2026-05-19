@@ -84,9 +84,11 @@ jobs:
         id: changed_files
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
-          FILES=$(gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
+          FILES=$(gh pr view "$PR_NUMBER" \
+            --repo "$REPO" \
             --json files \
             --jq '[.files[].path] | join("\n")' 2>/dev/null || echo "Unable to retrieve file list")
 
@@ -226,16 +228,19 @@ jobs:
           (steps.npm_install.outcome == 'success' && steps.frontend_build.outcome == 'success')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           # || true: GITHUB_TOKEN may not have comment access on some PR origins
           # (fork PRs, restricted integrations). The build verification succeeded —
           # a missing success comment is acceptable; only build failures need action.
-          gh pr comment "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
+          gh pr comment "$PR_NUMBER" \
+            --repo "$REPO" \
             --body "$(cat <<EOF
           **Post-merge build verification passed** :white_check_mark:
 
-          Both Go and frontend builds compiled successfully against merge commit \`${{ github.event.pull_request.merge_commit_sha }}\`.
+          Both Go and frontend builds compiled successfully against merge commit \`${MERGE_SHA}\`.
           EOF
           )" || true
 
