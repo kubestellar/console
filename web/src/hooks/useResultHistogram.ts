@@ -132,7 +132,7 @@ async function fetchHistogramWithRetry(
 
   if (response.status === RATE_LIMIT_STATUS) {
     if (attempt < maxAttempts - 1) {
-      // Exponential backoff: 100ms, 300ms, 900ms
+      // Exponential backoff: 100ms, 200ms, 400ms
       const delayMs = 100 * Math.pow(2, attempt)
       await new Promise(resolve => setTimeout(resolve, delayMs))
       return fetchHistogramWithRetry(sortBy, attempt + 1, maxAttempts)
