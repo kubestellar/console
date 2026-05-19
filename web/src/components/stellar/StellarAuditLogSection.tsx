@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { stellarApi } from '../../services/stellar'
 import type { StellarAuditEntry } from '../../types/stellar'
 import { cn } from '../../lib/cn'
@@ -108,6 +109,7 @@ interface StellarAuditLogSectionProps {
 }
 
 export function StellarAuditLogSection({ className }: StellarAuditLogSectionProps) {
+  const { t } = useTranslation()
   const [entries, setEntries] = useState<StellarAuditEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -263,7 +265,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
               onChange={event => setSelectedUser(event.target.value)}
               className="rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm text-[var(--s-text)] outline-none transition focus:border-[var(--s-border-focus)]"
             >
-              <option value="all">All users</option>
+              <option value="all">{t('stellar.auditLog.allUsers')}</option>
               {users.map(user => (
                 <option key={user} value={user}>{user}</option>
               ))}
@@ -277,7 +279,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
               onChange={event => setSelectedAction(event.target.value)}
               className="rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm text-[var(--s-text)] outline-none transition focus:border-[var(--s-border-focus)]"
             >
-              <option value="all">All actions</option>
+              <option value="all">{t('stellar.auditLog.allActions')}</option>
               {actions.map(action => (
                 <option key={action} value={action}>{action}</option>
               ))}

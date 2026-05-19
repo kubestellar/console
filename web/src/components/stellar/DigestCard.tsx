@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { StellarNotification, StellarSolve } from '../../types/stellar'
 
 interface DigestCardProps {
@@ -15,6 +16,7 @@ interface DigestCardProps {
  * them counting on faith.
  */
 export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: DigestCardProps) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   // Pull a recent window of solves to render in the expanded list. The server
@@ -45,7 +47,7 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
             textTransform: 'uppercase',
             color: 'var(--s-info)',
           }}
-        >Daily recap</span>
+        >{t('stellar.digest.dailyRecap')}</span>
         <div style={{ flex: 1 }} />
         <button
           onClick={() => setExpanded(e => !e)}
@@ -54,7 +56,7 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
         >{expanded ? '▼' : '▶'}</button>
         <button
           onClick={onDismiss}
-          title="Dismiss"
+          title={t('actions.dismiss')}
           className="text-xs"
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}
         >✕</button>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { StellarNotification } from '../../types/stellar'
 import { countRelated, deriveImportance, deriveShortReason, deriveTags, importanceColor, type SolveStatus } from './lib/derive'
 import { formatRelativeTime } from './lib/time'
@@ -129,6 +130,7 @@ export function EventCard({
   onAction?: (prompt: string, action?: PendingAction) => void
   onOpenDetail?: (n: StellarNotification) => void
 }) {
+  const { t } = useTranslation()
   const color = { critical: 'var(--s-critical)', warning: 'var(--s-warning)', info: 'var(--s-info)' }[notification.severity] ?? 'var(--s-text-muted)'
   const showRollback = isCompletedReversibleAction(notification)
   const hints = deriveActionHints(notification)
@@ -268,7 +270,7 @@ export function EventCard({
           }}
           style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}
         >
-          <button className="px-2 py-0.5 text-[11px]" onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
+          <button className="px-2 py-0.5 text-[11px]" onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' }}>{t('actions.dismiss')}</button>
           {showRollback && onRollback && (
             <button
               className="px-2 py-0.5 text-[11px]"
@@ -291,7 +293,7 @@ export function EventCard({
                 fontWeight: 600,
               }}
             >
-              <span>✦</span><span>Try AI mission</span>
+              <span>✦</span><span>{t('stellar.eventCard.tryAiMission')}</span>
             </button>
           )}
           {!hideManualActions && !isEscalated && hints.map(hint => {
