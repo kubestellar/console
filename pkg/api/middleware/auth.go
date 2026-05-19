@@ -362,6 +362,12 @@ func JWTAuth(secret string) fiber.Handler {
 				"/api/rewards/",
 				"/api/issue-stats",
 				"/api/github-pipelines",
+				"/api/mcp/",
+				"/api/alerts",
+				"/api/providers/health",
+				"/api/gitops/operators",
+				"/api/gitops/helm-releases",
+				"/api/namespaces",
 			}
 			for _, prefix := range widgetPublicPrefixes {
 				if strings.HasPrefix(c.Path(), prefix) {
