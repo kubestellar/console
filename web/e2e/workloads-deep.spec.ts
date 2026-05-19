@@ -1,9 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page, type Locator } from '@playwright/test'
 import {
   setupDemoAndNavigate,
   setupErrorCollector,
-  waitForSubRoute,
-  NETWORK_IDLE_TIMEOUT_MS,
+  waitForWorkloadsReady,
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
@@ -29,32 +28,51 @@ const STAT_DEPLOYMENTS_SUBLABEL = 'total deployments'
 /** Sublabel text for the pod issues stat block */
 const STAT_POD_ISSUES_SUBLABEL = 'pod issues'
 
-/** Text shown in the Clusters Overview section heading */
-const CLUSTERS_OVERVIEW_HEADING = 'Clusters Overview'
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-/** Empty state title when no workloads are found */
-const EMPTY_STATE_TEXT = 'No workloads found'
+async function setupWorkloadsPage(page: Page) {
+  await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
+  await waitForWorkloadsReady(page)
+}
+
+function getStatsLabel(page: Page, text: string) {
+  return page.getByText(text, { exact: false }).nth(0)
+}
+
+async function getFirstWorkloadRow(page: Page): Promise<Locator | null> {
+  const workloadRows = page.getByTestId('workload-row')
+  return (await workloadRows.count()) > 0 ? workloadRows.nth(0) : null
+}
+
+async function getFirstDeploymentRow(page: Page): Promise<Locator | null> {
+  const deploymentRows = page
+    .getByTestId('workload-row')
+    .filter({ has: page.getByRole('button', { name: 'Restart deployment' }) })
+  return (await deploymentRows.count()) > 0 ? deploymentRows.nth(0) : null
+}
+
+async function getFirstClusterCard(page: Page) {
+  const cards = page.getByTestId('clusters-overview-grid').getByTestId('cluster-card')
+  const cardCount = await cards.count()
+  expect(cardCount).toBeGreaterThan(0)
+  return cards.nth(0)
+}
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-test.describe('Workloads Deep Tests (/workloads)', () => {
+test.describe.serial('Workloads Deep Tests (/workloads)', () => {
   test.beforeEach(async ({ page }) => {
-    await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
-    await waitForSubRoute(page)
+    await setupWorkloadsPage(page)
   })
-
-  // -------------------------------------------------------------------------
-  // Page Structure
-  // -------------------------------------------------------------------------
 
   test.describe('Page Structure', () => {
     test('loads without console errors', async ({ page }) => {
-      // Set up error collector BEFORE navigation to capture cold-load errors
       const { errors } = setupErrorCollector(page)
-      await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
-      await waitForSubRoute(page)
+      await setupWorkloadsPage(page)
       expect(errors).toHaveLength(0)
     })
 
@@ -66,57 +84,36 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
     })
 
     test('displays dashboard header', async ({ page }) => {
-      const header = page.getByTestId('dashboard-header')
-      await expect(header).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+      await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
 
     test('shows stats overview', async ({ page }) => {
-      // DashboardPage renders stats blocks; look for any stat sublabel text
-      const statsArea = page.locator('text=' + STAT_NAMESPACES_SUBLABEL).first()
+      const statsArea = getStatsLabel(page, STAT_NAMESPACES_SUBLABEL)
       const isVisible = await statsArea.isVisible().catch(() => false)
-      // Stats may render differently depending on data availability
       if (isVisible) {
         await expect(statsArea).toBeVisible()
       }
     })
   })
 
-  // -------------------------------------------------------------------------
-  // Stats
-  // -------------------------------------------------------------------------
-
   test.describe('Stats', () => {
     test('shows namespace count stat', async ({ page }) => {
-      const stat = page.locator('text=' + STAT_NAMESPACES_SUBLABEL).first()
-      await expect(stat).toBeVisible()
+      await expect(getStatsLabel(page, STAT_NAMESPACES_SUBLABEL)).toBeVisible()
     })
 
     test('shows deployment count stat', async ({ page }) => {
-      const stat = page.locator('text=' + STAT_DEPLOYMENTS_SUBLABEL).first()
-      await expect(stat).toBeVisible()
+      await expect(getStatsLabel(page, STAT_DEPLOYMENTS_SUBLABEL)).toBeVisible()
     })
 
     test('shows pod issues stat', async ({ page }) => {
-      const stat = page.locator('text=' + STAT_POD_ISSUES_SUBLABEL).first()
-      await expect(stat).toBeVisible()
+      await expect(getStatsLabel(page, STAT_POD_ISSUES_SUBLABEL)).toBeVisible()
     })
   })
 
-  // -------------------------------------------------------------------------
-  // Content
-  // -------------------------------------------------------------------------
-
   test.describe('Content', () => {
     test('renders workload rows or empty state', async ({ page }) => {
-      // In demo mode we should see either workload rows or the empty state
-      // Workload rows have data-testid="workload-row"
-      const workloadRows = page.getByTestId('workload-row')
-      const emptyState = page.locator('text=' + EMPTY_STATE_TEXT).first()
-
-      const hasRows = (await workloadRows.count()) > 0
-      const hasEmpty = await emptyState.isVisible().catch(() => false)
-
-      // At least one of these should be present
+      const hasRows = (await page.getByTestId('workload-row').count()) > 0
+      const hasEmpty = await page.getByTestId('workloads-empty-state').isVisible().catch(() => false)
       expect(hasRows || hasEmpty).toBe(true)
     })
 
@@ -126,44 +123,25 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
     })
   })
 
-  // -------------------------------------------------------------------------
-  // Clusters Overview
-  // -------------------------------------------------------------------------
-
   test.describe('Clusters Overview', () => {
     test('renders clusters overview heading', async ({ page }) => {
-      const heading = page.locator('text=' + CLUSTERS_OVERVIEW_HEADING).first()
-      await expect(heading).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+      await expect(page.getByTestId('clusters-overview-heading')).toBeVisible({
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      })
     })
 
     test('renders clusters overview grid with cluster cards', async ({ page }) => {
       const grid = page.getByTestId('clusters-overview-grid')
       await expect(grid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-
-      // In demo mode at least one cluster card must be present
-      const cards = grid.getByTestId('cluster-card')
-      const cardCount = await cards.count()
-      expect(cardCount).toBeGreaterThan(0)
+      expect(await grid.getByTestId('cluster-card').count()).toBeGreaterThan(0)
     })
 
     test('cluster cards show pod and node counts', async ({ page }) => {
-      const grid = page.getByTestId('clusters-overview-grid')
-      await expect(grid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-
-      const cards = grid.getByTestId('cluster-card')
-      const cardCount = await cards.count()
-      expect(cardCount).toBeGreaterThan(0)
-
-      // Each card should display pod and node stats
-      const firstCard = cards.first()
-      await expect(firstCard.locator('text=/pods/')).toBeVisible()
-      await expect(firstCard.locator('text=/nodes/')).toBeVisible()
+      const firstCard = await getFirstClusterCard(page)
+      await expect(firstCard).toContainText(/pods/)
+      await expect(firstCard).toContainText(/nodes/)
     })
   })
-
-  // -------------------------------------------------------------------------
-  // Refresh
-  // -------------------------------------------------------------------------
 
   test.describe('Refresh', () => {
     test('refresh button is clickable', async ({ page }) => {
@@ -172,7 +150,6 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
       if (isVisible) {
         await expect(refreshBtn).toBeEnabled()
         await refreshBtn.click()
-        // After clicking, the page should still show the header
         await expect(page.getByTestId('dashboard-header')).toBeVisible({
           timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
         })
@@ -180,152 +157,76 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
     })
   })
 
-  // -------------------------------------------------------------------------
-  // Error State
-  // -------------------------------------------------------------------------
-
   test.describe('Error State', () => {
     test('handles error gracefully', async ({ page }) => {
-      // Navigate to the route and verify no unhandled crash occurs
-      // The page should render either content or empty state, not a blank page
-      const header = page.getByTestId('dashboard-header')
-      await expect(header).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-      // Verify the page did not crash to a white screen
+      await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
       const bodyText = await page.locator('body').textContent()
       expect((bodyText ?? '').length).toBeGreaterThan(MIN_PAGE_CONTENT_LENGTH)
     })
   })
 
-  // -------------------------------------------------------------------------
-  // Workload Interactions (#12475, #12476, #12477)
-  // -------------------------------------------------------------------------
-
   test.describe('Workload Row Click (#12475)', () => {
     test('clicking a workload row opens the drill-down panel', async ({ page }) => {
-      // Look for workload rows
-      const workloadRow = page.getByTestId('workload-row').first()
-      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+      const workloadRow = await getFirstWorkloadRow(page)
 
-      if (!hasRow) {
-        test.skip(true, 'No workload rows found in demo mode')
-        return
-      }
+      test.skip(!workloadRow, 'No workload rows found in demo mode')
 
-      // Click the first workload row
-      await workloadRow.click()
-
-      // Wait for drill-down modal to appear
-      const drilldownModal = page.getByTestId('drilldown-modal')
-      await expect(drilldownModal).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+      await workloadRow!.click()
+      await expect(page.getByTestId('drilldown-modal')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
   })
 
   test.describe('Add Workload Button (#12476)', () => {
     test('clicking Add Workload button navigates to deploy page', async ({ page }) => {
-      // Find the Add Workload button
       const addBtn = page.getByTestId('add-workload-btn')
       await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-
-      // Click the button
       await addBtn.click()
-
-      // Wait for navigation to complete
-      await page.waitForLoadState('domcontentloaded')
-
-      // Verify we navigated to the deploy route
+      await page.waitForURL('**/deploy*', { timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+      await expect(page.getByTestId('dashboard-title')).toContainText(/Deploy/i, {
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      })
       expect(page.url()).toContain('/deploy')
     })
   })
 
   test.describe('Action Buttons (#12477)', () => {
     test('Restart button is visible and clickable on deployment rows', async ({ page }) => {
-      // Look for workload rows
-      const workloadRow = page.getByTestId('workload-row').first()
-      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+      const deploymentRow = await getFirstDeploymentRow(page)
 
-      if (!hasRow) {
-        test.skip(true, 'No workload rows found in demo mode')
-        return
-      }
+      test.skip(!deploymentRow, 'No deployment rows with Restart button found')
 
-      // Look for the restart action button
-      const restartBtn = page.getByTestId('action-btn-restart').first()
-      const hasRestartBtn = await restartBtn.isVisible({ timeout: 5000 }).catch(() => false)
-
-      if (!hasRestartBtn) {
-        test.skip(true, 'No deployment rows with Restart button found')
-        return
-      }
-
-      // Verify button is clickable
+      const restartBtn = deploymentRow!.getByTestId('action-btn-restart')
       await expect(restartBtn).toBeEnabled()
       await expect(restartBtn).toBeVisible()
     })
 
     test('Logs button is visible and clickable on deployment rows', async ({ page }) => {
-      // Look for workload rows
-      const workloadRow = page.getByTestId('workload-row').first()
-      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+      const deploymentRow = await getFirstDeploymentRow(page)
 
-      if (!hasRow) {
-        test.skip(true, 'No workload rows found in demo mode')
-        return
-      }
+      test.skip(!deploymentRow, 'No deployment rows with Logs button found')
 
-      // Look for the logs action button
-      const logsBtn = page.getByTestId('action-btn-logs').first()
-      const hasLogsBtn = await logsBtn.isVisible({ timeout: 5000 }).catch(() => false)
-
-      if (!hasLogsBtn) {
-        test.skip(true, 'No deployment rows with Logs button found')
-        return
-      }
-
-      // Verify button is clickable
+      const logsBtn = deploymentRow!.getByTestId('action-btn-logs')
       await expect(logsBtn).toBeEnabled()
       await expect(logsBtn).toBeVisible()
     })
 
     test('Delete button is visible and clickable on deployment rows', async ({ page }) => {
-      // Look for workload rows
-      const workloadRow = page.getByTestId('workload-row').first()
-      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+      const deploymentRow = await getFirstDeploymentRow(page)
 
-      if (!hasRow) {
-        test.skip(true, 'No workload rows found in demo mode')
-        return
-      }
+      test.skip(!deploymentRow, 'No deployment rows with Delete button found')
 
-      // Look for the delete action button
-      const deleteBtn = page.getByTestId('action-btn-delete').first()
-      const hasDeleteBtn = await deleteBtn.isVisible({ timeout: 5000 }).catch(() => false)
-
-      if (!hasDeleteBtn) {
-        test.skip(true, 'No deployment rows with Delete button found')
-        return
-      }
-
-      // Verify button is clickable
+      const deleteBtn = deploymentRow!.getByTestId('action-btn-delete')
       await expect(deleteBtn).toBeEnabled()
       await expect(deleteBtn).toBeVisible()
     })
 
     test('clicking Logs button opens drill-down panel', async ({ page }) => {
-      // Look for the logs action button
-      const logsBtn = page.getByTestId('action-btn-logs').first()
-      const hasLogsBtn = await logsBtn.isVisible({ timeout: 5000 }).catch(() => false)
+      const deploymentRow = await getFirstDeploymentRow(page)
 
-      if (!hasLogsBtn) {
-        test.skip(true, 'No deployment rows with Logs button found')
-        return
-      }
+      test.skip(!deploymentRow, 'No deployment rows with Logs button found')
 
-      // Click the logs button
-      await logsBtn.click()
-
-      // Verify drill-down modal appears
-      const drilldownModal = page.getByTestId('drilldown-modal')
-      await expect(drilldownModal).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+      await deploymentRow!.getByTestId('action-btn-logs').click()
+      await expect(page.getByTestId('drilldown-modal')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
   })
 })

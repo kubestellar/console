@@ -331,9 +331,9 @@ export function Workloads() {
     >
       {/* Workloads List */}
       {showSkeletons ? (
-        <div className="space-y-3">
+        <div data-testid="workloads-loading-state" className="space-y-3">
           {Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
-            <div key={i} data-testid="workload-row" className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
+            <div key={i} data-testid="workload-row-skeleton" className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <Skeleton variant="circular" width={24} height={24} />
@@ -348,11 +348,12 @@ export function Workloads() {
           ))}
         </div>
       ) : apps.length === 0 ? (
-        <div className="text-center py-12">
+        <div data-testid="workloads-empty-state" className="text-center py-12">
           <div className="text-6xl mb-4">📦</div>
           <p className="text-lg text-foreground">{t('workloads.noWorkloadsTitle', 'No workloads found')}</p>
           <p className="text-sm text-muted-foreground mb-6">{t('workloads.noWorkloadsDesc', 'No deployments detected across your clusters')}</p>
           <button
+            data-testid="empty-state-deploy-workload-btn"
             onClick={() => navigate(ROUTES.DEPLOY)}
             className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
           >
@@ -361,7 +362,7 @@ export function Workloads() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div data-testid="workloads-list" className="space-y-3">
           {apps.map((item, i) => {
             const isDeployment = item.type === 'deployment'
             const app = item as AppSummary
@@ -468,8 +469,8 @@ export function Workloads() {
       )}
 
       {/* Clusters Summary */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
+      <div data-testid="clusters-overview-section" className="mt-8">
+        <h2 data-testid="clusters-overview-heading" className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
         <div data-testid="clusters-overview-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {forceSkeletonForOffline ? (
             // Show skeleton when agent is offline and demo mode is OFF

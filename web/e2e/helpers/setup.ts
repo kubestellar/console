@@ -149,28 +149,6 @@ export function setupErrorCollector(page: Page): { errors: string[]; warnings: s
 // ---------------------------------------------------------------------------
 
 /**
- * Clean all persistent storage (IndexedDB + sessionStorage + localStorage caches).
- * Returns a promise that resolves when cleanup is complete. Must be called in
- * page.evaluate() or page.addInitScript() so it runs in the browser context.
- *
- * #12089 — sessionStorage.clear() is synchronous but indexedDB.deleteDatabase()
- * is async. On webkit/firefox, sessionStorage hydration can outrace the async
- * IndexedDB delete, causing stale data to reappear. This helper ensures both
- * are cleaned before proceeding.
- */
-async function cleanPersistentStorage(): Promise<void> {
-  sessionStorage.clear()
-  localStorage.removeItem('kc-backend-status')
-  const deletePromise = new Promise<void>((resolve) => {
-    const req = indexedDB.deleteDatabase('kc_cache')
-    req.onsuccess = () => resolve()
-    req.onerror = () => resolve()
-    req.onblocked = () => resolve()
-  })
-  await deletePromise
-}
-
-/**
  * Install a mock for `/api/me` that returns a demo user. Safe to call
  * multiple times — Playwright will overwrite the handler. Tests that need
  * to simulate an unauthenticated state should NOT call this helper.
@@ -574,11 +552,18 @@ export async function setupDemoMode(page: Page) {
   await mockApiFallback(page)
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
-  await page.addInitScript(() => {
-    localStorage.removeItem('kc-has-session')
-    localStorage.removeItem('kc-update-channel')
-    localStorage.removeItem('kc-releases-cache')
-    localStorage.removeItem('kc-auth-token')
+  await page.addInitScript(async () => {
+    await (async () => {
+      sessionStorage.clear()
+      localStorage.clear()
+      const deletePromise = new Promise<void>((resolve) => {
+        const req = indexedDB.deleteDatabase('kc_cache')
+        req.onsuccess = () => resolve()
+        req.onerror = () => resolve()
+        req.onblocked = () => resolve()
+      })
+      await deletePromise
+    })()
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
@@ -598,11 +583,7 @@ export async function setupDemoMode(page: Page) {
 
 export async function setupDemoAndNavigate(page: Page, path: string) {
   await setupDemoMode(page)
-  await page.goto(path)
-  // `networkidle` is unreliable in a dashboard with WebSockets + SSE +
-  // periodic polling (#9082). Log when it times out so we can diagnose
-  // slow loads instead of silently swallowing the error.
-  await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS)
+  await page.goto(path, { waitUntil: 'domcontentloaded' })
 }
 
 // ---------------------------------------------------------------------------
@@ -638,6 +619,32 @@ export async function waitForSubRoute(page: Page) {
   await expect(page.getByTestId('dashboard-header')).toBeVisible({
     timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
   })
+}
+
+
+export async function waitForWorkloadsReady(
+  page: Page,
+  timeoutMs: number = ELEMENT_VISIBLE_TIMEOUT_MS,
+) {
+  await waitForSubRoute(page)
+  await expect(page.getByTestId('dashboard-title')).toContainText('Workloads', {
+    timeout: timeoutMs,
+  })
+  await page.waitForFunction(
+    () => {
+      const hasHydratedList = Boolean(document.querySelector('[data-testid="workloads-list"]'))
+      const hasEmptyState = Boolean(document.querySelector('[data-testid="workloads-empty-state"]'))
+      const hasClustersOverview = Boolean(document.querySelector('[data-testid="clusters-overview-grid"]'))
+      const isStillLoading = Boolean(document.querySelector('[data-testid="workloads-loading-state"]'))
+      return (hasHydratedList || hasEmptyState) && hasClustersOverview && !isStillLoading
+    },
+    { timeout: timeoutMs }
+  )
+}
+
+export async function setupWorkloadsDemoPage(page: Page) {
+  await setupDemoAndNavigate(page, '/workloads')
+  await waitForWorkloadsReady(page)
 }
 
 // ---------------------------------------------------------------------------
