@@ -3,8 +3,8 @@
  *
  * Powers the `/ci-cd` pipeline cards (Nightly Release Pulse, Workflow Matrix,
  * Live Runs flow, Recent Failures). Caches GitHub Actions data server-side
- * (Netlify Blobs) so a public-page visitor never hits GitHub directly and
- * the unauth'd 60/hr per-IP rate limit isn't a concern.
+ * (Netlify Blobs) and rate-limits public reads so visitors never hit GitHub
+ * directly and cannot abuse the dashboard endpoint.
  *
  * Views (GET):
  *   ?view=pulse                         → cross-repo nightly health
@@ -13,26 +13,26 @@
  *   ?view=failures&repo=…               → last N failed runs with failing step
  *   ?view=log&repo=…&job=…              → job log tail (last LOG_TAIL_LINES)
  *
- * Mutations (POST):
- *   ?view=mutate&op=rerun|cancel&repo=…&run=…
- *   Gated on GITHUB_MUTATIONS_TOKEN env var. If unset, always returns 503
- *   to keep the public demo site from triggering workflow re-runs.
+ * Mutations have been moved to the auth-gated
+ * `/api/github-pipelines/mutate` Netlify function.
  *
  * Env:
- *   GITHUB_TOKEN            — read-only PAT (required)
- *   GITHUB_MUTATIONS_TOKEN  — PAT with actions:write (optional; disabled if absent)
+ *   GITHUB_TOKEN — read-only PAT (required)
  */
 import { getStore } from "@netlify/blobs";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import {
   STORE_NAME,
   CACHE_TTL_MS,
   MATRIX_DEFAULT_DAYS,
   MATRIX_MAX_DAYS,
+  READ_RATE_LIMIT_STORE_NAME,
+  READ_RATE_LIMIT_MAX_REQUESTS,
+  READ_RATE_LIMIT_WINDOW_MS,
   getRepos,
 } from "./github-pipelines/constants";
 import { corsOrigin, jsonResponse, readCache, writeCache, isValidRepo } from "./github-pipelines/helpers";
 import { buildPulse, buildMatrix, buildFlow, buildFailures, buildLog } from "./github-pipelines/views";
-import { mutate } from "./github-pipelines/mutations";
 
 const REPOS = getRepos();
 
@@ -40,7 +40,7 @@ export default async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin");
   const baseHeaders: Record<string, string> = {
     "Access-Control-Allow-Origin": corsOrigin(origin),
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
@@ -59,29 +59,40 @@ export default async (req: Request): Promise<Response> => {
     );
   }
 
+  if (req.method !== "GET") {
+    return jsonResponse(
+      { error: "Only GET is supported on this endpoint" },
+      { status: 405, headers: baseHeaders },
+    );
+  }
+
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+  const readRate = await enforceSimpleRateLimit({
+    storeName: READ_RATE_LIMIT_STORE_NAME,
+    prefix: "gh-pipelines-read:",
+    subject: clientIp,
+    maxRequests: READ_RATE_LIMIT_MAX_REQUESTS,
+    windowMs: READ_RATE_LIMIT_WINDOW_MS,
+  });
+  if (readRate.limited) {
+    return jsonResponse(
+      { error: "Rate limit exceeded", retryAfter: readRate.retryAfterSeconds },
+      {
+        status: 429,
+        headers: {
+          ...baseHeaders,
+          "Retry-After": String(readRate.retryAfterSeconds),
+        },
+      },
+    );
+  }
+
   const store = getStore(STORE_NAME);
 
   try {
-    // Mutations — POST only
-    if (view === "mutate") {
-      if (req.method !== "POST") {
-        return jsonResponse(
-          { error: "Mutations require POST" },
-          { status: 405, headers: baseHeaders }
-        );
-      }
-      const op = url.searchParams.get("op") ?? "";
-      const repo = url.searchParams.get("repo") ?? "";
-      const run = url.searchParams.get("run") ?? "";
-      if (!/^\d+$/.test(run)) {
-        return jsonResponse({ error: "Invalid run ID" }, { status: 400, headers: baseHeaders });
-      }
-      const resp = await mutate(op, repo, run, req);
-      // Inherit CORS headers
-      for (const [k, v] of Object.entries(baseHeaders)) resp.headers.set(k, v);
-      return resp;
-    }
-
     // Reads — cache hit? Include UTC date in the pulse key so it rotates
     // daily and doesn't serve yesterday's release tag for hours after a new
     // nightly publishes. Other views are keyed by their query params.

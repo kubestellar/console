@@ -1714,6 +1714,7 @@ export function createHandlers() {
   http.all('/api/acmm/scan', () => passthrough()),
   http.all('/api/acmm/badge/*', () => passthrough()),
   http.all('/api/github-pipelines', () => passthrough()),
+  http.all('/api/github-pipelines/mutate', () => passthrough()),
   http.all('/api/feedback-app', () => passthrough()),
   http.all('/api/nightly-e2e/runs', () => passthrough()),
   http.all('/api/public/nightly-e2e/runs', () => passthrough()),

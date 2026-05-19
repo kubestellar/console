@@ -13,6 +13,19 @@ export const HISTORY_KEY = "history-v1";
 /** Cache TTL for view responses */
 export const CACHE_TTL_MS = 120_000; // 2 min
 
+/** Per-IP read throttling for the public dashboard endpoint */
+export const READ_RATE_LIMIT_STORE_NAME = "github-pipelines-rate-limit";
+export const READ_RATE_LIMIT_MAX_REQUESTS = 120;
+export const READ_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+/** Per-IP mutation throttling for the auth-gated mutation endpoint */
+export const MUTATION_RATE_LIMIT_STORE_NAME = "github-pipelines-mutate-rate-limit";
+export const MUTATION_RATE_LIMIT_MAX_REQUESTS = 5;
+export const MUTATION_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+/** Default auth cookie accepted by the mutation endpoint when configured */
+export const MUTATION_AUTH_COOKIE_NAME = "kc_auth";
+
 /** Matrix defaults */
 export const MATRIX_DEFAULT_DAYS = 14;
 export const MATRIX_MAX_DAYS = 90;
