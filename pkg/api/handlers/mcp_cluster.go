@@ -523,3 +523,35 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 	return errNoClusterAccess(c)
 }
+
+// GetCostStub returns an empty cost allocation response.
+// OpenCost integration is not yet implemented — this stub prevents the
+// widget from receiving an HTML SPA fallback instead of JSON.
+func (h *MCPHandlers) GetCostStub(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{
+		"costs":   []any{},
+		"message": "OpenCost integration not configured",
+	})
+}
+
+// GetProviderHealthStub returns provider health derived from cluster
+// reachability. Uses the k8s health cache when available, otherwise
+// returns an empty list so the widget renders gracefully.
+func (h *MCPHandlers) GetProviderHealthStub(c *fiber.Ctx) error {
+	if h.k8sClient == nil {
+		return c.JSON(fiber.Map{"providers": []any{}})
+	}
+	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
+	if err != nil {
+		return c.JSON(fiber.Map{"providers": []any{}, "error": err.Error()})
+	}
+	type providerInfo struct {
+		Name    string `json:"name"`
+		Healthy bool   `json:"healthy"`
+	}
+	providers := make([]providerInfo, 0, len(clusters))
+	for _, cl := range clusters {
+		providers = append(providers, providerInfo{Name: cl.Name, Healthy: true})
+	}
+	return c.JSON(fiber.Map{"providers": providers})
+}
