@@ -78,7 +78,9 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 		// context would cancel the in-flight GitHub API calls for everyone.
 		detachedCtx, cancel := context.WithTimeout(context.Background(), ghpFetchTimeout)
 		defer cancel()
+		origCtx := c.UserContext()
 		c.SetUserContext(detachedCtx)
+		defer c.SetUserContext(origCtx)
 		return build(c)
 	})
 	if err != nil {
