@@ -386,7 +386,7 @@ export const WIDGET_CARDS: Record<string, WidgetCardDefinition> = {
     cardType: 'github_ci_monitor',
     displayName: 'GitHub CI Monitor',
     description: 'Live GitHub Actions workflow status with pass rate and queue depth',
-    apiEndpoints: ['/api/github/repos'],
+    apiEndpoints: ['/api/github-pipelines?view=matrix'],
     supportsTheme: true,
     minRefreshInterval: 30_000,
     defaultSize: { width: 300, height: 300 },
