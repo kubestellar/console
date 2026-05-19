@@ -67,14 +67,16 @@ jobs:
         env:
           GA4_SERVICE_ACCOUNT_KEY: ${{ secrets.GA4_SERVICE_ACCOUNT_KEY }}
           GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          INPUT_LOOKBACK_HOURS: ${{ inputs.lookback_hours }}
+          INPUT_THRESHOLD: ${{ inputs.threshold }}
         with:
           github-token: ${{ secrets.CONSOLE_AUTO }}
           script: |
             const { google } = require('googleapis');
 
             // ── Config ──
-            const lookbackHours = parseInt('${{ inputs.lookback_hours }}' || process.env.LOOKBACK_HOURS);
-            const threshold = parseInt('${{ inputs.threshold }}' || process.env.ERROR_THRESHOLD);
+            const lookbackHours = parseInt(process.env.INPUT_LOOKBACK_HOURS || process.env.LOOKBACK_HOURS);
+            const threshold = parseInt(process.env.INPUT_THRESHOLD || process.env.ERROR_THRESHOLD);
             const maxIssues = parseInt(process.env.MAX_ISSUES_PER_RUN);
             const prefix = process.env.ISSUE_PREFIX;
             const propertyId = process.env.GA4_PROPERTY_ID;
