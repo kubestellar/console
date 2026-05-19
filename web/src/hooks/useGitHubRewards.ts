@@ -196,7 +196,9 @@ async function fetchRecentContributions(
     if (pageItems.length < CONTRIBUTIONS_PER_PAGE) break
   }
 
-  return allContributions.slice(0, CONTRIBUTIONS_LIST_LIMIT)
+  // Return all fetched contributions so the full point total can be computed.
+  // Callers should slice to CONTRIBUTIONS_LIST_LIMIT for display purposes only.
+  return allContributions
 }
 
 export function useGitHubRewards() {
@@ -249,9 +251,21 @@ export function useGitHubRewards() {
 
       const merged: GitHubRewardsResponse = {
         ...result,
-        total_points: hasLiveContributions ? summary.total_points : result.total_points,
+        // Use the higher of the live summary and the leaderboard total.
+        // The leaderboard is the authoritative source (includes bonus points
+        // and all-time history), but live search may have newer contributions
+        // not yet indexed. Never replace a higher leaderboard total with a
+        // lower live sum (which can happen when the search covers only a
+        // subset of orgs or is temporarily rate-limited).
+        total_points: hasLiveContributions
+          ? Math.max(summary.total_points, result.total_points)
+          : result.total_points,
         breakdown: hasLiveContributions ? summary.breakdown : result.breakdown,
-        contributions: hasLiveContributions ? contributions : result.contributions,
+        // Cap the display list to keep the UI responsive; point calculation
+        // above already used the full contributions array.
+        contributions: hasLiveContributions
+          ? contributions.slice(0, CONTRIBUTIONS_LIST_LIMIT)
+          : result.contributions,
       }
 
       setData(merged)
