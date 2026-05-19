@@ -66,6 +66,7 @@ export class CacheStore<T> {
   private state: CacheState<T>
   private subscribers = new Set<Subscriber>()
   private fetchingRef = false
+  private inFlightPromise: Promise<void> | null = null
   private refreshTimeoutRef: ReturnType<typeof setTimeout> | null = null
   private initialDataLoaded = false
   private storageLoadPromise: Promise<void> | null = null
@@ -238,6 +239,24 @@ export class CacheStore<T> {
   }
 
   async fetch(
+    fetcher: () => Promise<T>,
+    merge?: (old: T, new_: T) => T,
+    progressiveFetcher?: (onProgress: (partialData: T) => void) => Promise<T>,
+  ): Promise<void> {
+    if (this.inFlightPromise) return this.inFlightPromise
+
+    const fetchPromise = this.performFetch(fetcher, merge, progressiveFetcher)
+    this.inFlightPromise = fetchPromise
+    try {
+      await fetchPromise
+    } finally {
+      if (this.inFlightPromise === fetchPromise) {
+        this.inFlightPromise = null
+      }
+    }
+  }
+
+  private async performFetch(
     fetcher: () => Promise<T>,
     merge?: (old: T, new_: T) => T,
     progressiveFetcher?: (onProgress: (partialData: T) => void) => Promise<T>,

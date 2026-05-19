@@ -319,11 +319,11 @@ export const QuantumQubitGrid: React.FC = () => {
             <span className="text-gray-600 dark:text-gray-400">|1⟩ State</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border border-border" style={{ backgroundColor: 'rgb(104, 97, 104)' }} />
+            <div className="w-4 h-4 rounded border-2 border-gray-500 flex-shrink-0" style={{ backgroundColor: 'rgb(104, 97, 104)' }} />
             <span className="text-gray-600 dark:text-gray-400">Unused/Unmeasured</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-black rounded border border-border" />
+            <div className="w-4 h-4 bg-black rounded border-2 border-gray-400 flex-shrink-0" />
             <span className="text-gray-600 dark:text-gray-400">BKGD</span>
           </div>
         </div>

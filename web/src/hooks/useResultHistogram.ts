@@ -119,7 +119,11 @@ function normalizeHistogramData(raw: HistogramResponse, sortBy: HistogramSort): 
   }
 }
 
-async function fetchHistogram(sortBy: HistogramSort): Promise<HistogramData> {
+async function fetchHistogramWithRetry(
+  sortBy: HistogramSort,
+  attempt: number = 0,
+  maxAttempts: number = 3,
+): Promise<HistogramData> {
   const response = await fetch(`${HISTOGRAM_ENDPOINT}?sort=${sortBy}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -127,6 +131,12 @@ async function fetchHistogram(sortBy: HistogramSort): Promise<HistogramData> {
   })
 
   if (response.status === RATE_LIMIT_STATUS) {
+    if (attempt < maxAttempts - 1) {
+      // Exponential backoff: 100ms, 300ms, 900ms
+      const delayMs = 100 * Math.pow(2, attempt)
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+      return fetchHistogramWithRetry(sortBy, attempt + 1, maxAttempts)
+    }
     throw new Error(`Failed to fetch histogram (${RATE_LIMIT_STATUS})`)
   }
 
@@ -150,6 +160,10 @@ async function fetchHistogram(sortBy: HistogramSort): Promise<HistogramData> {
   }
 
   return normalizeHistogramData(payload, sortBy)
+}
+
+async function fetchHistogram(sortBy: HistogramSort): Promise<HistogramData> {
+  return fetchHistogramWithRetry(sortBy)
 }
 
 export function useResultHistogram(
