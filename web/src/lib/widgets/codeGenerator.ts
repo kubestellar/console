@@ -89,8 +89,12 @@ function generateCardRenderFunction(cardType: string, displayName?: string): str
     } else if (trimmed.startsWith('<!') || trimmed.startsWith('<html')) {
       error = 'Endpoint not available';
     } else if (trimmed.includes('"error"')) {
-      const parsed = JSON.parse(trimmed);
-      error = parsed.error || 'Load failed';
+      try {
+        const parsed = JSON.parse(trimmed);
+        error = parsed.error || 'Load failed';
+      } catch {
+        error = 'Load failed';
+      }
     } else {
       data = JSON.parse(trimmed);
     }
