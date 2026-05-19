@@ -27,7 +27,15 @@ on:
         type: boolean
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
-permissions: read-all
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
+# Prevent concurrent scheduled releases (allow manual runs to queue)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'schedule' && 'scheduled' || github.run_id }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
