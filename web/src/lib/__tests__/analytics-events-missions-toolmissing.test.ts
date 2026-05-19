@@ -7,12 +7,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../analytics-core', () => ({
+vi.mock('../analytics-core', () => ({
   send: vi.fn(),
 }))
 
-import { send } from '../../analytics-core'
-import { emitMissionToolMissing } from '../../analytics-events/missions'
+import { send } from '../analytics-core'
+import { emitMissionToolMissing } from '../analytics-events/missions'
 
 const mockSend = vi.mocked(send)
 
