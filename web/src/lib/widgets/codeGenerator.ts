@@ -484,7 +484,7 @@ const WIDGET_NAME = 'stats-widget';
 const openIssue = (errorMsg) => {
   const title = encodeURIComponent('[Widget] ' + WIDGET_NAME + ': ' + (errorMsg || 'unknown error'));
   const body = encodeURIComponent('**Widget:** ' + WIDGET_NAME + '\\n**Error:** ' + (errorMsg || 'unknown') + '\\n**Platform:** Übersicht (macOS)\\n\\n_Describe what you were doing when this happened:_\\n');
-  run(\`open "https://github.com/kubestellar/console/issues/new?title=${title}&body=${body}&labels=kind/bug,area/widgets"\`);
+  run(\`open "https://github.com/kubestellar/console/issues/new?title=\${title}&body=\${body}&labels=kind/bug,area/widgets"\`);
 };
 
 const StatBlock = ({ value, label, color }) => (
