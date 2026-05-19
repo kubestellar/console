@@ -5,24 +5,25 @@ const HOUR_MS = 3600_000
 const DAY_MS = 24 * HOUR_MS
 
 interface ScheduleChoice {
-  label: string
+  id: string
+  labelKey: string
   offsetMs: number | null // null = "now" (no dueAt)
 }
 
 const SCHEDULE_CHOICES: ScheduleChoice[] = [
-  { label: 'Do now', offsetMs: null },
-  { label: 'In 1 hour', offsetMs: HOUR_MS },
-  { label: 'Tomorrow', offsetMs: DAY_MS },
-  { label: 'In 3 days', offsetMs: 3 * DAY_MS },
-  { label: 'In 1 week', offsetMs: 7 * DAY_MS },
+  { id: 'do-now', labelKey: 'stellar.recommendedTasks.schedule.doNow', offsetMs: null },
+  { id: 'in-one-hour', labelKey: 'stellar.recommendedTasks.schedule.inOneHour', offsetMs: HOUR_MS },
+  { id: 'tomorrow', labelKey: 'stellar.recommendedTasks.schedule.tomorrow', offsetMs: DAY_MS },
+  { id: 'in-three-days', labelKey: 'stellar.recommendedTasks.schedule.inThreeDays', offsetMs: 3 * DAY_MS },
+  { id: 'in-one-week', labelKey: 'stellar.recommendedTasks.schedule.inOneWeek', offsetMs: 7 * DAY_MS },
 ]
 
 interface Recommendation {
   id: string
   category: 'security' | 'observability' | 'reliability' | 'best-practices'
   icon: string
-  title: string
-  blurb: string
+  titleKey: string
+  blurbKey: string
   prompt: string         // full LLM prompt that will be saved as task description
   priority: number       // 1 (highest) → 9
 }
@@ -32,8 +33,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'install-falco',
     category: 'security',
     icon: '🛡',
-    title: 'Install Falco runtime security',
-    blurb: 'Detect anomalous behavior, container escapes, and crypto-mining inside running pods.',
+    titleKey: 'stellar.recommendedTasks.items.installFalco.title',
+    blurbKey: 'stellar.recommendedTasks.items.installFalco.blurb',
     prompt:
       'Install Falco (https://falco.org) on the active cluster using the official Helm chart. ' +
       'Verify the falco namespace is created, all pods reach Running, and the default ruleset is loaded. ' +
@@ -44,8 +45,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'audit-rbac',
     category: 'security',
     icon: '🔐',
-    title: 'Audit cluster-wide RBAC',
-    blurb: 'List every ClusterRoleBinding that grants cluster-admin, plus any wildcard verbs/resources, and flag the over-privileged ones.',
+    titleKey: 'stellar.recommendedTasks.items.auditRbac.title',
+    blurbKey: 'stellar.recommendedTasks.items.auditRbac.blurb',
     prompt:
       'Audit RBAC on the active cluster. List all ClusterRoleBindings that bind to cluster-admin or contain wildcard verbs/resources. ' +
       'For each, identify the subject (user/group/serviceaccount) and namespace, and explain whether the grant looks intentional or accidental. ' +
@@ -56,8 +57,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'network-policies',
     category: 'security',
     icon: '🚧',
-    title: 'Add default-deny NetworkPolicies',
-    blurb: 'Stop accidental cross-namespace traffic. Generate baseline ingress/egress deny rules per namespace.',
+    titleKey: 'stellar.recommendedTasks.items.networkPolicies.title',
+    blurbKey: 'stellar.recommendedTasks.items.networkPolicies.blurb',
     prompt:
       'Generate default-deny NetworkPolicies for each application namespace on the active cluster. ' +
       'For each namespace, emit a NetworkPolicy YAML that denies all ingress and egress by default, then add explicit allow rules ' +
@@ -68,8 +69,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'pod-security-standards',
     category: 'best-practices',
     icon: '📜',
-    title: 'Enforce Pod Security Standards (restricted)',
-    blurb: 'Label every namespace with the `restricted` PodSecurity profile and fix any pods that violate it.',
+    titleKey: 'stellar.recommendedTasks.items.podSecurityStandards.title',
+    blurbKey: 'stellar.recommendedTasks.items.podSecurityStandards.blurb',
     prompt:
       'Apply the `restricted` Pod Security Standard to all application namespaces on the active cluster. ' +
       'Label each namespace with pod-security.kubernetes.io/enforce=restricted, identify pods that would fail under the new policy, ' +
@@ -80,8 +81,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'resource-limits',
     category: 'reliability',
     icon: '📊',
-    title: 'Set resource requests & limits',
-    blurb: "Find workloads without CPU/memory requests or limits. Right-size them from observed usage and apply.",
+    titleKey: 'stellar.recommendedTasks.items.resourceLimits.title',
+    blurbKey: 'stellar.recommendedTasks.items.resourceLimits.blurb',
     prompt:
       'Scan the active cluster for Deployments and StatefulSets whose pods have no resource requests or limits set. ' +
       'For each, use Prometheus/metrics-server data (or sensible defaults if metrics are unavailable) to recommend requests and limits, ' +
@@ -92,8 +93,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'install-prometheus-operator',
     category: 'observability',
     icon: '📈',
-    title: 'Install kube-prometheus-stack',
-    blurb: 'Prometheus, Alertmanager, and the default node/cluster dashboards in one Helm chart.',
+    titleKey: 'stellar.recommendedTasks.items.installPrometheusOperator.title',
+    blurbKey: 'stellar.recommendedTasks.items.installPrometheusOperator.blurb',
     prompt:
       'Install kube-prometheus-stack (https://github.com/prometheus-community/helm-charts) on the active cluster. ' +
       'Use the prometheus-community/kube-prometheus-stack Helm chart with the default values. ' +
@@ -104,8 +105,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'backup-etcd',
     category: 'reliability',
     icon: '💾',
-    title: 'Schedule etcd backups',
-    blurb: 'Snapshot the control-plane datastore on a daily cron and ship to object storage.',
+    titleKey: 'stellar.recommendedTasks.items.backupEtcd.title',
+    blurbKey: 'stellar.recommendedTasks.items.backupEtcd.blurb',
     prompt:
       'Set up daily etcd snapshots for the active cluster. Create a CronJob that runs `etcdctl snapshot save` on the control plane and ' +
       'uploads the snapshot to the configured S3-compatible bucket. Verify the first snapshot runs successfully and document the restore procedure.',
@@ -115,8 +116,8 @@ const RECOMMENDATIONS: Recommendation[] = [
     id: 'enable-audit-logging',
     category: 'security',
     icon: '📋',
-    title: 'Enable Kubernetes audit logging',
-    blurb: 'Record every API call against the cluster — required for incident forensics and many compliance frameworks.',
+    titleKey: 'stellar.recommendedTasks.items.enableAuditLogging.title',
+    blurbKey: 'stellar.recommendedTasks.items.enableAuditLogging.blurb',
     prompt:
       'Enable Kubernetes API server audit logging on the active cluster. Author an audit-policy.yaml that captures Metadata level for ' +
       'read requests and RequestResponse level for mutating requests on sensitive resources (Secrets, ConfigMaps, RBAC). ' +
@@ -130,6 +131,13 @@ const CATEGORY_COLOR: Record<Recommendation['category'], string> = {
   observability: 'var(--s-info)',
   reliability: 'var(--s-warning)',
   'best-practices': 'var(--s-success)',
+}
+
+const CATEGORY_LABEL_KEYS: Record<Recommendation['category'], string> = {
+  security: 'stellar.recommendedTasks.categories.security',
+  observability: 'stellar.recommendedTasks.categories.observability',
+  reliability: 'stellar.recommendedTasks.categories.reliability',
+  'best-practices': 'stellar.recommendedTasks.categories.bestPractices',
 }
 
 interface Props {
@@ -154,7 +162,7 @@ export function RecommendedTasksPanel({ createTask }: Props) {
       const dueAt = choice.offsetMs == null
         ? undefined
         : new Date(Date.now() + choice.offsetMs).toISOString()
-      await createTask(rec.title, rec.prompt, 'stellar', { dueAt, priority: rec.priority })
+      await createTask(t(rec.titleKey), rec.prompt, 'stellar', { dueAt, priority: rec.priority })
       setScheduledIds(prev => new Set(prev).add(rec.id))
       setExpandedId(null)
     } catch {
@@ -214,23 +222,23 @@ export function RecommendedTasksPanel({ createTask }: Props) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 13 }}>{rec.icon}</span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text)', flex: 1 }}>
-                      {rec.title}
+                      {t(rec.titleKey)}
                     </span>
                     {isScheduled && (
                       <span style={{ fontSize: 10, color: 'var(--s-success)', fontFamily: 'var(--s-mono)' }}>
-                        ✓ scheduled
+                        ✓ {t('stellar.recommendedTasks.scheduled')}
                       </span>
                     )}
                   </div>
                   <div style={{
                     fontSize: 11, color: 'var(--s-text-muted)',
                     paddingLeft: 19, marginTop: 3, lineHeight: 1.4,
-                  }}>{rec.blurb}</div>
+                  }}>{t(rec.blurbKey)}</div>
                   <div style={{
                     paddingLeft: 19, marginTop: 4,
                     fontSize: 9, fontFamily: 'var(--s-mono)',
                     color: cColor, textTransform: 'uppercase', letterSpacing: '0.05em',
-                  }}>{rec.category}</div>
+                  }}>{t(CATEGORY_LABEL_KEYS[rec.category])}</div>
                 </div>
 
                 {isExpanded && !isScheduled && (
@@ -241,7 +249,7 @@ export function RecommendedTasksPanel({ createTask }: Props) {
                   }}>
                     {SCHEDULE_CHOICES.map(choice => (
                       <button
-                        key={choice.label}
+                        key={choice.id}
                         disabled={busyId === rec.id}
                         onClick={(e) => { e.stopPropagation(); void onSchedule(rec, choice) }}
                         style={{
@@ -250,7 +258,7 @@ export function RecommendedTasksPanel({ createTask }: Props) {
                           fontSize: 10, cursor: busyId === rec.id ? 'wait' : 'pointer',
                           opacity: busyId === rec.id ? 0.5 : 1,
                         }}
-                      >{choice.label}</button>
+                      >{t(choice.labelKey)}</button>
                     ))}
                   </div>
                 )}

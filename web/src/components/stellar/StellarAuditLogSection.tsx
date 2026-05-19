@@ -7,12 +7,11 @@ import { cn } from '../../lib/cn'
 const AUDIT_FETCH_LIMIT = 100
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 const DATE_RANGE_OPTIONS = [
-  { label: 'All time', value: 'all', windowMs: null },
-  { label: '24h', value: '24h', windowMs: ONE_DAY_MS },
-  { label: '7d', value: '7d', windowMs: 7 * ONE_DAY_MS },
-  { label: '30d', value: '30d', windowMs: 30 * ONE_DAY_MS },
+  { value: 'all', windowMs: null },
+  { value: '24h', windowMs: ONE_DAY_MS },
+  { value: '7d', windowMs: 7 * ONE_DAY_MS },
+  { value: '30d', windowMs: 30 * ONE_DAY_MS },
 ] as const
-const CSV_COLUMNS = ['Timestamp', 'User', 'Action', 'Resource', 'Result', 'Cluster', 'Detail'] as const
 const EXPORT_FILENAME_PREFIX = 'stellar-audit-log'
 const TABLE_SORT_KEYS = {
   TIMESTAMP: 'ts',
@@ -54,14 +53,18 @@ function toCsvField(value: string): string {
   return `"${value.replace(/"/g, '""')}"`
 }
 
-function buildCsv(entries: StellarAuditEntry[]): string {
-  const header = CSV_COLUMNS.join(',')
+function buildCsv(
+  entries: StellarAuditEntry[],
+  columns: readonly string[],
+  getResultLabel: (result: AuditResult) => string,
+): string {
+  const header = columns.join(',')
   const rows = entries.map(entry => [
     formatTimestamp(entry.ts),
     entry.userId,
     entry.action,
     getResourceLabel(entry),
-    deriveAuditResult(entry),
+    getResultLabel(deriveAuditResult(entry)),
     entry.cluster || '—',
     entry.detail,
   ].map(value => toCsvField(value)).join(','))
@@ -69,8 +72,12 @@ function buildCsv(entries: StellarAuditEntry[]): string {
   return [header, ...rows].join('\n')
 }
 
-function exportEntries(entries: StellarAuditEntry[]): void {
-  const blob = new Blob([buildCsv(entries)], { type: 'text/csv;charset=utf-8' })
+function exportEntries(
+  entries: StellarAuditEntry[],
+  columns: readonly string[],
+  getResultLabel: (result: AuditResult) => string,
+): void {
+  const blob = new Blob([buildCsv(entries, columns, getResultLabel)], { type: 'text/csv;charset=utf-8' })
   const href = URL.createObjectURL(blob)
   const link = document.createElement('a')
   const stamp = new Date().toISOString().slice(0, 10)
@@ -119,6 +126,35 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
   const [sortKey, setSortKey] = useState<SortKey>(TABLE_SORT_KEYS.TIMESTAMP)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
+  const dateRangeOptions = [
+    { label: t('stellar.auditLog.dateRanges.allTime'), value: 'all', windowMs: null },
+    { label: t('stellar.auditLog.dateRanges.last24Hours'), value: '24h', windowMs: ONE_DAY_MS },
+    { label: t('stellar.auditLog.dateRanges.last7Days'), value: '7d', windowMs: 7 * ONE_DAY_MS },
+    { label: t('stellar.auditLog.dateRanges.last30Days'), value: '30d', windowMs: 30 * ONE_DAY_MS },
+  ] as const
+
+  const columnLabels = {
+    timestamp: t('stellar.auditLog.columns.timestamp'),
+    user: t('stellar.auditLog.columns.user'),
+    action: t('stellar.auditLog.columns.action'),
+    resource: t('stellar.auditLog.columns.resource'),
+    result: t('stellar.auditLog.columns.result'),
+    cluster: t('stellar.auditLog.columns.cluster'),
+    detail: t('stellar.auditLog.columns.detail'),
+  }
+
+  const csvColumns = [
+    columnLabels.timestamp,
+    columnLabels.user,
+    columnLabels.action,
+    columnLabels.resource,
+    columnLabels.result,
+    columnLabels.cluster,
+    columnLabels.detail,
+  ] as const
+
+  const getResultLabel = (result: AuditResult): string => t(`stellar.auditLog.results.${result}`)
+
   useEffect(() => {
     let mounted = true
     const controller = new AbortController()
@@ -135,7 +171,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
         if (!mounted || controller.signal.aborted) {
           return
         }
-        const message = fetchError instanceof Error ? fetchError.message : 'Failed to load audit log'
+        const message = fetchError instanceof Error ? fetchError.message : t('stellar.auditLog.loadError')
         setError(message)
       })
       .finally(() => {
@@ -148,7 +184,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
       mounted = false
       controller.abort()
     }
-  }, [])
+  }, [t])
 
   const users = useMemo(() => {
     return Array.from(new Set((entries || []).map(entry => entry.userId).filter(Boolean))).sort((left, right) => left.localeCompare(right))
@@ -159,7 +195,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
   }, [entries])
 
   const filteredEntries = useMemo(() => {
-    const selectedWindow = DATE_RANGE_OPTIONS.find(option => option.value === selectedRange)?.windowMs ?? null
+    const selectedWindow = dateRangeOptions.find(option => option.value === selectedRange)?.windowMs ?? null
     const threshold = selectedWindow == null ? null : Date.now() - selectedWindow
 
     return (entries || []).filter(entry => {
@@ -174,7 +210,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
       }
       return true
     })
-  }, [entries, selectedAction, selectedRange, selectedUser])
+  }, [dateRangeOptions, entries, selectedAction, selectedRange, selectedUser])
 
   const sortedEntries = useMemo(() => {
     const nextEntries = [...filteredEntries]
@@ -237,29 +273,29 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[var(--s-brand)]">
-                Stellar audit log
+                {t('stellar.auditLog.title')}
               </span>
               <span className="rounded-full border border-[var(--s-border-muted)] bg-[var(--s-surface-2)] px-2 py-0.5 font-mono text-[10px] text-[var(--s-text-muted)]">
-                {sortedEntries.length} rows
+                {t('stellar.auditLog.rows', { count: sortedEntries.length })}
               </span>
             </div>
             <p className="text-sm text-[var(--s-text-muted)]">
-              Review recent actions, filter by user or action type, and export the current slice.
+              {t('stellar.auditLog.description')}
             </p>
           </div>
           <button
             type="button"
-            onClick={() => exportEntries(sortedEntries)}
+            onClick={() => exportEntries(sortedEntries, csvColumns, getResultLabel)}
             disabled={sortedEntries.length === 0}
             className="inline-flex items-center justify-center rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm font-medium text-[var(--s-text)] transition hover:border-[var(--s-border-focus)] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Export CSV
+            {t('stellar.auditLog.exportCsv')}
           </button>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-2 text-xs text-[var(--s-text-muted)]">
-            <span className="font-mono uppercase tracking-[0.12em]">User</span>
+            <span className="font-mono uppercase tracking-[0.12em]">{t('stellar.auditLog.filters.user')}</span>
             <select
               value={selectedUser}
               onChange={event => setSelectedUser(event.target.value)}
@@ -273,7 +309,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
           </label>
 
           <label className="flex flex-col gap-2 text-xs text-[var(--s-text-muted)]">
-            <span className="font-mono uppercase tracking-[0.12em]">Action</span>
+            <span className="font-mono uppercase tracking-[0.12em]">{t('stellar.auditLog.filters.action')}</span>
             <select
               value={selectedAction}
               onChange={event => setSelectedAction(event.target.value)}
@@ -287,9 +323,9 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
           </label>
 
           <div className="flex flex-col gap-2 text-xs text-[var(--s-text-muted)]">
-            <span className="font-mono uppercase tracking-[0.12em]">Date range</span>
+            <span className="font-mono uppercase tracking-[0.12em]">{t('stellar.auditLog.filters.dateRange')}</span>
             <div className="flex flex-wrap gap-2">
-              {DATE_RANGE_OPTIONS.map(option => (
+              {dateRangeOptions.map(option => (
                 <button
                   key={option.value}
                   type="button"
@@ -311,26 +347,26 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
 
       <div className="s-scroll max-h-[28rem] overflow-auto">
         {loading && (
-          <div className="px-4 py-6 text-sm text-[var(--s-text-muted)]">Loading audit log…</div>
+          <div className="px-4 py-6 text-sm text-[var(--s-text-muted)]">{t('stellar.auditLog.loading')}</div>
         )}
         {!loading && error && (
           <div className="px-4 py-6 text-sm text-red-300">{error}</div>
         )}
         {!loading && !error && sortedEntries.length === 0 && (
-          <div className="px-4 py-6 text-sm text-[var(--s-text-muted)]">No audit entries match the selected filters.</div>
+          <div className="px-4 py-6 text-sm text-[var(--s-text-muted)]">{t('stellar.auditLog.empty')}</div>
         )}
         {!loading && !error && sortedEntries.length > 0 && (
           <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[var(--s-surface)]/95 backdrop-blur">
               <tr>
                 {[
-                  { label: 'Timestamp', key: TABLE_SORT_KEYS.TIMESTAMP },
-                  { label: 'User', key: TABLE_SORT_KEYS.USER },
-                  { label: 'Action', key: TABLE_SORT_KEYS.ACTION },
-                  { label: 'Resource', key: TABLE_SORT_KEYS.RESOURCE },
-                  { label: 'Result', key: TABLE_SORT_KEYS.RESULT },
-                  { label: 'Cluster', key: null },
-                  { label: 'Detail', key: null },
+                  { label: columnLabels.timestamp, key: TABLE_SORT_KEYS.TIMESTAMP },
+                  { label: columnLabels.user, key: TABLE_SORT_KEYS.USER },
+                  { label: columnLabels.action, key: TABLE_SORT_KEYS.ACTION },
+                  { label: columnLabels.resource, key: TABLE_SORT_KEYS.RESOURCE },
+                  { label: columnLabels.result, key: TABLE_SORT_KEYS.RESULT },
+                  { label: columnLabels.cluster, key: null },
+                  { label: columnLabels.detail, key: null },
                 ].map(column => (
                   <th
                     key={column.label}
@@ -372,7 +408,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
                     </td>
                     <td className="border-b border-[var(--s-border)] px-4 py-3">
                       <span className={cn('inline-flex rounded-full px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em]', getResultBadgeClassName(result))}>
-                        {result}
+                        {getResultLabel(result)}
                       </span>
                     </td>
                     <td className="border-b border-[var(--s-border)] px-4 py-3 text-sm text-[var(--s-text-muted)]">

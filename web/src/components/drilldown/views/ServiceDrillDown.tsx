@@ -20,6 +20,13 @@ interface Props {
 
 type TabType = 'overview' | 'endpoints' | 'describe' | 'yaml'
 
+function normalizeLbStatus(value?: string): 'ready' | 'provisioning' | '' {
+  const normalized = (value || '').toLowerCase()
+  if (normalized === 'ready') return 'ready'
+  if (normalized === 'provisioning') return 'provisioning'
+  return ''
+}
+
 export default function ServiceDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
@@ -35,7 +42,7 @@ export default function ServiceDrillDown({ data }: Props) {
   const [externalIPs, setExternalIPs] = useState<string[]>((data.externalIPs as string[]) || (data.externalIP ? [data.externalIP as string] : []))
   const [ports, setPorts] = useState<string[]>((data.ports as string[]) || [])
   const [endpointCount, setEndpointCount] = useState<number | undefined>(data.endpoints as number | undefined)
-  const [lbStatus, setLbStatus] = useState<string>((data.lbStatus as string) || '')
+  const [lbStatus, setLbStatus] = useState<'ready' | 'provisioning' | ''>(normalizeLbStatus(data.lbStatus as string | undefined))
   const [selector, setSelector] = useState<Record<string, string> | null>((data.selector as Record<string, string>) || null)
   const [labels, setLabels] = useState<Record<string, string> | null>(null)
   const [, setAnnotations] = useState<Record<string, string> | null>(null)
@@ -83,7 +90,7 @@ export default function ServiceDrillDown({ data }: Props) {
 
         // LB status
         if (spec.type === 'LoadBalancer') {
-          setLbStatus(ingress.length > 0 ? 'Ready' : 'Provisioning')
+          setLbStatus(ingress.length > 0 ? 'ready' : 'provisioning')
         }
 
         setSelector(spec.selector || null)
@@ -130,11 +137,15 @@ export default function ServiceDrillDown({ data }: Props) {
     type: serviceType,
   })
 
+  const lbStatusLabel = lbStatus === 'ready'
+    ? t('drilldown.service.loadBalancerReady')
+    : t('drilldown.service.loadBalancerProvisioning')
+
   const tabs: { id: TabType; label: string }[] = [
-    { id: 'overview', label: t('drilldown.overview', 'Overview') },
-    { id: 'endpoints', label: t('drilldown.endpoints', 'Endpoints') },
-    { id: 'describe', label: t('drilldown.describe', 'Describe') },
-    { id: 'yaml', label: t('drilldown.yaml', 'YAML') },
+    { id: 'overview', label: t('drilldown.tabs.overview') },
+    { id: 'endpoints', label: t('drilldown.tabs.endpoints') },
+    { id: 'describe', label: t('drilldown.tabs.describe') },
+    { id: 'yaml', label: t('drilldown.tabs.yaml') },
   ]
 
   return (
@@ -186,9 +197,9 @@ export default function ServiceDrillDown({ data }: Props) {
           {lbStatus && (
             <span className={cn(
               'px-2 py-0.5 rounded text-xs',
-              lbStatus === 'Ready' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
+              lbStatus === 'ready' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
             )}>
-              {lbStatus}
+              {lbStatusLabel}
             </span>
           )}
         </div>
@@ -225,29 +236,29 @@ export default function ServiceDrillDown({ data }: Props) {
               {/* Key details grid */}
               <div className="grid grid-cols-2 gap-3">
                 <InfoField
-                  label="Type"
+                  label={t('drilldown.service.type')}
                   value={serviceType}
                   icon={<Info className="w-3.5 h-3.5" />}
                   onCopy={() => handleCopy(serviceType, 'type')}
                   copied={copiedField === 'type'}
                 />
                 <InfoField
-                  label="Cluster IP"
-                  value={clusterIP || 'None'}
+                  label={t('drilldown.service.clusterIp')}
+                  value={clusterIP || t('drilldown.service.none')}
                   icon={<Server className="w-3.5 h-3.5" />}
                   onCopy={clusterIP ? () => handleCopy(clusterIP, 'clusterIP') : undefined}
                   copied={copiedField === 'clusterIP'}
                 />
                 <InfoField
-                  label="External IPs"
-                  value={externalIPs.length > 0 ? externalIPs.join(', ') : 'None'}
+                  label={t('drilldown.service.externalIps')}
+                  value={externalIPs.length > 0 ? externalIPs.join(', ') : t('drilldown.service.none')}
                   icon={<Globe className="w-3.5 h-3.5" />}
                   onCopy={externalIPs.length > 0 ? () => handleCopy(externalIPs.join(', '), 'externalIP') : undefined}
                   copied={copiedField === 'externalIP'}
                 />
                 <InfoField
-                  label="Endpoints"
-                  value={endpointCount !== undefined ? `${endpointCount} ready` : 'Unknown'}
+                  label={t('drilldown.service.endpoints')}
+                  value={endpointCount !== undefined ? t('drilldown.service.readyCount', { count: endpointCount }) : t('drilldown.service.unknown')}
                   icon={<Activity className="w-3.5 h-3.5" />}
                 />
               </div>
@@ -255,7 +266,7 @@ export default function ServiceDrillDown({ data }: Props) {
               {/* Ports */}
               {ports.length > 0 && (
                 <div className="p-3 rounded-lg bg-secondary/30">
-                  <div className="text-xs text-muted-foreground mb-2">Ports</div>
+                  <div className="text-xs text-muted-foreground mb-2">{t('drilldown.service.ports')}</div>
                   <div className="flex flex-wrap gap-2">
                     {ports.map((p, i) => (
                       <span key={i} className="px-2 py-1 rounded text-xs bg-secondary text-foreground font-mono">
@@ -271,7 +282,7 @@ export default function ServiceDrillDown({ data }: Props) {
                 <div className="p-3 rounded-lg bg-secondary/30">
                   <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                     <Tag className="w-3 h-3" />
-                    Selector
+                    {t('drilldown.service.selector')}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(selector).map(([k, v]) => (
@@ -288,7 +299,7 @@ export default function ServiceDrillDown({ data }: Props) {
                 <div className="p-3 rounded-lg bg-secondary/30">
                   <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                     <Tag className="w-3 h-3" />
-                    Labels
+                    {t('drilldown.service.labels')}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(labels).map(([k, v]) => (
@@ -308,7 +319,7 @@ export default function ServiceDrillDown({ data }: Props) {
         <div className="space-y-3">
           {endpointAddresses.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-6">
-              No ready endpoints found for this service.
+              {t('drilldown.service.noReadyEndpoints')}
             </div>
           ) : (
             endpointAddresses.map((addr, i) => (
@@ -358,13 +369,13 @@ export default function ServiceDrillDown({ data }: Props) {
               }}
               className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm transition-colors"
             >
-              Load Describe
+              {t('drilldown.service.loadDescribe')}
             </button>
           )}
           {describeLoading && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Running kubectl describe...
+              {t('drilldown.service.runningDescribe')}
             </div>
           )}
           {describeOutput && (
@@ -372,7 +383,7 @@ export default function ServiceDrillDown({ data }: Props) {
               <button
                 onClick={() => handleCopy(describeOutput, 'describe')}
                 className="absolute top-2 right-2 p-1 rounded bg-secondary hover:bg-secondary/80"
-                title="Copy"
+                title={t('drilldown.service.copy')}
               >
                 {copiedField === 'describe' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
               </button>
@@ -396,13 +407,13 @@ export default function ServiceDrillDown({ data }: Props) {
               }}
               className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm transition-colors"
             >
-              Load YAML
+              {t('drilldown.service.loadYaml')}
             </button>
           )}
           {yamlLoading && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Loading YAML...
+              {t('drilldown.service.loadingYaml')}
             </div>
           )}
           {yamlOutput && (
@@ -410,7 +421,7 @@ export default function ServiceDrillDown({ data }: Props) {
               <button
                 onClick={() => handleCopy(yamlOutput, 'yaml')}
                 className="absolute top-2 right-2 p-1 rounded bg-secondary hover:bg-secondary/80"
-                title="Copy"
+                title={t('drilldown.service.copy')}
               >
                 {copiedField === 'yaml' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
               </button>
@@ -433,6 +444,8 @@ function InfoField({ label, value, icon, onCopy, copied }: {
   onCopy?: () => void
   copied?: boolean
 }) {
+  const { t } = useTranslation()
+
   return (
     <div className="p-3 rounded-lg bg-secondary/30">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
@@ -442,7 +455,7 @@ function InfoField({ label, value, icon, onCopy, copied }: {
       <div className="flex items-center gap-2">
         <span className="text-sm text-foreground truncate" title={value}>{value}</span>
         {onCopy && (
-          <button onClick={onCopy} className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary shrink-0" title="Copy">
+          <button onClick={onCopy} className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary shrink-0" title={t('drilldown.service.copy')}>
             {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
           </button>
         )}

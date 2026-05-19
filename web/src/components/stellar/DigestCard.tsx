@@ -67,9 +67,9 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
 
       {expanded && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <DigestGroup label="Auto-fixed" color="var(--s-success)" items={resolved} onOpen={onOpenEvent} />
-          <DigestGroup label="Escalated" color="var(--s-warning)" items={escalated} onOpen={onOpenEvent} />
-          <DigestGroup label="Paused at budget" color="var(--s-warning)" items={paused} onOpen={onOpenEvent} />
+          <DigestGroup label={t('stellar.digest.autoFixed')} color="var(--s-success)" items={resolved} onOpen={onOpenEvent} />
+          <DigestGroup label={t('stellar.digest.escalated')} color="var(--s-warning)" items={escalated} onOpen={onOpenEvent} />
+          <DigestGroup label={t('stellar.digest.pausedAtBudget')} color="var(--s-warning)" items={paused} onOpen={onOpenEvent} />
         </div>
       )}
     </div>
@@ -84,6 +84,8 @@ function DigestGroup({
   items: StellarSolve[]
   onOpen?: (eventId: string) => void
 }) {
+  const { t } = useTranslation()
+
   if (items.length === 0) return null
   return (
     <div>
@@ -118,7 +120,7 @@ function DigestGroup({
             <span style={{ fontWeight: 600 }}>{item.workload || '—'}</span>
             <span style={{ flex: 1 }} />
             <span className="text-xs" style={{ color: 'var(--s-text-dim)' }}>
-              {item.actionsTaken} action{item.actionsTaken === 1 ? '' : 's'}
+              {t('stellar.digest.actionCount', { count: item.actionsTaken })}
             </span>
           </button>
         ))}

@@ -2698,7 +2698,26 @@
       "issues": "Issues"
     },
     "service": {
-      "loadingDetails": "Loading service details..."
+      "loadingDetails": "Loading service details...",
+      "type": "Type",
+      "clusterIp": "Cluster IP",
+      "externalIps": "External IPs",
+      "endpoints": "Endpoints",
+      "none": "None",
+      "unknown": "Unknown",
+      "readyCount_one": "{{count}} ready",
+      "readyCount_other": "{{count}} ready",
+      "ports": "Ports",
+      "selector": "Selector",
+      "labels": "Labels",
+      "noReadyEndpoints": "No ready endpoints found for this service.",
+      "loadDescribe": "Load Describe",
+      "runningDescribe": "Running kubectl describe...",
+      "loadYaml": "Load YAML",
+      "loadingYaml": "Loading YAML...",
+      "copy": "Copy",
+      "loadBalancerReady": "Ready",
+      "loadBalancerProvisioning": "Provisioning"
     },
     "errors": {
       "invalidPodResponse": "Failed to load pod details due to an invalid agent response.",
@@ -4799,20 +4818,121 @@
       "executeViaChat": "Execute via chat →"
     },
     "auditLog": {
+      "title": "Stellar audit log",
+      "rows_one": "{{count}} row",
+      "rows_other": "{{count}} rows",
+      "description": "Review recent actions, filter by user or action type, and export the current slice.",
+      "exportCsv": "Export CSV",
       "allUsers": "All users",
-      "allActions": "All actions"
+      "allActions": "All actions",
+      "loadError": "Failed to load audit log",
+      "loading": "Loading audit log…",
+      "empty": "No audit entries match the selected filters.",
+      "filters": {
+        "user": "User",
+        "action": "Action",
+        "dateRange": "Date range"
+      },
+      "dateRanges": {
+        "allTime": "All time",
+        "last24Hours": "24h",
+        "last7Days": "7d",
+        "last30Days": "30d"
+      },
+      "columns": {
+        "timestamp": "Timestamp",
+        "user": "User",
+        "action": "Action",
+        "resource": "Resource",
+        "result": "Result",
+        "cluster": "Cluster",
+        "detail": "Detail"
+      },
+      "results": {
+        "success": "Success",
+        "warning": "Warning",
+        "error": "Error"
+      }
     },
     "eventCard": {
-      "tryAiMission": "Try AI mission"
+      "tryAiMission": "Try AI mission",
+      "details": "details →",
+      "importanceScore": "importance score: {{score}}",
+      "attemptCount": "✦ Stellar tried {{count}}× — see details",
+      "undoThis": "Undo this",
+      "tryAiMissionTitle": "Escalate to an AI mission on your connected agent",
+      "solveAlreadyInProgress": "Solve already in progress",
+      "solving": "Solving…",
+      "autoHandling": "Stellar is handling this — no input needed.",
+      "actionTitle": "{{action}}: {{title}}",
+      "actions": {
+        "investigate": "Investigate",
+        "restart": "Restart",
+        "scale": "Scale",
+        "solve": "Solve"
+      }
     },
     "recommendedTasks": {
-      "stellarSuggests": "Stellar suggests"
+      "stellarSuggests": "Stellar suggests",
+      "scheduled": "scheduled",
+      "schedule": {
+        "doNow": "Do now",
+        "inOneHour": "In 1 hour",
+        "tomorrow": "Tomorrow",
+        "inThreeDays": "In 3 days",
+        "inOneWeek": "In 1 week"
+      },
+      "categories": {
+        "security": "security",
+        "observability": "observability",
+        "reliability": "reliability",
+        "bestPractices": "best practices"
+      },
+      "items": {
+        "installFalco": {
+          "title": "Install Falco runtime security",
+          "blurb": "Detect anomalous behavior, container escapes, and crypto-mining inside running pods."
+        },
+        "auditRbac": {
+          "title": "Audit cluster-wide RBAC",
+          "blurb": "List every ClusterRoleBinding that grants cluster-admin, plus any wildcard verbs/resources, and flag the over-privileged ones."
+        },
+        "networkPolicies": {
+          "title": "Add default-deny NetworkPolicies",
+          "blurb": "Stop accidental cross-namespace traffic. Generate baseline ingress/egress deny rules per namespace."
+        },
+        "podSecurityStandards": {
+          "title": "Enforce Pod Security Standards (restricted)",
+          "blurb": "Label every namespace with the `restricted` PodSecurity profile and fix any pods that violate it."
+        },
+        "resourceLimits": {
+          "title": "Set resource requests & limits",
+          "blurb": "Find workloads without CPU/memory requests or limits. Right-size them from observed usage and apply."
+        },
+        "installPrometheusOperator": {
+          "title": "Install kube-prometheus-stack",
+          "blurb": "Prometheus, Alertmanager, and the default node/cluster dashboards in one Helm chart."
+        },
+        "backupEtcd": {
+          "title": "Schedule etcd backups",
+          "blurb": "Snapshot the control-plane datastore on a daily cron and ship to object storage."
+        },
+        "enableAuditLogging": {
+          "title": "Enable Kubernetes audit logging",
+          "blurb": "Record every API call against the cluster — required for incident forensics and many compliance frameworks."
+        }
+      }
     },
     "tasks": {
       "title": "Tasks"
     },
     "digest": {
-      "dailyRecap": "Daily recap"
+      "dailyRecap": "Daily recap",
+      "autoFixed": "Auto-fixed",
+      "escalated": "Escalated",
+      "pausedAtBudget": "Paused at budget",
+      "actionCount_one": "{{count}} action",
+      "actionCount_other": "{{count}} actions"
     }
   },
   "missionControl": {
