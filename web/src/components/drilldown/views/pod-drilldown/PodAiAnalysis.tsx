@@ -52,7 +52,7 @@ export function PodAiAnalysis({
                   : 'hover:text-red-300'
               )}
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className={cn('w-3 h-3', aiAnalysisLoading && 'animate-spin')} />
               <span>{t('common.retry')}</span>
             </button>
           </div>

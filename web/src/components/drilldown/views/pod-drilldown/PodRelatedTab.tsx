@@ -69,7 +69,7 @@ export function PodRelatedTab({
             onClick={() => fetchRelatedResources(true)}
             className="mt-2 inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', relatedLoading && 'animate-spin')} />
             <span>{t('common.retry')}</span>
           </button>
         </div>

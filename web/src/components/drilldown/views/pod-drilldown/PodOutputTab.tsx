@@ -1,4 +1,5 @@
 import { Loader2, Copy, Check, AlertTriangle, RefreshCw } from 'lucide-react'
+import { cn } from '../../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import type { LucideIcon } from 'lucide-react'
 
@@ -61,7 +62,7 @@ export function PodOutputTab({
             onClick={onRefresh}
             className="mt-2 inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', loading && 'animate-spin')} />
             <span>{t('common.retry')}</span>
           </button>
         </div>
