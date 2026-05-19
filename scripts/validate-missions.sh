@@ -101,6 +101,148 @@ write_ajv_input() {
   printf '%s\n' "$file_path"
 }
 
+normalize_mission_json() {
+  local json="$1"
+
+  echo "$json" | jq '
+    . as $raw
+    | ($raw.mission // {}) as $mission
+    | if ($mission | type) == "object" then
+        $mission + {
+          version: ($raw.version // $mission.version // "kc-mission-v1"),
+          name: ($raw.name // $mission.name),
+          missionClass: ($raw.missionClass // $mission.missionClass),
+          author: ($raw.author // $mission.author),
+          authorGithub: ($raw.authorGithub // $mission.authorGithub),
+          prerequisites: ($mission.prerequisites // $raw.prerequisites),
+          security: ($mission.security // $raw.security),
+          metadata: ($mission.metadata // $raw.metadata),
+          tags: ($mission.tags // $raw.tags // $raw.metadata.tags),
+          category: ($mission.category // $raw.category),
+          cncfProject: ($mission.cncfProject // $raw.cncfProject),
+          difficulty: ($mission.difficulty // $raw.difficulty // $raw.metadata.difficulty),
+          installMethods: ($mission.installMethods // $raw.installMethods // $raw.metadata.installMethods),
+          orbitConfig: ($mission.orbitConfig // $raw.orbitConfig)
+        }
+      else
+        $raw
+      end
+  '
+}
+
+build_schema_validation_payload() {
+  local normalized="$1"
+
+  echo "$normalized" | jq '
+    def non_empty_array($value):
+      if ($value | type) == "array" then $value else [] end;
+
+    def sanitize_step($index):
+      if type == "object" then
+        {
+          title: (if (.title // "") != "" then .title else "Step \($index + 1)" end),
+          description: (.description // "")
+        }
+        + (if (.command // "") != "" then
+             {command: .command}
+           elif ((.commands // []) | type) == "array" and ((.commands // []) | length) > 0 then
+             {command: ((.commands // []) | map(select(type == "string")) | join("\n"))}
+           else
+             {}
+           end)
+        + (if (.yaml // "") != "" then {yaml: .yaml} else {} end)
+        + (if (.validation // "") != "" then {validation: .validation} else {} end)
+      else
+        {
+          title: "Step \($index + 1)",
+          description: ""
+        }
+      end;
+
+    def sanitize_steps($value):
+      if ($value | type) == "array" then
+        ($value | to_entries | map(.value | sanitize_step(.key)))
+      else
+        []
+      end;
+
+    def sanitize_metadata($value):
+      if ($value | type) == "object" then
+        {
+          author: $value.author,
+          source: $value.source,
+          createdAt: $value.createdAt,
+          updatedAt: $value.updatedAt,
+          qualityScore: $value.qualityScore,
+          maturity: $value.maturity,
+          projectVersion: $value.projectVersion,
+          sourceFormat: $value.sourceFormat,
+          detectedApiGroups: (if (($value.detectedApiGroups // []) | type) == "array" then $value.detectedApiGroups else [] end),
+          sourceUrls: (
+            if ($value.sourceUrls | type) == "object" then
+              {
+                docs: $value.sourceUrls.docs,
+                repo: $value.sourceUrls.repo,
+                helm: $value.sourceUrls.helm,
+                issue: $value.sourceUrls.issue,
+                pr: $value.sourceUrls.pr
+              }
+              | with_entries(select(.value != null and .value != ""))
+            else
+              null
+            end
+          )
+        }
+        | with_entries(select(.value != null and .value != [] and .value != {} and .value != ""))
+      else
+        null
+      end;
+
+    {
+      version: (.version // "kc-mission-v1"),
+      name: .name,
+      title: (.title // .name // "Untitled mission"),
+      description: (.description // ""),
+      type: (.type // "custom"),
+      tags: non_empty_array(.tags),
+      category: .category,
+      cncfProject: .cncfProject,
+      missionClass: .missionClass,
+      difficulty: .difficulty,
+      installMethods: non_empty_array(.installMethods),
+      author: .author,
+      authorGithub: .authorGithub,
+      prerequisites: non_empty_array(.prerequisites),
+      steps: sanitize_steps(.steps),
+      uninstall: sanitize_steps(.uninstall),
+      upgrade: sanitize_steps(.upgrade),
+      troubleshooting: sanitize_steps(.troubleshooting),
+      security: sanitize_steps(.security),
+      orbitConfig: .orbitConfig,
+      metadata: sanitize_metadata(.metadata),
+      resolution: (
+        if (.resolution | type) == "object" then
+          {
+            summary: (.resolution.summary // ""),
+            steps: (
+              if ((.resolution.steps // .resolution.codeSnippets // []) | type) == "array" then
+                (.resolution.steps // .resolution.codeSnippets // [] | map(tostring))
+              else
+                []
+              end
+            )
+          }
+          + (if (.resolution.yaml // "") != "" then {yaml: .resolution.yaml} else {} end)
+          | with_entries(select(.value != null and .value != [] and .value != {} and .value != ""))
+        else
+          null
+        end
+      )
+    }
+    | with_entries(select(.value != null and .value != [] and .value != {} and .value != ""))
+  '
+}
+
 ajv_formats_available() {
   [[ -n "$SCHEMA_FILE" ]] || return 1
 
@@ -172,21 +314,9 @@ validate_mission() {
     return
   fi
 
-  # Normalize: if there's a nested .mission object, merge it (mirrors types.ts normalizeMissionData)
+  # Normalize nested console-kb missions into the flat MissionExport shape.
   local normalized
-  normalized=$(echo "$json" | jq '
-    if (.mission | type) == "object" then
-      (.mission) + {
-        version: (.version // .mission.version // "kc-mission-v1"),
-        name: (.name // .mission.name),
-        missionClass: (.missionClass // .mission.missionClass),
-        author: (.author // .mission.author),
-        authorGithub: (.authorGithub // .mission.authorGithub)
-      }
-    else
-      .
-    end
-  ')
+  normalized=$(normalize_mission_json "$json")
 
   # Extract key fields
   local title name steps_count description type tags_count
@@ -277,12 +407,13 @@ validate_mission() {
 
   # ── JSON Schema validation via ajv-cli ────────────────────────
   if [[ -n "$SCHEMA_FILE" ]] && command -v ajv &>/dev/null; then
-    local ajv_input_file ajv_out
-    ajv_input_file=$(write_ajv_input "mission" "$json")
+    local schema_payload ajv_input_file ajv_out
+    schema_payload=$(build_schema_validation_payload "$normalized")
+    ajv_input_file=$(write_ajv_input "mission" "$schema_payload")
     if ! ajv_out=$(ajv validate --spec=draft7 -s "$SCHEMA_FILE" -d "$ajv_input_file" -c "$AJV_FORMATS_PLUGIN" 2>&1); then
       local ajv_err
       ajv_err=$(echo "$ajv_out" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')
-      mission_issues+=("CRITICAL: Schema validation failed — ${ajv_err}")
+      mission_issues+=("CRITICAL: Schema validation failed after normalization — ${ajv_err}")
       has_critical=true
     fi
   fi

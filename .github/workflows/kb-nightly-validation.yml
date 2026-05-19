@@ -43,27 +43,44 @@ jobs:
       - name: Check for regressions
         run: |
           FAILED=0
+          BASELINE_FILE=".github/kb-nightly-validation-baseline.json"
 
-          # Warn below 90%, but only hard-fail below 70%, because this nightly validates
-          # missions fetched from the external console-kb repo and those can temporarily lag
-          # behind schema changes that are validated separately in console-kb CI.
-          if grep -q "PASS_RATE=" validation-results.txt; then
-            RATE=$(grep -oP 'PASS_RATE=\K\d+' validation-results.txt | head -1)
-            if [ "${RATE:-100}" -lt 70 ]; then
-              echo "::error::Mission validation pass rate dropped below 70% (currently ${RATE}%)"
-              FAILED=1
-            elif [ "${RATE:-100}" -lt 90 ]; then
-              echo "::warning::Mission validation pass rate is below 90% (currently ${RATE}%) due to external console-kb mission validation drift"
-            fi
+          if [[ ! -f "$BASELINE_FILE" ]]; then
+            echo "::error::Missing KB nightly validation baseline: $BASELINE_FILE"
+            exit 1
           fi
 
-          # Fail if critical KB gaps were found
-          if grep -q "CRITICAL_GAPS=" gap-results.txt; then
-            GAPS=$(grep -oP 'CRITICAL_GAPS=\K\d+' gap-results.txt | head -1)
-            if [ "${GAPS:-0}" -gt 0 ]; then
-              echo "::error::${GAPS} critical KB gap(s) detected — see kb-gap-report.md"
-              FAILED=1
-            fi
+          MIN_PASS_RATE=$(jq -r '.minPassRate // 90' "$BASELINE_FILE")
+          MAX_VALIDATION_CRITICAL_ISSUES=$(jq -r '.maxValidationCriticalIssues // 0' "$BASELINE_FILE")
+          MAX_CRITICAL_GAPS=$(jq -r '.maxCriticalGaps // 0' "$BASELINE_FILE")
+          MAX_PREFLIGHT_UNCOVERED=$(jq -r '.maxPreflightUncovered // 0' "$BASELINE_FILE")
+
+          RATE=$(grep -oP 'PASS_RATE=\K\d+' validation-results.txt | head -1 || true)
+          VALIDATION_CRITICAL_ISSUES=$(grep -oP 'Critical issues:\s+\K\d+' validation-results.txt | head -1 || true)
+          GAPS=$(grep -oP 'CRITICAL_GAPS=\K\d+' gap-results.txt | head -1 || true)
+          PREFLIGHT_UNCOVERED=$(grep -oP 'PREFLIGHT_UNCOVERED=\K(\d+|skip)' gap-results.txt | head -1 || true)
+
+          echo "KB nightly baseline: pass-rate >= ${MIN_PASS_RATE}%, validation critical issues <= ${MAX_VALIDATION_CRITICAL_ISSUES}, critical gaps <= ${MAX_CRITICAL_GAPS}, preflight uncovered <= ${MAX_PREFLIGHT_UNCOVERED}"
+          echo "Current metrics: pass-rate=${RATE:-unknown}%, validation critical issues=${VALIDATION_CRITICAL_ISSUES:-unknown}, critical gaps=${GAPS:-unknown}, preflight uncovered=${PREFLIGHT_UNCOVERED:-unknown}"
+
+          if [[ -n "$RATE" && "$RATE" -lt "$MIN_PASS_RATE" ]]; then
+            echo "::error::Mission validation pass rate dropped below ${MIN_PASS_RATE}% (currently ${RATE}%)"
+            FAILED=1
+          fi
+
+          if [[ -n "$VALIDATION_CRITICAL_ISSUES" && "$VALIDATION_CRITICAL_ISSUES" -gt "$MAX_VALIDATION_CRITICAL_ISSUES" ]]; then
+            echo "::error::Mission validation critical issues increased above baseline (${VALIDATION_CRITICAL_ISSUES} > ${MAX_VALIDATION_CRITICAL_ISSUES})"
+            FAILED=1
+          fi
+
+          if [[ -n "$GAPS" && "$GAPS" -gt "$MAX_CRITICAL_GAPS" ]]; then
+            echo "::error::Critical KB gaps increased above baseline (${GAPS} > ${MAX_CRITICAL_GAPS}) — see kb-gap-report.md"
+            FAILED=1
+          fi
+
+          if [[ -n "$PREFLIGHT_UNCOVERED" && "$PREFLIGHT_UNCOVERED" != "skip" && "$PREFLIGHT_UNCOVERED" -gt "$MAX_PREFLIGHT_UNCOVERED" ]]; then
+            echo "::error::Preflight KB coverage regressed (${PREFLIGHT_UNCOVERED} uncovered > baseline ${MAX_PREFLIGHT_UNCOVERED})"
+            FAILED=1
           fi
 
           exit $FAILED
@@ -115,4 +132,5 @@ jobs:
           name: kb-validation-reports
           path: |
             validation-results.txt
+            gap-results.txt
             kb-gap-report.md
