@@ -1,46 +1,43 @@
-version: 2
 updates:
-  # Go modules
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    reviewers:
-      - "clubanderson"
-    labels:
-      - "dependencies"
-      - "go"
-    commit-message:
-      prefix: "chore(deps)"
-    open-pull-requests-limit: 10
-
-  # npm (frontend)
-  - package-ecosystem: "npm"
-    directory: "/web"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    reviewers:
-      - "clubanderson"
-    labels:
-      - "dependencies"
-      - "javascript"
-    commit-message:
-      prefix: "chore(deps)"
-    open-pull-requests-limit: 10
-
-  # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    reviewers:
-      - "clubanderson"
-    labels:
-      - "dependencies"
-      - "github-actions"
-    commit-message:
-      prefix: "chore(deps)"
-    open-pull-requests-limit: 5
+- commit-message:
+    prefix: chore(deps)
+  directory: /
+  labels:
+  - dependencies
+  - go
+  open-pull-requests-limit: 10
+  package-ecosystem: gomod
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /web
+  labels:
+  - dependencies
+  - javascript
+  open-pull-requests-limit: 10
+  package-ecosystem: npm
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /
+  ignore:
+  - dependency-name: "github/gh-aw-actions/**" # Managed by gh aw compile. Version-locked to the gh-aw compiler; do not bump.
+  labels:
+  - dependencies
+  - github-actions
+  open-pull-requests-limit: 5
+  package-ecosystem: github-actions
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+version: 2
