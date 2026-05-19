@@ -146,7 +146,9 @@ export function useClusterResourceQuery<T>(
 
   useEffect(() => {
     refetch()
+  }, [refetch])
 
+  useEffect(() => {
     const pollKey = `${resourceKey}:${cluster || 'all'}:${namespace || 'all'}`
     const unsubscribePolling = subscribePolling(
       pollKey,
@@ -154,16 +156,21 @@ export function useClusterResourceQuery<T>(
       () => refetch(),
     )
 
+    return () => {
+      unsubscribePolling()
+    }
+  }, [refetch, cluster, namespace, consecutiveFailures, resourceKey])
+
+  useEffect(() => {
     const unregisterRefetch = registerRefetch(
       `${resourceKey}:${cluster || 'all'}:${namespace || 'all'}`,
       () => refetch(),
     )
 
     return () => {
-      unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace, consecutiveFailures, resourceKey])
+  }, [refetch, cluster, namespace, resourceKey])
 
   return {
     data,
