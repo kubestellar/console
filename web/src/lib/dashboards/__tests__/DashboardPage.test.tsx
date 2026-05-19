@@ -320,14 +320,11 @@ describe('DashboardPage', () => {
     expect(container.querySelector('[data-testid="clusters-page"]')).not.toBeNull()
   })
 
-  it('omits data-testid on the wrapper when testId is not provided', () => {
+  it('uses dashboard-page as the default wrapper testId when testId is not provided', () => {
     const { container } = renderPage()
-    // The outer wrapper is the first div inside the test render. Without an
-    // explicit testId it must not emit a stray `data-testid` attribute —
-    // keeps existing selectors (dashboard-page, etc.) unambiguous.
-    const wrapper = container.querySelector('div.pt-4')
-    expect(wrapper).not.toBeNull()
-    expect(wrapper?.hasAttribute('data-testid')).toBe(false)
+    // DashboardPage now defaults the wrapper selector to `dashboard-page`
+    // so callers still get a stable mount target without passing testId.
+    expect(container.querySelector('[data-testid="dashboard-page"]')).not.toBeNull()
   })
 
   it('opens customizer when floating action button is clicked', () => {
