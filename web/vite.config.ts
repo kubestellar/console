@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'echarts-for-react/lib/types': path.resolve(__dirname, './src/lib/compat/echarts-for-react/lib/types.ts'),
+      'echarts-for-react': path.resolve(__dirname, './src/lib/compat/echarts-for-react/index.tsx'),
     },
   },
   define: {

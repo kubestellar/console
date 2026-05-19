@@ -17,7 +17,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "echarts-for-react": ["./src/lib/compat/echarts-for-react/index.tsx"],
+      "echarts-for-react/lib/types": ["./src/lib/compat/echarts-for-react/lib/types.ts"]
     }
   },
   "include": ["src"],
