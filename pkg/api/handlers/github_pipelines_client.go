@@ -40,8 +40,6 @@ type ghpStepRaw struct {
 }
 
 func (h *GitHubPipelinesHandler) ghGet(ctx context.Context, path string) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, ghpHTTPTimeout)
-	defer cancel()
 	fullURL := path
 	if parsed, err := url.Parse(path); err != nil || parsed.Scheme == "" {
 		fullURL = ghpGitHubAPIBase + path

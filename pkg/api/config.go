@@ -264,8 +264,12 @@ func resolveGitHubToken() string {
 		if sm := settings.GetSettingsManager(); sm != nil {
 			if all, err := sm.GetAll(); err == nil && all.FeedbackGitHubToken != "" {
 				token = all.FeedbackGitHubToken
+				slog.Info("[config] GitHub token resolved from settings DB", "length", len(token))
 			}
 		}
+	}
+	if token == "" {
+		slog.Warn("[config] GitHub token is EMPTY — GitHub API calls will fail")
 	}
 	return token
 }
