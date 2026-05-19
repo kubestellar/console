@@ -45,13 +45,14 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
 
   // Auto-select if only one online cluster
   useEffect(() => {
-    if (onlineClusters.length === 1 && selected.size === 0) {
+    if (open && onlineClusters.length === 1 && selected.size === 0) {
       const timer = setTimeout(() => {
+        if (!open) return
         onSelect([onlineClusters[0].context || onlineClusters[0].name])
       }, AUTO_SELECT_DELAY_MS)
       return () => clearTimeout(timer)
     }
-  }, [onlineClusters, selected.size, onSelect])
+  }, [open, onlineClusters, selected.size, onSelect])
 
   const toggleCluster = (id: string) => {
     setSelected(prev => {
