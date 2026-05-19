@@ -326,7 +326,7 @@ describe('useGitHubRewards', () => {
 
   it('uses live GitHub search aggregation when available', async () => {
     const apiResponse = makeSampleResponse({
-      total_points: 2100,
+      total_points: 300,
       breakdown: { bug_issues: 7, feature_issues: 0, other_issues: 0, prs_opened: 0, prs_merged: 0 },
     })
     vi.mocked(global.fetch)
@@ -355,6 +355,42 @@ describe('useGitHubRewards', () => {
     await waitFor(() => {
       expect(result.current.githubRewards).not.toBeNull()
       expect(result.current.githubRewards!.total_points).toBe(700)
+      expect(result.current.githubRewards!.breakdown.bug_issues).toBe(2)
+      expect(result.current.githubRewards!.breakdown.feature_issues).toBe(1)
+    })
+  })
+
+  it('preserves the leaderboard total when it is higher than the live search sum', async () => {
+    const apiResponse = makeSampleResponse({
+      total_points: 2100,
+      breakdown: { bug_issues: 7, feature_issues: 0, other_issues: 0, prs_opened: 0, prs_merged: 0 },
+    })
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(apiResponse),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          items: [
+            makeSearchItem({ number: 100, labels: [{ name: 'bug' }] }),
+            makeSearchItem({ number: 101, labels: [{ name: 'kind/bug' }] }),
+            makeSearchItem({ number: 102, labels: [{ name: 'enhancement' }] }),
+          ],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      } as Response)
+
+    const { useGitHubRewards } = await import('../useGitHubRewards')
+    const { result } = renderHook(() => useGitHubRewards())
+
+    await waitFor(() => {
+      expect(result.current.githubRewards).not.toBeNull()
+      expect(result.current.githubRewards!.total_points).toBe(2100)
       expect(result.current.githubRewards!.breakdown.bug_issues).toBe(2)
       expect(result.current.githubRewards!.breakdown.feature_issues).toBe(1)
     })
