@@ -95,7 +95,10 @@ jobs:
             echo "boosted=$BOOSTED" >> "$GITHUB_OUTPUT"
             echo "max_issues=$MAX_ISSUES" >> "$GITHUB_OUTPUT"
             echo "pr_guidance=$PR_GUIDANCE" >> "$GITHUB_OUTPUT"
-            echo "Tuning config loaded — blocked: ${BLOCKED:-none}, boosted: ${BOOSTED:-none}, max_issues: ${MAX_ISSUES:-default}"
+            # Export regression-driven focus overrides (areas with repeat issues)
+            FOCUS_OVERRIDES=$(jq -r '.regression_insights.focus_overrides // [] | join(",")' "$CONFIG")
+            echo "focus_overrides=$FOCUS_OVERRIDES" >> "$GITHUB_OUTPUT"
+            echo "Tuning config loaded — blocked: ${BLOCKED:-none}, boosted: ${BOOSTED:-none}, max_issues: ${MAX_ISSUES:-default}, focus_overrides: ${FOCUS_OVERRIDES:-none}"
           else
             echo "blocked=" >> "$GITHUB_OUTPUT"
             echo "boosted=" >> "$GITHUB_OUTPUT"
@@ -109,6 +112,7 @@ jobs:
         id: focus
         env:
           FOCUS_OVERRIDE: ${{ inputs.focus_override }}
+          FOCUS_OVERRIDES_REGRESSION: ${{ steps.tuning.outputs.focus_overrides }}
         run: |
           OVERRIDE="$FOCUS_OVERRIDE"
           if [ -n "$OVERRIDE" ] && [ "$OVERRIDE" != "none" ]; then
@@ -117,6 +121,10 @@ jobs:
           else
             # All 8 focus areas
             AREAS=("performance" "security" "a11y" "operator" "sre" "features" "resilience" "consistency")
+
+            # Parse regression-driven focus overrides (comma-separated list of areas
+            # where repeat issues were detected in the past 7 days)
+            IFS=',' read -ra REGRESSION_AREAS <<< "${FOCUS_OVERRIDES_REGRESSION:-}"
 
             # Try weighted selection from tuning config
             WEIGHTS_FILE="/tmp/rotation-weights.json"
@@ -136,6 +144,17 @@ jobs:
                 ENTRIES=${ENTRIES:-10}
                 [ "$ENTRIES" -le 0 ] && continue
                 [ "$ENTRIES" -gt 20 ] && ENTRIES=20
+
+                # Boost areas flagged by regression detector (2x pool entries)
+                for REGAREA in "${REGRESSION_AREAS[@]}"; do
+                  if [ "$AREA" = "$REGAREA" ]; then
+                    ENTRIES=$((ENTRIES * 2))
+                    [ "$ENTRIES" -gt 40 ] && ENTRIES=40
+                    echo "  Regression boost: $AREA (pool entries doubled to $ENTRIES)"
+                    break
+                  fi
+                done
+
                 for ((i=0; i<ENTRIES; i++)); do
                   POOL+=("$AREA")
                 done
@@ -153,6 +172,9 @@ jobs:
                   W=$(jq -r --arg a "$AREA" '.[$a] // 1.0' "$WEIGHTS_FILE")
                   echo "  $AREA: weight=$W"
                 done
+                if [ -n "$FOCUS_OVERRIDES_REGRESSION" ]; then
+                  echo "  Regression-boosted areas: $FOCUS_OVERRIDES_REGRESSION"
+                fi
               else
                 # All weights are 0 — fall back to fixed rotation
                 DOY=$(date -u +%j)

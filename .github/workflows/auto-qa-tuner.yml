@@ -238,6 +238,109 @@ jobs:
           echo "Max issues: $(jq '.max_issues_override' "$CONFIG")"
           echo "PR guidance: $(jq -r '.pr_guidance' "$CONFIG")"
 
+      - name: Detect regression patterns and update focus overrides
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CONFIG="$CONFIG_FILE"
+          [ ! -f "$CONFIG" ] && exit 0
+
+          SEVEN_DAYS_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          # Fetch auto-qa issues from the past 7 days (both open and closed)
+          gh issue list --state all --limit 100 \
+            --label auto-qa \
+            --search "created:>=$SEVEN_DAYS_AGO" \
+            --json number,title,labels,state,createdAt \
+            > /tmp/recent-autoqa-issues.json 2>/dev/null || echo "[]" > /tmp/recent-autoqa-issues.json
+
+          ISSUE_COUNT=$(jq 'length' /tmp/recent-autoqa-issues.json)
+          echo "Found $ISSUE_COUNT auto-qa issues in the past 7 days"
+
+          if [ "$ISSUE_COUNT" -eq 0 ]; then
+            echo "No recent issues — skipping regression detection"
+            exit 0
+          fi
+
+          # Count issues per auto-qa sub-label (e.g., auto-qa:a11y, auto-qa:loading-gaps)
+          jq -r '.[].labels[].name' /tmp/recent-autoqa-issues.json 2>/dev/null \
+            | grep -E '^auto-qa:' | grep -v '^auto-qa$' \
+            | sed 's/^auto-qa://' \
+            | sort | uniq -c | sort -rn \
+            > /tmp/regression-counts.txt || true
+
+          echo "Issue frequency by sub-category:"
+          cat /tmp/regression-counts.txt
+
+          # Identify repeat offenders: sub-categories with 3+ issues in 7 days
+          # These indicate regressions that keep being reintroduced
+          REPEAT_THRESHOLD=3
+          REPEAT_CATS=$(awk -v thresh="$REPEAT_THRESHOLD" '$1 >= thresh {print $2}' /tmp/regression-counts.txt | head -5)
+
+          # Map sub-categories back to focus areas
+          map_to_focus() {
+            local subcat="$1"
+            case "$subcat" in
+              unused-deps|lazy-loading|bundle-analysis|large-files|import-cost) echo "performance" ;;
+              hardcoded-creds|dep-age|hardcoded) echo "security" ;;
+              aria|aria-gaps|keyboard|keyboard-nav|color-contrast|event-parity) echo "a11y" ;;
+              magic-numbers|tooltips) echo "operator" ;;
+              single-cluster|health) echo "sre" ;;
+              todos|complexity|console-logs|any-types|memory-leaks) echo "features" ;;
+              swallowed|loading-states|modal-safety|feedback-gaps|loading-gaps) echo "resilience" ;;
+              hardcoded-colors|spacing|dark-mode|touch-targets|component-patterns) echo "consistency" ;;
+              *) echo "" ;;
+            esac
+          }
+
+          # Build focus_overrides: areas with repeat regressions get boosted
+          FOCUS_OVERRIDES=""
+          for CAT in $REPEAT_CATS; do
+            FOCUS=$(map_to_focus "$CAT")
+            if [ -n "$FOCUS" ]; then
+              COUNT=$(grep -w "$CAT" /tmp/regression-counts.txt | awk '{print $1}')
+              echo "Regression detected: $CAT ($COUNT issues in 7d) -> boosting focus area: $FOCUS"
+              FOCUS_OVERRIDES="${FOCUS_OVERRIDES:+$FOCUS_OVERRIDES,}$FOCUS"
+            fi
+          done
+
+          # Deduplicate focus overrides
+          FOCUS_OVERRIDES=$(echo "$FOCUS_OVERRIDES" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+          # Also detect title-level repeats (same issue title pattern appearing 2+ times)
+          jq -r '.[].title' /tmp/recent-autoqa-issues.json \
+            | sed 's/\[Auto-QA\] //' | sed 's/[0-9]\+/N/g' \
+            | sort | uniq -c | sort -rn \
+            | awk '$1 >= 2 {$1=""; print substr($0,2)}' \
+            > /tmp/repeat-titles.txt || true
+
+          REPEAT_TITLE_COUNT=$(wc -l < /tmp/repeat-titles.txt | tr -d ' ')
+          if [ "$REPEAT_TITLE_COUNT" -gt 0 ]; then
+            echo "Repeat issue titles (same pattern 2+ times in 7d):"
+            head -10 /tmp/repeat-titles.txt
+          fi
+
+          # Write focus_overrides and regression data to tuning config
+          TMP=$(mktemp)
+          OVERRIDES_JSON=$(echo "$FOCUS_OVERRIDES" | tr ',' '\n' | jq -R -s 'split("\n") | map(select(. != ""))')
+          REPEAT_TITLES_JSON=$(head -5 /tmp/repeat-titles.txt | jq -R -s 'split("\n") | map(select(. != ""))')
+
+          jq --argjson overrides "$OVERRIDES_JSON" \
+             --argjson repeats "$REPEAT_TITLES_JSON" \
+             --argjson issue_count "$ISSUE_COUNT" \
+             --argjson repeat_count "$REPEAT_TITLE_COUNT" '
+            .regression_insights = {
+              "focus_overrides": $overrides,
+              "repeat_issue_patterns": $repeats,
+              "total_issues_7d": $issue_count,
+              "repeat_pattern_count": $repeat_count,
+              "last_analyzed": (now | todate)
+            }
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          echo "Focus overrides: ${FOCUS_OVERRIDES:-none}"
+          echo "Repeat patterns: $REPEAT_TITLE_COUNT"
+
       - name: Commit tuning config
         run: |
           git config user.name "github-actions[bot]"
