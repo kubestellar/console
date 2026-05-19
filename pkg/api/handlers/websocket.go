@@ -391,6 +391,14 @@ func (h *Hub) RecordDemoSession(sessionID string) bool {
 		return true
 	}
 
+	// Evict stale sessions before checking capacity (write-path cleanup)
+	cutoff := time.Now().Add(-wsInactiveCutoff)
+	for id, lastSeen := range h.demoSessions {
+		if lastSeen.Before(cutoff) {
+			delete(h.demoSessions, id)
+		}
+	}
+
 	// Reject new sessions if at capacity
 	if len(h.demoSessions) >= maxDemoSessions {
 		return false
@@ -400,18 +408,18 @@ func (h *Hub) RecordDemoSession(sessionID string) bool {
 	return true
 }
 
-// GetDemoSessionCount returns the number of active demo sessions (seen in last 60 seconds)
+// GetDemoSessionCount returns the number of active demo sessions (seen in last 60 seconds).
+// This is a pure read — it does NOT evict stale entries to avoid mutating state
+// on a read path (which would race with RecordDemoSession cap checks).
 func (h *Hub) GetDemoSessionCount() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	cutoff := time.Now().Add(-wsInactiveCutoff)
 	count := 0
-	for id, lastSeen := range h.demoSessions {
+	for _, lastSeen := range h.demoSessions {
 		if lastSeen.After(cutoff) {
 			count++
-		} else {
-			delete(h.demoSessions, id) // cleanup stale sessions
 		}
 	}
 	return count
