@@ -268,7 +268,7 @@ export function KVCacheMonitor() {
   const [selectedMetrics, setSelectedMetrics] = useState<MetricType[]>(['util'])
   const [aggregationMode, setAggregationMode] = useState<AggregationMode>('aggregated')
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null)
-  const gaugeRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const gaugeRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const generateStatsRef = useRef<() => KVCacheStats[]>(() => [])
 
   // Detect if card is in expanded/fullscreen mode
@@ -460,7 +460,7 @@ export function KVCacheMonitor() {
   generateStatsRef.current = generateStats
 
   // Handle gauge click - calculate portal position
-  const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {
+  const handleGaugeClick = (podName: string, element: HTMLButtonElement | null) => {
     if (selectedPod === podName) {
       setSelectedPod(null)
       setPanelPosition(null)
