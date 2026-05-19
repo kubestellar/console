@@ -91,6 +91,7 @@ function useStellarSource() {
   const reconnectRef = useRef<() => void>(() => {})
   const reconnectDelay = useRef(STELLAR_RECONNECT_BASE_MS)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tokenPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // #14201 — Sync Stellar provider with user's agent selection changes
   useEffect(() => {
@@ -365,10 +366,13 @@ function useStellarSource() {
           return
         }
         let attempts = 0
-        const interval = setInterval(() => {
+        tokenPollRef.current = setInterval(() => {
           attempts++
           if (hasStellarAuthCredentials() || attempts > STELLAR_TOKEN_POLL_MAX_ATTEMPTS) {
-            clearInterval(interval)
+            if (tokenPollRef.current) {
+              clearInterval(tokenPollRef.current)
+              tokenPollRef.current = null
+            }
             resolve()
           }
         }, STELLAR_TOKEN_POLL_INTERVAL_MS)
@@ -394,6 +398,10 @@ function useStellarSource() {
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current)
         reconnectTimerRef.current = null
+      }
+      if (tokenPollRef.current) {
+        clearInterval(tokenPollRef.current)
+        tokenPollRef.current = null
       }
       esRef.current?.close()
     }
