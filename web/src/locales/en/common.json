@@ -2697,6 +2697,9 @@
       "manifest": "Manifest",
       "issues": "Issues"
     },
+    "service": {
+      "loadingDetails": "Loading service details..."
+    },
     "errors": {
       "invalidPodResponse": "Failed to load pod details due to an invalid agent response.",
       "failedToParseResponse": "Failed to parse response from agent",
@@ -4791,7 +4794,26 @@
     "clusters": "Clusters"
   },
   "stellar": {
-    "attentionBubble": "Try Stellar AI!"
+    "attentionBubble": "Try Stellar AI!",
+    "watchDetail": {
+      "executeViaChat": "Execute via chat →"
+    },
+    "auditLog": {
+      "allUsers": "All users",
+      "allActions": "All actions"
+    },
+    "eventCard": {
+      "tryAiMission": "Try AI mission"
+    },
+    "recommendedTasks": {
+      "stellarSuggests": "Stellar suggests"
+    },
+    "tasks": {
+      "title": "Tasks"
+    },
+    "digest": {
+      "dailyRecap": "Daily recap"
+    }
   },
   "missionControl": {
     "launchSequence": {

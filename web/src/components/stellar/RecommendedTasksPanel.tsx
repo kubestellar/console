@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const HOUR_MS = 3600_000
 const DAY_MS = 24 * HOUR_MS
@@ -141,6 +142,7 @@ interface Props {
 }
 
 export function RecommendedTasksPanel({ createTask }: Props) {
+  const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -178,7 +180,7 @@ export function RecommendedTasksPanel({ createTask }: Props) {
         <span style={{
           fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
           letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-text-muted)',
-        }}>Stellar suggests</span>
+        }}>{t('stellar.recommendedTasks.stellarSuggests')}</span>
         <span style={{
           fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-success)',
           background: 'rgba(63,185,80,0.1)', border: '1px solid rgba(63,185,80,0.25)',

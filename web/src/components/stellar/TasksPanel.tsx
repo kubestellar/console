@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { StellarTask } from '../../types/stellar'
 import { TaskCard } from './TaskCard'
 
@@ -9,6 +10,8 @@ interface TasksPanelProps {
 }
 
 export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksPanelProps) {
+  const { t } = useTranslation()
+
   return (
     <div style={{
       borderBottom: '1px solid var(--s-border)',
@@ -32,7 +35,7 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
           gap: 8,
         }}
       >
-        <span>Tasks</span>
+        <span>{t('stellar.tasks.title')}</span>
         <span style={{
           fontSize: 10,
           color: 'var(--s-warning)',

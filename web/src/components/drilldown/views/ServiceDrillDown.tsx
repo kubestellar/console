@@ -218,7 +218,7 @@ export default function ServiceDrillDown({ data }: Props) {
           {isLoading ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Loading service details...</span>
+              <span>{t('drilldown.service.loadingDetails')}</span>
             </div>
           ) : (
             <>

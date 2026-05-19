@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { StellarNotification, StellarSolve, StellarWatch } from '../../types/stellar'
 import type { PendingAction } from './EventCard'
 import { getWatchAttemptSummary } from './lib/derive'
@@ -408,6 +409,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Recommendation({
   label, rationale, confidence, color, onExecute,
 }: { label: string; rationale: string; confidence: number; color: string; onExecute: () => void }) {
+  const { t } = useTranslation()
+
   return (
     <div style={{
       border: '1px solid var(--s-border)', borderRadius: 'var(--s-r)',
@@ -432,7 +435,7 @@ function Recommendation({
           borderRadius: 'var(--s-rs)', padding: '4px 12px',
           fontSize: 11, cursor: 'pointer',
         }}
-      >Execute via chat →</button>
+      >{t('stellar.watchDetail.executeViaChat')}</button>
     </div>
   )
 }
