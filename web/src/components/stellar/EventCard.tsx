@@ -3,6 +3,9 @@ import type { StellarNotification } from '../../types/stellar'
 import { countRelated, deriveImportance, deriveShortReason, deriveTags, importanceColor, type SolveStatus } from './lib/derive'
 import { formatRelativeTime } from './lib/time'
 
+// Loose translator type for dynamic key lookup in action config.
+type TranslateFn = (key: string, opts?: Record<string, unknown>) => string
+
 export interface PendingAction {
   prompt: string
   actionType: string
@@ -130,7 +133,8 @@ export function EventCard({
   onAction?: (prompt: string, action?: PendingAction) => void
   onOpenDetail?: (n: StellarNotification) => void
 }) {
-  const { t } = useTranslation()
+  const { t: tTyped } = useTranslation()
+  const t = tTyped as unknown as TranslateFn
   const color = { critical: 'var(--s-critical)', warning: 'var(--s-warning)', info: 'var(--s-info)' }[notification.severity] ?? 'var(--s-text-muted)'
   const showRollback = isCompletedReversibleAction(notification)
   const hints = deriveActionHints(notification)

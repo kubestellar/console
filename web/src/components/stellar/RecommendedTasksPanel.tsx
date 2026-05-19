@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Loose translator type for dynamic key lookup in recommendation metadata.
+type TranslateFn = (key: string, opts?: Record<string, unknown>) => string
+
 const HOUR_MS = 3600_000
 const DAY_MS = 24 * HOUR_MS
 
@@ -150,7 +153,8 @@ interface Props {
 }
 
 export function RecommendedTasksPanel({ createTask }: Props) {
-  const { t } = useTranslation()
+  const { t: tTyped } = useTranslation()
+  const t = tTyped as unknown as TranslateFn
   const [collapsed, setCollapsed] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
