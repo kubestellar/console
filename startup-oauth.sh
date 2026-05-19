@@ -165,8 +165,19 @@ echo ""
 if [ -f .env ]; then
     echo -e "${GREEN}Loading .env file...${NC}"
     while IFS='=' read -r key value; do
+        # Strip carriage returns (Windows line endings)
+        key="${key//$'\r'/}"
+        value="${value//$'\r'/}"
+
+        # Strip leading/trailing whitespace
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
+        value="${value#"${value%%[![:space:]]*}"}"
+        value="${value%"${value##*[![:space:]]}"}"
+
         [[ $key =~ ^#.*$ ]] && continue
         [[ -z "$key" ]] && continue
+
         value="${value%\"}"
         value="${value#\"}"
         value="${value%\'}"
@@ -195,6 +206,22 @@ if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
     echo "  You can set it up from the login page (one-click GitHub App setup)"
     echo "  Or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env"
     echo ""
+fi
+
+# Validate OAuth credentials if present
+if [ -n "$GITHUB_CLIENT_ID" ] && [ -n "$GITHUB_CLIENT_SECRET" ]; then
+    # Quick validation: check if client_id looks valid (Ov23li... or Iv1. prefix for new apps)
+    if [[ ! "$GITHUB_CLIENT_ID" =~ ^(Ov|Iv)[a-zA-Z0-9]+ ]] && [[ ${#GITHUB_CLIENT_ID} -lt 10 ]]; then
+        echo -e "${YELLOW}⚠ GITHUB_CLIENT_ID looks unusual (length: ${#GITHUB_CLIENT_ID}). Verify it was copied correctly.${NC}"
+    fi
+    if [[ ${#GITHUB_CLIENT_SECRET} -lt 20 ]]; then
+        echo -e "${YELLOW}⚠ GITHUB_CLIENT_SECRET looks too short (length: ${#GITHUB_CLIENT_SECRET}). Verify it was copied correctly.${NC}"
+    fi
+    # Check for common corruption (embedded whitespace, control chars)
+    if [[ "$GITHUB_CLIENT_ID" =~ [[:space:]] ]] || [[ "$GITHUB_CLIENT_SECRET" =~ [[:space:]] ]]; then
+        echo -e "${RED}✗ OAuth credentials contain whitespace — this will cause login failures.${NC}"
+        echo "  Please fix your .env file and remove any spaces or tabs in the values."
+    fi
 fi
 
 # Generate JWT_SECRET if not set (production mode requires it)

@@ -612,7 +612,12 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	token, err := h.oauthConfig.Exchange(ctx, code)
 	if err != nil {
 		errCode, detail := classifyExchangeError(err)
-		slog.Error("[Auth] token exchange failed", "code", errCode, "error", err, "detail", detail)
+		clientIDPrefix := ""
+		if h.oauthConfig.ClientID != "" {
+			clientIDPrefix = h.oauthConfig.ClientID[:min(8, len(h.oauthConfig.ClientID))] + "..."
+		}
+		slog.Error("[Auth] token exchange failed", "code", errCode, "error", err, "detail", detail,
+			"clientID_prefix", clientIDPrefix)
 		return h.oauthErrorRedirect(c, errCode, detail)
 	}
 

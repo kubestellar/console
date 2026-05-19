@@ -197,6 +197,14 @@ func (s *Server) Start() error {
 		}
 	}
 
+	if s.config.GitHubClientID != "" {
+		slog.Info("[Server] OAuth configured",
+			"clientID_prefix", s.config.GitHubClientID[:min(8, len(s.config.GitHubClientID))]+"...",
+			"secretLen", len(s.config.GitHubSecret))
+	} else {
+		slog.Info("[Server] OAuth not configured — running in dev mode")
+	}
+
 	slog.Info("[Server] starting", "addr", addr, "devMode", s.config.DevMode)
 	return s.app.Listen(addr)
 }
