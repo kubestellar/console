@@ -186,7 +186,7 @@ describe('GPUOverview', () => {
         isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
       } as never)
       render(<GPUOverview />)
-      fireEvent.click(screen.getByText('gpuOverview.totalGPUs').closest('div')!)
+      fireEvent.click(screen.getByText('gpuOverview.totalGPUs').closest('button')!)
       expect(mockDrillToResources).toHaveBeenCalled()
     })
   })
