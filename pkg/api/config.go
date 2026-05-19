@@ -155,6 +155,32 @@ func LoadConfigFromEnv() Config {
 		devMode = true
 	}
 
+	// Validate OAuth credentials when OAuth mode is active (#14850).
+	// Warn about misconfiguration early so users don't discover it only when
+	// the GitHub token exchange fails with "invalid client credentials".
+	if !devMode && devModeEnv == "false" {
+		// DEV_MODE explicitly disabled — OAuth is required
+		if githubClientID == "" {
+			slog.Error("[Config] GITHUB_CLIENT_ID is not set. OAuth login will fail.",
+				"solution", "Create a GitHub OAuth App at https://github.com/settings/developers and add GITHUB_CLIENT_ID to your .env file.",
+				"docs", "See README.md section 'Setting up GitHub OAuth (self-hosted only)'")
+		}
+		if githubSecret == "" {
+			slog.Error("[Config] GITHUB_CLIENT_SECRET is not set. OAuth login will fail.",
+				"solution", "Add GITHUB_CLIENT_SECRET from your GitHub OAuth App to your .env file.",
+				"docs", "See README.md section 'Setting up GitHub OAuth (self-hosted only)'")
+		}
+		if githubClientID != "" && githubSecret != "" {
+			// Both are set — validate format (basic sanity check)
+			if len(githubClientID) < 10 {
+				slog.Warn("[Config] GITHUB_CLIENT_ID looks too short (< 10 chars). Verify it matches your GitHub OAuth App Client ID.")
+			}
+			if len(githubSecret) < 20 {
+				slog.Warn("[Config] GITHUB_CLIENT_SECRET looks too short (< 20 chars). Verify it matches your GitHub OAuth App Client Secret.")
+			}
+		}
+	}
+
 	// Frontend URL can be explicitly set via env var
 	// If not set, leave empty and compute default in NewServer based on final DevMode
 	// (This allows --dev flag to override env var for frontend URL default)

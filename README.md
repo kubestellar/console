@@ -154,6 +154,7 @@ If you self-host the console and want sign-in:
 1. **Create a [GitHub OAuth App](https://github.com/settings/developers)**
    - Homepage URL: `http://localhost:8080`
    - Callback URL: `http://localhost:8080/auth/github/callback`
+   - **After creating the app**, note down your **Client ID** (visible immediately) and generate a **Client Secret** (click "Generate a new client secret")
 
 2. **Clone the repo** (if you haven't already):
    ```bash
@@ -162,10 +163,24 @@ If you self-host the console and want sign-in:
    ```
 
 3. **Create a `.env` file in the repo root** (`console/.env`):
+   ```bash
+   # Create .env file with your GitHub OAuth App credentials
+   cat > .env << 'EOF'
+   GITHUB_CLIENT_ID=your-client-id-here
+   GITHUB_CLIENT_SECRET=your-client-secret-here
+   EOF
    ```
-   GITHUB_CLIENT_ID=your-client-id
-   GITHUB_CLIENT_SECRET=your-client-secret
-   ```
+   
+   **Replace `your-client-id-here` and `your-client-secret-here`** with the actual values from your GitHub OAuth App (step 1).
+   
+   **⚠️ Common mistakes:**
+   - **Missing `.env` file**: The console looks for `.env` in the repo root (`console/.env`), not in your home directory or elsewhere.
+   - **Wrong credentials**: Client ID and Client Secret must match **exactly** what GitHub shows in your OAuth App settings. Copy-paste to avoid typos.
+   - **Expired secret**: If you regenerate the Client Secret in GitHub, you must update `.env` with the new value.
+   
+   **Troubleshooting OAuth errors:**
+   - `"invalid client credentials"` → Verify `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in your `.env` match your GitHub OAuth App at https://github.com/settings/developers
+   - `"redirect_uri_mismatch"` → The Callback URL in your GitHub OAuth App must be exactly `http://localhost:8080/auth/github/callback`
 
 4. **Start the console**:
    ```bash
