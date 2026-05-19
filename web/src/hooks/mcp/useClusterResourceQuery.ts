@@ -66,6 +66,11 @@ export function useClusterResourceQuery<T>(
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const isMountedRef = useRef(true)
+  const getDemoDataRef = useRef(getDemoData)
+  getDemoDataRef.current = getDemoData
+  const filterFnRef = useRef(filterFn)
+  filterFnRef.current = filterFn
+
   useEffect(() => {
     isMountedRef.current = true
     return () => { isMountedRef.current = false }
@@ -74,9 +79,10 @@ export function useClusterResourceQuery<T>(
   const refetch = useCallback(async () => {
     // Demo mode check (unless forceLive overrides)
     if (!forceLive && isDemoMode()) {
-      const demoData = getDemoData()
-      const filtered = filterFn
-        ? demoData.filter(item => filterFn(item, cluster, namespace))
+      const demoData = getDemoDataRef.current()
+      const currentFilterFn = filterFnRef.current
+      const filtered = currentFilterFn
+        ? demoData.filter(item => currentFilterFn(item, cluster, namespace))
         : demoData
       if (!isMountedRef.current) return
       setData(filtered)
@@ -142,7 +148,7 @@ export function useClusterResourceQuery<T>(
         setIsLoading(false)
       }
     }
-  }, [cluster, namespace, forceLive, resourceKey, endpoint, dataField, getDemoData, filterFn, silentErrors])
+  }, [cluster, namespace, forceLive, resourceKey, endpoint, dataField, silentErrors])
 
   useEffect(() => {
     refetch()
