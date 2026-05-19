@@ -186,6 +186,7 @@ export class CacheStore<T> {
   resetToInitialData(): void {
     this.resetVersion++
     this.fetchingRef = false
+    this.inFlightPromise = null
     this.initialDataLoaded = false
     this.setState({
       data: this.initialData,
@@ -203,6 +204,7 @@ export class CacheStore<T> {
   resetForModeTransition(): void {
     this.resetVersion++
     this.fetchingRef = false
+    this.inFlightPromise = null
     this.initialDataLoaded = false
     this.storageLoadPromise = null
     this.setState({
