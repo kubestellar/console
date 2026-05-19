@@ -472,6 +472,43 @@ describe('runPreflightCheck — catch branch coverage', () => {
     expect(result.error?.code).toBe('RBAC_DENIED')
     expect(result.context).toBe('my-context')
   })
+
+  it('denied op without namespace produces message without "namespace" substring', async () => {
+    const exec = vi.fn()
+      .mockResolvedValueOnce({
+        output: 'secrets  []  []  [get list]',
+        exitCode: 0,
+      })
+      .mockResolvedValueOnce({ output: 'no', exitCode: 0 })
+
+    const deniedOp = { verb: 'create', resource: 'secrets' }
+    const result = await runPreflightCheck(exec, 'staging', [deniedOp])
+
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('RBAC_DENIED')
+    expect(result.error?.message).toContain('create secrets')
+    expect(result.error?.message).not.toContain('namespace')
+  })
+
+  it('multiple denied ops produce generic plural message', async () => {
+    const exec = vi.fn()
+      .mockResolvedValueOnce({
+        output: 'pods  []  []  [get list]',
+        exitCode: 0,
+      })
+      .mockResolvedValueOnce({ output: 'no', exitCode: 0 })
+      .mockResolvedValueOnce({ output: 'no', exitCode: 0 })
+
+    const result = await runPreflightCheck(exec, 'prod', [
+      { verb: 'delete', resource: 'pods', namespace: 'team-a' },
+      { verb: 'create', resource: 'pods', namespace: 'team-a' },
+    ])
+
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('RBAC_DENIED')
+    expect(result.error?.message).toContain('one or more required mission operations')
+    expect(result.deniedOps).toHaveLength(2)
+  })
 })
 
 // ============================================================================
