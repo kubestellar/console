@@ -121,7 +121,7 @@
     "storybook": "^10.4.0",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.59.2",
+    "typescript-eslint": "^8.59.4",
     "vite": "^8.0.13",
     "vite-plugin-compression2": "^2.5.3",
     "vite-plugin-istanbul": "^9.0.0",
