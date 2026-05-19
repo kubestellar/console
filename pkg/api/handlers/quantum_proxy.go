@@ -137,9 +137,8 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 
 // allowedHistogramSorts lists valid sort values for the histogram endpoint.
 var allowedHistogramSorts = map[string]bool{
-	"count":       true,
-	"name":        true,
-	"probability": true,
+	"count":   true,
+	"pattern": true,
 }
 
 // ProxyResultHistogram handles GET requests to /api/result/histogram
