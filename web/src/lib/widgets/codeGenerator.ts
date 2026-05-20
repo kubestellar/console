@@ -42,7 +42,9 @@ const WIDGET_TOKEN_CACHE = '/tmp/.kc-widget-token'
 // On subsequent runs, reads from cache; retries with a fresh token on 401.
 function generateWidgetCommand(baseUrl: string, curlUrl: string): string {
   const tokenUrl = `${baseUrl}/api/agent/token?source=ubersicht-widget`
-  return `TOKEN=$(cat ${WIDGET_TOKEN_CACHE} 2>/dev/null); RESP=$(/usr/bin/curl -s -w '\\n%{http_code}' --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null); CODE=$(echo "$RESP" | tail -1); if [ "$CODE" = "401" ] || [ -z "$TOKEN" ]; then TOKEN=$(/usr/bin/curl -s --connect-timeout 3 '${tokenUrl}' 2>/dev/null | /usr/bin/python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null); echo "$TOKEN" > ${WIDGET_TOKEN_CACHE}; RESP=$(/usr/bin/curl -s -w '\\n%{http_code}' --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null); fi; echo "$RESP" | sed \\$d`
+  // Try with cached token; if response contains "Missing authorization", refresh and retry.
+  // No HTTP status parsing needed — avoids sed/awk/$-escaping issues inside JS backticks.
+  return `TOKEN=$(cat ${WIDGET_TOKEN_CACHE} 2>/dev/null); OUT=$(/usr/bin/curl -s --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null); if echo "$OUT" | grep -q "Missing authorization" || [ -z "$TOKEN" ]; then TOKEN=$(/usr/bin/curl -s --connect-timeout 3 '${tokenUrl}' 2>/dev/null | /usr/bin/python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null); echo "$TOKEN" > ${WIDGET_TOKEN_CACHE}; /usr/bin/curl -s --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null || echo '{"error":"Load failed"}'; else echo "$OUT"; fi`
 }
 
 // Generate Übersicht widget code for a single card

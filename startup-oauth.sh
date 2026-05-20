@@ -580,6 +580,11 @@ if [ "$USE_DEV_SERVER" = true ]; then
     BACKEND_PID=$!
     sleep 2
 
+    # Patch deployed Übersicht widgets with current auth pattern
+    if [ -f "$SCRIPT_DIR/scripts/update-widgets.sh" ]; then
+        BACKEND_PORT=$BACKEND_LISTEN_PORT bash "$SCRIPT_DIR/scripts/update-widgets.sh" || true
+    fi
+
     write_stage "vite_starting"
     echo -e "${GREEN}Starting Vite dev server...${NC}"
     (cd web && npm run dev -- --port 5174) &
@@ -711,6 +716,11 @@ else
     BACKEND_PORT=$BACKEND_LISTEN_PORT "$BACKEND_BIN" &
     BACKEND_PID=$!
     sleep 2
+
+    # Patch deployed Übersicht widgets with current auth pattern
+    if [ -f "$SCRIPT_DIR/scripts/update-widgets.sh" ]; then
+        BACKEND_PORT=$BACKEND_LISTEN_PORT bash "$SCRIPT_DIR/scripts/update-widgets.sh" || true
+    fi
 
     echo ""
     echo -e "${GREEN}=== Console is running in OAUTH mode ===${NC}"
