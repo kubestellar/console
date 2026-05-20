@@ -145,7 +145,7 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 	app.Get("/auth/manifest/setup", authLimiter, manifest.ManifestSetup)
 	app.Get("/auth/manifest/callback", authLimiter, manifest.ManifestCallback)
 
-	jwtAuth := middleware.JWTAuth(s.config.JWTSecret)
+	jwtAuth := middleware.JWTAuth(s.config.JWTSecret, s.config.AgentToken)
 	csrfGuard := middleware.RequireCSRF()
 	app.Post("/auth/refresh", authLimiter, injectTracker, csrfGuard, jwtAuth, func(c *fiber.Ctx) error {
 		return currentAuthHandler().RefreshToken(c)

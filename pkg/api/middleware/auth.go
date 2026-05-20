@@ -344,7 +344,14 @@ const bearerScheme = "Bearer "
 
 // JWTAuth creates JWT authentication middleware.
 // Token resolution order: Authorization header -> HttpOnly cookie -> _token query param (SSE only).
-func JWTAuth(secret string) fiber.Handler {
+// When agentToken is non-empty, a Bearer header carrying that exact value
+// with source=ubersicht-widget is accepted as valid authentication for
+// desktop widgets that need access to K8s-proxying endpoints (MCP, alerts, etc.).
+func JWTAuth(secret string, agentToken ...string) fiber.Handler {
+	widgetAgentToken := ""
+	if len(agentToken) > 0 {
+		widgetAgentToken = agentToken[0]
+	}
 	return func(c *fiber.Ctx) error {
 		// Übersicht desktop widgets use curl without auth tokens.
 		// Allow read-only GET access for the exact source value on paths that
@@ -352,9 +359,10 @@ func JWTAuth(secret string) fiber.Handler {
 		// trivial bypasses; path prefix guard prevents access to sensitive routes
 		// (settings, users, dashboards, K8s proxy, etc.). See #14875.
 		if c.Method() == fiber.MethodGet && c.Query("source") == "ubersicht-widget" {
-			// SECURITY: Only paths that serve the same public data as Netlify
-			// Functions are allowed here. NEVER add paths that proxy K8s
-			// resources (mcp/*, namespaces, gitops/*) — those require auth.
+			// SECURITY: Only paths that serve public data or the agent token
+			// (needed so widgets can authenticate MCP calls) are allowed here.
+			// K8s-proxying paths (mcp/*, namespaces, gitops/*) are NOT bypassed;
+			// widgets must fetch the agent token and pass it as a Bearer header.
 			widgetPublicPrefixes := []string{
 				"/api/public/",
 				"/api/youtube/",
@@ -365,6 +373,7 @@ func JWTAuth(secret string) fiber.Handler {
 				"/api/rewards/",
 				"/api/issue-stats",
 				"/api/github-pipelines",
+				"/api/agent/token",
 			}
 			for _, prefix := range widgetPublicPrefixes {
 				if strings.HasPrefix(c.Path(), prefix) {
@@ -460,6 +469,14 @@ func JWTAuth(secret string) fiber.Handler {
 			slog.Info("[Auth] missing authorization", "path", c.Path())
 			audit.Log(c, audit.ActionAuthFailed, "endpoint", c.Path(), "missing_authorization")
 			return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
+		}
+
+		// Widget agent-token auth: when the Bearer token matches the agent
+		// token and the request comes from a desktop widget, skip JWT
+		// validation. This lets widgets access K8s-proxying endpoints
+		// (MCP, alerts) without requiring a full user session.
+		if widgetAgentToken != "" && tokenString == widgetAgentToken && c.Query("source") == "ubersicht-widget" {
+			return c.Next()
 		}
 
 		token, err := ParseJWT(tokenString, secret)
