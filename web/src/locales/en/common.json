@@ -4869,6 +4869,9 @@
       "solving": "Solving…",
       "autoHandling": "Stellar is handling this — no input needed.",
       "actionTitle": "{{action}}: {{title}}",
+      "monitoring": "Monitoring durability",
+      "recheckIn": "Recheck in {{countdown}}",
+      "recheckNow": "Checking now…",
       "actions": {
         "investigate": "Investigate",
         "restart": "Restart",

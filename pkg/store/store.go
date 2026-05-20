@@ -256,7 +256,8 @@ type StellarActivity struct {
 }
 
 // StellarSolve tracks one end-to-end Solve attempt initiated by Stellar.
-// Status transitions: running → resolved | escalated | exhausted.
+// Status transitions: running → resolved | resolved_monitored | escalated | exhausted.
+// resolved_monitored means action completed but durability validation is pending.
 type StellarSolve struct {
 	ID           string     `json:"id"`
 	EventID      string     `json:"eventId"`
@@ -271,6 +272,9 @@ type StellarSolve struct {
 	Error        string     `json:"error,omitempty"`
 	StartedAt    time.Time  `json:"startedAt"`
 	EndedAt      *time.Time `json:"endedAt,omitempty"`
+	// NextRecheckAt is set when status is resolved_monitored, scheduling the
+	// next durability validation check.
+	NextRecheckAt *time.Time `json:"nextRecheckAt,omitempty"`
 }
 
 type StellarAuditEntry struct {

@@ -923,6 +923,11 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_actions ADD COLUMN bumped_at DATETIME",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_actions_bumped ON stellar_actions(status, bumped_at DESC)",
 
+		// Partial success outcome classification (#14970): track next recheck
+		// time for resolved_monitored solves.
+		"ALTER TABLE stellar_solves ADD COLUMN next_recheck_at DATETIME",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_solves_recheck ON stellar_solves(status, next_recheck_at)",
+
 		// Stellar activity log: Stellar's first-person record of what it did and
 		// why. Distinct from stellar_audit_log (operator-facing legal trail) and
 		// stellar_notifications (the inbox). This is the "junior engineer's

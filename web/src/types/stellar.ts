@@ -167,26 +167,28 @@ export interface StellarSolve {
   cluster: string
   namespace: string
   workload: string
-  status: 'running' | 'resolved' | 'escalated' | 'exhausted' | string
+  status: 'running' | 'resolved' | 'resolved_monitored' | 'escalated' | 'exhausted' | string
   actionsTaken: number
   limitHit?: string
   summary: string
   error?: string
   startedAt: string
   endedAt?: string
+  nextRecheckAt?: string
 }
 
 export interface StellarSolveProgress {
   solveId: string
   eventId: string
   // Stellar v2 autonomous phases: investigating → root_cause → solving →
-  // resolved | escalated | exhausted. Older deterministic-loop phases are
+  // resolved | resolved_monitored | escalated | exhausted. Older deterministic-loop phases are
   // still accepted so cached SSE messages don't break parsing.
   step:
     | 'investigating'
     | 'root_cause'
     | 'solving'
     | 'resolved'
+    | 'resolved_monitored'
     | 'escalated'
     | 'exhausted'
     | 'reading'
@@ -200,6 +202,8 @@ export interface StellarSolveProgress {
   status: string
   /** 0-100 progress percentage emitted by the backend. */
   percent?: number
+  /** When step is resolved_monitored, the timestamp of the next recheck. */
+  nextRecheckAt?: string
 }
 
 export interface StellarDigestPayload {

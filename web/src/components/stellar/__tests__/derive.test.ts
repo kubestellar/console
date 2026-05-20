@@ -199,6 +199,14 @@ describe('getSolveStatus', () => {
   it('escalated phase', () => {
     expect(getSolveStatus(makeNotif(), [makeSolve({ status: 'escalated', eventId: 'n1' })], {})?.phase).toBe('escalated')
   })
+  it('resolved_monitored phase from direct solve', () => {
+    const nextRecheck = new Date(Date.now() + 5 * 60_000).toISOString()
+    expect(getSolveStatus(makeNotif(), [makeSolve({ status: 'resolved_monitored', eventId: 'n1', nextRecheckAt: nextRecheck })], {})?.phase).toBe('resolved_monitored')
+  })
+  it('resolved_monitored is terminal (isActive false)', () => {
+    const nextRecheck = new Date(Date.now() + 5 * 60_000).toISOString()
+    expect(getSolveStatus(makeNotif(), [makeSolve({ status: 'resolved_monitored', eventId: 'n1', nextRecheckAt: nextRecheck })], {})?.isActive).toBe(false)
+  })
   it('isActive true for running solve', () => {
     expect(getSolveStatus(makeNotif(), [makeSolve({ status: 'running', eventId: 'n1' })], {})?.isActive).toBe(true)
   })

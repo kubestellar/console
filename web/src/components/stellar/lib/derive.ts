@@ -11,7 +11,9 @@ export interface SolveStatus {
   /** 0-100 progress percentage. 100 means terminal (resolved/escalated). */
   percent: number
   /** Short phase string the card uses to color the progress bar. */
-  phase: 'investigating' | 'root_cause' | 'solving' | 'resolved' | 'escalated' | 'exhausted' | 'unknown'
+  phase: 'investigating' | 'root_cause' | 'solving' | 'resolved' | 'resolved_monitored' | 'escalated' | 'exhausted' | 'unknown'
+  /** When phase is 'resolved_monitored', the timestamp of the next recheck. */
+  nextRecheckAt?: number
 }
 
 /** Map a backend phase string to a (label, color, percent) tuple. The
@@ -37,6 +39,8 @@ function describePhase(step: string, message: string): {
       return { label: `🔧 ${message || 'Solving'}`, color: 'var(--s-info)', percent: 75, phase: 'solving' }
     case 'resolved':
       return { label: '✓ Resolved by Stellar', color: 'var(--s-success)', percent: 100, phase: 'resolved' }
+    case 'resolved_monitored':
+      return { label: '👁 Monitoring durability', color: 'var(--s-info)', percent: 100, phase: 'resolved_monitored' }
     case 'escalated':
       return { label: '⚠ Escalated to you', color: 'var(--s-warning)', percent: 100, phase: 'escalated' }
     case 'exhausted':
@@ -169,7 +173,7 @@ export function getSolveStatus(
   if (live) {
     const d = describePhase(live.step, live.message)
     const percent = typeof live.percent === 'number' ? live.percent : d.percent
-    const isTerminal = d.phase === 'resolved' || d.phase === 'escalated' || d.phase === 'exhausted'
+    const isTerminal = d.phase === 'resolved' || d.phase === 'resolved_monitored' || d.phase === 'escalated' || d.phase === 'exhausted'
     return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase }
   }
 
@@ -204,7 +208,7 @@ export function getSolveStatus(
       if (p.solveId === latest.id) {
         const d = describePhase(p.step, p.message)
         const percent = typeof p.percent === 'number' ? p.percent : d.percent
-        const isTerminal = d.phase === 'resolved' || d.phase === 'escalated' || d.phase === 'exhausted'
+        const isTerminal = d.phase === 'resolved' || d.phase === 'resolved_monitored' || d.phase === 'escalated' || d.phase === 'exhausted'
         return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase }
       }
     }
@@ -215,6 +219,8 @@ export function getSolveStatus(
       return { label: '🔧 Stellar solving…', color: 'var(--s-info)', isActive: true, percent: 60, phase: 'solving' }
     case 'resolved':
       return { label: '✓ Resolved by Stellar', color: 'var(--s-success)', isActive: false, percent: 100, phase: 'resolved' }
+    case 'resolved_monitored':
+      return { label: '👁 Monitoring durability', color: 'var(--s-info)', isActive: false, percent: 100, phase: 'resolved_monitored' }
     case 'escalated':
       return { label: '⚠ Escalated to you', color: 'var(--s-warning)', isActive: false, percent: 100, phase: 'escalated' }
     case 'exhausted':
