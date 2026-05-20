@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
+import { useState, useEffect, useRef, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Lightbulb, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Timer } from 'lucide-react'
