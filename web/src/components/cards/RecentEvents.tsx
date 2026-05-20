@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback, memo } from 'react'
 import { Clock, AlertTriangle, CheckCircle2, Activity, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -23,6 +23,55 @@ function getMinutesAgo(timestamp: string | undefined): string {
   if (diffMins < 60) return `${diffMins}m ago`
   return `${Math.floor(diffMins / 60)}h ago`
 }
+
+interface EventRowProps {
+  event: ClusterEvent
+}
+
+const EventRow = memo(function EventRow({ event }: EventRowProps) {
+  return (
+    <div
+      className={`p-2 rounded-lg border ${
+        event.type === 'Warning'
+          ? 'bg-yellow-500/5 border-yellow-500/20'
+          : 'bg-green-500/5 border-green-500/20'
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        {event.type === 'Warning' ? (
+          <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
+        ) : (
+          <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+              event.type === 'Warning'
+                ? 'bg-yellow-500/20 text-yellow-400'
+                : 'bg-green-500/20 text-green-400'
+            }`}>
+              {event.reason}
+            </span>
+            <span className="text-xs text-foreground truncate">{event.object}</span>
+            {event.count > 1 && (
+              <span className="text-xs px-1 py-0.5 rounded bg-card text-muted-foreground">
+                x{event.count}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">{event.message}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground">{event.namespace}</span>
+            {event.cluster && (
+              <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />
+            )}
+            <span className="text-xs text-muted-foreground ml-auto">{getMinutesAgo(event.lastSeen)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})
 
 export function RecentEvents() {
   const { isDemoMode } = useDemoMode()
@@ -97,6 +146,50 @@ export function RecentEvents() {
 
   const warningCount = recentEventsCandidates.filter(e => e.type === 'Warning').length
 
+  const clusterFilter = useMemo(() => ({
+    availableClusters: filters.availableClusters,
+    selectedClusters: filters.localClusterFilter,
+    onToggle: filters.toggleClusterFilter,
+    onClear: filters.clearClusterFilter,
+    isOpen: filters.showClusterFilter,
+    setIsOpen: filters.setShowClusterFilter,
+    containerRef: filters.clusterFilterRef,
+  }), [
+    filters.availableClusters,
+    filters.localClusterFilter,
+    filters.toggleClusterFilter,
+    filters.clearClusterFilter,
+    filters.showClusterFilter,
+    filters.setShowClusterFilter,
+    filters.clusterFilterRef,
+  ])
+
+  const sortOptions = useMemo(() => [
+    { value: 'time' as const, label: 'Time' },
+    { value: 'reason' as const, label: 'Reason' },
+    { value: 'object' as const, label: 'Object' },
+  ], [])
+
+  const onSortChange = useCallback((v: string) => sorting.setSortBy(v as SortByOption), [sorting.setSortBy])
+
+  const cardControls = useMemo(() => ({
+    limit: itemsPerPage,
+    onLimitChange: setItemsPerPage,
+    sortBy: sorting.sortBy,
+    sortOptions,
+    onSortChange,
+    sortDirection: sorting.sortDirection,
+    onSortDirectionChange: sorting.setSortDirection,
+  }), [
+    itemsPerPage,
+    setItemsPerPage,
+    sorting.sortBy,
+    sortOptions,
+    onSortChange,
+    sorting.sortDirection,
+    sorting.setSortDirection,
+  ])
+
   return (
     <div className="space-y-3">
       {/* Header controls */}
@@ -122,26 +215,8 @@ export function RecentEvents() {
         />
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
           <CardControlsRow
-            clusterFilter={{
-              availableClusters: filters.availableClusters,
-              selectedClusters: filters.localClusterFilter,
-              onToggle: filters.toggleClusterFilter,
-              onClear: filters.clearClusterFilter,
-              isOpen: filters.showClusterFilter,
-              setIsOpen: filters.setShowClusterFilter,
-              containerRef: filters.clusterFilterRef }}
-            cardControls={{
-              limit: itemsPerPage,
-              onLimitChange: setItemsPerPage,
-              sortBy: sorting.sortBy,
-              sortOptions: [
-                { value: 'time', label: 'Time' },
-                { value: 'reason', label: 'Reason' },
-                { value: 'object', label: 'Object' },
-              ],
-              onSortChange: (v) => sorting.setSortBy(v as SortByOption),
-              sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection }}
+            clusterFilter={clusterFilter}
+            cardControls={cardControls}
             className="mb-0 flex-1"
           />
           <RefreshButton
@@ -174,47 +249,10 @@ export function RecentEvents() {
       ) : (
         <div ref={containerRef} className="space-y-2" style={containerStyle}>
           {paginatedItems.map((event) => (
-            <div
+            <EventRow
               key={`${event.cluster}-${event.namespace}-${event.object}-${event.reason}-${event.lastSeen}`}
-              className={`p-2 rounded-lg border ${
-                event.type === 'Warning'
-                  ? 'bg-yellow-500/5 border-yellow-500/20'
-                  : 'bg-green-500/5 border-green-500/20'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                {event.type === 'Warning' ? (
-                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
-                ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                      event.type === 'Warning'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'bg-green-500/20 text-green-400'
-                    }`}>
-                      {event.reason}
-                    </span>
-                    <span className="text-xs text-foreground truncate">{event.object}</span>
-                    {event.count > 1 && (
-                      <span className="text-xs px-1 py-0.5 rounded bg-card text-muted-foreground">
-                        x{event.count}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{event.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">{event.namespace}</span>
-                    {event.cluster && (
-                      <ClusterBadge cluster={event.cluster.split('/').pop() || event.cluster} size="sm" />
-                    )}
-                    <span className="text-xs text-muted-foreground ml-auto">{getMinutesAgo(event.lastSeen)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              event={event}
+            />
           ))}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { memo, useMemo, useCallback } from 'react'
 import { Server, Box, HardDrive, ExternalLink, AlertCircle, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -40,6 +41,89 @@ const DEMO_NAMESPACE_COSTS: NamespaceCost[] = [
   { namespace: 'cert-manager', cpuCost: 85, memCost: 45, storageCost: 10, totalCost: 140 },
   { namespace: 'ingress-nginx', cpuCost: 120, memCost: 80, storageCost: 5, totalCost: 205 },
 ]
+
+interface NamespaceCostRowProps {
+  ns: NamespaceCost
+  maxCost: number
+  idx: number
+  total: number
+  onActivate: (ns: NamespaceCost) => void
+  label: string
+}
+
+const NamespaceCostRow = memo(function NamespaceCostRow({
+  ns,
+  maxCost,
+  idx,
+  total,
+  onActivate,
+  label,
+}: NamespaceCostRowProps) {
+  const handleClick = useCallback(() => onActivate(ns), [onActivate, ns])
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const list = e.currentTarget.parentElement
+    const items = list
+      ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="opencost-ns"]'))
+      : []
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onActivate(ns)
+    } else if (e.key === 'ArrowDown' && idx < total - 1) {
+      e.preventDefault()
+      items[idx + 1]?.focus()
+    } else if (e.key === 'ArrowUp' && idx > 0) {
+      e.preventDefault()
+      items[idx - 1]?.focus()
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      items[0]?.focus()
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      items[items.length - 1]?.focus()
+    }
+  }, [onActivate, ns, idx, total])
+
+  return (
+    <div
+      key={ns.namespace}
+      data-keynav-item="opencost-ns"
+      role="button"
+      aria-label={label}
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
+        <div className="flex items-center gap-2">
+          <Box className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-sm font-medium text-foreground group-hover:text-blue-400">{ns.namespace}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-blue-400">${ns.totalCost.toLocaleString()}</span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </div>
+      <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
+        <div
+          className="h-full bg-linear-to-r from-blue-500 to-cyan-500 rounded-full"
+          style={{ width: `${(ns.totalCost / maxCost) * 100}%` }}
+        />
+      </div>
+      <div className="flex gap-3 text-2xs text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Server className="w-2.5 h-2.5" />
+          CPU: ${ns.cpuCost}
+        </span>
+        <span className="flex items-center gap-1">
+          <HardDrive className="w-2.5 h-2.5" />
+          Mem: ${ns.memCost}
+        </span>
+        <span>Storage: ${ns.storageCost}</span>
+      </div>
+    </div>
+  )
+})
 
 function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   const { t } = useTranslation('common')
@@ -92,6 +176,62 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   const totalCost = DEMO_NAMESPACE_COSTS.reduce((sum, ns) => sum + ns.totalCost, 0)
   const maxCost = Math.max(...DEMO_NAMESPACE_COSTS.map(ns => ns.totalCost))
 
+  const handleActivate = useCallback((ns: NamespaceCost) => {
+    drillToCost('all', {
+      namespace: ns.namespace,
+      cpuCost: ns.cpuCost,
+      memCost: ns.memCost,
+      storageCost: ns.storageCost,
+      totalCost: ns.totalCost,
+      source: 'opencost',
+    })
+  }, [drillToCost])
+
+  const clusterIndicator = useMemo(() =>
+    localClusterFilter.length > 0
+      ? { selectedCount: localClusterFilter.length, totalCount: availableClusters.length }
+      : undefined,
+    [localClusterFilter, availableClusters.length]
+  )
+
+  const clusterFilter = useMemo(() => ({
+    availableClusters,
+    selectedClusters: localClusterFilter,
+    onToggle: toggleClusterFilter,
+    onClear: clearClusterFilter,
+    isOpen: showClusterFilter,
+    setIsOpen: setShowClusterFilter,
+    containerRef: clusterFilterRef,
+    minClusters: 1,
+  }), [
+    availableClusters,
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+  ])
+
+  const onSortChange = useCallback((v: string) => setSortBy(v as SortByOption), [setSortBy])
+
+  const cardControls = useMemo(() => ({
+    limit: itemsPerPage,
+    onLimitChange: setItemsPerPage,
+    sortBy,
+    sortOptions: SORT_OPTIONS,
+    onSortChange,
+    sortDirection,
+    onSortDirectionChange: setSortDirection,
+  }), [
+    itemsPerPage,
+    setItemsPerPage,
+    sortBy,
+    onSortChange,
+    sortDirection,
+    setSortDirection,
+  ])
+
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
@@ -112,29 +252,9 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
         </div>
         <div className="flex items-center gap-2">
           <CardControlsRow
-            clusterIndicator={localClusterFilter.length > 0 ? {
-              selectedCount: localClusterFilter.length,
-              totalCount: availableClusters.length,
-            } : undefined}
-            clusterFilter={{
-              availableClusters,
-              selectedClusters: localClusterFilter,
-              onToggle: toggleClusterFilter,
-              onClear: clearClusterFilter,
-              isOpen: showClusterFilter,
-              setIsOpen: setShowClusterFilter,
-              containerRef: clusterFilterRef,
-              minClusters: 1,
-            }}
-            cardControls={{
-              limit: itemsPerPage,
-              onLimitChange: setItemsPerPage,
-              sortBy,
-              sortOptions: SORT_OPTIONS,
-              onSortChange: (v) => setSortBy(v as SortByOption),
-              sortDirection,
-              onSortDirectionChange: setSortDirection,
-            }}
+            clusterIndicator={clusterIndicator}
+            clusterFilter={clusterFilter}
+            cardControls={cardControls}
             className="mb-0!"
           />
         </div>
@@ -176,76 +296,17 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
         <p className="text-xs text-muted-foreground font-medium mb-2">Cost by Namespace</p>
         <div role="group" aria-label="Namespace costs" className="space-y-2">
-        {filteredCosts.map((ns, idx, arr) => {
-          const activate = () => drillToCost('all', {
-            namespace: ns.namespace,
-            cpuCost: ns.cpuCost,
-            memCost: ns.memCost,
-            storageCost: ns.storageCost,
-            totalCost: ns.totalCost,
-            source: 'opencost',
-          })
-          const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-            const list = e.currentTarget.parentElement
-            const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="opencost-ns"]')) : []
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              activate()
-            } else if (e.key === 'ArrowDown' && idx < arr.length - 1) {
-              e.preventDefault()
-              items[idx + 1]?.focus()
-            } else if (e.key === 'ArrowUp' && idx > 0) {
-              e.preventDefault()
-              items[idx - 1]?.focus()
-            } else if (e.key === 'Home') {
-              e.preventDefault()
-              items[0]?.focus()
-            } else if (e.key === 'End') {
-              e.preventDefault()
-              items[items.length - 1]?.focus()
-            }
-          }
-          return (
-          <div
+        {filteredCosts.map((ns, idx) => (
+          <NamespaceCostRow
             key={ns.namespace}
-            data-keynav-item="opencost-ns"
-            role="button"
-            aria-label={t('actions.viewNamespaceCostAria', { namespace: ns.namespace })}
-            tabIndex={0}
-            onClick={activate}
-            onKeyDown={handleKeyDown}
-            className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
-              <div className="flex items-center gap-2">
-                <Box className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground group-hover:text-blue-400">{ns.namespace}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-blue-400">${ns.totalCost.toLocaleString()}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </div>
-            <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
-              <div
-                className="h-full bg-linear-to-r from-blue-500 to-cyan-500 rounded-full"
-                style={{ width: `${(ns.totalCost / maxCost) * 100}%` }}
-              />
-            </div>
-            <div className="flex gap-3 text-2xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Server className="w-2.5 h-2.5" />
-                CPU: ${ns.cpuCost}
-              </span>
-              <span className="flex items-center gap-1">
-                <HardDrive className="w-2.5 h-2.5" />
-                Mem: ${ns.memCost}
-              </span>
-              <span>Storage: ${ns.storageCost}</span>
-            </div>
-          </div>
-          )
-        })}
+            ns={ns}
+            maxCost={maxCost}
+            idx={idx}
+            total={filteredCosts.length}
+            onActivate={handleActivate}
+            label={t('actions.viewNamespaceCostAria', { namespace: ns.namespace })}
+          />
+        ))}
         </div>
       </div>
 
