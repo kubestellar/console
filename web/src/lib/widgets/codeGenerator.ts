@@ -33,11 +33,16 @@ function resolveWidgetEndpoint(apiEndpoint: string, cardApiPath: string): string
   return `${base}${cardApiPath}`
 }
 
-// Generate the shell command that fetches the agent token for auth, then curls the API.
-// The token endpoint is on the public bypass list so widgets can access it without JWT.
+// Cache file for the agent token — avoids a round-trip on every widget refresh.
+// Token is re-fetched automatically on 401 (server restart, token rotation).
+const WIDGET_TOKEN_CACHE = '/tmp/.kc-widget-token'
+
+// Generate the shell command that authenticates with the agent token and fetches data.
+// On first run (or after token rotation), fetches the token and caches it.
+// On subsequent runs, reads from cache; retries with a fresh token on 401.
 function generateWidgetCommand(baseUrl: string, curlUrl: string): string {
   const tokenUrl = `${baseUrl}/api/agent/token?source=ubersicht-widget`
-  return `TOKEN=$(/usr/bin/curl -s --connect-timeout 3 '${tokenUrl}' 2>/dev/null | /usr/bin/python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null) && /usr/bin/curl -s --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null || echo '{"error":"Load failed"}'`
+  return `TOKEN=$(cat ${WIDGET_TOKEN_CACHE} 2>/dev/null); RESP=$(/usr/bin/curl -s -w '\\n%{http_code}' --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null); CODE=$(echo "$RESP" | tail -1); if [ "$CODE" = "401" ] || [ -z "$TOKEN" ]; then TOKEN=$(/usr/bin/curl -s --connect-timeout 3 '${tokenUrl}' 2>/dev/null | /usr/bin/python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null); echo "$TOKEN" > ${WIDGET_TOKEN_CACHE}; RESP=$(/usr/bin/curl -s -w '\\n%{http_code}' --connect-timeout 5 -H "Authorization: Bearer $TOKEN" '${curlUrl}' 2>/dev/null); fi; echo "$RESP" | sed \\$d`
 }
 
 // Generate Übersicht widget code for a single card
