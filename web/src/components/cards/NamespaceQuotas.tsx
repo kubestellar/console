@@ -1,337 +1,39 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
-import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
-import { BaseModal, useModalState } from '../../lib/modals'
-import { Button } from '../ui/Button'
+import { Plus } from 'lucide-react'
+import { useModalState } from '../../lib/modals'
 import {
   useClusters,
   useResourceQuotas,
   useLimitRanges,
-  LimitRange,
-  ResourceQuota,
+  type ResourceQuota,
   createOrUpdateResourceQuota,
   deleteResourceQuota,
-  COMMON_RESOURCE_TYPES,
-  GPU_RESOURCE_TYPES } from '../../hooks/useMCP'
+} from '../../hooks/useMCP'
 import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
-import { ClusterBadge } from '../ui/ClusterBadge'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { useCardData, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
+import { CardControlsRow } from '../../lib/cards/CardComponents'
+import { useCardData, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
-import { StatusBadge } from '../ui/StatusBadge'
-
-interface NamespaceQuotasProps {
-  config?: {
-    cluster?: string
-    namespace?: string
-  }
-}
-
-interface QuotaUsage {
-  resource: string
-  rawResource: string // Original k8s resource name
-  used: string
-  limit: string
-  percent: number
-  cluster?: string
-  namespace?: string
-  quotaName?: string // The name of the ResourceQuota this came from
-}
-
-interface LimitRangeItem {
-  name: string
-  type: string
-  limits: LimitRange['limits'][0]
-  cluster?: string
-  namespace?: string
-}
-
-type TabKey = 'quotas' | 'limits'
-type SortByOption = 'name' | 'percent'
-
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'percent' as const, label: 'Usage' },
-]
-
-const QUOTA_SORT_COMPARATORS: Record<SortByOption, (a: QuotaUsage, b: QuotaUsage) => number> = {
-  name: commonComparators.string<QuotaUsage>('resource'),
-  percent: commonComparators.number<QuotaUsage>('percent') }
-
-const LIMIT_SORT_COMPARATORS: Record<SortByOption, (a: LimitRangeItem, b: LimitRangeItem) => number> = {
-  name: commonComparators.string<LimitRangeItem>('name'),
-  // For limits, sort by name for both options (no percent on limits)
-  percent: commonComparators.string<LimitRangeItem>('name') }
-
-// Parse quantity string to numeric value (handles Kubernetes resource quantities)
-function parseQuantity(value: string): number {
-  if (!value) return 0
-  const num = parseFloat(value)
-  if (value.endsWith('Gi')) return num * 1024 * 1024 * 1024
-  if (value.endsWith('Mi')) return num * 1024 * 1024
-  if (value.endsWith('Ki')) return num * 1024
-  if (value.endsWith('G')) return num * 1000000000
-  if (value.endsWith('M')) return num * 1000000
-  if (value.endsWith('K')) return num * 1000
-  if (value.endsWith('m')) return num / 1000 // millicores
-  return num
-}
-
-// Modal for creating/editing ResourceQuotas
-function QuotaModal({
-  isOpen,
-  onClose,
-  onSave,
-  clusters,
-  namespaces,
-  selectedCluster,
-  selectedNamespace,
-  editingQuota,
-  isLoading }: {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (spec: { cluster: string; namespace: string; name: string; hard: Record<string, string> }) => Promise<void>
-  clusters: Array<{ name: string }>
-  namespaces: string[]
-  selectedCluster: string
-  selectedNamespace: string
-  editingQuota?: ResourceQuota | null
-  isLoading: boolean
-}) {
-  const { t } = useTranslation(['cards', 'common'])
-  const [cluster, setCluster] = useState(editingQuota?.cluster || (selectedCluster !== 'all' ? selectedCluster : ''))
-  const [namespace, setNamespace] = useState(editingQuota?.namespace || (selectedNamespace !== 'all' ? selectedNamespace : ''))
-  const [name, setName] = useState(editingQuota?.name || '')
-  const [resources, setResources] = useState<Array<{ id: string; key: string; value: string }>>(
-    editingQuota
-      ? Object.entries(editingQuota.hard).map(([key, value]) => ({ id: crypto.randomUUID(), key, value }))
-      : [{ id: crypto.randomUUID(), key: 'limits.nvidia.com/gpu', value: '4' }]
-  )
-  const [showGpuPresets, setShowGpuPresets] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const gpuDropdownKeyNav = useDropdownKeyNav(() => setShowGpuPresets(false))
-
-  const { namespaces: clusterNamespaces } = useCachedNamespaces(cluster || undefined)
-  const availableNamespaces = cluster ? clusterNamespaces : namespaces
-
-  const addResource = () => {
-    setResources([...resources, { id: crypto.randomUUID(), key: '', value: '' }])
-  }
-
-  const removeResource = (index: number) => {
-    setResources(resources.filter((_, i) => i !== index))
-  }
-
-  const updateResource = (index: number, field: 'key' | 'value', value: string) => {
-    const updated = [...resources]
-    updated[index][field] = value
-    setResources(updated)
-  }
-
-  const addGpuPreset = (resourceKey: string) => {
-    if (!resources.some(r => r.key === resourceKey)) {
-      setResources([...resources, { id: crypto.randomUUID(), key: resourceKey, value: '4' }])
-    }
-    setShowGpuPresets(false)
-  }
-
-  const handleSave = async () => {
-    setError(null)
-    if (!cluster || !namespace || !name) {
-      setError('Cluster, namespace, and name are required')
-      return
-    }
-    const validResources = resources.filter(r => r.key && r.value)
-    if (validResources.length === 0) {
-      setError('At least one resource limit is required')
-      return
-    }
-    const hard: Record<string, string> = {}
-    validResources.forEach(r => {
-      hard[r.key] = r.value
-    })
-    try {
-      await onSave({ cluster, namespace, name, hard })
-      onClose()
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save quota')
-    }
-  }
-
-  return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false}>
-      <BaseModal.Header
-        title={editingQuota ? t('namespaceQuotas.editQuota') : t('namespaceQuotas.createQuota')}
-        icon={Gauge}
-        onClose={onClose}
-        showBack={false}
-      />
-
-      <BaseModal.Content className="max-h-[60vh]">
-        <div className="space-y-4">
-          {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Cluster selector */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common:common.cluster')}</label>
-            <select
-              value={cluster}
-              onChange={(e) => {
-                setCluster(e.target.value)
-                setNamespace('')
-              }}
-              disabled={!!editingQuota}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
-            >
-              <option value="">{t('common:selectors.selectCluster')}</option>
-              {clusters.map(c => (
-                <option key={c.name} value={c.name}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Namespace selector */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common:common.namespace')}</label>
-            <select
-              value={namespace}
-              onChange={(e) => setNamespace(e.target.value)}
-              disabled={!!editingQuota || !cluster}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
-            >
-              <option value="">{t('common:selectors.selectNamespace')}</option>
-              {availableNamespaces.map(ns => (
-                <option key={ns} value={ns}>{ns}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Quota name */}
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('namespaceQuotas.quotaName')}</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={!!editingQuota}
-              placeholder={t('namespaceQuotas.quotaNamePlaceholder')}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-            />
-          </div>
-
-          {/* Resources */}
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-              <label className="text-sm font-medium text-muted-foreground">{t('namespaceQuotas.resourceLimits')}</label>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    icon={<Zap className="w-3 h-3" />}
-                    onClick={() => setShowGpuPresets(!showGpuPresets)}
-                    className="rounded"
-                  >
-                    GPU
-                  </Button>
-                  {showGpuPresets && (
-                    <div role="menu" onKeyDown={gpuDropdownKeyNav} className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-10">
-                      {GPU_RESOURCE_TYPES.map(rt => (
-                        <button
-                          key={rt.key}
-                          onClick={() => addGpuPreset(rt.key)}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-secondary first:rounded-t-lg last:rounded-b-lg"
-                        >
-                          <div className="text-foreground">{rt.label}</div>
-                          <div className="text-xs text-muted-foreground">{rt.key}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={addResource}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-                >
-                  <Plus className="w-3 h-3" />
-                  {t('common:common.add')}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {resources.map((resource, index) => (
-                <div key={resource.id} className="flex items-center gap-2">
-                  <select
-                    value={resource.key}
-                    onChange={(e) => updateResource(index, 'key', e.target.value)}
-                    className="flex-1 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground"
-                  >
-                    <option value="">{t('namespaceQuotas.selectResource')}</option>
-                    {COMMON_RESOURCE_TYPES.map(rt => (
-                      <option key={rt.key} value={rt.key}>{rt.label} ({rt.key})</option>
-                    ))}
-                    <option value="custom">{t('namespaceQuotas.customResource')}</option>
-                  </select>
-                  {resource.key === 'custom' && (
-                    <input
-                      type="text"
-                      placeholder="resource.name"
-                      onChange={(e) => updateResource(index, 'key', e.target.value)}
-                      className="flex-1 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground"
-                    />
-                  )}
-                  <input
-                    type="text"
-                    value={resource.value}
-                    onChange={(e) => updateResource(index, 'value', e.target.value)}
-                    placeholder="e.g., 4, 8Gi"
-                    className="w-24 px-2 py-1.5 rounded bg-secondary border border-border text-sm text-foreground"
-                  />
-                  <button
-                    onClick={() => removeResource(index)}
-                    className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </BaseModal.Content>
-
-      <BaseModal.Footer>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={onClose}
-          >
-            {t('common:common.cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleSave}
-            disabled={isLoading}
-            loading={isLoading}
-          >
-            {editingQuota ? t('common:common.update') : t('common:common.create')}
-          </Button>
-        </div>
-      </BaseModal.Footer>
-    </BaseModal>
-  )
-}
+import { NamespaceQuotasDeleteModal } from './NamespaceQuotasDeleteModal'
+import { NamespaceQuotasList } from './NamespaceQuotasList'
+import { QuotaModal } from './NamespaceQuotasModal'
+import type {
+  LimitRangeItem,
+  NamespaceQuotasProps,
+  QuotaUsage,
+  SortByOption,
+  TabKey,
+} from './NamespaceQuotas.types'
+import {
+  LIMIT_SORT_COMPARATORS,
+  parseQuantity,
+  formatResourceName,
+  QUOTA_SORT_COMPARATORS,
+  SORT_OPTIONS,
+} from './NamespaceQuotas.utils'
 
 export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -530,28 +232,6 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     { key: 'limits' as const, label: 'Limits', count: totalLimits },
   ]
 
-  /** Static Tailwind class maps — dynamic interpolation doesn't work with JIT (#5715) */
-  const USAGE_TEXT_CLASSES: Record<string, string> = {
-    red: 'text-red-400', orange: 'text-orange-400', green: 'text-green-400',
-  }
-  const USAGE_BAR_CLASSES: Record<string, string> = {
-    red: 'bg-red-500', orange: 'bg-orange-500', green: 'bg-green-500',
-  }
-
-  const getColor = (percent: number) => {
-    if (percent >= 90) return 'red'
-    if (percent >= 70) return 'orange'
-    return 'green'
-  }
-
-  const getIcon = (resource: string) => {
-    if (resource.toLowerCase().includes('cpu')) return Cpu
-    if (resource.toLowerCase().includes('memory')) return HardDrive
-    if (resource.toLowerCase().includes('pod')) return Box
-    if (resource.toLowerCase().includes('gpu')) return Zap
-    return Gauge
-  }
-
   if (isInitialLoading) {
     return (
       <div className="h-full flex flex-col min-h-card">
@@ -571,7 +251,6 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
           <StatusBadge color="yellow">
@@ -580,9 +259,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         </div>
         <div className="flex items-center gap-2">
           <CardControlsRow
-            clusterIndicator={{
-              selectedCount: quotaFilters.localClusterFilter.length,
-              totalCount: quotaFilters.availableClusters.length }}
+            clusterIndicator={{ selectedCount: quotaFilters.localClusterFilter.length, totalCount: quotaFilters.availableClusters.length }}
             clusterFilter={{
               availableClusters: quotaFilters.availableClusters,
               selectedClusters: quotaFilters.localClusterFilter,
@@ -591,15 +268,17 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
               isOpen: quotaFilters.showClusterFilter,
               setIsOpen: quotaFilters.setShowClusterFilter,
               containerRef: quotaFilters.clusterFilterRef,
-              minClusters: 1 }}
+              minClusters: 1,
+            }}
             cardControls={{
               limit: quotaItemsPerPage,
               onLimitChange: quotaSetItemsPerPage,
               sortBy: quotaSorting.sortBy,
               sortOptions: SORT_OPTIONS,
-              onSortChange: (v) => quotaSorting.setSortBy(v as SortByOption),
+              onSortChange: v => quotaSorting.setSortBy(v as SortByOption),
               sortDirection: quotaSorting.sortDirection,
-              onSortDirectionChange: quotaSorting.setSortDirection }}
+              onSortDirectionChange: quotaSorting.setSortDirection,
+            }}
             extra={
               <button
                 onClick={() => {
@@ -616,255 +295,50 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         </div>
       </div>
 
-      {/* Selectors */}
       <div className="flex gap-2 mb-4">
         <select
           value={selectedCluster}
-          onChange={(e) => {
+          onChange={e => {
             setSelectedCluster(e.target.value)
-            // Reset namespace to 'all' when cluster changes (unless going to 'all' clusters)
-            if (e.target.value === 'all') {
-              setSelectedNamespace('all')
-            } else {
-              setSelectedNamespace('all')
-            }
+            setSelectedNamespace('all')
           }}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="all">All Clusters ({clusters.length})</option>
-          {clusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
+          {clusters.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
         </select>
-        <select
-          value={selectedNamespace}
-          onChange={(e) => setSelectedNamespace(e.target.value)}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-        >
+        <select value={selectedNamespace} onChange={e => setSelectedNamespace(e.target.value)} className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground">
           <option value="all">{t('namespaceQuotas.allNamespaces')}</option>
-          {selectedCluster !== 'all' && namespaces.map(ns => (
-            <option key={ns} value={ns}>{ns}</option>
-          ))}
+          {selectedCluster !== 'all' && namespaces.map(ns => <option key={ns} value={ns}>{ns}</option>)}
         </select>
       </div>
 
-      <>
-        {/* Local Search */}
-        <CardSearchInput
-          value={quotaFilters.search}
-          onChange={quotaFilters.setSearch}
-          placeholder="Search quotas..."
-          className="mb-4"
-        />
+      <NamespaceQuotasList
+        searchValue={quotaFilters.search}
+        onSearchChange={quotaFilters.setSearch}
+        selectedCluster={selectedCluster}
+        selectedNamespace={selectedNamespace}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={tabs}
+        paginatedQuotas={paginatedQuotas as QuotaUsage[]}
+        paginatedLimits={paginatedLimits as LimitRangeItem[]}
+        uniqueQuotas={uniqueQuotas}
+        isFetchingData={isFetchingData}
+        onEditQuota={openEditModal}
+        onDeleteQuota={setDeleteConfirm}
+        onCreateQuota={() => {
+          setEditingQuota(null)
+          openModal()
+        }}
+        activePagination={{
+          ...activePagination,
+          itemsPerPage: typeof activePagination.itemsPerPage === 'number' ? activePagination.itemsPerPage : activePagination.totalItems,
+        }}
+        containerRef={containerRef}
+        containerStyle={containerStyle}
+      />
 
-        {/* Scope badge */}
-        <div className="flex items-center gap-2 mb-4 min-w-0 overflow-hidden">
-          {selectedCluster === 'all' ? (
-            <StatusBadge color="blue" size="md" className="shrink-0">All Clusters</StatusBadge>
-          ) : (
-            <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
-          )}
-          <span className="text-muted-foreground shrink-0">/</span>
-          {selectedNamespace === 'all' ? (
-            <StatusBadge color="purple" size="md" className="shrink-0">All Namespaces</StatusBadge>
-          ) : (
-            <span className="text-sm text-foreground truncate min-w-0">{selectedNamespace}</span>
-          )}
-        </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 mb-4 p-1 rounded-lg bg-secondary/30">
-            {tabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${
-                  activeTab === tab.key
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className="text-xs opacity-60">({tab.count})</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Content */}
-          <div ref={containerRef} className="flex-1 space-y-3 overflow-y-auto" style={containerStyle}>
-            {isFetchingData && activePagination.items.length === 0 ? (
-              <>
-                <Skeleton variant="rounded" height={70} />
-                <Skeleton variant="rounded" height={70} />
-                <Skeleton variant="rounded" height={70} />
-              </>
-            ) : activePagination.items.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm py-8">
-                <p>No {activeTab === 'quotas' ? 'resource quotas' : 'limit ranges'} found</p>
-                {activeTab === 'quotas' && (
-                  <button
-                    onClick={() => {
-                      setEditingQuota(null)
-                      openModal()
-                    }}
-                    className="mt-3 flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {t('namespaceQuotas.createGpuQuota')}
-                  </button>
-                )}
-              </div>
-            ) : activeTab === 'quotas' ? (
-              (paginatedQuotas as QuotaUsage[]).map((quota, idx) => {
-                const color = getColor(quota.percent)
-                const Icon = getIcon(quota.resource)
-                const showScope = selectedCluster === 'all' || selectedNamespace === 'all'
-                const fullQuota = uniqueQuotas.find(
-                  q => q.cluster === quota.cluster && q.namespace === quota.namespace && q.name === quota.quotaName
-                )
-
-                return (
-                  <div key={`${quota.cluster}-${quota.namespace}-${quota.resource}-${idx}`} className={`p-3 rounded-lg bg-secondary/30 ${isFetchingData ? 'opacity-50' : ''}`}>
-                    {showScope && (
-                      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                          {quota.cluster && <span className="shrink-0"><ClusterBadge cluster={quota.cluster} size="sm" /></span>}
-                          {quota.namespace && (
-                            <span className="flex items-center gap-1 truncate">
-                              <span>/</span>
-                              <span className="truncate">{quota.namespace}</span>
-                            </span>
-                          )}
-                          {quota.quotaName && (
-                            <span className="flex items-center gap-1 truncate">
-                              <span>/</span>
-                              <span className="text-yellow-400 truncate">{quota.quotaName}</span>
-                            </span>
-                          )}
-                        </div>
-                        {fullQuota && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => openEditModal(fullQuota)}
-                              className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-blue-400"
-                              title="Edit quota"
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirm({ cluster: fullQuota.cluster ?? '', namespace: fullQuota.namespace, name: fullQuota.name })}
-                              className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400"
-                              title="Delete quota"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <Icon className={`w-4 h-4 ${USAGE_TEXT_CLASSES[color]}`} />
-                        <span className="text-sm text-foreground">{quota.resource}</span>
-                        {quota.rawResource.includes('gpu') && (
-                          <Zap className="w-3 h-3 text-purple-400" />
-                        )}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {quota.used} / {quota.limit}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${USAGE_BAR_CLASSES[color]}`}
-                        style={{ width: `${Math.min(quota.percent, 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-end mt-1">
-                      <span className={`text-xs ${USAGE_TEXT_CLASSES[color]}`}>{quota.percent.toFixed(0)}%</span>
-                    </div>
-                  </div>
-                )
-              })
-            ) : (
-              (paginatedLimits as LimitRangeItem[]).map((item, idx) => {
-                const showScope = selectedCluster === 'all' || selectedNamespace === 'all'
-                return (
-                  <div
-                    key={`${item.cluster}-${item.namespace}-${item.name}-${item.type}-${idx}`}
-                    className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors ${isFetchingData ? 'opacity-50' : ''}`}
-                  >
-                    {showScope && (
-                      <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                        {item.cluster && <span className="shrink-0"><ClusterBadge cluster={item.cluster} size="sm" /></span>}
-                        {item.namespace && (
-                          <span className="flex items-center gap-1 truncate">
-                            <span>/</span>
-                            <span className="truncate">{item.namespace}</span>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-y-2">
-                      <div className="flex items-center gap-2">
-                        <Gauge className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm text-foreground">{item.name}</span>
-                        <StatusBadge color="blue">
-                          {item.type}
-                        </StatusBadge>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    <div className="mt-2 ml-6 text-xs text-muted-foreground space-y-1">
-                      {item.limits.default && (
-                        <div>Default: {formatLimits(item.limits.default)}</div>
-                      )}
-                      {item.limits.defaultRequest && (
-                        <div>Default Request: {formatLimits(item.limits.defaultRequest)}</div>
-                      )}
-                      {item.limits.max && (
-                        <div>Max: {formatLimits(item.limits.max)}</div>
-                      )}
-                      {item.limits.min && (
-                        <div>Min: {formatLimits(item.limits.min)}</div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-
-          {/* Pagination */}
-          <CardPaginationFooter
-            currentPage={activePagination.currentPage}
-            totalPages={activePagination.totalPages}
-            totalItems={activePagination.totalItems}
-            itemsPerPage={typeof activePagination.itemsPerPage === 'number' ? activePagination.itemsPerPage : activePagination.totalItems}
-            onPageChange={activePagination.goToPage}
-            needsPagination={activePagination.needsPagination}
-          />
-
-          {/* Footer legend */}
-          <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-green-500" />
-                <span>&lt;70%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-orange-500" />
-                <span>70-90%</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-red-500" />
-                <span>&gt;90%</span>
-              </div>
-            </div>
-          </div>
-        </>
-
-      {/* Create/Edit Modal */}
       <QuotaModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -880,76 +354,12 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         isLoading={isSaving}
       />
 
-      {/* Delete Confirmation */}
-      <BaseModal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="md">
-        <BaseModal.Header
-          title="Delete ResourceQuota?"
-          icon={Trash2}
-          onClose={() => setDeleteConfirm(null)}
-          showBack={false}
-        />
-        <BaseModal.Content>
-          <p className="text-sm text-muted-foreground mb-4">
-            Are you sure you want to delete the quota <span className="text-yellow-400">{deleteConfirm?.name}</span> from{' '}
-            <span className="text-blue-400">{deleteConfirm?.namespace}</span> in{' '}
-            <span className="text-foreground">{deleteConfirm?.cluster}</span>?
-          </p>
-          <p className="text-sm text-red-400">
-            This action cannot be undone. Pods and deployments will no longer be constrained by this quota.
-          </p>
-        </BaseModal.Content>
-        <BaseModal.Footer>
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => setDeleteConfirm(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              size="lg"
-              onClick={() => deleteConfirm && handleDeleteQuota(deleteConfirm.cluster, deleteConfirm.namespace, deleteConfirm.name)}
-              disabled={isSaving}
-              loading={isSaving}
-            >
-              Delete
-            </Button>
-          </div>
-        </BaseModal.Footer>
-      </BaseModal>
+      <NamespaceQuotasDeleteModal
+        deleteConfirm={deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onDelete={target => handleDeleteQuota(target.cluster, target.namespace, target.name)}
+        isLoading={isSaving}
+      />
     </div>
   )
-}
-
-// Format resource name for display (e.g., "requests.cpu" -> "CPU Requests")
-function formatResourceName(name: string): string {
-  const parts = name.split('.')
-  const formatted = parts.map(p => {
-    if (p === 'cpu') return 'CPU'
-    if (p === 'memory') return 'Memory'
-    if (p === 'requests') return 'Requests'
-    if (p === 'limits') return 'Limits'
-    if (p === 'pods') return 'Pods'
-    if (p === 'services') return 'Services'
-    if (p === 'persistentvolumeclaims') return 'PVCs'
-    if (p === 'storage') return 'Storage'
-    if (p.includes('nvidia')) return 'NVIDIA GPU'
-    if (p.includes('amd')) return 'AMD GPU'
-    return p.charAt(0).toUpperCase() + p.slice(1)
-  })
-  // Reorder: if it's "requests.cpu", make it "CPU Requests"
-  if (formatted.length === 2 && (formatted[0] === 'Requests' || formatted[0] === 'Limits')) {
-    return `${formatted[1]} ${formatted[0]}`
-  }
-  return formatted.join(' ')
-}
-
-// Format limit values for display
-function formatLimits(limits: Record<string, string>): string {
-  return Object.entries(limits)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(', ')
 }

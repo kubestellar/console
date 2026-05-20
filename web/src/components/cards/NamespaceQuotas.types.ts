@@ -1,3 +1,10 @@
+export interface NamespaceQuotasProps {
+  config?: {
+    cluster?: string
+    namespace?: string
+  }
+}
+
 export interface QuotaUsage {
   resource: string
   rawResource: string // Original k8s resource name
@@ -21,6 +28,12 @@ export interface LimitRangeItem {
   }
   cluster?: string
   namespace?: string
+}
+
+export interface QuotaDeleteTarget {
+  cluster: string
+  namespace: string
+  name: string
 }
 
 export type TabKey = 'quotas' | 'limits'
