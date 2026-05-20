@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Shield, ShieldAlert, ShieldCheck, Users, Eye, Clock, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
+import { Shield, ShieldAlert, ShieldCheck, Users, AlertTriangle } from 'lucide-react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { cn } from '../../lib/cn'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -203,11 +203,11 @@ export function Security() {
     const rbacLowRisk = filteredRBAC.filter(r => r.riskLevel === 'low').length
 
     // Compliance stats
-    const compliancePass = filteredCompliance.filter(c => c.status === 'pass').length
-    const complianceFail = filteredCompliance.filter(c => c.status === 'fail').length
-    const complianceWarn = filteredCompliance.filter(c => c.status === 'warn').length
+    const compliancePassed = filteredCompliance.filter(c => c.status === 'pass').length
+    const complianceFailed = filteredCompliance.filter(c => c.status === 'fail').length
+    const complianceWarnings = filteredCompliance.filter(c => c.status === 'warn').length
     const complianceScore = filteredCompliance.length > 0
-      ? Math.round((compliancePass / filteredCompliance.length) * 100)
+      ? Math.round((compliancePassed / filteredCompliance.length) * 100)
       : 100
 
     return {
@@ -222,9 +222,9 @@ export function Security() {
       rbacMedRisk,
       rbacLowRisk,
       complianceTotal: filteredCompliance.length,
-      compliancePass,
-      complianceFail,
-      complianceWarn,
+      compliancePassed,
+      complianceFailed,
+      complianceWarnings,
       complianceScore,
       // Chart data
       severityChartData: [
@@ -242,9 +242,9 @@ export function Security() {
         { name: 'Low Risk', value: rbacLowRisk, color: GREEN_500 },
       ].filter(d => d.value > 0),
       complianceChartData: [
-        { name: 'Pass', value: compliancePass, color: GREEN_500 },
-        { name: 'Warn', value: complianceWarn, color: AMBER_500 },
-        { name: 'Fail', value: complianceFail, color: RED_500 },
+        { name: 'Pass', value: compliancePassed, color: GREEN_500 },
+        { name: 'Warn', value: complianceWarnings, color: AMBER_500 },
+        { name: 'Fail', value: complianceFailed, color: RED_500 },
       ].filter(d => d.value > 0) }
   }, [globalFilteredIssues, filteredRBAC, filteredCompliance])
 

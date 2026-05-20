@@ -61,7 +61,7 @@ export function SecurityComplianceTab({ stats, complianceByCategory, handleRefre
             <div className="flex items-center gap-2">
               <ShieldX className="w-4 h-4 text-red-400" />
               <span className="text-sm text-foreground">
-                {stats.complianceFailed} {t('cards:security.failed')}
+                {stats.complianceFailed} {t('cards:security.failing')}
               </span>
             </div>
             <div className="flex items-center gap-2">

@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
-import { ShieldAlert, ShieldCheck, ShieldX, AlertTriangle, Users, Key, ChevronRight } from 'lucide-react'
+import { ShieldAlert, ShieldCheck, AlertTriangle, Users, Key, ChevronRight } from 'lucide-react'
 import { DonutChart } from '../charts/PieChart'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { cn } from '../../lib/cn'
 import type { SecurityIssue, RBACBinding } from '../../mocks/securityData'
-import { severityColor, getTypeLabel } from './securityHelpers'
+import { getTypeLabel } from './securityHelpers'
 
 interface SecurityStats {
   total: number
@@ -21,7 +21,7 @@ interface SecurityOverviewTabProps {
   stats: SecurityStats
   globalFilteredIssues: SecurityIssue[]
   filteredRBAC: RBACBinding[]
-  setActiveTab: (tab: string) => void
+  setActiveTab: (tab: 'overview' | 'issues' | 'rbac' | 'compliance') => void
   setSeverityFilter: (filter: string) => void
 }
 

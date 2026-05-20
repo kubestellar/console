@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import {
@@ -24,7 +24,8 @@ import { useModalState } from "../../lib/modals";
 import { safeGetItem, safeSetItem } from "../../lib/utils/localStorage";
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl';
 import { AgentApprovalDialog, hasApprovedAgents } from "./AgentApprovalDialog";
-import { AgentInstallGuide, fetchMissionFile, INSTALL_MISSION_PATHS } from "./AgentInstallGuide";
+import { AgentInstallGuide, fetchMissionFile } from "./AgentInstallGuide";
+import type { MissionExport, MissionStep } from '../../lib/missions/types';
 import { ClusterSelectionDialog } from "../missions/ClusterSelectionDialog";
 import {
   CLUSTER_PROVIDER_KEYS,
@@ -866,7 +867,7 @@ export function AgentSelector({
             const stepsText =
               (m.steps ?? [])
                 .map(
-                  (s, i) =>
+                  (s: MissionStep, i: number) =>
                     `${i + 1}. ${s.title}${s.description ? ": " + s.description : ""}`,
                 )
                 .join("\n") || m.description;
