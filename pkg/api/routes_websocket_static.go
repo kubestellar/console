@@ -21,7 +21,7 @@ func (s *Server) setupWebSocketStaticRoutes(routes *routeSetupContext) {
 	}
 	s.app.Post("/webhooks/github", feedback.HandleGitHubWebhook)
 
-	s.app.Use("/ws", routes.publicLimiter, middleware.WebSocketUpgrade())
+	s.app.Use("/ws", routes.publicLimiter, middleware.ValidateWebSocketOrigin(s.config.DevMode), middleware.WebSocketUpgrade())
 	s.app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		s.hub.HandleConnection(c)
 	}))
