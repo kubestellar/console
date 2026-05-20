@@ -176,7 +176,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   const widgetContent = (
       <div className="flex flex-col h-full min-h-0">
         {/* Tabs */}
-        <div className="flex border-b border-border mb-4" role="tablist" aria-label={t('widgets.exportDesktopWidget')} onKeyDown={handleTabKeyDown}>
+        <div className="flex border-b border-border mb-4 shrink-0" role="tablist" aria-label={t('widgets.exportDesktopWidget')} onKeyDown={handleTabKeyDown}>
           <button
             onClick={() => setActiveTab('templates')}
             id={EXPORT_TAB_IDS.templates}
@@ -227,9 +227,10 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           </button>
         </div>
 
-        <div className="flex-1 flex items-start gap-4 min-h-0">
-          {/* Left: Selection */}
-          <div className="w-1/2 flex flex-col overflow-hidden min-h-0">
+        {/* Main content area with fixed height scrolling */}
+        <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
+          {/* Left: Selection list (scrollable) */}
+          <div className="w-1/2 flex flex-col min-h-0">
             <div
               id={EXPORT_PANEL_IDS[activeTab]}
               ref={cardListRef}
@@ -287,8 +288,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               )}
             </div>
 
-            {/* Configuration */}
-            <div className="mt-4 pt-4 border-t border-border space-y-3">
+            {/* Configuration section (static below list) */}
+            <div className="mt-4 pt-4 border-t border-border space-y-3 shrink-0">
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <label htmlFor={API_ENDPOINT_INPUT_ID} className="block text-xs text-muted-foreground">{t('widgets.apiEndpoint')}</label>
@@ -350,10 +351,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             </div>
           </div>
 
-          {/* Right: Preview & Code — sticky positioning keeps the preview visible
-              while the left selection list scrolls independently. */}
-          <div className="sticky top-0 self-start w-1/2 flex flex-col overflow-hidden min-h-0 pb-6">
-            <div className="flex items-center justify-between mb-2">
+          {/* Right: Preview & Code (static, always visible) */}
+          <div className="w-1/2 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
                 onClick={() => setShowCode(!showCode)}
@@ -372,14 +372,14 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 </pre>
               </div>
             ) : (
-              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-start justify-center overflow-hidden min-w-0 min-h-[16rem]">
+              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-start justify-center overflow-auto min-w-0 min-h-[16rem]">
                 <div className="max-w-full overflow-hidden origin-top" style={previewStyle}>
                   <WidgetPreview config={exportConfig} />
                 </div>
               </div>
             )}
 
-            {/* Setup instructions — shrink-0 keeps it visible, overflow-auto if cramped */}
+            {/* Setup instructions (static below preview) */}
             <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 shrink-0 overflow-auto max-h-40">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
@@ -399,35 +399,37 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border shrink-0">
-          <a
-            href="https://tracesof.net/uebersicht/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-          >
-            {t('widgets.getUebersicht')} <ExternalLink className="w-3 h-3" />
-          </a>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCopy}
-              disabled={!widgetCode}
-              className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded flex items-center gap-2 disabled:opacity-50"
-              aria-label={copied ? t('widgets.copied', 'Copied!') : t('widgets.copyCode', 'Copy Code')}
+        {/* Fixed bottom bar with Übersicht link and action buttons */}
+        <div className="mt-4 pt-4 border-t border-border shrink-0">
+          <div className="flex items-center justify-between">
+            <a
+              href="https://tracesof.net/uebersicht/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
             >
-              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy Code'}
-            </button>
-            <button
-              onClick={handleDownload}
-              disabled={!widgetCode || isLoading}
-              className="px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 rounded flex items-center gap-2 disabled:opacity-50"
-              aria-label={t('widgets.downloadFilename', { filename })}
-            >
-              <Download className="w-4 h-4" />
-              {t('widgets.downloadFilename', { filename })}
-            </button>
+              {t('widgets.getUebersicht')} <ExternalLink className="w-3 h-3" />
+            </a>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopy}
+                disabled={!widgetCode}
+                className="px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded flex items-center gap-2 disabled:opacity-50"
+                aria-label={copied ? t('widgets.copied', 'Copied!') : t('widgets.copyCode', 'Copy Code')}
+              >
+                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied!' : 'Copy Code'}
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={!widgetCode || isLoading}
+                className="px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 rounded flex items-center gap-2 disabled:opacity-50"
+                aria-label={t('widgets.downloadFilename', { filename })}
+              >
+                <Download className="w-4 h-4" />
+                {t('widgets.downloadFilename', { filename })}
+              </button>
+            </div>
           </div>
         </div>
       </div>
