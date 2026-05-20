@@ -191,6 +191,7 @@ async function runRefresh(bypassThrottle = false): Promise<void> {
       }))
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') return
+      console.debug('[useKagentBackend] refresh failed:', error instanceof Error ? error.message : error)
       setSharedState(current => ({ ...current, hasPolled: true }))
     } finally {
       if (activeRefreshController === controller) {

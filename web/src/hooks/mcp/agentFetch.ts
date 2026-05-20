@@ -17,7 +17,7 @@ export function getLocalAgentURL(): string {
 export const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
 /** How long to remember that the backend returned no token (avoids repeated 5s timeouts). */
-const AGENT_TOKEN_NEGATIVE_CACHE_MS = 30_000
+const AGENT_TOKEN_NEGATIVE_CACHE_MS = 300_000
 
 let agentTokenPromise: Promise<string> | null = null
 /** Session-level dedup: only emit one agent_token_failure per page load */
@@ -47,7 +47,11 @@ export function _resetAgentTokenState(): void {
  * WebSocket connections open before token fetch completes (#13034).
  */
 export function getAgentToken(): Promise<string> {
-  if (isDemoMode() || isNetlifyDeployment || isLocalAgentSuppressed()) return Promise.resolve('')
+  if (isDemoMode() || isNetlifyDeployment || isLocalAgentSuppressed()) {
+    // Remove stale cached token so it doesn't leak into SSE/WS auth headers
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    return Promise.resolve('')
+  }
 
   const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   if (cached) return Promise.resolve(cached)

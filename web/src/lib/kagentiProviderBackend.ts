@@ -108,7 +108,11 @@ export async function fetchKagentiProviderStatus(options: { signal?: AbortSignal
       signal: getRequestSignal(KAGENTI_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return { available: false, reason: `HTTP ${resp.status}` }
-    return resp.json()
+    try {
+      return await resp.json()
+    } catch {
+      return { available: false, reason: 'invalid JSON response' }
+    }
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
@@ -128,8 +132,15 @@ export async function fetchKagentiProviderAgents(options: FetchKagentiProviderAg
       }
       return []
     }
-    const data = await resp.json()
-    return data.agents || []
+    try {
+      const data = await resp.json()
+      return data.agents || []
+    } catch {
+      if (options.throwOnUnavailable) {
+        throw new Error('invalid JSON response')
+      }
+      return []
+    }
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
@@ -201,7 +212,11 @@ export async function updateKagentiProviderConfig(payload: {
     throw new Error(message)
   }
 
-  return resp.json()
+  try {
+    return await resp.json()
+  } catch {
+    return {} as KagentiProviderConfigStatus
+  }
 }
 
 /**

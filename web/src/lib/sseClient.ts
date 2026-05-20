@@ -17,6 +17,9 @@ import { STORAGE_KEY_TOKEN } from './constants'
 import { emitSseAuthFailure } from './analytics'
 import { isDemoMode } from './demoMode'
 
+/** Session-level dedup: only emit SSE auth failure once per URL path per page load */
+const sseAuthFailureEmitted = new Set<string>()
+
 export interface SSEFetchOptions<T> {
   /** SSE endpoint URL path (e.g. `${LOCAL_AGENT_HTTP_URL}/pods/stream`) */
   url: string
@@ -76,6 +79,7 @@ export function clearSSECache(): void {
   resultCache.clear()
   inflightRequests.clear()
   inflightSubscribers.clear()
+  sseAuthFailureEmitted.clear()
 }
 
 /**
@@ -385,7 +389,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
             errorMessage.includes(String(statusCode)),
           )
           if (is401 && currentToken) {
-            emitSseAuthFailure(fullUrl)
+            const pathKey = fullUrl.replace(/\?.*$/, '')
+            if (!sseAuthFailureEmitted.has(pathKey)) {
+              sseAuthFailureEmitted.add(pathKey)
+              emitSseAuthFailure(fullUrl)
+            }
           }
           if (isNonRetryable) {
             console.debug('[SSE] Non-retryable error (endpoint unavailable or auth) — skipping retries')

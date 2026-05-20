@@ -34,7 +34,11 @@ export async function fetchKagentStatus(options: { signal?: AbortSignal } = {}):
       signal: getRequestSignal(KAGENT_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return { available: false, reason: `HTTP ${resp.status}` }
-    return resp.json()
+    try {
+      return await resp.json()
+    } catch {
+      return { available: false, reason: 'invalid JSON response' }
+    }
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
@@ -49,8 +53,12 @@ export async function fetchKagentAgents(options: { signal?: AbortSignal } = {}):
       signal: getRequestSignal(KAGENT_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return []
-    const data = await resp.json()
-    return data.agents || []
+    try {
+      const data = await resp.json()
+      return data.agents || []
+    } catch {
+      return []
+    }
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw error
