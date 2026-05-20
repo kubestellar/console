@@ -449,8 +449,6 @@ export function EventsPanel({
           solves={solves}
           onClose={() => setDetailNotification(null)}
           onAction={onAction}
-          onSolve={startSolve}
-          onDismiss={() => { void acknowledgeNotification(detailNotification.id) }}
         />
       )}
 
