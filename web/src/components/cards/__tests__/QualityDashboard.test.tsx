@@ -34,11 +34,11 @@ describe('QualityDashboard', () => {
       isLoading: true,
       isRefreshing: false,
       isDemoFallback: false,
-    } as any);
+    } as unknown as ReturnType<typeof useCachedData.useCachedQuality>);
 
     vi.mocked(CardDataContext.useCardLoadingState).mockReturnValue({
       showSkeleton: true,
-    } as any);
+    } as unknown as ReturnType<typeof CardDataContext.useCardLoadingState>);
 
     render(<QualityDashboard />);
     expect(screen.getByText('messages.checking')).toBeInTheDocument();
@@ -56,11 +56,11 @@ describe('QualityDashboard', () => {
       isLoading: false,
       isRefreshing: false,
       isDemoFallback: false,
-    } as any);
+    } as unknown as ReturnType<typeof useCachedData.useCachedQuality>);
 
     vi.mocked(CardDataContext.useCardLoadingState).mockReturnValue({
       showSkeleton: false,
-    } as any);
+    } as unknown as ReturnType<typeof CardDataContext.useCardLoadingState>);
 
     render(<QualityDashboard />);
     

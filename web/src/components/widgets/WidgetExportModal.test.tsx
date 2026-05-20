@@ -6,7 +6,7 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, defaultValueOrOptions?: string | Record<string, unknown>) =>
-      typeof defaultValueOrOptions === 'string' ? defaultValueOrOptions : (defaultValueOrOptions as any)?.defaultValue ?? key,
+      typeof defaultValueOrOptions === 'string' ? defaultValueOrOptions : (defaultValueOrOptions as unknown as Record<string, unknown>)?.defaultValue ?? key,
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }))

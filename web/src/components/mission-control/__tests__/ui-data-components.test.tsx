@@ -9,9 +9,9 @@ import type { PayloadProject } from '../types'
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props as React.HTMLAttributes<HTMLDivElement>}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
 
 // Mock useTranslation
@@ -202,7 +202,7 @@ describe('ClusterReadinessCard', () => {
   it('renders cluster info and capacity gauges', () => {
     render(
       <ClusterReadinessCard
-        cluster={mockCluster as any}
+        cluster={mockCluster as unknown as typeof mockCluster}
         onToggleProject={vi.fn()}
         availableProjects={['falco']}
         assignment={{
@@ -210,7 +210,7 @@ describe('ClusterReadinessCard', () => {
           projectNames: ['falco'],
           readiness: { overallScore: 85, cpuHeadroomPercent: 75, memHeadroomPercent: 75, storageHeadroomPercent: 100 },
           warnings: []
-        } as any}
+        } as unknown as any}
       />
     )
     
@@ -223,7 +223,7 @@ describe('ClusterReadinessCard', () => {
     const onToggle = vi.fn()
     render(
       <ClusterReadinessCard
-        cluster={mockCluster as any}
+        cluster={mockCluster as unknown as typeof mockCluster}
         onToggleProject={onToggle}
         availableProjects={['falco']}
         assignment={{
@@ -231,7 +231,7 @@ describe('ClusterReadinessCard', () => {
           projectNames: [],
           readiness: { overallScore: 85 },
           warnings: []
-        } as any}
+        } as unknown as any}
       />
     )
     
@@ -257,7 +257,7 @@ describe('FixerDefinitionPanel', () => {
   it('renders initial state correctly', () => {
     render(
       <FixerDefinitionPanel
-        state={mockState as any}
+        state={mockState as unknown as typeof mockState}
         onDescriptionChange={vi.fn()}
         onTitleChange={vi.fn()}
         onTargetClustersChange={vi.fn()}
@@ -280,7 +280,7 @@ describe('FixerDefinitionPanel', () => {
     const onAskAI = vi.fn()
     render(
       <FixerDefinitionPanel
-        state={mockState as any}
+        state={mockState as unknown as typeof mockState}
         onDescriptionChange={vi.fn()}
         onTitleChange={vi.fn()}
         onTargetClustersChange={vi.fn()}
@@ -301,7 +301,7 @@ describe('FixerDefinitionPanel', () => {
   it('shows AI streaming indicator when aiStreaming is true', () => {
     render(
       <FixerDefinitionPanel
-        state={mockState as any}
+        state={mockState as unknown as typeof mockState}
         onDescriptionChange={vi.fn()}
         onTitleChange={vi.fn()}
         onTargetClustersChange={vi.fn()}
@@ -310,7 +310,7 @@ describe('FixerDefinitionPanel', () => {
         onRemoveProject={vi.fn()}
         onUpdatePriority={vi.fn()}
         aiStreaming={true}
-        planningMission={{ status: 'running', messages: [] } as any}
+        planningMission={{ status: 'running', messages: [] } as unknown as any}
       />
     )
     

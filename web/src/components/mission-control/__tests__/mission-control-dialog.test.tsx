@@ -36,9 +36,9 @@ vi.mock('../../ui/Toast', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props as React.HTMLAttributes<HTMLDivElement>}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
 
 // Mock sub-panels to avoid deep rendering issues in integration test
@@ -77,7 +77,7 @@ describe('MissionControlDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useMissionControl).mockReturnValue(mockMC as any)
+    vi.mocked(useMissionControl).mockReturnValue(mockMC as unknown as ReturnType<typeof useMissionControl>)
   })
 
   it('renders nothing when closed', () => {
@@ -115,7 +115,7 @@ describe('MissionControlDialog', () => {
       ...mockMC,
       state: { ...mockMC.state, projects: [{ name: 'falco' }] }
     }
-    vi.mocked(useMissionControl).mockReturnValue(mcWithProjects as any)
+    vi.mocked(useMissionControl).mockReturnValue(mcWithProjects as unknown as ReturnType<typeof useMissionControl>)
 
     render(<MissionControlDialog open={true} onClose={vi.fn()} />)
 
@@ -152,7 +152,7 @@ describe('MissionControlDialog', () => {
       ...mockMC,
       staleClusterNames: ['old-cluster']
     }
-    vi.mocked(useMissionControl).mockReturnValue(mcWithStale as any)
+    vi.mocked(useMissionControl).mockReturnValue(mcWithStale as unknown as ReturnType<typeof useMissionControl>)
 
     render(<MissionControlDialog open={true} onClose={vi.fn()} />)
     
@@ -162,7 +162,7 @@ describe('MissionControlDialog', () => {
 
   it('hydrates state from reviewPlanEncoded', () => {
     const mockPlan = { title: 'Shared Plan', projects: [] }
-    vi.mocked(decodePlan).mockReturnValue(mockPlan as any)
+    vi.mocked(decodePlan).mockReturnValue(mockPlan as unknown as ReturnType<typeof decodePlan>)
 
     render(
       <MissionControlDialog 
@@ -190,7 +190,7 @@ describe('MissionControlDialog', () => {
       setPhase: vi.fn(),
       setDryRun: vi.fn(),
     }
-    vi.mocked(useMissionControl).mockReturnValue(mcBlueprint as any)
+    vi.mocked(useMissionControl).mockReturnValue(mcBlueprint as unknown as ReturnType<typeof useMissionControl>)
 
     render(<MissionControlDialog open={true} onClose={vi.fn()} />)
 
