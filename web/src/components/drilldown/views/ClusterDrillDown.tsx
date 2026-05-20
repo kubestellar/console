@@ -40,6 +40,15 @@ export function ClusterDrillDown({ data }: Props) {
   const [activeLens, setActiveLens] = useState<TreeLens>('all')
   const [activeTab, setActiveTab] = useState<ClusterTab>('events')
   const resourceTreeRef = useRef<HTMLDivElement>(null)
+  const resourceTreeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (resourceTreeTimeoutRef.current) {
+        clearTimeout(resourceTreeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   /**
    * Navigate to the Resource Tree tab with a given lens active.
@@ -59,8 +68,12 @@ export function ClusterDrillDown({ data }: Props) {
       return next
     })
     // Allow DOM to update before scrolling
-    setTimeout(() => {
+    if (resourceTreeTimeoutRef.current) {
+      clearTimeout(resourceTreeTimeoutRef.current)
+    }
+    resourceTreeTimeoutRef.current = setTimeout(() => {
       resourceTreeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      resourceTreeTimeoutRef.current = null
     }, SCROLL_AFTER_TAB_SWITCH_MS)
   }, [])
 
