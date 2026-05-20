@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
-import { Shield, ShieldAlert, ShieldCheck, Users, AlertTriangle } from 'lucide-react'
+import { Shield, ShieldAlert, ShieldCheck, Users, AlertTriangle, type LucideIcon } from 'lucide-react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { cn } from '../../lib/cn'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -43,7 +43,8 @@ const DEFAULT_SECURITY_CARDS = getDefaultCards('security')
 type ViewTab = 'overview' | 'issues' | 'rbac' | 'compliance'
 
 export function Security() {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t } = useTranslation('cards')
+  const { t: tc } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const {
@@ -385,26 +386,26 @@ export function Security() {
         <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 shrink-0" />
           <div className="flex-1">
-            <p className="font-medium">{t('cards:security.refreshFailed')}</p>
+            <p className="font-medium">{t('security.refreshFailed')}</p>
             <p className="text-sm text-red-300/80">{refreshError}</p>
           </div>
           <button
             onClick={handleRefresh}
             className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-medium transition-colors"
           >
-            {t('common:common.retry')}
+            {tc('common.retry')}
           </button>
         </div>
       )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
-        {[
-          { id: 'overview', label: t('cards:security.overview'), icon: Shield },
-          { id: 'issues', label: t('cards:security.issues'), icon: ShieldAlert, count: stats.total },
-          { id: 'rbac', label: t('cards:security.rbac'), icon: Users, count: stats.rbacTotal },
-          { id: 'compliance', label: t('cards:security.compliance'), icon: ShieldCheck },
-        ].map(tab => {
+        {([
+          { id: 'overview', label: t('security.overview'), icon: Shield },
+          { id: 'issues', label: t('security.issues'), icon: ShieldAlert, count: stats.total },
+          { id: 'rbac', label: t('security.rbac'), icon: Users, count: stats.rbacTotal },
+          { id: 'compliance', label: t('security.compliance'), icon: ShieldCheck },
+        ] as { id: string; label: string; icon: LucideIcon; count?: number }[]).map(tab => {
           const Icon = tab.icon
           return (
             <button
@@ -442,8 +443,8 @@ export function Security() {
 
   return (
     <DashboardPage
-      title={t('common:navigation.security')}
-      subtitle={t('cards:security.subtitle')}
+      title={tc('navigation.security')}
+      subtitle={t('security.subtitle')}
       icon="Shield"
       rightExtra={<RotatingTip page="security" />}
       storageKey={SECURITY_CARDS_KEY}
@@ -457,8 +458,8 @@ export function Security() {
       hasData={stats.total > 0 || securityIssues.length > 0}
       beforeCards={tabsSection}
       emptyState={{
-        title: t('cards:security.securityDashboard'),
-        description: t('cards:security.emptyDescription') }}
+        title: t('security.securityDashboard'),
+        description: t('security.emptyDescription') }}
     />
   )
 }

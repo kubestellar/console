@@ -15,7 +15,8 @@ interface SecurityRBACTabProps {
 }
 
 export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t } = useTranslation('cards')
+  const { t: tc } = useTranslation()
 
   return (
     <div className="space-y-6">
@@ -28,7 +29,7 @@ export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
             </div>
             <div>
               <div className="text-2xl font-bold text-foreground">{stats.rbacTotal}</div>
-              <div className="text-xs text-muted-foreground">{t('cards:security.totalBindings')}</div>
+              <div className="text-xs text-muted-foreground">{t('security.totalBindings')}</div>
             </div>
           </div>
         </div>
@@ -39,7 +40,7 @@ export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
             </div>
             <div>
               <div className="text-2xl font-bold text-red-400">{stats.rbacHighRisk}</div>
-              <div className="text-xs text-muted-foreground">{t('cards:security.highRisk')}</div>
+              <div className="text-xs text-muted-foreground">{t('security.highRisk')}</div>
             </div>
           </div>
         </div>
@@ -50,7 +51,7 @@ export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
             </div>
             <div>
               <div className="text-2xl font-bold text-yellow-400">{stats.rbacMedRisk}</div>
-              <div className="text-xs text-muted-foreground">{t('cards:security.mediumRisk')}</div>
+              <div className="text-xs text-muted-foreground">{t('security.mediumRisk')}</div>
             </div>
           </div>
         </div>
@@ -61,7 +62,7 @@ export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
             </div>
             <div>
               <div className="text-2xl font-bold text-green-400">{stats.rbacLowRisk}</div>
-              <div className="text-xs text-muted-foreground">{t('cards:security.lowRisk')}</div>
+              <div className="text-xs text-muted-foreground">{t('security.lowRisk')}</div>
             </div>
           </div>
         </div>
@@ -105,14 +106,14 @@ export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
                     binding.riskLevel === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
                     'bg-green-500/20 text-green-400'
                   )}>
-                    {binding.riskLevel} {t('cards:security.risk')}
+                    {binding.riskLevel} {t('security.risk')}
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded bg-card text-muted-foreground">
                     {binding.kind}
                   </span>
                 </div>
                 <div className="text-sm text-foreground mb-2">
-                  <span className="text-muted-foreground">{t('cards:security.subjects')}: </span>
+                  <span className="text-muted-foreground">{t('security.subjects')}: </span>
                   {binding.subjects.map((s, j) => (
                     <span key={j} className="inline-flex items-center gap-1 mr-2">
                       {(s.kind === 'User' || s.kind === 'Group') && <Users className="w-3 h-3" />}
@@ -129,13 +130,13 @@ export function SecurityRBACTab({ stats, filteredRBAC }: SecurityRBACTabProps) {
                   ))}
                   {binding.permissions.length > 5 && (
                     <span className="text-xs text-muted-foreground">
-                      +{binding.permissions.length - 5} {t('common:common.more').toLowerCase()}
+                      +{binding.permissions.length - 5} {tc('common.more').toLowerCase()}
                     </span>
                   )}
                 </div>
                 {binding.namespace && (
                   <div className="text-xs text-muted-foreground mt-2">
-                    {t('common:common.namespace')}: {binding.namespace}
+                    {tc('common.namespace')}: {binding.namespace}
                   </div>
                 )}
               </div>

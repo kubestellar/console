@@ -20,7 +20,8 @@ interface SecurityComplianceTabProps {
 }
 
 export function SecurityComplianceTab({ stats, complianceByCategory, handleRefresh }: SecurityComplianceTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t } = useTranslation('cards')
+  const { t: tc } = useTranslation()
 
   return (
     <div className="space-y-6">
@@ -50,24 +51,24 @@ export function SecurityComplianceTab({ stats, complianceByCategory, handleRefre
           </div>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-foreground">{t('cards:security.overallCompliance')}</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('security.overallCompliance')}</h3>
           <div className="flex gap-6 mt-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-green-400" />
               <span className="text-sm text-foreground">
-                {stats.compliancePassed} {t('cards:security.passed')}
+                {stats.compliancePassed} {t('security.passed')}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <ShieldX className="w-4 h-4 text-red-400" />
               <span className="text-sm text-foreground">
-                {stats.complianceFailed} {t('cards:security.failing')}
+                {stats.complianceFailed} {t('security.failing')}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-yellow-400" />
               <span className="text-sm text-foreground">
-                {stats.complianceWarnings} {t('cards:security.warnings')}
+                {stats.complianceWarnings} {t('security.warnings')}
               </span>
             </div>
           </div>
@@ -78,7 +79,7 @@ export function SecurityComplianceTab({ stats, complianceByCategory, handleRefre
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm text-foreground transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            {t('common:common.refresh')}
+            {tc('common.refresh')}
           </button>
         </div>
       </div>
@@ -89,7 +90,7 @@ export function SecurityComplianceTab({ stats, complianceByCategory, handleRefre
           <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
             {category}
             <span className="text-xs text-muted-foreground font-normal">
-              ({checks.filter(c => c.status === 'pass').length}/{checks.length} {t('cards:security.passing')})
+              ({checks.filter(c => c.status === 'pass').length}/{checks.length} {t('security.passing')})
             </span>
           </h3>
           <div className="space-y-2">

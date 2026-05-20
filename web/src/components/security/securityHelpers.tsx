@@ -36,11 +36,11 @@ export function typeIcon(type: string) {
 /** Human-readable label for a security issue type. */
 export function getTypeLabel(type: string, t: (key: string) => string): string {
   const labels: Record<string, string> = {
-    privileged: t('cards:security.privilegedContainers'),
-    root: t('cards:security.runAsRoot'),
-    hostNetwork: t('cards:security.hostNetwork'),
-    hostPID: t('cards:security.hostPID'),
-    noSecurityContext: t('cards:security.noSecurityContext'),
+    privileged: t('security.privilegedContainers'),
+    root: t('security.runAsRoot'),
+    hostNetwork: t('security.hostNetwork'),
+    hostPID: t('security.hostPID'),
+    noSecurityContext: t('security.noSecurityContext'),
   }
   return labels[type] || type
 }

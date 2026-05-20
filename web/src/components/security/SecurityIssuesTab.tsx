@@ -28,17 +28,18 @@ export function SecurityIssuesTab({
   selectedIssueType,
   setSelectedIssueType,
 }: SecurityIssuesTabProps) {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t } = useTranslation('cards')
+  const { t: tc } = useTranslation()
 
   return (
     <div className="space-y-6">
       {/* Severity Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { sev: 'all', label: t('cards:security.allIssues'), count: stats.total, color: 'text-foreground', bg: 'bg-card' },
-          { sev: 'high', label: t('cards:security.highLabel'), count: stats.high, color: 'text-red-400', bg: 'bg-red-500/20' },
-          { sev: 'medium', label: t('cards:security.mediumLabel'), count: stats.medium, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
-          { sev: 'low', label: t('cards:security.lowLabel'), count: stats.low, color: 'text-blue-400', bg: 'bg-blue-500/20' },
+          { sev: 'all', label: t('security.allIssues'), count: stats.total, color: 'text-foreground', bg: 'bg-card' },
+          { sev: 'high', label: t('security.highLabel'), count: stats.high, color: 'text-red-400', bg: 'bg-red-500/20' },
+          { sev: 'medium', label: t('security.mediumLabel'), count: stats.medium, color: 'text-yellow-400', bg: 'bg-yellow-500/20' },
+          { sev: 'low', label: t('security.lowLabel'), count: stats.low, color: 'text-blue-400', bg: 'bg-blue-500/20' },
         ].map(item => (
           <button
             key={item.sev}
@@ -58,7 +59,7 @@ export function SecurityIssuesTab({
 
       {/* Issue Type Quick Filters */}
       <div className="flex flex-wrap gap-2">
-        <span className="text-sm text-muted-foreground mr-2">{t('cards:security.filterByType')}</span>
+        <span className="text-sm text-muted-foreground mr-2">{t('security.filterByType')}</span>
         <button
           onClick={() => setSelectedIssueType(null)}
           className={cn(
@@ -66,7 +67,7 @@ export function SecurityIssuesTab({
             selectedIssueType === null ? 'bg-purple-500 text-white' : 'bg-card text-muted-foreground hover:text-foreground'
           )}
         >
-          {t('common:common.all')}
+          {tc('common.all')}
         </button>
         {Object.entries(stats.typeCounts).map(([type, count]) => (
           <button
@@ -86,8 +87,8 @@ export function SecurityIssuesTab({
       {filteredIssues.filter(i => selectedIssueType === null || i.type === selectedIssueType).length === 0 ? (
         <div className="text-center py-12">
           <ShieldCheck className="w-16 h-16 mx-auto mb-4 text-green-400 opacity-50" />
-          <p className="text-lg text-foreground">{t('cards:security.noIssuesFound')}</p>
-          <p className="text-sm text-muted-foreground">{t('cards:security.bestPractices')}</p>
+          <p className="text-lg text-foreground">{t('security.noIssuesFound')}</p>
+          <p className="text-sm text-muted-foreground">{t('security.bestPractices')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -118,7 +119,7 @@ export function SecurityIssuesTab({
                     </div>
                     <p className="text-sm text-foreground">{issue.message}</p>
                     <div className="text-xs text-muted-foreground mt-2">
-                      {t('common:common.namespace')}: {issue.namespace}
+                      {tc('common.namespace')}: {issue.namespace}
                     </div>
                   </div>
                 </div>
