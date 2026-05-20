@@ -967,6 +967,25 @@ func (s *SQLiteStore) migrate() error {
 					"migration", migration, "version", i+1)
 				continue
 			}
+			// #14974: UNIQUE INDEX creation can fail when existing rows
+			// have duplicate (user_id, dedupe_key) pairs after adding the
+			// dedupe_key column with DEFAULT ''. Fix the data and retry.
+			if strings.Contains(migration, "CREATE UNIQUE INDEX") &&
+				strings.Contains(err.Error(), "UNIQUE constraint failed") {
+				slog.Warn("[SQLite] deduplicating data before retrying unique index",
+					"migration", migration, "version", i+1)
+				if fixErr := s.deduplicateBeforeUniqueIndex(ctx, migration); fixErr != nil {
+					slog.Error("[SQLite] deduplication failed", "error", fixErr)
+					return fmt.Errorf("migration %d %q failed after dedup: %w", i+1, migration, err)
+				}
+				if _, retryErr := s.db.ExecContext(ctx, migration); retryErr != nil {
+					slog.Error("[SQLite] migration still fails after dedup",
+						"migration", migration, "error", retryErr)
+					return fmt.Errorf("migration %d %q failed: %w", i+1, migration, retryErr)
+				}
+				slog.Info("[SQLite] migration succeeded after deduplication", "version", i+1)
+				continue
+			}
 			slog.Error("[SQLite] migration failed — refusing to start",
 				"migration", migration, "version", i+1, "error", err)
 			return fmt.Errorf("migration %d %q failed: %w", i+1, migration, err)
@@ -995,6 +1014,28 @@ func (s *SQLiteStore) migrate() error {
 // Close closes the database connection
 func (s *SQLiteStore) Close() error {
 	return s.db.Close()
+}
+
+// deduplicateBeforeUniqueIndex fixes duplicate rows that prevent a UNIQUE INDEX
+// from being created. For the stellar_notifications dedupe_key scenario, it
+// assigns UUID-based dedupe_keys to rows with empty '' values that would
+// otherwise collide on (user_id, dedupe_key). (#14974)
+func (s *SQLiteStore) deduplicateBeforeUniqueIndex(ctx context.Context, migration string) error {
+	if strings.Contains(migration, "idx_stellar_notifications_user_dedupe") {
+		// Assign unique dedupe_key to all rows with empty dedupe_key.
+		// The ID column is already unique, so use it as the dedupe_key fallback.
+		res, err := s.db.ExecContext(ctx,
+			`UPDATE stellar_notifications SET dedupe_key = id WHERE dedupe_key = ''`)
+		if err != nil {
+			return fmt.Errorf("fix empty dedupe_keys: %w", err)
+		}
+		if n, _ := res.RowsAffected(); n > 0 {
+			slog.Info("[SQLite] assigned dedupe_key to rows with empty value", "count", n)
+		}
+		return nil
+	}
+	// Generic case: if other unique indexes fail, log and return error.
+	return fmt.Errorf("no deduplication strategy for: %s", migration)
 }
 
 // Shared helper functions
