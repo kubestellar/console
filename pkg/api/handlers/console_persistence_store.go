@@ -348,6 +348,8 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 	}
 }
 
+const maxStatusHistory = 100
+
 // setTerminalStatus sets the deployment to a terminal phase (Complete/Failed),
 // records a completion timestamp and a history entry, then persists the status.
 func (h *ConsolePersistenceHandlers) setTerminalStatus(
@@ -374,6 +376,11 @@ func (h *ConsolePersistenceHandlers) setTerminalStatus(
 		Phase:       phase,
 		Message:     message,
 	})
+
+	// Cap history to prevent unbounded growth (#15022)
+	if len(wd.Status.History) > maxStatusHistory {
+		wd.Status.History = wd.Status.History[len(wd.Status.History)-maxStatusHistory:]
+	}
 
 	slog.Info("[reconcile] deployment reached terminal state",
 		"name", wd.Name, "phase", phase, "message", message)
