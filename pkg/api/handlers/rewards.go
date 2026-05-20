@@ -22,12 +22,15 @@ import (
 
 // Point values for GitHub contributions
 const (
-	rewardsCacheTTL         = 10 * time.Minute
-	rewardsPerPage          = 100              // GitHub max per page
-	rewardsMaxPages         = 100              // REST Issues API supports up to 10,000 per repo
-	rewardsMaxItems         = 10_000           // Hard cap on total items across all pages
-	maxRewardsResponseBytes = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
-	maxRewardsTotalItems    = 10_000           // Hard cap on total items across all repos
+	rewardsCacheTTL              = 10 * time.Minute
+	rewardsPerPage               = 100              // GitHub max per page
+	rewardsMaxPages              = 100              // REST Issues API supports up to 10,000 per repo
+	rewardsMaxItems              = 10_000           // Hard cap on total items across all pages
+	maxRewardsResponseBytes      = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
+	maxRewardsTotalItems         = 10_000           // Hard cap on total items across all repos
+	rewardsGitHubAPITimeout      = 30 * time.Second
+	estimatedRewardsItemsCap     = rewardsPerPage * 4
+	estimatedRewardsPageItemsCap = rewardsPerPage
 )
 
 // RewardsConfig holds configuration for the rewards handler.
@@ -270,40 +273,47 @@ type searchPRRef struct {
 // time are returned. Items created before sinceISO are filtered out
 // client-side (the API's `since` param filters by updated_at, not created_at).
 func (h *RewardsHandler) listRepoItems(ctx context.Context, repo, login, sinceISO, token string) ([]searchItem, error) {
-	allItems := make([]searchItem, 0, rewardsPerPage)
+	allItems := make([]searchItem, 0, estimatedRewardsItemsCap)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
 		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=all&per_page=%d&page=%d&sort=created&direction=desc&since=%s",
 			repo, rewardsPerPage, page, sinceISO)
 
-		req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
-		if err != nil {
-			return allItems, fmt.Errorf("create request: %w", err)
-		}
-		req.Header.Set("Accept", "application/vnd.github.v3+json")
-		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
-		}
+		body, statusCode, err := func() ([]byte, int, error) {
+			requestCtx, cancel := context.WithTimeout(ctx, rewardsGitHubAPITimeout)
+			defer cancel()
 
-		resp, err := h.httpClient.Do(req)
-		if err != nil {
-			return allItems, fmt.Errorf("execute request: %w", err)
-		}
+			req, err := http.NewRequestWithContext(requestCtx, "GET", apiURL, nil)
+			if err != nil {
+				return nil, 0, fmt.Errorf("create request: %w", err)
+			}
+			req.Header.Set("Accept", "application/vnd.github.v3+json")
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
 
-		body, err := func() ([]byte, error) {
+			resp, err := h.httpClient.Do(req)
+			if err != nil {
+				return nil, 0, fmt.Errorf("execute request: %w", err)
+			}
 			defer resp.Body.Close()
-			return io.ReadAll(io.LimitReader(resp.Body, maxRewardsResponseBytes))
+
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxRewardsResponseBytes))
+			if err != nil {
+				return nil, 0, fmt.Errorf("read body: %w", err)
+			}
+
+			return body, resp.StatusCode, nil
 		}()
-
 		if err != nil {
-			return allItems, fmt.Errorf("read body: %w", err)
+			return allItems, err
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			return allItems, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body[:min(len(body), 200)]))
+		if statusCode != http.StatusOK {
+			return allItems, fmt.Errorf("GitHub API returned %d: %s", statusCode, string(body[:min(len(body), 200)]))
 		}
 
-		pageItems := make([]searchItem, 0)
+		pageItems := make([]searchItem, 0, estimatedRewardsPageItemsCap)
 		if err := json.Unmarshal(body, &pageItems); err != nil {
 			return allItems, fmt.Errorf("unmarshal: %w", err)
 		}
