@@ -36,6 +36,11 @@ type GitHubPR struct {
 	MergedAt *time.Time `json:"merged_at"`
 }
 
+// notifyUpstream creates the GitHub issue and returns issue details.
+func (h *FeedbackHandler) notifyUpstream(ctx context.Context, request *models.FeatureRequest, user *models.User, targetRepoName string, input *models.CreateFeatureRequestInput, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
+	return h.createGitHubIssueInRepo(ctx, request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, input.ParentIssueNumber, clientAuth)
+}
+
 // resolveRepoName returns the GitHub repo name for the given target repo.
 func (h *FeedbackHandler) resolveRepoName(target models.TargetRepo) string {
 	if target == models.TargetRepoDocs {
@@ -512,4 +517,114 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(ctx context.Context, githubL
 	}
 
 	return filtered, nil
+}
+
+// CheckPreviewStatus checks the Netlify deploy preview status for a PR on-demand.
+// Uses GitHub Deployments API to find the actual preview URL — only returns "ready"
+// when the deploy has succeeded. This avoids showing "Preview Available" prematurely.
+func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
+	prNumber, err := strconv.Atoi(c.Params("pr_number"))
+	if err != nil || prNumber <= 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid PR number")
+	}
+
+	if h.getEffectiveToken() == "" {
+		return c.JSON(fiber.Map{"status": "unavailable", "message": "GitHub not configured"})
+	}
+
+	// Reuse the shared package-level client (connection pooling, keep-alive).
+	// Previously a new client was created per request which defeated pooling.
+	client := h.httpClient
+
+	// Query GitHub Deployments API for the Netlify deploy preview environment.
+	// Honor GITHUB_URL for GitHub Enterprise deployments.
+	envName := fmt.Sprintf("deploy-preview-%d", prNumber)
+	apiBase := resolveGitHubAPIBase()
+	deploymentsURL := fmt.Sprintf("%s/repos/%s/%s/deployments?environment=%s&per_page=1",
+		apiBase, h.repoOwner, h.repoName, envName)
+
+	// #9901: propagate request context so client disconnect cancels the outbound
+	// call. Layer WithTimeout on top so the original deadline still applies.
+	ctx, cancel := context.WithTimeout(c.UserContext(), githubAPITimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "GET", deploymentsURL, nil)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
+	}
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Failed to reach GitHub API"})
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub API returned %d", resp.StatusCode)})
+	}
+
+	var deployments []struct {
+		ID int `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&deployments); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to parse deployments"})
+	}
+
+	if len(deployments) == 0 {
+		return c.JSON(fiber.Map{"status": "pending", "message": "No deployment found yet"})
+	}
+
+	// Fetch the latest status for this deployment
+	statusesURL := fmt.Sprintf("%s/repos/%s/%s/deployments/%d/statuses?per_page=1",
+		apiBase, h.repoOwner, h.repoName, deployments[0].ID)
+
+	// #9901: reuse the same request-scoped context for the follow-up call.
+	ctx2, cancel2 := context.WithTimeout(c.UserContext(), githubAPITimeout)
+	defer cancel2()
+
+	req2, err := http.NewRequestWithContext(ctx2, "GET", statusesURL, nil)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create status request")
+	}
+	req2.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req2.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp2, err := client.Do(req2)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Failed to fetch deployment status"})
+	}
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode != http.StatusOK {
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub status API returned %d", resp2.StatusCode)})
+	}
+
+	var statuses []struct {
+		State     string `json:"state"`
+		TargetURL string `json:"target_url"`
+		CreatedAt string `json:"created_at"`
+	}
+	if err := json.NewDecoder(resp2.Body).Decode(&statuses); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to parse deployment statuses"})
+	}
+
+	if len(statuses) == 0 {
+		return c.JSON(fiber.Map{"status": "pending", "message": "Deployment in progress"})
+	}
+
+	latestStatus := statuses[0]
+	if latestStatus.State == "success" && latestStatus.TargetURL != "" {
+		return c.JSON(fiber.Map{
+			"status":      "ready",
+			"preview_url": latestStatus.TargetURL,
+			"ready_at":    latestStatus.CreatedAt,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status":  latestStatus.State,
+		"message": fmt.Sprintf("Deploy status: %s", latestStatus.State),
+	})
 }

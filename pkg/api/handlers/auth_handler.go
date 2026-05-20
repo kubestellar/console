@@ -2,28 +2,21 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
-	"net"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
-
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/safego"
-
-	"golang.org/x/oauth2"
-
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
+	"golang.org/x/oauth2"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
 
 // bearerPrefix is the standard "Bearer " prefix in Authorization headers.
@@ -32,70 +25,6 @@ const bearerPrefix = "Bearer "
 // bearerPrefixLen is the length of the "Bearer " prefix (7 bytes).
 // Used to safely slice Authorization headers after validating the prefix.
 const bearerPrefixLen = len(bearerPrefix)
-
-const (
-	// oauthStateExpiration is how long an OAuth state token remains valid.
-	oauthStateExpiration = 10 * time.Minute
-	// oauthStateCleanupInterval is how often the background goroutine sweeps
-	// for expired OAuth state entries in the persistent store.
-	oauthStateCleanupInterval = 5 * time.Minute
-	// jwtExpiration is the lifetime of issued JWT tokens.
-	// Set to 7 days — the auth middleware signals clients to silently refresh
-	// after 50% of the lifetime (3.5 days) via the X-Token-Refresh header,
-	// so users rarely see session-expired redirects.
-	jwtExpiration = 168 * time.Hour
-	// githubHTTPTimeout is the timeout for HTTP requests to the GitHub API during auth.
-	githubHTTPTimeout = 10 * time.Second
-	// defaultOAuthCallbackURL is the fallback OAuth callback when no backend URL is configured.
-	defaultOAuthCallbackURL = "http://localhost:8080/auth/github/callback"
-	// localBootstrapAdminUserCount is the maximum number of known users allowed
-	// when auto-promoting the first localhost user to admin.
-	localBootstrapAdminUserCount = 1
-)
-
-// storeOAuthState persists an OAuth CSRF state token in the backing store.
-//
-// Previously this lived in an in-process map, which meant a backend restart
-// between /auth/login and /auth/callback would drop every in-flight OAuth
-// flow and surface as `csrf_validation_failed` to users (issue #6028). The
-// persistent store makes OAuth flows resilient across restarts, as long as
-// the user completes the flow within oauthStateExpiration.
-func (h *AuthHandler) storeOAuthState(ctx context.Context, state string) error {
-	return h.store.StoreOAuthState(ctx, state, oauthStateExpiration)
-}
-
-// validateAndConsumeOAuthState atomically looks up and deletes an OAuth state
-// token. Returns true only when the state was found, had not expired, and was
-// successfully consumed (single-use). Returns false on any error or miss so
-// callers can respond with a generic csrf_validation_failed without leaking
-// details.
-// #6613: pass the request context so a browser disconnect or callback
-// deadline aborts the BEGIN IMMEDIATE transaction in the store instead of
-// running to completion with a dangling context.Background().
-func (h *AuthHandler) validateAndConsumeOAuthState(ctx context.Context, state string) bool {
-	ok, err := h.store.ConsumeOAuthState(ctx, state)
-	if err != nil {
-		slog.Error("[Auth] failed to consume OAuth state", "error", err)
-		return false
-	}
-	return ok
-}
-
-// isLocalhostURL returns true if the given URL points to a loopback address
-// (localhost, 127.x.x.x, or [::1]). Used to decide whether the localhost
-// OAuth callback fallback is appropriate.
-func isLocalhostURL(rawURL string) bool {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return false
-	}
-	host := u.Hostname()
-	if host == "localhost" {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
-}
 
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
@@ -223,86 +152,6 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	return h
 }
 
-// Stop tears down any background goroutines started by the AuthHandler
-// (currently just the OAuth state cleanup ticker). Tests should call this
-// via t.Cleanup so each test exits without leaking the cleanup goroutine.
-// Production code does not need to call Stop — the goroutine intentionally
-// runs for the lifetime of the process.
-func (h *AuthHandler) Stop() {
-	if h.cleanupCancel != nil {
-		h.cleanupCancel()
-	}
-}
-
-// maybePromoteLocalBootstrapAdmin grants admin to the first localhost OAuth
-// user so fresh self-hosted installs have an operator who can manage settings.
-func (h *AuthHandler) maybePromoteLocalBootstrapAdmin(ctx context.Context, user *models.User) {
-	if h.store == nil || user == nil || !isLocalhostURL(h.frontendURL) {
-		return
-	}
-	if user.Role == models.UserRoleAdmin {
-		return
-	}
-
-	admins, editors, viewers, err := h.store.CountUsersByRole(ctx)
-	if err != nil {
-		slog.Warn("[Auth] failed to count users for localhost admin bootstrap", "user", user.GitHubLogin, "error", err)
-		return
-	}
-	if admins > 0 {
-		return
-	}
-	if admins+editors+viewers != localBootstrapAdminUserCount {
-		return
-	}
-	if err := h.store.UpdateUserRole(ctx, user.ID, string(models.UserRoleAdmin)); err != nil {
-		slog.Warn("[Auth] failed to promote localhost bootstrap admin", "user", user.GitHubLogin, "error", err)
-		return
-	}
-
-	user.Role = models.UserRoleAdmin
-	slog.Info("[Auth] promoted localhost bootstrap user to admin", "user", user.GitHubLogin)
-}
-
-// runOAuthStateCleanup ticks every oauthStateCleanupInterval and removes
-// expired OAuth state rows. It exits when the cleanup context is cancelled
-// (via Stop) so tests do not leak the goroutine across t.Run boundaries.
-func (h *AuthHandler) runOAuthStateCleanup() {
-	ticker := time.NewTicker(oauthStateCleanupInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-h.cleanupCtx.Done():
-			return
-		case <-ticker.C:
-			if _, err := h.store.CleanupExpiredOAuthStates(h.cleanupCtx); err != nil {
-				slog.Warn("[Auth] OAuth state cleanup failed", "error", err)
-			}
-		}
-	}
-}
-
-// SetHub wires the WebSocket hub into the auth handler so that logout
-// can disconnect all active WebSocket sessions for the user (#4906).
-func (h *AuthHandler) SetHub(hub SessionDisconnecter) {
-	h.wsHub = hub
-}
-
-const (
-	// jwtCookieName is the HttpOnly cookie that carries the JWT.
-	jwtCookieName = "kc_auth"
-	// maxOAuthErrorDescriptionLen bounds the length of an OAuth
-	// error_description value reflected into a redirect URL (#6583).
-	maxOAuthErrorDescriptionLen = 200
-)
-
-// #6589 — Previously this file declared oauth_state cookie constants that
-// were never referenced; the CSRF state flow uses the persistent store
-// (storeOAuthState / validateAndConsumeOAuthState), not a browser cookie.
-// The dead constants have been removed. If a future refactor reintroduces
-// cookie-backed state, add the constants AND the code that reads them in
-// the same change.
-
 // GitHubLogin initiates GitHub OAuth flow
 func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 	// Bypass OAuth only when no client ID is configured (true dev/demo mode).
@@ -429,122 +278,6 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-store")
 	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t", h.frontendURL, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
-}
-
-// hasValidAuthCookie reports whether the incoming request carries a kc_auth
-// cookie that parses as a non-expired, non-revoked JWT under the handler's
-// signing secret. It is used by GitHubCallback (#6064) to recover from CSRF
-// state-validation failures when the user is already authenticated: a stale
-// OAuth tab, a browser back-button replay, or a server restart that cleared
-// the in-memory state store should not force a user with a live session
-// back through the login flow. Any parse error, validity failure, missing
-// claims, or revocation check failure causes this helper to return false so
-// the caller falls through to the normal error path.
-func (h *AuthHandler) hasValidAuthCookie(c *fiber.Ctx) bool {
-	cookieToken := c.Cookies(jwtCookieName)
-	if cookieToken == "" {
-		return false
-	}
-	parsed, err := middleware.ParseJWT(cookieToken, h.jwtSecret)
-	if err != nil || parsed == nil || !parsed.Valid {
-		return false
-	}
-	claims, ok := parsed.Claims.(*middleware.UserClaims)
-	if !ok {
-		return false
-	}
-	if claims.ID != "" && middleware.IsTokenRevoked(claims.ID) {
-		return false
-	}
-	return true
-}
-
-// sanitizeOAuthErrorDescription scrubs an externally-supplied OAuth error
-// description before it is reflected into a user-visible redirect URL
-// (#6583). GitHub's error_description is an attacker-influenceable string
-// (malicious OAuth apps could craft arbitrary content, and users could
-// forge the value by visiting a hand-crafted callback URL). Unsanitized
-// reflection enables:
-//   - header injection via embedded CR/LF,
-//   - long-URL / log-flooding attacks,
-//   - phishing copy injected into the login page.
-//
-// The sanitizer strips control characters, collapses whitespace, limits
-// length to maxOAuthErrorDescriptionLen, and returns only ASCII printable
-// plus space. Callers should still HTML-escape at render time.
-func sanitizeOAuthErrorDescription(raw string) string {
-	if raw == "" {
-		return ""
-	}
-	var b strings.Builder
-	b.Grow(len(raw))
-	for _, r := range raw {
-		// Allow only printable ASCII plus space. Reject CR, LF, tab, NUL,
-		// and anything non-ASCII (which could confuse URL parsers or be
-		// used for homograph tricks in error pages).
-		if r >= 0x20 && r < 0x7f {
-			b.WriteRune(r)
-		} else {
-			b.WriteRune(' ')
-		}
-		if b.Len() >= maxOAuthErrorDescriptionLen {
-			break
-		}
-	}
-	out := strings.TrimSpace(b.String())
-	if len(out) > maxOAuthErrorDescriptionLen {
-		out = out[:maxOAuthErrorDescriptionLen]
-	}
-	return out
-}
-
-// oauthErrorRedirect builds a redirect URL to the login page with a structured error.
-// The error code is always present; detail is optional human-readable context.
-// Any attacker-influenceable detail MUST be passed through
-// sanitizeOAuthErrorDescription before reaching this function (#6583).
-func (h *AuthHandler) oauthErrorRedirect(c *fiber.Ctx, errorCode, detail string) error {
-	// Record auth failure for progressive rate-limit escalation (#8676 Phase 2).
-	if tracker, ok := c.Locals("failureTracker").(*middleware.FailureTracker); ok {
-		tracker.RecordFailure(c.IP())
-	}
-	q := url.Values{"error": {errorCode}}
-	if detail != "" {
-		q.Set("error_detail", detail)
-	}
-	c.Set("Cache-Control", "no-store")
-	return c.Redirect(h.frontendURL+"/login?"+q.Encode(), fiber.StatusTemporaryRedirect)
-}
-
-// classifyExchangeError inspects a token-exchange error and returns a specific
-// error code plus a short description suitable for logging and the frontend.
-// Enhanced in #14850 to provide clearer guidance when OAuth credentials are invalid.
-func classifyExchangeError(err error) (code, detail string) {
-	msg := err.Error()
-
-	// Network-level failures (DNS, TCP, TLS)
-	var netErr net.Error
-	if ok := errors.As(err, &netErr); ok {
-		if netErr.Timeout() {
-			return "network_error", "Request to GitHub timed out — check your internet connection"
-		}
-		return "network_error", "Could not reach GitHub — check your internet connection or firewall"
-	}
-
-	// oauth2 wraps the HTTP response body when GitHub returns a non-200.
-	// Common patterns from GitHub's OAuth error responses:
-	lower := strings.ToLower(msg)
-	switch {
-	case strings.Contains(lower, "incorrect_client_credentials") ||
-		strings.Contains(lower, "client_id") ||
-		strings.Contains(lower, "invalid_client"):
-		return "invalid_client", "GitHub OAuth failed: invalid client credentials. Verify GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in your .env file match your GitHub OAuth App settings at https://github.com/settings/developers"
-	case strings.Contains(lower, "redirect_uri_mismatch"):
-		return "redirect_mismatch", "The callback URL does not match the one registered in GitHub OAuth app settings. Expected: the callback URL in your .env to match the one at https://github.com/settings/developers"
-	case strings.Contains(lower, "bad_verification_code"):
-		return "exchange_failed", "Authorization code expired or was already used — please try logging in again"
-	default:
-		return "exchange_failed", "Token exchange failed — please try logging in again. If this persists, verify your GitHub OAuth App credentials."
-	}
 }
 
 // GitHubCallback handles the OAuth callback
@@ -879,156 +612,4 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		"refreshed": true,
 		"onboarded": user.Onboarded,
 	})
-}
-
-// GitHubUser represents a GitHub user
-type GitHubUser struct {
-	ID        int    `json:"id"`
-	Login     string `json:"login"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatar_url"`
-}
-
-func (h *AuthHandler) getGitHubUser(ctx context.Context, accessToken string) (*GitHubUser, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", h.githubAPIBase+"/user", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	// #6582 — reuse the handler-scoped HTTP client rather than creating a
-	// fresh one per call. Creating a new client per request defeats
-	// connection reuse and leaks idle TCP connections under load.
-	resp, err := h.githubHTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
-	}
-
-	var user GitHubUser
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return nil, err
-	}
-
-	// GET /user only returns the user's public email (empty if not set).
-	// Fall back to GET /user/emails (requires user:email scope) to find
-	// the primary verified email address.
-	if user.Email == "" {
-		if email, err := h.getGitHubPrimaryEmail(ctx, accessToken); err == nil {
-			user.Email = email
-		}
-	}
-
-	return &user, nil
-}
-
-// gitHubEmail represents one entry from GitHub's GET /user/emails response.
-type gitHubEmail struct {
-	Email    string `json:"email"`
-	Primary  bool   `json:"primary"`
-	Verified bool   `json:"verified"`
-}
-
-// getGitHubPrimaryEmail fetches the user's primary verified email via
-// GET /user/emails (requires the user:email OAuth scope).
-func (h *AuthHandler) getGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", h.githubAPIBase+"/user/emails", nil)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	// #6582 — reuse the shared HTTP client (see getGitHubUser above).
-	resp, err := h.githubHTTPClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub emails API returned %d", resp.StatusCode)
-	}
-
-	emails := make([]gitHubEmail, 0)
-	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
-		return "", err
-	}
-
-	// Return the primary verified email; fall back to first verified email.
-	var firstVerified string
-	for _, e := range emails {
-		if e.Primary && e.Verified {
-			return e.Email, nil
-		}
-		if e.Verified && firstVerified == "" {
-			firstVerified = e.Email
-		}
-	}
-
-	if firstVerified != "" {
-		return firstVerified, nil
-	}
-
-	return "", fmt.Errorf("no verified email found")
-}
-
-// setJWTCookie sets an HttpOnly cookie carrying the JWT token.
-// The cookie is Secure when the frontend URL uses HTTPS and uses
-// SameSite=Strict (#6588): the cookie must NEVER be attached to a request
-// initiated by another origin, including top-level navigations. The OAuth
-// callback is handled by our own backend, which then redirects back to
-// the frontend via 307 — the final navigation is same-origin from the
-// browser's perspective once the redirect lands on the frontend URL, so
-// Strict does not break the OAuth flow. Previously the cookie used
-// SameSite=Lax, which allowed cross-origin top-level POSTs to carry the
-// cookie and enabled CSRF on mutating endpoints.
-func (h *AuthHandler) setJWTCookie(c *fiber.Ctx, token string) {
-	secure := strings.HasPrefix(h.frontendURL, "https://")
-	c.Cookie(&fiber.Cookie{
-		Name:     jwtCookieName,
-		Value:    token,
-		Path:     "/",
-		MaxAge:   int(jwtExpiration.Seconds()),
-		HTTPOnly: true,
-		Secure:   secure,
-		SameSite: "Strict",
-	})
-}
-
-// clearJWTCookie removes the JWT HttpOnly cookie.
-func (h *AuthHandler) clearJWTCookie(c *fiber.Ctx) {
-	secure := strings.HasPrefix(h.frontendURL, "https://")
-	c.Cookie(&fiber.Cookie{
-		Name:     jwtCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HTTPOnly: true,
-		Secure:   secure,
-		SameSite: "Strict",
-	})
-}
-
-func (h *AuthHandler) generateJWT(user *models.User) (string, error) {
-	claims := middleware.UserClaims{
-		UserID:      user.ID,
-		GitHubLogin: user.GitHubLogin,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        uuid.New().String(), // jti — unique token identifier for revocation
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtExpiration)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Subject:   user.ID.String(),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(h.jwtSecret))
 }

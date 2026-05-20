@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -221,11 +219,6 @@ func (h *FeedbackHandler) persistRequest(ctx context.Context, userID uuid.UUID, 
 	}
 
 	return request, nil
-}
-
-// notifyUpstream creates the GitHub issue and returns issue details.
-func (h *FeedbackHandler) notifyUpstream(ctx context.Context, request *models.FeatureRequest, user *models.User, targetRepoName string, input *models.CreateFeatureRequestInput, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
-	return h.createGitHubIssueInRepo(ctx, request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, input.ParentIssueNumber, clientAuth)
 }
 
 func (h *FeedbackHandler) GetIssueLinkCapabilities(c *fiber.Ctx) error {
@@ -560,116 +553,6 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 		return c.JSON(queueItemCounts)
 	}
 	return c.JSON(queueItems)
-}
-
-// CheckPreviewStatus checks the Netlify deploy preview status for a PR on-demand.
-// Uses GitHub Deployments API to find the actual preview URL — only returns "ready"
-// when the deploy has succeeded. This avoids showing "Preview Available" prematurely.
-func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
-	prNumber, err := strconv.Atoi(c.Params("pr_number"))
-	if err != nil || prNumber <= 0 {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid PR number")
-	}
-
-	if h.getEffectiveToken() == "" {
-		return c.JSON(fiber.Map{"status": "unavailable", "message": "GitHub not configured"})
-	}
-
-	// Reuse the shared package-level client (connection pooling, keep-alive).
-	// Previously a new client was created per request which defeated pooling.
-	client := h.httpClient
-
-	// Query GitHub Deployments API for the Netlify deploy preview environment.
-	// Honor GITHUB_URL for GitHub Enterprise deployments.
-	envName := fmt.Sprintf("deploy-preview-%d", prNumber)
-	apiBase := resolveGitHubAPIBase()
-	deploymentsURL := fmt.Sprintf("%s/repos/%s/%s/deployments?environment=%s&per_page=1",
-		apiBase, h.repoOwner, h.repoName, envName)
-
-	// #9901: propagate request context so client disconnect cancels the outbound
-	// call. Layer WithTimeout on top so the original deadline still applies.
-	ctx, cancel := context.WithTimeout(c.UserContext(), githubAPITimeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, "GET", deploymentsURL, nil)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
-	}
-	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Failed to reach GitHub API"})
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub API returned %d", resp.StatusCode)})
-	}
-
-	var deployments []struct {
-		ID int `json:"id"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&deployments); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to parse deployments"})
-	}
-
-	if len(deployments) == 0 {
-		return c.JSON(fiber.Map{"status": "pending", "message": "No deployment found yet"})
-	}
-
-	// Fetch the latest status for this deployment
-	statusesURL := fmt.Sprintf("%s/repos/%s/%s/deployments/%d/statuses?per_page=1",
-		apiBase, h.repoOwner, h.repoName, deployments[0].ID)
-
-	// #9901: reuse the same request-scoped context for the follow-up call.
-	ctx2, cancel2 := context.WithTimeout(c.UserContext(), githubAPITimeout)
-	defer cancel2()
-
-	req2, err := http.NewRequestWithContext(ctx2, "GET", statusesURL, nil)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create status request")
-	}
-	req2.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
-	req2.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp2, err := client.Do(req2)
-	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": "Failed to fetch deployment status"})
-	}
-	defer resp2.Body.Close()
-
-	if resp2.StatusCode != http.StatusOK {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"status": "error", "message": fmt.Sprintf("GitHub status API returned %d", resp2.StatusCode)})
-	}
-
-	var statuses []struct {
-		State     string `json:"state"`
-		TargetURL string `json:"target_url"`
-		CreatedAt string `json:"created_at"`
-	}
-	if err := json.NewDecoder(resp2.Body).Decode(&statuses); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"status": "error", "message": "Failed to parse deployment statuses"})
-	}
-
-	if len(statuses) == 0 {
-		return c.JSON(fiber.Map{"status": "pending", "message": "Deployment in progress"})
-	}
-
-	latestStatus := statuses[0]
-	if latestStatus.State == "success" && latestStatus.TargetURL != "" {
-		return c.JSON(fiber.Map{
-			"status":      "ready",
-			"preview_url": latestStatus.TargetURL,
-			"ready_at":    latestStatus.CreatedAt,
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"status":  latestStatus.State,
-		"message": fmt.Sprintf("Deploy status: %s", latestStatus.State),
-	})
 }
 
 // listLocalFeatureRequests falls back to local database when GitHub is unavailable.
@@ -1082,89 +965,4 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(feedback)
-}
-
-// GetNotifications returns the user's notifications
-func (h *FeedbackHandler) GetNotifications(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	if userID == uuid.Nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
-	}
-
-	limit := c.QueryInt("limit", 50)
-	if limit > 100 {
-		limit = 100
-	}
-	// #6291: a caller passing limit<=0 previously returned 0 rows (SQLite
-	// treats LIMIT 0 as zero rows). After #6286 added clampLimit(limit)
-	// to the store, limit=0 would return 1 row instead — a silent
-	// semantic change. Treat any non-positive value as "use default" so
-	// the handler contract is preserved.
-	if limit <= 0 {
-		limit = 50
-	}
-
-	notifications, err := h.store.GetUserNotifications(c.UserContext(), userID, limit)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get notifications")
-	}
-
-	if notifications == nil {
-		notifications = []models.Notification{}
-	}
-
-	return c.JSON(notifications)
-}
-
-// GetUnreadCount returns the count of unread notifications
-func (h *FeedbackHandler) GetUnreadCount(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	if userID == uuid.Nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
-	}
-
-	count, err := h.store.GetUnreadNotificationCount(c.UserContext(), userID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get unread count")
-	}
-
-	return c.JSON(fiber.Map{"count": count})
-}
-
-// MarkNotificationRead marks a notification as read
-func (h *FeedbackHandler) MarkNotificationRead(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	if userID == uuid.Nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
-	}
-	notificationID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Invalid notification ID")
-	}
-
-	// Mark the notification as read, verifying ownership in a single query.
-	// The store returns an error containing "not found" when the notification
-	// does not exist or is not owned by the caller.
-	if err := h.store.MarkNotificationReadByUser(c.UserContext(), notificationID, userID); err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fiber.NewError(fiber.StatusNotFound, "Notification not found")
-		}
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to mark notification read")
-	}
-
-	return c.JSON(fiber.Map{"success": true})
-}
-
-// MarkAllNotificationsRead marks all notifications as read
-func (h *FeedbackHandler) MarkAllNotificationsRead(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	if userID == uuid.Nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
-	}
-
-	if err := h.store.MarkAllNotificationsRead(c.UserContext(), userID); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to mark all notifications read")
-	}
-
-	return c.JSON(fiber.Map{"success": true})
 }
