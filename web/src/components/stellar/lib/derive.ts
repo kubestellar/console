@@ -14,6 +14,8 @@ export interface SolveStatus {
   phase: 'investigating' | 'root_cause' | 'solving' | 'resolved' | 'resolved_monitored' | 'escalated' | 'exhausted' | 'unknown'
   /** When phase is 'resolved_monitored', the timestamp of the next recheck. */
   nextRecheckAt?: number
+  /** When phase is 'resolved_monitored', the workload or resource being monitored. */
+  monitoringTarget?: string
 }
 
 /** Map a backend phase string to a (label, color, percent) tuple. The
@@ -174,7 +176,8 @@ export function getSolveStatus(
     const d = describePhase(live.step, live.message)
     const percent = typeof live.percent === 'number' ? live.percent : d.percent
     const isTerminal = d.phase === 'resolved' || d.phase === 'resolved_monitored' || d.phase === 'escalated' || d.phase === 'exhausted'
-    return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase }
+    const nextRecheckAt = live.nextRecheckAt ? new Date(live.nextRecheckAt).getTime() : undefined
+    return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase, nextRecheckAt }
   }
 
   // 2. A solve linked directly to this event id (the canonical case after
@@ -209,7 +212,8 @@ export function getSolveStatus(
         const d = describePhase(p.step, p.message)
         const percent = typeof p.percent === 'number' ? p.percent : d.percent
         const isTerminal = d.phase === 'resolved' || d.phase === 'resolved_monitored' || d.phase === 'escalated' || d.phase === 'exhausted'
-        return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase }
+        const nextRecheckAt = p.nextRecheckAt ? new Date(p.nextRecheckAt).getTime() : undefined
+        return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase, nextRecheckAt }
       }
     }
   }
@@ -219,8 +223,18 @@ export function getSolveStatus(
       return { label: '🔧 Stellar solving…', color: 'var(--s-info)', isActive: true, percent: 60, phase: 'solving' }
     case 'resolved':
       return { label: '✓ Resolved by Stellar', color: 'var(--s-success)', isActive: false, percent: 100, phase: 'resolved' }
-    case 'resolved_monitored':
-      return { label: '👁 Monitoring durability', color: 'var(--s-info)', isActive: false, percent: 100, phase: 'resolved_monitored' }
+    case 'resolved_monitored': {
+      const nextRecheckAt = latest.nextRecheckAt ? new Date(latest.nextRecheckAt).getTime() : undefined
+      return {
+        label: '👁 Monitoring durability',
+        color: 'var(--s-info)',
+        isActive: false,
+        percent: 100,
+        phase: 'resolved_monitored',
+        monitoringTarget: latest.workload,
+        nextRecheckAt,
+      }
+    }
     case 'escalated':
       return { label: '⚠ Escalated to you', color: 'var(--s-warning)', isActive: false, percent: 100, phase: 'escalated' }
     case 'exhausted':
