@@ -23,19 +23,18 @@ describe('WidgetExportModal', () => {
   it('keeps the preview pane static while only the widget list scrolls', () => {
     render(<WidgetExportModal isOpen onClose={vi.fn()} embedded />)
 
-    const previewTitle = screen.getByText('common.preview')
-    const previewPane = previewTitle.closest('div')?.parentElement
-    const widgetList = screen.getByRole('tabpanel')
+    const previewPane = screen.getByTestId('widget-export-preview-pane')
+    const widgetList = screen.getByTestId('widget-export-selection-panel')
 
-    expect(previewPane?.className).not.toContain('sticky')
-    expect(previewPane?.className).not.toContain('top-0')
+    expect(previewPane.className).not.toContain('sticky')
+    expect(previewPane.className).not.toContain('top-0')
     expect(widgetList.className).toContain('overflow-y-auto')
 
     fireEvent.click(screen.getByRole('tab', { name: 'widgets.singleCard' }))
 
-    expect(previewPane?.className).not.toContain('sticky')
-    expect(previewPane?.className).not.toContain('top-0')
-    expect(screen.getByRole('tabpanel').className).toContain('overflow-y-auto')
+    expect(previewPane.className).not.toContain('sticky')
+    expect(previewPane.className).not.toContain('top-0')
+    expect(screen.getByTestId('widget-export-selection-panel').className).toContain('overflow-y-auto')
   })
 
   it('scales wide template previews down from the top of the preview area', () => {

@@ -233,6 +233,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             <div
               id={EXPORT_PANEL_IDS[activeTab]}
               ref={cardListRef}
+              data-testid="widget-export-selection-panel"
               className="flex-1 overflow-y-auto pr-2"
               role="tabpanel"
               tabIndex={0}
@@ -351,7 +352,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           </div>
 
           {/* Right: Preview & Code — stay static while only the left selection list scrolls. */}
-          <div className="w-1/2 flex flex-col overflow-hidden min-h-0 pb-6">
+          <div data-testid="widget-export-preview-pane" className="w-1/2 flex flex-col overflow-hidden min-h-0 pb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
