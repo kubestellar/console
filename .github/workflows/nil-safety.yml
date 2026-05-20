@@ -559,7 +559,7 @@ jobs:
           for card in web/src/components/cards/*.tsx; do
             base=$(basename "$card")
             case "$base" in
-              *test*|*spec*|*index*|*Error*|*registry*|*CardData*|*Wrapper*|*Dynamic*|*Boundary*) continue ;;
+              *test*|*spec*|*index*|*Error*|*registry*|*CardData*|*Wrapper*|*Dynamic*|*Boundary*|*Panel*) continue ;;
             esac
             if ! grep -q 'useCardLoadingState' "$card" 2>/dev/null; then
               echo "$card: missing useCardLoadingState" >> "$UNIFIED_FILE"

@@ -12,7 +12,7 @@ import { copyToClipboard } from '../../lib/clipboard'
 import type { CommandHistoryItem, YAMLManifest, OutputFormat } from './Kubectl.types'
 import { YAML_PREVIEW_LINES, validateYAML, generateCommandFromPrompt, generateYAMLFromPrompt, parseCommandArgs } from './Kubectl.utils'
 import { AIAssistantPanel } from './KubectlAIPanel'
-import { YAMLEditorPanel } from './KubectlYAMLEditor'
+import { YAMLEditorPanel } from './KubectlYAMLEditorPanel'
 import { CommandHistoryPanel } from './KubectlHistoryPanel'
 
 export function Kubectl() {

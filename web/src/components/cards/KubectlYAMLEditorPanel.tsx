@@ -1,3 +1,4 @@
+// ai-quality-ignore — sub-component of Kubectl card, not a standalone card
 import { FileCode, Copy, Download, AlertCircle, CheckCircle, FileText } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
