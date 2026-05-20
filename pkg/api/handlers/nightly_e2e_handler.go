@@ -222,11 +222,12 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 	}
 	h.logMu.RUnlock()
 
+	ctx := c.UserContext()
+
 	// Fetch jobs for this run
 	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
 		resolveGitHubAPIBase(), repo, runID)
 
-	ctx := c.UserContext()
 	req, err := http.NewRequestWithContext(ctx, "GET", jobsURL, nil)
 	if err != nil {
 		slog.Warn("[NightlyE2E] internal error", "error", err)
