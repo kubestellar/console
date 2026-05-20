@@ -242,9 +242,9 @@ export function EventCard({
             </span>
             {solveStatus.phase === 'resolved_monitored' && solveStatus.nextRecheckAt && (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{
-                background: 'rgba(59, 130, 246, 0.1)',
+                background: 'color-mix(in srgb, var(--s-info) 10%, transparent)',
                 color: 'var(--s-info)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
+                border: '1px solid color-mix(in srgb, var(--s-info) 30%, transparent)',
                 flexShrink: 0,
               }}>
                 {formatCountdownShort(solveStatus.nextRecheckAt)}
@@ -267,6 +267,23 @@ export function EventCard({
               transition: 'width 0.35s ease',
             }} />
           </div>
+        </div>
+      )}
+      {solveStatus?.phase === 'resolved_monitored' && (
+        <div className="mt-1 inline-flex flex-wrap items-center gap-1 rounded-[10px] px-1.5 py-1 text-[10px] font-mono" style={{
+          color: 'var(--s-warning)',
+          background: 'rgba(227,179,65,0.08)',
+          border: '1px solid rgba(227,179,65,0.28)',
+        }}>
+          <span>{t('stellar.eventCard.monitoring')}</span>
+          <span style={{ color: 'var(--s-text-muted)' }}>·</span>
+          <span>{solveStatus.monitoringTarget || notification.namespace || notification.cluster || t('stellar.eventCard.defaultMonitoringTarget')}</span>
+          {solveStatus.nextRecheckAt ? (
+            <>
+              <span style={{ color: 'var(--s-text-muted)' }}>·</span>
+              <span>{solveStatus.nextRecheckAt <= Date.now() ? t('stellar.eventCard.recheckNow') : t('stellar.eventCard.recheckIn', { countdown: formatCountdownShort(solveStatus.nextRecheckAt) })}</span>
+            </>
+          ) : null}
         </div>
       )}
       {attemptCount && attemptCount > 0 ? (
