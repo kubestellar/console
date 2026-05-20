@@ -684,12 +684,14 @@ func (s *SQLiteStore) migrate() error {
 		mission_id TEXT NOT NULL DEFAULT '',
 		action_id TEXT NOT NULL DEFAULT '',
 		dedupe_key TEXT NOT NULL DEFAULT '',
+		batch_timestamp DATETIME,
 		read INTEGER NOT NULL DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_user_created ON stellar_notifications(user_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_unread ON stellar_notifications(user_id, read, created_at DESC);
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_notifications_user_dedupe ON stellar_notifications(user_id, dedupe_key);
+	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_type_batch ON stellar_notifications(type, batch_timestamp DESC);
 
 	-- Durable stellar task graph.
 	CREATE TABLE IF NOT EXISTS stellar_tasks (
@@ -766,6 +768,8 @@ func (s *SQLiteStore) migrate() error {
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_notifications_user_dedupe ON stellar_notifications(user_id, dedupe_key)",
 		"ALTER TABLE stellar_notifications ADD COLUMN read_at DATETIME",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_notif_read ON stellar_notifications(read, created_at DESC)",
+		"ALTER TABLE stellar_notifications ADD COLUMN batch_timestamp DATETIME",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_notifications_type_batch ON stellar_notifications(type, batch_timestamp DESC)",
 
 		"ALTER TABLE stellar_memory_entries ADD COLUMN embedding BLOB",
 		"ALTER TABLE stellar_memory_entries ADD COLUMN importance INTEGER NOT NULL DEFAULT 5",

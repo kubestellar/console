@@ -262,14 +262,15 @@ func (s *SQLiteStore) GetRecentSolveForWorkload(ctx context.Context, cluster, na
 func (s *SQLiteStore) GetNotificationByID(ctx context.Context, notificationID string) (*StellarNotification, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, user_id, type, severity, title, body, cluster, namespace,
-		       mission_id, action_id, dedupe_key, read, read_at, created_at
+		       mission_id, action_id, dedupe_key, batch_timestamp, read, read_at, created_at
 		FROM stellar_notifications WHERE id = ?
 	`, notificationID)
 	var n StellarNotification
+	var batchTimestamp sql.NullTime
 	var readInt int
 	var readAt sql.NullTime
 	err := row.Scan(&n.ID, &n.UserID, &n.Type, &n.Severity, &n.Title, &n.Body, &n.Cluster, &n.Namespace,
-		&n.MissionID, &n.ActionID, &n.DedupeKey, &readInt, &readAt, &n.CreatedAt)
+		&n.MissionID, &n.ActionID, &n.DedupeKey, &batchTimestamp, &readInt, &readAt, &n.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -277,6 +278,10 @@ func (s *SQLiteStore) GetNotificationByID(ctx context.Context, notificationID st
 		return nil, err
 	}
 	n.Read = readInt == 1
+	if batchTimestamp.Valid {
+		ts := batchTimestamp.Time.UTC()
+		n.BatchTimestamp = &ts
+	}
 	if readAt.Valid {
 		n.ReadAt = &readAt.Time
 	}

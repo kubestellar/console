@@ -9,9 +9,25 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	stellarEventNotificationType = "event"
+	stellarBatchWindow           = time.Hour
+)
+
+func computeStellarBatchTimestamp(ts time.Time) time.Time {
+	return ts.UTC().Truncate(stellarBatchWindow)
+}
+
+func nullableTimePtr(ts *time.Time) interface{} {
+	if ts == nil || ts.IsZero() {
+		return nil
+	}
+	return ts.UTC()
+}
+
 func (s *SQLiteStore) ListStellarNotifications(ctx context.Context, userID string, limit int, unreadOnly bool) ([]StellarNotification, error) {
 	lim := resolvePageLimit(limit, 100)
-	query := `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, read, created_at
+	query := `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, batch_timestamp, read, created_at
 		FROM stellar_notifications
 		WHERE user_id = ?`
 	args := []interface{}{userID}
@@ -36,18 +52,29 @@ func (s *SQLiteStore) ListStellarNotifications(ctx context.Context, userID strin
 	return results, rows.Err()
 }
 
-
 func (s *SQLiteStore) CreateStellarNotification(ctx context.Context, notification *StellarNotification) error {
 	if notification.ID == "" {
 		notification.ID = uuid.NewString()
+	}
+	if notification.CreatedAt.IsZero() {
+		notification.CreatedAt = time.Now().UTC()
+	} else {
+		notification.CreatedAt = notification.CreatedAt.UTC()
+	}
+	if notification.Type == stellarEventNotificationType && notification.BatchTimestamp == nil {
+		batchTimestamp := computeStellarBatchTimestamp(notification.CreatedAt)
+		notification.BatchTimestamp = &batchTimestamp
+	} else if notification.BatchTimestamp != nil {
+		batchTimestamp := notification.BatchTimestamp.UTC()
+		notification.BatchTimestamp = &batchTimestamp
 	}
 	dedupeKey := notification.DedupeKey
 	if strings.TrimSpace(dedupeKey) == "" {
 		dedupeKey = notification.ID
 	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO stellar_notifications (
-		id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, read, created_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))
+		id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, batch_timestamp, read, created_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(user_id, dedupe_key) DO NOTHING`,
 		notification.ID,
 		notification.UserID,
@@ -60,12 +87,12 @@ func (s *SQLiteStore) CreateStellarNotification(ctx context.Context, notificatio
 		notification.MissionID,
 		notification.ActionID,
 		dedupeKey,
+		nullableTimePtr(notification.BatchTimestamp),
 		boolToInt(notification.Read),
-		nullableTime(notification.CreatedAt),
+		notification.CreatedAt,
 	)
 	return err
 }
-
 
 func (s *SQLiteStore) NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error) {
 	var count int
@@ -99,7 +126,6 @@ func (s *SQLiteStore) UpdateNotificationBody(ctx context.Context, dedupeKey, new
 	return err
 }
 
-
 func (s *SQLiteStore) ListStellarUserIDs(ctx context.Context) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT user_id FROM (
 		SELECT user_id FROM stellar_preferences
@@ -125,12 +151,32 @@ func (s *SQLiteStore) ListStellarUserIDs(ctx context.Context) ([]string, error) 
 	return userIDs, rows.Err()
 }
 
+func (s *SQLiteStore) GetLatestEventBatchTimestamp(ctx context.Context) (*time.Time, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT batch_timestamp
+		FROM stellar_notifications
+		WHERE type = ? AND batch_timestamp IS NOT NULL
+		ORDER BY batch_timestamp DESC
+		LIMIT 1
+	`, stellarEventNotificationType)
+	var batchTimestamp sql.NullTime
+	if err := row.Scan(&batchTimestamp); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if !batchTimestamp.Valid {
+		return nil, nil
+	}
+	ts := batchTimestamp.Time.UTC()
+	return &ts, nil
+}
 
 func (s *SQLiteStore) MarkStellarNotificationRead(ctx context.Context, userID, notificationID string) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE stellar_notifications SET read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND id = ?`, userID, notificationID)
 	return err
 }
-
 
 func (s *SQLiteStore) CountUnreadStellarNotifications(ctx context.Context, userID string) (int, error) {
 	row := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM stellar_notifications WHERE user_id = ? AND read = 0`, userID)
@@ -141,9 +187,9 @@ func (s *SQLiteStore) CountUnreadStellarNotifications(ctx context.Context, userI
 	return total, nil
 }
 
-
 func scanStellarNotificationRow(rows *sql.Rows) (*StellarNotification, error) {
 	var item StellarNotification
+	var batchTimestamp sql.NullTime
 	var readInt int
 	if err := rows.Scan(
 		&item.ID,
@@ -157,18 +203,22 @@ func scanStellarNotificationRow(rows *sql.Rows) (*StellarNotification, error) {
 		&item.MissionID,
 		&item.ActionID,
 		&item.DedupeKey,
+		&batchTimestamp,
 		&readInt,
 		&item.CreatedAt,
 	); err != nil {
 		return nil, err
 	}
+	if batchTimestamp.Valid {
+		ts := batchTimestamp.Time.UTC()
+		item.BatchTimestamp = &ts
+	}
 	item.Read = readInt == 1
 	return &item, nil
 }
 
-
 func (s *SQLiteStore) GetNotificationsSince(ctx context.Context, since time.Time) ([]StellarNotification, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, read, created_at
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, batch_timestamp, read, created_at
 		FROM stellar_notifications WHERE created_at >= ? ORDER BY created_at ASC`, since.UTC())
 	if err != nil {
 		return nil, err
@@ -188,7 +238,7 @@ func (s *SQLiteStore) GetNotificationsSince(ctx context.Context, since time.Time
 // GetUserNotificationsSince returns notifications for a specific user since the given time.
 // Use this instead of GetNotificationsSince when serving data to a specific user session.
 func (s *SQLiteStore) GetUserNotificationsSince(ctx context.Context, userID string, since time.Time) ([]StellarNotification, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, read, created_at
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, type, severity, title, body, cluster, namespace, mission_id, action_id, dedupe_key, batch_timestamp, read, created_at
 		FROM stellar_notifications WHERE user_id = ? AND created_at >= ? ORDER BY created_at ASC`, userID, since.UTC())
 	if err != nil {
 		return nil, err
@@ -205,7 +255,6 @@ func (s *SQLiteStore) GetUserNotificationsSince(ctx context.Context, userID stri
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) UnreadCount(ctx context.Context) (int, error) {
 	var count int
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM stellar_notifications WHERE read = 0`).Scan(&count); err != nil {
@@ -213,4 +262,3 @@ func (s *SQLiteStore) UnreadCount(ctx context.Context) (int, error) {
 	}
 	return count, nil
 }
-

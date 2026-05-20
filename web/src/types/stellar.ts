@@ -10,6 +10,7 @@ export interface StellarNotification {
   missionId?: string
   actionId?: string
   dedupeKey?: string
+  batchTimestamp?: string
   read: boolean
   readAt?: string
   createdAt: string

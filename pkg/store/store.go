@@ -151,20 +151,21 @@ type StellarAction struct {
 
 // StellarNotification is an item shown in the persistent Stellar feed.
 type StellarNotification struct {
-	ID        string     `json:"id"`
-	UserID    string     `json:"userId"`
-	Type      string     `json:"type"`
-	Severity  string     `json:"severity"`
-	Title     string     `json:"title"`
-	Body      string     `json:"body"`
-	Cluster   string     `json:"cluster,omitempty"`
-	Namespace string     `json:"namespace,omitempty"`
-	MissionID string     `json:"missionId,omitempty"`
-	ActionID  string     `json:"actionId,omitempty"`
-	DedupeKey string     `json:"dedupeKey,omitempty"`
-	Read      bool       `json:"read"`
-	ReadAt    *time.Time `json:"readAt,omitempty"`
-	CreatedAt time.Time  `json:"createdAt"`
+	ID             string     `json:"id"`
+	UserID         string     `json:"userId"`
+	Type           string     `json:"type"`
+	Severity       string     `json:"severity"`
+	Title          string     `json:"title"`
+	Body           string     `json:"body"`
+	Cluster        string     `json:"cluster,omitempty"`
+	Namespace      string     `json:"namespace,omitempty"`
+	MissionID      string     `json:"missionId,omitempty"`
+	ActionID       string     `json:"actionId,omitempty"`
+	DedupeKey      string     `json:"dedupeKey,omitempty"`
+	BatchTimestamp *time.Time `json:"batchTimestamp,omitempty"`
+	Read           bool       `json:"read"`
+	ReadAt         *time.Time `json:"readAt,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
 }
 
 // StellarTask represents durable operator work tracked by Stellar.

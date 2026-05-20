@@ -106,6 +106,26 @@ type solveFullStore interface {
 // 5 min so demos don't feel stuck behind stale escalations.
 const AutoSolveCooldown = 5 * time.Minute
 
+func formatBatchTimestamp(ts *time.Time) string {
+	if ts == nil {
+		return "unknown"
+	}
+	return ts.UTC().Format(time.RFC3339)
+}
+
+func (h *StellarHandler) isLatestEventBatch(ctx context.Context, notif *store.StellarNotification) (bool, *time.Time, error) {
+	latestBatchTimestamp, err := h.store.GetLatestEventBatchTimestamp(ctx)
+	if err != nil {
+		return false, nil, err
+	}
+	if notif == nil || notif.BatchTimestamp == nil || latestBatchTimestamp == nil {
+		return false, latestBatchTimestamp, nil
+	}
+	currentBatchTimestamp := notif.BatchTimestamp.UTC()
+	latestBatch := latestBatchTimestamp.UTC()
+	return currentBatchTimestamp.Equal(latestBatch), &latestBatch, nil
+}
+
 // logActivity is the single write-and-broadcast helper for Stellar's activity
 // log. UI subscribes via the SSE `activity` channel and renders the entries in
 // the dedicated StellarActivityPanel — not the chat, not the events column.
@@ -259,6 +279,38 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 		Detail:    rootCauseDetail,
 		Severity:  "info",
 	})
+
+	autoResolveAllowed, latestBatchTimestamp, batchErr := h.isLatestEventBatch(ctx, notif)
+	if batchErr != nil {
+		slog.Warn("stellar: latest batch lookup failed", "event_id", notif.ID, "error", batchErr)
+	}
+	if !autoResolveAllowed {
+		summary := fmt.Sprintf(
+			"Root cause analysis completed. Automated remediation skipped because this event belongs to batch %s while the latest batch is %s. Manual resolution is still available.",
+			formatBatchTimestamp(notif.BatchTimestamp),
+			formatBatchTimestamp(latestBatchTimestamp),
+		)
+		_ = full.UpdateSolveStatus(ctx, solve.ID, "escalated", summary, "", "")
+		h.logActivity(ctx, &store.StellarActivity{
+			Kind:      "solve_escalated",
+			EventID:   notif.ID,
+			SolveID:   solve.ID,
+			Cluster:   event.Cluster,
+			Namespace: event.Namespace,
+			Workload:  workload,
+			Title:     fmt.Sprintf("Escalated: older batch requires manual review for %s/%s", event.Namespace, workload),
+			Detail:    summary,
+			Severity:  "warning",
+		})
+		h.broadcastSolveProgress(solve.ID, notif.ID, "escalated", summary, 100)
+		h.broadcastToClients(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+			"solveId": solve.ID,
+			"eventId": notif.ID,
+			"status":  "escalated",
+			"summary": summary,
+		}})
+		return
+	}
 
 	// PHASE 3a — TRY THE SAFE DETERMINISTIC FIX FIRST.
 	// If the evaluator recommended a safe action (RestartDeployment today),

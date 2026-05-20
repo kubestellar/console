@@ -112,6 +112,7 @@ type StellarStore interface {
 
 	ListStellarNotifications(ctx context.Context, userID string, limit int, unreadOnly bool) ([]store.StellarNotification, error)
 	CreateStellarNotification(ctx context.Context, notification *store.StellarNotification) error
+	GetLatestEventBatchTimestamp(ctx context.Context) (*time.Time, error)
 	MarkStellarNotificationRead(ctx context.Context, userID, notificationID string) error
 	CountUnreadStellarNotifications(ctx context.Context, userID string) (int, error)
 	NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error)
