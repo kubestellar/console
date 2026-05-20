@@ -9,8 +9,9 @@ name: GA4 Error Monitor
 
 on:
   schedule:
-    - cron: '42 * * * *' # Primary hourly run
+    - cron: '42 * * * *' # Primary hourly run (2h lookback, threshold 5)
     - cron: '49 * * * *' # Backup retry if the primary run is dropped by hosted-runner starvation
+    - cron: '0 7 * * *'  # Daily aggregate (24h lookback, threshold 50) — catches steady-drip errors
   workflow_dispatch:
     inputs:
       lookback_hours:
@@ -32,6 +33,9 @@ env:
   MAX_ISSUES_PER_RUN: 3
   # Hours to look back for errors
   LOOKBACK_HOURS: 2
+  # Daily aggregate settings (used by the 7:00 UTC cron)
+  DAILY_LOOKBACK_HOURS: 24
+  DAILY_ERROR_THRESHOLD: 50
 
 permissions:
   contents: read
@@ -75,10 +79,12 @@ jobs:
             const { google } = require('googleapis');
 
             // ── Config ──
-            const lookbackHours = parseInt(process.env.INPUT_LOOKBACK_HOURS || process.env.LOOKBACK_HOURS);
-            const threshold = parseInt(process.env.INPUT_THRESHOLD || process.env.ERROR_THRESHOLD);
+            // Detect daily aggregate run: the 7:00 UTC cron uses 24h lookback with higher threshold
+            const isDailyRun = new Date().getUTCHours() === 7 && !process.env.INPUT_LOOKBACK_HOURS;
+            const lookbackHours = parseInt(process.env.INPUT_LOOKBACK_HOURS || (isDailyRun ? process.env.DAILY_LOOKBACK_HOURS : process.env.LOOKBACK_HOURS));
+            const threshold = parseInt(process.env.INPUT_THRESHOLD || (isDailyRun ? process.env.DAILY_ERROR_THRESHOLD : process.env.ERROR_THRESHOLD));
             const maxIssues = parseInt(process.env.MAX_ISSUES_PER_RUN);
-            const prefix = process.env.ISSUE_PREFIX;
+            const prefix = isDailyRun ? '[GA4-Daily]' : process.env.ISSUE_PREFIX;
             const propertyId = process.env.GA4_PROPERTY_ID;
 
             if (!process.env.GA4_SERVICE_ACCOUNT_KEY || !propertyId) {
@@ -108,18 +114,18 @@ jobs:
               validHours.add(`${ymd}${String(d.getUTCHours()).padStart(2,'0')}`);
             }
 
-            core.info(`Querying GA4 property ${propertyId} for ksc_error events (last ${lookbackHours}h, threshold: ${threshold})`);
+            core.info(`Querying GA4 property ${propertyId} for ksc_error events (last ${lookbackHours}h, threshold: ${threshold}, mode: ${isDailyRun ? 'daily' : 'hourly'})`);
 
             const { data } = await analyticsData.properties.runReport({
               property: `properties/${propertyId}`,
               requestBody: {
-                dateRanges: [{ startDate: '2daysAgo', endDate: 'today' }],
+                dateRanges: [{ startDate: isDailyRun ? '3daysAgo' : '2daysAgo', endDate: 'today' }],
                 dimensions: [
                   { name: 'dateHour' },
                   { name: 'customEvent:error_category' },
                   { name: 'customEvent:error_page' },
                 ],
-                metrics: [{ name: 'eventCount' }],
+                metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
                 dimensionFilter: {
                   andGroup: {
                     expressions: [
@@ -151,6 +157,7 @@ jobs:
 
             // ── Aggregate by category+page, filtering to the lookback window ──
             const aggregated = new Map();
+            const userCounts = new Map();
 
             for (const row of data.rows) {
               const dateHour = row.dimensionValues[0].value || '';
@@ -159,9 +166,11 @@ jobs:
               const category = row.dimensionValues[1].value || 'uncategorized';
               const page = row.dimensionValues[2].value || '/';
               const count = parseInt(row.metricValues[0].value);
+              const users = parseInt(row.metricValues[1]?.value || '0');
 
               const key = `${category}::${page === '(not set)' ? '/' : page}`;
               aggregated.set(key, (aggregated.get(key) || 0) + count);
+              userCounts.set(key, Math.max(userCounts.get(key) || 0, users));
             }
 
             // ── Fetch top error details for each spike (for actionable issue body) ──
@@ -218,18 +227,30 @@ jobs:
             }
 
             // ── Filter by threshold and sort ──
+            // Flag by absolute count OR by high per-user density (>20 errors/user
+            // signals a broken polling loop — this pattern was missed in May 2026
+            // when 95 errors/user went undetected for 3 weeks)
+            const HIGH_DENSITY_ERRORS_PER_USER = 20;
+            const HIGH_DENSITY_MIN_USERS = 3;
             const spikes = [...aggregated.entries()]
-              .filter(([, count]) => count >= threshold)
+              .filter(([key, count]) => {
+                if (count >= threshold) return true;
+                const users = userCounts.get(key) || 0;
+                if (users >= HIGH_DENSITY_MIN_USERS && count / users >= HIGH_DENSITY_ERRORS_PER_USER) return true;
+                return false;
+              })
               .sort((a, b) => b[1] - a[1]);
 
             if (spikes.length === 0) {
-              core.info(`No error spikes above threshold (${threshold}) in the last ${lookbackHours}h.`);
+              core.info(`No error spikes above threshold (${threshold}) or high density (>${HIGH_DENSITY_ERRORS_PER_USER}/user) in the last ${lookbackHours}h.`);
               return;
             }
 
             core.info(`Found ${spikes.length} error spike(s) above threshold:`);
             for (const [key, count] of spikes) {
-              core.info(`  ${key}: ${count} errors`);
+              const users = userCounts.get(key) || 0;
+              const density = users > 0 ? (count / users).toFixed(1) : 'n/a';
+              core.info(`  ${key}: ${count} errors, ${users} users (${density} errors/user)`);
             }
 
             // ── Deduplicate against existing issues ──
@@ -270,7 +291,10 @@ jobs:
               }
 
               const [category, page] = key.split('::');
-              const title = `${prefix} ${count} ${category} errors on ${page} (last ${lookbackHours}h)`;
+              const users = userCounts.get(key) || 0;
+              const density = users > 0 ? Math.round(count / users) : 0;
+              const densitySuffix = density >= HIGH_DENSITY_ERRORS_PER_USER ? ` [${density}/user]` : '';
+              const title = `${prefix} ${count} ${category} errors on ${page} (last ${lookbackHours}h)${densitySuffix}`;
 
               const dup = existingIssues.find(i => normalizeTitle(i.title) === normalizeTitle(title));
               if (dup) {
@@ -347,8 +371,9 @@ jobs:
               const body = [
                 `## GA4 Error Spike: ${category}`,
                 '',
-                `**Detected:** ${timestamp} | **Count:** ${count} errors | **Threshold:** ${threshold} | **Window:** ${lookbackHours}h`,
+                `**Detected:** ${timestamp} | **Count:** ${count} errors | **Users:** ${users} | **Density:** ${density} errors/user | **Threshold:** ${threshold} | **Window:** ${lookbackHours}h`,
                 `**Page:** \`${page}\` | **Category:** \`${category}\``,
+                density >= HIGH_DENSITY_ERRORS_PER_USER ? `\n> ⚠️ **High error density** (${density} errors/user) — this typically indicates a broken polling loop or retry cascade, not isolated errors.\n` : '',
                 '',
                 `**Run:** [View workflow run](${runUrl})`,
                 '',

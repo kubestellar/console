@@ -30,6 +30,8 @@ env:
   SPIKE_THRESHOLD_PCT: 25
   MIN_ERROR_COUNT: 10
   MAX_ISSUES_PER_RUN: 5
+  # Absolute weekly threshold: flag any category exceeding this even if WoW trend is flat
+  ABSOLUTE_WEEKLY_THRESHOLD: 200
 
 permissions:
   contents: read
@@ -92,6 +94,7 @@ jobs:
             const spikePct    = parseInt(process.env.INPUT_SPIKE_THRESHOLD_PCT || process.env.SPIKE_THRESHOLD_PCT);
             const minCount    = parseInt(process.env.INPUT_MIN_ERROR_COUNT || process.env.MIN_ERROR_COUNT);
             const maxIssues   = parseInt(process.env.MAX_ISSUES_PER_RUN) || 5;
+            const absThreshold = parseInt(process.env.ABSOLUTE_WEEKLY_THRESHOLD) || 200;
             const prefix      = process.env.ISSUE_PREFIX;
             const propertyId  = process.env.GA4_PROPERTY_ID;
 
@@ -178,28 +181,36 @@ jobs:
 
               let changePct;
               if (previous === 0) {
-                // New category appeared this week
                 changePct = current >= minCount ? Infinity : 0;
               } else {
                 changePct = ((current - previous) / previous) * 100;
               }
 
-              if (changePct > spikePct) {
-                regressions.push({ category, current, previous, changePct });
+              // Flag if WoW spike exceeds threshold OR absolute count is high
+              // The absolute check catches steady-state elevated errors that
+              // persist week after week without triggering the % change gate
+              const isWowSpike = changePct > spikePct;
+              const isAbsoluteHigh = current >= absThreshold;
+
+              if (isWowSpike || isAbsoluteHigh) {
+                regressions.push({
+                  category, current, previous, changePct,
+                  reason: isWowSpike && isAbsoluteHigh ? 'wow+absolute' : isWowSpike ? 'wow' : 'absolute',
+                });
               }
             }
 
             regressions.sort((a, b) => b.current - a.current);
 
             if (regressions.length === 0) {
-              core.info(`No error rate regressions found (threshold: +${spikePct}%, min count: ${minCount}).`);
+              core.info(`No regressions found (WoW threshold: +${spikePct}%, absolute threshold: ${absThreshold}, min count: ${minCount}).`);
               return;
             }
 
             core.info(`Found ${regressions.length} regression(s):`);
             for (const r of regressions) {
               const pct = isFinite(r.changePct) ? `+${r.changePct.toFixed(0)}%` : 'new category';
-              core.info(`  ${r.category}: ${r.previous} → ${r.current} (${pct})`);
+              core.info(`  ${r.category}: ${r.previous} → ${r.current} (${pct}) [${r.reason}]`);
             }
 
             // Deduplicate against recently-filed regression issues
@@ -222,14 +233,16 @@ jobs:
 
             let created = 0;
 
-            for (const { category, current, previous, changePct } of regressions) {
+            for (const { category, current, previous, changePct, reason } of regressions) {
               if (created >= maxIssues) {
                 core.warning(`Rate limit: ${maxIssues} issues/run. Remaining regressions skipped.`);
                 break;
               }
 
               const pctLabel = isFinite(changePct) ? `+${changePct.toFixed(0)}%` : 'new';
-              const title    = `${prefix} ${category} errors up ${pctLabel} this week (${current} vs ${previous} last week)`;
+              const title = reason === 'absolute'
+                ? `${prefix} ${category} errors at ${current}/week (exceeds ${absThreshold} threshold)`
+                : `${prefix} ${category} errors up ${pctLabel} this week (${current} vs ${previous} last week)`;
 
               const dup = openIssues.find(i => normalizeTitle(i.title) === normalizeTitle(title));
               if (dup) {
@@ -257,8 +270,9 @@ jobs:
               const body = [
                 `## Error Rate Regression: \`${category}\``,
                 '',
-                `**Week of:** ${nowLabel} | **Change:** ${pctLabel} | **Threshold:** +${spikePct}%`,
+                `**Week of:** ${nowLabel} | **Change:** ${pctLabel} | **Trigger:** ${reason === 'absolute' ? `absolute threshold (>${absThreshold}/week)` : reason === 'wow+absolute' ? `WoW +${spikePct}% AND absolute (>${absThreshold}/week)` : `WoW +${spikePct}%`}`,
                 `**This week:** ${current} errors | **Last week:** ${previous} errors`,
+                reason === 'absolute' ? `\n> ⚠️ **Elevated steady-state errors** — this category has been above ${absThreshold} errors/week even though the week-over-week trend may be flat. This pattern indicates a persistent issue, not a new regression.\n` : '',
                 '',
                 `**Run:** [View workflow run](${runUrl})`,
                 '',
