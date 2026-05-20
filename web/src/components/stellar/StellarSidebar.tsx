@@ -139,7 +139,7 @@ export function StellarSidebar() {
                     borderRadius: STELLAR_UNREAD_BADGE_SIZE_PX,
                     padding: `0 ${STELLAR_BADGE_PADDING_X_PX}px`,
                     background: 'var(--s-critical)',
-                    color: '#fff',
+                    color: 'hsl(var(--destructive-foreground))',
                     fontSize: STELLAR_BADGE_FONT_SIZE_PX,
                     fontWeight: 700,
                     display: 'grid',

@@ -11,7 +11,7 @@ const WIDGET_EXPORT_MODAL_DIV_STYLE_2: CSSProperties = { flex: 1 }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_1: CSSProperties = { fontWeight: 500, maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_2: CSSProperties = { fontWeight: 500 }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_3: CSSProperties = { fontWeight: 500, flex: 1 }
-const WIDGET_EXPORT_MODAL_SPAN_STYLE_4: CSSProperties = { width: '24px', fontWeight: 600, color: '#94a3b8' }
+const WIDGET_EXPORT_MODAL_SPAN_STYLE_4: CSSProperties = { width: '24px', fontWeight: 600, color: '#9ca3af' }
 
 export function getWidgetPreviewDimensions(config: WidgetConfig | null): { width: number; height: number } | null {
   if (!config) return null
@@ -918,7 +918,7 @@ function NightlyE2EPreview() {
                 {g.dots.length > 0 ? g.dots.map((d, i) => (
                   <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor[d], display: 'inline-block', ...(d === 'b' ? { animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}) }} />
                 )) : (
-                  <span style={{ color: '#4b5563', fontSize: PREV_FS_LABEL }}>no runs</span>
+                  <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_LABEL }}>no runs</span>
                 )}
               </div>
             </div>
