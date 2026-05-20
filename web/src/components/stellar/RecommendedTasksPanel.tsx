@@ -177,14 +177,16 @@ export function RecommendedTasksPanel({ createTask }: Props) {
   }
 
   return (
-    <div style={{
-      borderBottom: '1px solid var(--s-border)',
-      flexShrink: 0,
-    }}>
+    <div style={{ flexShrink: 0 }}>
       {/* Title row */}
       <div
         onClick={() => setCollapsed(c => !c)}
         style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          background: 'var(--s-surface)',
+          borderBottom: '1px solid var(--s-border)',
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '7px 12px', cursor: 'pointer', userSelect: 'none',
         }}
