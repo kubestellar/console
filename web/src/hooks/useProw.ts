@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { formatTimeAgo, formatProwDuration } from '../lib/formatters'
 import { useDemoMode } from './useDemoMode'
@@ -75,8 +75,16 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const initialLoadDone = useRef(false)
+  // Use refs so the stable refetch callback always sees the latest prop values
+  const prowClusterRef = useRef(prowCluster)
+  const namespaceRef = useRef(namespace)
+  useEffect(() => {
+    prowClusterRef.current = prowCluster
+    namespaceRef.current = namespace
+  }, [prowCluster, namespace])
 
-  const refetch = async (silent = false) => {
+  // Stable callback — refs prevent stale closure over prowCluster/namespace
+  const refetch = useCallback(async (silent = false) => {
     if (!silent) {
       setIsRefreshing(true)
       if (!initialLoadDone.current) {
@@ -86,8 +94,8 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
 
     try {
       const response = await kubectlProxy.exec(
-        ['get', 'prowjobs', '-n', namespace, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
-        { context: prowCluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }
+        ['get', 'prowjobs', '-n', namespaceRef.current, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
+        { context: prowClusterRef.current, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }
       )
       if (response.exitCode !== 0) {
         throw new Error(response.error || 'Failed to get ProwJobs')
@@ -109,7 +117,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
             name: jobName,
             type: jobType,
             state,
-            cluster: prowCluster,
+            cluster: prowClusterRef.current,
             startTime,
             completionTime,
             duration: state === 'pending' || state === 'triggered' ? '-' : formatProwDuration(startTime, completionTime),
@@ -135,10 +143,9 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
       }
       setIsRefreshing(false)
     }
-   
-  }
+  }, []) // state setters and refs are stable; no other reactive deps
 
-  // Return demo data when in demo mode
+  // Return demo data when in demo mode; otherwise fetch and poll live data
   useEffect(() => {
     if (demoMode) {
       setJobs(getDemoProwJobs())
@@ -154,8 +161,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
     refetch(false)
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoMode])
+  }, [demoMode, refetch])
 
   // Compute status from jobs
   const status = useMemo((): ProwStatus => {

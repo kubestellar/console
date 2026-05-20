@@ -12,16 +12,24 @@ on:
   pull_request_target:
     types: [opened]
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+# No broad workflow-level permissions — each job declares only what it needs.
+# pull_request_target runs with write access to the base repo; the if-guard below
+# ensures only PRs from the same repository (not forks) proceed, preventing
+# untrusted PR head code from being executed with elevated permissions.
 
 jobs:
   ai-fix:
     if: >-
       github.event_name != 'pull_request_target' ||
       github.event.pull_request.head.repo.full_name == github.repository
+    # Scoped to minimum permissions required by the reusable AI-fix workflow:
+    # - contents:write  — to push commits on the fix branch
+    # - issues:write   — to comment on and close the issue
+    # - pull-requests:write — to open and update the fix PR
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@5c7fdcdde035388fa2df43d860d2372c2dd3e3ed  # main
     timeout-minutes: 5
     with:

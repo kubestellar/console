@@ -10,11 +10,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review]
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  statuses: write
+# No broad workflow-level permissions — each job declares only what it needs.
 
 concurrency:
   group: copilot-automation-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.sha }}
@@ -25,6 +21,16 @@ jobs:
     if: >-
       github.event_name != 'pull_request_target' ||
       github.event.pull_request.head.repo.full_name == github.repository
+    # Scoped to minimum permissions required by the reusable automation workflow:
+    # - contents:write  — to push fixup commits to the PR branch
+    # - pull-requests:write — to add review comments and labels
+    # - issues:write   — to post issue comments
+    # - statuses:write — to set commit status checks
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      statuses: write
     uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@5c7fdcdde035388fa2df43d860d2372c2dd3e3ed  # main
     timeout-minutes: 5
     with:
