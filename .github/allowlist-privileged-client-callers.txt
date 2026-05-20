@@ -29,3 +29,5 @@ gpu.go
 mcp_resources.go
 self_upgrade.go
 console_persistence.go
+# Split from console_persistence.go; same internal reconciler exception.
+console_persistence_store.go
