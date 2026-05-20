@@ -1,155 +1,73 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import {
-  Layers, ChevronRight, ChevronDown, Server, Box, Network, HardDrive,
-  FileText, FileKey, Clock, Container, RefreshCw, Plus, Minus,
-  AlertTriangle, Eye, X, Activity
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Activity } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { CardSearchInput } from '../../lib/cards/CardComponents'
+import { cn } from '../../lib/cn'
 import { useClusters } from '../../hooks/useMCP'
-import { useCachedNamespaces, useCachedDeployments, useCachedServices, useCachedPVCs, useCachedPods, useCachedConfigMaps, useCachedSecrets, useCachedJobs } from '../../hooks/useCachedData'
+import {
+  useCachedConfigMaps,
+  useCachedDeployments,
+  useCachedJobs,
+  useCachedNamespaces,
+  useCachedPods,
+  useCachedPVCs,
+  useCachedSecrets,
+  useCachedServices,
+} from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { BaseModal } from '../../lib/modals/BaseModal'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { MS_PER_MINUTE } from '../../lib/constants/time'
-
-// Resource types to monitor
-type ResourceType = 'pods' | 'deployments' | 'services' | 'configmaps' | 'secrets' | 'pvcs' | 'jobs'
-
-// Change types for animations
-type ChangeType = 'added' | 'modified' | 'deleted' | 'error' | null
-
-interface ResourceChange {
-  type: ChangeType
-  timestamp: number
-  resourceType: ResourceType
-  name: string
-  namespace: string
-  cluster: string
-  details?: string
-}
-
-// Track resource state for change detection
-interface ResourceSnapshot {
-  key: string
-  name: string
-  namespace: string
-  cluster: string
-  status?: string
-  replicas?: number
-  readyReplicas?: number
-}
-
-// Resource item types for the namespace data map
-interface PodItem { name: string; namespace: string; status: string; restarts: number }
-interface DeploymentItem { name: string; namespace: string; replicas: number; readyReplicas: number; status?: string }
-interface ServiceItem { name: string; namespace: string; type: string }
-interface ConfigMapItem { name: string; namespace: string; dataCount?: number }
-interface SecretItem { name: string; namespace: string; type?: string }
-interface PVCItem { name: string; namespace: string; status: string }
-interface JobItem { name: string; namespace: string; status: string }
-
-interface NamespaceData {
-  pods: PodItem[]
-  deployments: DeploymentItem[]
-  services: ServiceItem[]
-  configmaps: ConfigMapItem[]
-  secrets: SecretItem[]
-  pvcs: PVCItem[]
-  jobs: JobItem[]
-  hasIssues: boolean
-}
-
-// Icons for resource types
-const ResourceIcons: Record<ResourceType, typeof Container> = {
-  pods: Container,
-  deployments: Box,
-  services: Network,
-  configmaps: FileText,
-  secrets: FileKey,
-  pvcs: HardDrive,
-  jobs: Clock }
-
-// Colors for resource types
-const ResourceColors: Record<ResourceType, string> = {
-  pods: 'text-cyan-400',
-  deployments: 'text-green-400',
-  services: 'text-blue-400',
-  configmaps: 'text-orange-400',
-  secrets: 'text-red-400',
-  pvcs: 'text-green-400',
-  jobs: 'text-yellow-400' }
-
-// Animation classes for changes
-const ChangeAnimations: Record<Exclude<ChangeType, null>, string> = {
-  added: 'animate-pulse bg-green-500/20 border-green-500/50',
-  modified: 'animate-pulse bg-yellow-500/20 border-yellow-500/50',
-  deleted: 'animate-pulse bg-red-500/20 border-red-500/50 opacity-50',
-  error: 'animate-pulse bg-red-500/30 border-red-500/60' }
-
-/**
- * Hard cap on the number of namespace rows rendered per cluster (#6208).
- *
- * Each namespace row triggers 7 separate `.filter()` passes over the full
- * pods/deployments/services/configmaps/secrets/PVCs/jobs lists. With 80+
- * namespaces and 500 pods, every state update was triggering an
- * O(namespaces × resources) recomputation across all of them at once and
- * dropping frames. Capping at 30 keeps the worst case to 30 × 7 × N
- * filters per refresh, while still showing all the namespaces for
- * realistically-sized clusters. The "more namespaces filtered out" hint
- * below the list tells the user to use the search box to narrow down.
- */
-const MAX_NAMESPACES_RENDERED_PER_CLUSTER = 30
-
-// Shared empty result for clusters that aren't the selected one — avoids
-// allocating a fresh Map on every render of every non-selected cluster row.
-const EMPTY_NAMESPACE_DATA: Map<string, NamespaceData> = new Map()
-const MAX_VISIBLE_ITEMS = 10
+import type { ChangeType, ModalResource, NamespaceData, ResourceChange, ResourceSnapshot, ResourceType } from './NamespaceMonitor.types'
+import { NamespaceMonitorChangesPanel } from './NamespaceMonitorChangesPanel'
+import { NamespaceMonitorModal } from './NamespaceMonitorModal'
+import { NamespaceMonitorTable } from './NamespaceMonitorTable'
+import {
+  EMPTY_NAMESPACE_DATA,
+  MAX_RECENT_CHANGES,
+  RECENT_CHANGE_WINDOW_MS,
+  ResourceColors,
+  ResourceIcons,
+  buildCurrentSnapshots,
+  buildNamespaceData,
+  detectResourceChanges,
+  getChangeCountsByType,
+  getFilteredClusters,
+  getResourceChange as getRecentResourceChange,
+} from './NamespaceMonitor.utils'
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
+  const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
   const { deduplicatedClusters: clusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
-  // UI state
+
   const [searchFilter, setSearchFilter] = useState('')
   const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set())
   const [expandedNamespaces, setExpandedNamespaces] = useState<Set<string>>(new Set())
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const [activeResourceTypes, setActiveResourceTypes] = useState<Set<ResourceType>>(
-    new Set(['pods', 'deployments', 'services'])
+    new Set(['pods', 'deployments', 'services']),
   )
-
-  // Change tracking
   const [recentChanges, setRecentChanges] = useState<ResourceChange[]>([])
   const [showChangesPanel, setShowChangesPanel] = useState(false)
+  const [modalResource, setModalResource] = useState<ModalResource | null>(null)
+
   const previousSnapshotsRef = useRef<Map<string, ResourceSnapshot>>(new Map())
   const changeTimeoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
-  // Resource modal
-  const [modalResource, setModalResource] = useState<{
-    type: ResourceType
-    name: string
-    namespace: string
-    cluster: string
-  } | null>(null)
+  const filteredClusters = useMemo(
+    () => getFilteredClusters({
+      clusters,
+      selectedClusters,
+      isAllClustersSelected,
+      searchFilter,
+    }),
+    [clusters, isAllClustersSelected, searchFilter, selectedClusters],
+  )
 
-  // Get filtered clusters
-  const filteredClusters = (() => {
-    let result = clusters.filter(c => c.reachable !== false)
-    if (!isAllClustersSelected) {
-      result = result.filter(c => selectedClusters.includes(c.name))
-    }
-    if (searchFilter) {
-      const query = searchFilter.toLowerCase()
-      result = result.filter(c => c.name.toLowerCase().includes(query))
-    }
-    return result
-  })()
-
-  // Fetch data for selected cluster
   const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
   const { deployments, isDemoFallback: deploymentsDemoFallback, isRefreshing: deploymentsRefreshing } = useCachedDeployments(selectedCluster || undefined)
   const { services, isDemoFallback: servicesDemoFallback, isRefreshing: servicesRefreshing } = useCachedServices(selectedCluster || undefined)
@@ -159,194 +77,95 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { secrets, isDemoFallback: secretsDemoFallback, isRefreshing: secretsRefreshing } = useCachedSecrets(selectedCluster || undefined)
   const { jobs, isDemoFallback: jobsDemoFallback, isRefreshing: jobsRefreshing } = useCachedJobs(selectedCluster || undefined)
 
-  // Combine all isDemoFallback values from cached hooks
   const isDemoData = namespacesDemoFallback || deploymentsDemoFallback || servicesDemoFallback ||
     pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback || secretsDemoFallback || jobsDemoFallback
-
-  // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = clusters.length > 0
+
   useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing: namespacesRefreshing || deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing || secretsRefreshing || jobsRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoData,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+  })
 
-  // Build snapshots and detect changes
   useEffect(() => {
-    if (!selectedCluster) return
-
-    const currentSnapshots = new Map<string, ResourceSnapshot>()
-    const newChanges: ResourceChange[] = []
-
-    // Process pods
-    pods?.forEach(pod => {
-      const key = `${selectedCluster}:${pod.namespace}:pod:${pod.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: pod.name,
-        namespace: pod.namespace,
-        cluster: selectedCluster,
-        status: pod.status })
-    })
-
-    // Process deployments
-    deployments?.forEach(dep => {
-      const key = `${selectedCluster}:${dep.namespace}:deployment:${dep.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: dep.name,
-        namespace: dep.namespace,
-        cluster: selectedCluster,
-        status: dep.status,
-        replicas: dep.replicas,
-        readyReplicas: dep.readyReplicas })
-    })
-
-    // Process services
-    services?.forEach(svc => {
-      const key = `${selectedCluster}:${svc.namespace}:service:${svc.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: svc.name,
-        namespace: svc.namespace,
-        cluster: selectedCluster })
-    })
-
-    // Process pvcs
-    pvcs?.forEach(pvc => {
-      const key = `${selectedCluster}:${pvc.namespace}:pvc:${pvc.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: pvc.name,
-        namespace: pvc.namespace,
-        cluster: selectedCluster,
-        status: pvc.status })
-    })
-
-    // Process configmaps
-    configmaps?.forEach(cm => {
-      const key = `${selectedCluster}:${cm.namespace}:configmap:${cm.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: cm.name,
-        namespace: cm.namespace,
-        cluster: selectedCluster })
-    })
-
-    // Process secrets
-    secrets?.forEach(secret => {
-      const key = `${selectedCluster}:${secret.namespace}:secret:${secret.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: secret.name,
-        namespace: secret.namespace,
-        cluster: selectedCluster })
-    })
-
-    // Process jobs
-    jobs?.forEach(job => {
-      const key = `${selectedCluster}:${job.namespace}:job:${job.name}`
-      currentSnapshots.set(key, {
-        key,
-        name: job.name,
-        namespace: job.namespace,
-        cluster: selectedCluster,
-        status: job.status })
-    })
-
-    // Detect changes (only if we have previous snapshots)
-    if (previousSnapshotsRef.current.size > 0) {
-      // Check for additions and modifications
-      currentSnapshots.forEach((current, key) => {
-        const previous = previousSnapshotsRef.current.get(key)
-        const resourceType = key.split(':')[2] as ResourceType
-
-        if (!previous) {
-          // New resource
-          newChanges.push({
-            type: 'added',
-            timestamp: Date.now(),
-            resourceType,
-            name: current.name,
-            namespace: current.namespace,
-            cluster: current.cluster,
-            details: 'New resource created' })
-        } else if (current.status !== previous.status ||
-                   current.replicas !== previous.replicas ||
-                   current.readyReplicas !== previous.readyReplicas) {
-          // Modified resource
-          const isError = current.status === 'CrashLoopBackOff' ||
-                         current.status === 'Error' ||
-                         current.status === 'Failed' ||
-                         (current.readyReplicas !== undefined && current.readyReplicas < (current.replicas || 0))
-
-          newChanges.push({
-            type: isError ? 'error' : 'modified',
-            timestamp: Date.now(),
-            resourceType,
-            name: current.name,
-            namespace: current.namespace,
-            cluster: current.cluster,
-            details: `Status: ${previous.status} → ${current.status}` })
-        }
-      })
-
-      // Check for deletions
-      previousSnapshotsRef.current.forEach((previous, key) => {
-        if (!currentSnapshots.has(key)) {
-          const resourceType = key.split(':')[2] as ResourceType
-          newChanges.push({
-            type: 'deleted',
-            timestamp: Date.now(),
-            resourceType,
-            name: previous.name,
-            namespace: previous.namespace,
-            cluster: previous.cluster,
-            details: 'Resource deleted' })
-        }
-      })
+    if (!selectedCluster) {
+      return
     }
 
-    // Update snapshots
+    const currentSnapshots = buildCurrentSnapshots({
+      selectedCluster,
+      pods,
+      deployments,
+      services,
+      pvcs,
+      configmaps,
+      secrets,
+      jobs,
+    })
+    const newChanges = previousSnapshotsRef.current.size > 0
+      ? detectResourceChanges(currentSnapshots, previousSnapshotsRef.current)
+      : []
+
     previousSnapshotsRef.current = currentSnapshots
 
-    // Add new changes (keep last 50)
     if (newChanges.length > 0) {
-      setRecentChanges(prev => [...newChanges, ...prev].slice(0, 50))
+      setRecentChanges(previous => [...newChanges, ...previous].slice(0, MAX_RECENT_CHANGES))
     }
   }, [selectedCluster, pods, deployments, services, pvcs, configmaps, secrets, jobs])
 
-  // Get change for a specific resource (for animation)
-  const getResourceChange = (cluster: string, namespace: string, type: ResourceType, name: string): ChangeType => {
-    const change = recentChanges.find(
-      c => c.cluster === cluster && c.namespace === namespace && c.resourceType === type && c.name === name
-    )
-    // Only show animation for recent changes (within 5 seconds)
-    if (change && Date.now() - change.timestamp < 5000) {
-      return change.type
-    }
-    return null
-  }
+  useEffect(() => () => {
+    changeTimeoutRef.current.forEach(timeout => clearTimeout(timeout))
+    changeTimeoutRef.current.clear()
+  }, [])
 
-  // Clear change animation after timeout
-  const clearChangeAfterTimeout = (key: string) => {
-    if (changeTimeoutRef.current.has(key)) {
-      clearTimeout(changeTimeoutRef.current.get(key))
+  const selectedClusterNamespaceData = useMemo<Map<string, NamespaceData>>(
+    () => buildNamespaceData({
+      selectedCluster,
+      namespaces,
+      pods,
+      deployments,
+      services,
+      configmaps,
+      secrets,
+      pvcs,
+      jobs,
+      searchFilter,
+    }),
+    [selectedCluster, namespaces, pods, deployments, services, configmaps, secrets, pvcs, jobs, searchFilter],
+  )
+
+  const getNamespaceData = useCallback((clusterName: string) => {
+    if (clusterName !== selectedCluster) {
+      return EMPTY_NAMESPACE_DATA
     }
+    return selectedClusterNamespaceData
+  }, [selectedCluster, selectedClusterNamespaceData])
+
+  const getResourceChange = useCallback((cluster: string, namespace: string, type: ResourceType, name: string): ChangeType => (
+    getRecentResourceChange(recentChanges, cluster, namespace, type, name)
+  ), [recentChanges])
+
+  const clearChangeAfterTimeout = useCallback((key: string) => {
+    const existingTimeout = changeTimeoutRef.current.get(key)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+
     const timeout = setTimeout(() => {
       changeTimeoutRef.current.delete(key)
-    }, 5000)
-    changeTimeoutRef.current.set(key, timeout)
-  }
+    }, RECENT_CHANGE_WINDOW_MS)
 
-  // Toggle cluster expansion
-  const toggleCluster = (clusterName: string) => {
+    changeTimeoutRef.current.set(key, timeout)
+  }, [])
+
+  const toggleCluster = useCallback((clusterName: string) => {
     const isCurrentlyExpanded = expandedClusters.has(clusterName)
 
-    setExpandedClusters(prev => {
-      const next = new Set(prev)
+    setExpandedClusters(previous => {
+      const next = new Set(previous)
       if (next.has(clusterName)) {
         next.delete(clusterName)
       } else {
@@ -355,637 +174,159 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
       return next
     })
 
-    // Only set selected cluster when expanding (not collapsing)
     if (!isCurrentlyExpanded) {
       setSelectedCluster(clusterName)
     }
-  }
+  }, [expandedClusters])
 
-  // Toggle namespace expansion
-  const toggleNamespace = (nsKey: string) => {
-    setExpandedNamespaces(prev => {
-      const next = new Set(prev)
-      if (next.has(nsKey)) {
-        next.delete(nsKey)
+  const toggleNamespace = useCallback((namespaceKey: string) => {
+    setExpandedNamespaces(previous => {
+      const next = new Set(previous)
+      if (next.has(namespaceKey)) {
+        next.delete(namespaceKey)
       } else {
-        next.add(nsKey)
+        next.add(namespaceKey)
       }
       return next
     })
-  }
+  }, [])
 
-  // Toggle resource type filter
-  const toggleResourceType = (type: ResourceType) => {
-    setActiveResourceTypes(prev => {
-      const next = new Set(prev)
+  const toggleResourceType = useCallback((type: ResourceType) => {
+    setActiveResourceTypes(previous => {
+      const next = new Set(previous)
       if (next.has(type)) {
-        if (next.size > 1) next.delete(type) // Keep at least one
+        if (next.size > 1) {
+          next.delete(type)
+        }
       } else {
         next.add(type)
       }
       return next
     })
-  }
+  }, [])
 
-  // Build namespace data map for the currently selected cluster.
-  // One pass over each source array builds a Map<namespace, T[]> index, then
-  // each namespace does an O(1) lookup instead of an O(M) Array.filter().
-  const selectedClusterNamespaceData = useMemo<Map<string, NamespaceData>>(() => {
-    if (!selectedCluster) return new Map()
-
-    // Filter namespaces by search
-    let filteredNs = namespaces || []
-    if (searchFilter) {
-      const query = searchFilter.toLowerCase()
-      filteredNs = filteredNs.filter(ns => ns.toLowerCase().includes(query))
+  const handleViewResourceDetails = useCallback((resource: ModalResource) => {
+    if (resource.type === 'pods') {
+      drillToPod(resource.cluster, resource.namespace, resource.name)
+    } else if (resource.type === 'deployments') {
+      drillToDeployment(resource.cluster, resource.namespace, resource.name)
+    } else if (resource.type === 'services') {
+      drillToService(resource.cluster, resource.namespace, resource.name)
+    } else if (resource.type === 'pvcs') {
+      drillToPVC(resource.cluster, resource.namespace, resource.name)
     }
 
-    const podsByNs = new Map<string, PodItem[]>()
-    for (const p of (pods || [])) {
-      const item: PodItem = { name: p.name, namespace: p.namespace, status: p.status, restarts: p.restarts }
-      const arr = podsByNs.get(p.namespace)
-      if (arr) arr.push(item)
-      else podsByNs.set(p.namespace, [item])
-    }
+    setModalResource(null)
+  }, [drillToDeployment, drillToPVC, drillToPod, drillToService])
 
-    const depsByNs = new Map<string, DeploymentItem[]>()
-    for (const d of (deployments || [])) {
-      const item: DeploymentItem = {
-        name: d.name,
-        namespace: d.namespace,
-        replicas: d.replicas,
-        readyReplicas: d.readyReplicas,
-        status: d.status }
-      const arr = depsByNs.get(d.namespace)
-      if (arr) arr.push(item)
-      else depsByNs.set(d.namespace, [item])
-    }
-
-    const svcsByNs = new Map<string, ServiceItem[]>()
-    for (const s of (services || [])) {
-      const item: ServiceItem = { name: s.name, namespace: s.namespace, type: s.type }
-      const arr = svcsByNs.get(s.namespace)
-      if (arr) arr.push(item)
-      else svcsByNs.set(s.namespace, [item])
-    }
-
-    const cmsByNs = new Map<string, ConfigMapItem[]>()
-    for (const c of (configmaps || [])) {
-      const item: ConfigMapItem = { name: c.name, namespace: c.namespace, dataCount: c.dataCount }
-      const arr = cmsByNs.get(c.namespace)
-      if (arr) arr.push(item)
-      else cmsByNs.set(c.namespace, [item])
-    }
-
-    const secretsByNs = new Map<string, SecretItem[]>()
-    for (const s of (secrets || [])) {
-      const item: SecretItem = { name: s.name, namespace: s.namespace, type: s.type }
-      const arr = secretsByNs.get(s.namespace)
-      if (arr) arr.push(item)
-      else secretsByNs.set(s.namespace, [item])
-    }
-
-    const pvcsByNs = new Map<string, PVCItem[]>()
-    for (const p of (pvcs || [])) {
-      const item: PVCItem = { name: p.name, namespace: p.namespace, status: p.status }
-      const arr = pvcsByNs.get(p.namespace)
-      if (arr) arr.push(item)
-      else pvcsByNs.set(p.namespace, [item])
-    }
-
-    const jobsByNs = new Map<string, JobItem[]>()
-    for (const j of (jobs || [])) {
-      const item: JobItem = { name: j.name, namespace: j.namespace, status: j.status }
-      const arr = jobsByNs.get(j.namespace)
-      if (arr) arr.push(item)
-      else jobsByNs.set(j.namespace, [item])
-    }
-
-    const nsData = new Map<string, NamespaceData>()
-    filteredNs.forEach(ns => {
-      const nsPods = podsByNs.get(ns) || []
-      const nsDeps = depsByNs.get(ns) || []
-      const nsSvcs = svcsByNs.get(ns) || []
-      const nsCms = cmsByNs.get(ns) || []
-      const nsSecrets = secretsByNs.get(ns) || []
-      const nsPvcs = pvcsByNs.get(ns) || []
-      const nsJobs = jobsByNs.get(ns) || []
-
-      const hasIssues = nsPods.some(p => p.status !== 'Running' && p.status !== 'Succeeded') ||
-                       nsDeps.some(d => d.readyReplicas < d.replicas)
-
-      nsData.set(ns, {
-        pods: nsPods,
-        deployments: nsDeps,
-        services: nsSvcs,
-        configmaps: nsCms,
-        secrets: nsSecrets,
-        pvcs: nsPvcs,
-        jobs: nsJobs,
-        hasIssues })
+  const handleSelectChange = useCallback((change: ResourceChange) => {
+    setModalResource({
+      type: change.resourceType,
+      name: change.name,
+      namespace: change.namespace,
+      cluster: change.cluster,
     })
+  }, [])
 
-    return nsData
-  }, [selectedCluster, namespaces, pods, deployments, services, configmaps, secrets, pvcs, jobs, searchFilter])
+  const handleDrillToResource = useCallback((resource: ModalResource) => {
+    if (resource.type === 'pods') {
+      drillToPod(resource.cluster, resource.namespace, resource.name)
+      return
+    }
+    if (resource.type === 'deployments') {
+      drillToDeployment(resource.cluster, resource.namespace, resource.name)
+      return
+    }
+    if (resource.type === 'services') {
+      drillToService(resource.cluster, resource.namespace, resource.name)
+      return
+    }
+    if (resource.type === 'pvcs') {
+      drillToPVC(resource.cluster, resource.namespace, resource.name)
+    }
+  }, [drillToDeployment, drillToPVC, drillToPod, drillToService])
 
-  const getNamespaceData = (clusterName: string): Map<string, NamespaceData> => {
-    if (clusterName !== selectedCluster) return EMPTY_NAMESPACE_DATA
-    return selectedClusterNamespaceData
-  }
-
-  // Count recent changes by type
-  const changeCountsByType = (() => {
-    const counts = { added: 0, modified: 0, deleted: 0, error: 0 }
-    const recentTime = Date.now() - MS_PER_MINUTE
-    recentChanges.forEach(c => {
-      if (c.timestamp > recentTime && c.type) {
-        counts[c.type]++
-      }
-    })
-    return counts
-  })()
-
-  // Resource modal content
-  const ResourceModal = () => {
-    if (!modalResource) return null
-
-    const handleCloseModal = () => setModalResource(null)
-    const ResourceIcon = ResourceIcons[modalResource.type]
-
-    return (
-      <BaseModal isOpen={!!modalResource} onClose={handleCloseModal} size="sm">
-        <BaseModal.Header title={modalResource.name} icon={ResourceIcon} onClose={handleCloseModal} />
-
-        <BaseModal.Content>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm">
-              <Server className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Cluster:</span>
-              <span className="text-foreground">{modalResource.cluster}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Layers className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Namespace:</span>
-              <span className="text-foreground">{modalResource.namespace}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Box className="w-4 h-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Type:</span>
-              <span className="text-foreground capitalize">{modalResource.type}</span>
-            </div>
-          </div>
-        </BaseModal.Content>
-
-        <BaseModal.Footer showKeyboardHints={false}>
-          <button
-            onClick={() => {
-              if (modalResource.type === 'pods') {
-                drillToPod(modalResource.cluster, modalResource.namespace, modalResource.name)
-              } else if (modalResource.type === 'deployments') {
-                drillToDeployment(modalResource.cluster, modalResource.namespace, modalResource.name)
-              } else if (modalResource.type === 'services') {
-                drillToService(modalResource.cluster, modalResource.namespace, modalResource.name)
-              } else if (modalResource.type === 'pvcs') {
-                drillToPVC(modalResource.cluster, modalResource.namespace, modalResource.name)
-              }
-              setModalResource(null)
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-purple-500 hover:bg-purple-600 rounded text-sm text-white transition-colors ml-auto"
-          >
-            <Eye className="w-4 h-4" />
-            View Details
-          </button>
-        </BaseModal.Footer>
-      </BaseModal>
-    )
-  }
-
-  // Changes panel
-  const ChangesPanel = () => (
-    <div className={`absolute right-0 top-12 w-80 bg-card border border-border rounded-lg shadow-xl z-40 transition-all ${
-      showChangesPanel ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-    }`}>
-      <div className="flex flex-wrap items-center justify-between gap-y-2 p-3 border-b border-border">
-        <span className="text-sm font-medium text-foreground">Recent Changes</span>
-        <button onClick={() => setShowChangesPanel(false)} aria-label="Close recent changes panel" className="p-2 hover:bg-secondary rounded min-h-11 min-w-11 flex items-center justify-center">
-          <X className="w-4 h-4 text-muted-foreground" />
-        </button>
-      </div>
-      <div className="max-h-64 overflow-y-auto">
-        {recentChanges.length === 0 ? (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            No recent changes detected
-          </div>
-        ) : (
-          recentChanges.slice(0, 20).map((change, idx) => (
-            <div
-              key={idx}
-              className={`flex items-start gap-2 p-2 border-b border-border/50 hover:bg-secondary/50 cursor-pointer ${
-                change.type === 'added' ? 'bg-green-500/5' :
-                change.type === 'deleted' ? 'bg-red-500/5' :
-                change.type === 'error' ? 'bg-red-500/10' : 'bg-yellow-500/5'
-              }`}
-              onClick={() => setModalResource({
-                type: change.resourceType,
-                name: change.name,
-                namespace: change.namespace,
-                cluster: change.cluster })}
-            >
-              <div className={`mt-0.5 ${
-                change.type === 'added' ? 'text-green-400' :
-                change.type === 'deleted' ? 'text-red-400' :
-                change.type === 'error' ? 'text-red-500' : 'text-yellow-400'
-              }`}>
-                {change.type === 'added' ? <Plus className="w-3.5 h-3.5" /> :
-                 change.type === 'deleted' ? <Minus className="w-3.5 h-3.5" /> :
-                 change.type === 'error' ? <AlertTriangle className="w-3.5 h-3.5" /> :
-                 <Activity className="w-3.5 h-3.5" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  {(() => {
-                    const Icon = ResourceIcons[change.resourceType]
-                    return <Icon className={`w-3 h-3 ${ResourceColors[change.resourceType]}`} />
-                  })()}
-                  <span className="text-xs font-medium text-foreground truncate">{change.name}</span>
-                </div>
-                <div className="text-2xs text-muted-foreground">
-                  {change.namespace} • {new Date(change.timestamp).toLocaleTimeString()}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  )
+  const changeCountsByType = useMemo(() => getChangeCountsByType(recentChanges), [recentChanges])
+  const totalChangeCount = changeCountsByType.added + changeCountsByType.modified + changeCountsByType.deleted + changeCountsByType.error
 
   return (
     <div className="h-full flex flex-col min-h-0 relative">
-      {/* Header */}
       <div className="flex items-center justify-end mb-3 shrink-0">
-        <div className="flex items-center gap-2">
-          {/* Changes indicator */}
-          <button
-            onClick={() => setShowChangesPanel(!showChangesPanel)}
-            className={`relative flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
-              changeCountsByType.error > 0 ? 'bg-red-500/20 text-red-400' :
-              changeCountsByType.added + changeCountsByType.modified > 0 ? 'bg-purple-500/20 text-purple-400' :
-              'bg-secondary text-muted-foreground'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>{changeCountsByType.added + changeCountsByType.modified + changeCountsByType.deleted + changeCountsByType.error}</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowChangesPanel(open => !open)}
+          className={cn(
+            'relative flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors',
+            changeCountsByType.error > 0
+              ? 'bg-red-500/20 text-red-400'
+              : totalChangeCount > 0
+                ? 'bg-purple-500/20 text-purple-400'
+                : 'bg-secondary text-muted-foreground',
+          )}
+          title={t('cards:namespaceMonitor.recentChanges', { defaultValue: 'Recent changes' })}
+        >
+          <Activity className="w-3.5 h-3.5" />
+          <span>{totalChangeCount}</span>
+        </button>
       </div>
 
-      {/* Changes panel */}
-      <ChangesPanel />
+      <NamespaceMonitorChangesPanel
+        showChangesPanel={showChangesPanel}
+        recentChanges={recentChanges}
+        onClose={() => setShowChangesPanel(false)}
+        onSelectChange={handleSelectChange}
+      />
 
-      {/* Search */}
       <CardSearchInput
         value={searchFilter}
         onChange={setSearchFilter}
-        placeholder="Search clusters, namespaces..."
+        placeholder={t('cards:namespaceMonitor.searchPlaceholder', { defaultValue: 'Search clusters, namespaces...' })}
         className="mb-3 shrink-0"
       />
 
-      {/* Resource type filters */}
       <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
         {(Object.keys(ResourceIcons) as ResourceType[]).map(type => {
           const Icon = ResourceIcons[type]
           const isActive = activeResourceTypes.has(type)
+
           return (
             <button
               key={type}
               onClick={() => toggleResourceType(type)}
-              className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg border transition-colors ${
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg border transition-colors',
                 isActive
                   ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                  : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
-              }`}
+                  : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground hover:bg-secondary',
+              )}
             >
-              <Icon className={`w-3 h-3 ${isActive ? ResourceColors[type] : ''}`} />
-              <span className="capitalize">{type}</span>
+              <Icon className={cn('w-3 h-3', isActive && ResourceColors[type])} />
+              <span className="capitalize">{t(`cards:namespaceMonitor.resourceTypes.${type}`, { defaultValue: type })}</span>
             </button>
           )
         })}
       </div>
 
-      {/* Tree content */}
-      <div className="flex-1 bg-card/30 rounded-lg border border-border overflow-y-auto min-h-card-content">
-        <div className="p-2">
-          {filteredClusters.map(cluster => {
-            const isExpanded = expandedClusters.has(cluster.name)
-            const namespaceData = isExpanded ? getNamespaceData(cluster.name) : new Map<string, NamespaceData>()
-            const allNamespaces = Array.from(namespaceData.keys())
-              .filter(ns => !ns.startsWith('kube-') && ns !== 'openshift' && !ns.startsWith('openshift-'))
-              .sort()
-            // #6208: cap rows rendered to keep render cost bounded. The
-            // truncated count drives the "n more namespaces" hint below.
-            const namespaceList = allNamespaces.slice(0, MAX_NAMESPACES_RENDERED_PER_CLUSTER)
-            const truncatedCount = allNamespaces.length - namespaceList.length
+      <NamespaceMonitorTable
+        filteredClusters={filteredClusters}
+        selectedCluster={selectedCluster}
+        expandedClusters={expandedClusters}
+        expandedNamespaces={expandedNamespaces}
+        activeResourceTypes={activeResourceTypes}
+        getNamespaceData={getNamespaceData}
+        getResourceChange={getResourceChange}
+        clearChangeAfterTimeout={clearChangeAfterTimeout}
+        onToggleCluster={toggleCluster}
+        onToggleNamespace={toggleNamespace}
+        onDrillToNamespace={drillToNamespace}
+        onDrillToResource={handleDrillToResource}
+        onOpenResource={setModalResource}
+      />
 
-            return (
-              <div key={cluster.name} className="mb-1">
-                {/* Cluster row */}
-                <div
-                  className="flex items-center gap-2 py-2 px-2 rounded-md hover:bg-secondary/50 transition-colors cursor-pointer group"
-                  onClick={() => toggleCluster(cluster.name)}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  )}
-                  <Server className={`w-4 h-4 ${cluster.healthy ? 'text-green-400' : 'text-red-400'}`} />
-                  <span className="text-sm text-foreground flex-1">{cluster.context || cluster.name}</span>
-                  <span className="text-xs text-muted-foreground">{cluster.nodeCount} nodes</span>
-                </div>
-
-                {/* Namespaces */}
-                {isExpanded && (
-                  <div className="ml-6 border-l border-border/50">
-                    {selectedCluster !== cluster.name ? (
-                      <div className="flex items-center gap-2 py-2 px-4 text-xs text-muted-foreground">
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        Loading...
-                      </div>
-                    ) : namespaceList.length === 0 ? (
-                      <div className="py-2 px-4 text-xs text-muted-foreground">
-                        No namespaces found
-                      </div>
-                    ) : (
-                      namespaceList.map(ns => {
-                        const nsKey = `${cluster.name}:${ns}`
-                        const isNsExpanded = expandedNamespaces.has(nsKey)
-                        const data = namespaceData.get(ns)
-
-                        // Skip if data not loaded yet
-                        if (!data) return null
-
-                        return (
-                          <div key={ns} className="mb-0.5">
-                            {/* Namespace row */}
-                            <div
-                              className={`flex items-center gap-2 py-1.5 px-4 rounded-md hover:bg-secondary/50 transition-colors cursor-pointer ${
-                                data.hasIssues ? 'bg-red-500/5' : ''
-                              }`}
-                              onClick={() => toggleNamespace(nsKey)}
-                            >
-                              {isNsExpanded ? (
-                                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                              ) : (
-                                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                              )}
-                              <Layers className={`w-3.5 h-3.5 ${data.hasIssues ? 'text-yellow-400' : 'text-blue-400'}`} />
-                              <span
-                                className="text-sm text-foreground flex-1 hover:text-purple-400"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  drillToNamespace(cluster.name, ns)
-                                }}
-                              >
-                                {ns}
-                              </span>
-                              {data.hasIssues && (
-                                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
-                              )}
-                            </div>
-
-                            {/* Resources */}
-                            {isNsExpanded && (
-                              <div className="ml-4 border-l border-border/30">
-                                {/* Pods */}
-                                {activeResourceTypes.has('pods') && data.pods.length > 0 && (
-                                  <ResourceSection
-                                    type="pods"
-                                    items={data.pods.map(p => ({
-                                      name: p.name,
-                                      status: p.status,
-                                      healthy: p.status === 'Running' || p.status === 'Succeeded' }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={(name) => drillToPod(cluster.name, ns, name)}
-                                    onItemAction={(name) => setModalResource({ type: 'pods', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-
-                                {/* Deployments */}
-                                {activeResourceTypes.has('deployments') && data.deployments.length > 0 && (
-                                  <ResourceSection
-                                    type="deployments"
-                                    items={data.deployments.map(d => ({
-                                      name: d.name,
-                                      status: `${d.readyReplicas}/${d.replicas}`,
-                                      healthy: d.readyReplicas === d.replicas }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={(name) => drillToDeployment(cluster.name, ns, name)}
-                                    onItemAction={(name) => setModalResource({ type: 'deployments', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-
-                                {/* Services */}
-                                {activeResourceTypes.has('services') && data.services.length > 0 && (
-                                  <ResourceSection
-                                    type="services"
-                                    items={data.services.map(s => ({
-                                      name: s.name,
-                                      status: s.type,
-                                      healthy: true }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={(name) => drillToService(cluster.name, ns, name)}
-                                    onItemAction={(name) => setModalResource({ type: 'services', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-
-                                {/* ConfigMaps */}
-                                {activeResourceTypes.has('configmaps') && data.configmaps.length > 0 && (
-                                  <ResourceSection
-                                    type="configmaps"
-                                    items={data.configmaps.map(c => ({
-                                      name: c.name,
-                                      status: `${c.dataCount || 0} keys`,
-                                      healthy: true }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={() => {}}
-                                    onItemAction={(name) => setModalResource({ type: 'configmaps', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-
-                                {/* Secrets */}
-                                {activeResourceTypes.has('secrets') && data.secrets.length > 0 && (
-                                  <ResourceSection
-                                    type="secrets"
-                                    items={data.secrets.map(s => ({
-                                      name: s.name,
-                                      status: s.type || 'Opaque',
-                                      healthy: true }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={() => {}}
-                                    onItemAction={(name) => setModalResource({ type: 'secrets', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-
-                                {/* PVCs */}
-                                {activeResourceTypes.has('pvcs') && data.pvcs.length > 0 && (
-                                  <ResourceSection
-                                    type="pvcs"
-                                    items={data.pvcs.map(p => ({
-                                      name: p.name,
-                                      status: p.status,
-                                      healthy: p.status === 'Bound' }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={(name) => drillToPVC(cluster.name, ns, name)}
-                                    onItemAction={(name) => setModalResource({ type: 'pvcs', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-
-                                {/* Jobs */}
-                                {activeResourceTypes.has('jobs') && data.jobs.length > 0 && (
-                                  <ResourceSection
-                                    type="jobs"
-                                    items={data.jobs.map(j => ({
-                                      name: j.name,
-                                      status: j.status,
-                                      healthy: j.status === 'Complete' }))}
-                                    cluster={cluster.name}
-                                    namespace={ns}
-                                    getResourceChange={getResourceChange}
-                                    clearChangeAfterTimeout={clearChangeAfterTimeout}
-                                    onItemClick={() => {}}
-                                    onItemAction={(name) => setModalResource({ type: 'jobs', name, namespace: ns, cluster: cluster.name })}
-                                  />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })
-                    )}
-                    {/* #6208: surface the truncation hint so users know there
-                        are more namespaces beyond what was rendered. */}
-                    {truncatedCount > 0 && (
-                      <div className="py-2 px-4 text-xs text-muted-foreground italic">
-                        +{truncatedCount} more namespace{truncatedCount === 1 ? '' : 's'} not shown — use the search box to narrow down.
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-
-          {filteredClusters.length === 0 && (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              No clusters match the current filter
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Resource Modal */}
-      <ResourceModal />
-    </div>
-  )
-}
-
-// Resource section component
-interface ResourceSectionProps {
-  type: ResourceType
-  items: Array<{ name: string; status: string; healthy: boolean }>
-  cluster: string
-  namespace: string
-  getResourceChange: (cluster: string, namespace: string, type: ResourceType, name: string) => ChangeType
-  clearChangeAfterTimeout: (key: string) => void
-  onItemClick: (name: string) => void
-  onItemAction: (name: string) => void
-}
-
-function ResourceSection({
-  type,
-  items,
-  cluster,
-  namespace,
-  getResourceChange,
-  clearChangeAfterTimeout,
-  onItemClick,
-  onItemAction }: ResourceSectionProps) {
-  const Icon = ResourceIcons[type]
-  const color = ResourceColors[type]
-
-  return (
-    <div className="py-1 px-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-        <Icon className={`w-3 h-3 ${color}`} />
-        <span className="capitalize">{type}</span>
-        <span>({items.length})</span>
-      </div>
-      <div className="space-y-0.5">
-        {items.slice(0, MAX_VISIBLE_ITEMS).map(item => {
-          const changeType = getResourceChange(cluster, namespace, type, item.name)
-          const key = `${cluster}:${namespace}:${type}:${item.name}`
-
-          if (changeType) {
-            clearChangeAfterTimeout(key)
-          }
-
-          return (
-            <div
-              key={item.name}
-              className={`flex items-center gap-2 py-1 px-2 rounded text-xs group transition-all border border-transparent ${
-                changeType ? ChangeAnimations[changeType] : 'hover:bg-secondary/50'
-              }`}
-            >
-              <span
-                className={`flex-1 truncate cursor-pointer hover:text-purple-400 ${
-                  item.healthy ? 'text-foreground' : 'text-yellow-400'
-                }`}
-                onClick={() => onItemClick(item.name)}
-              >
-                {item.name}
-              </span>
-              <span className={`text-2xs px-1.5 py-0.5 rounded ${
-                item.healthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-              }`}>
-                {item.status}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onItemAction(item.name)
-                }}
-                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-secondary rounded transition-opacity"
-              >
-                <Eye className="w-3 h-3 text-muted-foreground" />
-              </button>
-            </div>
-          )
-        })}
-        {items.length > MAX_VISIBLE_ITEMS && (
-          <div className="text-2xs text-muted-foreground px-2 py-1">
-            +{items.length - MAX_VISIBLE_ITEMS} more
-          </div>
-        )}
-      </div>
+      <NamespaceMonitorModal
+        modalResource={modalResource}
+        onClose={() => setModalResource(null)}
+        onViewDetails={handleViewResourceDetails}
+      />
     </div>
   )
 }
