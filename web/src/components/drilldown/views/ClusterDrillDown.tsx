@@ -208,6 +208,10 @@ export function ClusterDrillDown({ data }: Props) {
     return []
   }, [activeLens, allDeployments, normalizedSearchFilter])
 
+  const unhealthyDeployments = useMemo(() => {
+    return filteredDeployments.filter(d => d.readyReplicas < d.replicas)
+  }, [filteredDeployments])
+
   const filteredServices = useMemo(() => {
     let svcs = allServices || []
     if (normalizedSearchFilter) {
@@ -825,7 +829,7 @@ export function ClusterDrillDown({ data }: Props) {
 
                         {expandedSections.has('deployment-issues') && (
                           <div className="ml-6 border-l-2 border-orange-500/30 pl-4 mt-1 space-y-1">
-                            {filteredDeployments.filter(d => d.readyReplicas < d.replicas).map((dep, i) => (
+                            {unhealthyDeployments.map((dep, i) => (
                               <div
                                 key={i}
                                 onClick={() => drillToNamespace(effectiveClusterName, dep.namespace)}

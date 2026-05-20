@@ -591,10 +591,43 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     setLocalClusterFilter([])
   }, [])
 
+  // Single-pass partition: categorize items by type in one iteration
+  const categorizedItems = useMemo(() => {
+    const offline: UnifiedItem[] = []
+    const gpu: UnifiedItem[] = []
+    const prediction: UnifiedItem[] = []
+    const criticalPredictions: UnifiedItem[] = []
+    const aiPredictions: UnifiedItem[] = []
+
+    for (const item of sortedItems) {
+      if (item.category === 'offline') {
+        offline.push(item)
+      } else if (item.category === 'gpu') {
+        gpu.push(item)
+      } else if (item.category === 'prediction') {
+        prediction.push(item)
+        if (item.predictionData?.severity === 'critical') {
+          criticalPredictions.push(item)
+        }
+        if (item.predictionData?.source === 'ai') {
+          aiPredictions.push(item)
+        }
+      }
+    }
+
+    return {
+      offline,
+      gpu,
+      prediction,
+      criticalPredictions,
+      aiPredictions,
+    }
+  }, [sortedItems])
+
   // Filtered counts for the action button
-  const filteredOfflineCount = useMemo(() => sortedItems.filter(i => i.category === 'offline').length, [sortedItems])
-  const filteredGpuCount = useMemo(() => sortedItems.filter(i => i.category === 'gpu').length, [sortedItems])
-  const filteredPredictionCount = useMemo(() => sortedItems.filter(i => i.category === 'prediction').length, [sortedItems])
+  const filteredOfflineCount = categorizedItems.offline.length
+  const filteredGpuCount = categorizedItems.gpu.length
+  const filteredPredictionCount = categorizedItems.prediction.length
 
   // ============================================================================
   // Root Cause Grouping
@@ -666,14 +699,8 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
 
   const filteredTotalIssues = filteredOfflineCount + filteredGpuCount
   const filteredTotalPredicted = filteredPredictionCount
-  const filteredCriticalPredicted = useMemo(
-    () => sortedItems.filter(i => i.category === 'prediction' && i.predictionData?.severity === 'critical').length,
-    [sortedItems]
-  )
-  const filteredAIPredictionCount = useMemo(
-    () => sortedItems.filter(i => i.category === 'prediction' && i.predictionData?.source === 'ai').length,
-    [sortedItems]
-  )
+  const filteredCriticalPredicted = categorizedItems.criticalPredictions.length
+  const filteredAIPredictionCount = categorizedItems.aiPredictions.length
   const isFiltered = search.trim() !== '' || localClusterFilter.length > 0
 
   const runningMission = missions.find(m =>
@@ -682,7 +709,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
 
   const doStartAnalysis = () => {
     const filteredOfflineItems = isFiltered
-      ? sortedItems.filter(i => i.category === 'offline')
+      ? categorizedItems.offline
       : unifiedItems.filter(i => i.category === 'offline')
     const filteredOfflineNodes = filteredOfflineItems
       .map(i => i.nodeData)
@@ -691,10 +718,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       .map(i => i.clusterIssueData)
       .filter((issue): issue is NonNullable<typeof issue> => !!issue)
     const filteredGpuIssuesList = isFiltered
-      ? sortedItems.filter(i => i.category === 'gpu' && i.gpuData).map(i => i.gpuData) as typeof gpuIssues
+      ? categorizedItems.gpu.map(i => i.gpuData).filter((data): data is NonNullable<typeof data> => !!data)
       : gpuIssues
     const filteredPredictedRisks = isFiltered
-      ? sortedItems.filter(i => i.category === 'prediction' && i.predictionData).map(i => i.predictionData) as typeof predictedRisks
+      ? categorizedItems.prediction.map(i => i.predictionData).filter((data): data is NonNullable<typeof data> => !!data)
       : predictedRisks
 
     const nodesSummary = filteredOfflineNodes.map(node => {
