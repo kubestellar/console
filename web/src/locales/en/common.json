@@ -4813,6 +4813,47 @@
     "clusters": "Clusters"
   },
   "stellar": {
+    "eventCard": {
+      "details": "details",
+      "importanceScore": "Importance: {{score}}",
+      "attemptCount": "Tried {{count}}×",
+      "undoThis": "Undo this",
+      "tryAiMission": "Try AI mission",
+      "tryAiMissionTitle": "Hand this off to an AI mission on your connected agent for deeper investigation and autonomous fix",
+      "solveAlreadyInProgress": "Stellar is already solving this event",
+      "actionTitle": "{{action}} for {{title}}",
+      "autoHandling": "Stellar is handling this autonomously",
+      "solving": "Solving...",
+      "actions": {
+        "investigate": "Investigate",
+        "restart": "Restart",
+        "scale": "Scale",
+        "solve": "Solve"
+      }
+    },
+    "eventModal": {
+      "solve": "Solve",
+      "confirmSolve": "Confirm & Solve",
+      "solving": "Solving...",
+      "solveTooltip": "Mark event as resolved with optional note",
+      "solveSuccess": "Event marked as resolved",
+      "solveFailed": "Failed to solve event: {{error}}",
+      "resolutionNoteLabel": "Resolution note (optional)",
+      "resolutionNotePlaceholder": "Describe what was done to resolve this event...",
+      "investigate": "Investigate",
+      "investigateTooltip": "Open investigation panel with logs and related events",
+      "investigateStarted": "Investigation started",
+      "investigationPanelTitle": "Investigation Panel",
+      "investigationPanelDescription": "Logs and related events are being pulled. Check the activity log for full output.",
+      "remove": "Remove",
+      "confirmRemove": "Confirm & Remove",
+      "removing": "Removing...",
+      "removeTooltip": "Dismiss event with optional reason",
+      "removeSuccess": "Event dismissed",
+      "removeFailed": "Failed to remove event: {{error}}",
+      "dismissReasonLabel": "Dismiss reason (optional)",
+      "dismissReasonPlaceholder": "Why is this event being dismissed?..."
+    },
     "attentionBubble": "Try Stellar AI!",
     "watchDetail": {
       "executeViaChat": "Execute via chat →"
