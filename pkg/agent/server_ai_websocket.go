@@ -20,7 +20,10 @@ import (
 // wsGoroutineDrainTimeout is the maximum time handleWebSocket waits for
 // spawned goroutines (pinger, chat, kubectl) to exit before closing the
 // connection. Prevents indefinite hangs on abnormal exit (#11878).
-const wsGoroutineDrainTimeout = 5 * time.Second
+// Increased to 15s to accommodate slow cluster API calls (EKS clusters with
+// ~1.8s response times) and ensure in-flight operations complete gracefully
+// before timeout, preventing frequent reconnects during AI Missions (#14988).
+const wsGoroutineDrainTimeout = 15 * time.Second
 
 // maxWSGoroutines limits concurrent chat/kubectl goroutines per connection
 // to prevent resource exhaustion from bursty or malicious traffic (#7277).
