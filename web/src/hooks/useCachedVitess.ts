@@ -114,6 +114,9 @@ function buildKeyspaces(shards: VitessShard[], tablets: VitessTablet[]): VitessK
 }
 
 function summarize(tablets: VitessTablet[], keyspaces: VitessKeyspace[]): VitessSummary {
+   const safeTablets = tablets ?? []      
+  const safeKeyspaces = keyspaces ?? []  
+
   let primaryTablets = 0
   let replicaTablets = 0
   let rdonlyTablets = 0
@@ -121,7 +124,7 @@ function summarize(tablets: VitessTablet[], keyspaces: VitessKeyspace[]): Vitess
   let maxReplicationLagSeconds = 0
   let totalShards = 0
 
-  for (const tablet of (tablets || [])) {
+ for (const tablet of safeTablets) {
     if (tablet.type === 'PRIMARY') primaryTablets += 1
     else if (tablet.type === 'REPLICA') replicaTablets += 1
     else if (tablet.type === 'RDONLY') rdonlyTablets += 1
@@ -131,14 +134,14 @@ function summarize(tablets: VitessTablet[], keyspaces: VitessKeyspace[]): Vitess
     }
   }
 
-  for (const keyspace of (keyspaces || [])) {
+  for (const keyspace of safeKeyspaces) {
     totalShards += keyspace.shards.length
   }
 
   return {
-    totalKeyspaces: keyspaces.length,
+    totalKeyspaces: safeKeyspaces.length,
     totalShards,
-    totalTablets: tablets.length,
+    totalTablets: safeTablets.length,
     primaryTablets,
     replicaTablets,
     rdonlyTablets,
