@@ -12,7 +12,7 @@
  *  - getDependencyNotes — human-readable integration notes for a project set
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { AMBER_500, GREEN_500_BRIGHT, RED_500, SLATE_700 } from '../../lib/theme/chartColors'
@@ -557,6 +557,10 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
   installedProjects?: Set<string>
 }) {
   const depNotes = getDependencyNotes(projects)
+  const projectByName = useMemo(
+    () => new Map(projects.map((project) => [project.name, project] as const)),
+    [projects]
+  )
   // Use AI-provided phases, or auto-generate from dependencies
   const effectivePhases = phases.length > 0 ? phases : generateDefaultPhases(projects)
   const totalEstSec = effectivePhases.reduce((sum, p) => sum + (p.estimatedSeconds ?? 180), 0)
@@ -623,8 +627,8 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
           <div className="space-y-3">
             {effectivePhases.map((phase, phaseIdx) => {
               const phaseProjects = phase.projectNames
-                .map((n) => projects.find((p) => p.name === n))
-                .filter(Boolean) as PayloadProject[]
+                .map((projectName) => projectByName.get(projectName))
+                .filter((project): project is PayloadProject => Boolean(project))
               return (
                 <div key={phase.phase} className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <div className="flex items-center gap-2 mb-2">
@@ -639,9 +643,9 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
                     )}
                   </div>
                   <ul className="space-y-2 ml-1">
-                    {phaseProjects.map((proj) => (
+                    {phaseProjects.map((proj, projectIdx) => (
                       <li key={proj.name} className="flex items-start gap-2">
-                        <span className="text-xs font-bold text-primary mt-0.5 shrink-0">{phaseIdx + 1}.{phaseProjects.indexOf(proj) + 1}</span>
+                        <span className="text-xs font-bold text-primary mt-0.5 shrink-0">{phaseIdx + 1}.{projectIdx + 1}</span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-medium text-foreground">{proj.displayName}</span>
