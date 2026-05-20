@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -16,6 +17,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestGetConfigMaps(t *testing.T) {
@@ -103,6 +106,75 @@ func TestGetSecrets(t *testing.T) {
 	secrets := response["secrets"].([]interface{})
 	assert.NotEmpty(t, secrets)
 	assert.Equal(t, "test-secret", secrets[0].(map[string]interface{})["name"])
+}
+
+func TestGetConfigMaps_AllClustersAnnotatesPartialErrors(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewMCPHandlers(nil, env.K8sClient, env.Store)
+	env.App.Get("/api/mcp/resources/configmaps", handler.GetConfigMaps)
+
+	scheme := newK8sScheme()
+	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-a-cm",
+			Namespace: "default",
+		},
+		Data: map[string]string{"key": "value"},
+	}
+
+	injectDynamicClusterWithObjects(env, "cluster-a", scheme, []runtime.Object{cm}, cm)
+	injectDynamicClusterWithObjects(env, "cluster-b", scheme, nil)
+
+	clusterBClient, err := env.K8sClient.GetClient("cluster-b")
+	require.NoError(t, err)
+
+	fakeClient, ok := clusterBClient.(*k8sfake.Clientset)
+	require.True(t, ok, "expected fake clientset for cluster-b")
+	fakeClient.PrependReactor("list", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("dial tcp 127.0.0.1:6443: connect: connection refused")
+	})
+
+	req, err := http.NewRequest("GET", "/api/mcp/resources/configmaps?namespace=default", nil)
+	require.NoError(t, err)
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var response map[string]interface{}
+	body, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
+	require.NoError(t, json.Unmarshal(body, &response))
+
+	configmaps := response["configmaps"].([]interface{})
+	assert.Len(t, configmaps, 1)
+	assert.Equal(t, "cluster-a-cm", configmaps[0].(map[string]interface{})["name"])
+	assert.Equal(t, true, response["partial"])
+
+	clusterErrors := response["clusterErrors"].([]interface{})
+	assert.Len(t, clusterErrors, 1)
+	assert.Equal(t, "cluster-b", clusterErrors[0].(map[string]interface{})["cluster"])
+}
+
+func TestGetPVs_SingleClusterEmptyIsArray(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewMCPHandlers(nil, env.K8sClient, env.Store)
+	env.App.Get("/api/mcp/resources/pvs", handler.GetPVs)
+
+	req, err := http.NewRequest("GET", "/api/mcp/resources/pvs?cluster=test-cluster", nil)
+	require.NoError(t, err)
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var response map[string]interface{}
+	body, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
+	require.NoError(t, json.Unmarshal(body, &response))
+
+	items, ok := response["pvs"].([]interface{})
+	require.True(t, ok, "pvs should be a JSON array, not null")
+	assert.Len(t, items, 0)
 }
 
 func TestCreateOrUpdateResourceQuota(t *testing.T) {
