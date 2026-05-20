@@ -34,7 +34,12 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 		Role:        models.UserRoleAdmin,
 	}))
 	require.NoError(t, sqlStore.UpdateStellarPreferences(context.Background(), &store.StellarPreferences{
-		UserID: testUserID.String(),
+		UserID:          testUserID.String(),
+		DefaultProvider: "auto",
+		ExecutionMode:   "hybrid",
+		Timezone:        "UTC",
+		ProactiveMode:   true,
+		PinnedClusters:  []string{},
 	}))
 
 	ollamaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
