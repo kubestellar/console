@@ -104,7 +104,7 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	slog.Debug("[QuantumProxy] Forwarding request", "from", c.Path(), "to", targetURL)
 
 	// Create HTTP client request
-	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
@@ -157,7 +157,7 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 
 	slog.Debug("[QuantumProxy] Forwarding histogram request", "from", c.Path(), "to", targetURL)
 
-	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
 	if err != nil {
 		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
@@ -241,7 +241,7 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	slog.Debug("[QuantumProxy] Forwarding POST request", "from", c.Path(), "to", targetURL)
 
 	// Create HTTP client request
-	req, err := http.NewRequest(http.MethodPost, targetURL, strings.NewReader(string(c.Body())))
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodPost, targetURL, strings.NewReader(string(c.Body())))
 	if err != nil {
 		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")

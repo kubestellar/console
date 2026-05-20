@@ -9,7 +9,6 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
-
 const (
 	developerCheckInterval = 15 * time.Minute
 	releaseCheckInterval   = 60 * time.Minute
@@ -98,14 +97,14 @@ func (uc *UpdateChecker) Configure(enabled bool, channel string) {
 // outside the lock so concurrent callers are not serialized behind a 15s fetch (#7282).
 func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 	uc.mu.Lock()
+	repoPath := uc.repoPath
 	resp := AutoUpdateStatusResponse{
-		InstallMethod:         uc.installMethod,
-		RepoPath:              uc.repoPath,
-		CurrentSHA:            uc.currentSHA,
-		AutoUpdateEnabled:     uc.enabled,
-		Channel:               uc.channel,
-		HasUncommittedChanges: hasUncommittedChanges(uc.repoPath),
-		UpdateInProgress:      uc.IsUpdating(),
+		InstallMethod:     uc.installMethod,
+		RepoPath:          repoPath,
+		CurrentSHA:        uc.currentSHA,
+		AutoUpdateEnabled: uc.enabled,
+		Channel:           uc.channel,
+		UpdateInProgress:  uc.IsUpdating(),
 	}
 
 	if !uc.lastUpdateTime.IsZero() {
@@ -115,8 +114,9 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 		// Sanitize error message for client - don't leak raw git/npm/build errors
 		resp.LastUpdateResult = "Update failed - check server logs for details"
 	}
-	repoPath := uc.repoPath
 	uc.mu.Unlock()
+
+	resp.HasUncommittedChanges = hasUncommittedChanges(repoPath)
 
 	// Re-read current SHA from repo (may have changed if someone pulled locally).
 	// These git operations run outside the lock to avoid blocking other callers.
