@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -486,10 +488,50 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// validateBaseURL performs a syntactic check on a base URL before it is
-// saved. This is not a reachability test — local runners may not be
-// running at the time the operator configures them. The goal is only to
-// reject obvious typos (missing scheme, whitespace, non-http(s) scheme).
+// privateIPNets contains RFC 1918, loopback, link-local, and other
+// non-routable CIDR ranges that MUST NOT be used as provider base URLs.
+var privateIPNets = func() []*net.IPNet {
+	cidrs := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"127.0.0.0/8",
+		"169.254.0.0/16",
+		"::1/128",
+		"fc00::/7",
+		"fe80::/10",
+	}
+	nets := make([]*net.IPNet, 0, len(cidrs))
+	for _, cidr := range cidrs {
+		_, n, _ := net.ParseCIDR(cidr)
+		nets = append(nets, n)
+	}
+	return nets
+}()
+
+// isPrivateIP returns true if the given IP falls within a private or
+// non-routable range.
+func isPrivateIP(ip net.IP) bool {
+	for _, n := range privateIPNets {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// allowLocalProviders controls whether validateBaseURL permits private-IP
+// base URLs (e.g. localhost Ollama). Set via ALLOW_LOCAL_PROVIDERS=true.
+func allowLocalProviders() bool {
+	return os.Getenv("ALLOW_LOCAL_PROVIDERS") == "true"
+}
+
+// validateBaseURL performs syntactic and SSRF-safety checks on a base URL
+// before it is saved. Rejects private/loopback IPs unless the operator has
+// explicitly opted in with ALLOW_LOCAL_PROVIDERS=true (for local runners
+// like Ollama). This prevents authenticated operators from using the
+// provider proxy as an SSRF gadget to reach cloud metadata or internal
+// services.
 func validateBaseURL(s string) error {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -501,6 +543,34 @@ func validateBaseURL(s string) error {
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 		return fmt.Errorf("base URL must start with http:// or https://")
 	}
+
+	// SSRF hardening: block private/internal IPs unless opted out.
+	if !allowLocalProviders() {
+		u, err := url.Parse(s)
+		if err != nil {
+			return fmt.Errorf("malformed URL: %w", err)
+		}
+		host := u.Hostname()
+		// Resolve the hostname to check all addresses
+		ips, err := net.LookupHost(host)
+		if err != nil {
+			// If DNS fails, check if host is a literal IP
+			if ip := net.ParseIP(host); ip != nil {
+				if isPrivateIP(ip) {
+					return fmt.Errorf("base URL resolves to a private/internal IP address")
+				}
+			}
+			// DNS failure for non-literal host: allow (host may not resolve yet
+			// for local runners that aren't started).
+			return nil
+		}
+		for _, ipStr := range ips {
+			if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
+				return fmt.Errorf("base URL resolves to a private/internal IP address")
+			}
+		}
+	}
+
 	return nil
 }
 

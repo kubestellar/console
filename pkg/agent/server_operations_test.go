@@ -44,13 +44,23 @@ func TestServer_GetKeysStatus(t *testing.T) {
 }
 
 func TestServer_ValidateBaseURL(t *testing.T) {
+	// Unset ALLOW_LOCAL_PROVIDERS to test default (private-IP blocking) behavior
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "")
+
 	tests := []struct {
 		url   string
 		valid bool
 	}{
-		{"http://localhost:11434", true},
 		{"https://api.openai.com", true},
-		{"http://10.0.0.1:8080/v1", true},
+		{"https://api.anthropic.com/v1", true},
+		{"https://openrouter.ai/api/v1", true},
+		// Private IPs blocked by default
+		{"http://10.0.0.1:8080/v1", false},
+		{"http://172.16.0.1:11434", false},
+		{"http://192.168.1.100:8080", false},
+		{"http://127.0.0.1:11434", false},
+		{"http://169.254.169.254/latest/meta-data", false},
+		// Syntactic failures
 		{"missing-scheme", false},
 		{"ftp://invalid", false},
 		{"http:// space ", false},
@@ -60,6 +70,30 @@ func TestServer_ValidateBaseURL(t *testing.T) {
 		err := validateBaseURL(tt.url)
 		if (err == nil) != tt.valid {
 			t.Errorf("validateBaseURL(%q) valid=%v, want %v. Err: %v", tt.url, err == nil, tt.valid, err)
+		}
+	}
+}
+
+func TestServer_ValidateBaseURL_AllowLocal(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
+	tests := []struct {
+		url   string
+		valid bool
+	}{
+		{"http://localhost:11434", true},
+		{"http://10.0.0.1:8080/v1", true},
+		{"http://127.0.0.1:11434", true},
+		{"https://api.openai.com", true},
+		// Syntactic failures still fail
+		{"missing-scheme", false},
+		{"ftp://invalid", false},
+	}
+
+	for _, tt := range tests {
+		err := validateBaseURL(tt.url)
+		if (err == nil) != tt.valid {
+			t.Errorf("validateBaseURL(%q) with ALLOW_LOCAL_PROVIDERS=true valid=%v, want %v. Err: %v", tt.url, err == nil, tt.valid, err)
 		}
 	}
 }
