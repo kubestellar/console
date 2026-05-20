@@ -4814,6 +4814,10 @@
   },
   "stellar": {
     "attentionBubble": "Try Stellar AI!",
+    "catchUp": {
+      "title": "While you were away",
+      "dismissAriaLabel": "Dismiss catch-up summary"
+    },
     "watchDetail": {
       "executeViaChat": "Execute via chat →"
     },

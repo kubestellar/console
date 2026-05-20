@@ -342,10 +342,15 @@ describe('StellarProvider — SSE events', () => {
     const es = eventSourceInstances[0]
     es._triggerOpen()
     await act(async () => {
-      es._triggerEvent('catchup', { summary: 'You missed 3 events', kind: 'digest' })
+      es._triggerEvent('catchup', {
+        summary: 'You missed 3 events',
+        kind: 'digest',
+        highlights: ['Away for 2h.', '[WARNING] Pod restarted on prod-cluster'],
+      })
     })
     expect(capturedRef.current?.catchUp?.summary).toBe('You missed 3 events')
     expect(capturedRef.current?.catchUp?.kind).toBe('digest')
+    expect(capturedRef.current?.catchUp?.highlights).toEqual(['Away for 2h.', '[WARNING] Pod restarted on prod-cluster'])
   })
 
   it('handles action_updated SSE event — removes approved action', async () => {
@@ -518,7 +523,7 @@ describe('StellarProvider — actions', () => {
     const es = eventSourceInstances[0]
     es._triggerOpen()
     await act(async () => {
-      es._triggerEvent('catchup', { summary: 'Missed events', kind: 'digest' })
+      es._triggerEvent('catchup', { summary: 'Missed events', kind: 'digest', highlights: ['Away for 1h.'] })
     })
     expect(capturedRef.current?.catchUp).not.toBeNull()
     act(() => { capturedRef.current?.dismissCatchUp() })

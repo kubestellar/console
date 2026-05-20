@@ -52,6 +52,7 @@ function sortNotificationsByCreatedAt(items: StellarNotification[]): StellarNoti
 export interface CatchUpState {
   summary: string
   kind: string
+  highlights?: string[]
 }
 
 function useStellarSource() {
@@ -331,7 +332,7 @@ function useStellarSource() {
       stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
     })
     es.addEventListener('catchup', (e) => {
-      const catchup = parseStellarEvent<{ summary: string; kind: string }>(e, 'catchup')
+      const catchup = parseStellarEvent<{ summary: string; kind: string; highlights?: string[] }>(e, 'catchup')
       if (!catchup) {
         return
       }
