@@ -23,6 +23,10 @@ const (
 	// perClusterDataTimeout bounds each goroutine's data-gathering work
 	// (pod issues + GPU nodes + offline nodes) for a single cluster.
 	perClusterDataTimeout = 15 * time.Second
+
+	// maxPredictionConcurrency caps the number of concurrent cluster queries
+	// to prevent resource exhaustion when querying many clusters.
+	maxPredictionConcurrency = 10
 )
 
 // PredictionSettings holds configuration from the frontend
@@ -518,6 +522,9 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 
+		// Semaphore to cap concurrent cluster queries
+		sem := make(chan struct{}, maxPredictionConcurrency)
+
 		for _, cluster := range clusters {
 			if !healthyClusterSet[cluster.Name] {
 				slog.Info("[PredictionWorker] skipping offline cluster", "cluster", cluster.Name)
@@ -527,6 +534,10 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 			wg.Add(1)
 			safego.GoWith("prediction-worker/"+cl.Name, func() {
 				defer wg.Done()
+
+				// Acquire semaphore slot
+				sem <- struct{}{}
+				defer func() { <-sem }()
 
 				// Check parent context before starting work
 				select {
