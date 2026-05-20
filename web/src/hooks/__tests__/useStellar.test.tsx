@@ -150,6 +150,12 @@ import {
   STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
   useStellar,
 } from '../useStellar'
+import {
+  STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS,
+  STELLAR_BATCH_INTERVAL_TWO_HOURS_MS,
+  STELLAR_DEFAULT_BATCH_INTERVAL_MS,
+} from '../../components/stellar/lib/time'
+import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../../lib/constants/storage'
 
 // ---------------------------------------------------------------------------
 // Helper: render a consumer inside StellarProvider
@@ -185,6 +191,8 @@ describe('useStellar — fallback outside provider', () => {
     expect(result.current.state).toBeNull()
     expect(result.current.nudge).toBeNull()
     expect(result.current.catchUp).toBeNull()
+    expect(result.current.batchIntervalMs).toBe(STELLAR_DEFAULT_BATCH_INTERVAL_MS)
+    expect(result.current.isBatchRefreshing).toBe(false)
   })
 
   it('fallback action handlers are callable without throwing', async () => {
@@ -241,6 +249,66 @@ describe('StellarProvider — initial state', () => {
     expect(mockStellarApi.getState).toHaveBeenCalled()
     expect(mockStellarApi.getNotifications).toHaveBeenCalled()
     expect(mockStellarApi.getTasks).toHaveBeenCalled()
+  })
+})
+
+describe('StellarProvider — batch scheduling', () => {
+  it('loads the stored batch interval preference', async () => {
+    localStorage.setItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS))
+
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+
+    expect(capturedRef.current?.batchIntervalMs).toBe(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS)
+  })
+
+  it('persists batch interval changes and resets the next batch time', async () => {
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+
+    const previousNextBatchAtMs = capturedRef.current?.nextBatchAtMs ?? 0
+
+    await act(async () => {
+      capturedRef.current?.setBatchIntervalMs(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS)
+    })
+
+    expect(localStorage.getItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS)).toBe(String(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS))
+    expect(capturedRef.current?.batchIntervalMs).toBe(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS)
+    expect((capturedRef.current?.nextBatchAtMs ?? 0)).toBeGreaterThan(previousNextBatchAtMs)
+  })
+
+  it('automatically refreshes when the configured batch interval elapses', async () => {
+    vi.useFakeTimers()
+    localStorage.setItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS))
+
+    renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+
+    mockStellarApi.getState.mockClear()
+    mockStellarApi.getNotifications.mockClear()
+
+    await act(async () => {
+      vi.advanceTimersByTime(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS)
+      await Promise.resolve()
+    })
+
+    expect(mockStellarApi.getState).toHaveBeenCalledTimes(1)
+    expect(mockStellarApi.getNotifications).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs a batch immediately when requested', async () => {
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+
+    mockStellarApi.getState.mockClear()
+    mockStellarApi.getNotifications.mockClear()
+
+    await act(async () => {
+      await capturedRef.current?.runBatchNow()
+    })
+
+    expect(mockStellarApi.getState).toHaveBeenCalledTimes(1)
+    expect(mockStellarApi.getNotifications).toHaveBeenCalledTimes(1)
   })
 })
 

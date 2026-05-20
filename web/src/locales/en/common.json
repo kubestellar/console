@@ -4814,6 +4814,21 @@
   },
   "stellar": {
     "attentionBubble": "Try Stellar AI!",
+    "header": {
+      "clusterCount_one": "{{count}} cluster",
+      "clusterCount_other": "{{count}} clusters",
+      "nextBatch": "Next batch: {{countdown}}",
+      "batchIntervalLabel": "Batch interval",
+      "runNow": "Run Now",
+      "batchIntervals": {
+        "fifteenMinutes": "15m",
+        "thirtyMinutes": "30m",
+        "oneHour": "1h",
+        "twoHours": "2h",
+        "fourHours": "4h",
+        "eightHours": "8h"
+      }
+    },
     "catchUp": {
       "title": "While you were away",
       "dismissAriaLabel": "Dismiss catch-up summary"

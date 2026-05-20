@@ -1,4 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { getNextBatchTime, resolveStellarBatchIntervalMs, STELLAR_DEFAULT_BATCH_INTERVAL_MS } from '../components/stellar/lib/time'
+import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../lib/constants/storage'
+import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { stellarApi } from '../services/stellar'
 import type { ProviderSession, StellarAction, StellarActivity, StellarNotification, StellarObservation, StellarOperationalState, StellarSolve, StellarSolveProgress, StellarTask, StellarWatch } from '../types/stellar'
 
@@ -55,6 +58,10 @@ export interface CatchUpState {
   highlights?: string[]
 }
 
+function getStoredStellarBatchIntervalMs(): number {
+  return resolveStellarBatchIntervalMs(safeGetItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS))
+}
+
 function useStellarSource() {
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
@@ -93,19 +100,38 @@ function useStellarSource() {
   const reconnectDelay = useRef(STELLAR_RECONNECT_BASE_MS)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tokenPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [batchIntervalMs, setBatchIntervalMsState] = useState(() => getStoredStellarBatchIntervalMs())
+  const batchIntervalMsRef = useRef(batchIntervalMs)
+  const [nextBatchAtMs, setNextBatchAtMs] = useState(() => getNextBatchTime(batchIntervalMs))
+  const [isBatchRefreshing, setIsBatchRefreshing] = useState(false)
+  const batchRefreshInFlightRef = useRef(false)
 
   // #14201 — Sync Stellar provider with user's agent selection changes
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
-      if (e.key !== 'kc_selected_agent') return
-      const agent = e.newValue
-      if (agent && agent !== 'none') {
-        setProviderSession({ provider: agent, model: '', source: 'user-default', isCli: true })
+      if (e.key === 'kc_selected_agent') {
+        const agent = e.newValue
+        if (agent && agent !== 'none') {
+          setProviderSession({ provider: agent, model: '', source: 'user-default', isCli: true })
+        }
+        return
+      }
+
+      if (e.key === STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS) {
+        const storedIntervalMs = resolveStellarBatchIntervalMs(e.newValue)
+        batchIntervalMsRef.current = storedIntervalMs
+        setBatchIntervalMsState(storedIntervalMs)
+        setNextBatchAtMs(getNextBatchTime(storedIntervalMs))
       }
     }
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
+
+  useEffect(() => {
+    batchIntervalMsRef.current = batchIntervalMs
+  }, [batchIntervalMs])
 
   const refreshState = useCallback(async () => {
     const results = await Promise.allSettled([
@@ -132,6 +158,40 @@ function useStellarSource() {
       console.warn('stellar: refreshState partial failure —', failures.length, 'of 7 calls failed')
     }
   }, [])
+
+  const scheduleNextBatch = useCallback((intervalMs = batchIntervalMsRef.current) => {
+    setNextBatchAtMs(getNextBatchTime(intervalMs))
+  }, [])
+
+  const refreshBatch = useCallback(async () => {
+    if (batchRefreshInFlightRef.current) {
+      return
+    }
+
+    batchRefreshInFlightRef.current = true
+    setIsBatchRefreshing(true)
+    try {
+      await refreshState()
+    } catch (err) {
+      console.warn('stellar: batch refresh failed:', err)
+    } finally {
+      batchRefreshInFlightRef.current = false
+      setIsBatchRefreshing(false)
+      scheduleNextBatch()
+    }
+  }, [refreshState, scheduleNextBatch])
+
+  const setBatchIntervalMs = useCallback((intervalMs: number) => {
+    const nextIntervalMs = resolveStellarBatchIntervalMs(intervalMs)
+    batchIntervalMsRef.current = nextIntervalMs
+    setBatchIntervalMsState(nextIntervalMs)
+    safeSetItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(nextIntervalMs))
+    setNextBatchAtMs(getNextBatchTime(nextIntervalMs))
+  }, [])
+
+  const runBatchNow = useCallback(async () => {
+    await refreshBatch()
+  }, [refreshBatch])
 
   const connectSSE = useCallback(() => {
     if (esRef.current) {
@@ -360,6 +420,24 @@ function useStellarSource() {
   }, [connectSSE])
 
   useEffect(() => {
+    if (batchTimeoutRef.current) {
+      clearTimeout(batchTimeoutRef.current)
+    }
+
+    const delayMs = Math.max(0, nextBatchAtMs - Date.now())
+    batchTimeoutRef.current = setTimeout(() => {
+      void refreshBatch()
+    }, delayMs)
+
+    return () => {
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current)
+        batchTimeoutRef.current = null
+      }
+    }
+  }, [nextBatchAtMs, refreshBatch])
+
+  useEffect(() => {
     const waitForToken = (): Promise<void> => {
       return new Promise((resolve) => {
         if (hasStellarAuthCredentials()) {
@@ -388,7 +466,9 @@ function useStellarSource() {
       } catch (err) {
         console.warn('stellar: init failed:', err)
       }
-      
+
+      scheduleNextBatch()
+
       // Always connect SSE — even if init failed or cancelled by HMR
       connectSSE()
     }
@@ -403,6 +483,10 @@ function useStellarSource() {
       if (tokenPollRef.current) {
         clearInterval(tokenPollRef.current)
         tokenPollRef.current = null
+      }
+      if (batchTimeoutRef.current) {
+        clearTimeout(batchTimeoutRef.current)
+        batchTimeoutRef.current = null
       }
       esRef.current?.close()
     }
@@ -576,6 +660,11 @@ function useStellarSource() {
     snoozeWatch,
     dismissCatchUp,
     refreshState,
+    batchIntervalMs,
+    setBatchIntervalMs,
+    nextBatchAtMs,
+    isBatchRefreshing,
+    runBatchNow,
     solves,
     solveProgress,
     startSolve,
@@ -644,6 +733,11 @@ function useStellarFallback(): StellarContextValue {
     snoozeWatch: async () => {},
     dismissCatchUp: () => {},
     refreshState: async () => {},
+    batchIntervalMs: STELLAR_DEFAULT_BATCH_INTERVAL_MS,
+    setBatchIntervalMs: () => {},
+    nextBatchAtMs: getNextBatchTime(STELLAR_DEFAULT_BATCH_INTERVAL_MS),
+    isBatchRefreshing: false,
+    runBatchNow: async () => {},
     solves: [],
     solveProgress: {},
     startSolve: async () => ({}) as never,

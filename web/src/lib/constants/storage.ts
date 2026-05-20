@@ -112,3 +112,4 @@ export const STORAGE_KEY_DRASI_ACTIVE_CONNECTION = 'ksc-drasi-active-connection'
 // ── Banners ───────────────────────────────────────────────────────────
 export const STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED = 'kc-autonomous-banner-dismissed'
 export const STORAGE_KEY_STELLAR_ATTENTION_DISMISSED = 'kc-stellar-attention-dismissed'
+export const STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS = 'kc-stellar-batch-interval-ms'
