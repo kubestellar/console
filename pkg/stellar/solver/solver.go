@@ -76,6 +76,7 @@ type Broadcaster interface {
 type Storage interface {
 	CreateSolve(ctx context.Context, solve *store.StellarSolve) error
 	UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error
+	UpdateSolveStatusWithRecheck(ctx context.Context, solveID, status, summary string, nextRecheckAt time.Time) error
 	IncrementSolveActions(ctx context.Context, solveID string) error
 	CreateStellarAction(ctx context.Context, action *store.StellarAction) error
 	UpdateStellarActionStatus(ctx context.Context, actionID, status, outcome, rejectReason string) error

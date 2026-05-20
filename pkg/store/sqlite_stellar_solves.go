@@ -34,7 +34,7 @@ func (s *SQLiteStore) CreateSolve(ctx context.Context, solve *StellarSolve) erro
 // or nil if none exists. Used to make StartSolve idempotent.
 func (s *SQLiteStore) GetActiveSolveForEvent(ctx context.Context, eventID string) (*StellarSolve, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at
+		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at, next_recheck_at
 		FROM stellar_solves
 		WHERE event_id = ? AND status = 'running'
 		ORDER BY started_at DESC LIMIT 1
@@ -45,7 +45,7 @@ func (s *SQLiteStore) GetActiveSolveForEvent(ctx context.Context, eventID string
 // GetSolveByID returns a solve by ID. Returns nil if not found.
 func (s *SQLiteStore) GetSolveByID(ctx context.Context, solveID string) (*StellarSolve, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at
+		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at, next_recheck_at
 		FROM stellar_solves WHERE id = ?
 	`, solveID)
 	return scanSolveRow(row)
@@ -57,7 +57,7 @@ func (s *SQLiteStore) GetSolvesForUser(ctx context.Context, userID string, limit
 		limit = 100
 	}
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at
+		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at, next_recheck_at
 		FROM stellar_solves WHERE user_id = ? ORDER BY started_at DESC LIMIT ?
 	`, userID, limit)
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *SQLiteStore) GetSolvesForUser(ctx context.Context, userID string, limit
 // Used by the daily digest aggregator.
 func (s *SQLiteStore) GetSolvesSince(ctx context.Context, userID string, since time.Time) ([]StellarSolve, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at
+		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at, next_recheck_at
 		FROM stellar_solves WHERE user_id = ? AND started_at >= ? ORDER BY started_at DESC
 	`, userID, since)
 	if err != nil {
@@ -98,7 +98,7 @@ func (s *SQLiteStore) GetSolvesSince(ctx context.Context, userID string, since t
 }
 
 // UpdateSolveStatus sets the terminal status, summary, and ended_at on a solve.
-// Status should be one of: running, resolved, escalated, exhausted.
+// Status should be one of: running, resolved, resolved_monitored, escalated, exhausted.
 func (s *SQLiteStore) UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error {
 	now := time.Now().UTC()
 	if status == "running" {
@@ -110,6 +110,17 @@ func (s *SQLiteStore) UpdateSolveStatus(ctx context.Context, solveID, status, su
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE stellar_solves SET status = ?, summary = ?, limit_hit = ?, error = ?, ended_at = ? WHERE id = ?
 	`, status, summary, limitHit, errStr, now, solveID)
+	return err
+}
+
+// UpdateSolveStatusWithRecheck sets the status to resolved_monitored and schedules
+// the next recheck time. Used when a solve completes with partial success requiring
+// durability validation.
+func (s *SQLiteStore) UpdateSolveStatusWithRecheck(ctx context.Context, solveID, status, summary string, nextRecheckAt time.Time) error {
+	now := time.Now().UTC()
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE stellar_solves SET status = ?, summary = ?, ended_at = ?, next_recheck_at = ? WHERE id = ?
+	`, status, summary, now, nextRecheckAt, solveID)
 	return err
 }
 
@@ -249,7 +260,7 @@ func (s *SQLiteStore) ListActivity(ctx context.Context, limit int) ([]StellarAct
 // workload with back-to-back solves.
 func (s *SQLiteStore) GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*StellarSolve, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at
+		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at, next_recheck_at
 		FROM stellar_solves
 		WHERE cluster = ? AND namespace = ? AND workload = ? AND started_at >= ?
 		ORDER BY started_at DESC LIMIT 1
@@ -343,13 +354,17 @@ func scanSolveRow(row *sql.Row) (*StellarSolve, error) {
 func scanSolveRowGeneric(row rowScanner) (*StellarSolve, error) {
 	var s StellarSolve
 	var endedAt sql.NullTime
+	var nextRecheckAt sql.NullTime
 	err := row.Scan(&s.ID, &s.EventID, &s.UserID, &s.Cluster, &s.Namespace, &s.Workload,
-		&s.Status, &s.ActionsTaken, &s.LimitHit, &s.Summary, &s.Error, &s.StartedAt, &endedAt)
+		&s.Status, &s.ActionsTaken, &s.LimitHit, &s.Summary, &s.Error, &s.StartedAt, &endedAt, &nextRecheckAt)
 	if err != nil {
 		return nil, err
 	}
 	if endedAt.Valid {
 		s.EndedAt = &endedAt.Time
+	}
+	if nextRecheckAt.Valid {
+		s.NextRecheckAt = &nextRecheckAt.Time
 	}
 	return &s, nil
 }

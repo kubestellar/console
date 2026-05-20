@@ -4925,6 +4925,9 @@
       "solving": "Solving…",
       "autoHandling": "Stellar is handling this — no input needed.",
       "actionTitle": "{{action}}: {{title}}",
+      "monitoring": "Monitoring durability",
+      "recheckIn": "Recheck in {{countdown}}",
+      "recheckNow": "Checking now…",
       "actions": {
         "investigate": "Investigate",
         "restart": "Restart",
@@ -4993,6 +4996,28 @@
       "pausedAtBudget": "Paused at budget",
       "actionCount_one": "{{count}} action",
       "actionCount_other": "{{count}} actions"
+    },
+    "batch": {
+      "title": "Batch Processing Monitor",
+      "elapsed": "Elapsed",
+      "summary": "Summary",
+      "events_one": "event",
+      "events_other": "events",
+      "resolved": "Resolved",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "inProgress": "In Progress",
+      "noEvents": "No events in this batch",
+      "statusInProgress": "In Progress",
+      "statusCompleted": "Completed",
+      "statusFailed": "Failed",
+      "viewBatchMonitor": "View batch progress",
+      "processingBatch": "Processing batch…",
+      "batchComplete": "Batch complete",
+      "resolutionSteps": "Resolution steps",
+      "closeAriaLabel": "Close batch monitor",
+      "progressAriaLabel": "Batch processing progress: {{percent}}%",
+      "eventListAriaLabel": "Events being processed in this batch"
     }
   },
   "missionControl": {

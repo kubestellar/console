@@ -3,6 +3,25 @@ import type { StellarNotification } from '../../types/stellar'
 import { countRelated, deriveImportance, deriveShortReason, deriveTags, importanceColor, type SolveStatus } from './lib/derive'
 import { formatRelativeTime } from './lib/time'
 
+/** Format countdown from timestamp to short human-readable string (e.g., "2m 30s"). */
+function formatCountdownShort(recheckAt: number): string {
+  const ms = recheckAt - Date.now()
+  if (ms <= 0) return 'now'
+  const seconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  
+  if (hours > 0) {
+    const remainingMinutes = minutes % 60
+    return `${hours}h ${remainingMinutes}m`
+  }
+  if (minutes > 0) {
+    const remainingSeconds = seconds % 60
+    return `${minutes}m ${remainingSeconds}s`
+  }
+  return `${seconds}s`
+}
+
 // Loose translator type for dynamic key lookup in action config.
 type TranslateFn = (key: string, opts?: Record<string, unknown>) => string
 
@@ -221,6 +240,16 @@ export function EventCard({
             }}>
               {solveStatus.label}
             </span>
+            {solveStatus.phase === 'resolved_monitored' && solveStatus.nextRecheckAt && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{
+                background: 'color-mix(in srgb, var(--s-info) 10%, transparent)',
+                color: 'var(--s-info)',
+                border: '1px solid color-mix(in srgb, var(--s-info) 30%, transparent)',
+                flexShrink: 0,
+              }}>
+                {formatCountdownShort(solveStatus.nextRecheckAt)}
+              </span>
+            )}
             <span className="text-[10px] font-mono" style={{
               color: solveStatus.color, flexShrink: 0,
             }}>
@@ -238,6 +267,23 @@ export function EventCard({
               transition: 'width 0.35s ease',
             }} />
           </div>
+        </div>
+      )}
+      {solveStatus?.phase === 'resolved_monitored' && (
+        <div className="mt-1 inline-flex flex-wrap items-center gap-1 rounded-[10px] px-1.5 py-1 text-[10px] font-mono" style={{
+          color: 'var(--s-warning)',
+          background: 'rgba(227,179,65,0.08)',
+          border: '1px solid rgba(227,179,65,0.28)',
+        }}>
+          <span>{t('stellar.eventCard.monitoring')}</span>
+          <span style={{ color: 'var(--s-text-muted)' }}>·</span>
+          <span>{solveStatus.monitoringTarget || notification.namespace || notification.cluster || t('stellar.eventCard.defaultMonitoringTarget')}</span>
+          {solveStatus.nextRecheckAt ? (
+            <>
+              <span style={{ color: 'var(--s-text-muted)' }}>·</span>
+              <span>{solveStatus.nextRecheckAt <= Date.now() ? t('stellar.eventCard.recheckNow') : t('stellar.eventCard.recheckIn', { countdown: formatCountdownShort(solveStatus.nextRecheckAt) })}</span>
+            </>
+          ) : null}
         </div>
       )}
       {attemptCount && attemptCount > 0 ? (
@@ -260,8 +306,9 @@ export function EventCard({
         // hunting through the mission sidebar.
         const isAutoActive = solveStatus?.isActive ?? false
         const isResolved = solveStatus?.phase === 'resolved'
+        const isResolvedMonitored = solveStatus?.phase === 'resolved_monitored'
         const isEscalated = solveStatus?.phase === 'escalated' || solveStatus?.phase === 'exhausted'
-        const hideManualActions = isAutoActive || isResolved
+        const hideManualActions = isAutoActive || isResolved || isResolvedMonitored
         return (
         <div
           onClick={(e) => e.stopPropagation()}

@@ -1,10 +1,12 @@
 import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { StellarAction, StellarNotification, StellarSolve, StellarSolveProgress } from '../../types/stellar'
 import { EventCard, type PendingAction } from './EventCard'
 import { ApprovalCard } from './ApprovalCard'
 import { EventModal } from './EventModal'
 import { DigestCard } from './DigestCard'
 import { SolveProgressCard, SolveEscalatedCard } from './SolveCards'
+import { BatchMonitorModal } from './BatchMonitorModal'
 import { countSolveAttempts, getSolveStatus } from './lib/derive'
 
 interface GroupConfig {
@@ -73,12 +75,17 @@ export function EventsPanel({
   onRollback,
   onAction,
 }: EventsPanelProps) {
+  const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
   // Allow the parent (StellarPage) to control the modal so the activity log
   // can also open it. Fall back to internal state when uncontrolled.
   const [detailLocal, setDetailLocal] = useState<StellarNotification | null>(null)
   const detailNotification = detailNotificationProp !== undefined ? detailNotificationProp : detailLocal
   const setDetailNotification = setDetailNotificationProp ?? setDetailLocal
+
+  // Batch monitor modal state
+  const [batchMonitorOpen, setBatchMonitorOpen] = useState(false)
+  const [selectedBatchTimestamp, setSelectedBatchTimestamp] = useState<string | null>(null)
 
   // Pull the latest digest notification (if any) so we can pin it at the top.
   const digest = useMemo(() => {
@@ -94,6 +101,35 @@ export function EventsPanel({
   }, [solves])
 
   const activeProgress = useMemo(() => Object.values(solveProgress || {}), [solveProgress])
+
+  // Detect current batch being processed
+  const currentBatch = useMemo(() => {
+    if (activeProgress.length === 0) return null
+    
+    // Find the batch timestamp from events being solved
+    const batchTimestamps = new Set<string>()
+    for (const progress of activeProgress) {
+      const notification = (notifications || []).find(n => n.id === progress.eventId)
+      if (notification?.batchTimestamp) {
+        batchTimestamps.add(notification.batchTimestamp)
+      }
+    }
+    
+    // If we have exactly one batch being processed, show the banner
+    if (batchTimestamps.size === 1) {
+      const batchTimestamp = Array.from(batchTimestamps)[0]
+      const batchEvents = (notifications || []).filter(n => n.batchTimestamp === batchTimestamp)
+      const solving = batchEvents.filter(n => solveProgress[n.id]).length
+      
+      return {
+        timestamp: batchTimestamp,
+        totalEvents: batchEvents.length,
+        solvingCount: solving,
+      }
+    }
+    
+    return null
+  }, [activeProgress, notifications, solveProgress])
 
   const { unread, groups, stellarResolved, hasAny } = useMemo(() => {
     const unreadItems = notifications.filter(n => !n.read)
@@ -237,6 +273,65 @@ export function EventsPanel({
           />
         )}
 
+        {currentBatch && (
+          <button
+            onClick={() => {
+              setSelectedBatchTimestamp(currentBatch.timestamp)
+              setBatchMonitorOpen(true)
+            }}
+            style={{
+              borderLeft: '3px solid var(--s-info)',
+              background: 'rgba(99,150,237,0.08)',
+              border: '1px solid rgba(99,150,237,0.3)',
+              borderRadius: 'var(--s-r)',
+              padding: '10px 12px',
+              margin: '6px 4px 10px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              width: 'calc(100% - 8px)',
+              textAlign: 'left',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(99,150,237,0.12)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(99,150,237,0.08)'
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 0, left: 0, height: 2, width: '100%',
+              background: 'linear-gradient(90deg, transparent, var(--s-info), transparent)',
+              animation: 'stellar-pulse 1.6s linear infinite',
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>⊙</span>
+              <span
+                className="font-mono text-xs"
+                style={{
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'var(--s-info)',
+                }}
+              >{t('stellar.batch.processingBatch')}</span>
+              <div style={{ flex: 1 }} />
+              <span style={{
+                fontFamily: 'var(--s-mono)',
+                fontSize: 10,
+                color: 'var(--s-text-muted)',
+              }}>
+                {currentBatch.solvingCount}/{currentBatch.totalEvents} solving
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--s-text-dim)' }}>→</span>
+            </div>
+            <div className="text-xs" style={{ color: 'var(--s-text)', marginTop: 4, lineHeight: 1.5 }}>
+              {t('stellar.batch.viewBatchMonitor')} — {currentBatch.solvingCount} event{currentBatch.solvingCount === 1 ? '' : 's'} actively solving
+            </div>
+          </button>
+        )}
+
         {activeProgress.length > 0 && (
           <div className="mx-1 mb-2 mt-1">
             {activeProgress.map(p => (
@@ -356,6 +451,19 @@ export function EventsPanel({
           onAction={onAction}
           onSolve={startSolve}
           onDismiss={() => { void acknowledgeNotification(detailNotification.id) }}
+        />
+      )}
+
+      {batchMonitorOpen && selectedBatchTimestamp && (
+        <BatchMonitorModal
+          batchTimestamp={selectedBatchTimestamp}
+          notifications={notifications}
+          solves={solves}
+          solveProgress={solveProgress}
+          onClose={() => {
+            setBatchMonitorOpen(false)
+            setSelectedBatchTimestamp(null)
+          }}
         />
       )}
     </div>
