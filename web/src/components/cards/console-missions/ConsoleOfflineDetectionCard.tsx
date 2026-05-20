@@ -449,10 +449,23 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       })
   }, [heuristicPredictions, aiPredictions, aiEnabled, selectedClusters, isAllClustersSelected])
 
-  const totalPredicted = predictedRisks.length
-  const criticalPredicted = predictedRisks.filter(r => r.severity === 'critical').length
-  const aiPredictionCount = predictedRisks.filter(r => r.source === 'ai').length
-  const heuristicPredictionCount = predictedRisks.filter(r => r.source === 'heuristic').length
+  // Single-pass counts to avoid repeated O(n) scans
+  const { totalPredicted, criticalPredicted, aiPredictionCount, heuristicPredictionCount } = useMemo(() => {
+    let critical = 0
+    let ai = 0
+    let heuristic = 0
+    for (const r of predictedRisks) {
+      if (r.severity === 'critical') critical++
+      if (r.source === 'ai') ai++
+      else if (r.source === 'heuristic') heuristic++
+    }
+    return {
+      totalPredicted: predictedRisks.length,
+      criticalPredicted: critical,
+      aiPredictionCount: ai,
+      heuristicPredictionCount: heuristic,
+    }
+  }, [predictedRisks])
 
   // ============================================================================
   // Unified items list for filtering/sorting/pagination
