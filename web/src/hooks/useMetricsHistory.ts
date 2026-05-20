@@ -11,6 +11,13 @@ const MAX_SNAPSHOTS = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours 
 const CACHE_TTL_MS = 7 * MS_PER_DAY
 /** Maximum number of increasing-restart pods to include in AI context */
 const MAX_INCREASING_RESTART_PODS = 10
+const TREND_LOOKBACK_SNAPSHOTS = 6
+const TREND_MIN_HISTORY_SNAPSHOTS = 3
+const CLUSTER_TREND_MIN_VALUES = 3
+const POD_RESTART_TREND_MIN_VALUES = 2
+const CLUSTER_TREND_THRESHOLD_PERCENT = 5
+const POD_RESTART_WORSENING_DELTA = 1
+const POD_ISSUE_KEY_SEPARATOR = '\u0000'
 /**
  * Maximum consecutive snapshots whose empty GPU data will be carried-forward
  * from the last known non-empty gpuNodes list. Prevents a transient GPU fetch
@@ -119,6 +126,29 @@ function addSnapshot(snapshot: MetricsSnapshot) {
   snapshots.push(snapshot)
   notifySubscribers()
   persistSnapshots()
+}
+
+function getPodIssueLookupKey(podName: string, cluster: string): string {
+  return `${cluster}${POD_ISSUE_KEY_SEPARATOR}${podName}`
+}
+
+type TrendSnapshotLookup = {
+  clusterMetricsByName: Map<string, MetricsSnapshot['clusters'][number]>
+  podIssuesByKey: Map<string, MetricsSnapshot['podIssues'][number]>
+}
+
+function buildTrendSnapshotLookup(snapshot: MetricsSnapshot): TrendSnapshotLookup {
+  return {
+    clusterMetricsByName: new Map(
+      snapshot.clusters.map(cluster => [cluster.name, cluster] as const),
+    ),
+    podIssuesByKey: new Map(
+      snapshot.podIssues.map(podIssue => [
+        getPodIssueLookupKey(podIssue.name, podIssue.cluster),
+        podIssue,
+      ] as const),
+    ),
+  }
 }
 
 /**
@@ -264,6 +294,10 @@ export function useMetricsHistory() {
   gpuNodesRef.current = gpuNodes
 
   const clusterIds = useMemo(() => clusters.map(c => c.name).join(','), [clusters])
+  const recentTrendLookups = useMemo(
+    () => history.slice(-TREND_LOOKBACK_SNAPSHOTS).map(buildTrendSnapshotLookup),
+    [history],
+  )
 
   // Auto-capture snapshots at configured interval.
   // Reads volatile data from refs so the interval stays stable across MCP polls (#5781).
@@ -375,14 +409,13 @@ export function useMetricsHistory() {
     clusterName: string,
     metric: 'cpuPercent' | 'memoryPercent'
   ): TrendDirection => {
-    if (history.length < 3) return 'stable'
+    if (history.length < TREND_MIN_HISTORY_SNAPSHOTS) return 'stable'
 
-    const recentSnapshots = history.slice(-6) // Last hour (6 x 10min)
-    const values = recentSnapshots
-      .map(s => s.clusters.find(c => c.name === clusterName)?.[metric])
-      .filter((v): v is number => v !== undefined)
+    const values = recentTrendLookups
+      .map(snapshotLookup => snapshotLookup.clusterMetricsByName.get(clusterName)?.[metric])
+      .filter((value): value is number => value !== undefined)
 
-    if (values.length < 3) return 'stable'
+    if (values.length < CLUSTER_TREND_MIN_VALUES) return 'stable'
 
     // Calculate average of first half vs second half
     const halfLen = Math.floor(values.length / 2)
@@ -393,10 +426,9 @@ export function useMetricsHistory() {
     const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length
 
     const diff = avgSecond - avgFirst
-    const threshold = 5 // 5% change threshold
 
-    if (diff > threshold) return 'worsening'
-    if (diff < -threshold) return 'improving'
+    if (diff > CLUSTER_TREND_THRESHOLD_PERCENT) return 'worsening'
+    if (diff < -CLUSTER_TREND_THRESHOLD_PERCENT) return 'improving'
     return 'stable'
   }
 
@@ -405,19 +437,19 @@ export function useMetricsHistory() {
     podName: string,
     cluster: string
   ): TrendDirection => {
-    if (history.length < 3) return 'stable'
+    if (history.length < TREND_MIN_HISTORY_SNAPSHOTS) return 'stable'
 
-    const recentSnapshots = history.slice(-6)
-    const values = recentSnapshots
-      .map(s => s.podIssues.find(p => p.name === podName && p.cluster === cluster)?.restarts)
-      .filter((v): v is number => v !== undefined)
+    const podIssueKey = getPodIssueLookupKey(podName, cluster)
+    const values = recentTrendLookups
+      .map(snapshotLookup => snapshotLookup.podIssuesByKey.get(podIssueKey)?.restarts)
+      .filter((value): value is number => value !== undefined)
 
-    if (values.length < 2) return 'stable'
+    if (values.length < POD_RESTART_TREND_MIN_VALUES) return 'stable'
 
     const first = values[0]
     const last = values[values.length - 1]
 
-    if (last > first + 1) return 'worsening'
+    if (last > first + POD_RESTART_WORSENING_DELTA) return 'worsening'
     if (last < first) return 'improving'
     return 'stable'
   }
