@@ -1,30 +1,23 @@
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Lightbulb, Clock, X, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Wrench, Stethoscope, Timer } from 'lucide-react'
+import { Lightbulb, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Timer } from 'lucide-react'
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
-import { useSnoozedMissions, formatTimeRemaining } from '../../hooks/useSnoozedMissions'
+import { useSnoozedMissions } from '../../hooks/useSnoozedMissions'
 import { useMissions } from '../../hooks/useMissions'
 import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useMissionSuggestionsTimer } from '../../hooks/useMissionSuggestionsTimer'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
+import { MissionActionPanel } from './MissionActionPanel'
 import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
 import { safeSetItem } from '../../lib/utils/localStorage'
-import type { CSSProperties } from 'react'
-
-// Inline style constants
-const MISSION_SUGGESTIONS_DIV_STYLE_1: CSSProperties = { isolation: 'isolate' }
 
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
 const STORAGE_KEY_MISSIONS_COLLAPSED = 'kc-missions-collapsed'
-
-/** Seconds before the panel auto-collapses */
-const AUTO_COLLAPSE_SECONDS = 20
-/** Interval between each countdown tick in milliseconds (1 second) */
-const COUNTDOWN_TICK_MS = 1000
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -51,9 +44,8 @@ export function MissionSuggestions() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [minimized, setMinimized] = useState(true)
-  const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const analyticsEmittedRef = useRef(false)
+  const mountedRef = useRef(true)
   // Refs to each chip trigger button, keyed by suggestion id.
   // Used so the outside-click listener can ignore clicks on the trigger itself
   // (the trigger's own onClick handles toggling). Without this, clicking the
@@ -70,50 +62,19 @@ export function MissionSuggestions() {
   // Force dependency on snoozedMissions for reactivity
   void snoozedMissions
 
-  // Start / stop countdown timer
-  const startCountdown = useCallback(() => {
-    if (countdownRef.current) clearInterval(countdownRef.current)
-    countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (countdownRef.current) clearInterval(countdownRef.current)
-          countdownRef.current = null
-          setMinimized(true)
-          // Timer-initiated collapse: do NOT persist to localStorage.
-          // Only user-initiated minimize (explicit click) persists state.
-          // This allows the panel to re-expand on next session/page load.
-          return AUTO_COLLAPSE_SECONDS
-        }
-        return prev - 1
-      })
-    }, COUNTDOWN_TICK_MS)
-  }, [])
+  // Timer hook for auto-collapse countdown
+  const { countdown, handleMouseEnter, handleMouseLeave } = useMissionSuggestionsTimer({
+    minimized,
+    hasSuggestions,
+    onAutoCollapse: () => setMinimized(true),
+  })
 
-  // Manage countdown lifecycle based on minimized state
+  // Cleanup on unmount
   useEffect(() => {
-    if (!minimized && hasSuggestions) {
-      setCountdown(AUTO_COLLAPSE_SECONDS)
-      startCountdown()
-    } else if (countdownRef.current) {
-      clearInterval(countdownRef.current)
-      countdownRef.current = null
-    }
     return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current)
+      mountedRef.current = false
     }
-  }, [minimized, hasSuggestions, startCountdown])
-
-  // Pause countdown on hover, resume on leave
-  const handleMouseEnter = () => {
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current)
-      countdownRef.current = null
-    }
-  }
-
-  const handleMouseLeave = () => {
-    if (!minimized) startCountdown()
-  }
+  }, [])
 
   // Emit analytics once when panel first renders with suggestions
   useEffect(() => {
@@ -176,6 +137,7 @@ export function MissionSuggestions() {
 
     // Execute action after dropdown closes
     setTimeout(() => {
+      if (!mountedRef.current) return
       if (suggestion.action.type === 'navigate') {
         navigate(suggestion.action.target)
       } else if (suggestion.action.type === 'ai') {
@@ -204,6 +166,7 @@ export function MissionSuggestions() {
 
     // Start mission after dropdown closes
     setTimeout(() => {
+      if (!mountedRef.current) return
       startMission({
         title: t('dashboard.missions.repairPrefix', { title: suggestion.title }),
         description: t('dashboard.missions.autoRepairPrefix', { description: suggestion.description }),
@@ -280,80 +243,16 @@ export function MissionSuggestions() {
                 </button>
 
                 {/* Inline dropdown — appears below the chip without expanding the panel */}
-                {isExpanded && (
-                  <div
-                    id={`mission-dropdown-${suggestion.id}`}
-                    role="menu"
-                    className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
-                    style={MISSION_SUGGESTIONS_DIV_STYLE_1}
-                    onKeyDown={(e) => {
-                      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                      e.preventDefault()
-                      const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-                      const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                      if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                      else items[Math.max(idx - 1, 0)]?.focus()
-                    }}
-                  >
-                    <div className="p-3">
-                      <p className="text-xs text-muted-foreground mb-2">{suggestion.description}</p>
-                      {suggestion.context.details && suggestion.context.details.length > 0 && (
-                        <div className="text-xs text-muted-foreground mb-3 max-h-20 overflow-y-auto">
-                          <ul className="ml-3 list-disc space-y-0.5">
-                            {suggestion.context.details.slice(0, 3).map((detail, idx) => (
-                              <li key={idx} className="truncate">{detail}</li>
-                            ))}
-                            {suggestion.context.details.length > 3 && (
-                              <li className="text-muted-foreground/70">
-                                {t('dashboard.missions.moreDetails', { count: suggestion.context.details.length - 3 })}
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      )}
-                      {snoozeRemaining && snoozeRemaining > 0 && (
-                        <div className="text-xs text-muted-foreground mb-2">
-                          {t('dashboard.missions.snoozedFor', { time: formatTimeRemaining(snoozeRemaining) })}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-1.5">
-                        <button
-                          onClick={(e) => handleAction(e, suggestion)}
-                          disabled={isProcessing}
-                          className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"
-                        >
-                          <Stethoscope className="w-3 h-3" />
-                          {suggestion.action.label}
-                        </button>
-                        <button
-                          onClick={(e) => handleRepair(e, suggestion)}
-                          disabled={isProcessing}
-                          className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors flex items-center gap-1"
-                          title={t('dashboard.missions.repairTitle')}
-                        >
-                          <Wrench className="w-3 h-3" />
-                          {t('dashboard.missions.repair')}
-                        </button>
-                        <button
-                          onClick={(e) => handleSnooze(e, suggestion)}
-                          disabled={isProcessing}
-                          className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50"
-                          title={t('dashboard.missions.snoozeTitle')}
-                        >
-                          <Clock className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => handleDismiss(e, suggestion)}
-                          disabled={isProcessing}
-                          className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50"
-                          title={t('dashboard.missions.dismiss')}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <MissionActionPanel
+                  suggestion={suggestion}
+                  isExpanded={isExpanded}
+                  isProcessing={isProcessing}
+                  snoozeRemaining={snoozeRemaining}
+                  onAction={handleAction}
+                  onRepair={handleRepair}
+                  onSnooze={handleSnooze}
+                  onDismiss={handleDismiss}
+                />
               </div>
             )
           })}
@@ -438,84 +337,16 @@ export function MissionSuggestions() {
               </button>
 
               {/* Expanded dropdown */}
-              {isExpanded && (
-                <div
-                  id={`mission-dropdown-${suggestion.id}`}
-                  role="menu"
-                  className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
-                  style={MISSION_SUGGESTIONS_DIV_STYLE_1}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                    e.preventDefault()
-                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                    else items[Math.max(idx - 1, 0)]?.focus()
-                  }}
-                >
-                  <div className="p-3">
-                    {/* Description */}
-                    <p className="text-xs text-muted-foreground mb-2">{suggestion.description}</p>
-
-                    {/* Context details */}
-                    {suggestion.context.details && suggestion.context.details.length > 0 && (
-                      <div className="text-xs text-muted-foreground mb-3 max-h-20 overflow-y-auto">
-                        <ul className="ml-3 list-disc space-y-0.5">
-                          {suggestion.context.details.slice(0, 3).map((detail, idx) => (
-                            <li key={idx} className="truncate">{detail}</li>
-                          ))}
-                          {suggestion.context.details.length > 3 && (
-                            <li className="text-muted-foreground/70">
-                              {t('dashboard.missions.moreDetails', { count: suggestion.context.details.length - 3 })}
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
-
-                    {snoozeRemaining && snoozeRemaining > 0 && (
-                      <div className="text-xs text-muted-foreground mb-2">
-                        {t('dashboard.missions.snoozedFor', { time: formatTimeRemaining(snoozeRemaining) })}
-                      </div>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex flex-wrap gap-1.5">
-                      <button
-                        onClick={(e) => handleAction(e, suggestion)}
-                        disabled={isProcessing}
-                        className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"
-                      >
-                        <Stethoscope className="w-3 h-3" />
-                        {suggestion.action.label}
-                      </button>
-                      <button
-                        onClick={(e) => handleRepair(e, suggestion)}
-                        disabled={isProcessing}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors flex items-center gap-1"
-                        title={t('dashboard.missions.repairTitle')}
-                      >
-                        <Wrench className="w-3 h-3" />
-                        {t('dashboard.missions.repair')}
-                      </button>
-                      <button
-                        onClick={(e) => handleSnooze(e, suggestion)}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
-                        title={t('dashboard.missions.snoozeTitle')}
-                      >
-                        <Clock className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDismiss(e, suggestion)}
-                        className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors"
-                        title={t('dashboard.missions.dismiss')}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <MissionActionPanel
+                suggestion={suggestion}
+                isExpanded={isExpanded}
+                isProcessing={isProcessing}
+                snoozeRemaining={snoozeRemaining}
+                onAction={handleAction}
+                onRepair={handleRepair}
+                onSnooze={handleSnooze}
+                onDismiss={handleDismiss}
+              />
             </div>
           )
         })}
