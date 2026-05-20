@@ -17,7 +17,7 @@ import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { KVCacheMonitorVisualization, SummaryStats, TrendSparkline } from './KVCacheMonitorChart'
 import { KVCacheMonitorDetailPanel } from './KVCacheMonitorDetailPanel'
 import { KVCacheMonitorHeader } from './KVCacheMonitorHeader'
-import type { AggregationMode, MetricType, PanelPosition, PodHistoryMap, ViewMode } from './KVCacheMonitor.types'
+import type { AggregationMode, CardsCommonTFunction, MetricType, PanelPosition, PodHistoryMap, ViewMode } from './KVCacheMonitor.types'
 import {
   calculateAggregateMetrics,
   calculateTrend,
@@ -26,7 +26,8 @@ import {
 } from './KVCacheMonitor.utils'
 
 export function KVCacheMonitor() {
-  const { t } = useTranslation(['cards', 'common'])
+  const { t: tRaw } = useTranslation(['cards', 'common'])
+  const t = tRaw as CardsCommonTFunction
   const stackContext = useOptionalStack()
   const { isExpanded } = useCardExpanded()
 
