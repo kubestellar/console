@@ -8,7 +8,6 @@ import {
   Sparkles,
   Play,
   BookOpen,
-  X,
   RefreshCw,
   AlertTriangle,
   ExternalLink,
@@ -19,17 +18,13 @@ import { useKagentBackend } from "../../hooks/useKagentBackend";
 import { useProviderConnection } from "../../hooks/useProviderConnection";
 import { AgentIcon } from "./AgentIcon";
 import type { AgentInfo, AgentProvider } from "../../types/agent";
-
-/** Timeout (ms) for fetching mission install guide files from the API */
-const MISSION_FILE_FETCH_TIMEOUT_MS = 5_000;
-import { PROVIDER_PREREQUISITES} from "../../types/agent";
-import type { MissionExport } from "../../lib/missions/types";
+import { PROVIDER_PREREQUISITES } from "../../types/agent";
 import { cn } from "../../lib/cn";
 import { useModalState } from "../../lib/modals";
 import { safeGetItem, safeSetItem } from "../../lib/utils/localStorage";
-import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl';
 import { AgentApprovalDialog, hasApprovedAgents } from "./AgentApprovalDialog";
-import { MissionDetailView } from "../missions/MissionDetailView";
+import { AgentInstallGuide, fetchMissionFile, INSTALL_MISSION_PATHS } from "./AgentInstallGuide";
 import { ClusterSelectionDialog } from "../missions/ClusterSelectionDialog";
 import {
   CLUSTER_PROVIDER_KEYS,
@@ -42,6 +37,30 @@ const AGENT_TO_PROVIDER_KEY: Record<string, string> = {
   vscode: "vscode",
   antigravity: "antigravity",
 };
+
+/** Providers that are cluster-based (rendered in bottom section) */
+const CLUSTER_PROVIDERS: Set<AgentProvider> = new Set(CLUSTER_PROVIDER_KEYS);
+
+/** Always-show CLI agents (appear grayed out when not detected) */
+const ALWAYS_SHOW_CLI: AgentInfo[] = [
+  {
+    name: "goose",
+    displayName: "Goose",
+    description: "Open-source AI agent by Block with MCP support",
+    provider: "block",
+    available: false,
+    installUrl: "https://github.com/block/goose",
+  },
+  {
+    name: "copilot-cli",
+    displayName: "Copilot CLI",
+    description: "GitHub Copilot in the terminal",
+    provider: "github-cli",
+    available: false,
+    installUrl:
+      "https://docs.github.com/en/copilot/github-copilot-in-the-cli",
+  },
+];
 
 interface AgentSelectorProps {
   compact?: boolean;
@@ -100,44 +119,14 @@ export function AgentSelector({
   } = useProviderConnection();
   // Stash the agent name the user intended to select when approval was triggered
   const pendingAgentRef = useRef<string | null>(null);
-  // Install guide modal state
-  const [installGuide, setInstallGuide] = useState<{
-    mission: MissionExport;
-    raw: string;
-  } | null>(null);
-  const [installGuideLoading, setInstallGuideLoading] = useState(false);
-  const [installGuideError, setInstallGuideError] = useState(false);
-  const [installGuideShowRaw, setInstallGuideShowRaw] = useState(false);
+  // Install guide: missionId to display (null = closed)
+  const [installGuideMissionId, setInstallGuideMissionId] = useState<string | null>(null);
   // Cluster selection for AI install
   const [pendingInstall, setPendingInstall] = useState<{
     missionId: string;
     displayName: string;
     mission: MissionExport;
   } | null>(null);
-
-  // Providers that are cluster-based (rendered in bottom section)
-  const CLUSTER_PROVIDERS: Set<AgentProvider> = new Set(CLUSTER_PROVIDER_KEYS);
-
-  // Always-show CLI agents (appear grayed out when not detected)
-  const ALWAYS_SHOW_CLI: AgentInfo[] = [
-    {
-      name: "goose",
-      displayName: "Goose",
-      description: "Open-source AI agent by Block with MCP support",
-      provider: "block",
-      available: false,
-      installUrl: "https://github.com/block/goose",
-    },
-    {
-      name: "copilot-cli",
-      displayName: "Copilot CLI",
-      description: "GitHub Copilot in the terminal",
-      provider: "github-cli",
-      available: false,
-      installUrl:
-        "https://docs.github.com/en/copilot/github-copilot-in-the-cli",
-    },
-  ];
 
   // Merge local agents with always-show CLI agents and in-cluster backends
   const visibleAgents = buildVisibleAgents(agents, ALWAYS_SHOW_CLI, {
@@ -150,54 +139,9 @@ export function AgentSelector({
   // Check if any CLI agent is available (can run install missions)
   const hasCliAgent = agents.some((a) => a.available);
 
-  // Known KB paths for install missions (stable reference to avoid recreating callbacks)
-  const INSTALL_MISSION_PATHS = useMemo<Record<string, string[]>>(
-    () => ({
-      "install-kagent": ["fixes/cncf-install/install-kagent.json"],
-      "install-kagenti": ["fixes/platform-install/install-kagenti.json"],
-    }),
-    [],
-  );
-
-  const openInstallGuide = async (missionId: string) => {
+  const openInstallGuide = (missionId: string) => {
     closeDropdown();
-    setInstallGuideLoading(true);
-    setInstallGuideError(false);
-    const paths = INSTALL_MISSION_PATHS[missionId] || [
-      `fixes/cncf-install/${missionId}.json`,
-      `fixes/platform-install/${missionId}.json`,
-    ];
-    for (const path of paths) {
-      try {
-        const res = await fetch(
-          `/api/missions/file?path=${encodeURIComponent(path)}`,
-          { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) },
-        );
-        if (!res.ok) continue;
-        const raw = await res.text();
-        const parsed = JSON.parse(raw);
-        const nested = parsed.mission || {};
-        const mission: MissionExport = {
-          version: parsed.version || "1.0",
-          title: nested.title || parsed.title || missionId,
-          description: nested.description || parsed.description || "",
-          type: nested.type || parsed.type || "deploy",
-          steps: nested.steps || parsed.steps || [],
-          uninstall: nested.uninstall || parsed.uninstall,
-          upgrade: nested.upgrade || parsed.upgrade,
-          troubleshooting: nested.troubleshooting || parsed.troubleshooting,
-          tags: nested.tags || parsed.tags,
-          missionClass: "install",
-        };
-        setInstallGuide({ mission, raw });
-        setInstallGuideLoading(false);
-        return;
-      } catch {
-        continue;
-      }
-    }
-    setInstallGuideError(true);
-    setInstallGuideLoading(false);
+    setInstallGuideMissionId(missionId);
   };
 
   const handleInstallMission = async (
@@ -205,38 +149,7 @@ export function AgentSelector({
     displayName: string,
   ) => {
     closeDropdown();
-    // Fetch the actual mission content
-    const paths = INSTALL_MISSION_PATHS[missionId] || [
-      `fixes/cncf-install/${missionId}.json`,
-      `fixes/platform-install/${missionId}.json`,
-    ];
-    let missionData: MissionExport | null = null;
-    for (const path of paths) {
-      try {
-        const res = await fetch(
-          `/api/missions/file?path=${encodeURIComponent(path)}`,
-          { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) },
-        );
-        if (!res.ok) continue;
-        const raw = await res.text();
-        const parsed = JSON.parse(raw);
-        const nested = parsed.mission || {};
-        missionData = {
-          version: parsed.version || "1.0",
-          title: nested.title || parsed.title || displayName,
-          description:
-            nested.description ||
-            parsed.description ||
-            `Install ${displayName}`,
-          type: "deploy",
-          tags: nested.tags || parsed.tags || [],
-          steps: nested.steps || parsed.steps || [],
-        };
-        break;
-      } catch {
-        continue;
-      }
-    }
+    const missionData = await fetchMissionFile(missionId, displayName);
     if (!missionData) {
       // Fallback: start with simple prompt
       startMission({
@@ -248,7 +161,7 @@ export function AgentSelector({
       return;
     }
     // Show cluster selection dialog before running
-    setPendingInstall({ missionId, displayName, mission: missionData });
+    setPendingInstall({ missionId, displayName, mission: missionData.mission });
   };
 
   // Split agents into sections: selected at top, then CLI, then Cluster
@@ -935,90 +848,14 @@ export function AgentSelector({
           pendingAgentRef.current = null;
         }}
       />
-      {/* Install guide modal */}
-      {(installGuide || installGuideLoading || installGuideError) &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setInstallGuide(null);
-                setInstallGuideLoading(false);
-                setInstallGuideError(false);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setInstallGuide(null);
-                setInstallGuideLoading(false);
-                setInstallGuideError(false);
-              }
-            }}
-            tabIndex={-1}
-            ref={(el) => el?.focus()}
-          >
-            <div className="relative bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col w-[900px] max-h-[85vh]">
-              <button
-                onClick={() => {
-                  setInstallGuide(null);
-                  setInstallGuideLoading(false);
-                  setInstallGuideError(false);
-                }}
-                className="absolute top-3 right-3 z-10 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="flex-1 overflow-y-auto scroll-enhanced p-6">
-                {installGuideLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : installGuideError ? (
-                  <div
-                    role="alert"
-                    className="flex flex-col items-center justify-center py-12 gap-3 text-center"
-                  >
-                    <p className="text-sm text-red-400">
-                      {t(
-                        "agent.installGuideLoadError",
-                        "Failed to load install guide",
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t(
-                        "agent.installGuideLoadErrorHint",
-                        "Check your connection or try again later",
-                      )}
-                    </p>
-                  </div>
-                ) : installGuide ? (
-                  <MissionDetailView
-                    mission={installGuide.mission}
-                    rawContent={installGuide.raw}
-                    showRaw={installGuideShowRaw}
-                    onToggleRaw={() => setInstallGuideShowRaw((prev) => !prev)}
-                    onImport={() => {
-                      const missionId = installGuide.mission.title
-                        .toLowerCase()
-                        .includes("kagenti")
-                        ? "install-kagenti"
-                        : "install-kagent";
-                      handleInstallMission(
-                        missionId,
-                        installGuide.mission.title,
-                      );
-                      setInstallGuide(null);
-                    }}
-                    onBack={() => setInstallGuide(null)}
-                    importLabel="Run"
-                    hideBackButton
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      <AgentInstallGuide
+        missionId={installGuideMissionId}
+        onClose={() => setInstallGuideMissionId(null)}
+        onRunInstall={(mid, displayName) => {
+          setInstallGuideMissionId(null);
+          handleInstallMission(mid, displayName);
+        }}
+      />
       {/* Cluster selection for AI install */}
       {pendingInstall && (
         <ClusterSelectionDialog

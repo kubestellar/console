@@ -21,11 +21,9 @@ import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 import type { PredictedRisk } from '../../../types/predictions'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
-import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
 import { useDemoMode } from '../../../hooks/useDemoMode'
-import { agentFetch } from '../../../hooks/mcp/shared'
 import { useClusterFiltering } from '../../clusters/useClusterFiltering'
 import { getClusterHealthState, isClusterTokenExpired } from '../../clusters/utils'
 
@@ -47,88 +45,13 @@ import {
 import { UnifiedItemsList } from './UnifiedItemsList'
 import { RootCauseAnalyzer, type RootCauseGroup } from './RootCauseAnalyzer'
 import { AIAnalysisPanel } from './AIAnalysisPanel'
-
-// ============================================================================
-// Module-level cache for all nodes (shared across card instances)
-// ============================================================================
-let nodesCache: NodeData[] = []
-let nodesCacheTimestamp = 0
-let nodesFetchInProgress = false
-let nodesFetchError: string | null = null
-let nodesFetchConsecutiveFailures = 0
-const NODES_CACHE_TTL = 30000
-const OFFLINE_DETECTION_FAILURE_THRESHOLD = 3
-/** Cluster-level GPU allocation threshold — flag when >80% of a cluster's GPUs are allocated */
-const GPU_CLUSTER_EXHAUSTION_THRESHOLD = 0.8
-const nodesSubscribers = new Set<(nodes: NodeData[]) => void>()
-
-type NodesFetchResult = {
-  nodes: NodeData[]
-  error: string | null
-  consecutiveFailures: number
-}
-
-function notifyNodesSubscribers() {
-  nodesSubscribers.forEach(cb => cb(nodesCache))
-}
-
-async function fetchAllNodes(): Promise<NodesFetchResult> {
-  if (Date.now() - nodesCacheTimestamp < NODES_CACHE_TTL && nodesCache.length > 0) {
-    return { nodes: nodesCache, error: null, consecutiveFailures: 0 }
-  }
-
-  if (nodesFetchInProgress) {
-    return {
-      nodes: nodesCache,
-      error: nodesFetchError,
-      consecutiveFailures: nodesFetchConsecutiveFailures,
-    }
-  }
-
-  nodesFetchInProgress = true
-  try {
-    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const data = await response.json() as { nodes?: NodeData[] }
-    nodesCache = data.nodes || []
-    nodesCacheTimestamp = Date.now()
-    nodesFetchError = null
-    nodesFetchConsecutiveFailures = 0
-    notifyNodesSubscribers()
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    nodesFetchConsecutiveFailures += 1
-    nodesFetchError = message
-    
-    // Fix for #13038: In local k3d/k3s environments, the /nodes endpoint may not be
-    // configured, causing persistent JSON parse errors. Suppress excessive logging
-    // after the first few failures to reduce console noise.
-    const isJsonParseError = message.includes('Unexpected token') || message.includes('JSON')
-    const shouldLogError = nodesFetchConsecutiveFailures <= OFFLINE_DETECTION_FAILURE_THRESHOLD || !isJsonParseError
-    
-    if (nodesCache.length > 0) {
-      if (shouldLogError) {
-        console.warn('[OfflineDetection] Node fetch degraded:', message)
-      }
-    } else {
-      if (shouldLogError) {
-        console.error('[OfflineDetection] Error fetching nodes:', error)
-      }
-    }
-  } finally {
-    nodesFetchInProgress = false
-  }
-
-  return {
-    nodes: nodesCache,
-    error: nodesFetchError,
-    consecutiveFailures: nodesFetchConsecutiveFailures,
-  }
-}
+import {
+  getNodesCache,
+  subscribeToNodes,
+  fetchAllNodes,
+  OFFLINE_DETECTION_FAILURE_THRESHOLD,
+  GPU_CLUSTER_EXHAUSTION_THRESHOLD,
+} from './nodeCache'
 
 // Card 4: AI Cluster Issue Predictor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
@@ -173,8 +96,8 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const THRESHOLDS = predictionSettings.thresholds
 
   // Get all nodes from shared cache
-  const [allNodes, setAllNodes] = useState<NodeData[]>(() => nodesCache)
-  const [nodesLoading, setNodesLoading] = useState(() => !shouldUseDemoData && nodesCache.length === 0)
+  const [allNodes, setAllNodes] = useState<NodeData[]>(() => getNodesCache())
+  const [nodesLoading, setNodesLoading] = useState(() => !shouldUseDemoData && getNodesCache().length === 0)
   const [nodesRefreshing, setNodesRefreshing] = useState(false)
   const [nodesFailures, setNodesFailures] = useState(0)
 
@@ -241,11 +164,11 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       setAllNodes(nodes)
       setNodesLoading(false)
     }
-    nodesSubscribers.add(handleUpdate)
+    const unsubscribe = subscribeToNodes(handleUpdate)
 
     const refreshNodes = () => {
       if (!isMounted) return
-      setNodesRefreshing(nodesCache.length > 0)
+      setNodesRefreshing(getNodesCache().length > 0)
 
       fetchAllNodes().then(result => {
         if (!isMounted) return
@@ -264,7 +187,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
 
     return () => {
       isMounted = false
-      nodesSubscribers.delete(handleUpdate)
+      unsubscribe()
       clearInterval(interval)
     }
   }, [shouldUseDemoData])
