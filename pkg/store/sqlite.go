@@ -691,7 +691,6 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_user_created ON stellar_notifications(user_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_unread ON stellar_notifications(user_id, read, created_at DESC);
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_notifications_user_dedupe ON stellar_notifications(user_id, dedupe_key);
-	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_type_batch ON stellar_notifications(type, batch_timestamp DESC);
 
 	-- Durable stellar task graph.
 	CREATE TABLE IF NOT EXISTS stellar_tasks (
