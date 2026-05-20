@@ -132,7 +132,7 @@ export function StellarHeader({
       {unreadCount > 0 && (
         <div style={{
           background: 'var(--s-critical)',
-          color: '#fff',
+          color: 'hsl(var(--destructive-foreground))',
           borderRadius: STELLAR_HEADER_BADGE_RADIUS_PX,
           fontSize: 10,
           fontWeight: 700,
