@@ -779,7 +779,10 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_notifications ADD COLUMN status TEXT NOT NULL DEFAULT ''",
 		"ALTER TABLE stellar_notifications ADD COLUMN read_at DATETIME",
 		"ALTER TABLE stellar_notifications ADD COLUMN batch_timestamp DATETIME",
-		"ALTER TABLE stellar_notifications ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+		// SQLite does not allow non-constant DEFAULT (like CURRENT_TIMESTAMP) in ALTER TABLE ADD COLUMN.
+		// Split into ADD COLUMN + UPDATE to achieve the same result.
+		"ALTER TABLE stellar_notifications ADD COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+		"UPDATE stellar_notifications SET updated_at = CURRENT_TIMESTAMP WHERE updated_at = '1970-01-01 00:00:00'",
 		"ALTER TABLE stellar_notifications ADD COLUMN root_cause TEXT NOT NULL DEFAULT ''",
 		"ALTER TABLE stellar_notifications ADD COLUMN affected_resource TEXT NOT NULL DEFAULT ''",
 		"ALTER TABLE stellar_notifications ADD COLUMN error_message TEXT NOT NULL DEFAULT ''",
@@ -810,7 +813,10 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_actions ADD COLUMN audit_log TEXT NOT NULL DEFAULT '[]'",
 		"ALTER TABLE stellar_actions ADD COLUMN idempotency_key TEXT",
 		"ALTER TABLE stellar_actions ADD COLUMN confirm_token TEXT",
-		"ALTER TABLE stellar_actions ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+		// SQLite does not allow non-constant DEFAULT (like CURRENT_TIMESTAMP) in ALTER TABLE ADD COLUMN.
+		// Split into ADD COLUMN + UPDATE to achieve the same result.
+		"ALTER TABLE stellar_actions ADD COLUMN updated_at DATETIME NOT NULL DEFAULT '1970-01-01 00:00:00'",
+		"UPDATE stellar_actions SET updated_at = CURRENT_TIMESTAMP WHERE updated_at = '1970-01-01 00:00:00'",
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_actions_idempotency ON stellar_actions(idempotency_key) WHERE idempotency_key IS NOT NULL",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_actions_due ON stellar_actions(status, scheduled_at)",
 
