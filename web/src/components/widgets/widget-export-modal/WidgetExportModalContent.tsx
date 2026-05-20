@@ -227,10 +227,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           </button>
         </div>
 
-        {/* Main content area with fixed height scrolling */}
-        <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
-          {/* Left: Selection list (scrollable) */}
-          <div className="w-1/2 flex flex-col min-h-0">
+        <div className="flex-1 flex items-stretch gap-4 min-h-0">
+          {/* Left: Selection */}
+          <div className="w-1/2 flex flex-col overflow-hidden min-h-0">
             <div
               id={EXPORT_PANEL_IDS[activeTab]}
               ref={cardListRef}
@@ -351,9 +350,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             </div>
           </div>
 
-          {/* Right: Preview & Code (static, always visible) */}
-          <div className="w-1/2 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-2 shrink-0">
+          {/* Right: Preview & Code — stay static while only the left selection list scrolls. */}
+          <div className="w-1/2 flex flex-col overflow-hidden min-h-0 pb-6">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
                 onClick={() => setShowCode(!showCode)}
@@ -438,10 +437,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   // Embedded mode: render inline within Console Studio
   if (embedded) {
     return (
-      <div className="h-full flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-4">
-          {widgetContent}
-        </div>
+      <div className="h-full flex flex-col overflow-hidden p-4">
+        {widgetContent}
       </div>
     )
   }
