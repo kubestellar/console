@@ -12,6 +12,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import type { GatekeeperStatus, OPAClusterItem, Policy } from './opa'
 import type { SortByOption } from './OPAPolicies.types'
 import { SORT_OPTIONS } from './OPAPolicies.types'
+import type { ClusterWithHealth } from '../../lib/cards/cardFilters'
 
 interface OPAPoliciesTableProps {
   // Summary stats
@@ -39,7 +40,7 @@ interface OPAPoliciesTableProps {
   search: string
   setSearch: (v: string) => void
   // Cluster filter
-  availableClusters: string[]
+  availableClusters: ClusterWithHealth[]
   localClusterFilter: string[]
   toggleClusterFilter: (c: string) => void
   clearClusterFilter: () => void

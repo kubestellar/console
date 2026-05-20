@@ -41,8 +41,8 @@ interface NamespaceQuotasListProps {
   onDeleteQuota: (target: QuotaDeleteTarget) => void
   onCreateQuota: () => void
   activePagination: PaginationState
-  containerRef: RefObject<HTMLDivElement>
-  containerStyle: CSSProperties
+  containerRef: RefObject<HTMLDivElement | null>
+  containerStyle?: CSSProperties
 }
 
 export const NamespaceQuotasList = memo(function NamespaceQuotasList({

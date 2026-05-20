@@ -16,6 +16,7 @@ import {
   getTotalDevices,
   GPU_SORT_WEIGHT,
   INVENTORY_SORT_OPTIONS,
+  UNKNOWN_SEVERITY_SORT_ORDER,
 } from './HardwareHealthCard.utils'
 import type { SortField, ViewMode } from './HardwareHealthCard.types'
 import { HardwareHealthCardContent } from './HardwareHealthCardContent'
@@ -242,7 +243,7 @@ export function HardwareHealthCard() {
           break
         case 'severity':
         default:
-          cmp = (severityOrder[a.severity] ?? 999) - (severityOrder[b.severity] ?? 999)
+          cmp = (severityOrder[a.severity] ?? UNKNOWN_SEVERITY_SORT_ORDER) - (severityOrder[b.severity] ?? UNKNOWN_SEVERITY_SORT_ORDER)
           break
       }
       return sortDirection === 'asc' ? cmp : -cmp

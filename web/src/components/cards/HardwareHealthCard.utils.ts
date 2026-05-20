@@ -28,6 +28,9 @@ export const GPU_SORT_WEIGHT = 100
 /** Auto-dismiss delay for alert clear error messages (ms) */
 export const CLEAR_ERROR_DISMISS_MS = 5000
 
+/** Fallback sort order value for unknown severities (ensures they sort last) */
+export const UNKNOWN_SEVERITY_SORT_ORDER = 999
+
 const NODE_HOSTNAME_PATTERN =
   /([a-z0-9-]+-worker-[a-z0-9-]+|[a-z0-9-]+-gpu-[a-z0-9-]+|[a-z0-9-]+-compute-[a-z0-9-]+)/i
 const MIN_HOSTNAME_LENGTH = 5
