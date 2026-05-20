@@ -298,4 +298,4 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   )
 }
 
-export type { ClusterDeployment, WorkloadStatus, WorkloadType } from './WorkloadDeployment.utils'
+export type { ClusterDeployment, Workload, WorkloadStatus, WorkloadType } from './WorkloadDeployment.utils'

@@ -7,6 +7,7 @@ import type { KVCacheStats } from '../../../lib/llmd/mockData'
 export type MetricType = 'util' | 'hitRate'
 export type AggregationMode = 'aggregated' | 'disaggregated'
 export type ViewMode = 'gauges' | 'horseshoe' | 'heatmap'
+export type CardsCommonTFunction = TFunction<readonly ['cards', 'common'], undefined>
 
 export interface PodMetricHistory {
   util: number[]
@@ -38,7 +39,7 @@ export interface VisualizationProps {
   onGaugeClick: (podName: string, element: HTMLButtonElement | null) => void
   selectedPod: string | null
   stats: KVCacheStats[]
-  t: TFunction
+  t: CardsCommonTFunction
   viewMode: ViewMode
 }
 
@@ -50,7 +51,7 @@ export interface DetailPanelProps {
   selectedMetrics: MetricType[]
   selectedPod: string | null
   stats: KVCacheStats[]
-  t: TFunction
+  t: CardsCommonTFunction
 }
 
 export interface HeaderProps {
@@ -59,14 +60,14 @@ export interface HeaderProps {
   onAggregationModeChange: (mode: AggregationMode) => void
   onViewModeToggle: (nextMode: ViewMode) => void
   selectedStack: LLMdStack | null
-  t: TFunction
+  t: CardsCommonTFunction
   viewMode: ViewMode
 }
 
 export interface SummaryStatsProps {
   aggregateMetrics: AggregateMetrics
   podCount: number
-  t: TFunction
+  t: CardsCommonTFunction
   trend: number
 }
 
