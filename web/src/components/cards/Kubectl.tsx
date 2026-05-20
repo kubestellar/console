@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { Send, Copy, Trash2, ChevronDown, Sparkles, FileCode, History, Loader2 } from 'lucide-react'
 import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useKubectl } from '../../hooks/useKubectl'
@@ -10,43 +10,22 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { copyToClipboard } from '../../lib/clipboard'
-import { downloadText } from '../../lib/download'
-import { useToast } from '../ui/Toast'
-
-const YAML_PREVIEW_LINES = 5
-
-interface CommandHistoryItem {
-  id: string
-  context: string
-  command: string
-  output: string
-  timestamp: Date
-  success: boolean
-}
-
-interface YAMLManifest {
-  id: string
-  name: string
-  content: string
-  timestamp: Date
-}
+import type { CommandHistoryItem, YAMLManifest, OutputFormat } from './Kubectl.types'
+import { YAML_PREVIEW_LINES, validateYAML, generateCommandFromPrompt, generateYAMLFromPrompt, parseCommandArgs } from './Kubectl.utils'
+import { AIAssistantPanel } from './KubectlAIPanel'
+import { YAMLEditorPanel } from './KubectlYAMLEditor'
+import { CommandHistoryPanel } from './KubectlHistoryPanel'
 
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
-  // #6226: useToast for download error feedback.
-  const { showToast } = useToast()
   const { execute } = useKubectl()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
-  // Filter to only reachable & healthy clusters — running kubectl against an
-  // unreachable cluster just hangs and frustrates the user. The status of
-  // every kubeconfig context is already known from the cluster cache, so we
-  // can hide the unhealthy ones from the picker entirely. (A cluster is
-  // considered usable if it is both reachable and not explicitly unhealthy.)
+  // Filter to only reachable & healthy clusters
   const clusters = useMemo(() => allClusters.filter(c => c.reachable !== false && c.healthy !== false), [allClusters])
   const { isDemoMode } = useDemoMode()
   const [selectedContext, setSelectedContext] = useState<string>('')
 
-  // Report loading state to CardWrapper for skeleton/refresh behavior
+  // Report loading state to CardWrapper
   const hasData = clusters.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
@@ -56,7 +35,6 @@ export function Kubectl() {
     isFailed,
     consecutiveFailures })
   const [command, setCommand] = useState('')
-  const [aiPrompt, setAiPrompt] = useState('')
   const [output, setOutput] = useState<string[]>([])
   const [isExecuting, setIsExecuting] = useState(false)
   const [commandHistory, setCommandHistory] = useState<CommandHistoryItem[]>([])
@@ -68,8 +46,7 @@ export function Kubectl() {
   const [yamlError, setYamlError] = useState<string | null>(null)
   const [yamlManifests, setYamlManifests] = useState<YAMLManifest[]>([])
   const [selectedManifest, setSelectedManifest] = useState<string | null>(null)
-  const [historySearch, setHistorySearch] = useState('')
-  const [outputFormat, setOutputFormat] = useState<'table' | 'yaml' | 'json' | 'wide'>('table')
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>('table')
   const [isDryRun, setIsDryRun] = useState(false)
   const [showFormatMenu, setShowFormatMenu] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
@@ -120,44 +97,6 @@ export function Kubectl() {
     }
   }, [commandHistory])
 
-  // Validate YAML
-  // Note: This is basic validation. For production use, consider using a library like js-yaml
-  // for comprehensive YAML parsing and validation
-  const validateYAML = (content: string) => {
-    if (!content.trim()) {
-      setYamlError(null)
-      return true
-    }
-
-    try {
-      // Basic YAML validation (check for common issues)
-      const lines = content.split('\n')
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-        // Check for tabs (YAML doesn't allow tabs)
-        if (line.includes('\t')) {
-          setYamlError(`Line ${i + 1}: YAML doesn't allow tabs, use spaces`)
-          return false
-        }
-      }
-
-      // Check for basic YAML structure
-      if (content.includes('apiVersion:') && content.includes('kind:')) {
-        setYamlError(null)
-        return true
-      } else if (content.trim()) {
-        setYamlError('YAML should contain apiVersion and kind fields')
-        return false
-      }
-
-      setYamlError(null)
-      return true
-    } catch (err: unknown) {
-      setYamlError(err instanceof Error ? err.message : 'Invalid YAML')
-      return false
-    }
-  }
-
   // Execute kubectl command
   const executeCommand = async (cmd: string, dryRun = false) => {
     if (!cmd.trim() || !selectedContext) return
@@ -167,21 +106,7 @@ export function Kubectl() {
     const commandId = `cmd-${timestamp.getTime()}`
 
     try {
-      // Parse command
-      const args = cmd.trim().split(/\s+/)
-      
-      // Add output format if not specified
-      if (!args.includes('-o') && !args.includes('--output') && outputFormat !== 'table') {
-        args.push('-o', outputFormat)
-      }
-
-      // Add dry-run flag if enabled
-      if (dryRun && (args[0] === 'apply' || args[0] === 'create' || args[0] === 'delete')) {
-        if (!args.includes('--dry-run')) {
-          args.push('--dry-run=client')
-        }
-      }
-
+      const args = parseCommandArgs(cmd, outputFormat, dryRun)
       const result = await execute(selectedContext, args)
       
       setOutput(prev => [
@@ -191,7 +116,6 @@ export function Kubectl() {
         ''
       ])
 
-      // Add to history
       const historyItem: CommandHistoryItem = {
         id: commandId,
         context: selectedContext,
@@ -213,7 +137,6 @@ export function Kubectl() {
         ''
       ])
 
-      // Add to history as failed
       const historyItem: CommandHistoryItem = {
         id: commandId,
         context: selectedContext,
@@ -229,150 +152,43 @@ export function Kubectl() {
   }
 
   // AI-assisted command generation
-  const generateCommand = async () => {
-    if (!aiPrompt.trim()) return
-
-    setIsExecuting(true)
-    try {
-      // Simple AI command generation using pattern matching
-      // Note: This is a basic implementation. For production, consider integrating
-      // with a proper AI service for more accurate command generation
-      let generatedCmd = ''
-      const prompt = aiPrompt.toLowerCase()
-
-      if (prompt.includes('deployment') && prompt.includes('nginx')) {
-        const replicas = prompt.match(/(\d+)\s+replica/)?.[1] || '3'
-        generatedCmd = `create deployment nginx --image=nginx --replicas=${replicas}`
-      } else if (prompt.includes('pod') && prompt.includes('list')) {
-        generatedCmd = 'get pods --all-namespaces'
-      } else if (prompt.includes('scale') && prompt.match(/deployment|deploy/)) {
-        const name = prompt.match(/deployment\s+(\S+)/)?.[1] || 'my-deployment'
-        const replicas = prompt.match(/(\d+)\s+replica/)?.[1] || '5'
-        generatedCmd = `scale deployment ${name} --replicas=${replicas}`
-      } else if (prompt.includes('delete') && prompt.match(/pod|pods/)) {
-        generatedCmd = 'delete pod <pod-name>'
-      } else if (prompt.includes('logs')) {
-        generatedCmd = 'logs <pod-name>'
-      } else if (prompt.includes('describe')) {
-        const resource = prompt.match(/describe\s+(\S+)/)?.[1] || 'pod'
-        generatedCmd = `describe ${resource} <name>`
-      } else {
-        setOutput(prev => [
-          ...prev,
-          `AI: I'm not sure how to generate that command. Try: "create deployment nginx", "list pods", "scale deployment", etc.`,
-          `Tip: Use the YAML editor for complex resource definitions.`,
-          ''
-        ])
-        setIsExecuting(false)
-        return
-      }
-
+  const handleGenerateCommand = (prompt: string) => {
+    const generatedCmd = generateCommandFromPrompt(prompt)
+    if (generatedCmd) {
       setCommand(generatedCmd)
       setOutput(prev => [
         ...prev,
-        `AI: Generated command from "${aiPrompt}":`,
+        `AI: Generated command from "${prompt}":`,
         `kubectl ${generatedCmd}`,
         ''
       ])
-      setAiPrompt('')
       setShowAI(false)
       commandInputRef.current?.focus()
-    } catch (err: unknown) {
+    } else {
       setOutput(prev => [
         ...prev,
-        `AI Error: ${err instanceof Error ? err.message : 'Failed to generate command'}`,
+        `AI: I'm not sure how to generate that command. Try: "create deployment nginx", "list pods", "scale deployment", etc.`,
+        `Tip: Use the YAML editor for complex resource definitions.`,
         ''
       ])
-    } finally {
-      setIsExecuting(false)
     }
   }
 
   // Generate YAML from AI prompt
-  const generateYAML = async () => {
-    if (!aiPrompt.trim()) return
-
-    setIsExecuting(true)
-    try {
-      const prompt = aiPrompt.toLowerCase()
-      let yaml = ''
-
-      if (prompt.includes('deployment') && prompt.includes('nginx')) {
-        const replicas = prompt.match(/(\d+)\s+replica/)?.[1] || '3'
-        yaml = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-deployment
-  labels:
-    app: nginx
-spec:
-  replicas: ${replicas}
-  selector:
-    matchLabels:
-      app: nginx
-  template:
-    metadata:
-      labels:
-        app: nginx
-    spec:
-      containers:
-      - name: nginx
-        image: nginx:latest
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"`
-      } else if (prompt.includes('service')) {
-        yaml = `apiVersion: v1
-kind: Service
-metadata:
-  name: my-service
-spec:
-  selector:
-    app: my-app
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8080
-  type: ClusterIP`
-      } else if (prompt.includes('configmap')) {
-        yaml = `apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-config
-data:
-  config.json: |
-    {
-      "key": "value"
-    }`
-      } else {
-        setOutput(prev => [
-          ...prev,
-          `AI: I can generate YAML for: deployments, services, configmaps, etc.`,
-          ''
-        ])
-        setIsExecuting(false)
-        return
-      }
-
+  const handleGenerateYAML = (prompt: string) => {
+    const yaml = generateYAMLFromPrompt(prompt)
+    if (yaml) {
       setYamlContent(yaml)
-      validateYAML(yaml)
+      const validation = validateYAML(yaml)
+      setYamlError(validation.error)
       setShowYAMLEditor(true)
       setShowAI(false)
-      setAiPrompt('')
-    } catch (err: unknown) {
+    } else {
       setOutput(prev => [
         ...prev,
-        `AI Error: ${err instanceof Error ? err.message : 'Failed to generate YAML'}`,
+        `AI: I can generate YAML for: deployments, services, configmaps, etc.`,
         ''
       ])
-    } finally {
-      setIsExecuting(false)
     }
   }
 
@@ -380,7 +196,8 @@ data:
   const applyYAML = async () => {
     if (!yamlContent.trim() || !selectedContext) return
 
-    if (!validateYAML(yamlContent)) {
+    const validation = validateYAML(yamlContent)
+    if (!validation.valid) {
       return
     }
 
@@ -389,14 +206,11 @@ data:
       const manifestId = `manifest-${Date.now()}`
       const manifestName = yamlContent.match(/name:\s*(\S+)/)?.[1] || 'unnamed'
       
-      // Apply the YAML using kubectl
       const args = ['apply', '-f', '-']
       if (isDryRun) {
         args.push('--dry-run=client')
       }
 
-      // Note: In a real implementation, you would need to pass the YAML content to stdin
-      // For now, we show what would be executed and save the manifest
       const result = await execute(selectedContext, args)
       
       const manifest: YAMLManifest = {
@@ -437,16 +251,9 @@ data:
     setOutput(prev => [...prev, 'Copied to clipboard!', ''])
   }
 
-  // Export YAML
-  const exportYAML = () => {
-    if (!yamlContent.trim()) return
-
-    // #6226: surface download failures via toast instead of letting an
-    // unhandled exception white-screen the card.
-    const result = downloadText('manifest.yaml', yamlContent, 'text/yaml')
-    if (!result.ok) {
-      showToast(`Failed to export YAML: ${result.error?.message || 'unknown error'}`, 'error')
-    }
+  // Clear output
+  const clearOutput = () => {
+    setOutput([])
   }
 
   // Handle keyboard shortcuts
@@ -474,16 +281,23 @@ data:
     }
   }
 
-  // Clear output
-  const clearOutput = () => {
-    setOutput([])
+  const handleSelectCommand = (cmd: string, context: string) => {
+    setCommand(cmd)
+    setSelectedContext(context)
+    setShowHistory(false)
+    commandInputRef.current?.focus()
   }
 
-  // Filtered history based on search
-  const filteredHistory = useMemo(() => commandHistory.filter(item =>
-    item.command.toLowerCase().includes(historySearch.toLowerCase()) ||
-    item.context.toLowerCase().includes(historySearch.toLowerCase())
-  ).reverse(), [commandHistory, historySearch])
+  const handleValidateYAML = (content: string) => {
+    const validation = validateYAML(content)
+    setYamlError(validation.error)
+  }
+
+  const handleLoadManifest = (manifest: YAMLManifest) => {
+    setYamlContent(manifest.content)
+    setSelectedManifest(manifest.id)
+    handleValidateYAML(manifest.content)
+  }
 
   return (
     <div className="h-full flex flex-col min-h-card overflow-hidden">
@@ -548,211 +362,41 @@ data:
 
       {/* AI Assistant Panel */}
       {showAI && (
-        <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300">{t('cards:kubectl.aiAssist')}</span>
-          </div>
-          <input
-            type="text"
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && generateCommand()}
-            placeholder="e.g., Create a deployment for nginx with 3 replicas"
-            className="w-full px-3 py-2 text-sm bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
-          />
-          <div className="flex gap-2 mt-2">
-            <Button
-              variant="accent"
-              size="sm"
-              onClick={generateCommand}
-              disabled={isExecuting || !aiPrompt.trim()}
-            >
-              {t('cards:kubectl.generateCommand')}
-            </Button>
-            <Button
-              variant="accent"
-              size="sm"
-              onClick={generateYAML}
-              disabled={isExecuting || !aiPrompt.trim()}
-              className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300"
-            >
-              {t('cards:kubectl.generateYAML')}
-            </Button>
-          </div>
-        </div>
+        <AIAssistantPanel
+          onGenerateCommand={handleGenerateCommand}
+          onGenerateYAML={handleGenerateYAML}
+          isExecuting={isExecuting}
+        />
       )}
 
       {/* YAML Editor Panel */}
       {showYAMLEditor && (
-        <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-            <div className="flex items-center gap-2">
-              <FileCode className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-blue-300">{t('cards:kubectl.yamlEditor')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsDryRun(!isDryRun)}
-                className={cn(
-                  'px-2 py-1 text-xs rounded',
-                  isDryRun ? 'bg-yellow-500/20 text-yellow-400' : 'bg-secondary text-muted-foreground'
-                )}
-                title={isDryRun ? 'Dry-run enabled' : 'Dry-run disabled'}
-              >
-                {t('cards:kubectl.dryRun')}
-              </button>
-              <button
-                onClick={() => {
-                  copyToClipboard(yamlContent)
-                  setOutput(prev => [...prev, 'YAML copied to clipboard!', ''])
-                }}
-                disabled={!yamlContent.trim()}
-                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-                title="Copy YAML"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={exportYAML}
-                disabled={!yamlContent.trim()}
-                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-                title="Download YAML"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-          <textarea
-            value={yamlContent}
-            onChange={(e) => {
-              setYamlContent(e.target.value)
-              validateYAML(e.target.value)
-            }}
-            placeholder="Paste or write your YAML manifest here..."
-            className="w-full h-40 px-3 py-2 text-xs font-mono bg-black/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50 resize-none"
-          />
-          {yamlError && (
-            <div className="flex items-center gap-2 mt-2 text-xs text-red-400">
-              <AlertCircle className="w-3.5 h-3.5" />
-              {yamlError}
-            </div>
-          )}
-          {!yamlError && yamlContent.trim() && (
-            <div className="flex items-center gap-2 mt-2 text-xs text-green-400">
-              <CheckCircle className="w-3.5 h-3.5" />
-              {t('cards:kubectl.validYaml')}
-            </div>
-          )}
-          <div className="flex gap-2 mt-2">
-            <Button
-              variant="accent"
-              size="sm"
-              onClick={applyYAML}
-              disabled={isExecuting || !yamlContent.trim() || !!yamlError}
-              className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300"
-            >
-              {isExecuting ? t('cards:kubectl.applying') : isDryRun ? t('cards:kubectl.dryRunApply') : t('common:common.apply')}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setYamlContent('')
-                setYamlError(null)
-              }}
-            >
-              {t('common:common.clear')}
-            </Button>
-          </div>
-
-          {/* Saved Manifests */}
-          {yamlManifests.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-border/30">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{t('cards:kubectl.savedManifests')}</span>
-              </div>
-              <div className="space-y-1">
-                {yamlManifests.slice(-5).reverse().map(manifest => (
-                  <button
-                    key={manifest.id}
-                    onClick={() => {
-                      setYamlContent(manifest.content)
-                      setSelectedManifest(manifest.id)
-                      validateYAML(manifest.content)
-                    }}
-                    className={cn(
-                      'w-full px-2 py-1.5 text-xs rounded text-left hover:bg-secondary/50',
-                      selectedManifest === manifest.id ? 'bg-secondary/50 text-foreground' : 'text-muted-foreground'
-                    )}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-y-2">
-                      <span>{manifest.name}</span>
-                      <span className="text-2xs">{manifest.timestamp.toLocaleTimeString()}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <YAMLEditorPanel
+          yamlContent={yamlContent}
+          yamlError={yamlError}
+          yamlManifests={yamlManifests}
+          selectedManifest={selectedManifest}
+          isDryRun={isDryRun}
+          isExecuting={isExecuting}
+          onContentChange={setYamlContent}
+          onValidate={handleValidateYAML}
+          onApply={applyYAML}
+          onClear={() => {
+            setYamlContent('')
+            setYamlError(null)
+          }}
+          onToggleDryRun={() => setIsDryRun(!isDryRun)}
+          onLoadManifest={handleLoadManifest}
+          onAddOutput={(message) => setOutput(prev => [...prev, message, ''])}
+        />
       )}
 
       {/* Command History Panel */}
       {showHistory && (
-        <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg max-h-64 overflow-hidden flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
-            <History className="w-4 h-4 text-orange-400" />
-            <span className="text-sm font-medium text-orange-300">{t('cards:kubectl.history')}</span>
-          </div>
-          <div className="relative mb-2">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-            <input
-              type="text"
-              value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
-              placeholder={t('cards:kubectl.searchHistory')}
-              className="w-full pl-7 pr-3 py-1.5 text-xs bg-secondary rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-orange-500/50"
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-1">
-            {filteredHistory.map(item => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setCommand(item.command)
-                  setSelectedContext(item.context)
-                  setShowHistory(false)
-                  commandInputRef.current?.focus()
-                }}
-                className="w-full px-2 py-1.5 text-xs rounded text-left hover:bg-secondary/50 group"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-y-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {item.success ? (
-                      <CheckCircle className="w-3 h-3 text-green-400 shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
-                    )}
-                    <span className="text-muted-foreground truncate">{item.command}</span>
-                  </div>
-                  <span className="text-2xs text-muted-foreground ml-2 shrink-0">
-                    {item.timestamp.toLocaleTimeString()}
-                  </span>
-                </div>
-                <div className="text-2xs text-muted-foreground/60 mt-0.5 truncate">
-                  {item.context}
-                </div>
-              </button>
-            ))}
-            {filteredHistory.length === 0 && (
-              <div className="text-xs text-muted-foreground text-center py-4">
-                {historySearch ? t('cards:kubectl.noMatchingCommands') : t('cards:kubectl.noHistory')}
-              </div>
-            )}
-          </div>
-        </div>
+        <CommandHistoryPanel
+          history={commandHistory}
+          onSelectCommand={handleSelectCommand}
+        />
       )}
 
       {/* Terminal Output */}
