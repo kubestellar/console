@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,8 @@ func TestKubaraCatalogHandler_GetConfig(t *testing.T) {
 }
 
 func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
+	const kubaraCatalogLockCheckTimeout = 100 * time.Millisecond
+
 	env := setupTestEnv(t)
 	h := NewKubaraCatalogHandler("token", "org/repo", "path")
 	env.App.Get("/api/kubara/catalog", h.GetCatalog)
@@ -87,6 +90,51 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp2.StatusCode)
 		_ = json.NewDecoder(resp2.Body).Decode(&respData)
 		assert.Equal(t, 1, callCount, "Should not have called upstream again")
+	})
+
+	t.Run("fetch does not hold write lock", func(t *testing.T) {
+		fetchStarted := make(chan struct{})
+		releaseFetch := make(chan struct{})
+		requestDone := make(chan error, 1)
+
+		h.httpClient.Transport = RoundTripFunc(func(req *http.Request) *http.Response {
+			close(fetchStarted)
+			<-releaseFetch
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`[{"name":"chart1","path":"path/chart1","type":"dir"}]`)),
+				Header:     make(http.Header),
+			}
+		})
+		h.cache = nil
+		h.cacheExp = time.Time{}
+
+		go func() {
+			req := httptest.NewRequest("GET", "/api/kubara/catalog", nil)
+			resp, err := env.App.Test(req)
+			if err == nil {
+				_ = resp.Body.Close()
+			}
+			requestDone <- err
+		}()
+
+		<-fetchStarted
+
+		lockAcquired := make(chan struct{})
+		go func() {
+			h.mu.Lock()
+			close(lockAcquired)
+			h.mu.Unlock()
+		}()
+
+		select {
+		case <-lockAcquired:
+		case <-time.After(kubaraCatalogLockCheckTimeout):
+			t.Fatal("expected kubara catalog write lock to remain available during upstream fetch")
+		}
+
+		close(releaseFetch)
+		require.NoError(t, <-requestDone)
 	})
 
 	t.Run("upstream error", func(t *testing.T) {

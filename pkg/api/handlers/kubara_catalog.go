@@ -93,7 +93,7 @@ func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check cache (read lock)
+	// Check cache under a read lock first.
 	h.mu.RLock()
 	if h.cache != nil && time.Now().Before(h.cacheExp) {
 		entries := h.cache
@@ -105,30 +105,36 @@ func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 	}
 	h.mu.RUnlock()
 
-	// Cache miss — fetch from upstream (write lock)
+	// Fetch from upstream without holding the write lock so concurrent readers
+	// are not serialized behind slow network I/O.
+	entries, err := h.fetchUpstream()
+	if err != nil {
+		slog.Error("[KubaraCatalog] upstream fetch failed", "error", err)
+
+		// If we have a stale cache, serve it rather than failing.
+		h.mu.RLock()
+		staleEntries := h.cache
+		h.mu.RUnlock()
+		if staleEntries != nil {
+			return c.JSON(fiber.Map{
+				"entries": staleEntries,
+				"source":  "stale-cache",
+			})
+		}
+
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error": "Failed to fetch Kubara catalog",
+		})
+	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	// Double-check: another goroutine may have refreshed while we waited
+	// Another goroutine may have refreshed while we were fetching.
 	if h.cache != nil && time.Now().Before(h.cacheExp) {
 		return c.JSON(fiber.Map{
 			"entries": h.cache,
 			"source":  "cache",
-		})
-	}
-
-	entries, err := h.fetchUpstream()
-	if err != nil {
-		slog.Error("[KubaraCatalog] upstream fetch failed", "error", err)
-		// If we have a stale cache, serve it rather than failing
-		if h.cache != nil {
-			return c.JSON(fiber.Map{
-				"entries": h.cache,
-				"source":  "stale-cache",
-			})
-		}
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": "Failed to fetch Kubara catalog",
 		})
 	}
 
