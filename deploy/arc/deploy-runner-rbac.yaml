@@ -1,4 +1,6 @@
 ---
+# ServiceAccount for the GitHub Actions self-hosted runner that builds and
+# deploys the kubestellar-console Helm chart to the target cluster.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -9,6 +11,42 @@ metadata:
     app.kubernetes.io/component: deploy-runner
 
 ---
+# ClusterRole: CLUSTER-SCOPED permissions only.
+#
+# Minimum rationale — why each rule exists:
+#
+#   namespaces (create/update/patch):
+#     The deploy workflow runs `kubectl create namespace kc --dry-run=client
+#     -o yaml | kubectl apply -f -` to ensure the target namespace exists
+#     before a Helm install/upgrade. This is the only cluster-wide write
+#     required; everything else is scoped to the "kc" namespace via the Role
+#     and RoleBinding below.
+#
+#   clusterroles / clusterrolebindings (full CRUD):
+#     The Helm chart creates a ClusterRole and ClusterRoleBinding that grants
+#     the console ServiceAccount read access to cluster-wide resources (nodes,
+#     CRDs, etc.). Kubernetes RBAC escalation prevention requires that the
+#     principal creating or updating a ClusterRole already holds every
+#     permission it is granting. Therefore this ClusterRole must be a superset
+#     of every permission in the chart's ClusterRole. The read-only rules below
+#     fulfil that requirement — they mirror the chart's ClusterRole exactly so
+#     that chart updates do not silently break the deploy with a
+#     "is forbidden: … attempting to grant … not currently held" error.
+#
+#     If the chart's ClusterRole gains a new resource or verb, add the
+#     matching rule here and re-apply this file. Do NOT reinstate the
+#     cluster-admin binding as a shortcut — that trades a one-line YAML change
+#     for a full cluster compromise vector.
+#
+#   Read-only rules (nodes, PVs, CRDs, etc.):
+#     These mirror the chart's ClusterRole so the runner passes RBAC
+#     escalation checks when it applies the chart. The runner never mutates
+#     these resources — only get/list/watch is needed.
+#
+# Namespace-scoped resources (deployments, services, secrets, etc.) are
+# intentionally ABSENT here. They are granted via a RoleBinding in the "kc"
+# namespace only, so a compromised runner pod cannot read or modify workloads
+# or secrets in any other namespace.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -17,45 +55,202 @@ metadata:
     app.kubernetes.io/part-of: kubestellar-console
     app.kubernetes.io/component: deploy-runner
 rules:
+  # Ensure the deploy-target namespace ("kc") exists before Helm install.
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "create", "update", "patch"]
+
+  # Full CRUD on cluster-scoped RBAC objects — the Helm chart creates a
+  # ClusterRole + ClusterRoleBinding; see rationale above.
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles", "clusterrolebindings"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # --- Read-only rules mirrored from the chart's ClusterRole ---
+  # Required by RBAC escalation prevention when the runner applies the chart.
+  # The runner does NOT mutate any of these cluster-wide resources.
+
   - apiGroups: [""]
-    resources: ["secrets", "configmaps", "services", "serviceaccounts", "persistentvolumeclaims", "pods", "pods/log"]
+    resources:
+      - nodes
+      - persistentvolumes
+      - limitranges
+      - resourcequotas
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources:
+      - validatingwebhookconfigurations
+      - mutatingwebhookconfigurations
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["nvidia.com"]
+    resources: ["clusterpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["mellanox.com"]
+    resources: ["nicclusterpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["agent.kagenti.dev"]
+    resources: ["agents", "agentbuilds", "agentcards"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["mcp.kagenti.com"]
+    resources: ["mcpservers"]
+    verbs: ["get", "list", "watch"]
+
+  # console.kubestellar.io CRDs require full CRUD in the chart's ClusterRole.
+  - apiGroups: ["console.kubestellar.io"]
+    resources:
+      - managedworkloads
+      - managedworkloads/status
+      - clustergroups
+      - clustergroups/status
+      - workloaddeployments
+      - workloaddeployments/status
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["multicluster.x-k8s.io"]
+    resources: ["serviceexports", "serviceimports"]
+    verbs: ["get", "list", "watch"]
+
+  # user.openshift.io — opt-in in the chart; mirrored here for parity.
+  - apiGroups: ["user.openshift.io"]
+    resources: ["users"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["selfsubjectaccessreviews"]
+    verbs: ["create"]
+
+---
+# ClusterRoleBinding: binds the cluster-scoped ClusterRole to the runner SA.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kc-deploy-runner
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+    app.kubernetes.io/component: deploy-runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kc-deploy-runner
+subjects:
+  - kind: ServiceAccount
+    name: kc-deploy-runner
+    namespace: arc-systems
+
+---
+# Role: NAMESPACE-SCOPED permissions in the "kc" deploy-target namespace.
+#
+# All mutable access to workload resources is confined to the "kc" namespace.
+# If the runner pod is compromised it cannot read, write, or delete resources
+# in any other namespace (including arc-systems where the runner itself lives).
+#
+# Minimum rationale — why each resource group exists:
+#
+#   secrets:         Helm stores release state as Secrets; the deploy workflow
+#                    also creates/updates the "kc-secrets" credential bundle.
+#   configmaps:      Helm chart creates ConfigMaps for app configuration.
+#   services:        Helm chart creates a Service for the console pod.
+#   serviceaccounts: Helm chart creates a ServiceAccount for the console pod.
+#   pvcs:            Helm chart creates a PVC for SQLite persistence.
+#   pods/log:        Read-only — used by the deploy workflow health checks.
+#   deployments /
+#   statefulsets /
+#   replicasets:     App workloads created/updated by Helm.
+#   cronjobs/jobs:   DB backup CronJob created by the chart.
+#   poddisruptionbudgets: PDB created by the chart for HA.
+#   ingresses /
+#   networkpolicies: Traffic management resources in the chart.
+#   routes:          OpenShift Route for console ingress.
+#   roles /
+#   rolebindings:    Helm chart creates a self-upgrade Role/RoleBinding scoped
+#                    to this namespace; runner must hold these permissions to
+#                    satisfy RBAC escalation prevention when applying the chart.
+#                    Note: only namespace-scoped Roles, NOT ClusterRoles.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kc-deploy-runner
+  namespace: kc
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+    app.kubernetes.io/component: deploy-runner
+rules:
+  - apiGroups: [""]
+    resources:
+      - secrets
+      - configmaps
+      - services
+      - serviceaccounts
+      - persistentvolumeclaims
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Read-only pod access — health checks only; no exec or delete.
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+
   - apiGroups: ["apps"]
     resources: ["deployments", "deployments/status", "statefulsets", "replicasets"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
   - apiGroups: ["batch"]
     resources: ["cronjobs", "jobs"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
   - apiGroups: ["policy"]
     resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses", "networkpolicies"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
   - apiGroups: ["autoscaling"]
     resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
   - apiGroups: ["route.openshift.io"]
     resources: ["routes"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Namespace-scoped RBAC only — for the chart's self-upgrade Role/RoleBinding.
+  # ClusterRole/ClusterRoleBinding management is handled by the ClusterRole above.
   - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 ---
+# RoleBinding: grants the namespace-scoped Role above to the runner SA in "kc".
+# Keeping this separate from the ClusterRoleBinding above ensures the
+# namespace-scoped permissions never apply cluster-wide.
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: kc-deploy-runner
+  namespace: kc
   labels:
     app.kubernetes.io/part-of: kubestellar-console
     app.kubernetes.io/component: deploy-runner
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: kc-deploy-runner
 subjects:
   - kind: ServiceAccount
@@ -63,67 +258,31 @@ subjects:
     namespace: arc-systems
 
 ---
-# OpenShift SCC: grant privileged SCC for Docker-in-Docker runner containers
+# OpenShift SCC: grant nonroot-v2 SCC to the deploy runner.
+#
+# The kc-deploy-runner pod runs kubectl and helm — it does NOT perform
+# Docker-in-Docker, does not mount the host Docker socket, and does not need
+# Linux capabilities (NET_ADMIN, SYS_ADMIN, etc.).
+#
+# nonroot-v2 is the minimum SCC required on OpenShift for the ARC runner
+# containers: it allows a non-root fixed UID and grants the pod a writable
+# work directory without opening any privileged kernel interfaces.
+#
+# DO NOT change this to system:openshift:scc:privileged — that SCC grants
+# full host-level access and is not needed for a deploy-only runner.
+# The build runner (which performs container image builds) uses a separate
+# ServiceAccount and may require a higher SCC.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kc-deploy-runner-scc-privileged
+  name: kc-deploy-runner-scc
   labels:
     app.kubernetes.io/part-of: kubestellar-console
     app.kubernetes.io/component: deploy-runner
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:scc:privileged
-subjects:
-  - kind: ServiceAccount
-    name: kc-deploy-runner
-    namespace: arc-systems
-
----
-# cluster-admin: prevent recurring deploy failures from RBAC permission drift.
-#
-# Background: every time the kubestellar-console Helm chart adds a new RBAC
-# rule (e.g. a new CRD apiGroup, a new resource verb), the deploy fails on
-# the target cluster with `is forbidden: ... is attempting to grant RBAC
-# permissions not currently held` because Kubernetes RBAC requires that the
-# granter already hold every permission they're granting. The detailed
-# kc-deploy-runner ClusterRole above lists what the chart needed at the
-# time the runner was bootstrapped — but every chart change risks drift,
-# and re-applying this file via `kubectl apply` would silently RESET the
-# role to the static rule set, breaking the next deploy.
-#
-# Why cluster-admin is the right answer here:
-#   1. The runner already has full CRUD on `clusterroles` and
-#      `clusterrolebindings` (see the role above), so it can already
-#      escalate itself to cluster-admin. Making the binding explicit
-#      removes the trap and the audit confusion.
-#   2. The runner already has the privileged SCC. It deploys the entire
-#      kubestellar-console workload with whatever permissions the chart
-#      asks for. There is no meaningful security boundary between
-#      "enumerated permissions" and "cluster-admin" for a deploy bot
-#      that can `kubectl apply` arbitrary RBAC.
-#   3. Every standard CI deploy bot (Argo CD, Flux, Helm operator,
-#      ARC itself) is bound to cluster-admin or equivalent.
-#
-# This binding stops the chart-vs-runner-RBAC drift class of failures
-# permanently. The detailed ClusterRole above is kept as documentation
-# of the minimum permissions the chart historically needed.
-#
-# Tracking: this addresses the recurring "Workflow failure: Build and
-# Deploy KC" issues caused by RBAC drift on managed clusters
-# (see #6021, #6099, #6118 for prior occurrences).
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kc-deploy-runner-cluster-admin
-  labels:
-    app.kubernetes.io/part-of: kubestellar-console
-    app.kubernetes.io/component: deploy-runner
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
+  name: system:openshift:scc:nonroot-v2
 subjects:
   - kind: ServiceAccount
     name: kc-deploy-runner
