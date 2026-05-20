@@ -46,6 +46,9 @@ func (s *Server) setupStellarRoutes(routes *routeSetupContext) {
 	// Notifications
 	api.Get("/stellar/notifications", stellar.ListNotifications)
 	api.Post("/stellar/notifications/:id/read", stellar.MarkNotificationRead)
+	api.Post("/stellar/notifications/:id/investigate", stellar.MarkNotificationInvestigating)
+	api.Post("/stellar/notifications/:id/resolve", stellar.ResolveNotification)
+	api.Post("/stellar/notifications/:id/dismiss", stellar.DismissNotification)
 
 	// Missions
 	api.Get("/stellar/missions", stellar.ListMissions)

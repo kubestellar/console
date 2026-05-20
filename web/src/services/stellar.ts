@@ -124,6 +124,21 @@ export const stellarApi = {
     await api.post(`/api/stellar/notifications/${encodeURIComponent(id)}/read`, {})
   },
 
+  async investigateNotification(id: string, investigationSummary?: string): Promise<StellarNotification> {
+    const { data } = await api.post<StellarNotification>(`/api/stellar/notifications/${encodeURIComponent(id)}/investigate`, { investigationSummary })
+    return data
+  },
+
+  async resolveNotification(id: string, resolutionNote?: string): Promise<StellarNotification> {
+    const { data } = await api.post<StellarNotification>(`/api/stellar/notifications/${encodeURIComponent(id)}/resolve`, { resolutionNote })
+    return data
+  },
+
+  async dismissNotification(id: string, dismissalReason?: string): Promise<StellarNotification> {
+    const { data } = await api.post<StellarNotification>(`/api/stellar/notifications/${encodeURIComponent(id)}/dismiss`, { dismissalReason })
+    return data
+  },
+
   async getTasks(): Promise<StellarTask[]> {
     try {
       const { data } = await api.get<{ items: StellarTask[] }>('/api/stellar/tasks')

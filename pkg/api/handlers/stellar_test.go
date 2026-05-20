@@ -71,6 +71,9 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Post("/api/stellar/ask", h.Ask)
 	app.Get("/api/stellar/notifications", h.ListNotifications)
 	app.Post("/api/stellar/notifications/:id/read", h.MarkNotificationRead)
+	app.Post("/api/stellar/notifications/:id/investigate", h.MarkNotificationInvestigating)
+	app.Post("/api/stellar/notifications/:id/resolve", h.ResolveNotification)
+	app.Post("/api/stellar/notifications/:id/dismiss", h.DismissNotification)
 	app.Get("/api/stellar/watches", h.ListWatches)
 	app.Post("/api/stellar/watches", h.CreateWatch)
 	app.Post("/api/stellar/watches/:id/resolve", h.ResolveWatch)
@@ -206,6 +209,81 @@ func TestStellarAskStateDigestAndNotifications(t *testing.T) {
 			require.Equal(t, http.StatusNoContent, readResp.StatusCode)
 		}
 	}
+}
+
+func TestStellarNotificationStateTransitions(t *testing.T) {
+	app, st := newStellarTestApp(t)
+	sqlStore, ok := st.(*store.SQLiteStore)
+	require.True(t, ok)
+
+	items, err := sqlStore.ListStellarUserIDs(context.Background())
+	require.NoError(t, err)
+	require.NotEmpty(t, items)
+	userID := items[0]
+
+	notification := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "critical",
+		Title:     "CrashLoopBackOff — default/api-7c9d",
+		Body:      "timeout after 30s waiting for DB pool",
+		Cluster:   "prod-a",
+		Namespace: "default",
+		DedupeKey: "ev:Pod:api-7c9d",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), notification))
+
+	investigateReq, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+notification.ID+"/investigate", bytes.NewReader([]byte(`{"investigationSummary":"pulling logs"}`)))
+	require.NoError(t, err)
+	investigateReq.Header.Set("Content-Type", "application/json")
+	investigateResp, err := app.Test(investigateReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, investigateResp.StatusCode)
+
+	var investigating store.StellarNotification
+	require.NoError(t, json.NewDecoder(investigateResp.Body).Decode(&investigating))
+	assert.Equal(t, "investigating", investigating.Status)
+	assert.Equal(t, "pulling logs", investigating.InvestigationSummary)
+	assert.False(t, investigating.Read)
+
+	resolveReq, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+notification.ID+"/resolve", bytes.NewReader([]byte(`{"resolutionNote":"restarted deployment"}`)))
+	require.NoError(t, err)
+	resolveReq.Header.Set("Content-Type", "application/json")
+	resolveResp, err := app.Test(resolveReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resolveResp.StatusCode)
+
+	var resolved store.StellarNotification
+	require.NoError(t, json.NewDecoder(resolveResp.Body).Decode(&resolved))
+	assert.Equal(t, "resolved", resolved.Status)
+	assert.Equal(t, "restarted deployment", resolved.ResolutionNote)
+	assert.True(t, resolved.Read)
+	assert.NotNil(t, resolved.BatchTimestamp)
+
+	notification2 := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "warning",
+		Title:     "FailedScheduling — default/api",
+		Body:      "insufficient cpu",
+		Cluster:   "prod-a",
+		Namespace: "default",
+		DedupeKey: "ev:Pod:api",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), notification2))
+
+	dismissReq, err := http.NewRequest(http.MethodPost, "/api/stellar/notifications/"+notification2.ID+"/dismiss", bytes.NewReader([]byte(`{"dismissalReason":"duplicate event"}`)))
+	require.NoError(t, err)
+	dismissReq.Header.Set("Content-Type", "application/json")
+	dismissResp, err := app.Test(dismissReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, dismissResp.StatusCode)
+
+	var dismissed store.StellarNotification
+	require.NoError(t, json.NewDecoder(dismissResp.Body).Decode(&dismissed))
+	assert.Equal(t, "dismissed", dismissed.Status)
+	assert.Equal(t, "duplicate event", dismissed.DismissalReason)
+	assert.True(t, dismissed.Read)
 }
 
 func TestStellarResolveWatchReturnsJSON(t *testing.T) {

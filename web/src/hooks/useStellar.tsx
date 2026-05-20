@@ -52,6 +52,18 @@ function sortNotificationsByCreatedAt(items: StellarNotification[]): StellarNoti
   return (items || []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
+function shouldHideNotification(notification: StellarNotification): boolean {
+  return notification.read || notification.status === 'resolved' || notification.status === 'dismissed'
+}
+
+function mergeNotificationUpdate(items: StellarNotification[], updated: StellarNotification): StellarNotification[] {
+  const remaining = (items || []).filter(item => item.id !== updated.id)
+  if (shouldHideNotification(updated)) {
+    return remaining
+  }
+  return sortNotificationsByCreatedAt([updated, ...remaining])
+}
+
 export interface CatchUpState {
   summary: string
   kind: string
@@ -329,6 +341,13 @@ function useStellarSource() {
         n.dedupeKey === payload.dedupKey ? { ...n, body: payload.body } : n
       ))
     })
+    es.addEventListener('notification_replace', (e) => {
+      const payload = parseStellarEvent<StellarNotification>(e, 'notification_replace')
+      if (!payload) {
+        return
+      }
+      setNotifications(prev => mergeNotificationUpdate(prev, payload))
+    })
     es.addEventListener('solve_started', (e) => {
       const payload = parseStellarEvent<{ solveId: string; eventId: string }>(e, 'solve_started')
       if (!payload) {
@@ -539,6 +558,58 @@ function useStellarSource() {
     }
   }, [])
 
+  const investigateNotification = useCallback(async (id: string, investigationSummary?: string) => {
+    const previous = notificationsRef.current.find(notification => notification.id === id) || null
+    if (previous) {
+      const optimisticUpdatedAt = new Date().toISOString()
+      setNotifications(prev => prev.map(notification => (
+        notification.id === id
+          ? { ...notification, status: 'investigating', investigationSummary, updatedAt: optimisticUpdatedAt, read: false }
+          : notification
+      )))
+    }
+    try {
+      const updated = await stellarApi.investigateNotification(id, investigationSummary)
+      setNotifications(prev => mergeNotificationUpdate(prev, updated))
+      return updated
+    } catch (error) {
+      if (previous) {
+        setNotifications(prev => mergeNotificationUpdate(prev, previous))
+      }
+      throw error
+    }
+  }, [])
+
+  const resolveNotification = useCallback(async (id: string, resolutionNote?: string) => {
+    const previous = notificationsRef.current.find(notification => notification.id === id) || null
+    setNotifications(prev => prev.filter(notification => notification.id !== id))
+    try {
+      const updated = await stellarApi.resolveNotification(id, resolutionNote)
+      setNotifications(prev => mergeNotificationUpdate(prev, updated))
+      return updated
+    } catch (error) {
+      if (previous) {
+        setNotifications(prev => mergeNotificationUpdate(prev, previous))
+      }
+      throw error
+    }
+  }, [])
+
+  const dismissNotification = useCallback(async (id: string, dismissalReason?: string) => {
+    const previous = notificationsRef.current.find(notification => notification.id === id) || null
+    setNotifications(prev => prev.filter(notification => notification.id !== id))
+    try {
+      const updated = await stellarApi.dismissNotification(id, dismissalReason)
+      setNotifications(prev => mergeNotificationUpdate(prev, updated))
+      return updated
+    } catch (error) {
+      if (previous) {
+        setNotifications(prev => mergeNotificationUpdate(prev, previous))
+      }
+      throw error
+    }
+  }, [])
+
   const approveAction = useCallback(async (id: string, confirmToken?: string) => {
     await stellarApi.approveAction(id, confirmToken)
     setPendingActions(prev => prev.filter(action => action.id !== id))
@@ -650,6 +721,9 @@ function useStellarSource() {
     setProviderSession,
     acknowledgeNotification,
     dismissAllNotifications,
+    investigateNotification,
+    resolveNotification,
+    dismissNotification,
     approveAction,
     rejectAction,
     updateTaskStatus,
@@ -723,6 +797,9 @@ function useStellarFallback(): StellarContextValue {
     setProviderSession: () => {},
     acknowledgeNotification: async () => {},
     dismissAllNotifications: async () => {},
+    investigateNotification: async () => ({} as never),
+    resolveNotification: async () => ({} as never),
+    dismissNotification: async () => ({} as never),
     approveAction: async () => {},
     rejectAction: async () => {},
     updateTaskStatus: async () => {},

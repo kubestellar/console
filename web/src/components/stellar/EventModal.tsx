@@ -1,803 +1,581 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { StellarAction, StellarNotification, StellarSolve } from '../../types/stellar'
-import type { PendingAction } from './EventCard'
-import { countSolveAttempts } from './lib/derive'
+import { useStellar } from '../../hooks/useStellar'
 import { useToast } from '../ui/Toast'
+import { BaseModal } from '../../lib/modals'
+import { copyToClipboard } from '../../lib/clipboard'
+import type { PendingAction } from './EventCard'
 
 const RELATED_EVENT_LIMIT = 6
-const RECURRING_RELATED_THRESHOLD = 2
-const HINT_TO_ACTION_TYPE: Record<string, string> = {
-  restart: 'RestartDeployment',
-  scale: 'ScaleDeployment',
-  investigate: 'investigate',
-}
-const HINT_CONFIDENCE: Record<string, number> = {
-  restart: 88,
-  scale: 72,
-  investigate: 95,
-}
+const TIMELINE_ENTRY_LIMIT = 8
+const INVESTIGATION_ACTIVITY_LIMIT = 6
+const INVESTIGATION_TEXTAREA_ROWS = 3
+const CONFIRMATION_TEXTAREA_ROWS = 4
 
 interface EventModalProps {
   notification: StellarNotification
   allNotifications: StellarNotification[]
   pendingActions: StellarAction[]
-  /** Live solve status for the modal narration. Optional so older call sites
-   *  that don't yet pass it still compile; modal degrades to attempt-history
-   *  narration in that case. */
   solveStatus?: import('./lib/derive').SolveStatus | null
-  /** Solves list — used to surface attempt count and a row-per-attempt history
-   *  in the modal so it matches the "Tried N×" badge on the card. */
   solves?: StellarSolve[]
   onClose: () => void
   onAction?: (prompt: string, action?: PendingAction) => void
-  onSolve?: (eventID: string) => Promise<unknown>
-  onDismiss?: () => void
 }
 
-interface DerivedNarration {
-  whatHappened: string
-  whyItHappened: string
-  whatWereDoing: string
-}
+type ModalView = 'overview' | 'investigate'
+type ConfirmAction = 'resolve' | 'dismiss' | null
 
-interface DerivedRecommendation {
-  hint: string
+interface TimelineEntry {
+  ts: string
   label: string
-  rationale: string
-  confidence: number
+  detail: string
 }
 
-function severityColor(sev: string): string {
-  if (sev === 'critical') return 'var(--s-critical)'
-  if (sev === 'warning') return 'var(--s-warning)'
+function severityColor(severity: string): string {
+  if (severity === 'critical') return 'var(--s-critical)'
+  if (severity === 'warning') return 'var(--s-warning)'
   return 'var(--s-info)'
 }
 
-function deriveTags(n: StellarNotification, related: StellarNotification[]): string[] {
-  const tags: string[] = [n.severity]
-  const t = n.title.toLowerCase()
-  const hints = n.actionHints || []
-  if (hints.includes('restart') || hints.includes('scale')) tags.push('auto-fixable')
-  if (related.length >= RECURRING_RELATED_THRESHOLD) tags.push('recurring')
-  if (t.includes('oom') || t.includes('memory')) tags.push('memory-issue')
-  if (t.includes('crashloop') || t.includes('backoff')) tags.push('crash-loop')
-  if (t.includes('failedscheduling')) tags.push('scheduling')
-  if (t.includes('failedmount')) tags.push('storage')
-  return tags
+function statusLabel(status?: string): string {
+  switch (status) {
+    case 'investigating':
+      return 'Investigating'
+    case 'resolved':
+      return 'Resolved'
+    case 'dismissed':
+      return 'Removed'
+    case 'exhausted':
+      return 'Paused'
+    case 'open':
+      return 'Open'
+    case 'escalated':
+    default:
+      return 'Escalated'
+  }
 }
 
-interface StellarAttempt {
-  notification: StellarNotification
-  failed: boolean
-  whenIso: string
-}
-
-function deriveNarration(
-  n: StellarNotification,
-  related: StellarNotification[],
-  pending: StellarAction[],
-  completed: StellarNotification | null,
-  attempts: StellarAttempt[],
-  solveStatus: import('./lib/derive').SolveStatus | null,
-  solveAttemptCount: number,
-): DerivedNarration {
-  const title = n.title.toLowerCase()
-
-  let whatHappened = n.body || 'Stellar surfaced this event.'
-  let whyItHappened = 'Cause is being investigated.'
-
-  if (title.includes('crashloop') || title.includes('backoff')) {
-    whatHappened = 'The pod is stuck in a restart loop — its container keeps starting and immediately exiting.'
-    whyItHappened = related.length >= RECURRING_RELATED_THRESHOLD
-      ? `Recurring failure (${related.length + 1}× observed). Likely a code or config defect introduced recently — the same crash signature keeps repeating after each restart.`
-      : 'The container exits non-zero on startup. Common causes: bad config, missing secret, failing health probe, or a panic on init.'
-  } else if (title.includes('oom') || title.includes('memory')) {
-    whatHappened = 'The pod was killed for exceeding its memory limit.'
-    whyItHappened = 'Either the workload genuinely needs more memory or there is a memory leak. Without a fix the OOM kill will repeat.'
-  } else if (title.includes('failedscheduling')) {
-    whatHappened = "The pod can't be placed on any node."
-    whyItHappened = 'Usually insufficient cluster capacity, an unsatisfiable affinity/toleration, or PVC binding failures.'
-  } else if (title.includes('failedmount')) {
-    whatHappened = "The pod can't mount a required volume."
-    whyItHappened = 'The referenced PVC, ConfigMap or Secret is missing, unbound, or has the wrong permissions.'
-  } else if (title.includes('imagepullbackoff') || title.includes('errimagepull')) {
-    whatHappened = "The kubelet can't pull the container image."
-    whyItHappened = 'Image is mistyped, registry is unreachable, or the pull secret is missing/expired.'
-  }
-
-  let whatWereDoing: string
-  // First-priority signal: the live solve outcome. If Stellar resolved or
-  // escalated this workload, the modal narrates exactly that — beats any
-  // older attempt-history phrasing or the static "Standing by" fallback.
-  if (solveStatus && !solveStatus.isActive && solveStatus.phase === 'resolved') {
-    whatWereDoing = 'Stellar tried a first-line fix and it worked — issue resolved. Dismiss this card when you\'re ready.'
-  } else if (solveStatus && !solveStatus.isActive && solveStatus.phase === 'escalated') {
-    whatWereDoing = 'Stellar tried a first-line fix and it didn\'t hold. Hand this to an AI mission — click "Try AI mission" on the card (or open the mission sidebar) to run a deeper diagnose-and-act loop on your connected agent. The mission can read logs, propose a different fix, and apply it autonomously.'
-  } else if (solveStatus && !solveStatus.isActive && solveStatus.phase === 'exhausted') {
-    whatWereDoing = 'Stellar tried multiple actions and hit the budget limit. Paused for your call — click "Try AI mission" to escalate to a deeper mission on your connected agent, or review what was attempted in the Stellar log and decide whether to retry.'
-  } else if (solveStatus && solveStatus.isActive) {
-    whatWereDoing = `Stellar is on it right now — ${solveStatus.label.replace(/^[^\sA-Za-z]+\s*/, '')}. Watch the progress bar; the activity log has step-by-step.`
-  }
-  // Solve-history fallback: when there's no live solveStatus but we DO have a
-  // record of Stellar having attempted this workload via the autonomous loop
-  // (the "Tried N×" badge on the card came from here), describe it. Without
-  // this branch the modal falls through to "Standing by" while the card
-  // already says "Tried 1×" — a contradiction the user called out.
-  else if (solveAttemptCount > 0) {
-    whatWereDoing = `Stellar has attempted this workload ${solveAttemptCount}× — see "Stellar's attempts" below. The current event came in after those attempts; pick Investigate to pull fresh logs, click Solve to retry with the AI, or use a recommended action below.`
-  }
-  // Prefer the most recent attempt — that's the freshest signal of what Stellar
-  // has been doing. The pitch vision: report attempts like a junior engineer.
-  // "Tried once, failed. Awaiting your call." beats "Standing by."
-  else if (attempts.length > 0) {
-    const latest = attempts[0]
-    const succeededCount = attempts.filter(a => !a.failed).length
-    const failedCount = attempts.length - succeededCount
-    if (latest.failed) {
-      whatWereDoing = `Stellar tried ${attempts.length} fix${attempts.length === 1 ? '' : 'es'} (${failedCount} failed). The issue keeps recurring — Stellar has paused and is waiting for your call before retrying. Click Solve to hand it off to the AI, or pick a manual action below.`
-    } else if (pending.length > 0) {
-      whatWereDoing = `Stellar restarted this ${succeededCount}× already and the issue came back. Demoted to approval mode — waiting for your sign-off before retrying.`
-    } else {
-      whatWereDoing = `Stellar auto-fixed this ${succeededCount}× already. Monitoring to confirm the latest fix held.`
-    }
-  } else if (completed) {
-    whatWereDoing = `Auto-resolved by Stellar: ${completed.title}. Watching metrics to confirm the fix held.`
-  } else if (pending.length > 0) {
-    whatWereDoing = `Stellar prepared a fix and is awaiting your approval (${pending.length} pending action${pending.length === 1 ? '' : 's'}). Approve to execute, or click Solve for the AI to handle it end-to-end.`
-  } else if ((n.actionHints || []).length > 0) {
-    whatWereDoing = 'Recommendations ready below. Click Solve to hand the whole thing to the AI, or pick a manual action.'
-  } else {
-    whatWereDoing = 'Standing by — click Investigate to pull logs, or pick a recommended fix below.'
-  }
-
-  return { whatHappened, whyItHappened, whatWereDoing }
-}
-
-function deriveRecommendations(n: StellarNotification): DerivedRecommendation[] {
-  const hints = n.actionHints || []
-  return hints.map(h => {
-    const confidence = HINT_CONFIDENCE[h] ?? 60
-    let label = h.charAt(0).toUpperCase() + h.slice(1)
-    let rationale = ''
-    if (h === 'restart') {
-      label = 'Restart the deployment'
-      rationale = "A rollout restart cycles every pod through a fresh image pull and a clean process — clears most transient crash loops and config caches."
-    } else if (h === 'scale') {
-      label = 'Scale the deployment'
-      rationale = 'Adding replicas spreads load and absorbs partial node failures; matched to current request volume.'
-    } else if (h === 'investigate') {
-      label = 'Pull logs & investigate'
-      rationale = 'Read the last 100 log lines, surface the stack trace, and correlate with recent deploys before any change.'
-    } else {
-      rationale = `Recommended action: ${h}.`
-    }
-    return { hint: h, label, rationale, confidence }
-  })
-}
-
-function extractResourceName(n: StellarNotification): string {
-  if (!n.dedupeKey) return ''
-  const parts = n.dedupeKey.split(':')
+function extractResourceName(notification: StellarNotification): string {
+  if (!notification.dedupeKey) return ''
+  const parts = notification.dedupeKey.split(':')
   const offset = parts[0] === 'ev' ? 1 : 0
-  if (parts.length >= offset + 3) return parts[offset + 2]
+  if (parts.length >= offset + 3) {
+    return parts[offset + 2]
+  }
   return ''
 }
 
-function buildActionPrompt(hint: string, n: StellarNotification): string {
-  const resource = n.title
-  const cluster = n.cluster ? ` on cluster ${n.cluster}` : ''
-  if (hint === 'investigate') return `Investigate ${resource}${cluster}. Pull the logs and tell me what's wrong.`
-  if (hint === 'restart') return `Restart the affected deployment for ${resource}${cluster}. What's the safest approach?`
-  if (hint === 'scale') return `Should we scale the deployment for ${resource}${cluster}? What replica count makes sense?`
-  return `Help me with "${hint}" for ${resource}${cluster}.`
+function formatAbsoluteUtc(value?: string): string {
+  if (!value) return 'Unavailable'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Unavailable'
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  }) + ' UTC'
 }
 
-function formatRelative(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(ms / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+function formatRelative(value?: string): string {
+  if (!value) return 'just now'
+  const ms = Date.now() - new Date(value).getTime()
+  const minutes = Math.floor(ms / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
-const ACTION_BUTTON_TIMEOUT_MS = 5000
-const MODAL_OVERLAY_BACKGROUND = 'var(--game-overlay)'
-const MODAL_ELEVATION_SHADOW = '0 20px 60px var(--glass-shadow)'
-const INFO_ACCENT_BACKGROUND = 'color-mix(in srgb, var(--s-info) 12%, transparent)'
-const INFO_PANEL_BACKGROUND = 'color-mix(in srgb, var(--s-info) 6%, transparent)'
-const INFO_PANEL_BORDER = '1px solid color-mix(in srgb, var(--s-info) 20%, transparent)'
-const RECOMMENDATION_HIGHLIGHT_BACKGROUND = 'color-mix(in srgb, var(--s-info) 4%, transparent)'
+function buildInvestigatePrompt(notification: StellarNotification): string {
+  const cluster = notification.cluster ? ` on cluster ${notification.cluster}` : ''
+  const namespace = notification.namespace ? ` in namespace ${notification.namespace}` : ''
+  return `Investigate ${notification.title}${cluster}${namespace}. Pull logs, related events, retry history, and summarize the likely root cause.`
+}
 
-export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves, onClose, onAction, onSolve, onDismiss }: EventModalProps) {
-  const { t } = useTranslation()
-  const { showToast } = useToast()
-  const [showInvestigationPanel, setShowInvestigationPanel] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [resolutionNote, setResolutionNote] = useState('')
-  const [dismissReason, setDismissReason] = useState('')
-  const [showResolutionNoteInput, setShowResolutionNoteInput] = useState(false)
-  const [showDismissReasonInput, setShowDismissReasonInput] = useState(false)
-
-  // Solve-derived attempt count for this workload. Mirrors the badge on the
-  // card so the modal's header agrees with the list view.
-  const solveAttemptCount = useMemo(
-    () => countSolveAttempts(notification, solves || []),
-    [notification, solves],
-  )
-
-  // Handle Solve action: Mark event as resolved with optional note
-  const handleSolve = async () => {
-    if (isProcessing) return
-    setIsProcessing(true)
-    try {
-      if (onSolve) {
-        await Promise.race([
-          onSolve(notification.id),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ACTION_BUTTON_TIMEOUT_MS)),
-        ])
-        showToast(t('stellar.eventModal.solveSuccess'), 'success')
-      }
-      if (resolutionNote.trim()) {
-        // Note captured — in a production system this would be persisted
-        // to the solve record or a separate notes table
-      }
-      onClose()
-    } catch (err) {
-      showToast(t('stellar.eventModal.solveFailed', { error: err instanceof Error ? err.message : String(err) }), 'error')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  // Handle Investigate action: Opens sub-panel with logs and details
-  const handleInvestigate = () => {
-    setShowInvestigationPanel(true)
-    if (onAction) {
-      const prompt = `Investigate ${notification.title} on cluster ${notification.cluster || 'unknown'}. Pull the logs and tell me what's wrong.`
-      const action: PendingAction = {
-        prompt,
-        actionType: 'investigate',
-        cluster: notification.cluster || '',
-        namespace: notification.namespace || '',
-        name: extractResourceName(notification),
-      }
-      onAction(prompt, action)
-    }
-    showToast(t('stellar.eventModal.investigateStarted'), 'info')
-  }
-
-  // Handle Remove action: Dismisses event with optional reason
-  const handleRemove = async () => {
-    if (isProcessing) return
-    setIsProcessing(true)
-    try {
-      await Promise.race([
-        onDismiss ? onDismiss() : Promise.resolve(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ACTION_BUTTON_TIMEOUT_MS)),
-      ])
-      if (dismissReason.trim()) {
-        // Reason captured — in a production system this would be persisted
-        // to an audit log or event metadata
-      }
-      showToast(t('stellar.eventModal.removeSuccess'), 'success')
-      onClose()
-    } catch (err) {
-      showToast(t('stellar.eventModal.removeFailed', { error: err instanceof Error ? err.message : String(err) }), 'error')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  // Solve rows for this workload — render alongside the legacy auto-fix
-  // notifications so the modal shows the same attempt history the card hints
-  // at. Workload-matching mirrors countSolveAttempts.
-  const workloadSolves = useMemo<StellarSolve[]>(() => {
-    if (!solves || solves.length === 0) return []
-    const clusterKey = (notification.cluster || '').toLowerCase()
-    const nsKey = (notification.namespace || '').toLowerCase()
-    return solves
-      .filter(s => s.cluster.toLowerCase() === clusterKey && s.namespace.toLowerCase() === nsKey)
-      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-  }, [solves, notification.cluster, notification.namespace])
-
-  // Find related events: same dedupeKey, excluding self
-  const related = useMemo(() => {
-    if (!notification.dedupeKey) return []
-    return allNotifications
-      .filter(n => n.id !== notification.id && n.dedupeKey === notification.dedupeKey)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [allNotifications, notification.id, notification.dedupeKey])
-
-  // Pending actions matching this resource
-  const matchedPending = useMemo(() => {
-    const ns = notification.namespace || ''
-    const cl = notification.cluster || ''
-    return pendingActions.filter(a => a.cluster === cl && (a.namespace || '') === ns)
-  }, [pendingActions, notification.cluster, notification.namespace])
-
-  // Resource fingerprint — used to find prior Stellar attempts that targeted
-  // the same workload, even when the auto-fix notification has a different
-  // dedupe key from the original event.
-  const resourceFingerprint = useMemo(() => {
-    const cluster = (notification.cluster || '').toLowerCase()
-    const ns = (notification.namespace || '').toLowerCase()
-    return { cluster, ns }
-  }, [notification.cluster, notification.namespace])
-
-  // Every prior Stellar attempt (auto-fixed or auto-fix failed) targeting the
-  // same cluster/namespace. Sorted newest-first.
-  const stellarAttempts = useMemo<StellarAttempt[]>(() => {
-    return allNotifications
-      .filter(n => {
-        if (n.type !== 'action') return false
-        const t = n.title || ''
-        if (!t.startsWith('Stellar auto-fix')) return false
-        if ((n.cluster || '').toLowerCase() !== resourceFingerprint.cluster) return false
-        if ((n.namespace || '').toLowerCase() !== resourceFingerprint.ns) return false
-        return true
-      })
-      .map(n => ({
-        notification: n,
-        failed: n.title.startsWith('Stellar auto-fix failed'),
-        whenIso: n.createdAt,
-      }))
-      .sort((a, b) => new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime())
-  }, [allNotifications, resourceFingerprint.cluster, resourceFingerprint.ns])
-
-  // Most recent completed-action notification for this resource (if any)
-  const completedAction = useMemo<StellarNotification | null>(() => {
-    const key = notification.dedupeKey
-    if (!key) return null
-    const hit = allNotifications.find(n =>
-      n.type === 'action' &&
-      n.title.startsWith('Action completed') &&
-      n.dedupeKey === key,
-    )
-    return hit || null
-  }, [allNotifications, notification.dedupeKey])
-
-  const tags = deriveTags(notification, related)
-  const narration = deriveNarration(notification, related, matchedPending, completedAction, stellarAttempts, solveStatus ?? null, solveAttemptCount)
-  const recommendations = deriveRecommendations(notification)
-  const color = severityColor(notification.severity)
+function matchesSolve(notification: StellarNotification, solve: StellarSolve): boolean {
+  if ((notification.cluster || '') !== solve.cluster) return false
+  if ((notification.namespace || '') !== solve.namespace) return false
   const resourceName = extractResourceName(notification)
-  const titleId = `event-detail-title-${notification.id}`
+  if (!resourceName) return notification.id === solve.eventId
+  return resourceName.startsWith(solve.workload) || solve.workload === resourceName
+}
 
-  // Esc to close
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error && 'response' in error) {
+    const response = (error as { response?: { data?: { error?: string } } }).response
+    if (response?.data?.error) return response.data.error
+  }
+  if (error instanceof Error && error.message) return error.message
+  return fallback
+}
+
+export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves = [], onClose, onAction }: EventModalProps) {
+  const {
+    notifications,
+    activity,
+    investigateNotification,
+    resolveNotification,
+    dismissNotification,
+  } = useStellar()
+  const { showToast } = useToast()
+
+  const liveNotification = useMemo(() => {
+    return (notifications || []).find(item => item.id === notification.id) || notification
+  }, [notification, notifications])
+
+  const [view, setView] = useState<ModalView>('overview')
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
+  const [investigationSummary, setInvestigationSummary] = useState(liveNotification.investigationSummary || '')
+  const [resolutionNote, setResolutionNote] = useState(liveNotification.resolutionNote || '')
+  const [dismissalReason, setDismissalReason] = useState(liveNotification.dismissalReason || '')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+    setView('overview')
+    setConfirmAction(null)
+    setInvestigationSummary(liveNotification.investigationSummary || '')
+    setResolutionNote(liveNotification.resolutionNote || '')
+    setDismissalReason(liveNotification.dismissalReason || '')
+  }, [liveNotification.id, liveNotification.dismissalReason, liveNotification.investigationSummary, liveNotification.resolutionNote])
+
+  const allKnownNotifications = useMemo(() => {
+    const merged = [...(notifications || []), ...(allNotifications || [])]
+    return merged.filter((item, index) => merged.findIndex(candidate => candidate.id === item.id) === index)
+  }, [allNotifications, notifications])
+
+  const relatedEvents = useMemo(() => {
+    const resourceName = extractResourceName(liveNotification)
+    return allKnownNotifications
+      .filter(item => item.id !== liveNotification.id)
+      .filter(item => {
+        if (liveNotification.dedupeKey && item.dedupeKey === liveNotification.dedupeKey) return true
+        return Boolean(resourceName) && extractResourceName(item) === resourceName && item.cluster === liveNotification.cluster && item.namespace === liveNotification.namespace
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }, [allKnownNotifications, liveNotification])
+
+  const matchingSolves = useMemo(() => {
+    return (solves || [])
+      .filter(solve => matchesSolve(liveNotification, solve))
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  }, [liveNotification, solves])
+
+  const relatedActivity = useMemo(() => {
+    const resourceName = extractResourceName(liveNotification)
+    return (activity || [])
+      .filter(entry => entry.eventId === liveNotification.id || (
+        Boolean(resourceName) &&
+        entry.cluster === liveNotification.cluster &&
+        entry.namespace === liveNotification.namespace &&
+        entry.workload === resourceName
+      ))
+      .slice(0, INVESTIGATION_ACTIVITY_LIMIT)
+  }, [activity, liveNotification])
+
+  const resourceName = extractResourceName(liveNotification)
+  const affectedResource = liveNotification.affectedResource || [liveNotification.cluster, liveNotification.namespace, resourceName].filter(Boolean).join(' / ') || 'Unknown resource'
+  const rootCause = liveNotification.rootCause || liveNotification.investigationSummary || matchingSolves[0]?.summary || 'Pending Analysis'
+  const errorMessage = liveNotification.errorMessage || liveNotification.body || 'No error message recorded.'
+  const autoResolutionSummary = useMemo(() => {
+    const latestSolve = matchingSolves[0]
+    if (!latestSolve) {
+      return {
+        status: 'Not attempted',
+        detail: 'No automatic remediation attempt has been recorded for this event yet.',
+      }
+    }
+    const summary = latestSolve.error || latestSolve.summary || 'Manual intervention is still required.'
+    if (latestSolve.status === 'resolved') {
+      return { status: 'Succeeded', detail: summary }
+    }
+    if (latestSolve.status === 'running') {
+      return { status: 'In progress', detail: summary }
+    }
+    if (latestSolve.status === 'escalated') {
+      return { status: 'Escalated', detail: summary }
+    }
+    if (latestSolve.status === 'exhausted') {
+      return { status: 'Paused', detail: summary }
+    }
+    return { status: latestSolve.status, detail: summary }
+  }, [matchingSolves])
+
+  const timelineEntries = useMemo<TimelineEntry[]>(() => {
+    const entries: TimelineEntry[] = [
+      {
+        ts: liveNotification.createdAt,
+        label: 'Detected',
+        detail: liveNotification.title,
+      },
+    ]
+    if (liveNotification.updatedAt && liveNotification.updatedAt !== liveNotification.createdAt) {
+      entries.push({
+        ts: liveNotification.updatedAt,
+        label: statusLabel(liveNotification.status),
+        detail: liveNotification.investigationSummary || liveNotification.resolutionNote || liveNotification.dismissalReason || 'Event status updated from the modal.',
+      })
+    }
+    relatedEvents.forEach(item => {
+      entries.push({ ts: item.createdAt, label: 'Related event', detail: item.title })
+    })
+    matchingSolves.forEach(solve => {
+      entries.push({
+        ts: solve.endedAt || solve.startedAt,
+        label: `Auto-resolution ${statusLabel(solve.status)}`,
+        detail: solve.error || solve.summary || `${solve.actionsTaken} action(s) taken`,
+      })
+    })
+    return entries
+      .sort((a, b) => b.ts.localeCompare(a.ts))
+      .slice(0, TIMELINE_ENTRY_LIMIT)
+  }, [liveNotification, matchingSolves, relatedEvents])
+
+  const investigationCopyText = useMemo(() => {
+    const pendingApprovalCount = (pendingActions || []).filter(action => action.cluster === liveNotification.cluster && action.namespace === liveNotification.namespace).length
+    const sections = [
+      `Event ID: ${liveNotification.id}`,
+      `Title: ${liveNotification.title}`,
+      `Status: ${statusLabel(liveNotification.status)}`,
+      `Severity: ${liveNotification.severity}`,
+      `Timestamp: ${formatAbsoluteUtc(liveNotification.updatedAt || liveNotification.createdAt)}`,
+      `Affected resource: ${affectedResource}`,
+      `Root cause: ${rootCause}`,
+      `Error message: ${errorMessage}`,
+      `Batch window: ${formatAbsoluteUtc(liveNotification.batchTimestamp || liveNotification.createdAt)}`,
+      `Auto-resolution: ${autoResolutionSummary.status} — ${autoResolutionSummary.detail}`,
+      `Pending approvals: ${pendingApprovalCount}`,
+      `Related events: ${(relatedEvents || []).map(item => `${formatAbsoluteUtc(item.createdAt)} — ${item.title}`).join('\n') || 'None'}`,
+      `Related activity: ${(relatedActivity || []).map(item => `${formatAbsoluteUtc(item.ts)} — ${item.title}: ${item.detail || ''}`).join('\n') || 'None'}`,
+      `Solve attempts: ${(matchingSolves || []).map(item => `${formatAbsoluteUtc(item.startedAt)} — ${item.status}: ${item.summary || item.error || 'No summary'}`).join('\n') || 'None'}`,
+      `Raw detail: ${liveNotification.body || 'None'}`,
+    ]
+    return sections.join('\n\n')
+  }, [affectedResource, autoResolutionSummary.detail, autoResolutionSummary.status, errorMessage, liveNotification, matchingSolves, pendingActions, relatedActivity, relatedEvents, rootCause])
+
+  const handleCopyDetails = async () => {
+    const copied = await copyToClipboard(investigationCopyText)
+    showToast(copied ? 'Investigation details copied' : 'Failed to copy investigation details', copied ? 'success' : 'error')
+  }
+
+  const handleMarkInvestigating = async () => {
+    setIsSubmitting(true)
+    try {
+      await investigateNotification(liveNotification.id, investigationSummary.trim() || undefined)
+      showToast('Event marked as investigating', 'info')
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Failed to mark event as investigating'), 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleResolve = async () => {
+    setIsSubmitting(true)
+    try {
+      await resolveNotification(liveNotification.id, resolutionNote.trim() || undefined)
+      showToast('Event resolved successfully', 'success')
+      onClose()
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Failed to resolve event'), 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDismiss = async () => {
+    setIsSubmitting(true)
+    try {
+      await dismissNotification(liveNotification.id, dismissalReason.trim() || undefined)
+      showToast('Event removed from escalated list', 'success')
+      onClose()
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Failed to remove event'), 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const color = severityColor(liveNotification.severity)
+  const solveAttemptCount = matchingSolves.length
 
   return (
-    <div
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: MODAL_OVERLAY_BACKGROUND,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20, backdropFilter: 'blur(4px)',
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: 720, maxHeight: '90vh',
-          background: 'var(--s-bg)',
-          border: `1px solid var(--s-border)`,
-          borderLeft: `4px solid ${color}`,
-          borderRadius: 'var(--s-r)',
-          display: 'flex', flexDirection: 'column',
-          fontFamily: 'var(--s-sans)', color: 'var(--s-text)',
-          boxShadow: MODAL_ELEVATION_SHADOW,
-        }}
-      >
-        {/* Header */}
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--s-border)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-                {notification.severity} · {notification.type} · {formatRelative(notification.createdAt)}
-              </div>
-              <div id={titleId} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>{notification.title}</div>
-              {(notification.cluster || notification.namespace || resourceName) && (
-                <div style={{ fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', marginTop: 4 }}>
-                  {notification.cluster}{notification.namespace ? ` / ${notification.namespace}` : ''}{resourceName ? ` / ${resourceName}` : ''}
+    <BaseModal isOpen onClose={onClose} size="lg" testId="stellar-event-modal">
+      <div className="flex min-h-0 flex-col bg-[var(--s-bg)] text-[var(--s-text)]">
+        <BaseModal.Header
+          title={liveNotification.title}
+          description={`Event ID: ${liveNotification.id}`}
+          onClose={onClose}
+          badges={(
+            <>
+              <Badge color={color}>{liveNotification.severity}</Badge>
+              <Badge color={liveNotification.status === 'investigating' ? 'var(--s-info)' : color}>{statusLabel(liveNotification.status)}</Badge>
+              <Badge color="var(--s-text-muted)">{formatAbsoluteUtc(liveNotification.updatedAt || liveNotification.createdAt)}</Badge>
+            </>
+          )}
+        >
+          <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-[var(--s-text-muted)]">
+            Escalated event details
+          </div>
+        </BaseModal.Header>
+
+        <div className="s-scroll flex-1 overflow-y-auto px-5 py-4">
+          {view === 'overview' ? (
+            <div className="space-y-4">
+              <Section title="Root cause">{rootCause}</Section>
+              <Section title="Affected resource">{affectedResource}</Section>
+              <Section title="Error message">{errorMessage}</Section>
+              <Section title="Event history">
+                <Timeline entries={timelineEntries} />
+              </Section>
+              <Section title="Auto-resolution attempt">
+                <div className="text-sm">
+                  <div className="mb-1 font-medium">Status: {autoResolutionSummary.status}</div>
+                  <div className="text-[var(--s-text-muted)]">{autoResolutionSummary.detail}</div>
                 </div>
-              )}
+              </Section>
+              <Section title="Batch metadata">Batch window: {formatAbsoluteUtc(liveNotification.batchTimestamp || liveNotification.createdAt)}</Section>
             </div>
-            <button
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)', padding: 2 }}
-              title="Close (Esc)"
-              aria-label="Close"
-            >✕</button>
-          </div>
-          {/* Tag row */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 10 }}>
-            {tags.map(tag => (
-              <span key={tag} style={{
-                fontSize: 10, fontFamily: 'var(--s-mono)',
-                padding: '2px 6px', borderRadius: 10,
-                background: tag === notification.severity ? `${color}22` : 'var(--s-surface-2)',
-                color: tag === notification.severity ? color : 'var(--s-text-muted)',
-                border: `1px solid ${tag === notification.severity ? color : 'var(--s-border)'}`,
-              }}>{tag}</span>
-            ))}
-            {solveAttemptCount > 0 && (
-              <span style={{
-                fontSize: 10, fontFamily: 'var(--s-mono)',
-                padding: '2px 6px', borderRadius: 10,
-                background: INFO_ACCENT_BACKGROUND,
-                color: 'var(--s-info)',
-                border: '1px solid var(--s-info)',
-              }} title="Number of times Stellar has tried to auto-solve this workload">
-                ✦ Stellar tried {solveAttemptCount}×
-              </span>
-            )}
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <Section title="Investigation summary">
+                <textarea
+                  value={investigationSummary}
+                  onChange={(event) => setInvestigationSummary(event.target.value)}
+                  rows={INVESTIGATION_TEXTAREA_ROWS}
+                  className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
+                  placeholder="Optional note for the team"
+                />
+              </Section>
+              <Section title="Full event logs">
+                <pre className="whitespace-pre-wrap rounded border border-[var(--s-border)] bg-[var(--s-surface)] p-3 text-xs text-[var(--s-text-muted)]">{liveNotification.body || errorMessage}</pre>
+              </Section>
+              <Section title={`Related events (${relatedEvents.length})`}>
+                <ListBlock
+                  items={(relatedEvents || []).slice(0, RELATED_EVENT_LIMIT).map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    subtitle: `${formatAbsoluteUtc(item.createdAt)} · ${statusLabel(item.status)}`,
+                  }))}
+                  emptyText="No related events found in the current feed."
+                />
+              </Section>
+              <Section title={`Retry history (${solveAttemptCount})`}>
+                <ListBlock
+                  items={(matchingSolves || []).map(item => ({
+                    id: item.id,
+                    title: `${statusLabel(item.status)} · ${item.actionsTaken} action(s)`,
+                    subtitle: `${formatAbsoluteUtc(item.startedAt)} · ${item.summary || item.error || 'No summary available'}`,
+                  }))}
+                  emptyText="No automatic retries recorded."
+                />
+              </Section>
+              <Section title={`Related activity (${relatedActivity.length})`}>
+                <ListBlock
+                  items={(relatedActivity || []).map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    subtitle: `${formatAbsoluteUtc(item.ts)} · ${item.detail || 'No additional detail'}`,
+                  }))}
+                  emptyText="No related activity recorded yet."
+                />
+              </Section>
+            </div>
+          )}
         </div>
 
-        {/* Body — scrollable */}
-        <div className="s-scroll" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px' }}>
-          <Section title="What happened">{narration.whatHappened}</Section>
-          <Section title="Why it happened">{narration.whyItHappened}</Section>
-          <Section title="What we're doing">{narration.whatWereDoing}</Section>
-
-          {workloadSolves.length > 0 && (
-            <>
-              <SectionHeader title={`Stellar's attempts (${workloadSolves.length})`} />
-              <div style={{ marginBottom: 12 }}>
-                {workloadSolves.slice(0, 5).map(s => {
-                  const outcomeColor =
-                    s.status === 'resolved' ? 'var(--s-success)' :
-                    s.status === 'running' ? 'var(--s-info)' :
-                    'var(--s-critical)'
-                  const outcomeLabel =
-                    s.status === 'resolved' ? '✓ resolved' :
-                    s.status === 'running' ? '▶ running' :
-                    s.status === 'escalated' ? '⚠ escalated' :
-                    s.status === 'exhausted' ? '⏸ paused' :
-                    s.status
-                  return (
-                    <div key={s.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '6px 10px', fontSize: 11,
-                      borderLeft: `2px solid ${outcomeColor}`,
-                      background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
-                      marginBottom: 3,
-                    }}>
-                      <span style={{ fontFamily: 'var(--s-mono)', color: outcomeColor, minWidth: 86 }}>
-                        {outcomeLabel}
-                      </span>
-                      <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', minWidth: 60 }}>
-                        {formatRelative(s.startedAt)}
-                      </span>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {s.workload || s.namespace}
-                        {s.actionsTaken > 0 && (
-                          <span style={{ color: 'var(--s-text-dim)', marginLeft: 6 }}>
-                            · {s.actionsTaken} action{s.actionsTaken === 1 ? '' : 's'}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
+        <div className="border-t border-[var(--s-border)] px-5 py-4">
+          {confirmAction === 'resolve' && (
+            <ConfirmationPanel
+              title="Confirm resolution"
+              description="Mark this event as resolved?"
+              value={resolutionNote}
+              onChange={setResolutionNote}
+              placeholder="Resolution note (optional)"
+              onCancel={() => setConfirmAction(null)}
+              onConfirm={() => { void handleResolve() }}
+              confirmLabel="Confirm"
+              isSubmitting={isSubmitting}
+            />
+          )}
+          {confirmAction === 'dismiss' && (
+            <ConfirmationPanel
+              title="Confirm removal"
+              description="This event will be removed from the escalated list."
+              value={dismissalReason}
+              onChange={setDismissalReason}
+              placeholder="Dismissal reason (optional)"
+              onCancel={() => setConfirmAction(null)}
+              onConfirm={() => { void handleDismiss() }}
+              confirmLabel="Remove"
+              isSubmitting={isSubmitting}
+            />
           )}
 
-          {stellarAttempts.length > 0 && workloadSolves.length === 0 && (
-            <>
-              <SectionHeader title={`Stellar's attempts (${stellarAttempts.length})`} />
-              <div style={{ marginBottom: 12 }}>
-                {stellarAttempts.slice(0, 5).map(a => (
-                  <div key={a.notification.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '6px 10px', fontSize: 11,
-                    borderLeft: `2px solid ${a.failed ? 'var(--s-critical)' : 'var(--s-success)'}`,
-                    background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
-                    marginBottom: 3,
-                  }}>
-                    <span style={{ fontFamily: 'var(--s-mono)', color: a.failed ? 'var(--s-critical)' : 'var(--s-success)', minWidth: 70 }}>
-                      {a.failed ? '✗ failed' : '✓ ran'}
-                    </span>
-                    <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', minWidth: 60 }}>
-                      {formatRelative(a.whenIso)}
-                    </span>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.notification.title.replace(/^Stellar auto-fix(ed)?( failed)?:\s*/i, '')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
+          {confirmAction === null && view === 'overview' && (
+            <div className="flex flex-wrap gap-2">
+              <ActionButton onClick={() => setView('investigate')} color="var(--s-info)">Investigate</ActionButton>
+              <ActionButton onClick={() => setConfirmAction('resolve')} color="var(--s-success)">Solve</ActionButton>
+              <ActionButton onClick={() => setConfirmAction('dismiss')} color="var(--s-critical)">Remove</ActionButton>
+            </div>
           )}
 
-          {recommendations.length > 0 && (
-            <SectionHeader title="Recommendations" />
-          )}
-          {recommendations.map((rec, idx) => (
-            <div key={rec.hint} style={{
-              border: '1px solid var(--s-border)', borderRadius: 'var(--s-r)',
-              padding: '10px 12px', marginBottom: 8,
-              background: idx === 0 ? RECOMMENDATION_HIGHLIGHT_BACKGROUND : 'transparent',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{rec.label}</span>
-                <span style={{
-                  fontSize: 10, fontFamily: 'var(--s-mono)',
-                  color: rec.confidence >= 80 ? 'var(--s-success)' : rec.confidence >= 60 ? 'var(--s-warning)' : 'var(--s-text-muted)',
-                }}>
-                  confidence: {rec.confidence}%
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
-                {rec.rationale}
-              </div>
+          {confirmAction === null && view === 'investigate' && (
+            <div className="flex flex-wrap gap-2">
+              <ActionButton onClick={() => setView('overview')} color="var(--s-text-muted)">Back</ActionButton>
+              <ActionButton onClick={() => { void handleCopyDetails() }} color="var(--s-text-muted)">Copy Details</ActionButton>
               {onAction && (
-                <button
-                  onClick={() => {
-                    const prompt = buildActionPrompt(rec.hint, notification)
-                    const action: PendingAction = {
-                      prompt,
-                      actionType: HINT_TO_ACTION_TYPE[rec.hint] ?? rec.hint,
-                      cluster: notification.cluster || '',
-                      namespace: notification.namespace || '',
-                      name: resourceName,
-                    }
-                    onAction(prompt, action)
-                    onClose()
-                  }}
-                  style={{
-                    background: 'none', border: `1px solid ${color}`, color,
-                    borderRadius: 'var(--s-rs)', padding: '4px 12px',
-                    fontSize: 11, cursor: 'pointer',
-                  }}
+                <ActionButton
+                  onClick={() => onAction(buildInvestigatePrompt(liveNotification), {
+                    prompt: buildInvestigatePrompt(liveNotification),
+                    actionType: 'investigate',
+                    cluster: liveNotification.cluster || '',
+                    namespace: liveNotification.namespace || '',
+                    name: resourceName,
+                  })}
+                  color="var(--s-warning)"
                 >
-                  Execute via chat →
-                </button>
+                  Open in Chat
+                </ActionButton>
               )}
-            </div>
-          ))}
-
-          {related.length > 0 && (
-            <>
-              <SectionHeader title={`Related events (${related.length})`} />
-              <div style={{ marginBottom: 12 }}>
-                {related.slice(0, RELATED_EVENT_LIMIT).map(r => (
-                  <div key={r.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '5px 8px', fontSize: 11,
-                    borderLeft: `2px solid ${severityColor(r.severity)}`,
-                    background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
-                    marginBottom: 3,
-                  }}>
-                    <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', minWidth: 70 }}>
-                      {formatRelative(r.createdAt)}
-                    </span>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {r.title}
-                    </span>
-                  </div>
-                ))}
-                {related.length > RELATED_EVENT_LIMIT && (
-                  <div style={{ fontSize: 10, color: 'var(--s-text-dim)', textAlign: 'center', marginTop: 4 }}>
-                    +{related.length - RELATED_EVENT_LIMIT} earlier
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Action buttons footer */}
-        <div style={{ borderTop: '1px solid var(--s-border)', padding: '14px 18px', flexShrink: 0 }}>
-          {/* Optional resolution note input */}
-          {showResolutionNoteInput && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 11, color: 'var(--s-text-muted)', marginBottom: 4 }}>
-                {t('stellar.eventModal.resolutionNoteLabel')}
-              </label>
-              <textarea
-                value={resolutionNote}
-                onChange={(e) => setResolutionNote(e.target.value)}
-                placeholder={t('stellar.eventModal.resolutionNotePlaceholder')}
-                rows={2}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  fontFamily: 'var(--s-mono)',
-                  background: 'var(--s-surface-2)',
-                  border: '1px solid var(--s-border)',
-                  borderRadius: 'var(--s-rs)',
-                  color: 'var(--s-text)',
-                  resize: 'vertical',
-                }}
-              />
+              <ActionButton onClick={() => { void handleMarkInvestigating() }} color="var(--s-info)" disabled={isSubmitting}>
+                Mark as Investigating
+              </ActionButton>
             </div>
           )}
 
-          {/* Optional dismiss reason input */}
-          {showDismissReasonInput && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 11, color: 'var(--s-text-muted)', marginBottom: 4 }}>
-                {t('stellar.eventModal.dismissReasonLabel')}
-              </label>
-              <textarea
-                value={dismissReason}
-                onChange={(e) => setDismissReason(e.target.value)}
-                placeholder={t('stellar.eventModal.dismissReasonPlaceholder')}
-                rows={2}
-                style={{
-                  width: '100%',
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  fontFamily: 'var(--s-mono)',
-                  background: 'var(--s-surface-2)',
-                  border: '1px solid var(--s-border)',
-                  borderRadius: 'var(--s-rs)',
-                  color: 'var(--s-text)',
-                  resize: 'vertical',
-                }}
-              />
+          {solveStatus && view === 'overview' && confirmAction === null && (
+            <div className="mt-3 text-xs text-[var(--s-text-muted)]">
+              Stellar status: <span style={{ color: solveStatus.color }}>{solveStatus.label}</span>
             </div>
-          )}
-
-          {/* Investigation panel (inline) */}
-          {showInvestigationPanel && (
-            <div style={{
-              marginBottom: 12,
-              padding: '10px 12px',
-              background: INFO_PANEL_BACKGROUND,
-              border: INFO_PANEL_BORDER,
-              borderRadius: 'var(--s-r)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--s-info)' }}>
-                  🔍 {t('stellar.eventModal.investigationPanelTitle')}
-                </span>
-                <div style={{ flex: 1 }} />
-                <button
-                  onClick={() => setShowInvestigationPanel(false)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--s-text-dim)' }}
-                >✕</button>
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--s-text-muted)', lineHeight: 1.5, fontStyle: 'italic' }}>
-                {t('stellar.eventModal.investigationPanelDescription')}
-              </div>
-            </div>
-          )}
-
-          {/* Action buttons row */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              onClick={() => {
-                if (showResolutionNoteInput) {
-                  void handleSolve()
-                } else {
-                  setShowResolutionNoteInput(true)
-                }
-              }}
-              disabled={isProcessing}
-              style={{
-                flex: 1,
-                padding: '8px 16px',
-                fontSize: 13,
-                fontWeight: 600,
-                background: isProcessing ? 'var(--s-surface-2)' : 'var(--s-success)',
-                color: isProcessing ? 'var(--s-text-dim)' : 'var(--s-bg)',
-                border: 'none',
-                borderRadius: 'var(--s-r)',
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                opacity: isProcessing ? 0.5 : 1,
-              }}
-              title={t('stellar.eventModal.solveTooltip')}
-            >
-              {isProcessing ? t('stellar.eventModal.solving') : showResolutionNoteInput ? t('stellar.eventModal.confirmSolve') : t('stellar.eventModal.solve')}
-            </button>
-
-            <button
-              onClick={handleInvestigate}
-              disabled={isProcessing}
-              style={{
-                flex: 1,
-                padding: '8px 16px',
-                fontSize: 13,
-                fontWeight: 600,
-                background: 'none',
-                color: 'var(--s-info)',
-                border: '1px solid var(--s-info)',
-                borderRadius: 'var(--s-r)',
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                opacity: isProcessing ? 0.5 : 1,
-              }}
-              title={t('stellar.eventModal.investigateTooltip')}
-            >
-              {t('stellar.eventModal.investigate')}
-            </button>
-
-            <button
-              onClick={() => {
-                if (showDismissReasonInput) {
-                  void handleRemove()
-                } else {
-                  setShowDismissReasonInput(true)
-                }
-              }}
-              disabled={isProcessing}
-              style={{
-                flex: 1,
-                padding: '8px 16px',
-                fontSize: 13,
-                fontWeight: 600,
-                background: 'none',
-                color: 'var(--s-text-muted)',
-                border: '1px solid var(--s-border-muted)',
-                borderRadius: 'var(--s-r)',
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                opacity: isProcessing ? 0.5 : 1,
-              }}
-              title={t('stellar.eventModal.removeTooltip')}
-            >
-              {isProcessing ? t('stellar.eventModal.removing') : showDismissReasonInput ? t('stellar.eventModal.confirmRemove') : t('stellar.eventModal.remove')}
-            </button>
-          </div>
-
-          {/* Cancel button when input is shown */}
-          {(showResolutionNoteInput || showDismissReasonInput) && (
-            <button
-              onClick={() => {
-                setShowResolutionNoteInput(false)
-                setShowDismissReasonInput(false)
-                setResolutionNote('')
-                setDismissReason('')
-              }}
-              style={{
-                marginTop: 8,
-                width: '100%',
-                padding: '6px 12px',
-                fontSize: 11,
-                background: 'none',
-                color: 'var(--s-text-dim)',
-                border: 'none',
-                borderRadius: 'var(--s-rs)',
-                cursor: 'pointer',
-              }}
-            >
-              {t('actions.cancel')}
-            </button>
           )}
         </div>
       </div>
+    </BaseModal>
+  )
+}
+
+function Badge({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <span style={{
+      border: `1px solid ${color}`,
+      color,
+      borderRadius: 999,
+      padding: '2px 8px',
+      background: 'var(--s-surface-2)',
+    }}>
+      {children}
+    </span>
+  )
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.12em] text-[var(--s-text-muted)]">{title}</div>
+      <div className="rounded border border-[var(--s-border)] bg-[var(--s-surface)] p-3 text-sm leading-6 text-[var(--s-text)]">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function Timeline({ entries }: { entries: TimelineEntry[] }) {
+  if (entries.length === 0) {
+    return <div className="text-[var(--s-text-muted)]">No timeline entries recorded yet.</div>
+  }
+  return (
+    <div className="space-y-2">
+      {entries.map(entry => (
+        <div key={`${entry.label}-${entry.ts}`} className="border-l-2 border-[var(--s-border)] pl-3">
+          <div className="text-xs font-mono text-[var(--s-text-muted)]">{formatAbsoluteUtc(entry.ts)} · {formatRelative(entry.ts)}</div>
+          <div className="text-sm font-medium">{entry.label}</div>
+          <div className="text-sm text-[var(--s-text-muted)]">{entry.detail}</div>
+        </div>
+      ))}
     </div>
   )
 }
 
-function SectionHeader({ title }: { title: string }) {
+function ListBlock({ items, emptyText }: { items: { id: string; title: string; subtitle: string }[]; emptyText: string }) {
+  if (items.length === 0) {
+    return <div className="text-[var(--s-text-muted)]">{emptyText}</div>
+  }
   return (
-    <div style={{
-      fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
-      letterSpacing: '0.1em', textTransform: 'uppercase',
-      color: 'var(--s-text-muted)', marginTop: 10, marginBottom: 6,
-    }}>{title}</div>
+    <div className="space-y-2">
+      {items.map(item => (
+        <div key={item.id} className="rounded border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2">
+          <div className="text-sm font-medium">{item.title}</div>
+          <div className="text-xs text-[var(--s-text-muted)]">{item.subtitle}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function ActionButton({ children, color, disabled = false, onClick }: { children: ReactNode; color: string; disabled?: boolean; onClick: () => void }) {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <SectionHeader title={title} />
-      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--s-text)' }}>{children}</div>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        border: `1px solid ${color}`,
+        color,
+        background: 'var(--s-surface-2)',
+        borderRadius: 8,
+        padding: '6px 12px',
+        opacity: disabled ? 0.5 : 1,
+      }}
+      className="text-sm font-medium"
+    >
+      {children}
+    </button>
+  )
+}
+
+function ConfirmationPanel({
+  title,
+  description,
+  value,
+  onChange,
+  placeholder,
+  onCancel,
+  onConfirm,
+  confirmLabel,
+  isSubmitting,
+}: {
+  title: string
+  description: string
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  onCancel: () => void
+  onConfirm: () => void
+  confirmLabel: string
+  isSubmitting: boolean
+}) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="text-sm font-semibold">{title}</div>
+        <div className="text-sm text-[var(--s-text-muted)]">{description}</div>
+      </div>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={CONFIRMATION_TEXTAREA_ROWS}
+        className="w-full rounded border border-[var(--s-border)] bg-[var(--s-surface)] px-3 py-2 text-sm text-[var(--s-text)]"
+        placeholder={placeholder}
+      />
+      <div className="flex flex-wrap gap-2">
+        <ActionButton onClick={onCancel} color="var(--s-text-muted)">Cancel</ActionButton>
+        <ActionButton onClick={onConfirm} color="var(--s-warning)" disabled={isSubmitting}>{isSubmitting ? 'Working…' : confirmLabel}</ActionButton>
+      </div>
     </div>
   )
 }

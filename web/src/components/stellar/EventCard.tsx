@@ -163,6 +163,13 @@ export function EventCard({
   const importanceCol = importanceColor(importance.label)
   const shortReason = deriveShortReason(notification)
   const relativeCreatedAt = formatRelativeTime(notification.createdAt)
+  const statusBadge = notification.status === 'investigating'
+    ? { label: 'Investigating', color: 'var(--s-info)' }
+    : notification.status === 'resolved'
+      ? { label: 'Resolved', color: 'var(--s-success)' }
+      : notification.status === 'dismissed'
+        ? { label: 'Removed', color: 'var(--s-text-muted)' }
+        : null
 
   return (
     <div
@@ -200,6 +207,18 @@ export function EventCard({
               color: importanceCol, border: `1px solid ${importanceCol}`,
               borderRadius: 8, padding: '0 5px', flexShrink: 0,
             }}>{importance.label}</span>
+          )}
+          {statusBadge && (
+            <span className="text-[9px] font-mono" style={{
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              color: statusBadge.color,
+              border: `1px solid ${statusBadge.color}`,
+              borderRadius: 8,
+              padding: '0 5px',
+              flexShrink: 0,
+            }}>{statusBadge.label}</span>
           )}
           {onOpenDetail && (
             <span className="text-[10px] font-mono" style={{ color: 'var(--s-text-dim)', flexShrink: 0 }}>{t('stellar.eventCard.details')}</span>

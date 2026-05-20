@@ -10,10 +10,20 @@ export interface StellarNotification {
   missionId?: string
   actionId?: string
   dedupeKey?: string
-  batchTimestamp?: string
+  status?: 'escalated' | 'investigating' | 'resolved' | 'dismissed' | 'open' | string
   read: boolean
   readAt?: string
   createdAt: string
+  batchTimestamp?: string
+  updatedAt?: string
+  rootCause?: string
+  affectedResource?: string
+  errorMessage?: string
+  resolutionNote?: string
+  dismissalReason?: string
+  investigationSummary?: string
+  autoResolutionStatus?: string
+  autoResolutionDetail?: string
   actionHints?: string[]
 }
 

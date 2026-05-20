@@ -26,6 +26,9 @@ const { mockStellarApi } = vi.hoisted(() => ({
     listSolves: vi.fn(),
     listActivity: vi.fn(),
     acknowledgeNotification: vi.fn(),
+    investigateNotification: vi.fn(),
+    resolveNotification: vi.fn(),
+    dismissNotification: vi.fn(),
     approveAction: vi.fn(),
     rejectAction: vi.fn(),
     updateTaskStatus: vi.fn(),
@@ -122,6 +125,9 @@ beforeEach(() => {
   mockStellarApi.listSolves.mockResolvedValue([])
   mockStellarApi.listActivity.mockResolvedValue([])
   mockStellarApi.acknowledgeNotification.mockResolvedValue(undefined)
+  mockStellarApi.investigateNotification.mockResolvedValue({ id: 'n1', status: 'investigating' })
+  mockStellarApi.resolveNotification.mockResolvedValue({ id: 'n1', status: 'resolved' })
+  mockStellarApi.dismissNotification.mockResolvedValue({ id: 'n1', status: 'dismissed' })
   mockStellarApi.approveAction.mockResolvedValue({ id: 'a1', status: 'approved' })
   mockStellarApi.rejectAction.mockResolvedValue({ id: 'a1', status: 'rejected' })
   mockStellarApi.updateTaskStatus.mockResolvedValue(undefined)
