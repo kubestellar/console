@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/safego"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/safego"
 
 	"github.com/kubestellar/console/pkg/api/audit"
 )
@@ -343,11 +343,44 @@ const jwtCookieName = "kc_auth"
 // middleware and any helpers agree on the exact prefix to strip.
 const bearerScheme = "Bearer "
 
+var widgetPublicPrefixes = []string{
+	"/api/public/",
+	"/api/youtube/",
+	"/api/medium/",
+	"/api/missions/",
+	"/api/github/issues",
+	"/api/nightly-e2e/",
+	"/api/rewards/",
+	"/api/issue-stats",
+	"/api/github-pipelines",
+}
+
+var widgetAgentAllowedPaths = map[string]struct{}{
+	"/api/alerts":                  {},
+	"/api/gitops/helm-releases":    {},
+	"/api/gitops/operators":        {},
+	"/api/mcp/clusters":            {},
+	"/api/mcp/costs":               {},
+	"/api/mcp/events":              {},
+	"/api/mcp/gpu-nodes":           {},
+	"/api/mcp/namespaces/overview": {},
+	"/api/mcp/network":             {},
+	"/api/mcp/nodes":               {},
+	"/api/mcp/pod-issues":          {},
+	"/api/mcp/pods":                {},
+	"/api/mcp/pvcs":                {},
+	"/api/mcp/security":            {},
+	"/api/mcp/services":            {},
+	"/api/mcp/storage":             {},
+	"/api/mcp/workloads":           {},
+	"/api/providers/health":        {},
+}
+
 // JWTAuth creates JWT authentication middleware.
 // Token resolution order: Authorization header -> HttpOnly cookie -> _token query param (SSE only).
 // When agentToken is non-empty, a Bearer header carrying that exact value
-// with source=ubersicht-widget is accepted as valid authentication for
-// desktop widgets that need access to K8s-proxying endpoints (MCP, alerts, etc.).
+// with source=ubersicht-widget is accepted only on the exported widget
+// read endpoints, not on the rest of the authenticated API surface.
 func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 	widgetAgentToken := ""
 	if len(agentToken) > 0 {
@@ -360,21 +393,9 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 		// trivial bypasses; path prefix guard prevents access to sensitive routes
 		// (settings, users, dashboards, K8s proxy, etc.). See #14875.
 		if c.Method() == fiber.MethodGet && c.Query("source") == "ubersicht-widget" {
-			// SECURITY: Only paths that serve public data or the agent token
-			// (needed so widgets can authenticate MCP calls) are allowed here.
-			// K8s-proxying paths (mcp/*, namespaces, gitops/*) are NOT bypassed;
-			// widgets must fetch the agent token and pass it as a Bearer header.
-			widgetPublicPrefixes := []string{
-				"/api/public/",
-				"/api/youtube/",
-				"/api/medium/",
-				"/api/missions/",
-				"/api/github/issues",
-				"/api/nightly-e2e/",
-				"/api/rewards/",
-				"/api/issue-stats",
-				"/api/github-pipelines",
-			}
+			// SECURITY: Only already-public read endpoints are allowed here.
+			// Everything else, including /api/agent/token, must present either a
+			// real user JWT/cookie or the restricted widget agent token path below.
 			for _, prefix := range widgetPublicPrefixes {
 				if strings.HasPrefix(c.Path(), prefix) {
 					return c.Next()
@@ -471,15 +492,17 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 			return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 		}
 
-		// Widget agent-token auth: when the Bearer token matches the agent
-		// token and the request comes from a desktop widget, skip JWT
-		// validation. This lets widgets access K8s-proxying endpoints
-		// (MCP, alerts) without requiring a full user session.
-		// Set a restricted identity so downstream handlers can scope access.
-		if widgetAgentToken != "" && tokenString == widgetAgentToken && c.Query("source") == "ubersicht-widget" {
-			c.Locals("userID", uuid.Nil)
-			c.Locals("githubLogin", "widget-agent")
-			return c.Next()
+		// Widget agent-token auth is intentionally narrower than full JWT auth:
+		// the shared agent token may only read the specific endpoints exported by
+		// the Übersicht widget generator. Sensitive routes (settings, users,
+		// mutating MCP tools, K8s proxy helpers, etc.) must still present a real
+		// user JWT even if a widget agent token is leaked.
+		if widgetAgentToken != "" && tokenString == widgetAgentToken && c.Method() == fiber.MethodGet && c.Query("source") == "ubersicht-widget" {
+			if _, ok := widgetAgentAllowedPaths[c.Path()]; ok {
+				c.Locals("userID", uuid.Nil)
+				c.Locals("githubLogin", "widget-agent")
+				return c.Next()
+			}
 		}
 
 		token, err := ParseJWT(tokenString, secret)

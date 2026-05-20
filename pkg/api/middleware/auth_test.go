@@ -62,6 +62,30 @@ func TestJWTAuth(t *testing.T) {
 		assert.Equal(t, 401, resp.StatusCode)
 	})
 
+	t.Run("Widget Agent Token Allowed Only On Widget Export Endpoints (#15044)", func(t *testing.T) {
+		widgetApp := fiber.New()
+		widgetApp.Get("/api/mcp/clusters", JWTAuth("test-secret", "widget-agent-token"), func(c *fiber.Ctx) error {
+			assert.Equal(t, uuid.Nil, c.Locals("userID"))
+			assert.Equal(t, "widget-agent", c.Locals("githubLogin"))
+			return c.SendString("ok")
+		})
+		widgetApp.Get("/api/mcp/secrets", JWTAuth("test-secret", "widget-agent-token"), func(c *fiber.Ctx) error {
+			return c.SendString("should-not-reach")
+		})
+
+		req := httptest.NewRequest("GET", "/api/mcp/clusters?source=ubersicht-widget", nil)
+		req.Header.Set("Authorization", "Bearer widget-agent-token")
+		resp, err := widgetApp.Test(req, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		restrictedReq := httptest.NewRequest("GET", "/api/mcp/secrets?source=ubersicht-widget", nil)
+		restrictedReq.Header.Set("Authorization", "Bearer widget-agent-token")
+		restrictedResp, err := widgetApp.Test(restrictedReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, restrictedResp.StatusCode)
+	})
+
 	t.Run("Query Param Fallback Rejected On Non-Allowlisted Stream Path (#6585)", func(t *testing.T) {
 		// #6585 — _token query param is no longer accepted on arbitrary
 		// paths just because they end in /stream. The endpoint must be
