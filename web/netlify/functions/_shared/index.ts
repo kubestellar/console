@@ -5,6 +5,9 @@ export type { CorsOptions } from "./cors";
 export { enforceSimpleRateLimit } from "./rate-limit";
 export type { SimpleRateLimitOptions, SimpleRateLimitResult } from "./rate-limit";
 
+export { checkInMemoryRateLimit, getClientIp } from "./inMemoryRateLimit";
+export type { InMemoryRateLimitEntry, InMemoryRateLimitResult } from "./inMemoryRateLimit";
+
 export { fetchWithTimeout } from "./fetchWithTimeout";
 export type { FetchWithTimeoutOptions } from "./fetchWithTimeout";
 
