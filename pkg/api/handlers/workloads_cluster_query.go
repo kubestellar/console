@@ -85,6 +85,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	if needNodes {
 		var nodesMu sync.Mutex
 		g, gctx := errgroup.WithContext(ctx)
+		g.SetLimit(defaultClusterFanoutConcurrency)
 		for _, cl := range dedupClusters {
 			clName := cl.Name
 			g.Go(func() error {
