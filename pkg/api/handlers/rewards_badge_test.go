@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -25,7 +26,7 @@ type fakeBadgeFetcher struct {
 	calls    int
 }
 
-func (f *fakeBadgeFetcher) fetchUserRewardsForBadge(login string) (*GitHubRewardsResponse, bool, error) {
+func (f *fakeBadgeFetcher) fetchUserRewardsForBadge(_ context.Context, login string) (*GitHubRewardsResponse, bool, error) {
 	f.calls++
 	if err, ok := f.errorFor[login]; ok {
 		return nil, f.lastHit, err

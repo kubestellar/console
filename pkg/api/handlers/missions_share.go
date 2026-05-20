@@ -184,6 +184,7 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 // ShareToGitHub creates a PR with the mission file.
 // POST /api/missions/share/github
 func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
+	ctx := c.UserContext()
 	token := c.Get("X-GitHub-Token")
 	if token == "" {
 		return c.Status(401).JSON(fiber.Map{"error": "X-GitHub-Token header is required"})
@@ -245,7 +246,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// Step 1: Fork the repo
 	forkURL := fmt.Sprintf("%s/repos/%s/forks", h.githubAPIURL, req.Repo)
-	forkReq, err := http.NewRequest("POST", forkURL, nil)
+	forkReq, err := http.NewRequestWithContext(ctx, "POST", forkURL, nil)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build fork request"})
 	}
@@ -292,7 +293,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	// that use "master", "trunk", or other non-default names (#6795).
 	{
 		upstreamURL := fmt.Sprintf("%s/repos/%s", h.githubAPIURL, req.Repo)
-		upstreamReq, err := http.NewRequest("GET", upstreamURL, nil)
+		upstreamReq, err := http.NewRequestWithContext(ctx, "GET", upstreamURL, nil)
 		if err == nil {
 			upstreamReq.Header.Set("Authorization", "Bearer "+token)
 			upstreamReq.Header.Set("Accept", "application/vnd.github.v3+json")
@@ -321,7 +322,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	var headSHA string
 	backoff := forkHeadSHAInitialBackoff
 	for attempt := 0; attempt < forkHeadSHAMaxRetries; attempt++ {
-		mainRefReq, err := http.NewRequest("GET", mainRefURL, nil)
+		mainRefReq, err := http.NewRequestWithContext(ctx, "GET", mainRefURL, nil)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "failed to build ref request"})
 		}
@@ -391,7 +392,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal branch ref payload"})
 	}
-	refReq, err := http.NewRequest("POST", refURL, bytes.NewReader(refPayload))
+	refReq, err := http.NewRequestWithContext(ctx, "POST", refURL, bytes.NewReader(refPayload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build branch ref request"})
 	}
@@ -424,7 +425,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal file commit payload"})
 	}
-	fileReq, err := http.NewRequest("PUT", fileURL, bytes.NewReader(filePayload))
+	fileReq, err := http.NewRequestWithContext(ctx, "PUT", fileURL, bytes.NewReader(filePayload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build file commit request"})
 	}
@@ -465,7 +466,7 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to marshal PR payload"})
 	}
-	prReq, err := http.NewRequest("POST", prURL, bytes.NewReader(prPayload))
+	prReq, err := http.NewRequestWithContext(ctx, "POST", prURL, bytes.NewReader(prPayload))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to build PR request"})
 	}

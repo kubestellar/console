@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -107,7 +108,7 @@ func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 
 	// Fetch from upstream without holding the write lock so concurrent readers
 	// are not serialized behind slow network I/O.
-	entries, err := h.fetchUpstream()
+	entries, err := h.fetchUpstream(c.UserContext())
 	if err != nil {
 		slog.Error("[KubaraCatalog] upstream fetch failed", "error", err)
 
@@ -148,9 +149,9 @@ func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 }
 
 // fetchUpstream calls the GitHub Contents API for the configured catalog repo.
-func (h *KubaraCatalogHandler) fetchUpstream() ([]KubaraCatalogEntry, error) {
+func (h *KubaraCatalogHandler) fetchUpstream(ctx context.Context) ([]KubaraCatalogEntry, error) {
 	upstreamURL := "https://api.github.com/repos/" + h.catalogRepo + "/contents/" + h.catalogPath
-	req, err := http.NewRequest(http.MethodGet, upstreamURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, upstreamURL, nil)
 	if err != nil {
 		return nil, err
 	}

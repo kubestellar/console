@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -68,7 +69,7 @@ const (
 // whole RewardsHandler's transitive dependencies. cacheHit reports whether
 // the response came from the in-memory cache; used for GA4 analytics only.
 type badgeRewardsFetcher interface {
-	fetchUserRewardsForBadge(login string) (resp *GitHubRewardsResponse, cacheHit bool, err error)
+	fetchUserRewardsForBadge(ctx context.Context, login string) (resp *GitHubRewardsResponse, cacheHit bool, err error)
 }
 
 // errBadgeUnknownLogin signals an empty/404 upstream. Handler maps this to
@@ -79,7 +80,7 @@ var errBadgeUnknownLogin = errors.New("unknown github login")
 // Shares the authenticated path's cache map + TTL (rewardsCacheTTL); unlike
 // GetGitHubRewards it does NOT fall back to stale cache on upstream failure
 // because the badge handler needs to pick between success/unknown/error.
-func (h *RewardsHandler) fetchUserRewardsForBadge(login string) (*GitHubRewardsResponse, bool, error) {
+func (h *RewardsHandler) fetchUserRewardsForBadge(ctx context.Context, login string) (*GitHubRewardsResponse, bool, error) {
 	h.mu.RLock()
 	if entry, ok := h.cache[login]; ok && time.Since(entry.fetchedAt) < rewardsCacheTTL {
 		h.mu.RUnlock()
@@ -92,7 +93,7 @@ func (h *RewardsHandler) fetchUserRewardsForBadge(login string) (*GitHubRewardsR
 	h.mu.RUnlock()
 
 	token := h.resolveToken()
-	resp, err := h.fetchUserRewards(login, token)
+	resp, err := h.fetchUserRewards(ctx, login, token)
 	if err != nil {
 		// Treat "not found"/"unprocessable" as unknown-login so the caller
 		// renders the gray badge instead of the red error one.
@@ -158,7 +159,7 @@ func (h *BadgeHandler) GetBadge(c *fiber.Ctx) error {
 			return renderBadgeSVG(c, badgeStatusOK, badgeUnknownTierName, badgeUnknownTierColor, "", badgeCacheControlSuccess)
 		}
 
-		resp, cacheHit, err := h.fetcher.fetchUserRewardsForBadge(login)
+		resp, cacheHit, err := h.fetcher.fetchUserRewardsForBadge(c.UserContext(), login)
 		if err != nil {
 			slog.Error("[rewards/badge] live rewards fetch failed", "login", login, "error", err)
 			return renderBadgeSVG(c, http.StatusBadGateway, badgeErrorTierName, badgeErrorTierColor, "", badgeCacheControlError)
@@ -181,7 +182,7 @@ func (h *BadgeHandler) GetBadge(c *fiber.Ctx) error {
 		return renderBadgeSVG(c, badgeStatusOK, tier.Name, fill, tier.IconPath, badgeCacheControlSuccess)
 	}
 
-	resp, cacheHit, err := h.fetcher.fetchUserRewardsForBadge(login)
+	resp, cacheHit, err := h.fetcher.fetchUserRewardsForBadge(c.UserContext(), login)
 	switch {
 	case errors.Is(err, errBadgeUnknownLogin):
 		emitBadgeFetchedEvent(login, badgeUnknownTierName, cacheHit)

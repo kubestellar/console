@@ -132,7 +132,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 	token := h.resolveToken()
 
 	// Cache miss — fetch from GitHub
-	resp, err := h.fetchUserRewards(githubLogin, token)
+	resp, err := h.fetchUserRewards(c.UserContext(), githubLogin, token)
 	if err != nil {
 		slog.Error("[rewards] failed to fetch GitHub rewards", "user", githubLogin, "error", err)
 
@@ -171,14 +171,14 @@ func (h *RewardsHandler) resolveToken() string {
 	return token
 }
 
-func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsResponse, error) {
+func (h *RewardsHandler) fetchUserRewards(ctx context.Context, login, token string) (*GitHubRewardsResponse, error) {
 	yearStart := fmt.Sprintf("%d-01-01T00:00:00Z", time.Now().Year())
 
 	contributions := make([]GitHubContribution, 0)
 	var fetchErr error
 
 	for _, repo := range h.repos {
-		items, err := h.listRepoItems(repo, login, yearStart, token)
+		items, err := h.listRepoItems(ctx, repo, login, yearStart, token)
 		if err != nil {
 			slog.Error("[rewards] failed to list items", "repo", repo, "user", login, "error", err)
 			fetchErr = fmt.Errorf("list %s failed: %w", repo, err)
@@ -269,14 +269,14 @@ type searchPRRef struct {
 // sinceISO is an ISO-8601 timestamp; only items updated on or after this
 // time are returned. Items created before sinceISO are filtered out
 // client-side (the API's `since` param filters by updated_at, not created_at).
-func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]searchItem, error) {
+func (h *RewardsHandler) listRepoItems(ctx context.Context, repo, login, sinceISO, token string) ([]searchItem, error) {
 	allItems := make([]searchItem, 0, rewardsPerPage)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
 		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=all&per_page=%d&page=%d&sort=created&direction=desc&since=%s",
 			repo, rewardsPerPage, page, sinceISO)
 
-		req, err := http.NewRequest("GET", apiURL, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 		if err != nil {
 			return allItems, fmt.Errorf("create request: %w", err)
 		}

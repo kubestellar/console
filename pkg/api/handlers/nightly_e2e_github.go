@@ -116,13 +116,13 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 				return
 			default:
 			}
-			runs, err := h.fetchWorkflowRuns(wf)
+			runs, err := h.fetchWorkflowRuns(ctx, wf)
 			ch <- result{idx: i, runs: runs, err: err}
 		})
 	}
 
 	// Fetch dynamic image tags (cached separately with longer TTL)
-	guideImages := h.getGuideImages()
+	guideImages := h.getGuideImages(ctx)
 
 	// Collect results
 	runsByIdx := make(map[int][]NightlyRun, len(nightlyWorkflows))
@@ -180,11 +180,11 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 	}, nil
 }
 
-func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun, error) {
+func (h *NightlyE2EHandler) fetchWorkflowRuns(ctx context.Context, wf NightlyWorkflow) ([]NightlyRun, error) {
 	url := fmt.Sprintf("%s/repos/%s/actions/workflows/%s/runs?per_page=%d",
 		resolveGitHubAPIBase(), wf.Repo, wf.WorkflowFile, nightlyRunsPerPage)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func (h *NightlyE2EHandler) fetchWorkflowRuns(wf NightlyWorkflow) ([]NightlyRun,
 	}
 
 	// Classify failures (GPU unavailable vs test failure)
-	h.classifyFailures(wf.Repo, runs)
+	h.classifyFailures(ctx, wf.Repo, runs)
 
 	return runs, nil
 }
@@ -261,7 +261,7 @@ const maxConcurrentClassify = 5
 
 // classifyFailures fetches jobs for failed runs and sets FailureReason.
 // #7056 — Uses a semaphore to cap concurrent GitHub API calls.
-func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
+func (h *NightlyE2EHandler) classifyFailures(ctx context.Context, repo string, runs []NightlyRun) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, maxConcurrentClassify)
 	for i := range runs {
@@ -274,18 +274,18 @@ func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
 		safego.Go(func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			runs[idx].FailureReason = h.detectGPUFailure(repo, runs[idx].ID)
+			runs[idx].FailureReason = h.detectGPUFailure(ctx, repo, runs[idx].ID)
 		})
 	}
 	wg.Wait()
 }
 
 // detectGPUFailure checks if a run failed due to GPU unavailability.
-func (h *NightlyE2EHandler) detectGPUFailure(repo string, runID int64) string {
+func (h *NightlyE2EHandler) detectGPUFailure(ctx context.Context, repo string, runID int64) string {
 	url := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
 		resolveGitHubAPIBase(), repo, runID)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return failureReasonTest
 	}
@@ -329,7 +329,7 @@ func (h *NightlyE2EHandler) detectGPUFailure(repo string, runID int64) string {
 }
 
 // getGuideImages returns cached image maps or fetches fresh ones from GitHub.
-func (h *NightlyE2EHandler) getGuideImages() map[string]map[string]string {
+func (h *NightlyE2EHandler) getGuideImages(ctx context.Context) map[string]map[string]string {
 	h.imgMu.RLock()
 	if h.imgCache != nil && time.Now().Before(h.imgCacheExp) {
 		result := h.imgCache
@@ -338,7 +338,7 @@ func (h *NightlyE2EHandler) getGuideImages() map[string]map[string]string {
 	}
 	h.imgMu.RUnlock()
 
-	images := h.fetchAllGuideImages()
+	images := h.fetchAllGuideImages(ctx)
 
 	h.imgMu.Lock()
 	h.imgCache = images
@@ -350,7 +350,7 @@ func (h *NightlyE2EHandler) getGuideImages() map[string]map[string]string {
 
 // fetchAllGuideImages fetches image tags for all unique guide paths by scanning
 // YAML files in the llm-d/llm-d repo's guides/ directory via the Git Trees API.
-func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
+func (h *NightlyE2EHandler) fetchAllGuideImages(ctx context.Context) map[string]map[string]string {
 	result := make(map[string]map[string]string)
 
 	// Collect unique guide paths
@@ -364,7 +364,7 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 	}
 
 	// Fetch the repo tree once (single API call for all file paths)
-	yamlFiles := h.fetchGuideYAMLFiles()
+	yamlFiles := h.fetchGuideYAMLFiles(ctx)
 
 	// For each guide, find relevant files and fetch their contents in parallel
 	type guideResult struct {
@@ -388,7 +388,7 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 
 			// Fetch each file and parse images (sequentially per guide to limit API calls)
 			for _, f := range files {
-				content := h.fetchBlob(f.SHA)
+				content := h.fetchBlob(ctx, f.SHA)
 				if content == "" {
 					continue
 				}
@@ -419,10 +419,10 @@ type treeEntry struct {
 
 // fetchGuideYAMLFiles fetches the repo tree and returns YAML files under guides/
 // that are likely to contain image references (values.yaml, decode.yaml, etc.).
-func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
+func (h *NightlyE2EHandler) fetchGuideYAMLFiles(ctx context.Context) []treeEntry {
 	url := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", resolveGitHubAPIBase(), imageRepo)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil
 	}
@@ -475,10 +475,10 @@ func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
 }
 
 // fetchBlob fetches a git blob's content by SHA and returns it decoded.
-func (h *NightlyE2EHandler) fetchBlob(sha string) string {
+func (h *NightlyE2EHandler) fetchBlob(ctx context.Context, sha string) string {
 	url := fmt.Sprintf("%s/repos/%s/git/blobs/%s", resolveGitHubAPIBase(), imageRepo, sha)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return ""
 	}
@@ -580,10 +580,10 @@ func isGPUStep(name string) bool {
 
 // fetchJobLog fetches the plain-text log for a single GitHub Actions job,
 // truncated to the last maxLogBytes bytes (failure info is at the tail).
-func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
+func (h *NightlyE2EHandler) fetchJobLog(ctx context.Context, repo string, jobID int64) string {
 	logURL := fmt.Sprintf("%s/repos/%s/actions/jobs/%d/logs", resolveGitHubAPIBase(), repo, jobID)
 
-	req, err := http.NewRequest("GET", logURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", logURL, nil)
 	if err != nil {
 		slog.Error("failed to create log request", "repo", repo, "jobID", jobID, "error", err)
 		return "[error creating request]"
@@ -613,7 +613,7 @@ func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
 		if location == "" {
 			return "[redirect with no Location header]"
 		}
-		redirectReq, err := http.NewRequest("GET", location, nil)
+		redirectReq, err := http.NewRequestWithContext(ctx, "GET", location, nil)
 		if err != nil {
 			slog.Error("failed to create redirect request", "repo", repo, "jobID", jobID, "location", location, "error", err)
 			return "[error following redirect]"

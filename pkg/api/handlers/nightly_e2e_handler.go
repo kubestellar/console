@@ -166,7 +166,7 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 	// #7053 — Use singleflight to coalesce concurrent cold-cache fetches
 	// into a single fetchAllWithContext call, preventing N × 17+ goroutine fan-out.
 	v, err, _ := h.fetchGroup.Do("runs", func() (interface{}, error) {
-		return h.fetchAllWithContext(c.Context())
+		return h.fetchAllWithContext(c.UserContext())
 	})
 	if err != nil {
 		slog.Error("failed to fetch nightly E2E data", "error", err)
@@ -226,7 +226,8 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
 		resolveGitHubAPIBase(), repo, runID)
 
-	req, err := http.NewRequest("GET", jobsURL, nil)
+	ctx := c.UserContext()
+	req, err := http.NewRequestWithContext(ctx, "GET", jobsURL, nil)
 	if err != nil {
 		slog.Warn("[NightlyE2E] internal error", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal server error"})
@@ -288,7 +289,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		sem <- struct{}{}
 		safego.GoWith("nightly-e2e-fetch-job-logs", func() {
 			defer func() { <-sem }()
-			logText := h.fetchJobLog(repo, job.ID)
+			logText := h.fetchJobLog(ctx, repo, job.ID)
 			ch <- logResult{idx: i, log: JobLog{Name: job.Name, Conclusion: conclusion, Log: logText}}
 		})
 	}

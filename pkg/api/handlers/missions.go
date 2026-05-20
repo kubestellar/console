@@ -52,8 +52,8 @@ func (h *MissionsHandler) RegisterPublicRoutes(g fiber.Router) {
 }
 
 // githubGet makes a GET request to the GitHub API, falling back to unauthenticated if token is expired.
-func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (h *MissionsHandler) githubGet(ctx context.Context, url string, clientToken string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 		// connection is returned to the pool for reuse (HTTP/1.1 keep-alive).
 		io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20)) //nolint:errcheck // best-effort drain
 		resp.Body.Close()
-		retryReq, err := http.NewRequest("GET", url, nil)
+		retryReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -102,6 +102,7 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 }
 
 func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext string, logArgs ...any) (*githubFetchResult, error) {
+	ctx := c.UserContext()
 	if cached := h.cache.get(cacheKey, missionsCacheTTL); cached != nil {
 		slog.Info("[missions] cache HIT "+logContext, logArgs...)
 		return &githubFetchResult{
@@ -126,14 +127,14 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 			slog.Info("[missions] retrying upstream fetch "+logContext, append(logArgs, "attempt", attempt+1, "delay", delay)...)
 			// Monitor context cancellation to avoid orphaned goroutines on client disconnect
 			select {
-			case <-c.Context().Done():
-				return &githubFetchResult{StatusCode: http.StatusServiceUnavailable}, c.Context().Err()
+			case <-ctx.Done():
+				return &githubFetchResult{StatusCode: http.StatusServiceUnavailable}, ctx.Err()
 			case <-time.After(delay):
 				// Continue to retry
 			}
 		}
 
-		resp, err = h.githubGet(url, c.Get("X-GitHub-Token"))
+		resp, err = h.githubGet(ctx, url, c.Get("X-GitHub-Token"))
 		if err != nil {
 			continue
 		}
