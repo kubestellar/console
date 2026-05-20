@@ -33,6 +33,9 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 		GitHubLogin: "stellar-test-user",
 		Role:        models.UserRoleAdmin,
 	}))
+	require.NoError(t, sqlStore.UpdateStellarPreferences(context.Background(), &store.StellarPreferences{
+		UserID: testUserID.String(),
+	}))
 
 	ollamaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
