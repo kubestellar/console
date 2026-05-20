@@ -171,7 +171,6 @@ jobs:
       issues: write
       actions: read
     uses: ./.github/workflows/_perf-regression-issue.yml
-    timeout-minutes: 5
     with:
       result-path: web/perf-result.json
       signal: ttfi-all-cards
