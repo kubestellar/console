@@ -7,7 +7,14 @@
  * Caches responses in Netlify Blobs to avoid hitting GitHub on every request.
  */
 import { getStore } from "@netlify/blobs";
-import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import {
+  buildCorsHeaders,
+  checkInMemoryRateLimit,
+  getClientIp,
+  handlePreflight,
+  rateLimitResponse,
+} from "./_shared";
+import type { InMemoryRateLimitEntry } from "./_shared";
 
 const GITHUB_RAW_URL = "https://raw.githubusercontent.com";
 const KB_REPO = "kubestellar/console-kb";
@@ -24,8 +31,15 @@ const MAX_BODY_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 30_000;
 /** Cache TTL: serve cached content for 15 minutes before re-fetching from GitHub */
 const CACHE_TTL_MS = 15 * 60 * 1000;
-/** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
-const CDN_CACHE_MAX_AGE_S = 600;
+/** Browser cache TTL for public mission score responses. */
+const SCORES_BROWSER_CACHE_MAX_AGE_S = 300;
+/** CDN edge cache TTL for public mission score responses. */
+const SCORES_EDGE_CACHE_MAX_AGE_S = 600;
+const SCORES_CACHE_CONTROL = `public, max-age=${SCORES_BROWSER_CACHE_MAX_AGE_S}, s-maxage=${SCORES_EDGE_CACHE_MAX_AGE_S}`;
+
+/** Allow a small burst of cache misses per client per minute. */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const MAX_REQUESTS_PER_WINDOW = 30;
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
@@ -38,6 +52,8 @@ interface CacheEntry {
   contentType: string;
   fetchedAt: number;
 }
+
+const missionsScoresRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
 /** Mirrors the relevant fields of indexJsonFormat in pkg/api/handlers/missions.go */
 interface IndexEntry {
@@ -117,6 +133,19 @@ export default async (request: Request): Promise<Response> => {
       bodyText = cached.body;
       servedFromCache = true;
     } else {
+      const rateLimit = checkInMemoryRateLimit(
+        getClientIp(request),
+        missionsScoresRateLimitMap,
+        MAX_REQUESTS_PER_WINDOW,
+        RATE_LIMIT_WINDOW_MS,
+      );
+      if (!rateLimit.allowed) {
+        return rateLimitResponse(rateLimit.retryAfterSeconds, {
+          "Cache-Control": "private, no-store",
+          ...corsHeaders,
+        });
+      }
+
       const rawUrl = `${GITHUB_RAW_URL}/${KB_REPO}/${DEFAULT_REF}/fixes/index.json`;
       const resp = await fetch(rawUrl, {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -158,7 +187,7 @@ export default async (request: Request): Promise<Response> => {
         const idNoExt = idParam.endsWith(".json") ? idParam.slice(0, -5) : idParam;
         if (mProject === projectParam && mBaseNoExt === idNoExt) {
           if (m.qualityScore == null) {
-            return jsonResponse(corsHeaders, { error: "Mission found but has no score associated" }, 404);
+            return jsonResponse(corsHeaders, { error: "Mission found but has no score associated" }, 404, "NONE", SCORES_CACHE_CONTROL);
           }
           return jsonResponse(corsHeaders, {
             path: m.path,
@@ -171,7 +200,7 @@ export default async (request: Request): Promise<Response> => {
           }, 200, servedFromCache ? "HIT" : "MISS");
         }
       }
-      return jsonResponse(corsHeaders, { error: "KB mission not found" }, 404);
+      return jsonResponse(corsHeaders, { error: "KB mission not found" }, 404, "NONE", SCORES_CACHE_CONTROL);
     } else {
       const results: ScoreEntry[] = [];
       for (const m of (index.missions || [])) {
@@ -214,12 +243,13 @@ function jsonResponse(
   data: Record<string, unknown>,
   status = 200,
   cacheHead = "NONE",
+  cacheControl = status >= 400 ? "no-store" : SCORES_CACHE_CONTROL,
 ): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
+      "Cache-Control": cacheControl,
       "X-Cache": cacheHead,
       ...corsHeaders,
     },

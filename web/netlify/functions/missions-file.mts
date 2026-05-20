@@ -7,7 +7,14 @@
  * No GITHUB_TOKEN required — the repo is public.
  */
 import { getStore } from "@netlify/blobs";
-import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import {
+  buildCorsHeaders,
+  checkInMemoryRateLimit,
+  getClientIp,
+  handlePreflight,
+  rateLimitResponse,
+} from "./_shared";
+import type { InMemoryRateLimitEntry } from "./_shared";
 
 const GITHUB_RAW_URL = "https://raw.githubusercontent.com";
 const KB_REPO = "kubestellar/console-kb";
@@ -22,8 +29,15 @@ const FETCH_TIMEOUT_MS = 30_000;
 /** Cache TTL: serve cached content for 15 minutes before re-fetching from GitHub */
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
-/** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
-const CDN_CACHE_MAX_AGE_S = 600;
+/** Browser cache TTL for public mission files. */
+const FILE_BROWSER_CACHE_MAX_AGE_S = 3_600;
+/** CDN edge cache TTL for public mission files. */
+const FILE_EDGE_CACHE_MAX_AGE_S = 86_400;
+const FILE_CACHE_CONTROL = `public, max-age=${FILE_BROWSER_CACHE_MAX_AGE_S}, s-maxage=${FILE_EDGE_CACHE_MAX_AGE_S}`;
+
+/** Allow a small burst of cache misses per client per minute. */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const MAX_REQUESTS_PER_WINDOW = 30;
 
 /** Number of retry attempts for transient upstream errors (#10966, #11033) */
 const MAX_RETRIES = 3;
@@ -41,6 +55,8 @@ interface CacheEntry {
   contentType: string;
   fetchedAt: number;
 }
+
+const fileRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
 function hasInvalidPathInput(value: string): boolean {
   return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
@@ -84,10 +100,23 @@ export default async (request: Request): Promise<Response> => {
         status: 200,
         headers: {
           "Content-Type": cached.contentType,
-          "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
+          "Cache-Control": FILE_CACHE_CONTROL,
           "X-Cache": "HIT",
           ...corsHeaders,
         },
+      });
+    }
+
+    const rateLimit = checkInMemoryRateLimit(
+      getClientIp(request),
+      fileRateLimitMap,
+      MAX_REQUESTS_PER_WINDOW,
+      RATE_LIMIT_WINDOW_MS,
+    );
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfterSeconds, {
+        "Cache-Control": "private, no-store",
+        ...corsHeaders,
       });
     }
 
@@ -113,7 +142,7 @@ export default async (request: Request): Promise<Response> => {
     }
 
     if (resp.status === 404) {
-      return jsonResponse(corsHeaders, { error: "file not found" }, 404);
+      return jsonResponse(corsHeaders, { error: "file not found" }, 404, FILE_CACHE_CONTROL);
     }
     if (!resp.ok) {
       // If GitHub fails but we have stale cache, serve it
@@ -122,6 +151,7 @@ export default async (request: Request): Promise<Response> => {
           status: 200,
           headers: {
             "Content-Type": cached.contentType,
+            "Cache-Control": FILE_CACHE_CONTROL,
             "X-Cache": "STALE",
             ...corsHeaders,
           },
@@ -145,7 +175,7 @@ export default async (request: Request): Promise<Response> => {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
+        "Cache-Control": FILE_CACHE_CONTROL,
         "X-Cache": "MISS",
         ...corsHeaders,
       },
@@ -161,9 +191,14 @@ function jsonResponse(
   corsHeaders: Record<string, string>,
   data: Record<string, unknown>,
   status = 200,
+  cacheControl = status >= 400 ? "no-store" : FILE_CACHE_CONTROL,
 ): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": cacheControl,
+      ...corsHeaders,
+    },
   });
 }
