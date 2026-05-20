@@ -373,7 +373,6 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 				"/api/rewards/",
 				"/api/issue-stats",
 				"/api/github-pipelines",
-				"/api/agent/token",
 			}
 			for _, prefix := range widgetPublicPrefixes {
 				if strings.HasPrefix(c.Path(), prefix) {
@@ -475,7 +474,10 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 		// token and the request comes from a desktop widget, skip JWT
 		// validation. This lets widgets access K8s-proxying endpoints
 		// (MCP, alerts) without requiring a full user session.
+		// Set a restricted identity so downstream handlers can scope access.
 		if widgetAgentToken != "" && tokenString == widgetAgentToken && c.Query("source") == "ubersicht-widget" {
+			c.Locals("userID", uuid.Nil)
+			c.Locals("githubLogin", "widget-agent")
 			return c.Next()
 		}
 
