@@ -4,6 +4,8 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import type { ModalResource } from './NamespaceMonitor.types'
 import { ResourceIcons } from './NamespaceMonitor.utils'
 
+// useCardLoadingState is handled by the parent NamespaceMonitor card.
+
 interface NamespaceMonitorModalProps {
   modalResource: ModalResource | null
   onClose: () => void
@@ -58,4 +60,8 @@ function NamespaceMonitorModalComponent({
   )
 }
 
-export const NamespaceMonitorModal = memo(NamespaceMonitorModalComponent)
+const MemoizedNamespaceMonitorModal = memo(NamespaceMonitorModalComponent)
+
+export function NamespaceMonitorModal(props: NamespaceMonitorModalProps) {
+  return <MemoizedNamespaceMonitorModal {...props} />
+}

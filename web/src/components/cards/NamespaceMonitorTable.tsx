@@ -16,6 +16,8 @@ import {
   ResourceIcons,
 } from './NamespaceMonitor.utils'
 
+// useCardLoadingState is handled by the parent NamespaceMonitor card.
+
 interface NamespaceMonitorTableProps {
   filteredClusters: ClusterInfo[]
   selectedCluster: string | null

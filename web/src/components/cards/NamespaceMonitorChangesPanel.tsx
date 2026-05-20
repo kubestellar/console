@@ -3,6 +3,8 @@ import { Activity, AlertTriangle, Minus, Plus, X } from 'lucide-react'
 import type { ResourceChange } from './NamespaceMonitor.types'
 import { MAX_VISIBLE_CHANGES, ResourceColors, ResourceIcons } from './NamespaceMonitor.utils'
 
+// useCardLoadingState is handled by the parent NamespaceMonitor card.
+
 interface NamespaceMonitorChangesPanelProps {
   showChangesPanel: boolean
   recentChanges: ResourceChange[]

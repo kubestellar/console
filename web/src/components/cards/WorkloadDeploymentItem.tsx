@@ -21,6 +21,8 @@ import {
   type WorkloadType,
 } from './WorkloadDeployment.utils'
 
+// useCardLoadingState is handled by the parent WorkloadDeployment card.
+
 interface StatusIconProps {
   status: WorkloadStatus
 }
