@@ -119,6 +119,24 @@ export default async (req: Request, context: Context): Promise<Response> => {
     );
   }
 
+  // Auth check for POST mutation endpoints (parity with Go backend requireBearerToken)
+  if (req.method === "POST") {
+    const authHeader = req.headers.get("authorization") || "";
+    const cookie = req.headers.get("cookie") || "";
+    const hasBearer = authHeader.startsWith("Bearer ") && authHeader.length > 7;
+    const hasCookie = cookie.includes("kc_auth=");
+    
+    if (!hasBearer && !hasCookie) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }
+
   const clientIp =
     req.headers.get("x-nf-client-connection-ip") ||
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
