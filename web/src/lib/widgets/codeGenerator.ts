@@ -186,7 +186,8 @@ export const render = ({ output }) => {${parseBlock}
         <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 
-  const issues = data?.issues || data || [];
+  const rawIssues = data?.issues || data || [];
+  const issues = Array.isArray(rawIssues) ? rawIssues : [];
   const crashLoop = issues.filter(i => i.reason === 'CrashLoopBackOff').length;
   const oomKilled = issues.filter(i => i.reason === 'OOMKilled').length;
   const other = issues.length - crashLoop - oomKilled;
@@ -426,7 +427,8 @@ export const render = ({ output }) => {${parseBlock}
         <span style={{color: styles.colors.error}}>Error: {error}</span>${issueButton}${wrapClose}
   }
 
-  const nodes = data?.nodes || data || [];
+  const rawNodes = data?.nodes || data || [];
+  const nodes = Array.isArray(rawNodes) ? rawNodes : [];
   const totalGPUs = nodes.reduce((sum, n) => sum + (n.gpuCount || 0), 0);
   const allocatedGPUs = nodes.reduce((sum, n) => sum + (n.gpuAllocated || 0), 0);
   const utilization = totalGPUs > 0 ? Math.round((allocatedGPUs / totalGPUs) * 100) : 0;
