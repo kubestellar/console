@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { StellarAction, StellarNotification, StellarSolve } from '../../types/stellar'
 import type { PendingAction } from './EventCard'
 import { countSolveAttempts } from './lib/derive'
-import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
-import { toast } from 'sonner'
+import { useToast } from '../ui/Toast'
 
 const RELATED_EVENT_LIMIT = 6
 const RECURRING_RELATED_THRESHOLD = 2
@@ -205,9 +204,16 @@ function formatRelative(iso: string): string {
 }
 
 const ACTION_BUTTON_TIMEOUT_MS = 5000
+const MODAL_OVERLAY_BACKGROUND = 'var(--game-overlay)'
+const MODAL_ELEVATION_SHADOW = '0 20px 60px var(--glass-shadow)'
+const INFO_ACCENT_BACKGROUND = 'color-mix(in srgb, var(--s-info) 12%, transparent)'
+const INFO_PANEL_BACKGROUND = 'color-mix(in srgb, var(--s-info) 6%, transparent)'
+const INFO_PANEL_BORDER = '1px solid color-mix(in srgb, var(--s-info) 20%, transparent)'
+const RECOMMENDATION_HIGHLIGHT_BACKGROUND = 'color-mix(in srgb, var(--s-info) 4%, transparent)'
 
 export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves, onClose, onAction, onSolve, onDismiss }: EventModalProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [showInvestigationPanel, setShowInvestigationPanel] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [resolutionNote, setResolutionNote] = useState('')
@@ -232,7 +238,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
           onSolve(notification.id),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ACTION_BUTTON_TIMEOUT_MS)),
         ])
-        toast.success(t('stellar.eventModal.solveSuccess'))
+        showToast(t('stellar.eventModal.solveSuccess'), 'success')
       }
       if (resolutionNote.trim()) {
         // Note captured — in a production system this would be persisted
@@ -240,7 +246,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       }
       onClose()
     } catch (err) {
-      toast.error(t('stellar.eventModal.solveFailed', { error: err instanceof Error ? err.message : String(err) }))
+      showToast(t('stellar.eventModal.solveFailed', { error: err instanceof Error ? err.message : String(err) }), 'error')
     } finally {
       setIsProcessing(false)
     }
@@ -260,7 +266,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       }
       onAction(prompt, action)
     }
-    toast.info(t('stellar.eventModal.investigateStarted'))
+    showToast(t('stellar.eventModal.investigateStarted'), 'info')
   }
 
   // Handle Remove action: Dismisses event with optional reason
@@ -276,10 +282,10 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
         // Reason captured — in a production system this would be persisted
         // to an audit log or event metadata
       }
-      toast.success(t('stellar.eventModal.removeSuccess'))
+      showToast(t('stellar.eventModal.removeSuccess'), 'success')
       onClose()
     } catch (err) {
-      toast.error(t('stellar.eventModal.removeFailed', { error: err instanceof Error ? err.message : String(err) }))
+      showToast(t('stellar.eventModal.removeFailed', { error: err instanceof Error ? err.message : String(err) }), 'error')
     } finally {
       setIsProcessing(false)
     }
@@ -375,7 +381,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       aria-labelledby={titleId}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0, 0, 0, 0.6)',
+        background: MODAL_OVERLAY_BACKGROUND,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20, backdropFilter: 'blur(4px)',
       }}
@@ -384,13 +390,13 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 720, maxHeight: '90vh',
-          background: `var(--s-bg, ${STELLAR_DARK_BG})`,
+          background: 'var(--s-bg)',
           border: `1px solid var(--s-border)`,
           borderLeft: `4px solid ${color}`,
           borderRadius: 'var(--s-r)',
           display: 'flex', flexDirection: 'column',
           fontFamily: 'var(--s-sans)', color: 'var(--s-text)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: MODAL_ELEVATION_SHADOW,
         }}
       >
         {/* Header */}
@@ -429,7 +435,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
               <span style={{
                 fontSize: 10, fontFamily: 'var(--s-mono)',
                 padding: '2px 6px', borderRadius: 10,
-                background: 'rgba(56,139,253,0.12)',
+                background: INFO_ACCENT_BACKGROUND,
                 color: 'var(--s-info)',
                 border: '1px solid var(--s-info)',
               }} title="Number of times Stellar has tried to auto-solve this workload">
@@ -523,7 +529,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
             <div key={rec.hint} style={{
               border: '1px solid var(--s-border)', borderRadius: 'var(--s-r)',
               padding: '10px 12px', marginBottom: 8,
-              background: idx === 0 ? 'rgba(56,139,253,0.04)' : 'transparent',
+              background: idx === 0 ? RECOMMENDATION_HIGHLIGHT_BACKGROUND : 'transparent',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{rec.label}</span>
@@ -652,8 +658,8 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
             <div style={{
               marginBottom: 12,
               padding: '10px 12px',
-              background: 'rgba(56,139,253,0.06)',
-              border: '1px solid rgba(56,139,253,0.2)',
+              background: INFO_PANEL_BACKGROUND,
+              border: INFO_PANEL_BORDER,
               borderRadius: 'var(--s-r)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -689,7 +695,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
                 fontSize: 13,
                 fontWeight: 600,
                 background: isProcessing ? 'var(--s-surface-2)' : 'var(--s-success)',
-                color: isProcessing ? 'var(--s-text-dim)' : 'white',
+                color: isProcessing ? 'var(--s-text-dim)' : 'var(--s-bg)',
                 border: 'none',
                 borderRadius: 'var(--s-r)',
                 cursor: isProcessing ? 'not-allowed' : 'pointer',
