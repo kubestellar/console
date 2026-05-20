@@ -19,7 +19,7 @@ const ROOT_VISIBLE_TIMEOUT_MS = 20_000
 const STANDARD_ASSERT_TIMEOUT_MS = 20_000
 const SIDEBAR_ASSERT_TIMEOUT_MS = 20_000
 const HEADER_ASSERT_TIMEOUT_MS = 20_000
-const ERROR_FALLBACK_TIMEOUT_MS = 15_000
+const ERROR_FALLBACK_TIMEOUT_MS = 20_000
 const CARD_DATA_TIMEOUT_MS = 15_000
 const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 20_000
 const HOVER_EFFECT_TIMEOUT_MS = 5_000
@@ -109,6 +109,10 @@ function validateMockClusterResponse(response: MockClusterResponse): MockCluster
 async function waitForDashboardReady(page: Page) {
   await page.waitForLoadState('domcontentloaded')
   await page.waitForLoadState('networkidle').catch(() => {})
+  // Firefox can close the page during navigation transitions - add explicit check
+  if (page.isClosed()) {
+    throw new Error('Page was closed during navigation')
+  }
   await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
 }
 
@@ -599,6 +603,10 @@ test.describe('Dashboard Live Data Loading', () => {
     const cards = cardsGrid.locator(VISIBLE_GRID_CARD_SELECTOR)
     await expect(cards.first()).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
+    // Wait for network to settle before checking for demo badges
+    // Firefox can be slower to render demo fallback state
+    await page.waitForLoadState('networkidle').catch(() => {})
+    
     const demoBadge = cardsGrid.locator('[data-testid="demo-badge"]:visible').first()
     const demoBadgeAppeared = await demoBadge
       .isVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
