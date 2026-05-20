@@ -287,8 +287,6 @@ func (s *SQLiteStore) GetNotificationByID(ctx context.Context, notificationID st
 		return nil, err
 	}
 	return n, nil
-	return n, nil
->>>>>>> 9644945f7 (🐛 Improve escalated events handling)
 }
 
 // GetExecutionsByDedupeSince returns executions for a given dedupe key (workload)

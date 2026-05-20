@@ -247,7 +247,6 @@ func nullableTimePointer(t *time.Time) interface{} {
 	return t.UTC()
 }
 
->>>>>>> 9644945f7 (🐛 Improve escalated events handling)
 func (s *SQLiteStore) NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM stellar_notifications WHERE user_id = ? AND dedupe_key = ?`, userID, dedupeKey).Scan(&count)
@@ -412,7 +411,6 @@ func (s *SQLiteStore) GetNotificationsSince(ctx context.Context, since time.Time
         resolution_note, dismissal_reason, investigation_summary,
         auto_resolution_status, auto_resolution_detail
         FROM stellar_notifications WHERE created_at >= ? ORDER BY created_at ASC`, since.UTC())
->>>>>>> 9644945f7 (🐛 Improve escalated events handling)
 	if err != nil {
 		return nil, err
 	}
