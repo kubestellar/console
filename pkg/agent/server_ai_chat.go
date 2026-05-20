@@ -22,6 +22,9 @@ const (
 	kagentiContextFetchTimeout        = 8 * time.Second
 	kagentiMaxPodIssuesPerCluster     = 10
 	kagentiMaxWarningEventsPerCluster = 5
+	// kagentiMaxConcurrentClusterFetches limits parallel cluster snapshot fetches
+	// to prevent goroutine explosion and K8s API thundering herd in large fleets (#15003).
+	kagentiMaxConcurrentClusterFetches = 10
 )
 
 type kagentiClusterSnapshot struct {
@@ -78,11 +81,14 @@ func (s *Server) buildKagentiK8sContext(ctx context.Context, clusterContext stri
 
 	snapshots := make([]kagentiClusterSnapshot, len(clusters))
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, kagentiMaxConcurrentClusterFetches)
 	for i, cluster := range clusters {
 		i, cluster := i, cluster
 		wg.Add(1)
+		sem <- struct{}{}
 		safego.Go(func() {
 			defer wg.Done()
+			defer func() { <-sem }()
 			snapshots[i] = s.collectKagentiClusterSnapshot(fetchCtx, cluster)
 		})
 	}
