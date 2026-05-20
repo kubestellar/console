@@ -150,7 +150,7 @@ var allowedHistogramSorts = map[string]bool{
 func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	sort := c.Query("sort", "count")
 	if !allowedHistogramSorts[sort] {
-		sort = "count"
+		return fiber.NewError(fiber.StatusBadRequest, "invalid sort parameter")
 	}
 	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + url.QueryEscape(sort)
 
