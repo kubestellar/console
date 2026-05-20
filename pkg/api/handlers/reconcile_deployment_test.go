@@ -483,4 +483,13 @@ func TestSetTerminalStatus(t *testing.T) {
 	h.setTerminalStatus(wd, "Failed", "Retry failed", updateFn)
 	assert.Len(t, wd.Status.History, 2)
 	assert.Equal(t, 2, wd.Status.History[1].Revision)
+
+	// Verify history is capped at maxDeploymentHistory
+	for i := 3; i <= maxDeploymentHistory+10; i++ {
+		h.setTerminalStatus(wd, "Failed", fmt.Sprintf("attempt %d", i), updateFn)
+	}
+	assert.LessOrEqual(t, len(wd.Status.History), maxDeploymentHistory,
+		"history should be capped at maxDeploymentHistory entries")
+	assert.Equal(t, fmt.Sprintf("attempt %d", maxDeploymentHistory+10),
+		wd.Status.History[len(wd.Status.History)-1].Message)
 }
