@@ -2,12 +2,19 @@ package handlers
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
-	"log/slog"
-	"time"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 )
 
 // workloadDeployer abstracts the DeployWorkload call so reconciliation can be
@@ -52,6 +59,158 @@ func NewConsolePersistenceHandlers(
 
 	return h
 }
+
+// requireAdmin checks that the requesting user has the admin role.
+// Returns a Fiber error if not authorized, nil if authorized (#4750).
+func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
+	if h.userStore == nil {
+		return nil // no user store — skip check (dev/demo mode)
+	}
+	currentUserID := middleware.GetUserID(c)
+	currentUser, err := h.userStore.GetUser(c.UserContext(), currentUserID)
+	if err != nil {
+		// Infrastructure failure — don't silently downgrade to a 403 which
+		// would mask a persistent DB outage and make this look like an
+		// authorization issue.
+		slog.Warn("[ConsolePersistence] requireAdmin: failed to load user",
+			"user", currentUserID, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+	}
+	if currentUser == nil || currentUser.Role != "admin" {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
+}
+
+// checkClusterHealth checks if a cluster is healthy
+func (h *ConsolePersistenceHandlers) checkClusterHealth(ctx context.Context, clusterName string) store.ClusterHealth {
+	if h.k8sClient == nil {
+		return store.ClusterHealthUnknown
+	}
+
+	// Try to get cluster info
+	clusters, err := h.k8sClient.ListClusters(ctx)
+	if err != nil {
+		return store.ClusterHealthUnknown
+	}
+	for _, cluster := range clusters {
+		if cluster.Name == clusterName {
+			if cluster.Healthy {
+				return store.ClusterHealthHealthy
+			}
+			return store.ClusterHealthUnreachable
+		}
+	}
+
+	return store.ClusterHealthUnknown
+}
+
+// getClusterClient returns a dynamic client and rest config for a cluster.
+// Previously the second return value was always nil, which would panic any
+// caller that dereferenced it. Return the real *rest.Config so the contract
+// matches the factory signature.
+func (h *ConsolePersistenceHandlers) getClusterClient(clusterName string) (dynamic.Interface, *rest.Config, error) {
+	if h.k8sClient == nil {
+		// Factory callback has no *fiber.Ctx, so we cannot call
+		// errNoClusterAccess(c) directly. Use the shared noClusterAccessMsg
+		// constant so the error message stays unified with the helper (#9830).
+		return nil, nil, fiber.NewError(fiber.StatusServiceUnavailable, noClusterAccessMsg)
+	}
+
+	client, err := h.k8sClient.GetDynamicClient(clusterName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cfg, err := h.k8sClient.GetRestConfig(clusterName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get rest config for cluster %q: %w", clusterName, err)
+	}
+
+	return client, cfg, nil
+}
+
+// StartWatcher starts the console resource watcher if persistence is enabled
+func (h *ConsolePersistenceHandlers) StartWatcher(ctx context.Context) error {
+	if !h.persistenceStore.IsEnabled() {
+		slog.Info("[ConsolePersistence] Persistence not enabled, skipping watcher")
+		return nil
+	}
+
+	if h.k8sClient == nil {
+		return fmt.Errorf("%s", noClusterAccessMsg)
+	}
+
+	activeCluster, err := h.persistenceStore.GetActiveCluster(ctx)
+	if err != nil {
+		slog.Warn("[ConsolePersistence] cannot start watcher", "error", err)
+		return err
+	}
+
+	client, err := h.k8sClient.GetDynamicClient(activeCluster)
+	if err != nil {
+		return err
+	}
+
+	namespace := h.persistenceStore.GetNamespace()
+
+	h.watcher = k8s.NewConsoleWatcher(client, namespace, h.handleResourceEvent)
+	return h.watcher.Start(ctx)
+}
+
+// StopWatcher stops the console resource watcher
+func (h *ConsolePersistenceHandlers) StopWatcher() {
+	if h.watcher != nil {
+		h.watcher.Stop()
+		h.watcher = nil
+	}
+}
+
+// handleResourceEvent broadcasts resource changes to connected clients and,
+// for newly created WorkloadDeployment resources, kicks off reconciliation.
+//
+// The reconcile-on-ADDED path is the Phase 2.5 replacement for the inline
+// reconcileDeployment goroutine that CreateWorkloadDeployment used to fire
+// directly (#7993). The CR write itself is now handled by kc-agent under the
+// user's kubeconfig; the backend sees the new resource via the watcher and
+// reconciles it as a proper controller. The reconciler still uses the pod SA
+// because it's system-internal (not user-initiated).
+func (h *ConsolePersistenceHandlers) handleResourceEvent(event k8s.ConsoleResourceEvent) {
+	if h.hub != nil {
+		msg := Message{
+			Type: "console_resource_changed",
+			Data: event,
+		}
+		h.hub.BroadcastAll(msg)
+	}
+
+	// Trigger reconciliation on newly observed WorkloadDeployment CRs.
+	// Only act on ADDED events — MODIFIED covers status updates from the
+	// reconciler itself and would cause reconcile loops, DELETED is a no-op.
+	if event.Type != "ADDED" || event.ResourceType != "WorkloadDeployment" {
+		return
+	}
+	wd, ok := event.Resource.(*v1alpha1.WorkloadDeployment)
+	if !ok {
+		slog.Warn("[ConsolePersistence] watcher returned non-WorkloadDeployment resource",
+			"type", event.ResourceType, "name", event.Name)
+		return
+	}
+	// Use a detached context with a wall-clock bound so reconciliation
+	// survives independently of the watcher's event dispatch goroutine and
+	// cannot run forever. 5 minutes matches the prior CreateWorkloadDeployment
+	// detached timeout.
+	const reconcileTimeout = 5 * time.Minute
+	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), reconcileTimeout)
+	safego.Go(func() {
+		defer reconcileCancel()
+		h.reconcileDeployment(reconcileCtx, wd)
+	})
+}
+
+// =============================================================================
+// Config endpoints
+// =============================================================================
 
 // GetConfig returns the current persistence configuration
 // GET /api/persistence/config
@@ -103,6 +262,10 @@ func (h *ConsolePersistenceHandlers) GetStatus(c *fiber.Ctx) error {
 	return c.JSON(status)
 }
 
+// =============================================================================
+// ManagedWorkload endpoints
+// =============================================================================
+
 // ListManagedWorkloads returns all managed workloads
 // GET /api/persistence/workloads
 func (h *ConsolePersistenceHandlers) ListManagedWorkloads(c *fiber.Ctx) error {
@@ -153,6 +316,17 @@ func (h *ConsolePersistenceHandlers) GetManagedWorkload(c *fiber.Ctx) error {
 	return c.JSON(workload)
 }
 
+// CreateManagedWorkload / UpdateManagedWorkload / DeleteManagedWorkload were
+// removed in #7993 Phase 2.5. These user-initiated CR writes now go through
+// kc-agent's /console-cr/workloads route so they run under the caller's own
+// kubeconfig rather than the backend pod ServiceAccount. The reconciler
+// (reconcileDeployment below) still runs here because it's system-internal
+// and legitimately uses the pod SA.
+
+// =============================================================================
+// ClusterGroup endpoints
+// =============================================================================
+
 // ListClusterGroups returns all cluster groups
 // GET /api/persistence/groups
 func (h *ConsolePersistenceHandlers) ListClusterGroups(c *fiber.Ctx) error {
@@ -201,6 +375,10 @@ func (h *ConsolePersistenceHandlers) GetClusterGroup(c *fiber.Ctx) error {
 	return c.JSON(group)
 }
 
+// =============================================================================
+// WorkloadDeployment endpoints
+// =============================================================================
+
 // ListWorkloadDeployments returns all workload deployments
 // GET /api/persistence/deployments
 func (h *ConsolePersistenceHandlers) ListWorkloadDeployments(c *fiber.Ctx) error {
@@ -244,6 +422,10 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 
 	return c.JSON(deployment)
 }
+
+// =============================================================================
+// Sync endpoints
+// =============================================================================
 
 // SyncNow triggers an immediate sync of all console resources
 // POST /api/persistence/sync
