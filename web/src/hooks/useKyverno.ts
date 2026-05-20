@@ -247,6 +247,9 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
       }
     }
 
+    // Build lookup map for O(1) policy matching in report processing (#15005)
+    const policyByName = new Map(policies.map(p => [p.name, p]))
+
     // Fetch PolicyReports for violation counts
     const reports: KyvernoPolicyReport[] = []
     const reportResult = await kubectlProxy.exec(
@@ -274,7 +277,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
         if (item.results) {
           for (const result of (item.results || [])) {
             if (result.result === 'fail' && result.policy) {
-              const matchingPolicy = policies.find(p => p.name === result.policy)
+              const matchingPolicy = policyByName.get(result.policy)
               if (matchingPolicy) {
                 matchingPolicy.violations += 1
               }
@@ -300,7 +303,7 @@ async function fetchSingleCluster(cluster: string): Promise<KyvernoClusterStatus
         if (item.results) {
           for (const result of (item.results || [])) {
             if (result.result === 'fail' && result.policy) {
-              const matchingPolicy = policies.find(p => p.name === result.policy)
+              const matchingPolicy = policyByName.get(result.policy)
               if (matchingPolicy) {
                 matchingPolicy.violations += 1
               }
