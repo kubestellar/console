@@ -45,6 +45,7 @@ const HISTOGRAM_ENDPOINT = '/api/result/histogram'
 const DEFAULT_SORT: HistogramSort = 'count'
 const DEFAULT_POLL_MS = 5000
 const RATE_LIMIT_STATUS = 429
+const RATE_LIMIT_BACKOFF_BASE_MS = 100 // Base delay for exponential backoff (100ms, 200ms, 400ms...)
 
 const EMPTY_HISTOGRAM_DATA: HistogramData = {
   histogram: [],
@@ -133,7 +134,7 @@ async function fetchHistogramWithRetry(
   if (response.status === RATE_LIMIT_STATUS) {
     if (attempt < maxAttempts - 1) {
       // Exponential backoff: 100ms, 200ms, 400ms
-      const delayMs = 100 * Math.pow(2, attempt)
+      const delayMs = RATE_LIMIT_BACKOFF_BASE_MS * Math.pow(2, attempt)
       await new Promise(resolve => setTimeout(resolve, delayMs))
       return fetchHistogramWithRetry(sortBy, attempt + 1, maxAttempts)
     }

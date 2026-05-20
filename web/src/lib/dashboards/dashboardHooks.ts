@@ -14,6 +14,7 @@ import { isCardTypeRegistered } from '../../components/cards/cardRegistry'
 import { DashboardCard, DashboardCardPlacement, NewCardInput } from './types'
 import { useDashboardUndoRedo } from '../../hooks/useUndoRedo'
 import { setAutoRefreshPaused } from '../cache'
+import { POLL_INTERVAL_MS } from '../constants/network'
 
 // Re-export dashboardSync for use in auth context (clear cache on logout)
 export { dashboardSync } from './dashboardSync'
@@ -350,7 +351,7 @@ export interface UseDashboardAutoRefreshResult {
 
 export function useDashboardAutoRefresh(
   refreshFn: () => void,
-  interval: number = 30000,
+  interval: number = POLL_INTERVAL_MS,
   initialEnabled: boolean = true
 ): UseDashboardAutoRefreshResult {
   const [autoRefresh, setAutoRefresh] = useState(initialEnabled)

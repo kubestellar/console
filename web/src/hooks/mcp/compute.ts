@@ -7,11 +7,16 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, getLocalAgentURL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
+import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_FAST_MS, LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
 import { isInClusterMode } from '../useBackendHealth'
 import { getClusterModeBaseUrl, isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
+
+// GPU fetch retry configuration
+const GPU_FETCH_MAX_RETRIES = 2
+const GPU_FETCH_RETRY_DELAYS = [POLL_INTERVAL_FAST_MS, LOADING_TIMEOUT_MS] // 2s, then 5s
+const GPU_FETCH_DEFAULT_RETRY_DELAY = LOADING_TIMEOUT_MS
 
 /**
  * Per-cluster error surfaced by {@link useNodes} when the backend emits a
@@ -316,10 +321,8 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       }
 
       // Retry logic: schedule a retry if we haven't exceeded max retries
-      const MAX_RETRIES = 2
-      const RETRY_DELAYS = [2000, 5000] // 2s, then 5s
-      if (newFailures <= MAX_RETRIES && !isDemoMode()) {
-        const delay = RETRY_DELAYS[newFailures - 1] || 5000
+      if (newFailures <= GPU_FETCH_MAX_RETRIES && !isDemoMode()) {
+        const delay = GPU_FETCH_RETRY_DELAYS[newFailures - 1] || GPU_FETCH_DEFAULT_RETRY_DELAY
         setTimeout(() => {
           fetchGPUNodes(cluster, `retry-${newFailures}`)
         }, delay)

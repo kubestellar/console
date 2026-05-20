@@ -1,18 +1,27 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
-import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
+import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay, POLL_INTERVAL_FAST_MS } from '../lib/constants/network'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { MS_PER_SECOND } from '../lib/constants/time'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
-const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
+const BACKEND_POLL_MS = POLL_INTERVAL_FAST_MS  // Poll interval when waiting for backend to come up
 const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up
 
 // Stale detection: if WebSocket has been disconnected for this long during an
 // active update (status is "pulling", "building", or "restarting"), we assume
 // the kc-agent died and show a failure message instead of leaving the UI stuck.
 const STALE_UPDATE_TIMEOUT_MS = 45_000  // 45 seconds without a WebSocket message
+
+// Progress percentage thresholds for backend health polling phase
+const RESTART_BASE_PCT = 88   // Starting progress during health polling
+const RESTART_MAX_PCT = 99    // Max progress before "done" (100%)
+
+// Time thresholds for progressive status messages (in seconds)
+const MESSAGE_THRESHOLD_10_SEC = 10
+const MESSAGE_THRESHOLD_30_SEC = 30
+const MESSAGE_THRESHOLD_60_SEC = 60
 
 /** Known update step labels for developer channel (7-step update) */
 const DEV_UPDATE_STEP_LABELS: Record<number, string> = {
@@ -120,25 +129,20 @@ export function useUpdateProgress() {
     // be building/starting. Poll /health before showing "done" so the
     // "Refresh" link only appears when the backend is actually ready.
     async function waitForBackend() {
-      const RESTART_BASE_PCT = 88   // Starting progress during health polling
-      const RESTART_MAX_PCT = 99    // Max progress before "done" (100%)
       const pctPerAttempt = (RESTART_MAX_PCT - RESTART_BASE_PCT) / BACKEND_POLL_MAX
       for (let i = 0; i < BACKEND_POLL_MAX; i++) {
         const pct = Math.round(RESTART_BASE_PCT + (i * pctPerAttempt))
         const elapsed = Math.round((i * BACKEND_POLL_MS) / MS_PER_SECOND)
-        const TEN_SEC = 10
-        const THIRTY_SEC = 30
-        const SIXTY_SEC = 60
 
         // Show progressive messages so the user sees activity
         let message: string
         if (i === 0) {
           message = 'Waiting for services to restart...'
-        } else if (elapsed < TEN_SEC) {
+        } else if (elapsed < MESSAGE_THRESHOLD_10_SEC) {
           message = `Starting backend services... (${elapsed}s)`
-        } else if (elapsed < THIRTY_SEC) {
+        } else if (elapsed < MESSAGE_THRESHOLD_30_SEC) {
           message = `Backend initializing... (${elapsed}s)`
-        } else if (elapsed < SIXTY_SEC) {
+        } else if (elapsed < MESSAGE_THRESHOLD_60_SEC) {
           message = `Still starting up — this can take a minute... (${elapsed}s)`
         } else {
           message = `Almost there — waiting for health check... (${elapsed}s)`

@@ -1,8 +1,9 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { LOCAL_AGENT_WS_URL, KUBECTL_MEDIUM_TIMEOUT_MS } from '../lib/constants'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 
 const DEFAULT_TIMEOUT_MS = 10000
+const DEFAULT_HELM_TIMEOUT_MS = KUBECTL_MEDIUM_TIMEOUT_MS
 
 interface KubectlMessage {
   id?: string
@@ -142,7 +143,7 @@ export function useDrillDownWebSocket(cluster: string) {
    */
   const runHelm = useCallback(async (
     args: string[],
-    timeoutMs: number = 15000
+    timeoutMs: number = DEFAULT_HELM_TIMEOUT_MS
   ): Promise<string> => {
     return runCommand('helm', args, timeoutMs)
   }, [runCommand])
