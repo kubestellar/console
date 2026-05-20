@@ -363,7 +363,8 @@ export function getHorseshoeSize(statsLength: number, isExpanded: boolean): numb
   return 120
 }
 
-function translateAggregatePodName(t: TFunction, podName: string): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function translateAggregatePodName(t: TFunction<any>, podName: string): string {
   if (podName.startsWith('Prefill (')) {
     return podName.replace('Prefill', t('llmd.prefill', 'Prefill'))
   }
@@ -379,7 +380,8 @@ function translateAggregatePodName(t: TFunction, podName: string): string {
   return podName
 }
 
-export function getDisplayPodName(t: TFunction, podName: string, maxLength?: number): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function getDisplayPodName(t: TFunction<any>, podName: string, maxLength?: number): string {
   const translatedName = translateAggregatePodName(t, podName).replace('vllm-', '')
   return typeof maxLength === 'number' ? translatedName.slice(0, maxLength) : translatedName
 }
