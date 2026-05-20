@@ -58,7 +58,7 @@ function buildCsv(
   columns: readonly string[],
   getResultLabel: (result: AuditResult) => string,
 ): string {
-  const header = columns.join(',')
+  const header = (columns || []).join(',')
   const rows = entries.map(entry => [
     formatTimestamp(entry.ts),
     entry.userId,
