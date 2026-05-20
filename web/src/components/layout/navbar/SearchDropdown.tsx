@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
@@ -242,7 +242,7 @@ export function SearchDropdown() {
   }
 
   // Create a custom mission from the search query
-  const handleAskAI = () => {
+  const handleAskAI = useCallback(() => {
     if (!searchQuery.trim()) return
 
     const query = searchQuery.trim()
@@ -255,15 +255,15 @@ export function SearchDropdown() {
 
     setSearchQuery('')
     closeSearch()
-  }
+  }, [searchQuery, startMission, closeSearch])
 
   // Check if a page route is a discoverable dashboard not currently in the sidebar
-  const sidebarHrefs = (() => {
+  const sidebarHrefs = useMemo(() => {
     if (!sidebarConfig) return new Set<string>()
     return new Set(sidebarConfig.primaryNav.map(item => item.href))
-  })()
+  }, [sidebarConfig])
 
-  const handleSelect = (item: SearchItem, index?: number) => {
+  const handleSelect = useCallback((item: SearchItem, index?: number) => {
     emitGlobalSearchSelected(item.category, index ?? 0)
     // Mission items open the sidebar instead of navigating
     if (item.category === 'mission' && item.href?.startsWith('#mission:')) {
@@ -307,7 +307,7 @@ export function SearchDropdown() {
     }
     setSearchQuery('')
     closeSearch()
-  }
+  }, [sidebarHrefs, location.pathname, navigate, setActiveMission, openSidebar, closeSearch])
 
   // Close dropdown when clicking outside
   useEffect(() => {
