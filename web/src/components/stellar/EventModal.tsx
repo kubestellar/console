@@ -206,8 +206,6 @@ function formatRelative(iso: string): string {
 
 const ACTION_BUTTON_TIMEOUT_MS = 5000
 
-const ACTION_BUTTON_TIMEOUT_MS = 5000
-
 export function EventModal({ notification, allNotifications, pendingActions, solveStatus, solves, onClose, onAction, onSolve, onDismiss }: EventModalProps) {
   const { t } = useTranslation()
   const [showInvestigationPanel, setShowInvestigationPanel] = useState(false)
@@ -774,6 +772,10 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
             </button>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
 
 function SectionHeader({ title }: { title: string }) {
   return (
