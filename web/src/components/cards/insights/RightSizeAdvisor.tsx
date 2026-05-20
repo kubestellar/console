@@ -10,6 +10,7 @@ import { useChartFilters } from '../../../lib/cards/cardHooks'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { Skeleton } from '../../ui/Skeleton'
+import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 
 type Verdict = 'under-provisioned' | 'right-sized' | 'over-provisioned' | 'insufficient-data'
 
@@ -324,7 +325,7 @@ export function RightSizeAdvisor() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Cpu className="w-3 h-3" />
-                        <span>CPU</span>
+                        <span><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
                         <span className="ml-auto font-mono">{s.cpu.used}/{s.cpu.capacity} {s.cpu.unit} ({s.cpu.pct}%)</span>
                       </div>
                       <div className="h-2 bg-secondary rounded-full overflow-hidden">

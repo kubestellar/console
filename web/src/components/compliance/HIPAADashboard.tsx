@@ -10,6 +10,7 @@ import {
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 interface HIPAACheck {
   id: string; name: string; description: string; status: string
@@ -250,7 +251,7 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
                 <th className="p-3">Cluster</th>
                 <th className="p-3">Encrypted</th>
                 <th className="p-3">Audit</th>
-                <th className="p-3">RBAC</th>
+                <th className="p-3"><TechnicalAcronym term="RBAC">RBAC</TechnicalAcronym></th>
                 <th className="p-3">Status</th>
               </tr>
             </thead>

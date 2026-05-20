@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES, type WidgetCardDefinition } from '../../../lib/widgets/widgetRegistry'
 import { type WidgetConfig } from '../../../lib/widgets/codeGenerator'
 import type { CSSProperties } from 'react'
+import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 
 // Inline style constants
 const WIDGET_EXPORT_MODAL_PREVIEW_MAX_WIDTH_PX = 260
@@ -634,7 +635,7 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.row}>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: PREV_CLR_CPU }}>62%</span>
-              <span style={ps.statLbl}>CPU</span>
+              <span style={ps.statLbl}><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
             </div>
             <div style={ps.statBlock}>
               <span style={{ ...ps.statVal, fontSize: PREV_FS_STAT_SM, color: PREV_CLR_MEM }}>78%</span>

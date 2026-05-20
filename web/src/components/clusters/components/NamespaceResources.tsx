@@ -9,6 +9,7 @@ import {
   LB_PROVISIONING_LABEL,
   LB_STATUS_PROVISIONING,
 } from '../../../lib/constants/network'
+import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 
 /** Service type string emitted by the backend for LoadBalancer services.
  * Defined as a constant to avoid magic strings. */
@@ -506,7 +507,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('hpas')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('hpas') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="purple" icon={<Activity className="w-3 h-3" />}>HPA</StatusBadge>
+                  <StatusBadge color="purple" icon={<Activity className="w-3 h-3" />}><TechnicalAcronym term="HPA">HPA</TechnicalAcronym></StatusBadge>
                   <span className="text-muted-foreground">({hpas.length})</span>
                 </button>
                 {expandedTypes.has('hpas') && (
@@ -560,7 +561,7 @@ export function NamespaceResources({ clusterName, namespace, onClose }: Namespac
               <div className="mb-1">
                 <button onClick={() => toggleType('pvcs')} className="flex items-center gap-1.5 py-2 hover:bg-card/30 rounded px-2 w-full text-left min-h-11">
                   {expandedTypes.has('pvcs') ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <StatusBadge color="green" icon={<HardDrive className="w-3 h-3" />}>PVC</StatusBadge>
+                  <StatusBadge color="green" icon={<HardDrive className="w-3 h-3" />}><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></StatusBadge>
                   <span className="text-muted-foreground">({pvcs.length})</span>
                 </button>
                 {expandedTypes.has('pvcs') && (

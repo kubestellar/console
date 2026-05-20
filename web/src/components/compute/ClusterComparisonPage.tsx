@@ -5,6 +5,7 @@ import { useClusters, useNodes, ClusterInfo } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // Fallback string shown when a Kubernetes version cannot be resolved for a cluster (issue #6108).
 const K8S_VERSION_UNKNOWN = 'N/A'
@@ -218,7 +219,7 @@ export function ClusterComparisonPage() {
               <div className="flex items-center justify-between text-sm mb-2">
                 <div className="flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-purple-400" />
-                  <span className="text-muted-foreground">CPU Usage</span>
+                  <span className="text-muted-foreground"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym> Usage</span>
                 </div>
                 <span className="text-foreground font-medium">{cpuUtilization}%</span>
               </div>

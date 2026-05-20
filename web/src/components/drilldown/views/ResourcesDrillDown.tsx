@@ -21,6 +21,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { ClusterInfo } from '../../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
+import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 
 interface Props {
   data: Record<string, unknown>
@@ -342,7 +343,9 @@ export function ResourcesDrillDown({ data: _data }: Props) {
         <div className="p-3 rounded-lg bg-card/50 border border-border min-w-[120px]">
           <div className="flex items-center gap-2 mb-1">
             <Cpu className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-xs text-muted-foreground">CPU Capacity</span>
+            <span className="text-xs text-muted-foreground">
+              <TechnicalAcronym term="CPU">CPU</TechnicalAcronym> Capacity
+            </span>
           </div>
           <div className="text-xl font-bold text-foreground">{totals.cpus.toLocaleString()} cores</div>
           <div className="text-2xs text-muted-foreground mt-0.5">

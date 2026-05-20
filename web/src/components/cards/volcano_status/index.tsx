@@ -42,6 +42,7 @@ import type {
   VolcanoQueue,
 } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -120,7 +121,7 @@ function QueueRow({ queue }: { queue: VolcanoQueue }) {
       </div>
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="text-muted-foreground w-8 shrink-0">CPU</span>
+          <span className="text-muted-foreground w-8 shrink-0"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
           <div className="flex-1 h-1.5 rounded bg-secondary/50 overflow-hidden">
             <div
               className={`h-full ${usageBarClass(cpuPct)}`}

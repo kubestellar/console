@@ -8,6 +8,7 @@ import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useCachedNodes } from '../../../hooks/useCachedData'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 
 interface Props {
   data: Record<string, unknown>
@@ -200,7 +201,7 @@ Please:
           )}
           {cachedNode?.cpuCapacity && (
             <div>
-              <dt className="text-muted-foreground">CPU Capacity</dt>
+              <dt className="text-muted-foreground"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym> Capacity</dt>
               <dd className="font-mono text-foreground">{cachedNode.cpuCapacity}</dd>
             </div>
           )}

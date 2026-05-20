@@ -22,6 +22,7 @@ import type { DependencyEdge, DeployPhase, PayloadProject } from './types'
 import { fetchMissionContent } from '../missions/browser/missionCache'
 import { fetchKubaraValues } from '../../lib/kubara'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // ---------------------------------------------------------------------------
 // Status display maps (shared with the main component)
@@ -390,7 +391,7 @@ export function ClusterInfoPanel({ info }: { info: ClusterHoverInfo }) {
         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Capacity</h4>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-400">CPU</span>
+            <span className="text-slate-400"><TechnicalAcronym term="CPU">CPU</TechnicalAcronym></span>
             <span className="text-foreground tabular-nums">{fmtNum(info.cpuCores)} cores</span>
           </div>
           <div className="flex justify-between">
@@ -402,7 +403,7 @@ export function ClusterInfoPanel({ info }: { info: ClusterHoverInfo }) {
             <span className="text-foreground tabular-nums">{fmtNum(info.storageGB)} GB</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">PVC</span>
+            <span className="text-slate-400"><TechnicalAcronym term="PVC">PVC</TechnicalAcronym></span>
             <span className="text-foreground tabular-nums">{info.pvcBoundCount ?? '?'}/{info.pvcCount ?? '?'}</span>
           </div>
         </div>

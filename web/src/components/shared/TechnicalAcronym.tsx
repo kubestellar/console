@@ -132,6 +132,18 @@ export const TECHNICAL_ACRONYMS: Record<string, { full: string; desc: string }> 
     full: 'Operator Lifecycle Manager', 
     desc: 'Manages installation, updates, and lifecycle of Kubernetes operators' 
   },
+  
+  // Autoscaling
+  HPA: {
+    full: 'Horizontal Pod Autoscaler',
+    desc: 'Automatically scales the number of pods based on CPU utilization or custom metrics'
+  },
+  
+  // Metrics & Monitoring
+  MTTR: {
+    full: 'Mean Time To Recovery',
+    desc: 'Average time taken to recover from a failure or incident'
+  },
 }
 
 // Convenience component for displaying technical acronyms with tooltips
@@ -182,7 +194,7 @@ export function wrapAbbreviations(text: string): ReactNode {
   // Order matters - longer terms first to avoid partial matches
   const abbreviations = [
     'ConfigMaps', 'ConfigMap', 'CrashLoopBackOff', 'OOMKilled',
-    'RBAC', 'CRD', 'PVC',
+    'RBAC', 'CRD', 'PVC', 'HPA', 'MTTR',
     'GPUs', 'GPU', 'CPUs', 'CPU',
     'TPUs', 'TPU', 'AIUs', 'AIU', 'XPUs', 'XPU',
     'VRAM', 'CUDA', 'MIG', 'OLM', 'MCS', 'Secrets', 'Secret',

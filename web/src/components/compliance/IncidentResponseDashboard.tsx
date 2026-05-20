@@ -6,6 +6,7 @@ import {
 import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
             <p className="text-2xl font-bold text-red-400">{metrics.active_incidents}</p>
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-400">MTTR</p>
+            <p className="text-sm text-gray-400"><TechnicalAcronym term="MTTR">MTTR</TechnicalAcronym></p>
             <p className="text-2xl font-bold text-white">{metrics.mttr_hours}h</p>
             <p className={`text-xs ${TREND_COLORS[metrics.mttr_trend]}`}>{metrics.mttr_trend}</p>
           </div>
