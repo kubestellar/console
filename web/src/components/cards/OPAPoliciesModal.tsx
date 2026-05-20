@@ -26,6 +26,8 @@ export function OPAPoliciesModal({
   selectedPolicy, setSelectedPolicy, onAddPolicy,
   showCreatePolicyModal, closeCreatePolicyModal,
 }: OPAPoliciesModalProps) {
+  const open = showViolationsModal || showPolicyModal || showCreatePolicyModal
+  if (!open) return null
   return (
     <>
       {/* Cluster OPA Modal — Full CRUD */}
