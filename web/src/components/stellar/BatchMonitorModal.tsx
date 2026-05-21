@@ -8,6 +8,8 @@ const BATCH_UPDATE_INTERVAL_MS = 2000
 const SECONDS_PER_MINUTE = 60
 const MS_PER_SECOND = 1000
 
+const FLEX_MIN_WIDTH_STYLE = { flex: 1, minWidth: 0 } as const
+
 // ── Types ────────────────────────────────────────────────────────────────
 
 export interface ResolutionStep {
@@ -282,7 +284,7 @@ function EventRow({ event }: { event: BatchEvent }) {
           {getStatusIcon(event.status)}
         </span>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={FLEX_MIN_WIDTH_STYLE}>
           <div style={{
             fontSize: 12,
             fontWeight: 500,
@@ -371,7 +373,7 @@ function EventRow({ event }: { event: BatchEvent }) {
                   : step.status === 'in_progress' ? '⊙'
                   : '○'}
               </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={FLEX_MIN_WIDTH_STYLE}>
                 <div style={{
                   fontSize: 11,
                   color: step.status === 'pending' ? 'var(--s-text-dim)' : 'var(--s-text)',
@@ -575,7 +577,7 @@ export function BatchMonitorModal({
           borderBottom: '1px solid var(--s-border)',
           display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
         }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={FLEX_MIN_WIDTH_STYLE}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
               <h2
                 id={titleId}

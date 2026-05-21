@@ -76,6 +76,9 @@ const ACTION_CONFIG: Record<string, { labelKey: string; icon: string; color: str
   solve: { labelKey: 'stellar.eventCard.actions.solve', icon: '✦', color: 'var(--s-success)' },
 }
 
+const EVENT_CARD_ACTIONS_STYLE = { display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' } as const
+const EVENT_CARD_BUTTON_STYLE = { background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' } as const
+
 function buildActionPrompt(hint: string, notification: StellarNotification): string {
   const resource = notification.title
   const cluster = notification.cluster ? ` on cluster ${notification.cluster}` : ''
@@ -340,14 +343,14 @@ export function EventCard({
               e.stopPropagation()
             }
           }}
-          style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}
+          style={EVENT_CARD_ACTIONS_STYLE}
         >
-          <button className="px-2 py-0.5 text-[11px]" onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' }}>{t('actions.dismiss')}</button>
+          <button className="px-2 py-0.5 text-[11px]" onClick={onDismiss} style={EVENT_CARD_BUTTON_STYLE}>{t('actions.dismiss')}</button>
           {showRollback && onRollback && (
             <button
               className="px-2 py-0.5 text-[11px]"
               onClick={() => onRollback(buildRollbackPrompt(notification))}
-              style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' }}
+              style={EVENT_CARD_BUTTON_STYLE}
             >
               ↩ {t('stellar.eventCard.undoThis')}
             </button>

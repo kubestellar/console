@@ -41,6 +41,9 @@ const GROUP_CONFIGS: GroupConfig[] = [
   },
 ]
 
+const EVENTS_PANEL_LAYOUT_STYLE = { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } as const
+const FLEX_SPACER_STYLE = { flex: 1 } as const
+
 interface EventsPanelProps {
   notifications: StellarNotification[]
   pendingActions: StellarAction[]
@@ -176,7 +179,7 @@ export function EventsPanel({
   }, [notifications])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div style={EVENTS_PANEL_LAYOUT_STYLE}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -209,7 +212,7 @@ export function EventsPanel({
             {unread.length} new
           </span>
         )}
-        <div style={{ flex: 1 }} />
+        <div style={FLEX_SPACER_STYLE} />
         {notifications.length > 0 && (
           <button
             onClick={() => {
@@ -316,7 +319,7 @@ export function EventsPanel({
                   color: 'var(--s-info)',
                 }}
               >{t('stellar.batch.processingBatch')}</span>
-              <div style={{ flex: 1 }} />
+              <div style={FLEX_SPACER_STYLE} />
               <span style={{
                 fontFamily: 'var(--s-mono)',
                 fontSize: 10,
