@@ -13,6 +13,24 @@ import {
 } from "./helpers";
 
 // ---------------------------------------------------------------------------
+// Response size cap
+// ---------------------------------------------------------------------------
+
+const MAX_RESPONSE_BYTES = 512_000;
+
+async function readCappedJson<T>(res: Response): Promise<T> {
+  const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: content-length ${contentLength} exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+  const text = await res.text();
+  if (text.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: body ${text.length} bytes exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+  return JSON.parse(text) as T;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -67,7 +85,7 @@ async function fetchPaginated<T>(
       throw new Error(`GitHub API ${res.status}: ${body.slice(0, 300)}`);
     }
 
-    const data = await res.json();
+    const data = await readCappedJson<Record<string, unknown>>(res);
     const items = extractItems(data as Record<string, unknown>);
     allItems.push(...items);
 
@@ -134,7 +152,7 @@ export async function fetchWorkflowRuns(
   });
   if (!listRes.ok) return [];
 
-  const listData = await listRes.json();
+  const listData = await readCappedJson<Record<string, unknown>>(listRes);
   const workflows = (listData.workflows || []) as Array<{
     id: number;
     name: string;

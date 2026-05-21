@@ -24,6 +24,8 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 
 /** Timeout for GitHub API requests */
 const GITHUB_API_TIMEOUT_MS = 10_000;
+/** Maximum response body size (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 
 interface BonusEntry {
   issue_number: number;
@@ -40,6 +42,20 @@ interface CachedBonusData {
 }
 
 let cache: CachedBonusData | null = null;
+
+async function readCappedJson<T>(response: Response): Promise<T> {
+  const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: ${contentLength} bytes exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+
+  const rawText = await response.text();
+  if (rawText.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: ${rawText.length} bytes exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+
+  return JSON.parse(rawText) as T;
+}
 
 async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
   const byLogin: Record<string, BonusEntry[]> = {};
@@ -63,9 +79,15 @@ async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
     throw new Error(`GitHub API ${res.status}`);
   }
 
-  const issues = await res.json();
+  const issues = await readCappedJson<Array<{
+    number: number;
+    title: string;
+    user: { login: string };
+    created_at: string;
+    state: string;
+  }>>(res);
 
-  for (const issue of issues as Array<{ number: number; title: string; user: { login: string }; created_at: string; state: string }>) {
+  for (const issue of issues) {
     if (issue.user?.login !== BONUS_AUTHORIZED_USER) continue;
 
     const match = issue.title.match(BONUS_TITLE_REGEX);

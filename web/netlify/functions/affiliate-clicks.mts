@@ -21,6 +21,8 @@ import { buildCorsHeaders, handlePreflight } from "./_shared";
 const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWT_EXPIRY_SECONDS = 3600;
+/** Maximum response body size (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 
 /** Map GitHub login → utm_term for intern affiliate links */
 const INTERN_MAP: Record<string, string> = {
@@ -77,6 +79,20 @@ interface ServiceAccountKey {
 interface GA4Row {
   dimensionValues: { value: string }[];
   metricValues: { value: string }[];
+}
+
+async function readCappedJson<T>(response: Response): Promise<T> {
+  const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: ${contentLength} bytes exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+
+  const rawText = await response.text();
+  if (rawText.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: ${rawText.length} bytes exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+
+  return JSON.parse(rawText) as T;
 }
 
 // ── JWT / OAuth helpers (Web Crypto — no npm deps) ────────────────────
@@ -158,7 +174,7 @@ async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string
     throw new Error(`Token exchange failed (${resp.status}): ${body}`);
   }
 
-  const data = await resp.json();
+  const data = await readCappedJson<{ access_token: string; expires_in?: number }>(resp);
   const accessToken = data.access_token;
   const expiresIn = data.expires_in || JWT_EXPIRY_SECONDS;
 
@@ -191,7 +207,7 @@ async function runReport(
     throw new Error(`GA4 API ${resp.status}: ${text}`);
   }
 
-  const data = await resp.json();
+  const data = await readCappedJson<{ rows?: GA4Row[] }>(resp);
   return data.rows || [];
 }
 

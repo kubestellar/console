@@ -13,6 +13,24 @@ import {
 import type { WeeklyActivity, GitTreeEntry } from "./helpers";
 
 // ---------------------------------------------------------------------------
+// Response size cap
+// ---------------------------------------------------------------------------
+
+const MAX_RESPONSE_BYTES = 512_000;
+
+async function readCappedJson<T>(res: Response): Promise<T> {
+  const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: content-length ${contentLength} exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+  const text = await res.text();
+  if (text.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: body ${text.length} bytes exceeds ${MAX_RESPONSE_BYTES}`);
+  }
+  return JSON.parse(text) as T;
+}
+
+// ---------------------------------------------------------------------------
 // Search pagination
 // ---------------------------------------------------------------------------
 
@@ -39,7 +57,7 @@ async function searchAllPages(
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (!res.ok) break;
-    const body = (await res.json()) as { items?: SearchItem[] };
+    const body = await readCappedJson<{ items?: SearchItem[] }>(res);
     const pageItems = body.items || [];
     items.push(...pageItems);
     if (pageItems.length < SEARCH_PAGE_SIZE) break;
@@ -65,7 +83,7 @@ export async function fetchTreePaths(repo: string, token: string): Promise<Set<s
     if (repoRes.status === 404) throw new Error("Repo not found");
     throw new Error(`GitHub repo API ${repoRes.status}`);
   }
-  const repoInfo = (await repoRes.json()) as { default_branch?: string };
+  const repoInfo = await readCappedJson<{ default_branch?: string }>(repoRes);
   const branch = repoInfo.default_branch || "main";
 
   const url = `${GITHUB_API}/repos/${repo}/git/trees/${branch}?recursive=1`;
@@ -77,7 +95,7 @@ export async function fetchTreePaths(repo: string, token: string): Promise<Set<s
     if (res.status === 404) throw new Error("Repo not found");
     throw new Error(`GitHub tree API ${res.status}`);
   }
-  const data = (await res.json()) as { tree?: GitTreeEntry[] };
+  const data = await readCappedJson<{ tree?: GitTreeEntry[] }>(res);
   const paths = new Set<string>();
   for (const entry of data.tree || []) {
     paths.add(entry.path);

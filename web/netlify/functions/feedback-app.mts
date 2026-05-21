@@ -39,6 +39,22 @@ import {
 import type { FeedbackAppAction, IssueRequest } from "./_shared/feedback-helpers";
 
 const MAX_FEEDBACK_BODY_BYTES = 102_400;
+/** Maximum response body size for GitHub API responses (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
+
+async function readCappedJson<T>(response: Response): Promise<T> {
+  const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error(`Upstream response too large: ${contentLength} bytes`);
+  }
+
+  const rawText = await response.text();
+  if (rawText.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Upstream response too large: ${rawText.length} bytes`);
+  }
+
+  return JSON.parse(rawText) as T;
+}
 
 export default async function handler(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") {
@@ -66,7 +82,11 @@ export default async function handler(request: Request): Promise<Response> {
 
     let rawBody: unknown;
     try {
-      rawBody = await request.json();
+      const text = await request.text();
+      if (text.length > MAX_FEEDBACK_BODY_BYTES) {
+        return jsonResponse(request, 413, { error: "Request body too large" });
+      }
+      rawBody = JSON.parse(text) as unknown;
     } catch {
       return jsonResponse(request, 400, { error: "Invalid JSON body" });
     }
@@ -169,7 +189,7 @@ export default async function handler(request: Request): Promise<Response> {
         console.error("[feedback-app] GitHub issue comment failed:", resp.status, sanitizeUpstreamError(txt));
         return jsonResponse(request, resp.status, { error: "Failed to add comment to issue" });
       }
-      const data = (await resp.json()) as { html_url: string };
+      const data = await readCappedJson<{ html_url: string }>(resp);
       return jsonResponse(request, 200, { html_url: data.html_url, submitter: user.login });
     }
 
@@ -194,7 +214,7 @@ export default async function handler(request: Request): Promise<Response> {
         console.error("[feedback-app] GitHub issue update failed:", resp.status, sanitizeUpstreamError(txt));
         return jsonResponse(request, resp.status, { error: "Failed to update issue state" });
       }
-      const data = (await resp.json()) as { html_url: string; state: string };
+      const data = await readCappedJson<{ html_url: string; state: string }>(resp);
       return jsonResponse(request, 200, { html_url: data.html_url, state: data.state, submitter: user.login });
     }
 
@@ -221,7 +241,7 @@ export default async function handler(request: Request): Promise<Response> {
       console.error("[feedback-app] GitHub issue create failed:", resp.status, sanitizeUpstreamError(txt));
       return jsonResponse(request, resp.status, { error: "Failed to create issue" });
     }
-    const data = (await resp.json()) as { id: number; number: number; html_url: string };
+    const data = await readCappedJson<{ id: number; number: number; html_url: string }>(resp);
 
     let warning: string | undefined;
     if (typeof payload.parentIssueNumber === "number" && payload.parentIssueNumber > 0) {

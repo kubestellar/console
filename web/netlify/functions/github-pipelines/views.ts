@@ -30,7 +30,7 @@ import {
   FAILURES_LIMIT,
   LOG_TAIL_LINES,
 } from "./constants";
-import { gh } from "./fetchers";
+import { gh, readCappedJson } from "./fetchers";
 import { isValidRepo, jsonResponse } from "./helpers";
 import { normalizeRun } from "./transform";
 import { readHistory, writeHistory, mergeIntoHistory } from "./history";
@@ -55,7 +55,7 @@ export async function buildPulse(
     : `/repos/${targetRepo}/actions/runs?per_page=${MATRIX_DEFAULT_DAYS}`;
   const res = await gh(apiPath, token);
   if (!res.ok) throw new Error(`pulse: GitHub ${res.status}`);
-  const data = (await res.json()) as { workflow_runs: Array<Record<string, unknown>> };
+  const data = await readCappedJson<{ workflow_runs: Array<Record<string, unknown>> }>(res);
   const runs = (data.workflow_runs ?? []).map((r) => normalizeRun(r, targetRepo));
   mergeIntoHistory(await readHistory(store), runs); // side-effect updates below
 
@@ -68,12 +68,12 @@ export async function buildPulse(
   try {
     const rel = await gh(`/repos/${targetRepo}/releases?per_page=${RELEASE_OVERFETCH}`, token);
     if (rel.ok) {
-      const releases = (await rel.json()) as Array<{
+      const releases = await readCappedJson<Array<{
         tag_name?: string;
         published_at?: string;
         created_at?: string;
         draft?: boolean;
-      }>;
+      }>>(rel);
       // Include drafts — nightly releases on this repo are created as drafts
       // and never promoted, so filtering them out leaves zero candidates.
       // Sort by published_at when available, falling back to created_at for
@@ -97,7 +97,7 @@ export async function buildPulse(
   try {
     const tagRes = await gh(`/repos/${targetRepo}/tags?per_page=10`, token);
     if (tagRes.ok) {
-      const tags = (await tagRes.json()) as Array<{ name: string }>;
+      const tags = await readCappedJson<Array<{ name: string }>>(tagRes);
       const match = (tags || []).find((t) => NIGHTLY_TAG_RE.test(t.name));
       if (match && (!releaseTag || match.name > releaseTag)) {
         releaseTag = match.name;
@@ -138,7 +138,7 @@ export async function buildPulse(
   try {
     const wkRes = await gh(`/repos/${targetRepo}/releases/latest`, token);
     if (wkRes.ok) {
-      const wk = (await wkRes.json()) as { tag_name?: string };
+      const wk = await readCappedJson<{ tag_name?: string }>(wkRes);
       if (wk.tag_name) weeklyTag = wk.tag_name;
     }
   } catch {
@@ -192,7 +192,7 @@ export async function buildMatrix(
           token
         );
         if (!res.ok) break;
-        const data = (await res.json()) as { workflow_runs: Array<Record<string, unknown>> };
+        const data = await readCappedJson<{ workflow_runs: Array<Record<string, unknown>> }>(res);
         const runs = data.workflow_runs ?? [];
         for (const r of runs) {
           freshRuns.push(normalizeRun(r, repo));
@@ -257,11 +257,11 @@ export async function buildFlow(
       ]);
       const merged: Record<string, unknown>[] = [];
       if (inProgress.ok) {
-        const d = (await inProgress.json()) as { workflow_runs: Array<Record<string, unknown>> };
+        const d = await readCappedJson<{ workflow_runs: Array<Record<string, unknown>> }>(inProgress);
         merged.push(...(d.workflow_runs ?? []));
       }
       if (queued.ok) {
-        const d = (await queued.json()) as { workflow_runs: Array<Record<string, unknown>> };
+        const d = await readCappedJson<{ workflow_runs: Array<Record<string, unknown>> }>(queued);
         merged.push(...(d.workflow_runs ?? []));
       }
       const runs = merged.map((r) => normalizeRun(r, repo));
@@ -270,7 +270,7 @@ export async function buildFlow(
       for (const r of runs) {
         const jobsRes = await gh(`/repos/${repo}/actions/runs/${r.id}/jobs`, token);
         if (!jobsRes.ok) continue;
-        const jobsData = (await jobsRes.json()) as { jobs: Array<Record<string, unknown>> };
+        const jobsData = await readCappedJson<{ jobs: Array<Record<string, unknown>> }>(jobsRes);
         const jobs: Job[] = (jobsData.jobs ?? []).map((j) => ({
           id: Number(j.id),
           name: String(j.name ?? ""),
@@ -318,7 +318,7 @@ export async function buildFailures(
         token
       );
       if (!res.ok) continue;
-      const data = (await res.json()) as { workflow_runs: Array<Record<string, unknown>> };
+      const data = await readCappedJson<{ workflow_runs: Array<Record<string, unknown>> }>(res);
       for (const raw of data.workflow_runs ?? []) {
         const r = normalizeRun(raw, repo);
         const created = new Date(r.createdAt).getTime();
@@ -351,7 +351,7 @@ export async function buildFailures(
       try {
         const res = await gh(`/repos/${row.repo}/actions/runs/${row.runId}/jobs`, token);
         if (!res.ok) return;
-        const data = (await res.json()) as { jobs: Array<Record<string, unknown>> };
+        const data = await readCappedJson<{ jobs: Array<Record<string, unknown>> }>(res);
         for (const j of data.jobs ?? []) {
           if (j.conclusion !== "failure") continue;
           const steps = (j.steps as Array<Record<string, unknown>>) ?? [];
