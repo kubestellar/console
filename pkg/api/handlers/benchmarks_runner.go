@@ -151,20 +151,20 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 
 	var (
 		mu            sync.Mutex
-		allReports    []BenchmarkReport
+		allReports    = make([]BenchmarkReport, 0)
 		totalFailures int
 		wg            sync.WaitGroup
-		sem           = make(chan struct{}, driveFetchConcurrency)
-		innerSem      = make(chan struct{}, driveFetchConcurrency)
+		experimentSem = make(chan struct{}, driveFetchConcurrency)
+		runSem        = make(chan struct{}, driveFetchConcurrency)
 	)
 
 	for _, item := range experiments {
 		item := item
 		wg.Add(1)
-		sem <- struct{}{}
+		experimentSem <- struct{}{}
 		safego.Go(func() {
 			defer wg.Done()
-			defer func() { <-sem }()
+			defer func() { <-experimentSem }()
 
 			runFolders, listErr := h.listDriveFolder(ctx, item.ID)
 			if listErr != nil {
@@ -182,10 +182,10 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 				}
 				runItem := runItem
 				innerWg.Add(1)
-				innerSem <- struct{}{}
+				runSem <- struct{}{}
 				safego.Go(func() {
 					defer innerWg.Done()
-					defer func() { <-innerSem }()
+					defer func() { <-runSem }()
 
 					reports, failures, runErr := h.fetchRunFolder(ctx, runItem.ID, item.Name, runItem.Name)
 					if runErr != nil {

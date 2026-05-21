@@ -203,11 +203,14 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
 
+			sem := make(chan struct{}, maxConcurrentClusterQueries)
 			for _, cl := range clusters {
 				wg.Add(1)
-				safego.Go(func() {
+				clusterName := cl.Name
+				sem <- struct{}{}
+				safego.GoWith("mcp-cluster/nodes/"+clusterName, func() {
+					defer func() { <-sem }()
 					defer wg.Done()
-					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -292,7 +295,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 				perClusterLimit = 10
 			}
 
-			// Query clusters in parallel with 5 second timeout per cluster
+			// Query clusters with bounded concurrency and a per-cluster timeout.
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			allEvents := make([]k8s.Event, 0)
@@ -302,11 +305,14 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
 
+			sem := make(chan struct{}, maxConcurrentClusterQueries)
 			for _, cl := range clusters {
 				wg.Add(1)
-				safego.Go(func() {
+				clusterName := cl.Name
+				sem <- struct{}{}
+				safego.GoWith("mcp-cluster/events/"+clusterName, func() {
+					defer func() { <-sem }()
 					defer wg.Done()
-					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -406,11 +412,14 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
 
+			sem := make(chan struct{}, maxConcurrentClusterQueries)
 			for _, cl := range clusters {
 				wg.Add(1)
-				safego.Go(func() {
+				clusterName := cl.Name
+				sem <- struct{}{}
+				safego.GoWith("mcp-cluster/warnings/"+clusterName, func() {
+					defer func() { <-sem }()
 					defer wg.Done()
-					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -485,11 +494,14 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 			clusterCtx, clusterCancel := context.WithCancel(c.Context())
 			defer clusterCancel()
 
+			sem := make(chan struct{}, maxConcurrentClusterQueries)
 			for _, cl := range clusters {
 				wg.Add(1)
-				safego.Go(func() {
+				clusterName := cl.Name
+				sem <- struct{}{}
+				safego.GoWith("mcp-cluster/security/"+clusterName, func() {
+					defer func() { <-sem }()
 					defer wg.Done()
-					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -546,11 +558,14 @@ func (h *MCPHandlers) GetNamespacesOverview(c *fiber.Ctx) error {
 	clusterCtx, clusterCancel := context.WithCancel(c.Context())
 	defer clusterCancel()
 
+	sem := make(chan struct{}, maxConcurrentClusterQueries)
 	for _, cl := range clusters {
 		wg.Add(1)
-		safego.Go(func() {
+		clusterName := cl.Name
+		sem <- struct{}{}
+		safego.GoWith("mcp-cluster/namespaces/"+clusterName, func() {
+			defer func() { <-sem }()
 			defer wg.Done()
-			clusterName := cl.Name
 			ctx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
 			defer cancel()
 
