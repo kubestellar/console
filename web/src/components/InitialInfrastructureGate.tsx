@@ -11,15 +11,33 @@ const INITIAL_HANDSHAKE_TIMEOUT_SECONDS = INITIAL_HANDSHAKE_TIMEOUT_MS / 1000
 const STELLAR_STATE_ENDPOINT = '/api/stellar/state'
 const KAGENT_STATUS_ENDPOINT = '/api/kagent/status'
 
-type HandshakeState = 'loading' | 'ready' | 'error'
+type HandshakeState = 'loading' | 'ready' | 'error' | 'auth-required'
 
 type HandshakeErrorDetail = {
   endpoint: string
   message: string
+  isAuthError?: boolean
 }
 
 interface InitialInfrastructureGateProps {
   children: ReactNode
+}
+
+const isAuthenticationError = (error: unknown): boolean => {
+  if (!error) return false
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  const authErrorPatterns = [
+    'No authentication token',
+    'Token is invalid or expired',
+    'Unauthenticated',
+    'UnauthenticatedError',
+    'UnauthorizedError',
+    'authentication failed',
+    'not authenticated',
+  ]
+  return authErrorPatterns.some(pattern =>
+    errorMessage.toLowerCase().includes(pattern.toLowerCase()),
+  )
 }
 
 export function InitialInfrastructureGate({ children }: InitialInfrastructureGateProps) {
@@ -50,22 +68,30 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
       if (controller.signal.aborted) return
 
       const failures: HandshakeErrorDetail[] = []
+      let hasAuthError = false
+
       if (results[0].status === 'rejected') {
+        const isAuth = isAuthenticationError(results[0].reason)
+        hasAuthError = hasAuthError || isAuth
         failures.push({
           endpoint: STELLAR_STATE_ENDPOINT,
           message: getUserSafeErrorMessage(results[0].reason, t('startupHandshake.unknownError', 'Unknown error')),
+          isAuthError: isAuth,
         })
       }
       if (results[1].status === 'rejected') {
+        const isAuth = isAuthenticationError(results[1].reason)
+        hasAuthError = hasAuthError || isAuth
         failures.push({
           endpoint: KAGENT_STATUS_ENDPOINT,
           message: getUserSafeErrorMessage(results[1].reason, t('startupHandshake.unknownError', 'Unknown error')),
+          isAuthError: isAuth,
         })
       }
 
       if (failures.length > 0) {
         setErrorDetails(failures)
-        setHandshakeState('error')
+        setHandshakeState(hasAuthError ? 'auth-required' : 'error')
         return
       }
 
@@ -102,6 +128,52 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
     )
   }
 
+  if (handshakeState === 'auth-required') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8 max-w-2xl" role="alert">
+          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" aria-hidden="true" />
+          <h2 className="text-lg font-semibold text-foreground mb-2">
+            {t('startupHandshake.authRequiredTitle', 'Authentication Required')}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            {t(
+              'startupHandshake.authRequiredDescription',
+              'Your session has expired or authentication credentials are missing. Please sign in again to continue using the console.',
+            )}
+          </p>
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left mb-6">
+            <h3 className="text-sm font-semibold text-foreground mb-2">
+              {t('startupHandshake.authRecoveryTitle', 'Recovery Steps')}
+            </h3>
+            <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
+              <li>{t('startupHandshake.authRecoveryStep1', 'Click "Reload page" to refresh your session')}</li>
+              <li>{t('startupHandshake.authRecoveryStep2', 'If the issue persists, log out and log in again')}</li>
+              <li>{t('startupHandshake.authRecoveryStep3', 'Verify you have the necessary access permissions')}</li>
+            </ul>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              onClick={() => window.location.reload()}
+              variant="primary"
+              size="md"
+              icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
+            >
+              {t('chunkError.reloadPage', 'Reload page')}
+            </Button>
+            <Button
+              onClick={() => setAttempt(current => current + 1)}
+              variant="secondary"
+              size="md"
+            >
+              {t('actions.retry', 'Retry')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center p-8 max-w-2xl" role="alert">
@@ -118,14 +190,18 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
         </p>
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left">
           <h3 className="text-sm font-semibold text-foreground mb-2">
-            {t('startupHandshake.detailsTitle', 'Backend details')}
+            {t('startupHandshake.detailsTitle', 'Technical details')}
           </h3>
           <ul className="space-y-2 text-xs text-muted-foreground/80 font-mono wrap-break-word whitespace-pre-wrap">
-            {(errorDetails || []).map(({ endpoint, message }) => (
+            {(errorDetails || []).map(({ endpoint, message, isAuthError }) => (
               <li key={endpoint}>
                 <span className="text-foreground">{endpoint}</span>
                 <span className="text-muted-foreground/60"> — </span>
-                <span>{message}</span>
+                <span>
+                  {isAuthError
+                    ? t('startupHandshake.authErrorAbstracted', 'Authentication or session issue detected')
+                    : message}
+                </span>
               </li>
             ))}
           </ul>

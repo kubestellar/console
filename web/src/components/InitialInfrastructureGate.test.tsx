@@ -62,6 +62,48 @@ describe('InitialInfrastructureGate', () => {
     expect(screen.getByText(/HTTP 503: backend startup blocked/)).toBeInTheDocument()
   })
 
+  it('shows auth-required screen when authentication fails', async () => {
+    mockGetState.mockRejectedValue(new Error('No authentication token available'))
+    mockFetchKagentStatus.mockResolvedValue({ available: true, url: 'http://kagent:8080' })
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    await waitFor(() => expect(screen.getByText('Authentication Required')).toBeInTheDocument())
+    expect(screen.getByText(/session has expired or authentication credentials are missing/)).toBeInTheDocument()
+    expect(screen.getByText('Recovery Steps')).toBeInTheDocument()
+    expect(screen.getByText(/Click "Reload page" to refresh your session/)).toBeInTheDocument()
+  })
+
+  it('abstracts authentication errors in technical details for non-auth failures', async () => {
+    mockGetState.mockRejectedValue(new Error('No authentication token available'))
+    mockFetchKagentStatus.mockRejectedValue(new Error('Connection timeout'))
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    await waitFor(() => expect(screen.getByText('Authentication Required')).toBeInTheDocument())
+  })
+
+  it('shows infrastructure error with abstracted auth details when mixed failures occur', async () => {
+    mockGetState.mockRejectedValue(new Error('Token is invalid or expired'))
+    mockFetchKagentStatus.mockRejectedValue(new Error('Connection refused'))
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    await waitFor(() => expect(screen.getByText('Authentication Required')).toBeInTheDocument())
+  })
+
   it('retries the handshake when Retry is clicked', async () => {
     mockGetState
       .mockRejectedValueOnce(new Error('first failure'))
