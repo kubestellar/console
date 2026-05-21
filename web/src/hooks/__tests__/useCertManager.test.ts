@@ -1015,6 +1015,45 @@ describe('useCertManager', () => {
   })
 
   // ========================================================================
+  // Cluster dependency updates
+  // ========================================================================
+
+  describe('cluster dependency updates', () => {
+    it('refetches when reachable cluster names change without changing count', async () => {
+      setClusters('alpha')
+
+      mockKubectlProxy.exec.mockImplementation(async (args: string[], opts: { context: string }) => {
+        if (args[1] === 'crd') return { exitCode: 0, output: 'found' }
+        if (args[1] === 'certificates') {
+          return mockExecJson([
+            makeCertResource(`cert-${opts.context}`, 'default', {
+              readyStatus: 'True',
+              notAfter: new Date(Date.now() + 60 * ONE_DAY_MS).toISOString(),
+            }),
+          ])
+        }
+        if (args[1] === 'issuers') return mockExecJson([])
+        if (args[1] === 'clusterissuers') return mockExecJson([])
+        return { exitCode: 1, output: '' }
+      })
+
+      const { useCertManager } = await loadModule()
+      const { result, rerender } = renderHook(() => useCertManager())
+
+      await waitFor(() => {
+        expect(result.current.certificates.map(c => c.cluster)).toEqual(['alpha'])
+      })
+
+      setClusters('beta')
+      rerender()
+
+      await waitFor(() => {
+        expect(result.current.certificates.map(c => c.cluster)).toEqual(['beta'])
+      })
+    })
+  })
+
+  // ========================================================================
   // Non-reachable cluster filtering
   // ========================================================================
 

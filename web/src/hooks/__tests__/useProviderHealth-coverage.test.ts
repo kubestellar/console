@@ -454,4 +454,16 @@ describe('useProviderHealth hook integration', () => {
 
     expect(mockCacheResult.refetch).toHaveBeenCalledTimes(1)
   })
+
+  it('refetches when cluster identity changes without changing count', () => {
+    mockClusters = [{ name: 'shared-cluster', server: 'https://eks.amazonaws.com' }]
+    const { rerender } = renderHook(() => useProviderHealth())
+
+    expect(mockCacheResult.refetch).not.toHaveBeenCalled()
+
+    mockClusters = [{ name: 'shared-cluster', server: 'https://gke.googleapis.com' }]
+    rerender()
+
+    expect(mockCacheResult.refetch).toHaveBeenCalledTimes(1)
+  })
 })

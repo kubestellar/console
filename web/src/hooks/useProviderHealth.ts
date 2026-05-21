@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useCache } from '../lib/cache'
 import { useClusters } from './mcp/clusters'
 import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
@@ -234,6 +234,20 @@ const DEMO_PROVIDERS: ProviderHealthInfo[] = [
   { id: 'oci', name: 'Oracle OKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.oci, detail: '1 cluster' },
 ]
 
+const PROVIDER_HEALTH_REFRESH_INTERVAL_MS = 60_000
+
+function getClusterDependencyKey(clusters: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): string {
+  return [...(clusters || [])]
+    .map(cluster => [
+      cluster.name,
+      cluster.server || '',
+      cluster.user || '',
+      [...(cluster.namespaces || [])].sort().join('|'),
+    ].join('::'))
+    .sort()
+    .join(',')
+}
+
 /** Fetch AI + Cloud providers and their health status */
 async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
   const result: ProviderHealthInfo[] = isInClusterMode()
@@ -277,6 +291,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
  */
 export function useProviderHealth() {
   const { deduplicatedClusters: clusters } = useClusters()
+  const clusterDependencyKey = useMemo(() => getClusterDependencyKey(clusters), [clusters])
 
   // Always use a stable cache key — refetch when the cluster set changes
   const clustersRef = useRef(clusters)
@@ -289,20 +304,20 @@ export function useProviderHealth() {
     demoData: DEMO_PROVIDERS,
     demoWhenEmpty: !isInClusterMode(),
     fetcher: () => fetchProviders(clustersRef.current),
-    refreshInterval: 60_000 })
+    refreshInterval: PROVIDER_HEALTH_REFRESH_INTERVAL_MS })
 
-  // Re-fetch when the cluster count changes (cloud provider list depends on clusters)
-  const prevClusterCountRef = useRef<number | null>(null)
+  // Re-fetch when the cluster identity changes (cloud provider list depends on clusters)
+  const prevClusterDependencyKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    if (prevClusterCountRef.current === null) {
-      prevClusterCountRef.current = clusters.length
+    if (prevClusterDependencyKeyRef.current === null) {
+      prevClusterDependencyKeyRef.current = clusterDependencyKey
       return
     }
-    if (clusters.length !== prevClusterCountRef.current) {
-      prevClusterCountRef.current = clusters.length
+    if (clusterDependencyKey !== prevClusterDependencyKeyRef.current) {
+      prevClusterDependencyKeyRef.current = clusterDependencyKey
       void cacheResult.refetch()
     }
-  }, [clusters.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cacheResult.refetch, clusterDependencyKey])
 
   const aiProviders = (cacheResult.data || []).filter(p => p.category === 'ai')
   const cloudProviders = (cacheResult.data || []).filter(p => p.category === 'cloud')

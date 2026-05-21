@@ -218,6 +218,10 @@ function getDemoIssuers(): Issuer[] {
   ]
 }
 
+function getClusterDependencyKey(clusters: string[]): string {
+  return [...(clusters || [])].sort().join(',')
+}
+
 export function useCertManager() {
   const { isDemoMode: demoMode } = useDemoMode()
   const { deduplicatedClusters: allClusters } = useClusters()
@@ -241,10 +245,18 @@ export function useCertManager() {
   const fetchInProgress = useRef(false)
 
   // Filter to reachable clusters
-  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
+  const clusters = useMemo(
+    () => (allClusters || []).filter(c => c.reachable === true).map(c => c.name),
+    [allClusters],
+  )
+  const clusterDependencyKey = useMemo(() => getClusterDependencyKey(clusters), [clusters])
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
 
   const refetch = useCallback(async (silent = false) => {
-    if (clusters.length === 0) {
+    const currentClusters = clustersRef.current
+
+    if (currentClusters.length === 0) {
       setIsDemoData(false)
       setIsLoading(false)
       return
@@ -267,7 +279,7 @@ export function useCertManager() {
     let certManagerFound = false
 
     try {
-      for (const cluster of (clusters || [])) {
+      for (const cluster of (currentClusters || [])) {
         try {
           // First check if cert-manager CRD exists
           const crdCheck = await kubectlProxy.exec(
@@ -395,7 +407,7 @@ export function useCertManager() {
       setIsRefreshing(false)
       fetchInProgress.current = false
     }
-  }, [clusters])
+  }, [clusterDependencyKey])
 
   // Return demo data when in demo mode
   useEffect(() => {
@@ -419,7 +431,7 @@ export function useCertManager() {
     } else {
       setIsLoading(false)
     }
-  }, [clusters.length, demoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clusterDependencyKey, demoMode, refetch])
 
   // Auto-refresh (only in live mode)
   useEffect(() => {
