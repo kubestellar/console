@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { X, Upload, FileText } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { TextArea } from '../../ui/TextArea'
@@ -31,7 +31,7 @@ const validateQASM = (content: string): { valid: boolean; error?: string } => {
   return { valid: true }
 }
 
-export function CustomQASMModal({
+export const CustomQASMModal = React.memo(function CustomQASMModal({
   isOpen,
   onSubmit,
   onCancel,
@@ -41,6 +41,12 @@ export function CustomQASMModal({
   const [content, setContent] = useState(initialContent)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Stable refs for callbacks to prevent effect re-runs on every parent render
+  const onCancelRef = useRef(onCancel)
+  const onSubmitRef = useRef(onSubmit)
+  useEffect(() => { onCancelRef.current = onCancel }, [onCancel])
+  useEffect(() => { onSubmitRef.current = onSubmit }, [onSubmit])
 
   const handlePasteChange = (value: string) => {
     setContent(value)
@@ -73,22 +79,22 @@ export function CustomQASMModal({
     reader.readAsText(file)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     const validation = validateQASM(content)
     if (!validation.valid) {
       setError(validation.error || 'Invalid QASM')
       return
     }
-    onSubmit(content)
+    onSubmitRef.current(content)
     setContent('')
     setError(null)
-  }
+  }, [content])
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setContent(initialContent)
     setError(null)
-    onCancel()
-  }
+    onCancelRef.current()
+  }, [initialContent])
 
   useEffect(() => {
     if (!isOpen) return
@@ -97,13 +103,23 @@ export function CustomQASMModal({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, initialContent, onCancel])
+  }, [isOpen, handleCancel])
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col shadow-lg">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        e.stopPropagation()
+        if (e.target === e.currentTarget) handleCancel()
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Custom QASM Circuit</h2>
@@ -230,4 +246,4 @@ export function CustomQASMModal({
       </div>
     </div>
   )
-}
+})

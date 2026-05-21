@@ -111,22 +111,25 @@ export const QuantumControlPanel: React.FC = () => {
     }
 
     if (!hasInitializedControlRef.current) {
-      const backendInfo = status.backend_info || { name: control.backend, shots: control.shots }
-      setControl(prev => ({
-        ...prev,
-        backend: backendInfo?.name || prev.backend,
-        shots: backendInfo?.shots || prev.shots,
-        loop_mode: status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode,
-      }))
+      setControl(prev => {
+        const backendInfo = status.backend_info || { name: prev.backend, shots: prev.shots }
+        return {
+          ...prev,
+          backend: backendInfo?.name || prev.backend,
+          shots: backendInfo?.shots || prev.shots,
+          loop_mode: status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode,
+        }
+      })
       hasInitializedControlRef.current = true
       return
     }
 
-    setControl(prev => ({
-      ...prev,
-      loop_mode: status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode,
-    }))
-  }, [control.backend, control.shots, isAuthenticated, status])
+    setControl(prev => {
+      const newLoopMode = status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode
+      if (prev.loop_mode === newLoopMode) return prev
+      return { ...prev, loop_mode: newLoopMode }
+    })
+  }, [isAuthenticated, status])
 
   // Open IBM Quantum credentials dialog via drilldown
   const handleOpenCredentialsDialog = useCallback(() => {
@@ -306,6 +309,18 @@ export const QuantumControlPanel: React.FC = () => {
       setMutationError(err instanceof Error ? err.message : 'Failed to toggle loop mode')
     }
   }
+
+  // Stable callbacks for CustomQASMModal to prevent re-render cascades
+  const handleCustomQasmSubmit = useCallback((content: string) => {
+    setCustomQasmContent(content)
+    setControl(prev => ({ ...prev, qasm_file: 'custom' }))
+    setShowCustomQasmModal(false)
+  }, [])
+
+  const handleCustomQasmCancel = useCallback(() => {
+    setControl(prev => ({ ...prev, qasm_file: previousQasmFile }))
+    setShowCustomQasmModal(false)
+  }, [previousQasmFile])
 
   const displayStatus = status || DEMO_STATUS
   const isHealthy = displayStatus.status === 'ready' || displayStatus.loop_running === true
@@ -718,15 +733,8 @@ export const QuantumControlPanel: React.FC = () => {
       <CustomQASMModal
           isOpen={showCustomQasmModal}
           initialContent={customQasmContent}
-          onSubmit={(content) => {
-            setCustomQasmContent(content)
-            setControl(prev => ({ ...prev, qasm_file: 'custom' }))
-            setShowCustomQasmModal(false)
-          }}
-          onCancel={() => {
-            setControl(prev => ({ ...prev, qasm_file: previousQasmFile }))
-            setShowCustomQasmModal(false)
-          }}
+          onSubmit={handleCustomQasmSubmit}
+          onCancel={handleCustomQasmCancel}
       />
     </div>
   )
