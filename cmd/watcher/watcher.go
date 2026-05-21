@@ -301,7 +301,7 @@ func handleConn(conn net.Conn, tlsCfg *tls.Config, srv *http.Server, listenPort 
 	if first[0] == 0x16 {
 		tlsConn := tls.Server(newPeekedConn(conn, br), tlsCfg)
 		srv.ConnState = nil
-		safego.GoWith("watcher/http-serve", func() { srv.Serve(&singleConnListener{conn: tlsConn}) })
+		safego.GoWith("watcher/http-serve", func() { srv.Serve(newSingleConnListener(tlsConn)) })
 		return
 	}
 
@@ -331,19 +331,33 @@ func (c *peekedConn) Read(b []byte) (int, error) {
 }
 
 type singleConnListener struct {
-	conn net.Conn
-	done bool
+	conn   net.Conn
+	done   chan struct{}
+	served bool
+}
+
+func newSingleConnListener(conn net.Conn) *singleConnListener {
+	return &singleConnListener{conn: conn, done: make(chan struct{})}
 }
 
 func (l *singleConnListener) Accept() (net.Conn, error) {
-	if l.done {
-		select {}
+	if l.served {
+		<-l.done
+		return nil, net.ErrClosed
 	}
-	l.done = true
+	l.served = true
 	return l.conn, nil
 }
 
-func (l *singleConnListener) Close() error   { return nil }
+func (l *singleConnListener) Close() error {
+	select {
+	case <-l.done:
+	default:
+		close(l.done)
+	}
+	return nil
+}
+
 func (l *singleConnListener) Addr() net.Addr { return l.conn.LocalAddr() }
 
 func ensureTLSCert() (certFile, keyFile string, err error) {
