@@ -60,9 +60,15 @@ export function Kubectl() {
 
   // Set default context when clusters are loaded — prefer the user's current-context
   useEffect(() => {
-    if (clusters.length > 0 && !selectedContext) {
+    if (!selectedContext) {
       const currentCtx = clusters.find(c => c.isCurrent)
-      setSelectedContext(currentCtx ? currentCtx.name : clusters[0].name)
+      const firstCluster = clusters[0]
+
+      if (currentCtx) {
+        setSelectedContext(currentCtx.name)
+      } else if (firstCluster) {
+        setSelectedContext(firstCluster.name)
+      }
     }
   }, [clusters, selectedContext])
 
