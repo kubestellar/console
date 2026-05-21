@@ -51,7 +51,6 @@ jobs:
       github.event.comment.user.type != 'Bot' &&
       contains(github.event.comment.body, '@kubestellar-hive')
     uses: ./.github/workflows/hive-trust-gate.yml
-    timeout-minutes: 5
     permissions:
       contents: read
       issues: write

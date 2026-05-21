@@ -44,7 +44,6 @@ env:
 jobs:
   helm-test:
     uses: ./.github/workflows/helm-test.yml
-    timeout-minutes: 20
 
   determine_version:
     runs-on: ubuntu-latest
