@@ -1,5 +1,8 @@
 /**
  * useTimeoutFlag / useConditionalTimeout — timer behavior used by CardWrapper.
+ *
+ * Run from web/:  npm run test:card-wrapper
+ * (Do not run npx vitest from repo root — that skips vite.config.ts jsdom + @/ aliases.)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
@@ -13,6 +16,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.clearAllTimers()
   vi.useRealTimers()
 })
 

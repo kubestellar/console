@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
+    "test:card-wrapper": "vitest run src/hooks/__tests__/useTimeoutFlag.test.ts src/components/cards/__tests__/CardWrapper.test.tsx",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:e2e": "npm run build && playwright test",

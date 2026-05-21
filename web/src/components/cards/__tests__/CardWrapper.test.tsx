@@ -3,11 +3,14 @@
  *
  * PR A: demo badge, failure banner, collapse persistence, expand modal sizing,
  * mode-switch skeleton. Lazy modals / snooze / missions integration deferred to PR B.
+ *
+ * Run from web/:  npm run test:card-wrapper
+ * (Do not run npx vitest from repo root — that skips vite.config.ts jsdom + @/ aliases.)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import React from 'react'
+import React, { useContext, useLayoutEffect } from 'react'
 import { isDemoMode } from '../../../lib/demoMode'
 import { CardWrapper } from '../CardWrapper'
 import { CardDataReportContext, type CardDataState } from '../CardDataContext'
@@ -115,8 +118,8 @@ function renderCardWrapper(
 }
 
 function CardStateReporter({ state }: { state: CardDataState }) {
-  const ctx = React.use(CardDataReportContext)
-  React.useLayoutEffect(() => {
+  const ctx = useContext(CardDataReportContext)
+  useLayoutEffect(() => {
     ctx.report(state)
   }, [ctx, state])
   return <div data-testid="card-child">{CHILD_CONTENT_TEXT}</div>
@@ -248,8 +251,8 @@ describe('CardWrapper', () => {
       await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
 
       const modal = await screen.findByTestId('drilldown-modal')
-      expect(modal.className).toContain('max-w-[95vw]')
-      expect(modal.className).toContain('95vh')
+      expect(modal).toHaveClass('max-w-[95vw]')
+      expect(modal).toHaveClass('min-h-[95vh]')
     })
 
     it('uses xl modal size for LARGE_EXPANDED_CARDS', async () => {
@@ -259,8 +262,8 @@ describe('CardWrapper', () => {
       await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
 
       const modal = await screen.findByTestId('drilldown-modal')
-      expect(modal.className).toContain('max-w-6xl')
-      expect(modal.className).toContain('85vh')
+      expect(modal).toHaveClass('max-w-6xl')
+      expect(modal).toHaveClass('min-h-[85vh]')
     })
   })
 
