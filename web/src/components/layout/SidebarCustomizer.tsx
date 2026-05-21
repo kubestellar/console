@@ -185,16 +185,16 @@ const ROUTE_ICONS: Record<string, string> = {
  */
 function buildKnownRoutes(t: (key: string) => string): KnownRoute[] {
   const routes: KnownRoute[] = []
-  
+
   for (const [href, icon] of Object.entries(ROUTE_ICONS)) {
-    const key = `sidebar.routes["${href}"]`
+    const key = `sidebar.routes.${href}`
     const name = t(`${key}.name`)
     const description = t(`${key}.description`)
     const category = t(`${key}.category`)
-    
+
     routes.push({ href, name, description, icon, category })
   }
-  
+
   return routes
 }
 
