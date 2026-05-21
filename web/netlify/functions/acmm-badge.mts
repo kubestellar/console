@@ -18,6 +18,8 @@ import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATH
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const API_TIMEOUT_MS = 15_000;
+/** Maximum upstream response size (512 KB — tree JSON is typically < 200 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 const BLOB_CACHE_STORE = "acmm-scan";
 const BLOB_CACHE_TTL_MS = 60 * 60 * 1000;
 const LEVEL_COMPLETION_THRESHOLD = 0.7;
@@ -211,7 +213,9 @@ async function fetchDetectedIdsDirect(repo: string, token: string): Promise<stri
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
   if (!repoRes.ok) throw new Error(`repo API ${repoRes.status}`);
-  const repoInfo = (await repoRes.json()) as { default_branch?: string };
+  const repoRaw = await repoRes.text();
+  if (repoRaw.length > MAX_RESPONSE_BYTES) throw new Error("repo API response too large");
+  const repoInfo = JSON.parse(repoRaw) as { default_branch?: string };
   const branch = repoInfo.default_branch || "main";
 
   const res = await fetch(
@@ -222,7 +226,9 @@ async function fetchDetectedIdsDirect(repo: string, token: string): Promise<stri
     },
   );
   if (!res.ok) throw new Error(`tree API ${res.status}`);
-  const body = (await res.json()) as { tree?: { path: string }[] };
+  const treeRaw = await res.text();
+  if (treeRaw.length > MAX_RESPONSE_BYTES) throw new Error("tree API response too large");
+  const body = JSON.parse(treeRaw) as { tree?: { path: string }[] };
   const paths = new Set((body.tree || []).map((e) => e.path));
 
   const detected: string[] = [];

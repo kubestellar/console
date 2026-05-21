@@ -25,6 +25,8 @@ const PER_PAGE = 100;
 const MAX_PAGES = 5;
 /** Request timeout for GitHub API calls (30 seconds) */
 const API_TIMEOUT_MS = 30_000;
+/** Maximum upstream response size per page (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 /** Milliseconds per day */
 const MS_PER_DAY = 86_400_000;
 /** Default lookback in days */
@@ -82,7 +84,9 @@ async function fetchAllPages(
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (!resp.ok) break;
-    const data = (await resp.json()) as Record<string, unknown>[];
+    const rawText = await resp.text();
+    if (rawText.length > MAX_RESPONSE_BYTES) break;
+    const data = JSON.parse(rawText) as Record<string, unknown>[];
     if (!Array.isArray(data) || data.length === 0) break;
     allItems.push(...data);
     if (data.length < PER_PAGE) break;

@@ -22,6 +22,9 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
+/** Maximum upstream response size (512 KB — directory listings are typically < 50 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
+
 /** Number of retry attempts for transient upstream errors (#10966) */
 const MAX_RETRIES = 2;
 /** Base delay between retries in milliseconds */
@@ -116,7 +119,16 @@ export default async (request: Request): Promise<Response> => {
       return jsonResponse(corsHeaders, { error: "upstream request failed", code }, 502);
     }
 
-    const ghEntries = (await resp.json()) as GitHubEntry[];
+    // Guard against oversized upstream responses
+    const contentLength = parseInt(resp.headers.get("content-length") ?? "0", 10);
+    if (contentLength > MAX_RESPONSE_BYTES) {
+      return jsonResponse(corsHeaders, { error: "upstream response too large" }, 502);
+    }
+    const rawText = await resp.text();
+    if (rawText.length > MAX_RESPONSE_BYTES) {
+      return jsonResponse(corsHeaders, { error: "upstream response too large" }, 502);
+    }
+    const ghEntries = JSON.parse(rawText) as GitHubEntry[];
 
     /** Files to hide from the browser — infrastructure/metadata, not missions */
     const HIDDEN_FILES = new Set([".gitkeep", "index.json", "search-state.json"]);
