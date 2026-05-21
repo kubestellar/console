@@ -28,6 +28,8 @@ const ACTIVE_BUCKET_WINDOW = Math.ceil(SESSION_TTL_MS / SESSION_BUCKET_MS) + 1;
 const CLEANUP_BUCKET_CURSOR_KEY = "cleanup-bucket-cursor";
 const PRESENCE_CLEANUP_DELETE_LIMIT = 100;
 const MAX_SESSION_ID_LEN = 64;
+/** Maximum allowed request body size (bytes). */
+const MAX_BODY_BYTES = 4_096;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 const PRESENCE_WRITE_RATE_LIMIT_MAX_REQUESTS = 120;
 const PRESENCE_WRITE_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -192,6 +194,10 @@ export default async (req: Request) => {
 
     let sessionId: string | undefined;
     try {
+      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+      if (contentLength > MAX_BODY_BYTES) {
+        return new Response("Payload too large", { status: 413, headers });
+      }
       const body = await req.json();
       if (isValidSessionId(body.sessionId)) {
         sessionId = body.sessionId;
