@@ -51,6 +51,13 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
   const [errorDetails, setErrorDetails] = useState<HandshakeErrorDetail[]>([])
 
   useEffect(() => {
+    // In demo mode there is no real backend — skip the handshake entirely
+    // so the hosted demo (console.kubestellar.io) renders immediately.
+    if (isDemoMode()) {
+      setHandshakeState('ready')
+      return
+    }
+
     const controller = new AbortController()
     setHandshakeState('loading')
     setErrorDetails([])
