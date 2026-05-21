@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+var originBypassAllowedPaths = map[string]struct{}{
+	"/status": {},
+}
+
 // checkOrigin validates the Origin header against allowed origins
 // SECURITY: This prevents malicious websites from connecting to the local agent
 func (s *Server) checkOrigin(r *http.Request) bool {
@@ -39,6 +43,11 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 // (#3895). To prevent spoofed Upgrade headers from enabling the query-param
 // fallback (#4264), we verify all three headers that browsers always send for
 // real WebSocket handshakes: Upgrade, Connection, and Sec-WebSocket-Key.
+//
+// When KC_AGENT_TOKEN is auto-generated, trusted browser origins may bypass the
+// Bearer token requirement only on a tiny allow-list of safe read-only paths.
+// This preserves the local status probe without granting origin-based access to
+// cluster data, settings, or mutating endpoints (#15141).
 func (s *Server) validateToken(r *http.Request) bool {
 	// If no token configured, skip token validation
 	if s.agentToken == "" {
@@ -55,14 +64,15 @@ func (s *Server) validateToken(r *http.Request) bool {
 	}
 
 	// When KC_AGENT_TOKEN was NOT explicitly set (auto-generated), allow
-	// requests from browser pages served by trusted origins. Since kc-agent
-	// binds to loopback only, CORS is the effective access control for
-	// browser clients. This handles dev mode and standalone usage where the
-	// token isn't shared with the backend (#11120).
-	if !s.tokenExplicit {
+	// requests from browser pages served by trusted origins ONLY for a tiny
+	// read-only allow-list. Origin alone must never authorize access to
+	// cluster data, settings, or other sensitive endpoints (#15141).
+	if !s.tokenExplicit && r.Method == http.MethodGet {
 		origin := r.Header.Get("Origin")
 		if origin != "" && s.isAllowedOrigin(origin) {
-			return true
+			if _, ok := originBypassAllowedPaths[r.URL.Path]; ok {
+				return true
+			}
 		}
 	}
 

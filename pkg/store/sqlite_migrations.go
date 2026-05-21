@@ -2,10 +2,16 @@ package store
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"strings"
 )
+
+func migrationLogID(version int, migration string) string {
+	sum := sha256.Sum256([]byte(migration))
+	return fmt.Sprintf("v%d-%x", version, sum[:4])
+}
 
 // migrate creates the database schema
 func (s *SQLiteStore) migrate() error {
@@ -493,7 +499,6 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_notifications ADD COLUMN auto_resolution_status TEXT NOT NULL DEFAULT ''",
 		"ALTER TABLE stellar_notifications ADD COLUMN auto_resolution_detail TEXT NOT NULL DEFAULT ''",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_notif_read ON stellar_notifications(read, created_at DESC)",
-		"ALTER TABLE stellar_notifications ADD COLUMN batch_timestamp DATETIME",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_notifications_type_batch ON stellar_notifications(type, batch_timestamp DESC)",
 
 		"ALTER TABLE stellar_memory_entries ADD COLUMN embedding BLOB",
@@ -685,6 +690,8 @@ func (s *SQLiteStore) migrate() error {
 		)`,
 	}
 	for i, migration := range migrations {
+		version := i + 1
+		migrationID := migrationLogID(version, migration)
 		if _, err := s.db.ExecContext(ctx, migration); err != nil {
 			// #6291 / #6614: distinguish "column already exists"
 			// (expected, idempotent) from other errors (DB locked,
@@ -697,7 +704,7 @@ func (s *SQLiteStore) migrate() error {
 			// the underlying problem before serving traffic.
 			if strings.Contains(err.Error(), "duplicate column name") {
 				slog.Debug("[SQLite] migration already applied",
-					"migration", migration, "version", i+1)
+					"migration_id", migrationID, "version", version)
 				continue
 			}
 			// #14974: UNIQUE INDEX creation can fail when existing rows
@@ -706,24 +713,24 @@ func (s *SQLiteStore) migrate() error {
 			if strings.Contains(migration, "CREATE UNIQUE INDEX") &&
 				strings.Contains(err.Error(), "UNIQUE constraint failed") {
 				slog.Warn("[SQLite] deduplicating data before retrying unique index",
-					"migration", migration, "version", i+1)
-				if fixErr := s.deduplicateBeforeUniqueIndex(ctx, migration); fixErr != nil {
-					slog.Error("[SQLite] deduplication failed", "error", fixErr)
-					return fmt.Errorf("migration %d %q failed after dedup: %w", i+1, migration, err)
+					"migration_id", migrationID, "version", version)
+				if fixErr := s.deduplicateBeforeUniqueIndex(ctx, migrationID, migration); fixErr != nil {
+					slog.Error("[SQLite] deduplication failed", "migration_id", migrationID, "error", fixErr)
+					return fmt.Errorf("migration %s failed after dedup: %w", migrationID, err)
 				}
 				if _, retryErr := s.db.ExecContext(ctx, migration); retryErr != nil {
 					slog.Error("[SQLite] migration still fails after dedup",
-						"migration", migration, "error", retryErr)
-					return fmt.Errorf("migration %d %q failed: %w", i+1, migration, retryErr)
+						"migration_id", migrationID, "error", retryErr)
+					return fmt.Errorf("migration %s failed: %w", migrationID, retryErr)
 				}
-				slog.Info("[SQLite] migration succeeded after deduplication", "version", i+1)
+				slog.Info("[SQLite] migration succeeded after deduplication", "migration_id", migrationID, "version", version)
 				continue
 			}
 			slog.Error("[SQLite] migration failed — refusing to start",
-				"migration", migration, "version", i+1, "error", err)
-			return fmt.Errorf("migration %d %q failed: %w", i+1, migration, err)
+				"migration_id", migrationID, "version", version, "error", err)
+			return fmt.Errorf("migration %s failed: %w", migrationID, err)
 		}
-		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
+		slog.Debug("[SQLite] migration applied", "migration_id", migrationID, "version", version)
 	}
 	if err := s.migrateKBGapsSchema(ctx); err != nil {
 		return fmt.Errorf("migrate kb_query_gaps schema: %w", err)
@@ -746,9 +753,9 @@ func (s *SQLiteStore) migrate() error {
 
 // deduplicateBeforeUniqueIndex fixes duplicate rows that prevent a UNIQUE INDEX
 // from being created. For the stellar_notifications dedupe_key scenario, it
-// assigns UUID-based dedupe_keys to rows with empty '' values that would
+// assigns UUID-based dedupe_keys to rows with empty ” values that would
 // otherwise collide on (user_id, dedupe_key). (#14974)
-func (s *SQLiteStore) deduplicateBeforeUniqueIndex(ctx context.Context, migration string) error {
+func (s *SQLiteStore) deduplicateBeforeUniqueIndex(ctx context.Context, migrationID, migration string) error {
 	if strings.Contains(migration, "idx_stellar_notifications_user_dedupe") {
 		// Assign unique dedupe_key to all rows with empty dedupe_key.
 		// The ID column is already unique, so use it as the dedupe_key fallback.
@@ -763,5 +770,5 @@ func (s *SQLiteStore) deduplicateBeforeUniqueIndex(ctx context.Context, migratio
 		return nil
 	}
 	// Generic case: if other unique indexes fail, log and return error.
-	return fmt.Errorf("no deduplication strategy for: %s", migration)
+	return fmt.Errorf("no deduplication strategy for %s", migrationID)
 }

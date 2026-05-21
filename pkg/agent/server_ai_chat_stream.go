@@ -92,7 +92,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	//      AI provider hangs or never responds (#2375), and
 	//   3. client disconnect (connCtx cancelled) stops in-progress
 	//      StreamChat calls immediately, preventing goroutine/token leaks (#9709).
-	ctx, cancel := context.WithTimeout(connCtx, missionExecutionTimeout)
+	ctx, cancel := context.WithTimeout(connCtx, s.missionExecutionTimeout)
 	defer cancel()
 
 	// Register cancel function so handleCancelChat can stop this session.
@@ -309,9 +309,9 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
 				if ctx.Err() == context.DeadlineExceeded {
-					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", missionExecutionTimeout)
+					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", s.missionExecutionTimeout)
 					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
-						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(s.missionExecutionTimeout.Minutes()))))
 					return
 				}
 				slog.Info("[Chat] session cancelled", "sessionID", req.SessionID)
@@ -337,9 +337,9 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			if ctx.Err() != nil {
 				// Distinguish timeout from user-initiated cancel (#2375)
 				if ctx.Err() == context.DeadlineExceeded {
-					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", missionExecutionTimeout)
+					slog.Info("[Chat] session timed out", "sessionID", req.SessionID, "timeout", s.missionExecutionTimeout)
 					safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
-						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+						fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(s.missionExecutionTimeout.Minutes()))))
 					return
 				}
 				slog.Info("[Chat] session cancelled", "sessionID", req.SessionID)
@@ -359,7 +359,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		if ctx.Err() == context.DeadlineExceeded {
 			slog.Info("[Chat] session timed out after completion", "sessionID", req.SessionID)
 			safeWrite(context.Background(), s.errorResponse(msg.ID, "mission_timeout",
-				fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(missionExecutionTimeout.Minutes()))))
+				fmt.Sprintf("Mission timed out after %d minutes. The AI provider did not respond in time. You can retry or try a simpler prompt.", int(s.missionExecutionTimeout.Minutes()))))
 			return
 		}
 		slog.Info("[Chat] session cancelled after completion", "sessionID", req.SessionID)

@@ -317,23 +317,21 @@ func customErrorHandler(c *fiber.Ctx, err error) error {
 const devSecretBytes = 32
 
 // devSecretFile is the filename used to persist the auto-generated JWT secret
-// across dev-mode restarts (#6850). The file is created in the working directory
-// and should be gitignored.
+// across dev-mode restarts (#6850).
 const devSecretFile = ".jwt-secret"
 
-// sharedSecretDir is the user-level config directory where the JWT secret is
-// also persisted so it survives across fresh curl-install runs (#8202).
-const sharedSecretDir = ".kubestellar"
+// devSecretConfigDir is the per-user config directory where the JWT secret is
+// persisted so it survives restarts without writing into the repository root.
+const devSecretConfigDir = "kubestellar"
 
-// loadOrCreateDevSecret checks two locations for an existing JWT secret:
-// first the local working directory (explicit override), then the shared
-// ~/.kubestellar/ dir (survives reinstalls). If neither exists, it generates
-// a new secret and writes to both locations.
+// loadOrCreateDevSecret checks the user config directory first and only reads a
+// legacy working-directory secret for migration. New secrets are persisted only
+// under os.UserConfigDir(), never in the repository root (#15142).
 func loadOrCreateDevSecret() string {
-	localPath := filepath.Join(".", devSecretFile)
-	sharedPath := sharedSecretPath()
+	configPath := sharedSecretPath()
+	legacyPath := filepath.Join(".", devSecretFile)
 
-	for _, p := range []string{localPath, sharedPath} {
+	for _, p := range []string{configPath, legacyPath} {
 		if p == "" {
 			continue
 		}
@@ -344,8 +342,8 @@ func loadOrCreateDevSecret() string {
 		secret := strings.TrimSpace(string(data))
 		if len(secret) >= devSecretBytes {
 			slog.Info("Loaded persisted dev JWT secret", "path", p)
-			if p == sharedPath {
-				persistSecret(localPath, secret)
+			if configPath != "" && p != configPath {
+				persistSecret(configPath, secret)
 			}
 			return secret
 		}
@@ -353,21 +351,18 @@ func loadOrCreateDevSecret() string {
 	}
 
 	secret := generateRandomSecret()
-
-	persistSecret(localPath, secret)
-	if sharedPath != "" {
-		persistSecret(sharedPath, secret)
+	if configPath != "" {
+		persistSecret(configPath, secret)
 	}
-
 	return secret
 }
 
 func sharedSecretPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
+	configDir, err := os.UserConfigDir()
+	if err != nil || configDir == "" {
 		return ""
 	}
-	return filepath.Join(home, sharedSecretDir, devSecretFile)
+	return filepath.Join(configDir, devSecretConfigDir, devSecretFile)
 }
 
 func persistSecret(path, secret string) {

@@ -98,11 +98,6 @@ const (
 	handleChatMessageTimeout = 30 * time.Second
 )
 
-// missionExecutionTimeout is the effective mission execution deadline.
-// Initialised to defaultMissionExecutionTimeout and optionally overridden
-// from KC_MISSION_TIMEOUT in NewServer (#9482).
-var missionExecutionTimeout = defaultMissionExecutionTimeout
-
 // Version is set by ldflags during build
 var Version = "dev"
 
@@ -225,7 +220,8 @@ type Server struct {
 	stellarClient *http.Client
 
 	// Semaphore for bounding concurrent event forwards to prevent goroutine exhaustion (#13991)
-	stellarForwardSem chan struct{}
+	stellarForwardSem       chan struct{}
+	missionExecutionTimeout time.Duration
 }
 
 // NewServer creates a new agent server
@@ -285,7 +281,7 @@ func NewServer(cfg Config) (*Server, error) {
 	startupGeneratedToken := generatedTokenFlag == "1" || strings.EqualFold(generatedTokenFlag, "true")
 	if tokenExplicit && startupGeneratedToken {
 		tokenExplicit = false
-		slog.Info("Agent token set (startup-generated) — origin-based auth bypass enabled for browser clients")
+		slog.Info("Agent token set (startup-generated) — origin-based bypass limited to safe status probes")
 	} else if tokenExplicit {
 		slog.Info("Agent token authentication enabled (from KC_AGENT_TOKEN)")
 	} else {
@@ -317,6 +313,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Resolve mission execution timeout from env, falling back to the
 	// compiled default (#9482).
+	missionExecutionTimeout := defaultMissionExecutionTimeout
 	if raw := os.Getenv(missionTimeoutEnvVar); raw != "" {
 		if parsed, err := time.ParseDuration(raw); err == nil && parsed > 0 {
 			missionExecutionTimeout = parsed
@@ -329,20 +326,21 @@ func NewServer(cfg Config) (*Server, error) {
 
 	now := time.Now()
 	server := &Server{
-		config:             cfg,
-		kubectl:            kubectl,
-		k8sClient:          k8sClient,
-		registry:           GetRegistry(),
-		clients:            make(map[*websocket.Conn]*wsClient),
-		allowedOrigins:     allowedOrigins,
-		agentToken:         agentToken,
-		tokenExplicit:      tokenExplicit,
-		sessionStart:       now,
-		todayDate:          now.Format("2006-01-02"),
-		activeChatCtxs:     make(map[string]activeChatEntry),
-		dryRunSessions:     make(map[string]bool),
-		resourceRetryState: make(map[string]clusterResourceRetryState),
-		sessionTokenQuota:  sessionQuota,
+		config:                  cfg,
+		kubectl:                 kubectl,
+		k8sClient:               k8sClient,
+		registry:                GetRegistry(),
+		clients:                 make(map[*websocket.Conn]*wsClient),
+		allowedOrigins:          allowedOrigins,
+		agentToken:              agentToken,
+		tokenExplicit:           tokenExplicit,
+		sessionStart:            now,
+		todayDate:               now.Format("2006-01-02"),
+		activeChatCtxs:          make(map[string]activeChatEntry),
+		dryRunSessions:          make(map[string]bool),
+		resourceRetryState:      make(map[string]clusterResourceRetryState),
+		sessionTokenQuota:       sessionQuota,
+		missionExecutionTimeout: missionExecutionTimeout,
 		stellarClient: &http.Client{
 			Timeout: 5 * time.Second,
 			Transport: &http.Transport{

@@ -678,6 +678,7 @@ func TestServer_SettingsAll(t *testing.T) {
 func TestServer_ValidateToken(t *testing.T) {
 	tests := []struct {
 		name             string
+		path             string
 		agentToken       string   // configured token
 		tokenExplicit    bool     // true when KC_AGENT_TOKEN came from an explicit user setting
 		allowedOrigins   []string // origins eligible for the browser-only bypass
@@ -712,12 +713,22 @@ func TestServer_ValidateToken(t *testing.T) {
 			expectResult: false, // browser requests include Origin — CSRF protection
 		},
 		{
-			name:           "Allowed origin bypass when token was startup-generated",
+			name:           "Allowed origin bypass on safe status path when token was startup-generated",
+			path:           "/status",
 			agentToken:     "secret123",
 			tokenExplicit:  false,
 			allowedOrigins: []string{"http://localhost"},
 			origin:         "http://localhost:5174",
 			expectResult:   true,
+		},
+		{
+			name:           "Allowed origin does not bypass auth on sensitive path",
+			path:           "/clusters",
+			agentToken:     "secret123",
+			tokenExplicit:  false,
+			allowedOrigins: []string{"http://localhost"},
+			origin:         "http://localhost:5174",
+			expectResult:   false,
 		},
 		{
 			name:         "Valid Bearer token",
@@ -823,7 +834,10 @@ func TestServer_ValidateToken(t *testing.T) {
 				allowedOrigins: tt.allowedOrigins,
 			}
 
-			url := "/test"
+			url := tt.path
+			if url == "" {
+				url = "/test"
+			}
 			if tt.queryToken != "" {
 				url += "?token=" + tt.queryToken
 			}

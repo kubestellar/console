@@ -551,8 +551,12 @@ func validateBaseURL(s string) error {
 			return fmt.Errorf("malformed URL: %w", err)
 		}
 		host := u.Hostname()
-		// Resolve the hostname to check all addresses
-		ips, err := net.LookupHost(host)
+		// Resolve the hostname to check all addresses, but cap DNS latency so
+		// a slow or malicious resolver cannot stall the request indefinitely.
+		const baseURLDNSLookupTimeout = 3 * time.Second
+		lookupCtx, cancel := context.WithTimeout(context.Background(), baseURLDNSLookupTimeout)
+		defer cancel()
+		ips, err := net.DefaultResolver.LookupHost(lookupCtx, host)
 		if err != nil {
 			// If DNS fails, check if host is a literal IP
 			if ip := net.ParseIP(host); ip != nil {

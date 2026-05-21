@@ -334,6 +334,16 @@ var queryTokenAllowedPaths = map[string]struct{}{
 	// O(1) and consciously reviewed.
 }
 
+var queryTokenAllowlistWarnOnce sync.Once
+
+func warnIfQueryTokenAllowlistEmpty() {
+	queryTokenAllowlistWarnOnce.Do(func() {
+		if len(queryTokenAllowedPaths) == 0 {
+			slog.Warn("[Auth] _token query-param auth allowlist is empty; SSE routes must use Authorization headers unless explicitly allowlisted")
+		}
+	})
+}
+
 // jwtCookieName is the HttpOnly cookie that carries the JWT.
 // Must match the name used in handlers/auth.go.
 const jwtCookieName = "kc_auth"
@@ -382,6 +392,8 @@ var widgetAgentAllowedPaths = map[string]struct{}{
 // with source=ubersicht-widget is accepted only on the exported widget
 // read endpoints, not on the rest of the authenticated API surface.
 func JWTAuth(secret string, agentToken ...string) fiber.Handler {
+	warnIfQueryTokenAllowlistEmpty()
+
 	widgetAgentToken := ""
 	if len(agentToken) > 0 {
 		widgetAgentToken = agentToken[0]
