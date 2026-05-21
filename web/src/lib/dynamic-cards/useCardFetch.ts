@@ -22,6 +22,9 @@ const MIN_REFRESH_INTERVAL_MS = 5_000
 /** Maximum concurrent useCardFetch hooks per card scope */
 const MAX_CONCURRENT_FETCHES = 5
 
+/** Fetch timeout to prevent indefinite hangs on stalled connections (ms) */
+const CARD_FETCH_TIMEOUT_MS = 30_000
+
 /**
  * Options for useCardFetch.
  */
@@ -108,7 +111,7 @@ export function createCardFetchScope() {
 
       fetch(proxyURL, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(CARD_FETCH_TIMEOUT_MS)]),
       })
         .then(res => {
           if (!res.ok) {
