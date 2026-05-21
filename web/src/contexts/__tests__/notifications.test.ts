@@ -262,14 +262,14 @@ describe('sendNotifications', () => {
     await sendNotifications(makeAlert(), [], 'token', 'http://localhost', 5000)
   })
 
-  it('warns on non-auth error response', async () => {
+  it('logs error on non-auth error response', async () => {
     const mockResponse = {
       ok: false,
       status: 500,
       json: () => Promise.resolve({ message: 'Internal error' }),
     }
     mockAgentFetch.mockResolvedValue(mockResponse as Response)
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     await sendNotifications(makeAlert(), [], 'token', 'http://localhost', 5000)
 
