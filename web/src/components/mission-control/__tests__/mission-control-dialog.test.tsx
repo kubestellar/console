@@ -72,6 +72,7 @@ describe('MissionControlDialog', () => {
     staleClusterNames: [],
     acknowledgeStaleClusters: vi.fn(),
     hydrateFromPlan: vi.fn(),
+    loadHistoricalSession: vi.fn(() => false),
     installedProjects: new Set<string>(),
   }
 
@@ -97,6 +98,25 @@ describe('MissionControlDialog', () => {
     render(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />)
 
     expect(mockMC.reset).toHaveBeenCalledTimes(1)
+  })
+
+  it('resets after reopening from a historical mission into a fresh sidebar session', () => {
+    const mcWithHistory = {
+      ...mockMC,
+      loadHistoricalSession: vi.fn(() => true),
+    }
+    vi.mocked(useMissionControl).mockReturnValue(mcWithHistory as unknown as ReturnType<typeof useMissionControl>)
+
+    const { rerender } = render(
+      <MissionControlDialog open={true} onClose={vi.fn()} historicalMissionId="mission-1" />
+    )
+
+    expect(mcWithHistory.loadHistoricalSession).toHaveBeenCalledWith('mission-1')
+    expect(mcWithHistory.reset).not.toHaveBeenCalled()
+
+    rerender(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />)
+
+    expect(mcWithHistory.reset).toHaveBeenCalledTimes(1)
   })
 
   it('opens cleanly after rendering closed first', () => {
