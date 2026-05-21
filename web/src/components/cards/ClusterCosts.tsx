@@ -176,7 +176,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
   const { t } = useTranslation(['cards', 'common'])
 
   // Build sort options with translated labels
-  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
+  const sortOptions = useMemo(() => SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })), [t])
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { drillToCost } = useDrillDownActions()
@@ -410,7 +410,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
               limit: itemsPerPage,
               onLimitChange: setItemsPerPage,
               sortBy: sorting.sortBy,
-              sortOptions: SORT_OPTIONS,
+              sortOptions: sortOptions,
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
               onSortDirectionChange: sorting.setSortDirection }}

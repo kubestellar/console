@@ -195,12 +195,13 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
                   })}
               </div>
               {/* Stacked bar if there's category usage */}
-              {Object.values(usage.byCategory).some(v => v > 0) && (
+              {Object.values(usage.byCategory).some(v => v > 0) && (() => {
+                const totalCategoryUsage = Object.values(usage.byCategory).reduce((a, b) => a + b, 0)
+                return (
                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden flex mt-2">
                   {(Object.entries(usage.byCategory) as [TokenCategory, number][])
                     .filter(([, tokens]) => tokens > 0)
                     .map(([category, tokens]) => {
-                      const totalCategoryUsage = Object.values(usage.byCategory).reduce((a, b) => a + b, 0)
                       const pct = totalCategoryUsage > 0 ? (tokens / totalCategoryUsage) * 100 : 0
                       const config = CATEGORY_CONFIG[category]
                       return (
@@ -212,7 +213,8 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
                       )
                     })}
                 </div>
-              )}
+                )
+              })()}
             </div>
           )}
           <div className="mt-3 pt-3 border-t border-border">
