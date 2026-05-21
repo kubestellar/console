@@ -18,7 +18,7 @@ vi.mock('../cards/DynamicCard', () => ({
 }))
 
 vi.mock('../../lib/dynamic-cards/compiler', () => ({
-  CARD_COMPILE_TIMEOUT_MS: PREVIEW_COMPILE_TIMEOUT_MS,
+  CARD_COMPILE_TIMEOUT_MS: 5000,
   compileCardCode: (...args: unknown[]) => mockCompileCardCode(...args),
   createCardComponent: (...args: unknown[]) => mockCreateCardComponent(...args),
 }))

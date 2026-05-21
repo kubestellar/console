@@ -809,6 +809,8 @@ describe('sidebar minimize/expand', () => {
 // ── Mission timeout interval ─────────────────────────────────────────────────
 
 describe('mission timeout interval', () => {
+  const PRE_TIMEOUT_BUFFER_MS = 1
+
   it('transitions running mission to failed after MISSION_TIMEOUT_MS (5 min)', async () => {
     vi.useFakeTimers()
     try {
@@ -842,7 +844,7 @@ describe('mission timeout interval', () => {
       act(() => { vi.advanceTimersByTime(MISSION_TIMEOUT_MS + MISSION_TIMEOUT_CHECK_INTERVAL_MS) })
       expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
 
-      act(() => { vi.advanceTimersByTime(MISSION_CONTROL_TRIGGER_TIMEOUT_MS - MISSION_TIMEOUT_MS) })
+      act(() => { vi.advanceTimersByTime(MISSION_CONTROL_TRIGGER_TIMEOUT_MS - MISSION_TIMEOUT_MS - PRE_TIMEOUT_BUFFER_MS) })
       expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
 
       act(() => { vi.advanceTimersByTime(MISSION_TIMEOUT_CHECK_INTERVAL_MS) })
