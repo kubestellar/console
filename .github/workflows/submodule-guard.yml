@@ -1,0 +1,45 @@
+name: Submodule Guard
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check-submodules:
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Detect orphaned submodule entries
+        run: |
+          SUBMODULE_ENTRIES=$(git ls-tree HEAD | awk '$2 == "commit" {print $4}')
+          if [ -z "$SUBMODULE_ENTRIES" ]; then
+            echo "No submodule entries found — OK"
+            exit 0
+          fi
+
+          ORPHANED=""
+          for entry in $SUBMODULE_ENTRIES; do
+            if [ ! -f .gitmodules ]; then
+              ORPHANED="${ORPHANED} ${entry}"
+            elif ! grep -q "path = ${entry}" .gitmodules 2>/dev/null; then
+              ORPHANED="${ORPHANED} ${entry}"
+            fi
+          done
+
+          if [ -n "$ORPHANED" ]; then
+            echo "::error::Orphaned submodule entries found:${ORPHANED}"
+            echo ""
+            echo "These entries exist in the git tree (mode 160000) but have no"
+            echo "matching path in .gitmodules. This breaks Netlify deploys."
+            echo ""
+            echo "Fix: git rm --cached <path> for each orphaned entry"
+            exit 1
+          fi
+
+          echo "All submodule entries have matching .gitmodules paths — OK"
