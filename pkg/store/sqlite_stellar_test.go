@@ -94,6 +94,50 @@ func TestStellarMissionExecutionAndMemory(t *testing.T) {
 	require.Equal(t, "incident", entries[0].Category)
 }
 
+func TestStellarMemorySearchFTSSyncAndShortQueryFallback(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-fts"
+
+	entry := &StellarMemoryEntry{
+		UserID:     userID,
+		Cluster:    "prod-a",
+		Namespace:  "default",
+		Category:   "incident",
+		Summary:    "CrashLoop recovered after restart",
+		RawContent: "details from the first incident",
+		Tags:       []string{"restart"},
+	}
+	require.NoError(t, s.CreateStellarMemoryEntry(ctx, entry))
+
+	entries, err := s.SearchStellarMemoryEntries(ctx, userID, "Crash", 20)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, entry.ID, entries[0].ID)
+
+	shortEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "d", 20)
+	require.NoError(t, err)
+	require.Len(t, shortEntries, 1)
+	require.Equal(t, entry.ID, shortEntries[0].ID)
+
+	_, err = s.db.ExecContext(ctx, `UPDATE stellar_memory_entries SET summary = ? WHERE id = ?`, "Kernel panic resolved", entry.ID)
+	require.NoError(t, err)
+
+	updatedEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "Kernel", 20)
+	require.NoError(t, err)
+	require.Len(t, updatedEntries, 1)
+	require.Equal(t, entry.ID, updatedEntries[0].ID)
+
+	oldEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "CrashLoop", 20)
+	require.NoError(t, err)
+	require.Empty(t, oldEntries)
+
+	require.NoError(t, s.DeleteStellarMemoryEntry(ctx, userID, entry.ID))
+
+	deletedEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "Kernel", 20)
+	require.NoError(t, err)
+	require.Empty(t, deletedEntries)
+}
+
 func TestStellarActionsAndNotifications(t *testing.T) {
 	s := newTestStore(t)
 	const userID = "stellar-user-3"

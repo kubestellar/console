@@ -732,6 +732,9 @@ func (s *SQLiteStore) migrate() error {
 		}
 		slog.Debug("[SQLite] migration applied", "migration_id", migrationID, "version", version)
 	}
+	if err := s.ensureStellarMemoryFTS(ctx); err != nil {
+		return fmt.Errorf("ensure stellar memory fts: %w", err)
+	}
 	if err := s.migrateKBGapsSchema(ctx); err != nil {
 		return fmt.Errorf("migrate kb_query_gaps schema: %w", err)
 	}
@@ -748,6 +751,50 @@ func (s *SQLiteStore) migrate() error {
 		slog.Info("[SQLite] migrated pending reservations to active", "count", n)
 	}
 
+	return nil
+}
+
+func (s *SQLiteStore) ensureStellarMemoryFTS(ctx context.Context) error {
+	statements := []string{
+		`CREATE VIRTUAL TABLE IF NOT EXISTS stellar_memory_fts USING fts5(
+			summary, raw_content, tags,
+			content='stellar_memory_entries',
+			content_rowid='rowid'
+		)`,
+		`CREATE TRIGGER IF NOT EXISTS stellar_memory_entries_ai AFTER INSERT ON stellar_memory_entries BEGIN
+			INSERT INTO stellar_memory_fts(rowid, summary, raw_content, tags)
+			VALUES (new.rowid, new.summary, new.raw_content, new.tags);
+		END`,
+		`CREATE TRIGGER IF NOT EXISTS stellar_memory_entries_ad AFTER DELETE ON stellar_memory_entries BEGIN
+			INSERT INTO stellar_memory_fts(stellar_memory_fts, rowid, summary, raw_content, tags)
+			VALUES ('delete', old.rowid, old.summary, old.raw_content, old.tags);
+		END`,
+		`CREATE TRIGGER IF NOT EXISTS stellar_memory_entries_au AFTER UPDATE ON stellar_memory_entries BEGIN
+			INSERT INTO stellar_memory_fts(stellar_memory_fts, rowid, summary, raw_content, tags)
+			VALUES ('delete', old.rowid, old.summary, old.raw_content, old.tags);
+			INSERT INTO stellar_memory_fts(rowid, summary, raw_content, tags)
+			VALUES (new.rowid, new.summary, new.raw_content, new.tags);
+		END`,
+	}
+	for _, statement := range statements {
+		if _, err := s.db.ExecContext(ctx, statement); err != nil {
+			return err
+		}
+	}
+
+	var entryCount int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM stellar_memory_entries`).Scan(&entryCount); err != nil {
+		return err
+	}
+	var ftsCount int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM stellar_memory_fts`).Scan(&ftsCount); err != nil {
+		return err
+	}
+	if entryCount != ftsCount {
+		if _, err := s.db.ExecContext(ctx, `INSERT INTO stellar_memory_fts(stellar_memory_fts) VALUES('rebuild')`); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
