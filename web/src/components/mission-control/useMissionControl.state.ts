@@ -154,25 +154,45 @@ export function makeInitialState(
 
 export interface HistoryEntry {
   missionId: string
+  missionIds?: string[]
   title: string
   savedAt: number
   state: MissionControlState
 }
 
+function getHistoryMissionIds(state: MissionControlState, missionId: string | undefined): string[] {
+  const launchMissionIds = (state.launchProgress || [])
+    .flatMap((phase) => (phase.projects || []).map((project) => project.missionId))
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
+  return Array.from(new Set([...(missionId ? [missionId] : []), ...launchMissionIds]))
+}
+
+function matchesHistoryMissionId(entry: HistoryEntry, missionId: string): boolean {
+  return entry.missionId === missionId || (entry.missionIds || []).includes(missionId)
+}
+
 /** Archive the current MC state to history before starting a new session. */
 export function archiveToHistory(state: MissionControlState, missionId: string | undefined): void {
-  if (!missionId || (!state.title && state.projects.length === 0)) return
+  const missionIds = getHistoryMissionIds(state, missionId)
+  if (missionIds.length === 0 || (!state.title && state.projects.length === 0)) return
   try {
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
     const history: HistoryEntry[] = raw ? JSON.parse(raw) : []
-    // Avoid duplicates
-    const existing = history.findIndex((entry) => entry.missionId === missionId)
-    if (existing !== -1) {
-      history[existing] = { missionId, title: state.title || '(untitled)', savedAt: Date.now(), state }
-    } else {
-      history.unshift({ missionId, title: state.title || '(untitled)', savedAt: Date.now(), state })
+    const primaryMissionId = missionIds[0]
+    const existing = history.findIndex((entry) => missionIds.some((candidateId) => matchesHistoryMissionId(entry, candidateId)))
+    const nextEntry: HistoryEntry = {
+      missionId: primaryMissionId,
+      missionIds,
+      title: state.title || '(untitled)',
+      savedAt: Date.now(),
+      state,
     }
-    // Trim to max entries
+    if (existing !== -1) {
+      history[existing] = nextEntry
+    } else {
+      history.unshift(nextEntry)
+    }
     const trimmed = history.slice(0, MAX_HISTORY_ENTRIES)
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(trimmed))
   } catch {
@@ -186,7 +206,7 @@ export function loadHistoryEntry(missionId: string): MissionControlState | null 
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
     if (!raw) return null
     const history: HistoryEntry[] = JSON.parse(raw)
-    const entry = history.find((h) => h.missionId === missionId)
+    const entry = history.find((historyEntry) => matchesHistoryMissionId(historyEntry, missionId))
     return entry?.state ?? null
   } catch {
     return null

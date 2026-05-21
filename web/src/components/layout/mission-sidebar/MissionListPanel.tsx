@@ -4,12 +4,18 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { MissionListItem } from './MissionListItem'
 import { OrbitReminderBanner } from '../../missions/OrbitReminderBanner'
 import { MissionTypeExplainer } from '../../missions/MissionTypeExplainer'
+import {
+  getMissionControlRunSummary,
+  getMissionControlStatusClass,
+  MISSION_CONTROL_STATUS_LABEL_KEYS,
+} from '../../mission-control/missionControlHistory'
 import type { Mission } from '../../../hooks/useMissions'
 import { useTranslation } from 'react-i18next'
 
 interface MissionListPanelProps {
   missions: Mission[]
   savedMissions: Mission[]
+  missionControlRuns: Mission[]
   activeMissions: Mission[]
   visibleActiveMissions: Mission[]
   hasMoreMissions: boolean
@@ -38,6 +44,7 @@ interface MissionListPanelProps {
 export function MissionListPanel({
   missions,
   savedMissions,
+  missionControlRuns,
   activeMissions,
   visibleActiveMissions,
   hasMoreMissions,
@@ -126,10 +133,69 @@ export function MissionListPanel({
         }}
       />
 
+      {missionControlRuns.length > 0 && (
+        <div className="mb-3 space-y-2">
+          <div className="flex items-center gap-2 px-2 py-1.5">
+            <span className="text-xs font-semibold text-foreground">
+              {t('missionControl.summary.historyTitle', { defaultValue: 'Mission Control history' })}
+            </span>
+            <StatusBadge color="cyan" size="xs" rounded="full">{missionControlRuns.length}</StatusBadge>
+          </div>
+          {(missionControlRuns || []).map((mission) => {
+            const { clusters, workloads, guidance, progress } = getMissionControlRunSummary(mission)
+            const statusLabel = t(MISSION_CONTROL_STATUS_LABEL_KEYS[mission.status], { defaultValue: mission.status })
+            const runFootprint = t('missionControl.summary.runFootprint', {
+              defaultValue: '{{workloads}} workloads · {{clusters}} clusters',
+              workloads,
+              clusters,
+            })
+            const nextDirections = guidance || t('missionControl.summary.defaultGuidance', {
+              defaultValue: 'Reopen this Mission Control session to review the deployed tools and recommended next steps.',
+            })
+
+            return (
+              <button
+                key={mission.id}
+                type="button"
+                onClick={() => onOpenMissionControl(mission.id)}
+                className="w-full rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 text-left transition-colors hover:bg-cyan-500/10"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{mission.title}</p>
+                    <p className={cn('mt-1 text-xs font-medium', getMissionControlStatusClass(mission.status))}>{statusLabel}</p>
+                  </div>
+                  <span className="shrink-0 text-2xs text-muted-foreground/70">
+                    {mission.updatedAt.toLocaleDateString()} {mission.updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {(workloads > 0 || clusters > 0) && (
+                  <p className="mt-2 text-xs text-muted-foreground">{runFootprint}</p>
+                )}
+                {progress !== null && (
+                  <p className="mt-2 text-xs text-foreground">
+                    {t('missionControl.summary.progressLine', {
+                      defaultValue: 'Progress: {{progress}}%',
+                      progress,
+                    })}
+                  </p>
+                )}
+                <p className="mt-2 text-xs text-foreground line-clamp-2">
+                  <span className="font-medium text-muted-foreground">
+                    {t('missionControl.summary.nextDirections', { defaultValue: 'Next directions' })}:
+                  </span>{' '}
+                  {nextDirections}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Active missions section — paginated for performance (#4778) */}
       {activeMissions.length > 0 && (
         <>
-          {savedMissions.length > 0 && (
+          {(savedMissions.length > 0 || missionControlRuns.length > 0) && (
             <div className="flex items-center gap-2 px-2 py-1.5">
               <span className="text-xs font-semibold text-foreground">{t('layout.missionSidebar.activeMissions')}</span>
               <span className="text-2xs bg-secondary px-1.5 py-0.5 rounded-full">{activeMissions.length}</span>
@@ -174,13 +240,13 @@ export function MissionListPanel({
       )}
 
       {/* Empty state when only saved missions, no active */}
-      {activeMissions.length === 0 && savedMissions.length > 0 && !missionSearchQuery && (
+      {activeMissions.length === 0 && missionControlRuns.length === 0 && savedMissions.length > 0 && !missionSearchQuery && (
         <div className="text-center py-4">
           <p className="text-xs text-muted-foreground">{t('layout.missionSidebar.noActiveMissionsHint')}</p>
         </div>
       )}
       {/* No search results */}
-      {missionSearchQuery && savedMissions.length === 0 && activeMissions.length === 0 && (
+      {missionSearchQuery && savedMissions.length === 0 && missionControlRuns.length === 0 && activeMissions.length === 0 && (
         <div className="text-center py-6">
           <Search className="w-6 h-6 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">{t('missionSidebar.noSearchResults', { defaultValue: 'No missions match your search.' })}</p>

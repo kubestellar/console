@@ -122,6 +122,7 @@ export function MissionSidebar() {
     allResolutions,
     relatedResolutions,
     savedMissions,
+    missionControlRuns,
     activeMissions,
     visibleActiveMissions,
     hasMoreMissions,
@@ -391,6 +392,7 @@ export function MissionSidebar() {
           missionListProps={{
             missions,
             savedMissions,
+            missionControlRuns,
             activeMissions,
             visibleActiveMissions,
             hasMoreMissions,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import type { MissionExport, OrbitResourceFilter } from '../../../lib/missions/types'
+import { isMissionControlRun } from '../../mission-control/missionControlHistory'
 import {
   BACKGROUND_EXECUTION_STATUSES,
   BACKGROUND_MISSION_PREVIEW_LIMIT,
@@ -124,16 +125,22 @@ export function useMissionSidebarState() {
     () => (missions || []).filter((mission) => mission.status === 'saved' && matchesMissionSearch(mission, normalizedMissionSearchQuery)),
     [missions, normalizedMissionSearchQuery]
   )
+  const missionControlRuns = useMemo(
+    () => (missions || [])
+      .filter((mission) => mission.status !== 'saved' && isMissionControlRun(mission) && matchesMissionSearch(mission, normalizedMissionSearchQuery))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [missions, normalizedMissionSearchQuery]
+  )
   const activeMissions = useMemo(
     () => (missions || [])
-      .filter((mission) => mission.status !== 'saved' && matchesMissionSearch(mission, normalizedMissionSearchQuery))
+      .filter((mission) => mission.status !== 'saved' && !isMissionControlRun(mission) && matchesMissionSearch(mission, normalizedMissionSearchQuery))
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
     [missions, normalizedMissionSearchQuery]
   )
 
   const visibleActiveMissions = activeMissions.slice(0, visibleMissionCount)
   const hasMoreMissions = activeMissions.length > visibleMissionCount
-  const listTotalMissions = savedMissions.length + activeMissions.length
+  const listTotalMissions = savedMissions.length + missionControlRuns.length + activeMissions.length
   const needsAttention = getMissionAttentionCount(missions)
 
   const runningMissions = missions
@@ -240,6 +247,7 @@ export function useMissionSidebarState() {
     allResolutions,
     relatedResolutions,
     savedMissions,
+    missionControlRuns,
     activeMissions,
     visibleActiveMissions,
     hasMoreMissions,
