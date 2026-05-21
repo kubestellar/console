@@ -242,6 +242,7 @@ export interface UseContourStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  isDemoData: boolean
 }
 
 export function useContourStatus(): UseContourStatusResult {
@@ -276,6 +277,7 @@ export function useContourStatus(): UseContourStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    isDemoData: effectiveIsDemoData,
   }
 }
 

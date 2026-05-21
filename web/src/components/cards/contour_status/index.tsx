@@ -70,7 +70,7 @@ function ProxySection({
 
 export function ContourStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState } = useContourStatus()
+  const { data, error, showSkeleton, showEmptyState, isDemoData } = useContourStatus()
 
   const isHealthy = data.health === 'healthy'
 
@@ -107,7 +107,8 @@ export function ContourStatus() {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
+    <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden relative">
+      {isDemoData && <span className="demo-badge">Demo</span>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${

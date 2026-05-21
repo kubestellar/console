@@ -249,6 +249,7 @@ export interface UseFluxStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  isDemoData: boolean
 }
 
 export function useFluxStatus(): UseFluxStatusResult {
@@ -282,6 +283,7 @@ export function useFluxStatus(): UseFluxStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    isDemoData: effectiveIsDemoData,
   }
 }
 
