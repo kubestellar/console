@@ -1,7 +1,9 @@
 import { MS_PER_DAY } from '../../lib/constants/time'
 
 export const STORAGE_KEY = 'kc_mission_control_state'
+export const HISTORY_STORAGE_KEY = 'kc_mission_control_history'
 export const WIZARD_STATE_TTL_MS = 7 * MS_PER_DAY
+export const MAX_HISTORY_ENTRIES = 20
 export const PERSISTED_SCHEMA_VERSION = 1
 export const QUOTA_BANNER_KEY = 'kc_mission_control_quota_error'
 

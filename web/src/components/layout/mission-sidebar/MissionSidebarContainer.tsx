@@ -79,6 +79,8 @@ export function MissionSidebar() {
     setShowMissionControl,
     missionControlFreshSessionToken,
     setMissionControlFreshSessionToken,
+    historicalMissionId,
+    setHistoricalMissionId,
     pendingKubaraChart,
     setPendingKubaraChart,
     pendingReviewPlan,
@@ -138,12 +140,14 @@ export function MissionSidebar() {
     setNewMissionPrompt('')
     setPendingKubaraChart(undefined)
     setPendingReviewPlan(undefined)
+    setHistoricalMissionId(undefined)
     setMissionControlFreshSessionToken((previous) => (previous ?? 0) + 1)
     setShowMissionControl(true)
     openSidebar()
   }, [
     openSidebar,
     setActiveMission,
+    setHistoricalMissionId,
     setLastPanelView,
     setMissionControlFreshSessionToken,
     setNewMissionPrompt,
@@ -154,12 +158,13 @@ export function MissionSidebar() {
     setShowNewMission,
   ])
 
-  const openExistingMissionControl = useCallback(() => {
+  const openExistingMissionControl = useCallback((missionId?: string) => {
     setPendingKubaraChart(undefined)
     setPendingReviewPlan(undefined)
     setMissionControlFreshSessionToken(undefined)
+    setHistoricalMissionId(missionId)
     setShowMissionControl(true)
-  }, [setMissionControlFreshSessionToken, setPendingKubaraChart, setPendingReviewPlan, setShowMissionControl])
+  }, [setHistoricalMissionId, setMissionControlFreshSessionToken, setPendingKubaraChart, setPendingReviewPlan, setShowMissionControl])
 
   const { openMissionBrowser, closeMissionBrowser, deepLinkMission } = useMissionBrowserDeepLink(
     showBrowser,
@@ -522,10 +527,12 @@ export function MissionSidebar() {
             setPendingKubaraChart(undefined)
             setPendingReviewPlan(undefined)
             setMissionControlFreshSessionToken(undefined)
+            setHistoricalMissionId(undefined)
           },
           initialKubaraChart: pendingKubaraChart,
           reviewPlanEncoded: pendingReviewPlan,
           freshSessionToken: missionControlFreshSessionToken,
+          historicalMissionId,
         }}
         orbitDialogProps={showOrbitDialog
           ? {

@@ -3,6 +3,8 @@ import { logger } from '@/lib/logger'
 import { getDemoMissionControlState } from './demoState'
 import {
   STORAGE_KEY,
+  HISTORY_STORAGE_KEY,
+  MAX_HISTORY_ENTRIES,
   WIZARD_STATE_TTL_MS,
   PERSISTED_SCHEMA_VERSION,
   QUOTA_BANNER_KEY,
@@ -145,5 +147,59 @@ export function makeInitialState(
     aiStreaming: false,
     launchProgress: persisted?.launchProgress ?? [],
     groundControlDashboardId: persisted?.groundControlDashboardId,
+  }
+}
+
+// ─── Mission Control History ──────────────────────────────────────────────────
+
+export interface HistoryEntry {
+  missionId: string
+  title: string
+  savedAt: number
+  state: MissionControlState
+}
+
+/** Archive the current MC state to history before starting a new session. */
+export function archiveToHistory(state: MissionControlState, missionId: string | undefined): void {
+  if (!missionId || (!state.title && state.projects.length === 0)) return
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+    const history: HistoryEntry[] = raw ? JSON.parse(raw) : []
+    // Avoid duplicates
+    const existing = history.findIndex((entry) => entry.missionId === missionId)
+    if (existing !== -1) {
+      history[existing] = { missionId, title: state.title || '(untitled)', savedAt: Date.now(), state }
+    } else {
+      history.unshift({ missionId, title: state.title || '(untitled)', savedAt: Date.now(), state })
+    }
+    // Trim to max entries
+    const trimmed = history.slice(0, MAX_HISTORY_ENTRIES)
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(trimmed))
+  } catch {
+    logger.warn('[MissionControl] Failed to archive session to history')
+  }
+}
+
+/** Load a specific historical MC session by mission ID. */
+export function loadHistoryEntry(missionId: string): MissionControlState | null {
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+    if (!raw) return null
+    const history: HistoryEntry[] = JSON.parse(raw)
+    const entry = history.find((h) => h.missionId === missionId)
+    return entry?.state ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Get all history entries (for listing). */
+export function getHistoryEntries(): HistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as HistoryEntry[]
+  } catch {
+    return []
   }
 }

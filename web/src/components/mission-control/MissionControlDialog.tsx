@@ -51,6 +51,8 @@ interface MissionControlDialogProps {
   reviewPlanEncoded?: string
   /** Changes when sidebar CTAs should force a brand-new Mission Control session. */
   freshSessionToken?: number
+  /** When set, loads a historical MC session in read-only review mode (#15173) */
+  historicalMissionId?: string
 }
 
 const PHASE_STEPS: {
@@ -82,7 +84,7 @@ const PHASE_STEPS: {
 /** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
 const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
 
-export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded, freshSessionToken }: MissionControlDialogProps) {
+export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded, freshSessionToken, historicalMissionId }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
   const { startMission, openSidebar } = useMissions()
@@ -91,6 +93,16 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const [reviewNotes, setReviewNotes] = useState<string | undefined>()
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
   const launchSubmittingRef = useRef(false)
+
+  // Load historical session when historicalMissionId changes (#15173)
+  useEffect(() => {
+    if (!open || !historicalMissionId) return
+    const loaded = mc.loadHistoricalSession(historicalMissionId)
+    if (loaded) {
+      setIsReviewMode(true)
+      setReviewNotes(undefined)
+    }
+  }, [open, historicalMissionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open || freshSessionToken === undefined) return

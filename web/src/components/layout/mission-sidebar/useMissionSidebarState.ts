@@ -39,6 +39,7 @@ export function useMissionSidebarState() {
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
   const [missionControlFreshSessionToken, setMissionControlFreshSessionToken] = useState<number | undefined>(undefined)
+  const [historicalMissionId, setHistoricalMissionId] = useState<string | undefined>(undefined)
   const [pendingKubaraChart, setPendingKubaraChart] = useState<string | undefined>(undefined)
   const [pendingReviewPlan, setPendingReviewPlan] = useState<string | undefined>(undefined)
   const [showOrbitDialog, setShowOrbitDialog] = useState(false)
@@ -196,6 +197,8 @@ export function useMissionSidebarState() {
     setShowMissionControl,
     missionControlFreshSessionToken,
     setMissionControlFreshSessionToken,
+    historicalMissionId,
+    setHistoricalMissionId,
     pendingKubaraChart,
     setPendingKubaraChart,
     pendingReviewPlan,

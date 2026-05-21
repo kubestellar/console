@@ -2,7 +2,7 @@
 
 export type { PersistedStateEntry, MissionConversationMessage, BalancedBlockScanFrame, BalancedBlockScanCursor, AvailableCluster, InstalledProjectsSummary, SuggestionPromptResult, AssignmentResponse, ProjectResponse } from './useMissionControl.types'
 export { PROJECT_NAME_ALLOWED_REGEX, PROJECT_NAME_MAX_LENGTH } from './useMissionControl.constants'
-export { consumePersistQuotaBanner } from './useMissionControl.state'
+export { consumePersistQuotaBanner, getHistoryEntries } from './useMissionControl.state'
 export { buildInstallPromptForProject, isSafeProjectName, mergeProjects } from './useMissionControl.helpers'
 export { createBalancedBlockScanCursor, extractJSON, getAssistantContentSinceLastUser, getAssistantMessagesSinceLastUser, resetOversizedWarnings } from './useMissionControl.parsing'
 
@@ -14,7 +14,7 @@ import { useHelmReleases } from '../../hooks/mcp/helm'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { logger } from '@/lib/logger'
 import { AI_SUGGEST_TIMEOUT_MS, PERSIST_KEYSTROKE_DEBOUNCE_MS, STREAM_JSON_DEBOUNCE_MS } from './useMissionControl.constants'
-import { clearPersistedState, loadPersistedState, makeInitialState, persistState } from './useMissionControl.state'
+import { archiveToHistory, clearPersistedState, loadHistoryEntry, loadPersistedState, makeInitialState, persistState } from './useMissionControl.state'
 import { buildAssignmentsPrompt, buildAutoAssignments, buildInstallPromptForProject, buildSuggestionPrompt, computeInstalledProjectsSummary, isSafeProjectName, mergeProjects } from './useMissionControl.helpers'
 import { createBalancedBlockScanCursor, extractJSON, getAssistantContentSinceLastUser, getAssistantMessagesSinceLastUser, resetBalancedBlockScanCursor, resetOversizedWarnings } from './useMissionControl.parsing'
 import type { AssignmentResponse, AvailableCluster, BalancedBlockScanCursor, ProjectResponse } from './useMissionControl.types'
@@ -287,6 +287,8 @@ export function useMissionControl() {
 
   const reset = () => {
     const missionId = state.planningMissionId
+    // Archive current session to history before clearing
+    archiveToHistory(state, missionId)
     if (missionId) { try { dismissMission(missionId) } catch { /* ignore */ } }
     resetOversizedWarnings()
     staleReconcileDoneRef.current = false
@@ -307,13 +309,22 @@ export function useMissionControl() {
   }
 
   const hydrateFromPlan = (partial: Partial<MissionControlState>) => setState(() => ({ ...makeInitialState(), ...partial, phase: 'blueprint', aiStreaming: false, launchProgress: [] }))
+
+  /** Load a previously completed MC session from history (read-only view). */
+  const loadHistoricalSession = (missionId: string): boolean => {
+    const historical = loadHistoryEntry(missionId)
+    if (!historical) return false
+    setState(() => ({ ...makeInitialState(historical), aiStreaming: false }))
+    return true
+  }
+
   const autoAssignProjects = async (availableClusters: AvailableCluster[]) => {
     const assignments = await buildAutoAssignments({ projects: stateRef.current.projects, availableClusters, existingAssignments: stateRef.current.assignments, installedOnCluster: installedSummary.installedOnCluster })
     if (assignments.length === 0) return
     setState((prev) => ({ ...prev, assignments }))
   }
 
-  return { state, installedProjects: installedSummary.installedProjects, installedOnCluster: installedSummary.installedOnCluster, setDescription, setTitle, setTargetClusters, askAIForSuggestions, addProject, removeProject, updateProjectPriority, replaceProject, askAIForAssignments, autoAssignProjects, setAssignment, moveProjectToCluster, setPhase, setOverlay, setDeployMode, setDryRun, updateLaunchProgress, setGroundControlDashboardId, planningMission, staleClusterNames, acknowledgeStaleClusters, reset, hydrateFromPlan }
+  return { state, installedProjects: installedSummary.installedProjects, installedOnCluster: installedSummary.installedOnCluster, setDescription, setTitle, setTargetClusters, askAIForSuggestions, addProject, removeProject, updateProjectPriority, replaceProject, askAIForAssignments, autoAssignProjects, setAssignment, moveProjectToCluster, setPhase, setOverlay, setDeployMode, setDryRun, updateLaunchProgress, setGroundControlDashboardId, planningMission, staleClusterNames, acknowledgeStaleClusters, reset, hydrateFromPlan, loadHistoricalSession }
 }
 
 export const __missionControlTestables = { buildInstallPromptForProject, isSafeProjectName, mergeProjects, extractJSON, createBalancedBlockScanCursor, getAssistantContentSinceLastUser, getAssistantMessagesSinceLastUser, resetOversizedWarnings }
