@@ -109,15 +109,17 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 	// cancellation so prewarm timeouts don't leave goroutines running.
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
+		idx := i
+		workflow := wf
 		safego.GoWith("nightly-e2e-fetch-workflow", func() {
 			select {
 			case <-ctx.Done():
-				ch <- result{idx: i, err: ctx.Err()}
+				ch <- result{idx: idx, err: ctx.Err()}
 				return
 			default:
 			}
-			runs, err := h.fetchWorkflowRuns(ctx, wf)
-			ch <- result{idx: i, runs: runs, err: err}
+			runs, err := h.fetchWorkflowRuns(ctx, workflow)
+			ch <- result{idx: idx, runs: runs, err: err}
 		})
 	}
 
