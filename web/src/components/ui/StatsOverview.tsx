@@ -30,7 +30,6 @@ import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { STAT_BLOCK_COLORS as COLOR_HEX } from '../../lib/tokens'
-import { ROUTES } from '../../config/routes'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
