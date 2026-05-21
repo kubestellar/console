@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, AlertTriangle, CheckCircle, ChevronRight, ChevronDown, Server, Scissors } from 'lucide-react'
 import { useClusters, useGPUNodes, useNVIDIAOperators, refreshSingleCluster } from '../../hooks/useMCP'
@@ -230,7 +230,7 @@ export function Clusters() {
     customOrder })
 
   // Get GPU count per cluster
-  const gpuByCluster = (() => {
+  const gpuByCluster = useMemo(() => {
     const map: Record<string, { total: number; allocated: number }> = {}
     ;(gpuNodes || []).forEach(node => {
       const clusterKey = node.cluster.split('/')[0]
@@ -241,7 +241,7 @@ export function Clusters() {
       map[clusterKey].allocated += node.gpuAllocated || 0
     })
     return map
-  })()
+  }, [gpuNodes])
 
   const stats = useClusterStats({ globalFilteredClusters, gpuByCluster })
   const headerBadge = (() => {
