@@ -33,9 +33,9 @@ vi.mock('../../../../lib/cards/CardComponents', () => ({
   ),
 }))
 
-import ContourStatus from '../index'
+import { ContourStatus } from '../index'
 import { CONTOUR_DEMO_DATA } from '../demoData'
-import { __testables } from '../useContourStatus'
+import { __testables, type UseContourStatusResult } from '../useContourStatus'
 
 const validProxy = {
   name: 'app-proxy',
@@ -51,7 +51,7 @@ const HEALTHY_DATA = __testables.buildContourStatus(
   { total: 2, ready: 2, notReady: 0 },
 )
 
-function setup(overrides?: Record<string, unknown>) {
+function setup(overrides?: Partial<UseContourStatusResult>) {
   mockUseContourStatus.mockReturnValue({
     data: HEALTHY_DATA,
     error: false,

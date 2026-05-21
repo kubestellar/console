@@ -33,9 +33,9 @@ vi.mock('../../../../lib/cards/CardComponents', () => ({
   ),
 }))
 
-import FluxStatus from '../index'
+import { FluxStatus } from '../index'
 import { FLUX_DEMO_DATA } from '../demoData'
-import { __testables } from '../useFluxStatus'
+import { __testables, type UseFluxStatusResult } from '../useFluxStatus'
 import type { FluxResourceStatus } from '../demoData'
 
 const syncedSource: FluxResourceStatus = {
@@ -60,7 +60,7 @@ const HEALTHY_DATA = __testables.buildFluxStatus(
   [],
 )
 
-function setup(overrides?: Record<string, unknown>) {
+function setup(overrides?: Partial<UseFluxStatusResult>) {
   mockUseFluxStatus.mockReturnValue({
     data: HEALTHY_DATA,
     error: false,
