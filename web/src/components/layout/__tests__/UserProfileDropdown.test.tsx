@@ -138,7 +138,7 @@ describe('UserProfileDropdown', () => {
     expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0)
   })
 
-  it('shows the contributor rank instead of the raw role', async () => {
+  it('shows the contributor rank once instead of duplicating it in the coins row', async () => {
     modalState.isOpen = true
     const { UserProfileDropdown } = await import('../UserProfileDropdown')
     render(
@@ -147,7 +147,7 @@ describe('UserProfileDropdown', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getAllByText('Commander').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Commander')).toHaveLength(1)
     expect(screen.queryByText('viewer')).toBeNull()
   })
 

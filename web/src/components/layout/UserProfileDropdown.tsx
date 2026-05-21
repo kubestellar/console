@@ -230,7 +230,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               <Coins className="w-4 h-4 text-yellow-500" />
               <span className="text-muted-foreground">{t('profile.coins')}</span>
               <span
-                className="text-yellow-400 font-medium"
+                className="ml-auto text-yellow-400 font-medium"
                 title={[
                   `Console activity: ${localCoins.toLocaleString()}`,
                   githubPoints > 0 ? `GitHub contributions: ${githubPoints.toLocaleString()}` : null,
@@ -238,10 +238,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   'Note: Docs leaderboard shows GitHub points only',
                 ].filter(Boolean).join('\n')}
               >{totalCoins.toLocaleString()}</span>
-              <span className={`text-2xs px-1.5 py-0.5 rounded-full ${contributorLevel.bgClass} ${contributorLevel.textClass}`}>
-                {contributorLevel.name}
-              </span>
-              <ChevronDown className="w-3 h-3 ml-auto text-muted-foreground -rotate-90" />
+              <ChevronDown className="w-3 h-3 text-muted-foreground -rotate-90" />
             </button>
             {/* Language selector */}
             <div className="relative">
