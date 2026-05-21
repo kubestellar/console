@@ -219,6 +219,11 @@ function buildAvailableAlternatives(project: PayloadProject, allProjects: Payloa
   }
 
   for (const alternative of alternatives) {
+    // Filter out self-referential alternatives (same as current project)
+    if (alternative.name.toLowerCase().trim() === project.name.toLowerCase().trim()) {
+      continue
+    }
+    
     allAlternatives.push({
       ...alternative,
       isCurrent: alternative.name === project.name,
