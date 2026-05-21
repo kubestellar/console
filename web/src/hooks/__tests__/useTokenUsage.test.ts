@@ -778,14 +778,15 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     return { mod, result }
   }
 
-  it('first poll establishes baseline without attributing any delta', async () => {
+  it('first poll stores baseline usage in the other category', async () => {
     const INITIAL_INPUT = 6000
     const INITIAL_OUTPUT = 4000
+    const totalUsed = INITIAL_INPUT + INITIAL_OUTPUT
     const { result } = await mountAndPoll({ input: INITIAL_INPUT, output: INITIAL_OUTPUT }, 'session-1')
-    expect(result.current.usage.used).toBe(INITIAL_INPUT + INITIAL_OUTPUT)
-    // byCategory should still be all zero
+    expect(result.current.usage.used).toBe(totalUsed)
+    expect(result.current.usage.byCategory.other).toBe(totalUsed)
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(0)
+    expect(sum).toBe(totalUsed)
   })
 
   it('persists last-known usage + session id to localStorage', async () => {
@@ -795,7 +796,7 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     expect(localStorage.getItem(AGENT_SESSION_KEY)).toBe('session-abc')
   })
 
-  it('agent session change resets baseline without attributing delta', async () => {
+  it('agent session change resets baseline into the other category', async () => {
     const PRIOR_BASELINE = 10_000
     localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(PRIOR_BASELINE))
     localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
@@ -804,8 +805,9 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     const { result } = await mountAndPoll({ input: RESTART_TOKENS, output: 0 }, 'session-2')
 
     expect(result.current.usage.used).toBe(RESTART_TOKENS)
+    expect(result.current.usage.byCategory.other).toBe(RESTART_TOKENS)
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(0)
+    expect(sum).toBe(RESTART_TOKENS)
     expect(localStorage.getItem(AGENT_SESSION_KEY)).toBe('session-2')
   })
 
@@ -817,8 +819,9 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     const { result } = await mountAndPoll({ input: RESTART_TOKENS, output: 0 })
 
     expect(result.current.usage.used).toBe(RESTART_TOKENS)
+    expect(result.current.usage.byCategory.other).toBe(RESTART_TOKENS)
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(0)
+    expect(sum).toBe(RESTART_TOKENS)
   })
 
   it('single active op receives the full delta', async () => {
@@ -897,8 +900,9 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     const { result } = renderHook(() => mod.useTokenUsage())
     await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
     expect(result.current.usage.used).toBe(100)
+    expect(result.current.usage.byCategory.other).toBe(100)
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(0)
+    expect(sum).toBe(100)
   })
 
   it('non-ok fetch response calls reportAgentDataError', async () => {
@@ -956,7 +960,7 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     expect(result.current.usage.used).toBe(OUTPUT_TOKENS)
   })
 
-  it('large delta exceeding MAX_SINGLE_DELTA_TOKENS is skipped', async () => {
+  it('large delta exceeding MAX_SINGLE_DELTA_TOKENS is folded into other', async () => {
     // MAX_SINGLE_DELTA_TOKENS = 50_000
     const BASELINE = 1000
     localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(BASELINE))
@@ -974,12 +978,10 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     const { result } = renderHook(() => mod.useTokenUsage())
     await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
 
-    // used should be updated to the new total
     expect(result.current.usage.used).toBe(NEXT_TOTAL)
-    // But no category should have received the delta
+    expect(result.current.usage.byCategory.other).toBe(NEXT_TOTAL)
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(0)
-    // Should have logged a warning
+    expect(sum).toBe(NEXT_TOTAL)
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining('Skipping large delta')
     )
@@ -1007,7 +1009,7 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     expect(result.current.usage.byCategory.other).toBe(EXPECTED_DELTA)
   })
 
-  it('totalUsed === lastKnownUsage does not attribute any delta', async () => {
+  it('totalUsed === lastKnownUsage keeps the total represented in the breakdown', async () => {
     const BASELINE = 5000
     localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(BASELINE))
     localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
@@ -1023,8 +1025,9 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
 
     expect(result.current.usage.used).toBe(BASELINE)
+    expect(result.current.usage.byCategory.other).toBe(BASELINE)
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(0)
+    expect(sum).toBe(BASELINE)
   })
 
   it('three concurrent ops split delta with remainder to first op', async () => {
@@ -1085,7 +1088,7 @@ describe('demo mode behavior', () => {
     delete globalThis.fetch
   })
 
-  it('demo mode skips agent fetch and uses demo token values', async () => {
+  it('demo mode keeps the breakdown aligned with the displayed total', async () => {
     mockGetDemoMode.mockReturnValue(true)
     mockIsAgentUnavailable.mockReturnValue(false)
 
@@ -1100,9 +1103,10 @@ describe('demo mode behavior', () => {
     const { result } = renderHook(() => mod.useTokenUsage())
     await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
 
-    // Demo mode uses DEMO_TOKEN_USAGE (1247832) + random increase
     expect(result.current.usage.used).toBeGreaterThanOrEqual(1247832)
     expect(result.current.isDemoData).toBe(true)
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(result.current.usage.used)
   })
 
   it('demo mode does not persist category data to localStorage', async () => {
@@ -1229,7 +1233,7 @@ describe('backend hydration', () => {
     expect(mockGetUserTokenUsage).not.toHaveBeenCalled()
   })
 
-  it('backend response with partial categories merges with defaults', async () => {
+  it('backend response with partial categories fills the remaining total into other', async () => {
     mockGetUserTokenUsage.mockResolvedValue({
       user_id: 'user-1',
       total_tokens: 1000,
@@ -1245,10 +1249,13 @@ describe('backend hydration', () => {
     const { result } = renderHook(() => mod.useTokenUsage())
     await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
 
+    expect(result.current.usage.used).toBe(1000)
     expect(result.current.usage.byCategory.missions).toBe(500)
-    // Other categories should retain their default (0) values
+    expect(result.current.usage.byCategory.other).toBe(500)
     expect(typeof result.current.usage.byCategory.diagnose).toBe('number')
     expect(typeof result.current.usage.byCategory.insights).toBe('number')
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(1000)
   })
 
   it('backend response with non-finite category value is ignored', async () => {

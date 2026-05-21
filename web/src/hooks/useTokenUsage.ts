@@ -507,8 +507,10 @@ async function fetchTokenUsage() {
   if (getDemoMode()) {
     // Simulate slow token accumulation in demo mode
     const randomIncrease = Math.floor(Math.random() * 5000) // 0-5000 tokens
+    const totalUsed = DEMO_TOKEN_USAGE + randomIncrease
     updateSharedUsage({
-      used: DEMO_TOKEN_USAGE + randomIncrease,
+      used: totalUsed,
+      byCategory: reconcileUsageBreakdown(totalUsed, { ...DEMO_BY_CATEGORY }),
       resetDate: getNextResetDate(),
     })
     return
