@@ -255,7 +255,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
       `Solve attempts: ${(matchingSolves || []).map(item => `${formatAbsoluteUtc(item.startedAt)} — ${item.status}: ${item.summary || item.error || 'No summary'}`).join('\n') || 'None'}`,
       `Raw detail: ${liveNotification.body || 'None'}`,
     ]
-    return sections.join('\n\n')
+    return (sections || []).join('\n\n')
   }, [affectedResource, autoResolutionSummary.detail, autoResolutionSummary.status, errorMessage, liveNotification, matchingSolves, pendingActions, relatedActivity, relatedEvents, rootCause])
 
   const handleCopyDetails = async () => {
