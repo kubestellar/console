@@ -6,6 +6,7 @@
  * dashboards so they load instantly when navigated to.
  */
 
+import { ROUTES } from '../config/routes'
 import { DASHBOARD_CHUNKS } from './dashboardChunks'
 import { RETRY_DELAY_MS } from './constants/network'
 
@@ -38,7 +39,7 @@ function saveVisitCounts(counts: VisitCounts): void {
  */
 export function recordDashboardVisit(path: string): void {
   // Only track dashboard paths (skip auth, settings, etc.)
-  if (path.startsWith('/auth') || path === '/login' || path === '/settings') return
+  if (path.startsWith(ROUTES.AUTH_BASE) || path === ROUTES.LOGIN || path === ROUTES.SETTINGS) return
 
   const counts = getVisitCounts()
   counts[path] = (counts[path] || 0) + 1

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { ROUTES } from '../config/routes'
 
 const STORAGE_KEY = 'kubestellar-nav-history'
 const MAX_HISTORY = 100
@@ -11,7 +12,7 @@ export function useNavigationHistory() {
 
   useEffect(() => {
     // Don't track auth-related pages
-    if (location.pathname.startsWith('/auth') || location.pathname === '/login') {
+    if (location.pathname.startsWith(ROUTES.AUTH_BASE) || location.pathname === ROUTES.LOGIN) {
       return
     }
 

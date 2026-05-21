@@ -13,6 +13,7 @@ import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, 
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
 import { validateResponse } from './schemas/validate'
+import { ROUTES } from '../config/routes'
 
 interface User {
   id: string
@@ -661,8 +662,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (e: unknown) { console.error('[auth] failed to clear cached user validation key:', e) }
         document.getElementById('session-expiry-warning')?.remove()
         // Only redirect if we're not already on the login page to avoid a loop
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login'
+        if (!window.location.pathname.startsWith(ROUTES.LOGIN)) {
+          window.location.href = ROUTES.LOGIN
         }
         return
       }

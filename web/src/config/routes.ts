@@ -14,6 +14,7 @@
 
 export const ROUTES = {
   // Auth routes
+  AUTH_BASE: '/auth',
   LOGIN: '/login',
   AUTH_CALLBACK: '/auth/callback',
   // Main routes

@@ -1,4 +1,5 @@
 import { useState, memo, Suspense } from 'react'
+import { Link } from 'react-router-dom'
 import { safeLazy } from '../../lib/safeLazy'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -28,6 +29,7 @@ import { useStatHistory, MIN_SPARKLINE_POINTS } from '../../hooks/useStatHistory
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import { STAT_BLOCK_COLORS as COLOR_HEX } from '../../lib/tokens'
+import { ROUTES } from '../../config/routes'
 
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -503,9 +505,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           {isEmptyValue && (
             <div className="text-2xs text-muted-foreground/70 mt-0.5">
               {t('statsOverview.emptyHint', 'Connect a cluster to populate')}{' '}
-              <a href="/login" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              <Link to={ROUTES.LOGIN} className="underline underline-offset-2 hover:text-foreground transition-colors">
                 {t('statsOverview.setupWizard', 'Open setup wizard')}
-              </a>
+              </Link>
             </div>
           )}
           {data.sublabel && <div className="min-w-0 truncate text-xs text-muted-foreground" title={data.sublabel}>{wrapAbbreviations(data.sublabel)}</div>}

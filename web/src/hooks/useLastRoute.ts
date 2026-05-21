@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { ROUTES } from '../config/routes'
 import { FOCUS_DELAY_MS } from '../lib/constants/network'
 import { recordDashboardVisit } from '../lib/dashboardVisits'
 
@@ -242,8 +243,8 @@ export function useLastRoute() {
   // Save last route and scroll position on path change
   useEffect(() => {
     // Don't track auth-related pages
-    if (location.pathname.startsWith('/auth') ||
-        location.pathname === '/login') {
+    if (location.pathname.startsWith(ROUTES.AUTH_BASE) ||
+        location.pathname === ROUTES.LOGIN) {
       return
     }
 
