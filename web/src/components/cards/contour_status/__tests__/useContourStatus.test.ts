@@ -176,7 +176,7 @@ describe('useContourStatus', () => {
     expect(result.current.showSkeleton).toBe(true)
   })
 
-  it('sets error when fetch failed and no data available', () => {
+  it('does not set error when fetch failed but stale healthy data remains', () => {
     mockUseCache.mockReturnValue({
       data: HEALTHY_DATA,
       isLoading: false,
@@ -192,5 +192,27 @@ describe('useContourStatus', () => {
 
     expect(result.current.error).toBe(false)
     expect(result.current.consecutiveFailures).toBe(2)
+  })
+
+  it('sets error when fetch failed and no proxy data is available', () => {
+    mockUseCache.mockReturnValue({
+      data: {
+        ...HEALTHY_DATA,
+        health: 'healthy',
+        proxies: [],
+        summary: { totalProxies: 0, validProxies: 0, invalidProxies: 0 },
+      },
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: true,
+      consecutiveFailures: 1,
+      isDemoFallback: false,
+      refetch,
+    })
+
+    const { result } = renderHook(() => useContourStatus())
+
+    expect(result.current.error).toBe(true)
+    expect(result.current.consecutiveFailures).toBe(1)
   })
 })

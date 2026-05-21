@@ -109,7 +109,7 @@ export function FluxStatus() {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden relative">
-      {isDemoData && <span className="demo-badge">Demo</span>}
+      {isDemoData && <span className="demo-badge">{t('fluxStatus.demo')}</span>}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${

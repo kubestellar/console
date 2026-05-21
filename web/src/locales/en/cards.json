@@ -3116,6 +3116,7 @@
     "noExperiments": "No experiments found."
   },
   "fluxStatus": {
+    "demo": "Demo",
     "healthy": "Healthy",
     "degraded": "Degraded",
     "notInstalled": "Flux not detected",
@@ -3137,6 +3138,7 @@
     "syncedDaysAgo": "{{count}}d ago"
   },
   "contourStatus": {
+    "demo": "Demo",
     "healthy": "Healthy",
     "degraded": "Degraded",
     "notInstalled": "Contour not detected",

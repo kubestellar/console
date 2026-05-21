@@ -124,6 +124,6 @@ describe('FluxStatus', () => {
     setup({ data: FLUX_DEMO_DATA, isDemoData: true })
     render(<FluxStatus />)
 
-    expect(screen.getByText('Demo')).toBeTruthy()
+    expect(screen.getByText('fluxStatus.demo')).toBeTruthy()
   })
 })

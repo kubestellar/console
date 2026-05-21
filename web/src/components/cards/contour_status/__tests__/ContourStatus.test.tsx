@@ -115,6 +115,6 @@ describe('ContourStatus', () => {
     setup({ data: CONTOUR_DEMO_DATA, isDemoData: true })
     render(<ContourStatus />)
 
-    expect(screen.getByText('Demo')).toBeTruthy()
+    expect(screen.getByText('contourStatus.demo')).toBeTruthy()
   })
 })
