@@ -37,6 +37,9 @@ const DEFAULT_TERMINAL_COLS = 80
 /** Default terminal rows when dimensions cannot be detected */
 const DEFAULT_TERMINAL_ROWS = 24
 
+/** Terminal container style to prevent inline object creation on each render */
+const TERMINAL_CONTAINER_STYLE = { minHeight: 0 } as const
+
 /** xterm.js terminal theme — GitHub Dark palette.
  *  xterm.js renders on <canvas> so it requires raw hex values;
  *  CSS variables / Tailwind classes cannot be used here.          */
@@ -386,7 +389,7 @@ export default function PodExecTerminal({
         <div
           ref={terminalRef}
           className="absolute inset-0 p-2"
-          style={{ minHeight: 0 }}
+          style={TERMINAL_CONTAINER_STYLE}
         />
       </div>
     </div>

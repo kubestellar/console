@@ -28,6 +28,8 @@ const PROJECTION_WEEKS = 16
 const SHARE_SCALE = 100
 /** Chart row height in pixels (compact to fit both charts in the card). */
 const CHART_HEIGHT_PX = 60
+/** Reusable chart container style object to avoid creating new objects on each render. */
+const CHART_STYLE = { height: CHART_HEIGHT_PX, width: '100%' } as const
 /** Title area offset in pixels (echarts grid.top). */
 const CHART_TITLE_OFFSET_PX = 18
 /** Title font size in pixels. */
@@ -151,7 +153,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
         <LazyEChart
           option={prOption}
           notMerge={false}
-          style={{ height: CHART_HEIGHT_PX, width: '100%' }}
+          style={CHART_STYLE}
           opts={{ renderer: 'svg' }}
         />
         <div className="text-[9px] text-muted-foreground mt-0.5">
@@ -162,7 +164,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
         <LazyEChart
           option={issueOption}
           notMerge={false}
-          style={{ height: CHART_HEIGHT_PX, width: '100%' }}
+          style={CHART_STYLE}
           opts={{ renderer: 'svg' }}
         />
         <div className="text-[9px] text-muted-foreground mt-0.5">
