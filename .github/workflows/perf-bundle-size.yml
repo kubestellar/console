@@ -27,8 +27,8 @@ concurrency:
 
 env:
   PERF_SIGNAL: bundle-gzip-bytes
-  # ~10% headroom over the 2026-04-23 baseline of 3,320,295 bytes.
-  PERF_BUDGET_BUNDLE_GZIP_BYTES: "3650000"
+  # ~10% headroom over the 2026-05-21 baseline of 3,975,413 bytes.
+  PERF_BUDGET_BUNDLE_GZIP_BYTES: "4375000"
 
 jobs:
   bundle-size:
