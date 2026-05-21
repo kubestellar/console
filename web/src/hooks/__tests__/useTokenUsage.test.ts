@@ -1252,6 +1252,7 @@ describe('backend hydration', () => {
     expect(result.current.usage.used).toBe(1000)
     expect(result.current.usage.byCategory.missions).toBe(500)
     expect(result.current.usage.byCategory.other).toBe(500)
+    // Other categories should retain their default (0) values
     expect(typeof result.current.usage.byCategory.diagnose).toBe('number')
     expect(typeof result.current.usage.byCategory.insights).toBe('number')
     const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)

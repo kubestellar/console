@@ -98,10 +98,12 @@ const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
   predictions: 0,
   other: 0 }
 
-function reconcileUsageBreakdown(totalUsed: number, byCategory: TokenUsageByCategory): TokenUsageByCategory {
-  const knownCategories = byCategory.missions + byCategory.diagnose + byCategory.insights + byCategory.predictions
-  const other = Math.max(totalUsed - knownCategories, 0)
-  return other === byCategory.other ? byCategory : { ...byCategory, other }
+// Backend totals are authoritative for historical usage, so any missing
+// remainder is folded into `other`. Agent poll baselines stay unattributed.
+function fillMissingBackendUsageIntoOther(totalUsed: number, byCategory: TokenUsageByCategory): TokenUsageByCategory {
+  const knownTotal = byCategory.missions + byCategory.diagnose + byCategory.insights + byCategory.predictions + byCategory.other
+  if (knownTotal >= totalUsed) return byCategory
+  return { ...byCategory, other: byCategory.other + (totalUsed - knownTotal) }
 }
 
 // Demo mode token usage - simulate realistic usage
@@ -299,7 +301,7 @@ async function hydrateFromBackend(): Promise<void> {
     const used = Math.max(sharedUsage.used, record.total_tokens)
     updateSharedUsage({
       used,
-      byCategory: reconcileUsageBreakdown(used, merged),
+      byCategory: fillMissingBackendUsageIntoOther(used, merged),
       resetDate: getNextResetDate(),
     }, true)
   } catch (err: unknown) {
@@ -568,11 +570,7 @@ async function fetchTokenUsage() {
           // Reset baseline without attributing any delta. On first init
           // (lastKnownUsage === null) we also take this branch to establish
           // a baseline without pretending all current usage happened just now.
-          updateSharedUsage({
-            used: totalUsed,
-            byCategory: reconcileUsageBreakdown(totalUsed, sharedUsage.byCategory),
-            resetDate,
-          })
+          updateSharedUsage({ used: totalUsed, resetDate })
         } else if (totalUsed > lastKnownUsage) {
           const delta = totalUsed - lastKnownUsage
           // Sanity check: don't attribute more than MAX_SINGLE_DELTA_TOKENS
@@ -583,14 +581,14 @@ async function fetchTokenUsage() {
               // No active operation — attribute to the default category.
               const newByCategory = { ...sharedUsage.byCategory }
               newByCategory[DEFAULT_CATEGORY] += delta
-              updateSharedUsage({ used: totalUsed, byCategory: reconcileUsageBreakdown(totalUsed, newByCategory), resetDate })
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory, resetDate })
               queueBackendDelta(DEFAULT_CATEGORY, delta)
             } else if (activeCount === 1) {
               // Single operation — attribute the entire delta to it.
               const category = activeCategoriesByOp.values().next().value as TokenCategory
               const newByCategory = { ...sharedUsage.byCategory }
               newByCategory[category] += delta
-              updateSharedUsage({ used: totalUsed, byCategory: reconcileUsageBreakdown(totalUsed, newByCategory), resetDate })
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory, resetDate })
               queueBackendDelta(category, delta)
             } else {
               // Multiple concurrent operations — split the delta evenly
@@ -608,23 +606,15 @@ async function fetchTokenUsage() {
                 queueBackendDelta(category, portion)
                 first = false
               }
-              updateSharedUsage({ used: totalUsed, byCategory: reconcileUsageBreakdown(totalUsed, newByCategory), resetDate })
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory, resetDate })
             }
           } else {
             console.warn(`[TokenUsage] Skipping large delta ${delta} - likely initialization`)
-            updateSharedUsage({
-              used: totalUsed,
-              byCategory: reconcileUsageBreakdown(totalUsed, sharedUsage.byCategory),
-              resetDate,
-            })
+            updateSharedUsage({ used: totalUsed, resetDate })
           }
         } else {
           // totalUsed === lastKnownUsage — nothing to attribute.
-          updateSharedUsage({
-            used: totalUsed,
-            byCategory: reconcileUsageBreakdown(totalUsed, sharedUsage.byCategory),
-            resetDate,
-          })
+          updateSharedUsage({ used: totalUsed, resetDate })
         }
 
         lastKnownUsage = totalUsed
