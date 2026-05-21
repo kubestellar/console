@@ -3,6 +3,8 @@ import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { DashboardDropZone } from './DashboardDropZone'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import { DiscoverCardsPlaceholder } from './DiscoverCardsPlaceholder'
+import { DashboardHealthIndicator } from './DashboardHealthIndicator'
+import { useDashboardHealth } from '../../hooks/useDashboardHealth'
 import type { DashboardState } from './DashboardState'
 
 type DashboardGridProps = Pick<DashboardState,
@@ -70,6 +72,7 @@ export function DashboardGrid({
   triggerRefresh,
 }: DashboardGridProps) {
   const activeCard = activeId ? localCards.find(card => card.id === activeId) : null
+  const dashboardHealth = useDashboardHealth()
 
   return (
     <>
@@ -89,33 +92,40 @@ export function DashboardGrid({
         onDragCancel={handleDragCancel}
       >
         <SortableContext items={localCards.map(card => card.id)} strategy={rectSortingStrategy}>
-          <div
-            data-testid="dashboard-cards-grid"
-            data-tour="dashboard"
-            role="grid"
-            aria-label="Dashboard cards"
-            className={`grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-min grid-flow-dense min-w-0 ${showDragHint ? 'animate-shimmy' : ''}`}
-          >
-            {localCards.map((card, index) => (
-              <SortableCard
-                key={card.id}
-                card={card}
-                onConfigure={() => handleConfigureCard(card)}
-                onRemove={() => handleRemoveCard(card.id)}
-                onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-                onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
-                isDragging={activeId === card.id}
-                isRefreshing={isRefreshing}
-                onRefresh={triggerRefresh}
-                lastUpdated={lastUpdated}
-                onKeyDown={handleGridKeyDown}
-                registerRef={(el) => registerCardRef(card.id, el)}
-                registerExpandTrigger={(expand) => handleRegisterExpandTrigger(card.id, expand)}
-                onInsertBefore={() => handleInsertBefore(index)}
-                onInsertAfter={() => handleInsertAfter(index)}
-                isWorkloadDragActive={activeDragData?.type === 'workload'}
-              />
-            ))}
+          <div className="min-w-0">
+            {dashboardHealth.status !== 'healthy' && (
+              <div className="mb-3 flex justify-end">
+                <DashboardHealthIndicator size="sm" />
+              </div>
+            )}
+            <div
+              data-testid="dashboard-cards-grid"
+              data-tour="dashboard"
+              role="grid"
+              aria-label="Dashboard cards"
+              className={`grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-min grid-flow-dense min-w-0 ${showDragHint ? 'animate-shimmy' : ''}`}
+            >
+              {localCards.map((card, index) => (
+                <SortableCard
+                  key={card.id}
+                  card={card}
+                  onConfigure={() => handleConfigureCard(card)}
+                  onRemove={() => handleRemoveCard(card.id)}
+                  onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
+                  onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
+                  isDragging={activeId === card.id}
+                  isRefreshing={isRefreshing}
+                  onRefresh={triggerRefresh}
+                  lastUpdated={lastUpdated}
+                  onKeyDown={handleGridKeyDown}
+                  registerRef={(el) => registerCardRef(card.id, el)}
+                  registerExpandTrigger={(expand) => handleRegisterExpandTrigger(card.id, expand)}
+                  onInsertBefore={() => handleInsertBefore(index)}
+                  onInsertAfter={() => handleInsertAfter(index)}
+                  isWorkloadDragActive={activeDragData?.type === 'workload'}
+                />
+              ))}
+            </div>
           </div>
         </SortableContext>
 
