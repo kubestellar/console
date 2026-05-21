@@ -201,7 +201,11 @@ function SearchResultsPanel({
   )
 }
 
-export function SearchDropdown() {
+interface SearchDropdownProps {
+  autoFocusOnMount?: boolean
+}
+
+export function SearchDropdown({ autoFocusOnMount = false }: SearchDropdownProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
@@ -418,6 +422,7 @@ export function SearchDropdown() {
           name="global-search"
           data-testid="global-search-input"
           autoComplete="off"
+          autoFocus={autoFocusOnMount}
           value={searchQuery}
           onChange={e => {
             setSearchQuery(e.target.value)

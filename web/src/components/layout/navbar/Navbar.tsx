@@ -2,7 +2,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { safeLazy } from '../../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink, Sparkles } from 'lucide-react'
+import { Sun, Moon, Monitor, Menu, Search, X, MoreVertical, ExternalLink, Sparkles } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
@@ -42,7 +42,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
   const [showMobileMore, setShowMobileMore] = useState(false)
-  const { config, toggleMobileSidebar } = useSidebarConfig()
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const { config, toggleMobileSidebar, closeMobileSidebar } = useSidebarConfig()
   const { isMobile } = useMobile()
   const { t } = useTranslation()
   const branding = useBranding()
@@ -54,10 +55,33 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   // Close mobile more menu on route change
   useEffect(() => {
     setShowMobileMore(false)
+    setShowMobileSearch(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    if (!isMobile) {
+      setShowMobileSearch(false)
+    }
+  }, [isMobile])
 
   return (
     <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-sticky px-3 md:px-6 flex items-center justify-between overflow-x-clip">
+      {isMobile && showMobileSearch && (
+        <div className="absolute inset-0 z-modal flex items-center gap-2 bg-background/95 px-3 backdrop-blur-md">
+          <div className="min-w-0 flex-1">
+            <Suspense fallback={null}><SearchDropdown autoFocusOnMount /></Suspense>
+          </div>
+          <button
+            type="button"
+            data-testid="navbar-mobile-search-close"
+            onClick={() => setShowMobileSearch(false)}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg transition-colors hover:bg-secondary"
+            aria-label={t('actions.close')}
+          >
+            <X className="h-5 w-5 text-foreground" />
+          </button>
+        </div>
+      )}
       {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
@@ -170,8 +194,25 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Always-visible items — shrink-0 so theme toggle, alerts, user menu
              are never squeezed invisible at intermediate widths (#3191) */}
         <div className="flex items-center gap-1 md:gap-2 shrink-0">
-          {/* Tour trigger - icon always visible, text shows at xl+ */}
-          <LearnDropdown />
+          {/* Search stays accessible on mobile via an inline trigger */}
+          <button
+            type="button"
+            data-testid="navbar-mobile-search-btn"
+            onClick={() => {
+              closeMobileSidebar()
+              setShowMobileMore(false)
+              setShowMobileSearch(true)
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-secondary sm:hidden"
+            aria-label={t('layout.navbar.searchPlaceholder')}
+          >
+            <Search className="h-5 w-5 text-muted-foreground" />
+          </button>
+
+          {/* Tour trigger - desktop/tablet icon, mobile entry stays in overflow menu */}
+          <div className="hidden sm:block">
+            <LearnDropdown />
+          </div>
 
           {/* Theme toggle */}
           <Tooltip content={t('help.themeToggle')} side="bottom">

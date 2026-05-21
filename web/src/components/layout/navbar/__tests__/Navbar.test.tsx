@@ -1,9 +1,11 @@
 /**
  * Navbar Component Tests
  */
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+
+let isMobileMock = false
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -23,6 +25,7 @@ vi.mock('../../../../hooks/useSidebarConfig', () => ({
     config: { collapsed: false, isMobileOpen: false },
     toggleCollapsed: vi.fn(),
     openMobileSidebar: vi.fn(),
+    closeMobileSidebar: vi.fn(),
     toggleMobileSidebar: vi.fn(),
   }),
 }))
@@ -32,7 +35,7 @@ vi.mock('../../../../hooks/useTheme', () => ({
 }))
 
 vi.mock('../../../../hooks/useMobile', () => ({
-  useMobile: () => ({ isMobile: false }),
+  useMobile: () => ({ isMobile: isMobileMock }),
 }))
 
 vi.mock('../../../../hooks/useBranding', () => ({
@@ -92,6 +95,10 @@ vi.mock('../ActiveUsersWidget', () => ({
 }))
 
 describe('Navbar', () => {
+  afterEach(() => {
+    isMobileMock = false
+  })
+
   it('exports Navbar component', async () => {
     const mod = await import('../Navbar')
     expect(mod.Navbar).toBeDefined()
@@ -99,6 +106,7 @@ describe('Navbar', () => {
   })
 
   it('renders the AI missions launcher in the navbar when the sidebar is closed', async () => {
+    isMobileMock = false
     const { Navbar } = await import('../Navbar')
 
     render(
@@ -109,5 +117,23 @@ describe('Navbar', () => {
 
     expect(screen.getByTestId('navbar-ai-missions-btn')).toBeInTheDocument()
     expect(screen.getByText('missionSidebar.aiMissions')).toBeInTheDocument()
+  })
+
+  it('keeps a mobile search trigger visible on small viewports', async () => {
+    isMobileMock = true
+    const { Navbar } = await import('../Navbar')
+
+    render(
+      <MemoryRouter>
+        <Navbar />
+      </MemoryRouter>,
+    )
+
+    const trigger = screen.getByTestId('navbar-mobile-search-btn')
+    expect(trigger).toBeInTheDocument()
+
+    fireEvent.click(trigger)
+
+    expect(screen.getByTestId('navbar-mobile-search-close')).toBeInTheDocument()
   })
 })

@@ -195,6 +195,8 @@ export function SidebarShell({
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
+  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sidebarRef = useRef<HTMLElement | null>(null)
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -203,11 +205,16 @@ export function SidebarShell({
     }
   }, [location.pathname, isMobile, closeMobileSidebar])
 
+  useEffect(() => {
+    if (isMobile && config.isMobileOpen && sidebarRef.current) {
+      sidebarRef.current.scrollTop = 0
+    }
+  }, [config.isMobileOpen, isMobile])
+
   // ---- Auto-hide: collapse sidebar when mouse leaves, expand on hover ----
   const [isPinned, setIsPinned] = useState(() => {
     try { return localStorage.getItem('sidebar-left-pinned') !== 'false' } catch { return true }
   })
-  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearAutoHideTimer = useCallback(() => {
     if (autoHideTimerRef.current) {
@@ -690,6 +697,7 @@ export function SidebarShell({
       )}
 
       <aside
+        ref={sidebarRef}
         data-testid="sidebar"
         data-tour="sidebar"
         onMouseEnter={handleSidebarMouseEnter}
