@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
+import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal, AlertCircle } from 'lucide-react'
 import { useTokenUsage, type TokenCategory, type TokenAlertLevel } from '../../../hooks/useTokenUsage'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { Tooltip } from '../../ui/Tooltip'
@@ -9,12 +9,25 @@ import { cn } from '../../../lib/cn'
 import { getSettingsWithHash } from '../../../config/routes'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
-const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
-  missions: { label: 'AI Missions', icon: Rocket, color: 'bg-purple-500' },
-  diagnose: { label: 'Diagnose', icon: Stethoscope, color: 'bg-blue-500' },
-  insights: { label: 'Insights', icon: Lightbulb, color: 'bg-yellow-500' },
-  predictions: { label: 'Predictions', icon: TrendingUp, color: 'bg-green-500' },
-  other: { label: 'Other', icon: MoreHorizontal, color: 'bg-muted-foreground' },
+const UNATTRIBUTED_CATEGORY = 'unattributed'
+
+type DisplayCategory = TokenCategory | typeof UNATTRIBUTED_CATEGORY
+
+const CATEGORY_CONFIG: Record<DisplayCategory, { labelKey: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
+  missions: { labelKey: 'layout.navbar.tokenCategories.missions', icon: Rocket, color: 'bg-purple-500' },
+  diagnose: { labelKey: 'layout.navbar.tokenCategories.diagnose', icon: Stethoscope, color: 'bg-blue-500' },
+  insights: { labelKey: 'layout.navbar.tokenCategories.insights', icon: Lightbulb, color: 'bg-yellow-500' },
+  predictions: { labelKey: 'layout.navbar.tokenCategories.predictions', icon: TrendingUp, color: 'bg-green-500' },
+  other: { labelKey: 'layout.navbar.tokenCategories.other', icon: MoreHorizontal, color: 'bg-muted-foreground' },
+  unattributed: { labelKey: 'layout.navbar.tokenCategories.unattributed', icon: AlertCircle, color: 'bg-orange-500' },
+}
+
+const DISPLAY_CATEGORIES: TokenCategory[] = ['missions', 'diagnose', 'insights', 'predictions', 'other']
+
+function formatTokens(n: number) {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}k`
+  return n.toString()
 }
 
 const TOKEN_ALERT_STYLES: Record<TokenAlertLevel, { button: string; bar: string; text: string }> = {
@@ -60,6 +73,13 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
   const previousTokensRef = useRef<number>(usage.used)
   const tokenRef = useRef<HTMLDivElement>(null)
   const alertStyles = isDemoData ? DEMO_TOKEN_STYLES : TOKEN_ALERT_STYLES[alertLevel]
+  const categorizedUsage = DISPLAY_CATEGORIES.reduce((sum, category) => sum + (usage.byCategory[category] || 0), 0)
+  const unattributedUsage = Math.max(usage.used - categorizedUsage, 0)
+  const breakdownEntries: Array<{ category: DisplayCategory; tokens: number }> = [
+    ...DISPLAY_CATEGORIES.map((category) => ({ category, tokens: usage.byCategory[category] || 0 })),
+    ...(unattributedUsage > 0 ? [{ category: UNATTRIBUTED_CATEGORY, tokens: unattributedUsage }] : []),
+  ]
+  const totalBreakdownUsage = breakdownEntries.reduce((sum, entry) => sum + entry.tokens, 0)
 
   // Animate token icon when usage increases significantly
   useEffect(() => {
@@ -166,42 +186,39 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
           {/* Category breakdown - always show all features */}
           {usage.byCategory && (
             <div className="mt-3 pt-3 border-t border-border">
-              <div className="text-xs text-muted-foreground mb-2">{t('layout.navbar.breakdownByFeatureToday')}</div>
-              {/* Category list with token counts */}
-              <div className="space-y-1.5">
-                {(['missions', 'diagnose', 'insights', 'predictions', 'other'] as TokenCategory[])
-                  .map((category) => {
-                    const tokens = usage.byCategory[category] || 0
-                    const config = CATEGORY_CONFIG[category]
-                    const Icon = config.icon
-                    // Format tokens: 1.2M, 523k, or exact number
-                    const formatTokens = (n: number) => {
-                      if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
-                      if (n >= 1000) return `${(n / 1000).toFixed(0)}k`
-                      return n.toString()
-                    }
-                    return (
-                      <div key={category} className="flex items-center gap-2 text-xs">
-                        <div className={`w-2 h-2 rounded-full ${tokens > 0 ? config.color : 'bg-secondary'}`} />
-                        <Icon className={`w-3 h-3 ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`} />
-                        <span className={`flex-1 ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-                          {config.label}
-                        </span>
-                        <span className={`font-mono ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`}>
-                          {formatTokens(tokens)}
-                        </span>
-                      </div>
-                    )
-                  })}
+              <div className="flex items-center justify-between gap-2 mb-2 text-xs">
+                <span className="text-muted-foreground">{t('layout.navbar.breakdownByFeatureToday')}</span>
+                <span className="font-mono text-foreground">{totalBreakdownUsage.toLocaleString()}</span>
               </div>
-              {/* Stacked bar if there's category usage */}
-              {Object.values(usage.byCategory).some(v => v > 0) && (
+              {unattributedUsage > 0 && (
+                <p className="mb-2 text-[11px] text-orange-400/80">
+                  {t('layout.navbar.unattributedHelp')}
+                </p>
+              )}
+              <div className="space-y-1.5">
+                {breakdownEntries.map(({ category, tokens }) => {
+                  const config = CATEGORY_CONFIG[category]
+                  const Icon = config.icon
+                  return (
+                    <div key={category} className="flex items-center gap-2 text-xs">
+                      <div className={`w-2 h-2 rounded-full ${tokens > 0 ? config.color : 'bg-secondary'}`} />
+                      <Icon className={`w-3 h-3 ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`} />
+                      <span className={`flex-1 ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                        {t(config.labelKey)}
+                      </span>
+                      <span className={`font-mono ${tokens > 0 ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                        {formatTokens(tokens)}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              {totalBreakdownUsage > 0 && (
                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden flex mt-2">
-                  {(Object.entries(usage.byCategory) as [TokenCategory, number][])
-                    .filter(([, tokens]) => tokens > 0)
-                    .map(([category, tokens]) => {
-                      const totalCategoryUsage = Object.values(usage.byCategory).reduce((a, b) => a + b, 0)
-                      const pct = totalCategoryUsage > 0 ? (tokens / totalCategoryUsage) * 100 : 0
+                  {breakdownEntries
+                    .filter(({ tokens }) => tokens > 0)
+                    .map(({ category, tokens }) => {
+                      const pct = totalBreakdownUsage > 0 ? (tokens / totalBreakdownUsage) * 100 : 0
                       const config = CATEGORY_CONFIG[category]
                       return (
                         <div

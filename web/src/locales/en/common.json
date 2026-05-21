@@ -4495,6 +4495,15 @@
       "resetsDaily": "Resets daily",
       "breakdownByFeature": "Breakdown by Feature",
       "breakdownByFeatureToday": "Today's breakdown by feature",
+      "unattributedHelp": "Includes usage already counted in the total before it could be assigned to a feature, such as initialization or restart baselines.",
+      "tokenCategories": {
+        "missions": "AI Missions",
+        "diagnose": "Diagnose",
+        "insights": "Insights",
+        "predictions": "Predictions",
+        "other": "Other",
+        "unattributed": "Unattributed"
+      },
       "configureLimitsInSettings": "Configure limits in Settings",
       "dayStreak": "{{days}}-day streak",
       "devModeTitle": "Development mode — not connected to production",
