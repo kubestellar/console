@@ -131,11 +131,28 @@ export function MissionSidebar() {
   } = useMissionSidebarState()
 
   const openFreshMissionControl = useCallback(() => {
+    setActiveMission(null)
+    setShowHistoryPanel(false)
+    setLastPanelView('dashboard')
+    setShowNewMission(false)
+    setNewMissionPrompt('')
     setPendingKubaraChart(undefined)
     setPendingReviewPlan(undefined)
     setMissionControlFreshSessionToken((previous) => (previous ?? 0) + 1)
     setShowMissionControl(true)
-  }, [setMissionControlFreshSessionToken, setPendingKubaraChart, setPendingReviewPlan, setShowMissionControl])
+    openSidebar()
+  }, [
+    openSidebar,
+    setActiveMission,
+    setLastPanelView,
+    setMissionControlFreshSessionToken,
+    setNewMissionPrompt,
+    setPendingKubaraChart,
+    setPendingReviewPlan,
+    setShowHistoryPanel,
+    setShowMissionControl,
+    setShowNewMission,
+  ])
 
   const openExistingMissionControl = useCallback(() => {
     setPendingKubaraChart(undefined)

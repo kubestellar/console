@@ -269,11 +269,31 @@ describe('FixerDefinitionPanel', () => {
         planningMission={null}
       />
     )
-    
+
     expect(screen.getByText('Define Your Mission')).toBeDefined()
     expect(screen.getByDisplayValue('Test Mission')).toBeDefined()
     expect(screen.getByDisplayValue('Test Description')).toBeDefined()
-    expect(screen.getByText('Falco')).toBeDefined()
+    expect(screen.getAllByText('Falco').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Click a project card for details')).toBeNull()
+  })
+
+  it('shows project names in the mission summary sidebar', () => {
+    render(
+      <FixerDefinitionPanel
+        state={mockState as unknown as typeof mockState}
+        onDescriptionChange={vi.fn()}
+        onTitleChange={vi.fn()}
+        onTargetClustersChange={vi.fn()}
+        onAskAI={vi.fn()}
+        onAddProject={vi.fn()}
+        onRemoveProject={vi.fn()}
+        onUpdatePriority={vi.fn()}
+        aiStreaming={false}
+        planningMission={null}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: /1\s*Falco\s*Security/i })).toBeDefined()
   })
 
   it('calls onAskAI when Suggest/Refine button is clicked', () => {

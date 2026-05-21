@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { MissionSidebar, MissionSidebarToggle } from '../MissionSidebar'
 
@@ -175,5 +175,26 @@ describe('MissionSidebar visibility', () => {
     expect(missionControlButton.className).toContain('appearance-none')
     expect(missionControlButton.className).toContain('overflow-hidden')
     expect(missionControlButton.className).toContain('border-transparent')
+  })
+
+  it('opens a fresh Mission Control session from the add menu and clears the composer', () => {
+    mockMissionState.isSidebarOpen = true
+
+    render(
+      <MemoryRouter>
+        <MissionSidebar />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New Mission' }))
+
+    expect(screen.getByPlaceholderText('missionSidebar.newMissionPlaceholder')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mission Control' }))
+
+    expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('missionSidebar.newMissionPlaceholder')).not.toBeInTheDocument()
   })
 })

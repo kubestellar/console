@@ -1,16 +1,20 @@
 import { Layers } from 'lucide-react'
+import { cn } from '../../../lib/cn'
 import type { PayloadProject } from '../types'
 import { CategoryIcon } from './fixerDefinitionPanel.constants'
 import { getCategoryCounts, getPriorityCounts, getTotalDependencies } from './fixerDefinitionPanel.utils'
 
 interface MissionSummarySidebarProps {
   projects: PayloadProject[]
+  selectedProjectName?: string
+  onSelectProject?: (project: PayloadProject) => void
 }
 
-export function MissionSummarySidebar({ projects }: MissionSummarySidebarProps) {
-  const categoryCounts = getCategoryCounts(projects)
-  const priorityCounts = getPriorityCounts(projects)
-  const totalDependencies = getTotalDependencies(projects)
+export function MissionSummarySidebar({ projects, selectedProjectName, onSelectProject }: MissionSummarySidebarProps) {
+  const safeProjects = projects || []
+  const categoryCounts = getCategoryCounts(safeProjects)
+  const priorityCounts = getPriorityCounts(safeProjects)
+  const totalDependencies = getTotalDependencies(safeProjects)
 
   return (
     <div className="w-56 border-r border-border bg-card p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
@@ -19,7 +23,7 @@ export function MissionSummarySidebar({ projects }: MissionSummarySidebarProps) 
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Projects</span>
-            <span className="font-semibold text-foreground">{projects.length}</span>
+            <span className="font-semibold text-foreground">{safeProjects.length}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Dependencies</span>
@@ -28,8 +32,49 @@ export function MissionSummarySidebar({ projects }: MissionSummarySidebarProps) 
         </div>
       </div>
 
-      {projects.length > 0 ? (
+      {safeProjects.length > 0 ? (
         <>
+          <div>
+            <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Projects</h3>
+            <div className="space-y-1.5">
+              {safeProjects.map((project, index) => {
+                const isSelected = project.name === selectedProjectName
+
+                return (
+                  <button
+                    key={project.name}
+                    type="button"
+                    onClick={() => onSelectProject?.(project)}
+                    className={cn(
+                      'flex w-full items-start gap-2 rounded-lg border px-2 py-2 text-left transition-colors',
+                      isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-background/40 hover:border-primary/30 hover:bg-muted/30',
+                    )}
+                  >
+                    <span className={cn(
+                      'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground',
+                    )}>
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium text-foreground" title={project.displayName}>
+                        {project.displayName}
+                      </p>
+                      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <CategoryIcon category={project.category} />
+                        <span className="truncate">{project.category}</span>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div>
             <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">By Priority</h3>
             <div className="space-y-1.5">

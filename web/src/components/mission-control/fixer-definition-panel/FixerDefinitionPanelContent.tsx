@@ -51,6 +51,7 @@ export function FixerDefinitionPanel({
   const [manualName, setManualName] = useState('')
   const [stickyProject, setStickyProject] = useState<PayloadProject | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const projects = state.projects || []
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,6 +66,18 @@ export function FixerDefinitionPanel({
   const latestSystemError = planningFailed
     ? planningMission?.messages.filter((message) => message.role === 'system').slice(-1)[0]?.content ?? ''
     : ''
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      setStickyProject(null)
+      return
+    }
+
+    const hasSelectedProject = projects.some((project) => project.name === stickyProject?.name)
+    if (!hasSelectedProject) {
+      setStickyProject(projects[0])
+    }
+  }, [projects, stickyProject?.name])
 
   const handleSubmit = () => {
     if (!state.title && state.description.trim()) {
@@ -94,7 +107,11 @@ export function FixerDefinitionPanel({
 
   return (
     <div className="h-full flex">
-      <MissionSummarySidebar projects={state.projects} />
+      <MissionSummarySidebar
+        projects={projects}
+        selectedProjectName={stickyProject?.name}
+        onSelectProject={setStickyProject}
+      />
 
       <FixerDefinitionForm
         state={state}
@@ -133,8 +150,8 @@ export function FixerDefinitionPanel({
               className="p-4 space-y-4"
             >
               <ProjectDetailPanel
-                project={state.projects.find((project) => project.name === stickyProject.name) ?? stickyProject}
-                allProjects={state.projects}
+                project={projects.find((project) => project.name === stickyProject.name) ?? stickyProject}
+                allProjects={projects}
                 onReplace={onReplaceProject ? (oldName, newProject) => {
                   onReplaceProject(oldName, newProject)
                   setStickyProject(newProject)
