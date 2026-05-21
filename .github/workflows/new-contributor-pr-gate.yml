@@ -12,7 +12,7 @@ jobs:
   check-contributor:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Check contributor history
         env:
