@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockGet = vi.fn();
-const mockSetJSON = vi.fn();
+const { mockGet, mockSetJSON } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockSetJSON: vi.fn(),
+}));
 
 vi.mock("@netlify/blobs", () => ({
   getStore: () => ({ get: mockGet, setJSON: mockSetJSON }),

@@ -7,8 +7,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ── Mock @netlify/blobs ─────────────────────────────────────────────────
-const mockGet = vi.fn();
-const mockSetJSON = vi.fn();
+const { mockGet, mockSetJSON } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockSetJSON: vi.fn(),
+}));
 vi.mock("@netlify/blobs", () => ({
   getStore: () => ({ get: mockGet, setJSON: mockSetJSON }),
 }));
@@ -142,12 +144,12 @@ describe("acmm-badge", () => {
       // direct GitHub: repo info
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ default_branch: "main" }),
+        text: async () => JSON.stringify({ default_branch: "main" }),
       })
       // direct GitHub: tree
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        text: async () => JSON.stringify({
           tree: [
             { path: "CLAUDE.md" },
             { path: ".github/workflows/ci.yml" },
