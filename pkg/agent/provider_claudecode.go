@@ -653,6 +653,7 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 			if startErr := analysisCmd.Start(); startErr == nil {
 				analysisScanner := bufio.NewScanner(analysisStdout)
 				analysisScanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+				var analysisContent strings.Builder
 
 				for analysisScanner.Scan() {
 					line := analysisScanner.Text()
@@ -664,14 +665,14 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 						if event.Type == "assistant" && event.Message != nil {
 							for _, content := range event.Message.Content {
 								if content.Type == "text" && content.Text != "" {
-									responseContent += content.Text
+									analysisContent.WriteString(content.Text)
 									if onChunk != nil {
 										onChunk(content.Text)
 									}
 								}
 							}
 						} else if event.Type == "result" && event.Result != "" && !event.IsError {
-							if responseContent == "" {
+							if analysisContent.Len() == 0 && responseContent == "" {
 								responseContent = event.Result
 								if onChunk != nil {
 									onChunk(event.Result)
@@ -679,6 +680,9 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 							}
 						}
 					}
+				}
+				if analysisContent.Len() > 0 {
+					responseContent = analysisContent.String()
 				}
 				analysisCmd.Wait()
 			}

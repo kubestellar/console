@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -160,12 +161,13 @@ func (h *FeedbackHandler) addPRComment(ctx context.Context, request *models.Feat
 		emoji = ":-1:"
 	}
 
-	commentBody := fmt.Sprintf("**User Feedback:** %s\n\n", emoji)
+	var commentBody strings.Builder
+	commentBody.WriteString(fmt.Sprintf("**User Feedback:** %s\n\n", emoji))
 	if feedback.Comment != "" {
-		commentBody += fmt.Sprintf("> %s", feedback.Comment)
+		commentBody.WriteString(fmt.Sprintf("> %s", feedback.Comment))
 	}
 
-	payload := map[string]string{"body": commentBody}
+	payload := map[string]string{"body": commentBody.String()}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		slog.Error("[Feedback] failed to marshal PR comment payload", "error", err)
