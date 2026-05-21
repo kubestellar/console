@@ -110,7 +110,8 @@ export function useMissionControl() {
       if (validProjects.length !== projects.length) logger.warn(`[MissionControl] filtered ${projects.length - validProjects.length} invalid project(s) from AI payload`)
       const kubaraNames = kubaraChartNamesRef.current
       lastParsedContentRef.current = assistantContent
-      setState((prev) => ({ ...prev, projects: mergeProjects(prev.projects, validProjects.map((project) => ({ ...project, dependencies: project.dependencies ?? [], kubaraChartName: kubaraNames.has(project.name) ? project.name : undefined }))) }))
+      const aiSuggestedProjects = validProjects.map((project) => ({ ...project, dependencies: project.dependencies ?? [], kubaraChartName: kubaraNames.has(project.name) ? project.name : undefined }))
+      setState((prev) => ({ ...prev, projects: mergeProjects(prev.projects, aiSuggestedProjects), originalAISuggestions: aiSuggestedProjects }))
       return
     }
 

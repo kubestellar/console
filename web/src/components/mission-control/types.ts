@@ -144,6 +144,8 @@ export interface MissionControlState {
   title: string
   /** Selected payload projects */
   projects: PayloadProject[]
+  /** Original AI-suggested projects (immutable for executive analysis) */
+  originalAISuggestions?: PayloadProject[]
   /** Cluster assignments */
   assignments: ClusterAssignment[]
   /** Deploy phases (topologically sorted) */

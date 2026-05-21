@@ -134,7 +134,7 @@ export function FixerDefinitionForm({
       {latestAIContent && !aiStreaming && (
         <ExecutiveAnalysis
           aiContent={latestAIContent}
-          projects={state.projects}
+          projects={state.originalAISuggestions || []}
           missionTitle={state.title}
           missionDescription={state.description}
         />

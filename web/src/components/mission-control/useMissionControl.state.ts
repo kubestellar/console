@@ -134,6 +134,7 @@ export function makeInitialState(
     description: persisted?.description ?? '',
     title: persisted?.title ?? '',
     projects: persisted?.projects ?? [],
+    originalAISuggestions: persisted?.originalAISuggestions,
     assignments: persisted?.assignments ?? [],
     phases: persisted?.phases ?? [],
     overlay: persisted?.overlay ?? 'architecture',
