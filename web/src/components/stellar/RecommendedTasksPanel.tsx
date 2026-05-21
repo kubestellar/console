@@ -260,8 +260,8 @@ export function RecommendedTasksPanel({ createTask }: Props) {
           fontFamily: 'var(--s-mono)',
           fontSize: PANEL_TITLE_FONT_SIZE_PX,
           color: 'var(--s-success)',
-          background: 'rgba(63,185,80,0.1)',
-          border: '1px solid rgba(63,185,80,0.25)',
+          background: 'color-mix(in srgb, var(--s-success) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--s-success) 25%, transparent)',
           borderRadius: PANEL_BADGE_RADIUS_PX,
           padding: `0 ${PANEL_BADGE_PADDING_X_PX}px`,
         }}>{RECOMMENDATIONS.length - scheduledIds.size}</span>
