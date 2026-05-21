@@ -31,7 +31,7 @@ const validateQASM = (content: string): { valid: boolean; error?: string } => {
   return { valid: true }
 }
 
-export const CustomQASMModal = React.memo(function CustomQASMModal({
+const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
   isOpen,
   onSubmit,
   onCancel,
@@ -247,3 +247,7 @@ export const CustomQASMModal = React.memo(function CustomQASMModal({
     </div>
   )
 })
+
+export function CustomQASMModal(props: CustomQASMModalProps) {
+  return <MemoizedCustomQASMModal {...props} />
+}
