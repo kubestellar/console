@@ -150,7 +150,9 @@ func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
 	var req struct {
 		ConfirmToken string `json:"confirmToken"`
 	}
-	_ = c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
 	destructive := isDestructiveAction(item.ActionType)
 	if destructive {
 		if req.ConfirmToken == "" || req.ConfirmToken != item.ConfirmToken {
