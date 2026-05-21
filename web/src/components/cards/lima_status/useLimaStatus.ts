@@ -167,3 +167,9 @@ export function useLimaStatus(): UseLimaStatusResult {
     isDemoData: effectiveIsDemoData,
   }
 }
+
+/** Pure helpers for unit tests (factory hook — mock createCachedHook, not useCache directly). */
+export const __testables = {
+  buildLimaStatus,
+  toDemoStatus,
+}

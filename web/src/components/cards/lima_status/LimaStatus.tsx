@@ -85,8 +85,7 @@ export function LimaStatus() {
           )}
           {isHealthy ? t('lima.healthy') : t('lima.degraded')}
         </div>
-
-
+        {isDemoData && <span className="demo-badge">{t('lima.demo')}</span>}
       </div>
 
       {/* Metric tiles */}

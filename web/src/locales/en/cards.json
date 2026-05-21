@@ -3011,6 +3011,7 @@
     "syncedDaysAgo": "{{count}}d ago"
   },
   "lima": {
+    "demo": "Demo",
     "healthy": "Healthy",
     "degraded": "Degraded",
     "notDetected": "Lima Not Detected",
