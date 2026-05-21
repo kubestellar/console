@@ -8,6 +8,7 @@
 
 import { createPrivateKey, createSign } from "node:crypto";
 import { buildCorsHeaders } from "./cors";
+import { readCappedJson } from "./read-capped-json";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export async function getInstallationCred(): Promise<string> {
     console.error(`[feedback-app] installation credential exchange failed (req=${reqId}): HTTP ${resp.status} — ${sanitizeUpstreamError(txt)}`);
     throw new Error(`Upstream service error (req=${reqId})`);
   }
-  const data = (await resp.json()) as { token: string };
+  const data = await readCappedJson<{ token: string }>(resp, "GitHub App installation token");
   cachedInstallCred = { value: data.token, fetchedAt: Date.now() };
   return data.token;
 }
@@ -312,9 +313,9 @@ export async function verifyClientAuth(
   if (!resp.ok) {
     throw new Error(`introspection HTTP ${resp.status}`);
   }
-  const data = (await resp.json()) as {
+  const data = await readCappedJson<{
     user?: { login?: string; id?: number };
-  };
+  }>(resp, "GitHub token introspection");
   if (!data.user?.login || typeof data.user.id !== "number") {
     throw new Error("introspection response missing user");
   }
@@ -354,7 +355,7 @@ export async function getRepoPermissions(
   if (!resp.ok) {
     throw new Error(`repo permissions HTTP ${resp.status}`);
   }
-  const data = (await resp.json()) as { permissions?: { push?: boolean } };
+  const data = await readCappedJson<{ permissions?: { push?: boolean } }>(resp, "GitHub repo permissions");
   return { push: data.permissions?.push === true };
 }
 

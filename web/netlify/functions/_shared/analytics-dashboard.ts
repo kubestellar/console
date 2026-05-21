@@ -1,4 +1,5 @@
 import type { DashboardData, FilterMode, GA4Row } from "./analytics-dashboard-types";
+import { readCappedJson } from "./read-capped-json";
 
 export const CACHE_STORE = "analytics-dashboard";
 export const CACHE_KEY_PREFIX = "dashboard-data";
@@ -73,7 +74,7 @@ async function runReport(
     throw new Error(`Upstream service error (req=${reqId})`);
   }
 
-  const data = await resp.json();
+  const data = await readCappedJson<{ rows?: GA4Row[] }>(resp, "GA4 API");
   return data.rows || [];
 }
 

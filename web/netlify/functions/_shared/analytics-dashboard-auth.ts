@@ -1,5 +1,6 @@
 import type { getStore } from "@netlify/blobs";
 import type { ServiceAccountKey, TokenCache } from "./analytics-dashboard-types";
+import { readCappedJson } from "./read-capped-json";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWT_EXPIRY_SECONDS = 3600;
@@ -101,7 +102,7 @@ export async function getAccessToken(
     throw new Error(`Upstream service error (req=${reqId})`);
   }
 
-  const data = await resp.json();
+  const data = await readCappedJson<{ access_token: string; expires_in?: number }>(resp, "Google OAuth token");
   const accessToken = data.access_token;
   const expiresIn = data.expires_in || JWT_EXPIRY_SECONDS;
 

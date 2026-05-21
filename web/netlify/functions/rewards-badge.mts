@@ -5,6 +5,7 @@
  */
 import { getContributorLevel } from "../../src/types/rewards";
 import { GITHUB_SCORING_GENERATED } from "../../src/types/rewards.generated";
+import { readCappedJson } from "./_shared/read-capped-json";
 
 const GITHUB_API = "https://api.github.com";
 const MAX_PAGES = 10; // GitHub Search API caps at 1000 results
@@ -123,7 +124,7 @@ async function searchItems(login: string, itemType: "issue" | "pr", token: strin
       }
       throw new Error(`GitHub API ${res.status}`);
     }
-    const sr: SearchResponse = await res.json();
+    const sr: SearchResponse = await readCappedJson<SearchResponse>(res, "GitHub Search API");
     all.push(...sr.items);
     if (all.length >= sr.total_count || sr.items.length < PER_PAGE) break;
   }
