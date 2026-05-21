@@ -80,7 +80,11 @@ const ALLOWED_PATHS = new Set([
 
 const PROXY_TIMEOUT_MS = 15_000;
 const MAX_PROXY_BODY_BYTES = 1_048_576;
+const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
+const CIRCUIT_POST_PATHS = new Set(["/execute", "/loop/start"]);
+const LOOP_STOP_PATH = "/loop/stop";
+const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -92,6 +96,82 @@ function isAllowedPath(path: string): boolean {
     return false;
   }
   return ALLOWED_PATHS.has(path);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validatePostBody(path: string, requestBody: string): string | null {
+  const trimmedBody = requestBody.trim();
+  let parsedBody: unknown;
+
+  try {
+    parsedBody = trimmedBody === "" ? {} : JSON.parse(trimmedBody);
+  } catch {
+    return "Invalid JSON in request body";
+  }
+
+  if (!isPlainObject(parsedBody)) {
+    return "Request body must be a JSON object";
+  }
+
+  if (CIRCUIT_POST_PATHS.has(path)) {
+    if (Object.keys(parsedBody).length !== 1 || typeof parsedBody.circuit !== "string" || parsedBody.circuit.trim() === "") {
+      return 'Request body must be an object with a non-empty "circuit" string';
+    }
+  }
+
+  if (path === LOOP_STOP_PATH && Object.keys(parsedBody).length !== 0) {
+    return "Request body for /loop/stop must be empty";
+  }
+
+  return null;
+}
+
+async function readResponseBodyWithCap(response: Response): Promise<Uint8Array | null> {
+  const contentLengthHeader = response.headers.get("content-length");
+  if (contentLengthHeader) {
+    const contentLength = Number.parseInt(contentLengthHeader, 10);
+    if (!Number.isNaN(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
+      throw new Error(OVERSIZED_RESPONSE_ERROR);
+    }
+  }
+
+  if (!response.body) {
+    return null;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalSize = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (!value) {
+      continue;
+    }
+
+    totalSize += value.byteLength;
+    if (totalSize > MAX_RESPONSE_BYTES) {
+      await reader.cancel(OVERSIZED_RESPONSE_ERROR);
+      throw new Error(OVERSIZED_RESPONSE_ERROR);
+    }
+
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(totalSize);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return body;
 }
 
 export default async (req: Request, context: Context): Promise<Response> => {
@@ -240,6 +320,16 @@ export default async (req: Request, context: Context): Promise<Response> => {
       }
     }
     const requestBody = req.method === "GET" ? undefined : await req.text();
+    if (req.method === "POST" && requestBody !== undefined) {
+      const validationError = validatePostBody(path, requestBody);
+      if (validationError) {
+        return new Response(JSON.stringify({ error: validationError }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const response = await fetch(targetURL, {
       method: req.method,
       headers: {
@@ -249,11 +339,20 @@ export default async (req: Request, context: Context): Promise<Response> => {
       body: requestBody,
       signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
     });
-    return new Response(response.body, {
+
+    const responseBody = await readResponseBodyWithCap(response);
+    return new Response(responseBody, {
       status: response.status,
       headers: response.headers,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === OVERSIZED_RESPONSE_ERROR) {
+      return new Response(JSON.stringify({ error: OVERSIZED_RESPONSE_ERROR }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     console.error("Quantum proxy error:", error);
     return new Response(
       JSON.stringify({ error: "Quantum service unavailable" }),
