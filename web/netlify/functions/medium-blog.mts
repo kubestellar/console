@@ -23,6 +23,9 @@ const MAX_POSTS = 3;
 /** Maximum length of preview text */
 const PREVIEW_MAX_LEN = 200;
 
+/** Maximum upstream response size (512 KB) — reject unexpectedly large feeds */
+const MAX_RESPONSE_BYTES = 512 * 1024;
+
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
   "https://console-deploy-preview.kubestellar.io",
@@ -150,7 +153,21 @@ export default async (req: Request) => {
       );
     }
 
+    const contentLength = Number(resp.headers.get("content-length") || "0");
+    if (contentLength > MAX_RESPONSE_BYTES) {
+      return new Response(
+        JSON.stringify({ error: "upstream response too large" }),
+        { status: 502, headers }
+      );
+    }
+
     const xml = await resp.text();
+    if (xml.length > MAX_RESPONSE_BYTES) {
+      return new Response(
+        JSON.stringify({ error: "upstream response too large" }),
+        { status: 502, headers }
+      );
+    }
     const posts = parseRSSFeed(xml);
 
     return new Response(
