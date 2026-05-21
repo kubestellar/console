@@ -1,4 +1,5 @@
 import { useState, memo, Suspense } from 'react'
+import { Link } from 'react-router-dom'
 import { safeLazy } from '../../lib/safeLazy'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +15,7 @@ import { Skeleton } from './Skeleton'
 import { StatBlockConfig, DashboardStatsType, StatDisplayMode } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { StatBlockModePicker } from './StatBlockModePicker'
+import { ROUTES } from '../../config/routes'
 // Lazy-load Sparkline to defer the echarts vendor chunk from the critical path.
 // The Gauge and CircularProgress components are smaller and less common, but they
 // share the same echarts import chain, so lazy-loading them too is low-cost.
@@ -503,9 +505,9 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           {isEmptyValue && (
             <div className="text-2xs text-muted-foreground/70 mt-0.5">
               {t('statsOverview.emptyHint', 'Connect a cluster to populate')}{' '}
-              <a href="/login" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              <Link to={ROUTES.LOGIN} className="underline underline-offset-2 hover:text-foreground transition-colors">
                 {t('statsOverview.setupWizard', 'Open setup wizard')}
-              </a>
+              </Link>
             </div>
           )}
           {data.sublabel && <div className="min-w-0 truncate text-xs text-muted-foreground" title={data.sublabel}>{wrapAbbreviations(data.sublabel)}</div>}
