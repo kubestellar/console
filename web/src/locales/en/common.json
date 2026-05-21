@@ -4240,7 +4240,12 @@
     "errorDescription": "The console could not complete its startup handshake within {{timeoutSeconds}} seconds. Verify that the backend can reach the Kubernetes API, then retry.",
     "detailsTitle": "Backend details",
     "actionHint": "Check backend logs, kubeconfig access, and cluster network connectivity before retrying.",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "demoBadgeLabel": "Demo environment",
+    "demoAuthTitle": "Demo Session",
+    "demoAuthDescription": "You are viewing the Console in demo mode. This message does not indicate a real authentication failure.",
+    "demoAuthHint": "Reload the page to reset the demo session and continue exploring the demo experience.",
+    "demoAuthRefresh": "Reload Demo Session"
   },
   "agentSetup": {
     "welcomeTitle": "Welcome to KubeStellar Console",

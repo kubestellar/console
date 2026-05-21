@@ -4,6 +4,7 @@ import { InitialInfrastructureGate } from './InitialInfrastructureGate'
 
 const mockGetState = vi.fn()
 const mockFetchKagentStatus = vi.fn()
+const mockIsDemoMode = vi.fn(() => false)
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -26,9 +27,14 @@ vi.mock('../lib/kagentBackend', () => ({
   fetchKagentStatus: (...args: unknown[]) => mockFetchKagentStatus(...args),
 }))
 
+vi.mock('../lib/demoMode', () => ({
+  isDemoMode: () => mockIsDemoMode(),
+}))
+
 describe('InitialInfrastructureGate', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsDemoMode.mockReturnValue(false)
   })
 
   it('renders children after the initial handshake succeeds', async () => {
@@ -76,6 +82,25 @@ describe('InitialInfrastructureGate', () => {
     expect(screen.getByText(/session has expired or authentication credentials are missing/)).toBeInTheDocument()
     expect(screen.getByText('Recovery Steps')).toBeInTheDocument()
     expect(screen.getByText(/Click "Reload page" to refresh your session/)).toBeInTheDocument()
+  })
+
+  it('shows a demo-aware auth screen in demo mode', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockGetState.mockRejectedValue(new Error('No authentication token available'))
+    mockFetchKagentStatus.mockResolvedValue({ available: true, url: 'http://kagent:8080' })
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    await waitFor(() => expect(screen.getByText('Demo Session')).toBeInTheDocument())
+    expect(screen.getByText(/does not indicate a real authentication failure/)).toBeInTheDocument()
+    expect(screen.getByText(/reset the demo session and continue exploring/)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Demo environment' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reload Demo Session' })).toBeInTheDocument()
+    expect(screen.queryByText('Recovery Steps')).not.toBeInTheDocument()
   })
 
   it('abstracts authentication errors in technical details for non-auth failures', async () => {

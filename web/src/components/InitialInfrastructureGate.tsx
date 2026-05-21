@@ -1,15 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '../lib/cn'
+import { isDemoMode } from '../lib/demoMode'
 import { fetchKagentStatus } from '../lib/kagentBackend'
 import { getUserSafeErrorMessage } from '../lib/errors/handleError'
 import { stellarApi } from '../services/stellar'
+import { StatusBadge } from './ui/StatusBadge'
 import { Button } from './ui/Button'
 
 const INITIAL_HANDSHAKE_TIMEOUT_MS = 15_000
 const INITIAL_HANDSHAKE_TIMEOUT_SECONDS = INITIAL_HANDSHAKE_TIMEOUT_MS / 1000
 const STELLAR_STATE_ENDPOINT = '/api/stellar/state'
 const KAGENT_STATUS_ENDPOINT = '/api/kagent/status'
+const AUTH_REQUIRED_PANEL_CLASSNAME = 'w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm'
 
 type HandshakeState = 'loading' | 'ready' | 'error' | 'auth-required'
 
@@ -129,24 +133,72 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
   }
 
   if (handshakeState === 'auth-required') {
+    if (isDemoMode()) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <div className={cn(AUTH_REQUIRED_PANEL_CLASSNAME, 'text-center')} role="alert">
+            <div className="mb-4 flex items-center justify-center gap-2">
+              <StatusBadge
+                color="yellow"
+                variant="outline"
+                rounded="full"
+                role="img"
+                aria-label={t('startupHandshake.demoBadgeLabel', 'Demo environment')}
+              >
+                {t('layout.demo', 'Demo')}
+              </StatusBadge>
+            </div>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <RefreshCw className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <h2 className="mb-3 text-xl font-semibold text-foreground">
+              {t('startupHandshake.demoAuthTitle', 'Demo Session')}
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              {t(
+                'startupHandshake.demoAuthDescription',
+                'You are viewing the Console in demo mode. This message does not indicate a real authentication failure.',
+              )}
+            </p>
+            <p className="mb-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              {t(
+                'startupHandshake.demoAuthHint',
+                'Reload the page to reset the demo session and continue exploring the demo experience.',
+              )}
+            </p>
+            <div className="flex items-center justify-center">
+              <Button
+                onClick={() => window.location.reload()}
+                variant="primary"
+                size="md"
+                icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
+              >
+                {t('startupHandshake.demoAuthRefresh', 'Reload Demo Session')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center p-8 max-w-2xl" role="alert">
-          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" aria-hidden="true" />
-          <h2 className="text-lg font-semibold text-foreground mb-2">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className={cn(AUTH_REQUIRED_PANEL_CLASSNAME, 'text-center')} role="alert">
+          <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-yellow-400" aria-hidden="true" />
+          <h2 className="mb-2 text-lg font-semibold text-foreground">
             {t('startupHandshake.authRequiredTitle', 'Authentication Required')}
           </h2>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="mb-6 text-sm text-muted-foreground">
             {t(
               'startupHandshake.authRequiredDescription',
               'Your session has expired or authentication credentials are missing. Please sign in again to continue using the console.',
             )}
           </p>
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left mb-6">
-            <h3 className="text-sm font-semibold text-foreground mb-2">
+          <div className="mb-6 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left">
+            <h3 className="mb-2 text-sm font-semibold text-foreground">
               {t('startupHandshake.authRecoveryTitle', 'Recovery Steps')}
             </h3>
-            <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
+            <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
               <li>{t('startupHandshake.authRecoveryStep1', 'Click "Reload page" to refresh your session')}</li>
               <li>{t('startupHandshake.authRecoveryStep2', 'If the issue persists, log out and log in again')}</li>
               <li>{t('startupHandshake.authRecoveryStep3', 'Verify you have the necessary access permissions')}</li>
