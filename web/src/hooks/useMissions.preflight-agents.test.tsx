@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
-import { MissionProvider, useMissions } from './useMissions'
+import { MissionProvider, useMissions, type StartMissionParams } from './useMissions'
+import {
+  MISSION_CONTROL_TRIGGER_TIMEOUT_MS,
+  MISSION_TIMEOUT_CHECK_INTERVAL_MS,
+  MISSION_TIMEOUT_MS,
+} from './useMissions.constants'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
@@ -142,10 +147,11 @@ const defaultParams = {
 /** Start a mission and simulate the WebSocket opening so the mission moves to 'running'. */
 async function startMissionWithConnection(
   result: { current: ReturnType<typeof useMissions> },
+  params: StartMissionParams = defaultParams,
 ): Promise<{ missionId: string; requestId: string }> {
   let missionId = ''
   act(() => {
-    missionId = result.current.startMission(defaultParams)
+    missionId = result.current.startMission(params)
   })
   // Flush microtask queue so the preflight .then() chain resolves (#3742)
   await act(async () => { await Promise.resolve() })
@@ -811,13 +817,39 @@ describe('mission timeout interval', () => {
 
       expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
 
-      // Advance past the 5-minute timeout + one check interval (15s)
-      act(() => { vi.advanceTimersByTime(300_000 + 15_000) })
+      act(() => { vi.advanceTimersByTime(MISSION_TIMEOUT_MS + MISSION_TIMEOUT_CHECK_INTERVAL_MS) })
 
       const mission = result.current.missions.find(m => m.id === missionId)
       expect(mission?.status).toBe('failed')
       expect(mission?.messages.some(m => m.content.includes('Mission Timed Out'))).toBe(true)
       expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'mission_timeout', expect.anything())
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('allows Mission Control launches to run until the extended timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      const { result } = renderHook(() => useMissions(), { wrapper })
+      const missionParams: StartMissionParams = {
+        ...defaultParams,
+        type: 'deploy',
+        context: { source: 'mission-control' },
+      }
+      const { missionId } = await startMissionWithConnection(result, missionParams)
+
+      act(() => { vi.advanceTimersByTime(MISSION_TIMEOUT_MS + MISSION_TIMEOUT_CHECK_INTERVAL_MS) })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
+
+      act(() => { vi.advanceTimersByTime(MISSION_CONTROL_TRIGGER_TIMEOUT_MS - MISSION_TIMEOUT_MS) })
+      expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('running')
+
+      act(() => { vi.advanceTimersByTime(MISSION_TIMEOUT_CHECK_INTERVAL_MS) })
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+      expect(mission?.messages.some(m => m.content.includes('20 minutes'))).toBe(true)
+      expect(emitMissionError).toHaveBeenCalledWith('deploy', 'mission_timeout', expect.anything())
     } finally {
       vi.useRealTimers()
     }

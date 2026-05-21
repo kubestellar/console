@@ -10,8 +10,10 @@ import {
   STATUS_WAITING_DELAY_MS,
   STATUS_PROCESSING_DELAY_MS,
   MISSION_TIMEOUT_MS,
+  MISSION_CONTROL_TRIGGER_TIMEOUT_MS,
   MISSION_TIMEOUT_CHECK_INTERVAL_MS,
   MISSION_INACTIVITY_TIMEOUT_MS,
+  getMissionTimeoutMs,
   CANCEL_ACK_TIMEOUT_MS,
   CANCEL_ACK_MESSAGE_TYPE,
   CANCEL_CONFIRMED_MESSAGE_TYPE,
@@ -42,9 +44,16 @@ describe('useMissions.constants', () => {
     expect(STATUS_WAITING_DELAY_MS).toBe(500)
     expect(STATUS_PROCESSING_DELAY_MS).toBe(3_000)
     expect(MISSION_TIMEOUT_MS).toBe(300_000)
+    expect(MISSION_CONTROL_TRIGGER_TIMEOUT_MS).toBe(1_200_000)
     expect(MISSION_TIMEOUT_CHECK_INTERVAL_MS).toBe(15_000)
     expect(MISSION_INACTIVITY_TIMEOUT_MS).toBe(90_000)
     expect(WAITING_INPUT_TIMEOUT_MS).toBe(600_000)
+  })
+
+  it('uses the extended timeout only for Mission Control launches', () => {
+    expect(getMissionTimeoutMs({ context: { source: 'mission-control' } })).toBe(MISSION_CONTROL_TRIGGER_TIMEOUT_MS)
+    expect(getMissionTimeoutMs({ context: { source: 'sidebar' } })).toBe(MISSION_TIMEOUT_MS)
+    expect(getMissionTimeoutMs({})).toBe(MISSION_TIMEOUT_MS)
   })
 
   it('defines cancel protocol message types', () => {

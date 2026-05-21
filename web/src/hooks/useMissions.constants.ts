@@ -6,6 +6,7 @@
  */
 
 import { MS_PER_MINUTE } from '../lib/constants/time'
+import type { Mission } from './useMissionTypes'
 
 // ─── Reconnect & Replay ─────────────────────────────────────────────────────
 
@@ -53,16 +54,23 @@ export const STATUS_PROCESSING_DELAY_MS = 3_000
 // ─── Mission Timeouts ────────────────────────────────────────────────────────
 
 /**
- * Maximum time (ms) a mission is allowed to stay in "running" state before the
- * frontend considers it timed out and transitions it to "failed".  This acts as
- * a client-side safety net in case the backend timeout fires but the error
- * message is lost (e.g., WebSocket reconnect race), or the backend itself is
- * unreachable.  Matches the backend missionExecutionTimeout (5 min) plus a
- * small grace period for network latency.
+ * Standard client-side mission timeout for normal AI missions.
  */
-export const MISSION_TIMEOUT_MS = 300_000
+export const MISSION_TIMEOUT_MS = 5 * MS_PER_MINUTE
+/**
+ * Mission Control launches can legitimately go quiet for much longer while
+ * cluster tooling (for example Helm installs) finishes in the background.
+ */
+export const MISSION_CONTROL_TRIGGER_TIMEOUT_MS = 20 * MS_PER_MINUTE
+export const MISSION_CONTROL_TRIGGER_SOURCE = 'mission-control'
 /** How often (ms) the frontend checks for timed-out missions */
 export const MISSION_TIMEOUT_CHECK_INTERVAL_MS = 15_000
+
+export function getMissionTimeoutMs(mission: Pick<Mission, 'context'>): number {
+  return mission.context?.source === MISSION_CONTROL_TRIGGER_SOURCE
+    ? MISSION_CONTROL_TRIGGER_TIMEOUT_MS
+    : MISSION_TIMEOUT_MS
+}
 /**
  * If streaming has started (at least one chunk received) but no new chunk
  * arrives within this window, the agent is assumed to be stuck waiting on a

@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode }
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
 import { emitMissionError } from '../lib/analytics'
 import {
-  MISSION_TIMEOUT_MS,
   MISSION_TIMEOUT_CHECK_INTERVAL_MS,
   MISSION_INACTIVITY_TIMEOUT_MS,
+  getMissionTimeoutMs,
 } from './useMissions.constants'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 import {
   createMissionStateUtils,
   useMissionProviderState,
@@ -158,12 +159,13 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       state.setMissions(prev => {
         const hasIssue = prev.some(mission => {
           if (mission.status !== 'running') return false
+          const missionTimeoutMs = getMissionTimeoutMs(mission)
           const openTools = state.toolsInFlight.current.get(mission.id) ?? 0
           if (openTools > 0) {
-            if ((now - new Date(mission.updatedAt).getTime()) > MISSION_TIMEOUT_MS) return true
+            if ((now - new Date(mission.updatedAt).getTime()) > missionTimeoutMs) return true
             return false
           }
-          if ((now - new Date(mission.updatedAt).getTime()) > MISSION_TIMEOUT_MS) return true
+          if ((now - new Date(mission.updatedAt).getTime()) > missionTimeoutMs) return true
           const lastStreamTs = state.lastStreamTimestamp.current.get(mission.id)
           if (lastStreamTs && (now - lastStreamTs) > MISSION_INACTIVITY_TIMEOUT_MS) return true
           return false
@@ -175,9 +177,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
 
           const elapsed = now - new Date(mission.updatedAt).getTime()
           const lastStreamTs = state.lastStreamTimestamp.current.get(mission.id)
+          const missionTimeoutMs = getMissionTimeoutMs(mission)
           const openTools = state.toolsInFlight.current.get(mission.id) ?? 0
           const isInactive = openTools === 0 && !!lastStreamTs && (now - lastStreamTs) > MISSION_INACTIVITY_TIMEOUT_MS
-          const isTimedOut = elapsed > MISSION_TIMEOUT_MS
+          const isTimedOut = elapsed > missionTimeoutMs
 
           if (!isTimedOut && !isInactive) return mission
 
@@ -195,8 +198,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           )
 
           const errorContent = isInactive
-            ? `**Agent Not Responding**\n\nThe AI agent started responding but stopped for over ${Math.round(MISSION_INACTIVITY_TIMEOUT_MS / 60_000)} minutes. This usually means the agent is stuck waiting for a tool call to return (e.g., a Kubernetes API call or APISIX gateway request that is not responding).\n\nYou can:\n- **Retry** the mission — the issue may be transient\n- **Check cluster connectivity** — ensure the target cluster API server is reachable\n- **Cancel** and try a simpler or more specific request`
-            : `**Mission Timed Out**\n\nThis mission has been running for over ${Math.round(MISSION_TIMEOUT_MS / 60_000)} minutes without completing. It has been automatically stopped.\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
+            ? `**Agent Not Responding**\n\nThe AI agent started responding but stopped for over ${Math.round(MISSION_INACTIVITY_TIMEOUT_MS / MS_PER_MINUTE)} minutes. This usually means the agent is stuck waiting for a tool call to return (e.g., a Kubernetes API call or APISIX gateway request that is not responding).\n\nYou can:\n- **Retry** the mission — the issue may be transient\n- **Check cluster connectivity** — ensure the target cluster API server is reachable\n- **Cancel** and try a simpler or more specific request`
+            : `**Mission Timed Out**\n\nThis mission has been running for over ${Math.round(missionTimeoutMs / MS_PER_MINUTE)} minutes without completing. It has been automatically stopped.\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
 
           return {
             ...mission,
