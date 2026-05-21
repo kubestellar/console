@@ -104,153 +104,154 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
   }
 
   return (
-    <div className="p-4 space-y-4">
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {/* Refresh Interval Control */}
-        <div className="bg-secondary/30 rounded-lg p-3 border border-border">
-          <Slider
-            label="Refresh Interval"
-            value={pollInterval}
-            onChange={(e) => setPollInterval(Number(e.currentTarget.value))}
-            min={STATUS_POLL_MIN_MS}
-            max={STATUS_POLL_MAX_MS}
-            step={500}
-            unit=" ms"
-          />
+    <div className="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto p-4 pb-6">
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      {/* Refresh Interval Control */}
+      <div className="rounded-lg border border-border bg-secondary/30 p-3">
+        <Slider
+          label="Refresh Interval"
+          value={pollInterval}
+          onChange={(e) => setPollInterval(Number(e.currentTarget.value))}
+          min={STATUS_POLL_MIN_MS}
+          max={STATUS_POLL_MAX_MS}
+          step={500}
+          unit=" ms"
+        />
+      </div>
+
+      {/* Status Overview */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Status</span>
+          <StatusBadge color={getStatusColor(statusData.status)} size="sm">
+            {statusData.status}
+          </StatusBadge>
         </div>
 
-        {/* Status Overview */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Status</span>
-            <StatusBadge color={getStatusColor(statusData.status)} size="sm">
-              {statusData.status}
-            </StatusBadge>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Execution Mode</span>
-            <span className="text-sm font-medium">{statusData.execution_mode}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Loop Mode</span>
-            <StatusBadge color={statusData.loop_mode ? 'green' : 'gray'} size="sm">
-              {statusData.loop_mode ? 'Active' : 'Inactive'}
-            </StatusBadge>
-          </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Execution Mode</span>
+          <span className="text-sm font-medium">{statusData.execution_mode}</span>
         </div>
 
-        <div className="border-t border-border pt-3" />
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Loop Mode</span>
+          <StatusBadge color={statusData.loop_mode ? 'green' : 'gray'} size="sm">
+            {statusData.loop_mode ? 'Active' : 'Inactive'}
+          </StatusBadge>
+        </div>
+      </div>
 
-        {/* Circuit Info */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Circuit File</span>
-            <span className="text-sm font-mono">{statusData.qasm_file}</span>
-          </div>
+      <div className="border-t border-border pt-3" />
 
-          {statusData.backend_info?.name && (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Backend</span>
-                <span className="text-sm font-mono">{statusData.backend_info.name}</span>
-              </div>
-
-              {statusData.backend_info.type && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Type</span>
-                  <StatusBadge
-                    color={
-                      statusData.backend_info.type === 'real'
-                        ? 'green'
-                        : statusData.backend_info.type === 'noise_model'
-                          ? 'orange'
-                          : 'blue'
-                    }
-                    size="sm"
-                    variant="outline"
-                  >
-                    {statusData.backend_info.type === 'real'
-                      ? 'Real Hardware'
-                      : statusData.backend_info.type === 'noise_model'
-                        ? 'Noise Model'
-                        : 'Simulator'}
-                  </StatusBadge>
-                </div>
-              )}
-
-              {statusData.backend_info.shots && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Shots</span>
-                  <span className="text-sm font-medium">{statusData.backend_info.shots}</span>
-                </div>
-              )}
-            </>
-          )}
+      {/* Circuit Info */}
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-sm text-muted-foreground">Circuit File</span>
+          <span className="min-w-0 break-all text-right text-sm font-mono">{statusData.qasm_file}</span>
         </div>
 
-        {/* Control System Status */}
-        {statusData.control_system && (
+        {statusData.backend_info?.name && (
           <>
-            <div className="border-t border-border pt-3" />
-            <div className="space-y-2">
-              <div className="text-xs font-semibold text-muted-foreground">Control System</div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Backend</span>
+              <span className="text-sm font-mono">{statusData.backend_info.name}</span>
+            </div>
+
+            {statusData.backend_info.type && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Command</span>
-                <span className="text-sm font-medium">{statusData.control_system.command}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <StatusBadge color="purple" size="sm" variant="outline">
-                  {statusData.control_system.status}
+                <span className="text-sm text-muted-foreground">Type</span>
+                <StatusBadge
+                  color={
+                    statusData.backend_info.type === 'real'
+                      ? 'green'
+                      : statusData.backend_info.type === 'noise_model'
+                        ? 'orange'
+                        : 'blue'
+                  }
+                  size="sm"
+                  variant="outline"
+                >
+                  {statusData.backend_info.type === 'real'
+                    ? 'Real Hardware'
+                    : statusData.backend_info.type === 'noise_model'
+                      ? 'Noise Model'
+                      : 'Simulator'}
                 </StatusBadge>
               </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                {statusData.control_system.description}
-              </p>
-            </div>
-          </>
-        )}
+            )}
 
-        {/* Version Info */}
-        {statusData.version_info && (
-          <>
-            <div className="border-t border-border pt-3" />
-            <div className="space-y-1">
+            {statusData.backend_info.shots && (
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Version</span>
-                <span className="text-xs font-mono font-semibold">{statusData.version_info.version}</span>
+                <span className="text-sm text-muted-foreground">Shots</span>
+                <span className="text-sm font-medium">{statusData.backend_info.shots}</span>
               </div>
-              {statusData.version_info.commit && statusData.version_info.commit !== 'unknown' && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Commit</span>
-                  <span className="text-xs font-mono text-muted-foreground">{statusData.version_info.commit}</span>
-                </div>
-              )}
-            </div>
+            )}
           </>
-        )}
-
-        {/* Last Update */}
-        {statusData.last_result_time && (
-          <>
-            <div className="border-t border-border pt-3" />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Last Update</span>
-              <span className="text-xs font-mono text-muted-foreground">
-                {new Date(statusData.last_result_time).toLocaleTimeString()}
-              </span>
-            </div>
-          </>
-        )}
-
-        {/* Message */}
-        {statusData.message && (
-          <div className="bg-secondary/50 rounded px-3 py-2">
-            <p className="text-xs text-muted-foreground">{statusData.message}</p>
-          </div>
         )}
       </div>
-    )
-  }
+
+      {/* Control System Status */}
+      {statusData.control_system && (
+        <>
+          <div className="border-t border-border pt-3" />
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-muted-foreground">Control System</div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Command</span>
+              <span className="text-sm font-medium">{statusData.control_system.command}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Status</span>
+              <StatusBadge color="purple" size="sm" variant="outline">
+                {statusData.control_system.status}
+              </StatusBadge>
+            </div>
+            <p className="pt-1 text-xs text-muted-foreground">
+              {statusData.control_system.description}
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Version Info */}
+      {statusData.version_info && (
+        <>
+          <div className="border-t border-border pt-3" />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Version</span>
+              <span className="text-xs font-mono font-semibold">{statusData.version_info.version}</span>
+            </div>
+            {statusData.version_info.commit && statusData.version_info.commit !== 'unknown' && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Commit</span>
+                <span className="text-xs font-mono text-muted-foreground">{statusData.version_info.commit}</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Last Update */}
+      {statusData.last_result_time && (
+        <>
+          <div className="border-t border-border pt-3" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Last Update</span>
+            <span className="text-xs font-mono text-muted-foreground">
+              {new Date(statusData.last_result_time).toLocaleTimeString()}
+            </span>
+          </div>
+        </>
+      )}
+
+      {/* Message */}
+      {statusData.message && (
+        <div className="rounded bg-secondary/50 px-3 py-2">
+          <p className="text-xs text-muted-foreground">{statusData.message}</p>
+        </div>
+      )}
+    </div>
+  )
+}

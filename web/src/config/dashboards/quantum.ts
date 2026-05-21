@@ -29,7 +29,7 @@ export const quantumDashboardConfig: UnifiedDashboardConfig = {
       id: 'quantum-status-1',
       cardType: 'quantum_status',
       title: 'Quantum Status',
-      position: { w: 4, h: 3 },
+      position: { w: 4, h: 4 },
     },
     // Quantum circuit viewer
     {

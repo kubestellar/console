@@ -139,6 +139,18 @@ describe('QuantumStatus', () => {
     expect(screen.getByText('1.2.3')).toBeInTheDocument()
   })
 
+  it('uses a scrollable full-height container so status fields are not clipped', () => {
+    const { container } = render(<QuantumStatus />)
+
+    expect(container.firstElementChild).toHaveClass(
+      'flex',
+      'h-full',
+      'min-h-0',
+      'overflow-y-auto',
+      'pb-6',
+    )
+  })
+
   it('renders fallback when data is object with null version_info', () => {
     mockUseQuantumSystemStatus.mockReturnValue(
       defaultHookReturn({
