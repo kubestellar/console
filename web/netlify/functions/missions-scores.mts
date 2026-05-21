@@ -25,8 +25,8 @@ const DEFAULT_PAGE_LIMIT = 50;
 /** Maximum allowed limit to prevent abusive payloads. */
 const MAX_PAGE_LIMIT = 200;
 
-/** Maximum response size (10MB) */
-const MAX_BODY_BYTES = 10 * 1024 * 1024;
+/** Maximum upstream response size (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 /** Request timeout in milliseconds */
 const FETCH_TIMEOUT_MS = 30_000;
 /** Cache TTL: serve cached content for 15 minutes before re-fetching from GitHub */
@@ -160,9 +160,13 @@ export default async (request: Request): Promise<Response> => {
           return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
         }
       } else {
+        const contentLength = parseInt(resp.headers.get("content-length") ?? "0", 10);
+        if (contentLength > MAX_RESPONSE_BYTES) {
+          return jsonResponse(corsHeaders, { error: "upstream response too large" }, 502);
+        }
         bodyText = await resp.text();
-        if (bodyText.length > MAX_BODY_BYTES) {
-          return jsonResponse(corsHeaders, { error: "response too large" }, 413);
+        if (bodyText.length > MAX_RESPONSE_BYTES) {
+          return jsonResponse(corsHeaders, { error: "upstream response too large" }, 502);
         }
         const entry: CacheEntry = { body: bodyText, contentType: "application/json", fetchedAt: Date.now() };
         store.setJSON(cacheKey, entry).catch((err) => { console.warn("[missions-scores] blob cache write failed:", err instanceof Error ? err.message : err) });

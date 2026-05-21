@@ -20,8 +20,8 @@ const GITHUB_RAW_URL = "https://raw.githubusercontent.com";
 const KB_REPO = "kubestellar/console-kb";
 const DEFAULT_REF = "master";
 
-/** Maximum response size (10MB) */
-const MAX_BODY_BYTES = 10 * 1024 * 1024;
+/** Maximum upstream response size (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 
 /** Request timeout in milliseconds */
 const FETCH_TIMEOUT_MS = 30_000;
@@ -161,9 +161,14 @@ export default async (request: Request): Promise<Response> => {
       return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
     }
 
+    const contentLength = parseInt(resp.headers.get("content-length") ?? "0", 10);
+    if (contentLength > MAX_RESPONSE_BYTES) {
+      return jsonResponse(corsHeaders, { error: "upstream response too large" }, 502);
+    }
+
     const body = await resp.text();
-    if (body.length > MAX_BODY_BYTES) {
-      return jsonResponse(corsHeaders, { error: "response too large" }, 413);
+    if (body.length > MAX_RESPONSE_BYTES) {
+      return jsonResponse(corsHeaders, { error: "upstream response too large" }, 502);
     }
 
     const contentType = path.endsWith(".json") ? "application/json" : "text/plain";

@@ -14,6 +14,7 @@ export const STALE_SERVE_WINDOW_MS = 60 * 60 * 1000; // serve stale data up to 1
 const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
 const ARTIFACT_FETCH_TIMEOUT_MS = 10_000; // timeout for individual artifact downloads
 const GH_API_TIMEOUT_MS = 10_000; // timeout for GitHub API calls
+const MAX_RESPONSE_BYTES = 512_000; // maximum JSON payload size per GitHub API response
 const RUNS_PER_PAGE = 7;
 const GITHUB_API = "https://api.github.com";
 const IMAGE_REPO = "llm-d/llm-d";
@@ -196,6 +197,20 @@ interface GitTreeResponse {
   tree?: GitTreeNode[];
 }
 
+async function readCappedJsonResponse<T>(response: Response): Promise<T> {
+  const contentLength = parseInt(response.headers.get("content-length") ?? "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error("GitHub API response too large");
+  }
+
+  const rawText = await response.text();
+  if (rawText.length > MAX_RESPONSE_BYTES) {
+    throw new Error("GitHub API response too large");
+  }
+
+  return JSON.parse(rawText) as T;
+}
+
 async function fetchGuideYAMLFiles(token: string): Promise<TreeEntry[]> {
   const url = `${GITHUB_API}/repos/${IMAGE_REPO}/git/trees/main?recursive=1`;
   const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
@@ -204,7 +219,7 @@ async function fetchGuideYAMLFiles(token: string): Promise<TreeEntry[]> {
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
   if (!response.ok) return [];
 
-  const data = await response.json() as GitTreeResponse;
+  const data = await readCappedJsonResponse<GitTreeResponse>(response);
   const results: TreeEntry[] = [];
 
   for (const entry of data.tree ?? []) {
@@ -239,7 +254,7 @@ async function fetchBlob(sha: string, token: string): Promise<string> {
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
   if (!response.ok) return "";
 
-  const blob = await response.json() as GitBlobResponse;
+  const blob = await readCappedJsonResponse<GitBlobResponse>(response);
   if (blob.encoding === "base64") {
     return atob(blob.content ?? "");
   }
@@ -314,7 +329,7 @@ async function fetchRepoArtifacts(repo: string, token: string): Promise<Map<numb
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(ARTIFACT_FETCH_TIMEOUT_MS) });
   if (!response.ok) return new Map();
 
-  const data = await response.json() as ArtifactListResponse;
+  const data = await readCappedJsonResponse<ArtifactListResponse>(response);
   const artifactsByRun = new Map<number, number>();
   for (const artifact of data.artifacts ?? []) {
     if (artifact.workflow_run?.id) {
@@ -454,7 +469,7 @@ async function fetchWorkflowRuns(wf: NightlyWorkflow, token: string): Promise<Ni
     throw new Error(`GitHub API ${response.status}: ${body}`);
   }
 
-  const data = await response.json() as WorkflowRunsResponse;
+  const data = await readCappedJsonResponse<WorkflowRunsResponse>(response);
   const runs = (data.workflow_runs ?? [])
     .filter((run) => run.status !== "queued")
     .map((run) => ({
@@ -507,7 +522,7 @@ async function detectGPUFailure(repo: string, runId: number, token: string): Pro
     const response = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
     if (!response.ok) return "test_failure";
 
-    const data = await response.json() as JobsResponse;
+    const data = await readCappedJsonResponse<JobsResponse>(response);
     for (const job of data.jobs ?? []) {
       for (const step of job.steps ?? []) {
         if (step.conclusion === "failure" && isGPUStep(step.name)) {

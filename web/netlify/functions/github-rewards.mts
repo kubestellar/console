@@ -21,6 +21,8 @@ const LEADERBOARD_CACHE_TTL_MS = 60 * 60 * 1_000;
 const LEADERBOARD_CACHE_KEY = "__leaderboard__";
 /** Request timeout for fetching leaderboard JSON */
 const FETCH_TIMEOUT_MS = 15_000;
+/** Maximum upstream response size (512 KB) */
+const MAX_RESPONSE_BYTES = 512_000;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -98,7 +100,15 @@ async function fetchLeaderboard(): Promise<LeaderboardData> {
       `Leaderboard fetch failed: ${res.status} ${res.statusText}`
     );
   }
-  const data: LeaderboardData = await res.json();
+  const contentLength = parseInt(res.headers.get("content-length") ?? "0", 10);
+  if (contentLength > MAX_RESPONSE_BYTES) {
+    throw new Error("Leaderboard response too large");
+  }
+  const rawText = await res.text();
+  if (rawText.length > MAX_RESPONSE_BYTES) {
+    throw new Error("Leaderboard response too large");
+  }
+  const data = JSON.parse(rawText) as LeaderboardData;
 
   try {
     const entry: LeaderboardCacheEntry = { data, storedAt: Date.now() };
