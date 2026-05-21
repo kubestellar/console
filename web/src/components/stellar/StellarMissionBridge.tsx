@@ -90,10 +90,10 @@ export function StellarMissionBridge() {
       if (!INACTIVE_MISSION_STATUSES.has(m.status)) continue
       // Terminal — derive Stellar's outcome status from the mission's.
       let stellarStatus: 'resolved' | 'escalated' | 'exhausted' = 'resolved'
-      let summary = m.currentStep || 'AI mission completed.'
+      let summary = (m.currentStep === 'Reconnecting...' && m.lastKnownStep ? m.lastKnownStep : m.currentStep) || 'AI mission completed.'
       if (m.status === 'failed') {
         stellarStatus = 'escalated'
-        summary = `AI mission failed: ${m.currentStep || 'see mission sidebar for details'}.`
+        summary = `AI mission failed: ${(m.currentStep === 'Reconnecting...' && m.lastKnownStep ? m.lastKnownStep : m.currentStep) || 'see mission sidebar for details'}.`
       } else if (m.status === 'cancelled') {
         stellarStatus = 'exhausted'
         summary = 'AI mission cancelled — needs your call on next steps.'

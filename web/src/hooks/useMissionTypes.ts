@@ -72,6 +72,8 @@ export interface Mission {
   feedback?: MissionFeedback
   /** Current step/action the agent is performing */
   currentStep?: string
+  /** Last known progress step before WebSocket reconnection */
+  lastKnownStep?: string
   /** Token usage statistics */
   tokenUsage?: {
     input: number

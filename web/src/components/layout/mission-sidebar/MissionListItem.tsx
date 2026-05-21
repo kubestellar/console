@@ -175,7 +175,9 @@ function MissionListItemComponent({ mission, isActive, onClick, onDismiss, onExp
             {mission.currentStep && (
               <p className="mt-1 text-xs text-foreground line-clamp-2">
                 <span className="text-muted-foreground">{t('missionSidebar.currentStepLabel', { defaultValue: 'Current step:' })}</span>{' '}
-                {mission.currentStep}
+                {mission.currentStep === 'Reconnecting...' && mission.lastKnownStep
+                  ? `${mission.lastKnownStep} (reconnecting...)`
+                  : mission.currentStep}
               </p>
             )}
             {progressValue !== null && (

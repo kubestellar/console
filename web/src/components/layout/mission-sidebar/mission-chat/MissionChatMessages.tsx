@@ -125,7 +125,11 @@ export function MissionChatMessages({
                 <div className="flex items-center gap-2">
                   <TypingIndicator showMessage={!mission.currentStep} />
                   {mission.currentStep && (
-                    <span className="text-xs text-muted-foreground">{mission.currentStep}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {mission.currentStep === 'Reconnecting...' && mission.lastKnownStep
+                        ? `${mission.lastKnownStep} (reconnecting...)`
+                        : mission.currentStep}
+                    </span>
                   )}
                   {mission.tokenUsage && mission.tokenUsage.total > 0 && (
                     <span className="text-2xs text-muted-foreground/70 font-mono">

@@ -493,6 +493,7 @@ export function createMissionMessageHandler(
         if (isDisconnectPattern && !isExplicitAgentUnavailable && mission.status === 'running' && (Date.now() - new Date(mission.updatedAt).getTime()) <= MISSION_RECONNECT_MAX_AGE_MS) {
           return {
             ...mission,
+            lastKnownStep: mission.currentStep && mission.currentStep !== 'Reconnecting...' ? mission.currentStep : mission.lastKnownStep,
             currentStep: 'Reconnecting...',
             context: { ...mission.context, needsReconnect: true },
           }

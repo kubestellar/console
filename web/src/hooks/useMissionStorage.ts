@@ -83,6 +83,7 @@ export function loadMissions(): Mission[] {
         if (mission.status === 'running' || mission.status === 'waiting_input') {
           return {
             ...mission,
+            lastKnownStep: mission.currentStep && mission.currentStep !== 'Reconnecting...' ? mission.currentStep : mission.lastKnownStep,
             currentStep: 'Reconnecting...',
             context: { ...mission.context, needsReconnect: true }
           }

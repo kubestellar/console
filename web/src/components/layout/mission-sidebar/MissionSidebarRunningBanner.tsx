@@ -43,7 +43,11 @@ export function MissionSidebarRunningBanner({
                   <span className="truncate text-xs font-medium text-foreground">{mission.title}</span>
                   <span className="shrink-0 text-2xs text-primary">{getRunningMissionStatusLabel(mission.status)}</span>
                 </div>
-                <p className="mt-1 truncate text-2xs text-muted-foreground">{mission.currentStep || mission.description}</p>
+                <p className="mt-1 truncate text-2xs text-muted-foreground">
+                  {mission.currentStep === 'Reconnecting...' && mission.lastKnownStep
+                    ? `${mission.lastKnownStep} (reconnecting...)`
+                    : (mission.currentStep || mission.description)}
+                </p>
               </button>
             ))}
           </div>

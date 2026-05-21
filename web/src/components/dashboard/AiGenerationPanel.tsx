@@ -197,7 +197,9 @@ export function AiGenerationPanel<T>({
           <div className="flex items-center gap-2">
             <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
             <span className="text-sm text-purple-400">
-              {trackedMission?.currentStep || 'Generating...'}
+              {trackedMission?.currentStep === 'Reconnecting...' && trackedMission?.lastKnownStep
+                ? `${trackedMission.lastKnownStep} (reconnecting...)`
+                : (trackedMission?.currentStep || 'Generating...')}
             </span>
           </div>
           <textarea
