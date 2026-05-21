@@ -122,7 +122,10 @@ function groupEventsByTime(events: EventTimelineDatum[], bucketMinutes = 5, numB
 
 function EventsTimelineInternal() {
   const { t } = useTranslation(['cards', 'common'])
-  const TIME_RANGE_OPTIONS = TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
+  const TIME_RANGE_OPTIONS = useMemo(
+    () => TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) })),
+    [t]
+  )
   const { isDemoMode } = useDemoMode()
   const {
     events: rawEvents,
@@ -170,7 +173,10 @@ function EventsTimelineInternal() {
   }, [])
 
   // Get reachable clusters
-  const reachableClusters = (clusters || []).filter(c => c.reachable !== false)
+  const reachableClusters = useMemo(
+    () => (clusters || []).filter(c => c.reachable !== false),
+    [clusters]
+  )
 
   // Get available clusters for local filter (respects global filter)
   const availableClustersForFilter = useMemo(() => {

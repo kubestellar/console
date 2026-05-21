@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { ExternalLink, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useProviderHealth, ProviderHealthInfo } from '../../hooks/useProviderHealth'
@@ -28,7 +29,12 @@ const STATUS_LABEL_KEYS = {
 
 const PROVIDER_ROW_CONTAINER_STYLE = { containerType: 'inline-size' } as const
 
-function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; onConfigure?: () => void }) {
+interface ProviderRowProps {
+  provider: ProviderHealthInfo
+  onConfigure?: () => void
+}
+
+const ProviderRow = memo(function ProviderRow({ provider, onConfigure }: ProviderRowProps) {
   const { t } = useTranslation(['cards', 'common'])
   return (
     <div
@@ -87,7 +93,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
       </div>
     </div>
   )
-}
+})
 
 export function ProviderHealth() {
   const { t } = useTranslation(['cards', 'common'])
