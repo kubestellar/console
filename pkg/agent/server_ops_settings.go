@@ -321,11 +321,13 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 		if p.isLocalLLM && status.BaseURL == "" && p.defaultURL != "" {
 			status.BaseURL = p.defaultURL
 		}
-		// Local LLM runners are "configured" when a URL is reachable —
-		// either via env/config override or compiled-in default. Having
-		// only a sentinel placeholder API key is not enough (#8259).
+		// Local LLM runners are "configured" only when an operator has
+		// explicitly set a URL via env var or config file — the compiled-in
+		// loopback default alone does NOT count. This prevents providers
+		// like Ollama/LM Studio from appearing as "Operational" in the
+		// Provider Health widget when they are not actually installed (#15246).
 		if p.isLocalLLM {
-			status.Configured = status.BaseURL != ""
+			status.Configured = status.BaseURLSource != ""
 		}
 
 		if status.Configured {

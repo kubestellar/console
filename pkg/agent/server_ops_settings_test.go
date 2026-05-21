@@ -97,4 +97,58 @@ func TestServer_HandleGetKeysStatus(t *testing.T) {
 	if resp.ConfigPath != tmpConfig.Name() {
 		t.Errorf("Expected config path %s, got %s", tmpConfig.Name(), resp.ConfigPath)
 	}
+
+	// Local LLM runners (Ollama, LM Studio) should NOT be marked configured
+	// when only the compiled-in default URL is present (#15246).
+	for _, key := range resp.Keys {
+		if key.Provider == ProviderKeyOllama || key.Provider == ProviderKeyLMStudio {
+			if key.Configured {
+				t.Errorf("Provider %s should not be configured with only the compiled-in default URL", key.Provider)
+			}
+		}
+	}
+}
+
+func TestServer_HandleGetKeysStatus_LocalLLMExplicitURL(t *testing.T) {
+	cm := isolateConfigManager(t)
+
+	tmpConfig, err := os.CreateTemp("", "config-*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp config file: %v", err)
+	}
+	defer tmpConfig.Close()
+	defer os.Remove(tmpConfig.Name())
+	cm.SetConfigPath(tmpConfig.Name())
+
+	// Simulate an operator explicitly setting OLLAMA_URL
+	t.Setenv("OLLAMA_URL", "http://my-ollama-server:11434")
+
+	s := &Server{
+		allowedOrigins:    []string{"*"},
+		SkipKeyValidation: true,
+	}
+
+	req := httptest.NewRequest("GET", "/settings/keys", nil)
+	w := httptest.NewRecorder()
+	s.handleGetKeysStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var resp KeysStatusResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Ollama should now be configured because the URL was explicitly set
+	for _, key := range resp.Keys {
+		if key.Provider == ProviderKeyOllama {
+			if !key.Configured {
+				t.Errorf("Provider %s should be configured when OLLAMA_URL is explicitly set", key.Provider)
+			}
+			return
+		}
+	}
+	t.Error("Ollama provider not found in response")
 }
