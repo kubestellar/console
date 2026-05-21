@@ -39,7 +39,7 @@ interface LimaListResponse {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function buildLimaStatus(instances: LimaInstance[], lastCheckTime?: string): LimaStatus {
+export function buildLimaStatus(instances: LimaInstance[], lastCheckTime?: string): LimaStatus {
   const runningNodes = instances.filter(i => i.status === 'running').length
   const stoppedNodes = instances.filter(i => i.status === 'stopped').length
   const brokenNodes = instances.filter(i => i.status === 'broken').length
@@ -65,7 +65,7 @@ function buildLimaStatus(instances: LimaInstance[], lastCheckTime?: string): Lim
   }
 }
 
-function toDemoStatus(demo: LimaDemoData): LimaStatus {
+export function toDemoStatus(demo: LimaDemoData): LimaStatus {
   return {
     instances: demo.instances,
     totalNodes: demo.totalNodes,
@@ -166,10 +166,4 @@ export function useLimaStatus(): UseLimaStatusResult {
     showEmptyState,
     isDemoData: effectiveIsDemoData,
   }
-}
-
-/** Pure helpers for unit tests (factory hook — mock createCachedHook, not useCache directly). */
-export const __testables = {
-  buildLimaStatus,
-  toDemoStatus,
 }

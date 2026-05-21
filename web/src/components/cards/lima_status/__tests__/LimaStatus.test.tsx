@@ -35,7 +35,7 @@ vi.mock('../../../../lib/cards/CardComponents', () => ({
 
 import { LimaStatus } from '../LimaStatus'
 import { LIMA_DEMO_DATA } from '../demoData'
-import { __testables, type UseLimaStatusResult } from '../useLimaStatus'
+import { buildLimaStatus, toDemoStatus, type UseLimaStatusResult } from '../useLimaStatus'
 import type { LimaInstance } from '../demoData'
 
 const BASE_INSTANCE: LimaInstance = {
@@ -50,7 +50,7 @@ const BASE_INSTANCE: LimaInstance = {
   lastSeen: new Date().toISOString(),
 }
 
-const HEALTHY_DATA = __testables.buildLimaStatus([
+const HEALTHY_DATA = buildLimaStatus([
   BASE_INSTANCE,
   { ...BASE_INSTANCE, name: 'lima-default' },
 ])
@@ -89,7 +89,7 @@ describe('LimaStatus', () => {
   })
 
   it('renders not-detected state when health is not-detected', () => {
-    setup({ data: __testables.buildLimaStatus([]) })
+    setup({ data: buildLimaStatus([]) })
     render(<LimaStatus />)
 
     expect(screen.getByText('lima.notDetected')).toBeTruthy()
@@ -108,7 +108,13 @@ describe('LimaStatus', () => {
   })
 
   it('renders degraded badge when health is degraded', () => {
-    setup({ data: __testables.toDemoStatus(LIMA_DEMO_DATA) })
+    // Build an explicit degraded fixture so this test is resilient to
+    // future changes in LIMA_DEMO_DATA's health value.
+    const degradedStatus = {
+      ...toDemoStatus(LIMA_DEMO_DATA),
+      health: 'degraded' as const,
+    }
+    setup({ data: degradedStatus })
     render(<LimaStatus />)
 
     expect(screen.getByText('lima.degraded')).toBeTruthy()
@@ -116,7 +122,7 @@ describe('LimaStatus', () => {
   })
 
   it('renders demo badge when isDemoData is true', () => {
-    setup({ data: __testables.toDemoStatus(LIMA_DEMO_DATA), isDemoData: true })
+    setup({ data: toDemoStatus(LIMA_DEMO_DATA), isDemoData: true })
     render(<LimaStatus />)
 
     expect(screen.getByText('lima.demo')).toBeTruthy()

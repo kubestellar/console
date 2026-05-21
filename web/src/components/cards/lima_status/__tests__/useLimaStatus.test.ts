@@ -25,7 +25,10 @@ vi.mock('../../../../lib/cache', async (importOriginal) => {
           data: result.data,
           isLoading: result.isLoading,
           isRefreshing: result.isRefreshing,
-          isDemoFallback: result.isDemoFallback && !result.isLoading,
+          // Return isDemoFallback raw — let useLimaStatus enforce the
+          // `&& !isLoading` gate via effectiveIsDemoData, so that guard
+          // is actually exercised by the tests rather than duplicated here.
+          isDemoFallback: result.isDemoFallback,
           error: result.error,
           isFailed: result.isFailed,
           consecutiveFailures: result.consecutiveFailures,
@@ -42,7 +45,7 @@ vi.mock('../../CardDataContext', () => ({
   useCardLoadingState: (args: Record<string, unknown>) => mockUseCardLoadingState(args),
 }))
 
-import { useLimaStatus, __testables } from '../useLimaStatus'
+import { useLimaStatus, buildLimaStatus, toDemoStatus } from '../useLimaStatus'
 import { LIMA_DEMO_DATA, type LimaInstance } from '../demoData'
 
 const refetch = vi.fn(async () => {})
@@ -65,10 +68,10 @@ const STOPPED_INSTANCE: LimaInstance = {
   status: 'stopped',
 }
 
-const HEALTHY_DATA = __testables.buildLimaStatus([BASE_INSTANCE, { ...BASE_INSTANCE, name: 'lima-default' }])
-const DEGRADED_DATA = __testables.buildLimaStatus([BASE_INSTANCE, STOPPED_INSTANCE])
-const NOT_DETECTED_DATA = __testables.buildLimaStatus([])
-const DEMO_DATA = __testables.toDemoStatus(LIMA_DEMO_DATA)
+const HEALTHY_DATA = buildLimaStatus([BASE_INSTANCE, { ...BASE_INSTANCE, name: 'lima-default' }])
+const DEGRADED_DATA = buildLimaStatus([BASE_INSTANCE, STOPPED_INSTANCE])
+const NOT_DETECTED_DATA = buildLimaStatus([])
+const DEMO_DATA = toDemoStatus(LIMA_DEMO_DATA)
 
 function setupCacheReturn(overrides: Record<string, unknown>) {
   mockUseCache.mockReturnValue({
