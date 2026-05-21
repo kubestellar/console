@@ -18,6 +18,7 @@ import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 const RATE_LIMIT_STORE_NAME = "analytics-collect-rate-limit";
 const ANALYTICS_RATE_LIMIT_MAX_REQUESTS = 500;
 const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const MAX_BODY_BYTES = 65_536;
 
 function normalizeOrigin(header: string | null): string | null {
   if (!header) return null;
@@ -72,6 +73,11 @@ export default async (req: Request) => {
     }
   }
 
+  const contentLength = Number.parseInt(req.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    return new Response("Payload too large", { status: 413, headers: corsHeaders });
+  }
+
   const realMeasurementId = Netlify.env.get("GA4_REAL_MEASUREMENT_ID") || process.env.GA4_REAL_MEASUREMENT_ID;
   const url = new URL(req.url);
 
@@ -80,6 +86,10 @@ export default async (req: Request) => {
   let gaParams: URLSearchParams;
   const encoded = url.searchParams.get("d");
   if (encoded) {
+    if (encoded.length > MAX_BODY_BYTES) {
+      return new Response("Payload too large", { status: 413, headers: corsHeaders });
+    }
+
     try {
       gaParams = new URLSearchParams(atob(encoded));
     } catch {
@@ -122,6 +132,9 @@ export default async (req: Request) => {
   // when the request comes from a server IP.
   const targetUrl = "https://www.google-analytics.com/g/collect";
   const postBody = gaParams.toString();
+  if (postBody.length > MAX_BODY_BYTES) {
+    return new Response("Payload too large", { status: 413, headers: corsHeaders });
+  }
 
   try {
     const resp = await fetch(targetUrl, {

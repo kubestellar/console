@@ -16,6 +16,7 @@ const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
 const RATE_LIMIT_STORE_NAME = "umami-collect-rate-limit"
 const UMAMI_RATE_LIMIT_MAX_REQUESTS = 500
 const UMAMI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+const MAX_BODY_BYTES = 65_536
 
 /**
  * Hosts allowed via Referer fallback when Origin is absent. Keep
@@ -88,8 +89,16 @@ export default async (req: Request) => {
     }
   }
 
+  const contentLength = Number.parseInt(req.headers.get("content-length") || "0", 10)
+  if (contentLength > MAX_BODY_BYTES) {
+    return new Response("Payload too large", { status: 413, headers: corsHeaders })
+  }
+
   try {
     const body = await req.text()
+    if (body.length > MAX_BODY_BYTES) {
+      return new Response("Payload too large", { status: 413, headers: corsHeaders })
+    }
 
     const resp = await fetch(UMAMI_COLLECT_URL, {
       method: "POST",
