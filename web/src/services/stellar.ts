@@ -12,6 +12,15 @@ import type {
 
 const STELLAR_CHAT_TIMEOUT_MS = 300_000
 
+const isAuthError = (err: unknown): boolean => {
+  if (err instanceof Error) {
+    return err.message.includes('Unauthenticated') || err.message.includes('No authentication token') || err.name === 'UnauthenticatedError'
+  }
+
+  const errorText = String(err)
+  return errorText.includes('Unauthenticated') || errorText.includes('No authentication token')
+}
+
 export interface AskResponse {
   answer: string
   executionId: string
@@ -56,7 +65,11 @@ export const stellarApi = {
       const { data } = await api.get<StellarOperationalState>('/api/stellar/state')
       return data
     } catch (err) {
-      console.error('stellar: getState failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getState skipped (no auth token)')
+      } else {
+        console.error('stellar: getState failed:', err)
+      }
       return {
         generatedAt: new Date().toISOString(),
         clustersWatching: [],
@@ -77,7 +90,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarNotification[] }>(`/api/stellar/notifications?${query.toString()}`)
       return data.items || []
     } catch (err) {
-      console.error('stellar: getNotifications failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getNotifications skipped (no auth token)')
+      } else {
+        console.error('stellar: getNotifications failed:', err)
+      }
       return []
     }
   },
@@ -87,7 +104,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarMission[] }>(`/api/stellar/missions?limit=${limit}`)
       return data.items || []
     } catch (err) {
-      console.error('stellar: getMissions failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getMissions skipped (no auth token)')
+      } else {
+        console.error('stellar: getMissions failed:', err)
+      }
       return []
     }
   },
@@ -100,7 +121,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarAction[] }>(`/api/stellar/actions?${query.toString()}`)
       return data.items || []
     } catch (err) {
-      console.error('stellar: getActions failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getActions skipped (no auth token)')
+      } else {
+        console.error('stellar: getActions failed:', err)
+      }
       return []
     }
   },
@@ -144,7 +169,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarTask[] }>('/api/stellar/tasks')
       return data.items || []
     } catch (err) {
-      console.error('stellar: getTasks failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getTasks skipped (no auth token)')
+      } else {
+        console.error('stellar: getTasks failed:', err)
+      }
       return []
     }
   },
@@ -202,7 +231,11 @@ export const stellarApi = {
       const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
       return data
     } catch (err) {
-      console.error('stellar: getDigest failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getDigest skipped (no auth token)')
+      } else {
+        console.error('stellar: getDigest failed:', err)
+      }
       return { digest: '', model: '', provider: '' }
     }
   },
@@ -212,7 +245,11 @@ export const stellarApi = {
       const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
       return data
     } catch (err) {
-      console.error('stellar: getProviders failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getProviders skipped (no auth token)')
+      } else {
+        console.error('stellar: getProviders failed:', err)
+      }
       return { global: [], user: [] }
     }
   },
@@ -240,7 +277,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarWatch[] }>('/api/stellar/watches')
       return data.items || []
     } catch (err) {
-      console.error('stellar: getWatches failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getWatches skipped (no auth token)')
+      } else {
+        console.error('stellar: getWatches failed:', err)
+      }
       return []
     }
   },
@@ -265,7 +306,11 @@ export const stellarApi = {
       if (signal?.aborted) {
         return []
       }
-      console.error('stellar: getAuditLog failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: getAuditLog skipped (no auth token)')
+      } else {
+        console.error('stellar: getAuditLog failed:', err)
+      }
       return []
     }
   },
@@ -278,7 +323,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: import('../types/stellar').StellarSolve[] }>(`/api/stellar/solves?limit=${limit}`)
       return data.items || []
     } catch (err) {
-      console.error('stellar: listSolves failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: listSolves skipped (no auth token)')
+      } else {
+        console.error('stellar: listSolves failed:', err)
+      }
       return []
     }
   },
@@ -287,7 +336,11 @@ export const stellarApi = {
       const { data } = await api.get<{ items: import('../types/stellar').StellarActivity[] }>(`/api/stellar/activity?limit=${limit}`)
       return data.items || []
     } catch (err) {
-      console.error('stellar: listActivity failed:', err)
+      if (isAuthError(err)) {
+        console.debug('stellar: listActivity skipped (no auth token)')
+      } else {
+        console.error('stellar: listActivity failed:', err)
+      }
       return []
     }
   },
