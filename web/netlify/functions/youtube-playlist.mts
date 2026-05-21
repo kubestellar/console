@@ -10,6 +10,7 @@ import { buildCorsHeaders, handlePreflight } from "./_shared"
 
 const PLAYLIST_ID = "PL1ALKGr_qZKc-xehA_8iUCdiKsCo6p6nD";
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
+const MAX_RESPONSE_BYTES = 512_000; // 512 KB — playlist data is typically < 100 KB
 
 interface PlaylistVideo {
   id: string;
@@ -77,7 +78,15 @@ export default async (req: Request) => {
           { signal: AbortSignal.timeout(8000) }
         );
         if (invResp.ok) {
-          const data = (await invResp.json()) as { videos?: Array<{ videoId: string; title: string }> };
+          const invContentLength = parseInt(invResp.headers.get("content-length") ?? "0", 10);
+          if (invContentLength > MAX_RESPONSE_BYTES) {
+            continue; // skip oversized response, try next instance
+          }
+          const rawText = await invResp.text();
+          if (rawText.length > MAX_RESPONSE_BYTES) {
+            continue;
+          }
+          const data = JSON.parse(rawText) as { videos?: Array<{ videoId: string; title: string }> };
           if (data.videos && data.videos.length > 0) {
             const videos: PlaylistVideo[] = data.videos.map((v) => ({
               id: v.videoId,
@@ -105,7 +114,20 @@ export default async (req: Request) => {
     });
 
     if (resp.ok) {
+      const rssContentLength = parseInt(resp.headers.get("content-length") ?? "0", 10);
+      if (rssContentLength > MAX_RESPONSE_BYTES) {
+        return new Response(
+          JSON.stringify({ error: "Upstream response too large", videos: [] }),
+          { status: 502, headers }
+        );
+      }
       const xml = await resp.text();
+      if (xml.length > MAX_RESPONSE_BYTES) {
+        return new Response(
+          JSON.stringify({ error: "Upstream response too large", videos: [] }),
+          { status: 502, headers }
+        );
+      }
       const videos = parseAtomFeed(xml);
       if (videos.length > 0) {
         return new Response(

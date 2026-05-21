@@ -19,6 +19,7 @@ import type { Config } from "@netlify/functions"
 
 const GTAG_BASE_URL = "https://www.googletagmanager.com/gtag/js"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
+const MAX_RESPONSE_BYTES = 512_000 // 512 KB — gtag.js is ~90 KB
 
 export default async (req: Request) => {
   const url = new URL(req.url)
@@ -39,7 +40,16 @@ export default async (req: Request) => {
       return new Response(null, { status: resp.status })
     }
 
+    const contentLength = parseInt(resp.headers.get("content-length") ?? "0", 10)
+    if (contentLength > MAX_RESPONSE_BYTES) {
+      return new Response("Upstream response too large", { status: 502 })
+    }
+
     const body = await resp.text()
+
+    if (body.length > MAX_RESPONSE_BYTES) {
+      return new Response("Upstream response too large", { status: 502 })
+    }
 
     return new Response(body, {
       status: 200,
