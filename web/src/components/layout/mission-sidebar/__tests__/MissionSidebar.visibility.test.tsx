@@ -26,6 +26,7 @@ interface MockMissionState {
 }
 
 let mockMissionState: MockMissionState
+let mockIsMobile = false
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -40,7 +41,7 @@ vi.mock('../../../../hooks/useMissions', () => ({
 }))
 
 vi.mock('../../../../hooks/useMobile', () => ({
-  useMobile: () => ({ isMobile: false }),
+  useMobile: () => ({ isMobile: mockIsMobile }),
 }))
 
 vi.mock('../../../../hooks/useResolutions', () => ({
@@ -112,6 +113,7 @@ vi.mock('../../../missions/SaveResolutionDialog', () => ({
 }))
 
 beforeEach(() => {
+  mockIsMobile = false
   mockMissionState = {
     missions: [],
     activeMission: null,
@@ -157,6 +159,22 @@ describe('MissionSidebar visibility', () => {
     )
 
     expect(screen.getByTestId('mission-sidebar')).toBeInTheDocument()
+  })
+
+  it('keeps the mobile launcher within the safe area', () => {
+    mockIsMobile = true
+
+    render(
+      <MemoryRouter>
+        <MissionSidebarToggle />
+      </MemoryRouter>
+    )
+
+    const toggle = screen.getByTestId('mission-sidebar-toggle')
+    expect(toggle.className).toContain('z-sticky')
+    expect(toggle.className).toContain('bottom-[calc(1rem+env(safe-area-inset-bottom))]')
+    expect(toggle.className).toContain('right-[calc(1rem+env(safe-area-inset-right))]')
+    expect(toggle.className).toContain('max-w-[calc(100vw-2rem)]')
   })
 
   it('renders the Mission Control CTA with clipped custom button styling', () => {

@@ -562,8 +562,10 @@ export function MissionSidebarToggle() {
       data-tour="ai-missions-toggle"
       data-testid="mission-sidebar-toggle"
       className={cn(
-        'fixed flex items-center gap-2 rounded-full border border-border bg-card text-foreground shadow-lg transition-all z-50 hover:bg-secondary',
-        isMobile ? 'px-3 py-2 right-4 bottom-4' : 'px-4 py-3 right-4 bottom-4',
+        'fixed z-sticky flex items-center gap-2 rounded-full border border-border bg-card text-foreground shadow-lg transition-all hover:bg-secondary',
+        isMobile
+          ? 'bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] max-w-[calc(100vw-2rem)] px-3 py-2'
+          : 'bottom-4 right-4 px-4 py-3',
         needsAttention > 0 && 'ring-2 ring-purple-500/30'
       )}
       title={t('missionSidebar.openAIMissions')}
@@ -572,7 +574,7 @@ export function MissionSidebarToggle() {
       {runningCount > 0 && (
         <Loader2 className={isMobile ? 'w-3 h-3 animate-spin text-purple-400' : 'w-4 h-4 animate-spin text-purple-400'} />
       )}
-      <span className={cn(isMobile ? 'text-xs' : 'text-sm', needsAttention > 0 && 'font-medium')}>
+      <span className={cn(isMobile ? 'max-w-[8rem] truncate text-xs' : 'text-sm', needsAttention > 0 && 'font-medium')}>
         {activeCount > 0 ? t('missionSidebar.missionCount', { count: activeCount }) : t('missionSidebar.aiMissions')}
       </span>
       {needsAttention > 0 && (

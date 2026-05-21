@@ -102,7 +102,7 @@ export function NavigationShell({
             left: sidebarWidthPx,
             ...banner.style,
           }}
-          className={cn('fixed transition-[left,right] duration-300', banner.className)}
+          className={cn('fixed max-w-full transition-[left,right] duration-300', banner.className)}
         >
           {banner.content}
         </div>

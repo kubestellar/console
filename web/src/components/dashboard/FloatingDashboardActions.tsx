@@ -14,7 +14,7 @@ import { DashboardHealthIndicator } from './DashboardHealthIndicator'
  *  the button into a non-circular shape on narrow viewports (#8777). */
 const FAB_SIZE_DESKTOP = 'w-10 h-10 min-w-10 min-h-10 shrink-0 aspect-square'
 const FAB_SIZE_MOBILE  = 'w-8 h-8 min-w-8 min-h-8 shrink-0 aspect-square'
-const FAB_POSITION_MOBILE = 'right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]'
+const FAB_POSITION_MOBILE = 'right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(6rem+env(safe-area-inset-bottom))]'
 const FAB_POSITION_TABLET = 'right-4 bottom-20'
 const FAB_POSITION_DESKTOP = 'right-4 bottom-20'
 const FAB_POSITION_DESKTOP_MINIMIZED = 'right-[104px] bottom-20'
