@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
   BarChart3, Table2, ChevronDown, ArrowUpDown,
@@ -126,7 +126,7 @@ export function GPUInventoryHistory() {
   }
 
   // ── Filter helper applied to snapshot gpuNodes ─────────────────────
-  const filterGPUNodes = (nodes: Array<{ name: string; cluster: string; gpuType?: string; gpuAllocated: number; gpuTotal: number }>) => {
+  const filterGPUNodes = useCallback((nodes: Array<{ name: string; cluster: string; gpuType?: string; gpuAllocated: number; gpuTotal: number }>) => {
       let filtered = nodes || []
 
       // Global cluster filter
@@ -150,7 +150,7 @@ export function GPUInventoryHistory() {
         filtered = filtered.filter(g => g.name === selectedNode)
       }
       return filtered
-    }
+    }, [isAllClustersSelected, selectedClusters, localClusterFilter, selectedGPUType, selectedNode])
 
   // ── Chart data ─────────────────────────────────────────────────────
   const chartData = useMemo<GPUHistoryDataPoint[]>(() => {
