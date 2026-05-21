@@ -38,10 +38,8 @@ const PANEL_BADGE_PADDING_X_PX = 5
 const PANEL_LIST_PADDING_X_PX = 8
 const PANEL_LIST_PADDING_BOTTOM_PX = 8
 const PANEL_LIST_GAP_PX = 4
-const CARD_BORDER_LEFT_WIDTH_PX = 3
 const CARD_PADDING_Y_PX = 7
 const CARD_PADDING_X_PX = 10
-const SUGGESTION_ROW_GAP_PX = 6
 const SUGGESTION_ICON_SIZE_PX = 16
 const SUGGESTION_ICON_STROKE_WIDTH = 1.75
 const TITLE_TEXT_SIZE_PX = 12
@@ -58,7 +56,6 @@ const EXPANDED_SECTION_PADDING_TOP_PX = 8
 const ACTION_BUTTON_PADDING_Y_PX = 2
 const ACTION_BUTTON_PADDING_X_PX = 8
 const ACTION_BUTTON_OPACITY = 0.5
-const CONTENT_INDENT_PX = SUGGESTION_ICON_SIZE_PX + SUGGESTION_ROW_GAP_PX
 const DAY_MS = HOURS_PER_DAY * HOUR_MS
 
 interface ScheduleChoice {
@@ -287,76 +284,85 @@ export function RecommendedTasksPanel({ createTask }: Props) {
               <div key={rec.id} style={{
                 background: 'var(--s-surface-2)',
                 border: '1px solid var(--s-border)',
-                borderLeftWidth: CARD_BORDER_LEFT_WIDTH_PX,
-                borderLeftColor: isScheduled ? 'var(--s-success)' : cColor,
                 borderRadius: 'var(--s-r)',
                 padding: `${CARD_PADDING_Y_PX}px ${CARD_PADDING_X_PX}px`,
                 opacity: isScheduled ? SCHEDULED_CARD_OPACITY : DEFAULT_OPACITY,
               }}>
-                <div
-                  onClick={() => !isScheduled && setExpandedId(isExpanded ? null : rec.id)}
-                  style={{ cursor: isScheduled ? 'default' : 'pointer' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: SUGGESTION_ROW_GAP_PX }}>
-                    <span style={{ display: 'flex', alignSelf: 'baseline', color: cColor }}>
-                      <Icon size={SUGGESTION_ICON_SIZE_PX} strokeWidth={SUGGESTION_ICON_STROKE_WIDTH} />
-                    </span>
-                    <span style={{ fontSize: TITLE_TEXT_SIZE_PX, fontWeight: TITLE_TEXT_WEIGHT, color: 'var(--s-text)', flex: DEFAULT_OPACITY }}>
-                      {t(rec.titleKey)}
-                    </span>
-                    {isScheduled && (
-                      <span style={{ fontSize: STATUS_TEXT_SIZE_PX, color: 'var(--s-success)', fontFamily: 'var(--s-mono)' }}>
-                        ✓ {t('stellar.recommendedTasks.scheduled')}
+                <div className="flex items-stretch gap-3">
+                  <div
+                    className="w-[3px] shrink-0 rounded-full"
+                    style={{ background: isScheduled ? 'var(--s-success)' : cColor }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div
+                      onClick={() => !isScheduled && setExpandedId(isExpanded ? null : rec.id)}
+                      className="flex cursor-pointer items-start gap-3"
+                      style={{ cursor: isScheduled ? 'default' : 'pointer' }}
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center"
+                        style={{ color: cColor }}
+                      >
+                        <Icon size={SUGGESTION_ICON_SIZE_PX} strokeWidth={SUGGESTION_ICON_STROKE_WIDTH} />
                       </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-h-8 items-center justify-between gap-2">
+                          <span style={{ fontSize: TITLE_TEXT_SIZE_PX, fontWeight: TITLE_TEXT_WEIGHT, color: 'var(--s-text)', flex: DEFAULT_OPACITY }}>
+                            {t(rec.titleKey)}
+                          </span>
+                          {isScheduled && (
+                            <span style={{ fontSize: STATUS_TEXT_SIZE_PX, color: 'var(--s-success)', fontFamily: 'var(--s-mono)' }}>
+                              ✓ {t('stellar.recommendedTasks.scheduled')}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{
+                          fontSize: BLURB_TEXT_SIZE_PX,
+                          color: 'var(--s-text-muted)',
+                          marginTop: BLURB_MARGIN_TOP_PX,
+                          lineHeight: BLURB_LINE_HEIGHT,
+                        }}>{t(rec.blurbKey)}</div>
+                        <div style={{
+                          marginTop: CATEGORY_MARGIN_TOP_PX,
+                          fontSize: CATEGORY_TEXT_SIZE_PX,
+                          fontFamily: 'var(--s-mono)',
+                          color: cColor,
+                          textTransform: 'uppercase',
+                          letterSpacing: `${CATEGORY_LETTER_SPACING_EM}em`,
+                        }}>{t(CATEGORY_LABEL_KEYS[rec.category])}</div>
+                      </div>
+                    </div>
+
+                    {isExpanded && !isScheduled && (
+                      <div style={{
+                        marginTop: EXPANDED_SECTION_MARGIN_TOP_PX,
+                        paddingTop: EXPANDED_SECTION_PADDING_TOP_PX,
+                        borderTop: '1px dashed var(--s-border)',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: PANEL_LIST_GAP_PX,
+                      }}>
+                        {SCHEDULE_CHOICES.map(choice => (
+                          <button
+                            key={choice.id}
+                            disabled={busyId === rec.id}
+                            onClick={(e) => { e.stopPropagation(); void onSchedule(rec, choice) }}
+                            style={{
+                              background: 'none',
+                              border: `1px solid ${cColor}`,
+                              color: cColor,
+                              borderRadius: 'var(--s-rs)',
+                              padding: `${ACTION_BUTTON_PADDING_Y_PX}px ${ACTION_BUTTON_PADDING_X_PX}px`,
+                              fontSize: STATUS_TEXT_SIZE_PX,
+                              cursor: busyId === rec.id ? 'wait' : 'pointer',
+                              opacity: busyId === rec.id ? ACTION_BUTTON_OPACITY : DEFAULT_OPACITY,
+                            }}
+                          >{t(choice.labelKey)}</button>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <div style={{
-                    fontSize: BLURB_TEXT_SIZE_PX,
-                    color: 'var(--s-text-muted)',
-                    paddingLeft: CONTENT_INDENT_PX,
-                    marginTop: BLURB_MARGIN_TOP_PX,
-                    lineHeight: BLURB_LINE_HEIGHT,
-                  }}>{t(rec.blurbKey)}</div>
-                  <div style={{
-                    paddingLeft: CONTENT_INDENT_PX,
-                    marginTop: CATEGORY_MARGIN_TOP_PX,
-                    fontSize: CATEGORY_TEXT_SIZE_PX,
-                    fontFamily: 'var(--s-mono)',
-                    color: cColor,
-                    textTransform: 'uppercase',
-                    letterSpacing: `${CATEGORY_LETTER_SPACING_EM}em`,
-                  }}>{t(CATEGORY_LABEL_KEYS[rec.category])}</div>
                 </div>
-
-                {isExpanded && !isScheduled && (
-                  <div style={{
-                    marginTop: EXPANDED_SECTION_MARGIN_TOP_PX,
-                    paddingTop: EXPANDED_SECTION_PADDING_TOP_PX,
-                    paddingLeft: CONTENT_INDENT_PX,
-                    borderTop: '1px dashed var(--s-border)',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: PANEL_LIST_GAP_PX,
-                  }}>
-                    {SCHEDULE_CHOICES.map(choice => (
-                      <button
-                        key={choice.id}
-                        disabled={busyId === rec.id}
-                        onClick={(e) => { e.stopPropagation(); void onSchedule(rec, choice) }}
-                        style={{
-                          background: 'none',
-                          border: `1px solid ${cColor}`,
-                          color: cColor,
-                          borderRadius: 'var(--s-rs)',
-                          padding: `${ACTION_BUTTON_PADDING_Y_PX}px ${ACTION_BUTTON_PADDING_X_PX}px`,
-                          fontSize: STATUS_TEXT_SIZE_PX,
-                          cursor: busyId === rec.id ? 'wait' : 'pointer',
-                          opacity: busyId === rec.id ? ACTION_BUTTON_OPACITY : DEFAULT_OPACITY,
-                        }}
-                      >{t(choice.labelKey)}</button>
-                    ))}
-                  </div>
-                )}
               </div>
             )
           })}
