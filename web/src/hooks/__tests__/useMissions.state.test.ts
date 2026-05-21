@@ -8,10 +8,30 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../lib/analytics', () => ({
+  emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
 }))
 
 vi.mock('../useMissions.helpers', () => ({
+  canAutoCompleteMissionFromResponse: vi.fn(({
+    content,
+    messages,
+    type,
+    toolsExecuted,
+  }: {
+    content?: string
+    messages?: Array<{ role?: string; content?: string }>
+    type: string
+    toolsExecuted?: boolean
+  }) => {
+    const assistantMessages = (messages ?? []).filter((message: { role?: string }) => message.role === 'assistant')
+    const lastAssistant = assistantMessages[assistantMessages.length - 1] as { content?: string } | undefined
+    const finalContent = (content && typeof content === 'string' && content.trim().length > 0)
+      ? content.trim()
+      : (lastAssistant?.content?.trim() || '')
+    const missionRequiresTools = ['deploy', 'maintain', 'repair', 'upgrade'].includes(type)
+    return finalContent.length > 0 && (!missionRequiresTools || !!toolsExecuted)
+  }),
   getMissionMessages: vi.fn((msgs?: unknown[]) => msgs ?? []),
   generateMessageId: vi.fn(() => 'mock-msg-id'),
 }))
@@ -33,7 +53,7 @@ vi.mock('../useLocalAgent', () => ({
 }))
 
 import { createMissionStateUtils } from '../useMissions.state'
-import { emitMissionError } from '../../lib/analytics'
+import { emitMissionCompleted, emitMissionError } from '../../lib/analytics'
 import type { Mission } from '../useMissionTypes'
 import type { MissionProviderState } from '../useMissions.state'
 
@@ -87,6 +107,7 @@ function makeState(overrides: Partial<MissionProviderState> = {}): MissionProvid
     wsOpenEpoch: { current: 0 },
     wsSendRetryTimers: { current: new Set() },
     missionStatusTimers: { current: new Map() },
+    observedToolExecutions: { current: new Set() },
     queuedMissionExecutions: { current: [] },
     missionToolLocks: { current: new Map() },
     executingMissions: { current: new Set() },
@@ -270,6 +291,7 @@ describe('clearWaitingInputTimeout', () => {
 
 describe('startWaitingInputTimeout', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.useFakeTimers()
   })
 
@@ -351,6 +373,32 @@ describe('startWaitingInputTimeout', () => {
     const lastMsg = result[0].messages[result[0].messages.length - 1]
     expect(lastMsg.role).toBe('system')
     expect(lastMsg.content).toContain('timed out waiting for input')
+  })
+
+  it('on timeout: auto-completes a deploy mission when the final assistant response is already complete', () => {
+    const mission = {
+      ...makeMission('mission-1', 'waiting_input'),
+      type: 'deploy' as const,
+      messages: [
+        {
+          id: 'assistant-final',
+          role: 'assistant' as const,
+          content: 'All workloads are deployed and running successfully.',
+          timestamp: new Date(),
+        },
+      ],
+    }
+    const state = makeState()
+    state.observedToolExecutions.current.add('mission-1')
+
+    createMissionStateUtils(state).startWaitingInputTimeout('mission-1')
+    vi.runAllTimers()
+
+    const result = applySetMissions(state, [mission])
+    expect(result[0].status).toBe('completed')
+    expect(result[0].messages).toHaveLength(1)
+    expect(emitMissionCompleted).toHaveBeenCalledWith('deploy', expect.any(Number))
+    expect(emitMissionError).not.toHaveBeenCalled()
   })
 
   it('on timeout: does not change missions with a non-waiting_input status', () => {

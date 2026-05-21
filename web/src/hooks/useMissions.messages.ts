@@ -17,6 +17,7 @@ import {
   isInteractiveContent,
 } from './useMissions.constants'
 import {
+  canAutoCompleteMissionFromResponse,
   getMissionMessages,
   generateMessageId,
 } from './useMissions.helpers'
@@ -136,6 +137,7 @@ export function createMissionMessageHandler(
     if (message.type === 'progress') {
       const progressPayload = (message.payload ?? {}) as { tool?: string; output?: string }
       if (progressPayload.tool) {
+        state.observedToolExecutions.current.add(missionId)
         if (progressPayload.output) {
           const previousCount = state.toolsInFlight.current.get(missionId) ?? 0
           if (previousCount > 0) {
@@ -157,7 +159,11 @@ export function createMissionMessageHandler(
     state.setMissions(prev => prev.map(mission => {
       if (mission.id !== missionId) return mission
 
-      if (mission.status === 'failed' || mission.status === 'completed' || mission.status === 'cancelled') {
+      if (mission.status === 'failed' || mission.status === 'cancelled') {
+        state.pendingRequests.current.delete(message.id)
+        return mission
+      }
+      if (mission.status === 'completed' && message.type !== 'result') {
         state.pendingRequests.current.delete(message.id)
         return mission
       }
@@ -227,42 +233,27 @@ export function createMissionMessageHandler(
         const now = Date.now()
         const lastTimestamp = state.lastStreamTimestamp.current.get(missionId)
         const hasGap = !!lastTimestamp && (now - lastTimestamp > STREAM_GAP_THRESHOLD_MS)
-
-        if (!payload.done) {
-          state.lastStreamTimestamp.current.set(missionId, now)
-        } else {
-          state.lastStreamTimestamp.current.delete(missionId)
-        }
-
         const isActiveRequest = state.pendingRequests.current.has(message.id)
-        if (lastMessage?.role === 'assistant' && !payload.done && (mission.status === 'running' || mission.status === 'waiting_input' || isActiveRequest) && !hasGap) {
-          return {
-            ...mission,
-            status: 'running' as MissionStatus,
-            currentStep: 'Generating response...',
-            updatedAt: new Date(),
-            agent: payload.agent || mission.agent,
-            messages: [
+        const shouldAppendToLastMessage =
+          lastMessage?.role === 'assistant' &&
+          (mission.status === 'running' || mission.status === 'waiting_input' || isActiveRequest) &&
+          !hasGap
+
+        let nextMessages = missionMessages
+        if (payload.content) {
+          if (shouldAppendToLastMessage) {
+            nextMessages = [
               ...missionMessages.slice(0, -1),
               {
                 ...lastMessage,
-                content: lastMessage.content + (payload.content || ''),
+                content: lastMessage.content + payload.content,
                 agent: payload.agent || lastMessage.agent,
               },
-            ],
-          }
-        }
-
-        if (!payload.done && payload.content) {
-          const splitIndex = (state.streamSplitCounter.current.get(missionId) ?? 0) + 1
-          state.streamSplitCounter.current.set(missionId, splitIndex)
-          return {
-            ...mission,
-            status: 'running' as MissionStatus,
-            currentStep: 'Generating response...',
-            updatedAt: new Date(),
-            agent: payload.agent || mission.agent,
-            messages: [
+            ]
+          } else {
+            const splitIndex = (state.streamSplitCounter.current.get(missionId) ?? 0) + 1
+            state.streamSplitCounter.current.set(missionId, splitIndex)
+            nextMessages = [
               ...missionMessages,
               {
                 id: generateMessageId(`s${splitIndex}`),
@@ -271,30 +262,79 @@ export function createMissionMessageHandler(
                 timestamp: new Date(),
                 agent: payload.agent || mission.agent,
               },
-            ],
+            ]
           }
         }
 
-        if (payload.done) {
-          stateUtils.markMissionAsUnread(missionId)
-          if (payload.usage?.totalTokens) {
-            const previousTotal = mission.tokenUsage?.total ?? 0
-            const delta = payload.usage.totalTokens - previousTotal
-            if (delta > 0) {
-              addCategoryTokens(delta, getTokenCategoryForMissionType(mission.type))
-            }
+        if (!payload.done) {
+          state.lastStreamTimestamp.current.set(missionId, now)
+          return {
+            ...mission,
+            status: 'running' as MissionStatus,
+            currentStep: 'Generating response...',
+            updatedAt: new Date(),
+            agent: payload.agent || mission.agent,
+            messages: nextMessages,
           }
-          clearActiveTokenCategory(missionId)
-          const lastAssistantContent = payload.content || mission.messages.filter(messageItem => messageItem.role === 'assistant').pop()?.content || ''
-          if (!isInteractiveContent(lastAssistantContent)) {
-            stateUtils.startWaitingInputTimeout(missionId)
+        }
+
+        state.lastStreamTimestamp.current.delete(missionId)
+        stateUtils.markMissionAsUnread(missionId)
+        if (payload.usage?.totalTokens) {
+          const previousTotal = mission.tokenUsage?.total ?? 0
+          const delta = payload.usage.totalTokens - previousTotal
+          if (delta > 0) {
+            addCategoryTokens(delta, getTokenCategoryForMissionType(mission.type))
+          }
+        }
+        clearActiveTokenCategory(missionId)
+        const tokenUsage = payload.usage
+          ? {
+              input: payload.usage.inputTokens,
+              output: payload.usage.outputTokens,
+              total: payload.usage.totalTokens,
+            }
+          : mission.tokenUsage
+        const toolsWereExecuted = !!payload.toolsExecuted || state.observedToolExecutions.current.has(missionId)
+        const canAutoComplete = canAutoCompleteMissionFromResponse({
+          content: nextMessages.filter(messageItem => messageItem.role === 'assistant').pop()?.content,
+          messages: nextMessages,
+          type: mission.type,
+          toolsExecuted: toolsWereExecuted,
+        })
+
+        if (canAutoComplete) {
+          if (mission.status === 'running') {
+            const rawDuration = Math.round((Date.now() - mission.createdAt.getTime()) / 1000)
+            const clampedDuration = Math.min(Math.max(rawDuration, 0), SECONDS_PER_DAY)
+            emitMissionCompleted(mission.type, clampedDuration)
+            window.dispatchEvent(new CustomEvent('kc-mission-completed', {
+              detail: { missionId, missionType: mission.type },
+            }))
           }
           return {
             ...mission,
-            status: 'waiting_input' as MissionStatus,
+            status: 'completed' as MissionStatus,
             currentStep: undefined,
             updatedAt: new Date(),
+            agent: payload.agent || mission.agent,
+            tokenUsage,
+            messages: nextMessages,
           }
+        }
+
+        const lastAssistantContent = nextMessages.filter(messageItem => messageItem.role === 'assistant').pop()?.content || ''
+        if (!isInteractiveContent(lastAssistantContent)) {
+          stateUtils.startWaitingInputTimeout(missionId)
+        }
+        return {
+          ...mission,
+          status: 'waiting_input' as MissionStatus,
+          currentStep: undefined,
+          updatedAt: new Date(),
+          agent: payload.agent || mission.agent,
+          tokenUsage,
+          messages: nextMessages,
         }
       }
 
@@ -306,6 +346,9 @@ export function createMissionMessageHandler(
         state.toolsInFlight.current.delete(missionId)
         state.lastStreamTimestamp.current.delete(missionId)
         stateUtils.markMissionAsUnread(missionId)
+
+        const observedToolsExecuted = state.observedToolExecutions.current.has(missionId)
+        state.observedToolExecutions.current.delete(missionId)
 
         const chatPayload = payload as ChatStreamPayload
         const tokenUsage = chatPayload.usage
@@ -326,7 +369,7 @@ export function createMissionMessageHandler(
 
         clearActiveTokenCategory(missionId)
         const resultIsError = !!chatPayload.isError
-        const toolsWereExecuted = !!chatPayload.toolsExecuted
+        const toolsWereExecuted = !!chatPayload.toolsExecuted || observedToolsExecuted
         const missionRequiresTools = ['deploy', 'maintain', 'repair', 'upgrade'].includes(mission.type)
         const falsePositiveCompletion = !resultIsError && missionRequiresTools && !toolsWereExecuted
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
@@ -410,6 +453,7 @@ export function createMissionMessageHandler(
         state.streamSplitCounter.current.delete(missionId)
         state.toolsInFlight.current.delete(missionId)
         state.lastStreamTimestamp.current.delete(missionId)
+        state.observedToolExecutions.current.delete(missionId)
 
         const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
         const isToolMissingError =

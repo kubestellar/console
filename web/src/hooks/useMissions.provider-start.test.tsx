@@ -315,10 +315,50 @@ describe('startMission', () => {
     expect(result.current.missions[0].status).toBe('waiting_input')
   })
 
+  it('auto-completes a deploy mission from the final streamed response without waiting for result', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission({ ...defaultParams, type: 'deploy' })
+    })
+    await act(async () => { await Promise.resolve() })
+    await act(async () => {
+      MockWebSocket.lastInstance?.simulateOpen()
+    })
+    const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
+      (call: string[]) => JSON.parse(call[0]).type === 'chat',
+    )
+    const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'progress',
+        payload: { tool: 'kubectl' },
+      })
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: 'All workloads are deployed and running successfully.', done: false },
+      })
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: '', done: true, toolsExecuted: true },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('completed')
+    expect(mission?.messages.some(m => m.role === 'assistant' && m.content.includes('deployed and running'))).toBe(true)
+    expect(emitMissionCompleted).toHaveBeenCalledWith('deploy', expect.any(Number))
+  })
+
   // #5936 — mission stuck in waiting_input must auto-fail after a watchdog
   // timeout if the backend never delivers a final result message.
   it('auto-fails mission stuck in waiting_input after watchdog timeout (#5936)', async () => {
     vi.useFakeTimers()
+    vi.mocked(emitMissionCompleted).mockClear()
     try {
       const { result } = renderHook(() => useMissions(), { wrapper })
       const { requestId, missionId } = await startMissionWithConnection(result)

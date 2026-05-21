@@ -16,8 +16,13 @@ import {
 import {
   WAITING_INPUT_TIMEOUT_MS,
 } from './useMissions.constants'
-import { emitMissionError } from '../lib/analytics'
-import { getMissionMessages, generateMessageId } from './useMissions.helpers'
+import { emitMissionCompleted, emitMissionError } from '../lib/analytics'
+import { SECONDS_PER_DAY } from '../lib/constants/time'
+import {
+  canAutoCompleteMissionFromResponse,
+  getMissionMessages,
+  generateMessageId,
+} from './useMissions.helpers'
 
 export const ACTIVE_MISSION_STORAGE_KEY = 'kc_active_mission_id'
 export const SIDEBAR_OPEN_STORAGE_KEY = 'kc_mission_sidebar_open'
@@ -77,6 +82,7 @@ export function useMissionProviderState() {
   const wsOpenEpoch = useRef(0)
   const wsSendRetryTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
   const missionStatusTimers = useRef<Map<string, Set<ReturnType<typeof setTimeout>>>>(new Map())
+  const observedToolExecutions = useRef<Set<string>>(new Set())
   const queuedMissionExecutions = useRef<Array<import('./useMissions.types').QueuedMissionExecution>>([])
   const missionToolLocks = useRef<Map<string, string[]>>(new Map())
   const executingMissions = useRef<Set<string>>(new Set())
@@ -163,6 +169,7 @@ export function useMissionProviderState() {
     wsOpenEpoch,
     wsSendRetryTimers,
     missionStatusTimers,
+    observedToolExecutions,
     queuedMissionExecutions,
     missionToolLocks,
     executingMissions,
@@ -215,6 +222,26 @@ export function createMissionStateUtils(state: MissionProviderState) {
         if (mission.id !== missionId || mission.status !== 'waiting_input') {
           return mission
         }
+        if (canAutoCompleteMissionFromResponse({
+          messages: mission.messages,
+          type: mission.type,
+          toolsExecuted: state.observedToolExecutions.current.has(missionId),
+        })) {
+          state.observedToolExecutions.current.delete(missionId)
+          const rawDuration = Math.round((Date.now() - mission.createdAt.getTime()) / 1000)
+          const clampedDuration = Math.min(Math.max(rawDuration, 0), SECONDS_PER_DAY)
+          emitMissionCompleted(mission.type, clampedDuration)
+          window.dispatchEvent(new CustomEvent('kc-mission-completed', {
+            detail: { missionId, missionType: mission.type },
+          }))
+          return {
+            ...mission,
+            status: 'completed' as MissionStatus,
+            currentStep: undefined,
+            updatedAt: new Date(),
+          }
+        }
+        state.observedToolExecutions.current.delete(missionId)
         emitMissionError(
           mission.type,
           'waiting_input_timeout',
@@ -255,6 +282,7 @@ export function createMissionStateUtils(state: MissionProviderState) {
     state.lastStreamTimestamp.current.delete(missionId)
     state.streamSplitCounter.current.delete(missionId)
     state.toolsInFlight.current.delete(missionId)
+    state.observedToolExecutions.current.delete(missionId)
     clearWaitingInputTimeout(missionId)
     clearMissionStatusTimers(missionId)
 

@@ -10,7 +10,10 @@ import type { MissionMessage } from './useMissionTypes'
 import type { KagentiProviderAgentDiscoveryResult } from '../lib/kagentiProviderBackend'
 import type { PreflightError } from '../lib/missions/preflightCheck'
 import { resolveRequiredTools } from '../lib/missions/preflightCheck'
-import { AGENT_DISCONNECT_ERROR_PATTERNS } from './useMissions.constants'
+import {
+  AGENT_DISCONNECT_ERROR_PATTERNS,
+  isInteractiveContent,
+} from './useMissions.constants'
 import { generateMessageId } from './useMissionPromptBuilder'
 import {
   getSelectedKagentiAgentFromStorage,
@@ -22,6 +25,38 @@ import {
 /** Safely unwrap optional MissionMessage array (avoids .map on undefined). */
 export function getMissionMessages(messages?: MissionMessage[]): MissionMessage[] {
   return messages || []
+}
+
+export function getLastAssistantMessage(messages?: MissionMessage[]): MissionMessage | undefined {
+  const missionMessages = getMissionMessages(messages)
+  for (let index = missionMessages.length - 1; index >= 0; index -= 1) {
+    const message = missionMessages[index]
+    if (message.role === 'assistant') {
+      return message
+    }
+  }
+  return undefined
+}
+
+export function canAutoCompleteMissionFromResponse({
+  content,
+  messages,
+  type,
+  toolsExecuted = false,
+}: {
+  content?: string
+  messages?: MissionMessage[]
+  type: string
+  toolsExecuted?: boolean
+}): boolean {
+  const finalContent = (content && content.trim().length > 0)
+    ? content.trim()
+    : (getLastAssistantMessage(messages)?.content.trim() || '')
+  if (!finalContent || isInteractiveContent(finalContent)) {
+    return false
+  }
+  const missionRequiresTools = ['deploy', 'maintain', 'repair', 'upgrade'].includes(type)
+  return !missionRequiresTools || toolsExecuted
 }
 
 // ─── Agent Disconnect Detection ──────────────────────────────────────────────

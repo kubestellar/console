@@ -77,6 +77,7 @@ export function createMissionExecutionApi(
   ) => {
     const missionType = params.type || 'custom'
     reportAgentActivity('active')
+    state.observedToolExecutions.current.delete(missionId)
 
     if (state.cancelIntents.current.has(missionId)) {
       releaseMissionToolLock(missionId)

@@ -513,6 +513,7 @@ export function createMissionActions(
     }
 
     setActiveTokenCategory(missionId, getTokenCategoryForMissionType(currentMission?.type))
+    state.observedToolExecutions.current.delete(missionId)
 
     state.setMissions(prev => prev.map(candidate => {
       if (candidate.id !== missionId) return candidate
@@ -758,6 +759,7 @@ export function createMissionActions(
     state.lastStreamTimestamp.current.delete(missionId)
     state.streamSplitCounter.current.delete(missionId)
     state.toolsInFlight.current.delete(missionId)
+    state.observedToolExecutions.current.delete(missionId)
     stateUtils.clearMissionStatusTimers(missionId)
     state.setMissions(prev => prev.filter(candidate => candidate.id !== missionId))
     if (state.activeMissionId === missionId) {

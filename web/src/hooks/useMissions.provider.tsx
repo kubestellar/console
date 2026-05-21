@@ -94,6 +94,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           state.lastStreamTimestamp.current.clear()
           state.toolsInFlight.current.clear()
           state.streamSplitCounter.current.clear()
+          state.observedToolExecutions.current.clear()
           for (const timers of state.missionStatusTimers.current.values()) {
             for (const handle of timers || []) {
               clearTimeout(handle)
@@ -228,6 +229,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     const toolsInFlightRef = state.toolsInFlight.current
     const lastStreamTimestampRef = state.lastStreamTimestamp.current
     const streamSplitCounterRef = state.streamSplitCounter.current
+    const observedToolExecutionsRef = state.observedToolExecutions.current
     const waitingInputTimeoutsRef = state.waitingInputTimeouts.current
     const wsSendRetryTimersRef = state.wsSendRetryTimers.current
     const missionStatusTimersRef = state.missionStatusTimers.current
@@ -250,6 +252,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       toolsInFlightRef.clear()
       lastStreamTimestampRef.clear()
       streamSplitCounterRef.clear()
+      observedToolExecutionsRef.clear()
       for (const timeout of waitingInputTimeoutsRef.values()) {
         clearTimeout(timeout)
       }
