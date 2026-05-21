@@ -18,7 +18,7 @@ import {
   TreemapChart,
 } from 'echarts/charts'
 import { SVGRenderer, CanvasRenderer } from 'echarts/renderers'
-import type { EChartsInitOpts, EChartsType, SetOptionOpts } from 'echarts'
+import type { EChartsInitOpts, EChartsType, SetOptionOpts } from 'echarts/core'
 import type { EChartsReactProps, EChartsEventHandler } from './lib/types'
 
 // Register only the chart types/components used by the console to avoid pulling
@@ -108,13 +108,14 @@ export default class ReactECharts extends React.Component<EChartsReactProps> {
     }
 
     const echartsModule = this.getEchartsModule()
-    this.chart = echartsModule.getInstanceByDom?.(container) ?? echartsModule.init(container, this.props.theme, this.props.opts)
+    const chart = echartsModule.getInstanceByDom?.(container) ?? echartsModule.init(container, this.props.theme, this.props.opts)
+    this.chart = chart
     this.attachResizeObserver(container)
     this.rebindEvents(undefined, this.props.onEvents ?? {})
     this.updateLoadingState()
     this.setChartOption()
-    this.chart.resize()
-    this.props.onChartReady?.(this.chart)
+    chart.resize()
+    this.props.onChartReady?.(chart)
   }
 
   private setChartOption(previousProps?: Readonly<EChartsReactProps>) {

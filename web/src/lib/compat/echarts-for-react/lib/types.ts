@@ -1,5 +1,5 @@
 import type { Component, CSSProperties } from 'react'
-import type { EChartsCoreOption, EChartsInitOpts, EChartsType } from 'echarts'
+import type { EChartsCoreOption, EChartsInitOpts, EChartsType } from 'echarts/core'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EChartsEventHandler = (...args: any[]) => void
