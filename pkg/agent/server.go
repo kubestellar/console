@@ -242,6 +242,7 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	SetClusterContextProviders(nil, k8sClient)
+	runKubeAPIPreflightChecks(kubectl)
 
 	// Initialize AI providers
 	if err := InitializeProviders(); err != nil {
