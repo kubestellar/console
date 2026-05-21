@@ -19,6 +19,7 @@ import { CreateDashboardModal } from '../CreateDashboardModal'
 import { WidgetExportModal } from '../../widgets/WidgetExportModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import { useNavigate } from 'react-router-dom'
+import { getCustomDashboardRoute } from '../../../config/routes'
 import { useDashboards } from '../../../hooks/useDashboards'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { suggestIconSync } from '../../../lib/iconSuggester'
@@ -47,6 +48,11 @@ interface DashboardCustomizerProps {
 }
 
 const SECTIONS_WITH_PREVIEW = new Set<CustomizerSection>(['cards', 'collections'])
+const LOCAL_DASHBOARD_ID_PREFIX = 'local-'
+
+function createLocalDashboardId(): string {
+  return `${LOCAL_DASHBOARD_ID_PREFIX}${crypto.randomUUID()}`
+}
 
 export function DashboardCustomizer({
   isOpen,
@@ -166,10 +172,17 @@ export function DashboardCustomizer({
               isOpen={true}
               onClose={() => setUserSelectedSection('dashboards')}
               onCreate={async (name, _template, _description) => {
-                const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-                const href = `/custom-dashboard/${localId}`
-                addItem({ name, icon: suggestIconSync(name), href, type: 'link' }, 'primary')
-                await _createDashboard(name).catch((err) => { console.error('[DashboardCustomizer] backend create failed (non-critical):', err) })
+                const icon = suggestIconSync(name)
+                let href = getCustomDashboardRoute(createLocalDashboardId())
+
+                try {
+                  const createdDashboard = await _createDashboard(name)
+                  href = getCustomDashboardRoute(createdDashboard.id)
+                } catch (error: unknown) {
+                  console.error('[DashboardCustomizer] backend create failed, falling back to local dashboard:', error)
+                }
+
+                addItem({ name, icon, href, type: 'link' }, 'primary')
                 onClose()
                 navigate(href)
               }}

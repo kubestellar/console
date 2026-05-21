@@ -34,6 +34,7 @@ import { useSidebarConfig, SidebarItem } from '../../hooks/useSidebarConfig'
 import { useDashboards } from '../../hooks/useDashboards'
 import { DashboardTemplate } from '../dashboard/templates'
 import { CreateDashboardModal } from '../dashboard/CreateDashboardModal'
+import { getCustomDashboardRoute } from '../../config/routes'
 // StatusBadge and Button removed — no longer needed after Dashboards section cleanup
 
 /** Auto-dismiss delay for generation result messages */
@@ -47,6 +48,12 @@ import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestDashboardIcon, suggestIconSync } from '../../lib/iconSuggester'
 import { BaseModal, useModalState } from '../../lib/modals'
 import { iconRegistry } from '../../lib/icons'
+
+const LOCAL_DASHBOARD_ID_PREFIX = 'local-'
+
+function createLocalDashboardId(): string {
+  return `${LOCAL_DASHBOARD_ID_PREFIX}${crypto.randomUUID()}`
+}
 
 // Sortable sidebar item component
 interface SortableItemProps {
@@ -365,17 +372,22 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   }
 
   // Handle creating a new custom dashboard
-  const handleCreateDashboard = (name: string, _template?: DashboardTemplate, description?: string) => {
-    // Generate a local ID so we don't depend on the backend API
-    const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    const href = `/custom-dashboard/${localId}`
+  const handleCreateDashboard = async (name: string, _template?: DashboardTemplate, description?: string) => {
+    let href = getCustomDashboardRoute(createLocalDashboardId())
 
     // Use keyword-based icon immediately, then upgrade via AI
     const quickIcon = suggestIconSync(name)
 
-    // Add sidebar item, close modals, and navigate — all synchronous
+    try {
+      const createdDashboard = await createDashboard(name)
+      href = getCustomDashboardRoute(createdDashboard.id)
+    } catch (error: unknown) {
+      // Dashboard still works from localStorage when backend persistence fails
+      console.error('[SidebarCustomizer] backend create failed, falling back to local dashboard:', error)
+    }
+
     addItem({
-      name: name,
+      name,
       icon: quickIcon,
       href,
       type: 'link',
@@ -385,12 +397,6 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     closeCreateDashboard()
     onClose()
     navigate(href)
-
-    // Try to persist to backend in the background (optional, may fail offline)
-    createDashboard(name).catch((err) => {
-      // Dashboard works purely from localStorage — backend persistence is optional
-      console.error('[SidebarCustomizer] backend create failed (non-critical):', err)
-    })
 
     // Ask AI agent for a better icon in the background
     suggestDashboardIcon(name).then((aiIcon) => {

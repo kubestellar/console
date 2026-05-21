@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '../lib/api'
 import { emitDashboardCreated, emitDashboardDeleted, emitDashboardImported, emitDashboardExported } from '../lib/analytics'
 
@@ -42,32 +42,32 @@ export function useDashboards() {
     loadDashboards()
   }, [loadDashboards])
 
-  const createDashboard = async (name: string, isDefault?: boolean) => {
+  const createDashboard = useCallback(async (name: string, isDefault?: boolean) => {
     const { data } = await api.post<Dashboard>('/api/dashboards', { name, is_default: isDefault })
     setDashboards((prev) => [...prev, data])
     emitDashboardCreated(name)
     return data
-  }
+  }, [])
 
-  const updateDashboard = async (id: string, updates: Partial<Dashboard>) => {
+  const updateDashboard = useCallback(async (id: string, updates: Partial<Dashboard>) => {
     const { data } = await api.put<Dashboard>(`/api/dashboards/${id}`, updates)
     setDashboards((prev) => prev.map((d) => (d.id === id ? data : d)))
     return data
-  }
+  }, [])
 
-  const deleteDashboard = async (id: string) => {
+  const deleteDashboard = useCallback(async (id: string) => {
     await api.delete(`/api/dashboards/${id}`)
     setDashboards((prev) => prev.filter((d) => d.id !== id))
     emitDashboardDeleted()
-  }
+  }, [])
 
-  const moveCardToDashboard = async (cardId: string, targetDashboardId: string) => {
+  const moveCardToDashboard = useCallback(async (cardId: string, targetDashboardId: string) => {
     const { data } = await api.post(`/api/cards/${cardId}/move`, {
       target_dashboard_id: targetDashboardId })
     return data
-  }
+  }, [])
 
-  const getDashboardWithCards = async (dashboardId: string): Promise<Dashboard | null> => {
+  const getDashboardWithCards = useCallback(async (dashboardId: string): Promise<Dashboard | null> => {
     try {
       const { data } = await api.get<Dashboard>(`/api/dashboards/${dashboardId}`)
       return data
@@ -75,9 +75,9 @@ export function useDashboards() {
       // Silently fail - backend may be unavailable in demo mode
       return null
     }
-  }
+  }, [])
 
-  const getAllDashboardsWithCards = async (): Promise<Dashboard[]> => {
+  const getAllDashboardsWithCards = useCallback(async (): Promise<Dashboard[]> => {
     try {
       const { data: dashboardList } = await api.get<Dashboard[]>('/api/dashboards')
       if (!dashboardList || dashboardList.length === 0) return []
@@ -94,24 +94,24 @@ export function useDashboards() {
       // Silently fail - backend may be unavailable in demo mode
       return []
     }
-  }
+  }, [getDashboardWithCards])
 
-  const exportDashboard = async (dashboardId: string) => {
+  const exportDashboard = useCallback(async (dashboardId: string) => {
     const { data } = await api.get(`/api/dashboards/${dashboardId}/export`)
     emitDashboardExported()
     return data
-  }
+  }, [])
 
-  const importDashboard = async (exportJson: unknown) => {
+  const importDashboard = useCallback(async (exportJson: unknown) => {
     const { data } = await api.post<Dashboard>('/api/dashboards/import', exportJson)
     if (data) {
       setDashboards((prev) => [...prev, data])
     }
     emitDashboardImported()
     return data
-  }
+  }, [])
 
-  return {
+  return useMemo(() => ({
     dashboards,
     isLoading,
     error,
@@ -123,5 +123,19 @@ export function useDashboards() {
     getDashboardWithCards,
     getAllDashboardsWithCards,
     exportDashboard,
-    importDashboard }
+    importDashboard,
+  }), [
+    dashboards,
+    isLoading,
+    error,
+    loadDashboards,
+    createDashboard,
+    updateDashboard,
+    deleteDashboard,
+    moveCardToDashboard,
+    getDashboardWithCards,
+    getAllDashboardsWithCards,
+    exportDashboard,
+    importDashboard,
+  ])
 }

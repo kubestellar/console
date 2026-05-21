@@ -264,4 +264,33 @@ describe('useDashboards', () => {
     })
     expect(result.current.dashboards).toHaveLength(2)
   })
+
+  it('keeps action references stable across rerenders', async () => {
+    const { result, rerender } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const initialActions = {
+      loadDashboards: result.current.loadDashboards,
+      createDashboard: result.current.createDashboard,
+      updateDashboard: result.current.updateDashboard,
+      deleteDashboard: result.current.deleteDashboard,
+      moveCardToDashboard: result.current.moveCardToDashboard,
+      getDashboardWithCards: result.current.getDashboardWithCards,
+      getAllDashboardsWithCards: result.current.getAllDashboardsWithCards,
+      exportDashboard: result.current.exportDashboard,
+      importDashboard: result.current.importDashboard,
+    }
+
+    rerender()
+
+    expect(result.current.loadDashboards).toBe(initialActions.loadDashboards)
+    expect(result.current.createDashboard).toBe(initialActions.createDashboard)
+    expect(result.current.updateDashboard).toBe(initialActions.updateDashboard)
+    expect(result.current.deleteDashboard).toBe(initialActions.deleteDashboard)
+    expect(result.current.moveCardToDashboard).toBe(initialActions.moveCardToDashboard)
+    expect(result.current.getDashboardWithCards).toBe(initialActions.getDashboardWithCards)
+    expect(result.current.getAllDashboardsWithCards).toBe(initialActions.getAllDashboardsWithCards)
+    expect(result.current.exportDashboard).toBe(initialActions.exportDashboard)
+    expect(result.current.importDashboard).toBe(initialActions.importDashboard)
+  })
 })
