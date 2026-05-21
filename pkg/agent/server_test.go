@@ -881,7 +881,7 @@ func TestServer_CheckOrigin(t *testing.T) {
 		origin string
 		want   bool
 	}{
-		{"No origin - allow", "", true},
+		{"No origin - reject", "", false},
 		{"Exact match localhost", "http://localhost", true},
 		{"Localhost with port", "http://localhost:5174", true},
 		{"HTTPS localhost", "https://localhost:3000", true},

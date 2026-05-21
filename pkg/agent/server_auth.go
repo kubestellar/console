@@ -14,13 +14,17 @@ var originBypassAllowedPaths = map[string]struct{}{
 }
 
 // checkOrigin validates the Origin header against allowed origins
-// SECURITY: This prevents malicious websites from connecting to the local agent
+// SECURITY: This prevents malicious websites from connecting to the local agent.
+// Empty Origin is rejected because browsers always send Origin on WebSocket
+// handshakes; only non-browser clients (curl, native apps, local malware) omit it.
+// Rejecting empty Origin provides defense-in-depth alongside the agentToken (#15244).
 func (s *Server) checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 
-	// No origin header (e.g., same-origin request, curl, etc.) - allow
+	// Reject missing Origin — browsers always send it on WS upgrades
 	if origin == "" {
-		return true
+		slog.Warn("SECURITY: rejected WebSocket connection with empty Origin")
+		return false
 	}
 
 	// Check against allowed origins (supports wildcards like "https://*.ibm.com")
