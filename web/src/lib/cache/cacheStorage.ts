@@ -291,7 +291,7 @@ export class IndexedDBStorage implements CacheStorage {
         req.onerror = () => reject(req.error)
       })
     } catch (e: unknown) {
-      console.warn('[Cache] IndexedDB put failed:', e)
+      console.error('[Cache] IndexedDB put failed:', e)
     }
   }
 
@@ -306,7 +306,7 @@ export class IndexedDBStorage implements CacheStorage {
         req.onerror = () => resolve()
       })
     } catch (e: unknown) {
-      console.warn('[Cache] IndexedDB delete failed:', e)
+      console.error('[Cache] IndexedDB delete failed:', e)
     }
   }
 
@@ -321,7 +321,7 @@ export class IndexedDBStorage implements CacheStorage {
         req.onerror = () => resolve()
       })
     } catch (e: unknown) {
-      console.warn('[Cache] IndexedDB clear failed:', e)
+      console.error('[Cache] IndexedDB clear failed:', e)
     }
   }
 

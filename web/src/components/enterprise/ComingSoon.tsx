@@ -4,6 +4,7 @@
 import { useLocation } from 'react-router-dom'
 import { Construction, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '../ui/Button'
 import { ROUTES } from '../../config/routes'
 
 export default function ComingSoon() {
@@ -20,13 +21,14 @@ export default function ComingSoon() {
         <p className="text-sm text-muted-foreground mb-6">
           This compliance vertical is under development and will be available in a future release.
         </p>
-        <button
+        <Button
           onClick={() => navigate(ROUTES.ENTERPRISE)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-primary-foreground text-sm transition-colors"
+          variant="primary"
+          size="md"
+          icon={<ArrowLeft className="w-4 h-4" />}
         >
-          <ArrowLeft className="w-4 h-4" />
           Back to Enterprise Portal
-        </button>
+        </Button>
       </div>
     </div>
   )

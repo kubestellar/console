@@ -14,6 +14,7 @@ import { ENTERPRISE_NAV_SECTIONS } from './enterpriseNav'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { PageErrorBoundary } from '../PageErrorBoundary'
 import { RotatingTip } from '../ui/RotatingTip'
+import { Button } from '../ui/Button'
 import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
 
 const VERTICAL_META: Record<string, {
@@ -128,14 +129,16 @@ function VerticalCard({ sectionId, title, items, onNavigate }: {
 
       <div className="flex-1 space-y-1">
         {items.filter((i) => !i.href.includes('enterprise/enterprise')).map((item) => (
-          <button
+          <Button
             key={item.href}
             onClick={() => onNavigate(item.href)}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors group"
+            variant="ghost"
+            size="sm"
+            className="w-full justify-between"
+            iconRight={<ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
           >
-            <span>{item.label}</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
+            <span className="group">{item.label}</span>
+          </Button>
         ))}
       </div>
     </div>
@@ -236,9 +239,11 @@ function EnterprisePortalContent() {
         ))}
 
         {/* Add More tile */}
-        <button
+        <Button
           onClick={handleAddMore}
-          className="rounded-xl border-2 border-dashed border-border hover:border-purple-500/50 bg-card/30 hover:bg-purple-500/5 p-5 flex flex-col items-center justify-center gap-3 transition-all group min-h-[200px]"
+          variant="ghost"
+          size="lg"
+          className="rounded-xl border-2 border-dashed border-border hover:border-purple-500/50 bg-card/30 hover:bg-purple-500/5 p-5 flex flex-col items-center justify-center gap-3 group min-h-[200px] w-full"
         >
           <div className="p-3 rounded-full bg-secondary group-hover:bg-purple-500/20 transition-colors">
             <Plus className="w-6 h-6 text-muted-foreground group-hover:text-purple-400 transition-colors" />
@@ -251,7 +256,7 @@ function EnterprisePortalContent() {
               Dashboards, cards &amp; widgets
             </p>
           </div>
-        </button>
+        </Button>
       </div>
     </div>
   )

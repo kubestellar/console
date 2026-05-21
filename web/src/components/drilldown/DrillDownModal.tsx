@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign, AlertTriangle, RefreshCw, HardDrive } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
+import { Button } from '../ui/Button'
 import { useEscapeLayer } from '../../lib/modals'
 import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 // Lazy load large components (>300 lines) for better performance
@@ -90,19 +91,21 @@ class DrillDownErrorBoundary extends Component<
             </p>
           )}
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={() => this.setState({ hasError: false, error: null })}
-              className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
               Retry
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={this.props.onClose}
-              className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors"
+              variant="secondary"
+              size="sm"
             >
               Close
-            </button>
+            </Button>
           </div>
         </div>
       )

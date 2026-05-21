@@ -56,7 +56,7 @@ export const stellarApi = {
       const { data } = await api.get<StellarOperationalState>('/api/stellar/state')
       return data
     } catch (err) {
-      console.warn('stellar: getState failed:', err)
+      console.error('stellar: getState failed:', err)
       return {
         generatedAt: new Date().toISOString(),
         clustersWatching: [],
@@ -77,7 +77,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarNotification[] }>(`/api/stellar/notifications?${query.toString()}`)
       return data.items || []
     } catch (err) {
-      console.warn('stellar: getNotifications failed:', err)
+      console.error('stellar: getNotifications failed:', err)
       return []
     }
   },
@@ -87,7 +87,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarMission[] }>(`/api/stellar/missions?limit=${limit}`)
       return data.items || []
     } catch (err) {
-      console.warn('stellar: getMissions failed:', err)
+      console.error('stellar: getMissions failed:', err)
       return []
     }
   },
@@ -100,7 +100,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarAction[] }>(`/api/stellar/actions?${query.toString()}`)
       return data.items || []
     } catch (err) {
-      console.warn('stellar: getActions failed:', err)
+      console.error('stellar: getActions failed:', err)
       return []
     }
   },
@@ -144,7 +144,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarTask[] }>('/api/stellar/tasks')
       return data.items || []
     } catch (err) {
-      console.warn('stellar: getTasks failed:', err)
+      console.error('stellar: getTasks failed:', err)
       return []
     }
   },
@@ -202,7 +202,7 @@ export const stellarApi = {
       const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
       return data
     } catch (err) {
-      console.warn('stellar: getDigest failed:', err)
+      console.error('stellar: getDigest failed:', err)
       return { digest: '', model: '', provider: '' }
     }
   },
@@ -212,7 +212,7 @@ export const stellarApi = {
       const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
       return data
     } catch (err) {
-      console.warn('stellar: getProviders failed:', err)
+      console.error('stellar: getProviders failed:', err)
       return { global: [], user: [] }
     }
   },
@@ -240,7 +240,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: StellarWatch[] }>('/api/stellar/watches')
       return data.items || []
     } catch (err) {
-      console.warn('stellar: getWatches failed:', err)
+      console.error('stellar: getWatches failed:', err)
       return []
     }
   },
@@ -265,7 +265,7 @@ export const stellarApi = {
       if (signal?.aborted) {
         return []
       }
-      console.warn('stellar: getAuditLog failed:', err)
+      console.error('stellar: getAuditLog failed:', err)
       return []
     }
   },
@@ -278,7 +278,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: import('../types/stellar').StellarSolve[] }>(`/api/stellar/solves?limit=${limit}`)
       return data.items || []
     } catch (err) {
-      console.warn('stellar: listSolves failed:', err)
+      console.error('stellar: listSolves failed:', err)
       return []
     }
   },
@@ -287,7 +287,7 @@ export const stellarApi = {
       const { data } = await api.get<{ items: import('../types/stellar').StellarActivity[] }>(`/api/stellar/activity?limit=${limit}`)
       return data.items || []
     } catch (err) {
-      console.warn('stellar: listActivity failed:', err)
+      console.error('stellar: listActivity failed:', err)
       return []
     }
   },

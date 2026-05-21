@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { RefreshCw } from 'lucide-react'
 import i18next from 'i18next'
+import { Button } from './ui/Button'
 import { emitError, emitChunkReloadRecoveryFailed, markErrorReported } from '../lib/analytics'
 import { isChunkLoadError, CHUNK_RELOAD_TS_KEY } from '../lib/chunkErrors'
 
@@ -85,12 +86,13 @@ export class ChunkErrorBoundary extends Component<Props, State> {
             <p className="text-sm text-muted-foreground mb-6">
               {i18next.t('common:chunkError.newVersionDeployed')}
             </p>
-            <button
+            <Button
               onClick={this.handleReload}
-              className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-colors"
+              variant="primary"
+              size="md"
             >
               {i18next.t('common:chunkError.reloadPage')}
-            </button>
+            </Button>
           </div>
         </div>
       )

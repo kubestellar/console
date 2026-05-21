@@ -138,7 +138,7 @@ async function sendSingleNotification(
     }
   } catch (error: unknown) {
     if (logUnexpectedErrors && error instanceof Error && !error.message.includes('fetch')) {
-      console.warn('Notification send failed:', error.message)
+      console.error('Notification send failed:', error.message)
     }
   }
 }
