@@ -37,9 +37,10 @@ const SCORES_BROWSER_CACHE_MAX_AGE_S = 300;
 const SCORES_EDGE_CACHE_MAX_AGE_S = 600;
 const SCORES_CACHE_CONTROL = `public, max-age=${SCORES_BROWSER_CACHE_MAX_AGE_S}, s-maxage=${SCORES_EDGE_CACHE_MAX_AGE_S}`;
 
-/** Allow a small burst of cache misses per client per minute. */
+/** Allow cache-miss fetches at a bounded per-IP rate. */
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 30;
+const RATE_LIMIT_MAX_REQUESTS = 60;
+const RATE_LIMIT_RETRY_CACHE_CONTROL = "private, no-store";
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
@@ -136,12 +137,12 @@ export default async (request: Request): Promise<Response> => {
       const rateLimit = checkInMemoryRateLimit(
         getClientIp(request),
         missionsScoresRateLimitMap,
-        MAX_REQUESTS_PER_WINDOW,
+        RATE_LIMIT_MAX_REQUESTS,
         RATE_LIMIT_WINDOW_MS,
       );
       if (!rateLimit.allowed) {
         return rateLimitResponse(rateLimit.retryAfterSeconds, {
-          "Cache-Control": "private, no-store",
+          "Cache-Control": RATE_LIMIT_RETRY_CACHE_CONTROL,
           ...corsHeaders,
         });
       }

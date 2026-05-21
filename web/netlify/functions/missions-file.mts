@@ -35,9 +35,10 @@ const FILE_BROWSER_CACHE_MAX_AGE_S = 3_600;
 const FILE_EDGE_CACHE_MAX_AGE_S = 86_400;
 const FILE_CACHE_CONTROL = `public, max-age=${FILE_BROWSER_CACHE_MAX_AGE_S}, s-maxage=${FILE_EDGE_CACHE_MAX_AGE_S}`;
 
-/** Allow a small burst of cache misses per client per minute. */
+/** Allow cache-miss fetches at a bounded per-IP rate. */
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 30;
+const RATE_LIMIT_MAX_REQUESTS = 60;
+const RATE_LIMIT_RETRY_CACHE_CONTROL = "private, no-store";
 
 /** Number of retry attempts for transient upstream errors (#10966, #11033) */
 const MAX_RETRIES = 3;
@@ -110,12 +111,12 @@ export default async (request: Request): Promise<Response> => {
     const rateLimit = checkInMemoryRateLimit(
       getClientIp(request),
       fileRateLimitMap,
-      MAX_REQUESTS_PER_WINDOW,
+      RATE_LIMIT_MAX_REQUESTS,
       RATE_LIMIT_WINDOW_MS,
     );
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfterSeconds, {
-        "Cache-Control": "private, no-store",
+        "Cache-Control": RATE_LIMIT_RETRY_CACHE_CONTROL,
         ...corsHeaders,
       });
     }
