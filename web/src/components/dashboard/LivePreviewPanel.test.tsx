@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 
 const PREVIEW_DEBOUNCE_MS = 800
+const PREVIEW_COMPILE_TIMEOUT_MS = 5000
 const COMPILE_TIMEOUT_ERROR = 'Compilation error: timed out after 5000ms. Please try again.'
 const mockCompileCardCode = vi.fn()
 const mockCreateCardComponent = vi.fn()
@@ -17,6 +18,7 @@ vi.mock('../cards/DynamicCard', () => ({
 }))
 
 vi.mock('../../lib/dynamic-cards/compiler', () => ({
+  CARD_COMPILE_TIMEOUT_MS: PREVIEW_COMPILE_TIMEOUT_MS,
   compileCardCode: (...args: unknown[]) => mockCompileCardCode(...args),
   createCardComponent: (...args: unknown[]) => mockCreateCardComponent(...args),
 }))
@@ -57,6 +59,18 @@ describe('LivePreviewPanel', () => {
     fireEvent.click(screen.getByTitle('dashboard.preview.hidePreview'))
 
     expect(screen.getByTitle('dashboard.preview.showPreview')).toBeInTheDocument()
+  })
+
+  it('fails the preview gracefully when compilation never resolves', async () => {
+    mockCompileCardCode.mockReturnValue(new Promise(() => {}))
+
+    render(<LivePreviewPanel tier="tier2" t2Source="export default function Card() { return null }" />)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PREVIEW_DEBOUNCE_MS + PREVIEW_COMPILE_TIMEOUT_MS)
+    })
+
+    expect(screen.getByText(COMPILE_TIMEOUT_ERROR)).toBeInTheDocument()
   })
 
   it('shows compilation errors from the preview compiler', async () => {

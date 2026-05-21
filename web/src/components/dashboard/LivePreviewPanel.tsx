@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Maximize2, Minimize2, AlertTriangle, Loader2, Database } from 'lucide-react'
 import { Tier1CardRuntime } from '../cards/DynamicCard'
-import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
+import { CARD_COMPILE_TIMEOUT_MS, compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
 import { DynamicCardErrorBoundary } from '../cards/DynamicCardErrorBoundary'
 import { cn } from '../../lib/cn'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
@@ -25,6 +25,11 @@ interface LivePreviewPanelProps {
 
 const DEBOUNCE_TIER1_MS = 300  // Debounce for Tier 1 (declarative) config changes
 const DEBOUNCE_TIER2_MS = 800  // Longer debounce for Tier 2 (code) changes to avoid excessive recompilation
+const PREVIEW_COMPILE_TIMEOUT_MS = CARD_COMPILE_TIMEOUT_MS
+
+function getPreviewCompileTimeoutError(): string {
+  return `Compilation error: timed out after ${PREVIEW_COMPILE_TIMEOUT_MS}ms. Please try again.`
+}
 
 export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }: LivePreviewPanelProps) {
   const { t } = useTranslation()
@@ -173,19 +178,30 @@ function T2Preview({ source }: { source?: string }) {
   // Compile when debounced source updates
   useEffect(() => {
     if (!debouncedSource) {
+      setCompiling(false)
+      setError(null)
+      setCardComponent(null)
       return
     }
 
     let cancelled = false
+    let timedOut = false
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return
+      timedOut = true
+      setError(getPreviewCompileTimeoutError())
+      setCardComponent(null)
+      setCompiling(false)
+    }, PREVIEW_COMPILE_TIMEOUT_MS)
 
-    Promise.resolve().then(async () => {
+    const compilePreview = async () => {
       if (cancelled) return
       setCompiling(true)
       setError(null)
 
       try {
         const result = await compileCardCode(debouncedSource)
-        if (cancelled) return
+        if (cancelled || timedOut) return
         if (result.error) {
           setError(result.error)
           setCompiling(false)
@@ -193,7 +209,7 @@ function T2Preview({ source }: { source?: string }) {
           return
         }
         const componentResult = createCardComponent(result.code!)
-        if (cancelled) return
+        if (cancelled || timedOut) return
         if (componentResult.error) {
           setError(componentResult.error)
           setCompiling(false)
@@ -203,14 +219,21 @@ function T2Preview({ source }: { source?: string }) {
         setCardComponent(() => componentResult.component)
         setCompiling(false)
       } catch (err: unknown) {
-        if (cancelled) return
+        if (cancelled || timedOut) return
         setError(err instanceof Error ? err.message : 'Compilation failed')
         setCardComponent(null)
         setCompiling(false)
+      } finally {
+        clearTimeout(timeoutId)
       }
-    })
+    }
 
-    return () => { cancelled = true }
+    void compilePreview()
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
   }, [debouncedSource])
 
   if (!source) {
