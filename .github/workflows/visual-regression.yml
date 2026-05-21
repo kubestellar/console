@@ -6,6 +6,12 @@ on:
       - 'web/src/**'
       - 'web/e2e/visual/**'
       - '.github/workflows/visual-regression.yml'
+    paths-ignore:
+      - 'web/src/**/__tests__/**'
+      - 'web/src/**/*.test.ts'
+      - 'web/src/**/*.test.tsx'
+      - 'web/src/**/*.spec.ts'
+      - 'web/src/**/*.spec.tsx'
   workflow_dispatch:
 
 permissions: read-all
