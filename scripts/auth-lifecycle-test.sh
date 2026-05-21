@@ -145,12 +145,12 @@ echo ""
 
 echo -e "${BOLD}Phase 4: Auth security pattern verification${NC}"
 
-AUTH_FILE="pkg/api/handlers/auth.go"
 MW_FILE="pkg/api/middleware/auth.go"
+mapfile -t AUTH_FILES < <(find pkg/api/handlers -maxdepth 1 -type f -name '*auth*.go' | sort)
 
 # CSRF state store
 TOTAL=$((TOTAL + 1))
-if grep -q "state\|State\|csrf\|CSRF" "$AUTH_FILE" 2>/dev/null; then
+if [ "${#AUTH_FILES[@]}" -gt 0 ] && grep -Eq "state|State|csrf|CSRF" "${AUTH_FILES[@]}" 2>/dev/null; then
   echo -e "  ${GREEN}✓${NC}  OAuth CSRF state protection present"
   PASSED=$((PASSED + 1))
 else
