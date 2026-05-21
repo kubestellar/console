@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const maxStellarMemorySearchLimit = 100
+
 func (s *SQLiteStore) ListStellarMemoryEntries(ctx context.Context, userID, cluster, category string, limit, offset int) ([]StellarMemoryEntry, error) {
 	lim := resolvePageLimit(limit, defaultPageLimit)
 	off := resolvePageOffset(offset)
@@ -42,15 +44,22 @@ func (s *SQLiteStore) ListStellarMemoryEntries(ctx context.Context, userID, clus
 	return results, rows.Err()
 }
 
-
 func (s *SQLiteStore) SearchStellarMemoryEntries(ctx context.Context, userID, query string, limit int) ([]StellarMemoryEntry, error) {
 	lim := resolvePageLimit(limit, 20)
+	if lim > maxStellarMemorySearchLimit {
+		lim = maxStellarMemorySearchLimit
+	}
+	trimmedQuery := strings.TrimSpace(query)
+	if trimmedQuery == "" {
+		return s.GetRecentMemoryEntries(ctx, userID, "", lim)
+	}
+	likeTerm := likeQuery(trimmedQuery)
 	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, cluster, namespace, category, summary, raw_content, tags, mission_id, execution_id, expires_at, created_at
 		FROM stellar_memory_entries
 		WHERE user_id = ? AND (summary LIKE ? OR raw_content LIKE ? OR tags LIKE ?)
 		ORDER BY created_at DESC
 		LIMIT ?`,
-		userID, likeQuery(query), likeQuery(query), likeQuery(query), lim)
+		userID, likeTerm, likeTerm, likeTerm, lim)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +74,6 @@ func (s *SQLiteStore) SearchStellarMemoryEntries(ctx context.Context, userID, qu
 	}
 	return results, rows.Err()
 }
-
 
 func (s *SQLiteStore) CreateStellarMemoryEntry(ctx context.Context, entry *StellarMemoryEntry) error {
 	if entry.ID == "" {
@@ -98,12 +106,10 @@ func (s *SQLiteStore) CreateStellarMemoryEntry(ctx context.Context, entry *Stell
 	return err
 }
 
-
 func (s *SQLiteStore) DeleteStellarMemoryEntry(ctx context.Context, userID, entryID string) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM stellar_memory_entries WHERE user_id = ? AND id = ?`, userID, entryID)
 	return err
 }
-
 
 func (s *SQLiteStore) GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]StellarMemoryEntry, error) {
 	lim := resolvePageLimit(limit, 20)
@@ -131,7 +137,6 @@ func (s *SQLiteStore) GetRecentMemoryEntries(ctx context.Context, userID, cluste
 	}
 	return results, rows.Err()
 }
-
 
 func scanStellarMemoryRow(rows *sql.Rows) (*StellarMemoryEntry, error) {
 	var entry StellarMemoryEntry
@@ -173,12 +178,6 @@ func scanStellarMemoryRow(rows *sql.Rows) (*StellarMemoryEntry, error) {
 	return &entry, nil
 }
 
-
 func likeQuery(query string) string {
-	trimmed := strings.TrimSpace(query)
-	if trimmed == "" {
-		return "%"
-	}
-	return "%" + trimmed + "%"
+	return "%" + strings.TrimSpace(query) + "%"
 }
-
