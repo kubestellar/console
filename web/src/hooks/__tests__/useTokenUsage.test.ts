@@ -993,9 +993,9 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     localStorage.setItem(LAST_KNOWN_USAGE_KEY, String(BASELINE))
     localStorage.setItem(AGENT_SESSION_KEY, 'session-1')
 
-    // Delta of 500, no active ops -> all goes to 'other'
+    // Delta of 500, no active ops -> delta is unattributed, so the
+    // reconciled breakdown keeps the full total represented in 'other'.
     const NEXT_TOTAL = 2500
-    const EXPECTED_DELTA = NEXT_TOTAL - BASELINE
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -1006,7 +1006,10 @@ describe('agent restart detection (#6015) + per-op attribution (#6016)', () => {
     const { result } = renderHook(() => mod.useTokenUsage())
     await act(async () => { await new Promise(r => setTimeout(r, POLL_SETTLE_MS)) })
 
-    expect(result.current.usage.byCategory.other).toBe(EXPECTED_DELTA)
+    expect(result.current.usage.used).toBe(NEXT_TOTAL)
+    expect(result.current.usage.byCategory.other).toBe(NEXT_TOTAL)
+    const sum = Object.values(result.current.usage.byCategory).reduce((a, b) => a + b, 0)
+    expect(sum).toBe(NEXT_TOTAL)
   })
 
   it('totalUsed === lastKnownUsage keeps the total represented in the breakdown', async () => {

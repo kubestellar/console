@@ -125,4 +125,4 @@ describe('InitialInfrastructureGate', () => {
     expect(mockGetState).toHaveBeenCalledTimes(2)
     expect(mockFetchKagentStatus).toHaveBeenCalledTimes(2)
   })
-}
+})
