@@ -1,0 +1,158 @@
+package agent
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"runtime"
+	"time"
+
+	"github.com/kubestellar/console/pkg/agent/protocol"
+)
+
+// handleHealth handles HTTP health checks
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Health endpoint doesn't require token auth (used for discovery)
+	// but does enforce origin checks via CORS
+
+	clusters, _ := s.kubectl.ListContexts()
+	hasClaude := s.checkClaudeAvailable()
+
+	// Build lightweight provider summaries for telemetry
+	providerSummaries := make([]protocol.ProviderSummary, 0)
+	for _, p := range s.registry.ListAvailable() {
+		providerSummaries = append(providerSummaries, protocol.ProviderSummary{
+			Name:         p.Name,
+			DisplayName:  p.DisplayName,
+			Capabilities: p.Capabilities,
+		})
+	}
+
+	payload := protocol.HealthPayload{
+		Status:             "ok",
+		Version:            Version,
+		CommitSHA:          CommitSHA,
+		BuildTime:          BuildTime,
+		GoVersion:          runtime.Version(),
+		OS:                 runtime.GOOS,
+		Arch:               runtime.GOARCH,
+		Clusters:           len(clusters),
+		HasClaude:          hasClaude,
+		Claude:             s.getClaudeInfo(),
+		InstallMethod:      detectAgentInstallMethod(),
+		AvailableProviders: providerSummaries,
+	}
+
+	writeJSON(w, payload)
+}
+
+// handleStatus handles authenticated agent status probes.
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	clusters, _ := s.kubectl.ListContexts()
+
+	writeJSON(w, map[string]interface{}{
+		"status":   "ok",
+		"version":  Version,
+		"clusters": len(clusters),
+	})
+}
+
+// handleProviderCheck runs a readiness handshake for a specific provider.
+// GET /provider/check?name=antigravity
+func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	providerName := r.URL.Query().Get("name")
+	if providerName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, protocol.ErrorPayload{
+			Code:    "missing_name",
+			Message: "Query parameter 'name' is required",
+		})
+		return
+	}
+
+	provider, err := s.registry.Get(providerName)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		writeJSON(w, protocol.ProviderCheckResponse{
+			Provider: providerName,
+			Ready:    false,
+			State:    "failed",
+			Message:  fmt.Sprintf("Provider '%s' is not registered", providerName),
+		})
+		return
+	}
+
+	// Check if the provider supports explicit handshake
+	hp, hasHandshake := provider.(HandshakeProvider)
+	if !hasHandshake {
+		// Providers without Handshake just report availability
+		resp := protocol.ProviderCheckResponse{
+			Provider:     providerName,
+			Ready:        provider.IsAvailable(),
+			HasHandshake: false,
+		}
+		if provider.IsAvailable() {
+			resp.State = "connected"
+			resp.Message = fmt.Sprintf("%s is available", provider.DisplayName())
+		} else {
+			resp.State = "failed"
+			resp.Message = fmt.Sprintf("%s is not available", provider.DisplayName())
+		}
+		writeJSON(w, resp)
+		return
+	}
+
+	// Run the handshake with a timeout
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	result := hp.Handshake(ctx)
+	slog.Info("[ProviderCheck] result", "provider", providerName, "state", result.State, "ready", result.Ready, "message", result.Message)
+
+	writeJSON(w, protocol.ProviderCheckResponse{
+		Provider:      providerName,
+		Ready:         result.Ready,
+		State:         result.State,
+		Message:       result.Message,
+		Prerequisites: result.Prerequisites,
+		Version:       result.Version,
+		CliPath:       result.CliPath,
+		HasHandshake:  true,
+	})
+}
