@@ -74,7 +74,10 @@ const (
 	// execution.  Operators can override it at startup via the
 	// KC_MISSION_TIMEOUT environment variable (accepts Go duration strings
 	// such as "10m", "600s", "1h").  See #9482.
-	defaultMissionExecutionTimeout = 5 * time.Minute
+	// Increased from 5m to 15m to account for missions with multiple
+	// workloads — cumulative installation time was causing the last
+	// workload to timeout (#15165).
+	defaultMissionExecutionTimeout = 15 * time.Minute
 
 	// missionTimeoutEnvVar is the environment variable operators can set
 	// to override the per-mission execution timeout.
