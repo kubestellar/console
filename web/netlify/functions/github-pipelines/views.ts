@@ -30,7 +30,7 @@ import {
   FAILURES_LIMIT,
   LOG_TAIL_LINES,
 } from "./constants";
-import { gh, readCappedJson } from "./fetchers";
+import { gh, readCappedJson, readCappedText } from "./fetchers";
 import { isValidRepo, jsonResponse } from "./helpers";
 import { normalizeRun } from "./transform";
 import { readHistory, writeHistory, mergeIntoHistory } from "./history";
@@ -392,7 +392,7 @@ export async function buildLog(
   if (!res.ok) {
     return jsonResponse({ error: "upstream request failed" }, { status: 502 });
   }
-  const text = await res.text();
+  const text = await readCappedText(res);
   const lines = text.split("\n");
   const tail = lines.slice(Math.max(0, lines.length - LOG_TAIL_LINES)).join("\n");
   return jsonResponse({ lines: LOG_TAIL_LINES, truncatedFrom: lines.length, log: tail });

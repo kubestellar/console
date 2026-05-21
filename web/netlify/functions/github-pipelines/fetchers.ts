@@ -45,3 +45,33 @@ export async function readCappedJson<T>(res: Response): Promise<T> {
   }
   return JSON.parse(text) as T;
 }
+
+/**
+ * Read a Response body as text, capped at MAX_RESPONSE_BYTES.
+ * Unlike readCappedJson, this truncates instead of rejecting — suitable for
+ * log streams where we only need the tail anyway.
+ */
+export async function readCappedText(res: Response): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  while (totalBytes < MAX_RESPONSE_BYTES) {
+    const { done, value } = await reader.read();
+    if (done || !value) break;
+    const remaining = MAX_RESPONSE_BYTES - totalBytes;
+    if (value.byteLength > remaining) {
+      chunks.push(value.slice(0, remaining));
+      totalBytes += remaining;
+      break;
+    }
+    chunks.push(value);
+    totalBytes += value.byteLength;
+  }
+
+  reader.cancel().catch(() => {});
+  const decoder = new TextDecoder();
+  return chunks.map((c) => decoder.decode(c, { stream: true })).join("") + decoder.decode();
+}
