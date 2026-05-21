@@ -826,12 +826,14 @@ describe('stream done cleanup', () => {
       )
       const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
 
-      // Stream a chunk (sets timestamp)
+      // Stream a chunk (sets timestamp). Use interactive content so the
+      // mission remains in waiting_input after stream-done cleanup instead of
+      // auto-completing from a terminal streamed response.
       act(() => {
         MockWebSocket.lastInstance?.simulateMessage({
           id: requestId,
           type: 'stream',
-          payload: { content: 'Data', done: false },
+          payload: { content: 'What would you like to do next?', done: false },
         })
       })
 
