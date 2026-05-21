@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+# Least-privilege: only grant read access; reusable workflow cannot exceed this ceiling
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   copilot-dco:
     uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@5c7fdcdde035388fa2df43d860d2372c2dd3e3ed  # main
