@@ -177,6 +177,18 @@ vi.mock('../../../hooks/useRefreshIndicator', () => ({
 }))
 vi.mock('../../../hooks/useDemoMode', () => ({ getDemoMode: () => false, isDemoModeForced: false }))
 
+let mockDashboardHealthStatus: 'healthy' | 'warning' | 'critical' | 'empty' = 'healthy'
+vi.mock('../../../hooks/useDashboardHealth', () => ({
+  useDashboardHealth: () => ({
+    status: mockDashboardHealthStatus,
+    message: 'All systems healthy',
+    details: [],
+    criticalCount: 0,
+    warningCount: 0,
+    navigateTo: undefined,
+  }),
+}))
+
 const mockGlobalFilters = {
   selectedClusters: [] as string[],
   isAllClustersSelected: true,
@@ -212,7 +224,9 @@ vi.mock('../DiscoverCardsPlaceholder', () => ({ DiscoverCardsPlaceholder: () => 
 vi.mock('../customizer/DashboardCustomizer', () => ({ DashboardCustomizer: () => null }))
 vi.mock('../../widgets/WidgetExportModal', () => ({ WidgetExportModal: () => null }))
 vi.mock('../../deploy/DeployConfirmDialog', () => ({ DeployConfirmDialog: () => null }))
-vi.mock('../DashboardHealthIndicator', () => ({ DashboardHealthIndicator: () => null }))
+vi.mock('../DashboardHealthIndicator', () => ({
+  DashboardHealthIndicator: () => <div data-testid="dashboard-health-indicator" />,
+}))
 vi.mock('../WelcomeCard', () => ({ WelcomeCard: () => <div data-testid="welcome-card" /> }))
 const mockDashboardHeader = vi.fn(({ title }: { title: string }) => <div data-testid="dashboard-header">{title}</div>)
 vi.mock('../../shared/DashboardHeader', () => ({
@@ -270,6 +284,7 @@ describe('Dashboard', () => {
     mockLocation.pathname = '/'
     mockLocation.key = 'test-key'
     capturedGetStatValue = null
+    mockDashboardHealthStatus = 'healthy'
     // Reset global filter to default (all clusters)
     mockGlobalFilters.selectedClusters = []
     mockGlobalFilters.isAllClustersSelected = true
@@ -378,6 +393,14 @@ describe('Dashboard', () => {
 
     expect(discover).toBeInTheDocument()
     expect(within(grid).queryByTestId('discover')).not.toBeInTheDocument()
+  })
+
+  it('renders the dashboard health indicator when dashboard health is degraded', () => {
+    mockDashboardHealthStatus = 'warning'
+
+    render(<Dashboard />)
+
+    expect(screen.getByTestId('dashboard-health-indicator')).toBeInTheDocument()
   })
 
   it('persists auto-refresh true by default', () => {
