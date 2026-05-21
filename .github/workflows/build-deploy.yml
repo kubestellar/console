@@ -185,7 +185,13 @@ jobs:
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          for i in 1 2 3; do
+            docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} && exit 0
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Image inspect failed after 3 attempts (GHCR propagation delay)"
+          exit 1
 
   deploy-vllm-d:
     needs: merge
