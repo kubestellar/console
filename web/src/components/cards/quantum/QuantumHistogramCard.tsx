@@ -245,7 +245,7 @@ export function QuantumHistogramCard() {
   }
 
   return (
-    <div className="p-4 flex h-full flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-foreground">{t('cards:quantumHistogram.title')}</h3>
         <Button

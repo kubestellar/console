@@ -252,7 +252,7 @@ export const QuantumQubitGrid: React.FC = () => {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto p-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

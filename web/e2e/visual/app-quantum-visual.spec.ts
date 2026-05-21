@@ -1,0 +1,38 @@
+import { test, expect, type Locator, type Page } from '@playwright/test'
+import { setupDemoMode } from '../helpers/setup'
+
+const PAGE_VISIBLE_TIMEOUT_MS = 15_000
+const CARD_VISIBLE_TIMEOUT_MS = 15_000
+const DESKTOP_VIEWPORT = { width: 1440, height: 1400 }
+
+async function setupQuantumPage(page: Page) {
+  await setupDemoMode(page)
+  await page.goto('/quantum')
+  await expect(page.getByTestId('sidebar')).toBeVisible({
+    timeout: PAGE_VISIBLE_TIMEOUT_MS,
+  })
+  await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({
+    timeout: PAGE_VISIBLE_TIMEOUT_MS,
+  })
+}
+
+async function expectCardScreenshot(card: Locator, fileName: string) {
+  await expect(card).toBeAttached({ timeout: CARD_VISIBLE_TIMEOUT_MS })
+  await card.scrollIntoViewIfNeeded()
+  await expect(card).toBeVisible({ timeout: CARD_VISIBLE_TIMEOUT_MS })
+  await expect(card).toHaveScreenshot(fileName)
+}
+
+test.describe('Quantum dashboard cards', () => {
+  test.use({ viewport: DESKTOP_VIEWPORT })
+
+  test('execution histogram and qubit grid keep bottom content visible', async ({ page }) => {
+    await setupQuantumPage(page)
+
+    const qubitGridCard = page.locator('h2:has-text("Quantum Qubit Grid")').first().locator('xpath=ancestor::*[@data-card-type][1]')
+    const histogramCard = page.locator('h2:has-text("Execution Histogram")').first().locator('xpath=ancestor::*[@data-card-type][1]')
+
+    await expectCardScreenshot(qubitGridCard, 'app-quantum-qubit-grid-card.png')
+    await expectCardScreenshot(histogramCard, 'app-quantum-histogram-card.png')
+  })
+})

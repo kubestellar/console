@@ -22,7 +22,7 @@ export const quantumDashboardConfig: UnifiedDashboardConfig = {
       id: 'quantum-qubits-1',
       cardType: 'quantum_qubit_grid',
       title: 'Quantum Qubit Grid',
-      position: { w: 6, h: 4 },
+      position: { w: 6, h: 5 },
     },
     // Quantum status
     {
@@ -43,7 +43,7 @@ export const quantumDashboardConfig: UnifiedDashboardConfig = {
       id: 'quantum-histogram-1',
       cardType: 'quantum_histogram',
       title: 'Execution Histogram',
-      position: { w: 12, h: 4 },
+      position: { w: 12, h: 5 },
     },
   ],
   features: {
