@@ -39,6 +39,10 @@ const clusterListTimeout = 15 * time.Second
 // eventCollectTimeout is the per-cluster fetch timeout.
 const eventCollectTimeout = 15 * time.Second
 
+// maxTimelineWorkers bounds the number of simultaneous per-cluster goroutines
+// in the background collector to prevent unbounded fan-out.
+const maxTimelineWorkers = 10
+
 // eventsPerClusterLimit caps the number of events fetched per cluster per poll.
 const eventsPerClusterLimit = 200
 
@@ -168,10 +172,13 @@ func (h *TimelineHandler) collectAll() {
 	}
 
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxTimelineWorkers)
 	for _, ci := range healthy {
+		sem <- struct{}{}
 		wg.Add(1)
 		cluster := ci
 		safego.GoWith("timeline/"+cluster.Name, func() {
+			defer func() { <-sem }()
 			defer wg.Done()
 			h.collectCluster(cluster)
 		})
