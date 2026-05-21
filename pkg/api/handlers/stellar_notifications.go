@@ -56,19 +56,25 @@ func (h *StellarHandler) MarkNotificationRead(c *fiber.Ctx) error {
 
 func (h *StellarHandler) MarkNotificationInvestigating(c *fiber.Ctx) error {
 	var req notificationStateRequest
-	_ = c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
 	return h.updateNotificationState(c, stellarNotificationStatusInvestigating, strings.TrimSpace(req.InvestigationSummary))
 }
 
 func (h *StellarHandler) ResolveNotification(c *fiber.Ctx) error {
 	var req notificationStateRequest
-	_ = c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
 	return h.updateNotificationState(c, stellarNotificationStatusResolved, strings.TrimSpace(req.ResolutionNote))
 }
 
 func (h *StellarHandler) DismissNotification(c *fiber.Ctx) error {
 	var req notificationStateRequest
-	_ = c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
 	return h.updateNotificationState(c, stellarNotificationStatusDismissed, strings.TrimSpace(req.DismissalReason))
 }
 
