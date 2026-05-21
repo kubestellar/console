@@ -1,8 +1,15 @@
 import { authFetch } from './api'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const KAGENT_STATUS_ENDPOINT = '/api/kagent/status'
 const KAGENT_STATUS_TIMEOUT_MS = 5_000
 const KAGENT_TOOL_CALL_TIMEOUT_MS = 30_000
+
+interface FetchKagentStatusOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+  throwOnError?: boolean
+}
 
 export interface KagentAgent {
   name: string
@@ -28,20 +35,46 @@ function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal 
   return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
 }
 
-export async function fetchKagentStatus(options: { signal?: AbortSignal } = {}): Promise<KagentStatus> {
+async function getErrorReason(resp: Response): Promise<string> {
   try {
-    const resp = await authFetch(`${API_BASE}/api/kagent/status`, {
-      signal: getRequestSignal(KAGENT_STATUS_TIMEOUT_MS, options.signal),
+    const body = (await resp.text()).trim()
+    return body ? `HTTP ${resp.status}: ${body}` : `HTTP ${resp.status}`
+  } catch {
+    return `HTTP ${resp.status}`
+  }
+}
+
+export async function fetchKagentStatus(options: FetchKagentStatusOptions = {}): Promise<KagentStatus> {
+  const timeoutMs = options.timeoutMs ?? KAGENT_STATUS_TIMEOUT_MS
+  try {
+    const resp = await authFetch(`${API_BASE}${KAGENT_STATUS_ENDPOINT}`, {
+      signal: getRequestSignal(timeoutMs, options.signal),
     })
-    if (!resp.ok) return { available: false, reason: `HTTP ${resp.status}` }
+    if (!resp.ok) {
+      const reason = await getErrorReason(resp)
+      if (options.throwOnError) {
+        throw new Error(reason)
+      }
+      return { available: false, reason: `HTTP ${resp.status}` }
+    }
     try {
       return await resp.json()
     } catch {
-      return { available: false, reason: 'invalid JSON response' }
+      const reason = 'invalid JSON response'
+      if (options.throwOnError) {
+        throw new Error(reason)
+      }
+      return { available: false, reason }
     }
   } catch (error: unknown) {
     if (error instanceof DOMException && error.name === 'AbortError') {
+      if (options.throwOnError) {
+        throw new Error(`Request timeout after ${timeoutMs / 1000}s: ${KAGENT_STATUS_ENDPOINT}`)
+      }
       throw error
+    }
+    if (options.throwOnError) {
+      throw error instanceof Error ? error : new Error('unreachable')
     }
     return { available: false, reason: 'unreachable' }
   }

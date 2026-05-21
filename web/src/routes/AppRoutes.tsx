@@ -29,6 +29,7 @@ import { UnifiedDemoProvider } from '../lib/unified/demo'
 import { ChunkErrorBoundary } from '../components/ChunkErrorBoundary'
 import { AppErrorBoundary } from '../components/AppErrorBoundary'
 import { PageErrorBoundary } from '../components/PageErrorBoundary'
+import { InitialInfrastructureGate } from '../components/InitialInfrastructureGate'
 import { StellarProvider } from '../hooks/useStellar'
 import { ROUTES } from '../config/routes'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
@@ -260,9 +261,11 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
             and Enterprise navigations (#14220). Login/widget routes stay outside. */}
         <Route element={
           <ProtectedRoute>
-            <StellarProvider>
-              <Outlet />
-            </StellarProvider>
+            <InitialInfrastructureGate>
+              <StellarProvider>
+                <Outlet />
+              </StellarProvider>
+            </InitialInfrastructureGate>
           </ProtectedRoute>
         }>
         {/* Layout route — all dashboard routes share a single Layout instance.

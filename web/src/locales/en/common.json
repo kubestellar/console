@@ -4224,6 +4224,15 @@
     "newVersionDeployed": "A new version was deployed. Please reload to continue.",
     "reloadPage": "Reload Page"
   },
+  "startupHandshake": {
+    "loadingTitle": "Connecting to infrastructure",
+    "loadingDescription": "Checking backend connectivity before loading the console.",
+    "errorTitle": "Infrastructure Connection Error",
+    "errorDescription": "The console could not complete its startup handshake within {{timeoutSeconds}} seconds. Verify that the backend can reach the Kubernetes API, then retry.",
+    "detailsTitle": "Backend details",
+    "actionHint": "Check backend logs, kubeconfig access, and cluster network connectivity before retrying.",
+    "unknownError": "Unknown error"
+  },
   "agentSetup": {
     "welcomeTitle": "Welcome to KubeStellar Console",
     "welcomeDescription": "To access your local clusters and Claude Code, install our lightweight agent.",

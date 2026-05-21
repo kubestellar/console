@@ -55,6 +55,22 @@ describe('fetchKagentStatus', () => {
 
     await expect(fetchKagentStatus()).rejects.toThrow('The operation was aborted')
   })
+
+  it('throws backend details when throwOnError is enabled', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      text: () => Promise.resolve('backend startup blocked'),
+    } as Response)
+
+    await expect(fetchKagentStatus({ throwOnError: true })).rejects.toThrow('HTTP 503: backend startup blocked')
+  })
+
+  it('throws a timeout message when throwOnError is enabled and the request aborts', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new DOMException('The operation was aborted', 'AbortError'))
+
+    await expect(fetchKagentStatus({ throwOnError: true, timeoutMs: 15_000 })).rejects.toThrow('Request timeout after 15s: /api/kagent/status')
+  })
 })
 
 describe('fetchKagentAgents', () => {

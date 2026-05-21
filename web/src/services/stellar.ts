@@ -12,6 +12,12 @@ import type {
 
 const STELLAR_CHAT_TIMEOUT_MS = 300_000
 
+interface GetStateOptions {
+  timeout?: number
+  fallbackOnError?: boolean
+  signal?: AbortSignal
+}
+
 const isAuthError = (err: unknown): boolean => {
   if (err instanceof Error) {
     return err.message.includes('Unauthenticated') || err.message.includes('No authentication token') || err.name === 'UnauthenticatedError'
@@ -60,15 +66,19 @@ export interface UserProviderConfig {
 }
 
 export const stellarApi = {
-  async getState(): Promise<StellarOperationalState> {
+  async getState(options: GetStateOptions = {}): Promise<StellarOperationalState> {
+    const { timeout, fallbackOnError = true, signal } = options
     try {
-      const { data } = await api.get<StellarOperationalState>('/api/stellar/state')
+      const { data } = await api.get<StellarOperationalState>('/api/stellar/state', { timeout, signal })
       return data
     } catch (err) {
       if (isAuthError(err)) {
         console.debug('stellar: getState skipped (no auth token)')
       } else {
         console.error('stellar: getState failed:', err)
+      }
+      if (!fallbackOnError) {
+        throw err
       }
       return {
         generatedAt: new Date().toISOString(),
