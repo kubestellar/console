@@ -1,7 +1,45 @@
 import React, { createRef } from 'react'
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
+import {
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  TitleComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+  RadarComponent,
+} from 'echarts/components'
+import {
+  BarChart,
+  LineChart,
+  PieChart,
+  RadarChart,
+  ScatterChart,
+  TreemapChart,
+} from 'echarts/charts'
+import { SVGRenderer, CanvasRenderer } from 'echarts/renderers'
 import type { EChartsInitOpts, EChartsType, SetOptionOpts } from 'echarts'
 import type { EChartsReactProps, EChartsEventHandler } from './lib/types'
+
+// Register only the chart types/components used by the console to avoid pulling
+// the full ECharts bundle into the app.
+echarts.use([
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  TitleComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+  RadarComponent,
+  BarChart,
+  LineChart,
+  PieChart,
+  RadarChart,
+  ScatterChart,
+  TreemapChart,
+  SVGRenderer,
+  CanvasRenderer,
+])
 
 interface RegisteredEvents {
   [eventName: string]: EChartsEventHandler
