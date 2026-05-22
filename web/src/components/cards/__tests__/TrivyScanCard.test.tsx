@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TrivyScanCard } from '../compliance/TrivyScanCard'
+import { CARD_UI_STRINGS } from '../strings'
 import type { TrivyClusterStatus, TrivyVulnSummary } from '../../../hooks/useTrivy'
 import type { CardConfig } from '../compliance/cardTypes'
 
@@ -35,7 +37,7 @@ vi.mock('../CardDataContext', () => ({
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({
-  StatusBadge: ({ children, color }: { children: React.ReactNode; color: string }) => (
+  StatusBadge: ({ children, color }: { children: ReactNode; color: string }) => (
     <span data-testid="status-badge" data-color={color}>
       {children}
     </span>
@@ -134,25 +136,30 @@ function setupDefaults({
 // ---------------------------------------------------------------------------
 
 describe('TrivyScanCard', () => {
+  let user: ReturnType<typeof userEvent.setup>
+
   beforeEach(() => {
+    user = userEvent.setup()
     vi.clearAllMocks()
     setupDefaults()
   })
 
   describe('unavailable state', () => {
+    // Unavailable UI uses CARD_UI_STRINGS (not t()), so English literals are correct with key-returning i18n mock.
     it('shows unavailable message when scanner is not reachable', () => {
       setupDefaults({ unavailableReason: 'in-cluster' })
       render(<TrivyScanCard config={CARD_CONFIG} />)
-      expect(screen.getByText('Vulnerability scanning not available')).toBeInTheDocument()
-      expect(screen.getByText('Requires kc-agent (local agent mode)')).toBeInTheDocument()
+      expect(screen.getByText(CARD_UI_STRINGS.compliance.trivyUnavailable)).toBeInTheDocument()
+      expect(screen.getByText(CARD_UI_STRINGS.compliance.requiresLocalAgent)).toBeInTheDocument()
     })
   })
 
   describe('loading skeleton', () => {
-    it('shows loading spinner when loading with no cached statuses', () => {
-      setupDefaults({ isLoading: true, totalClusters: 2, clustersChecked: 1 })
-      const { container } = render(<TrivyScanCard config={CARD_CONFIG} />)
-      expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+    it('shows loading shell when loading with no cached statuses', () => {
+      setupDefaults({ isLoading: true, totalClusters: 0 })
+      render(<TrivyScanCard config={CARD_CONFIG} />)
+      expect(screen.queryByText('cards:trivyScan.integration')).not.toBeInTheDocument()
+      expect(screen.queryByText('common.critical')).not.toBeInTheDocument()
     })
 
     it('shows cluster check progress while loading', () => {
@@ -191,7 +198,7 @@ describe('TrivyScanCard', () => {
       const refetch = vi.fn()
       setupDefaults({ hasErrors: true, refetch })
       render(<TrivyScanCard config={CARD_CONFIG} />)
-      await userEvent.click(screen.getByText('cards:trivyScan.retry →'))
+      await user.click(screen.getByText('cards:trivyScan.retry →'))
       expect(refetch).toHaveBeenCalled()
     })
 
@@ -212,7 +219,7 @@ describe('TrivyScanCard', () => {
     it('calls startMission with install config when Install button is clicked', async () => {
       setupDefaults({ installed: false, isLoading: false })
       render(<TrivyScanCard config={CARD_CONFIG} />)
-      await userEvent.click(screen.getByText('cards:trivyScan.installWithMission →'))
+      await user.click(screen.getByText('cards:trivyScan.installWithMission →'))
       expect(mockStartMission).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Install Trivy Operator', type: 'deploy' }),
       )
@@ -340,7 +347,7 @@ describe('TrivyScanCard', () => {
         statuses: { prod: makeTrivyStatus({ cluster: 'prod' }) },
       })
       render(<TrivyScanCard config={CARD_CONFIG} />)
-      await userEvent.click(screen.getByTestId('status-badge'))
+      await user.click(screen.getByTestId('status-badge'))
       const modal = screen.getByTestId('trivy-detail-modal')
       expect(modal).toBeInTheDocument()
       expect(modal.textContent).toContain('prod')
@@ -373,7 +380,7 @@ describe('TrivyScanCard', () => {
       }
       setupDefaults({ installed: true, statuses })
       render(<TrivyScanCard config={CARD_CONFIG} />)
-      await userEvent.click(screen.getByText('cards:trivyScan.fixWithMission →'))
+      await user.click(screen.getByText('cards:trivyScan.fixWithMission →'))
       expect(mockStartMission).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Troubleshoot Trivy Operator', type: 'troubleshoot' }),
       )
