@@ -766,7 +766,46 @@ type StellarContextValue = ReturnType<typeof useStellarSource>
 const StellarContext = createContext<StellarContextValue | null>(null)
 
 export function StellarProvider({ children }: { children: ReactNode }) {
-  const value = useStellarSource()
+  const source = useStellarSource()
+  const value = useMemo(() => source, [
+    source.isConnected,
+    source.connectionError,
+    source.state,
+    source.notifications,
+    source.unreadCount,
+    source.pendingActions,
+    source.tasks,
+    source.watches,
+    source.nudge,
+    source.catchUp,
+    source.providerSession,
+    source.setProviderSession,
+    source.acknowledgeNotification,
+    source.dismissAllNotifications,
+    source.investigateNotification,
+    source.resolveNotification,
+    source.dismissNotification,
+    source.approveAction,
+    source.rejectAction,
+    source.updateTaskStatus,
+    source.createTask,
+    source.dismissNudge,
+    source.resolveWatch,
+    source.dismissWatch,
+    source.snoozeWatch,
+    source.dismissCatchUp,
+    source.refreshState,
+    source.batchIntervalMs,
+    source.setBatchIntervalMs,
+    source.nextBatchAtMs,
+    source.isBatchRefreshing,
+    source.runBatchNow,
+    source.solves,
+    source.solveProgress,
+    source.startSolve,
+    source.activity,
+  ])
+
   return <StellarContext.Provider value={value}>{children}</StellarContext.Provider>
 }
 
