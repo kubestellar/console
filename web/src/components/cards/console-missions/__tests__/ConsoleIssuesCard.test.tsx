@@ -148,9 +148,9 @@ describe('ConsoleIssuesCard', () => {
       })
       render(<ConsoleIssuesCard />)
 
-      expect(screen.getByText('2')).toBeInTheDocument()
+      expect(screen.getByTitle('2 pods with issues - Click to view first issue')).toHaveTextContent('2')
       expect(screen.getByText('Pod Issues')).toBeInTheDocument()
-      expect(screen.getByText('1')).toBeInTheDocument()
+      expect(screen.getByTitle('1 deployment with issues - Click to view first issue')).toHaveTextContent('1')
       expect(screen.getByText('Deployment Issues')).toBeInTheDocument()
     })
 

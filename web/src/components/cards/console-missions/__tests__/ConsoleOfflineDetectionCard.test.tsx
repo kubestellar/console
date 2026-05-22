@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ConsoleOfflineDetectionCard } from '../ConsoleOfflineDetectionCard'
@@ -131,7 +132,7 @@ vi.mock('../shared', () => ({
 }))
 
 vi.mock('../DynamicCardErrorBoundary', () => ({
-  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DynamicCardErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../../../../lib/cards/CardComponents', () => ({
@@ -270,10 +271,10 @@ describe('ConsoleOfflineDetectionCard', () => {
       })
       render(<ConsoleOfflineDetectionCard />)
 
-      const issuesTile = screen.getByTitle('All Healthy')
-      expect(issuesTile).toBeInTheDocument()
-      expect(issuesTile.querySelector('.text-red-400')).toBeNull()
+      expect(screen.getByTitle('All Healthy')).toBeInTheDocument()
       expect(screen.getByText('All Healthy')).toBeInTheDocument()
+      expect(screen.queryByText('Offline')).not.toBeInTheDocument()
+      expect(screen.queryByText('Unhealthy')).not.toBeInTheDocument()
     })
 
     it('shows issue count with offline tooltip when unreachable clusters exist', () => {

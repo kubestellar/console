@@ -120,9 +120,9 @@ describe('ConsoleKubeconfigAuditCard', () => {
       })
       render(<ConsoleKubeconfigAuditCard />)
 
-      expect(screen.getByText('2')).toBeInTheDocument()
+      expect(screen.getByTitle('2 total cluster contexts in kubeconfig')).toHaveTextContent('2')
       expect(screen.getByText('Total Contexts')).toBeInTheDocument()
-      expect(screen.getByText('1')).toBeInTheDocument()
+      expect(screen.getByTitle('1 offline cluster - Click to view first')).toHaveTextContent('1')
       expect(screen.getByText('Offline')).toBeInTheDocument()
     })
 
