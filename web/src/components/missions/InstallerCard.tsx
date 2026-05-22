@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ExternalLink, Download, Wrench, Trash2, ArrowUpCircle, AlertTriangle, Link, Check } from 'lucide-react'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { cn } from '../../lib/cn'
@@ -165,6 +166,7 @@ interface InstallerCardProps {
 }
 
 export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact }: InstallerCardProps) {
+  const { t } = useTranslation()
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -246,7 +248,8 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
               linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
             }}
             className="absolute top-1.5 right-1.5 p-1 rounded bg-black/30 hover:bg-black/50 text-white/70 hover:text-white transition-colors"
-            title="Copy shareable link"
+            title={t('missions.browser.copyShareableLink')}
+            aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
           >
             {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
           </button>
@@ -348,10 +351,11 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
                   linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
                 }}
                 className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
-                title="Copy shareable link"
+                title={t('missions.browser.copyShareableLink')}
+                aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
               >
                 {linkCopied ? <Check className="w-3 h-3 text-green-400" /> : <Link className="w-3 h-3" />}
-                {linkCopied ? 'Copied' : 'Share'}
+                {linkCopied ? t('missions.browser.copied') : t('feedback.share')}
               </button>
             )}
             <button
@@ -362,7 +366,7 @@ export function InstallerCard({ mission, onImport, onSelect, onCopyLink, compact
               className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
             >
               <Download className="w-3 h-3" />
-              Import
+              {t('actions.import')}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle, Check, Link } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -20,6 +21,7 @@ export function RecommendationCard({
   onCopyLink,
   compact = false,
 }: RecommendationCardProps) {
+  const { t } = useTranslation()
   const { mission, score, matchPercent, matchReasons } = match
   const isClusterMatch = score > 1
   const [linkCopied, setLinkCopied] = useState(false)
@@ -81,7 +83,8 @@ export function RecommendationCard({
                 linkCopyTimerRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="p-1 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
-              title="Copy shareable link"
+              title={t('missions.browser.copyShareableLink')}
+              aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
             >
               {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
             </button>
@@ -93,7 +96,7 @@ export function RecommendationCard({
             }}
             className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
           >
-            Import
+            {t('actions.import')}
           </button>
         </div>
       </div>
@@ -120,7 +123,8 @@ export function RecommendationCard({
                 linkCopyTimerRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
-              title="Copy shareable link"
+              title={t('missions.browser.copyShareableLink')}
+              aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
             >
               {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
             </button>
@@ -184,7 +188,7 @@ export function RecommendationCard({
           }}
           className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
         >
-          Import
+          {t('actions.import')}
         </button>
       </div>
     </div>
