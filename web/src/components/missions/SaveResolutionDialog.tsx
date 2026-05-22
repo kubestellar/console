@@ -134,6 +134,77 @@ function isRateLimitError(message: string): boolean {
 const RATE_LIMIT_MESSAGE =
   'AI provider rate limit exceeded. Please wait a minute and try again, or switch to a different AI provider in Settings.'
 
+const JSON_OBJECT_START = '{'
+const JSON_OBJECT_END = '}'
+const JSON_STRING_DELIMITER = '"'
+const JSON_ESCAPE_CHARACTER = '\\'
+
+/**
+ * Extract the last complete JSON object from an AI response.
+ * This skips braces inside quoted strings and prefers the last parseable object,
+ * so prefixed reasoning text or earlier JSON-like snippets do not break parsing.
+ */
+function extractLastJsonObject(content: string): string | null {
+  const candidates: string[] = []
+  let startIndex = -1
+  let depth = 0
+  let inString = false
+  let isEscaped = false
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index]
+
+    if (isEscaped) {
+      isEscaped = false
+      continue
+    }
+
+    if (char === JSON_ESCAPE_CHARACTER) {
+      if (inString) {
+        isEscaped = true
+      }
+      continue
+    }
+
+    if (char === JSON_STRING_DELIMITER) {
+      inString = !inString
+      continue
+    }
+
+    if (inString) {
+      continue
+    }
+
+    if (char === JSON_OBJECT_START) {
+      if (depth === 0) {
+        startIndex = index
+      }
+      depth += 1
+      continue
+    }
+
+    if (char === JSON_OBJECT_END && depth > 0) {
+      depth -= 1
+      if (depth === 0 && startIndex !== -1) {
+        candidates.push(content.slice(startIndex, index + 1))
+        startIndex = -1
+      }
+    }
+  }
+
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const candidate = candidates[index]
+    try {
+      JSON.parse(candidate)
+      return candidate
+    } catch {
+      // Ignore invalid JSON-like snippets and keep searching backward.
+    }
+  }
+
+  return null
+}
+
 /**
  * Request AI to generate a resolution summary from the mission conversation
  */
@@ -231,10 +302,9 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
 
             // Try to parse JSON from response
             try {
-              // Extract JSON if wrapped in code blocks
-              const jsonMatch = content.match(/\{[\s\S]*\}/)
-              if (jsonMatch?.[0]) {
-                const parsed = JSON.parse(jsonMatch[0])
+              const jsonContent = extractLastJsonObject(content)
+              if (jsonContent) {
+                const parsed = JSON.parse(jsonContent) as Partial<AISummary>
                 resolve({
                   title: parsed.title || mission.title,
                   issueType: parsed.issueType || 'Unknown',
