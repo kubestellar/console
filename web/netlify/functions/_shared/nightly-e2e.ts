@@ -3,6 +3,7 @@
  */
 import type { getStore } from "@netlify/blobs";
 import { unzipSync } from "fflate";
+import { readCappedBuffer, readCappedJson } from "./read-capped-json";
 
 export const CACHE_STORE = "nightly-e2e";
 export const CACHE_KEY = "runs";
@@ -14,7 +15,7 @@ export const STALE_SERVE_WINDOW_MS = 60 * 60 * 1000; // serve stale data up to 1
 const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
 const ARTIFACT_FETCH_TIMEOUT_MS = 10_000; // timeout for individual artifact downloads
 const GH_API_TIMEOUT_MS = 10_000; // timeout for GitHub API calls
-const MAX_RESPONSE_BYTES = 512_000; // maximum JSON payload size per GitHub API response
+const MAX_ARTIFACT_ZIP_BYTES = 5_242_880;
 const RUNS_PER_PAGE = 7;
 const GITHUB_API = "https://api.github.com";
 const IMAGE_REPO = "llm-d/llm-d";
@@ -198,17 +199,7 @@ interface GitTreeResponse {
 }
 
 async function readCappedJsonResponse<T>(response: Response): Promise<T> {
-  const contentLength = parseInt(response.headers.get("content-length") ?? "0", 10);
-  if (contentLength > MAX_RESPONSE_BYTES) {
-    throw new Error("GitHub API response too large");
-  }
-
-  const rawText = await response.text();
-  if (rawText.length > MAX_RESPONSE_BYTES) {
-    throw new Error("GitHub API response too large");
-  }
-
-  return JSON.parse(rawText) as T;
+  return readCappedJson<T>(response, "GitHub API");
 }
 
 async function fetchGuideYAMLFiles(token: string): Promise<TreeEntry[]> {
@@ -357,7 +348,7 @@ async function downloadArtifact(
     });
     if (!response.ok) return null;
 
-    const buffer = await response.arrayBuffer();
+    const buffer = await readCappedBuffer(response, MAX_ARTIFACT_ZIP_BYTES, "GitHub artifact ZIP");
     const unzipped = unzipSync(new Uint8Array(buffer));
     const jsonFile = Object.values(unzipped)[0];
     if (!jsonFile) return null;

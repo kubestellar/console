@@ -10,6 +10,7 @@
 
 import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
+import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
@@ -17,6 +18,7 @@ const RATE_LIMIT_STORE_NAME = "umami-collect-rate-limit"
 const UMAMI_RATE_LIMIT_MAX_REQUESTS = 500
 const UMAMI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 const MAX_BODY_BYTES = 65_536
+const MAX_UPSTREAM_TEXT_BYTES = 1_048_576
 
 /**
  * Hosts allowed via Referer fallback when Origin is absent. Keep
@@ -112,7 +114,7 @@ export default async (req: Request) => {
     })
 
     const isNullBody = resp.status === 204 || resp.status === 304
-    const responseBody = isNullBody ? null : await resp.text()
+    const responseBody = isNullBody ? null : await readCappedText(resp, MAX_UPSTREAM_TEXT_BYTES, "Umami upstream")
     return new Response(responseBody, {
       status: resp.status,
       headers: {
@@ -122,6 +124,12 @@ export default async (req: Request) => {
     })
   } catch (err) {
     console.error("[umami-collect] Proxy error:", err instanceof Error ? err.message : err)
+    if (isResponseTooLargeError(err)) {
+      return new Response(JSON.stringify({ error: "upstream_response_too_large" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
     return new Response(JSON.stringify({ error: "proxy_error" }), {
       status: 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

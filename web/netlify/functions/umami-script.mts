@@ -10,10 +10,12 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 
 /** Upstream Umami instance — the custom script name is "ksc" */
 const UMAMI_SCRIPT_URL = "https://analytics.kubestellar.io/ksc"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
+const MAX_SCRIPT_BYTES = 1_048_576
 
 export default async (req: Request) => {
   try {
@@ -28,7 +30,7 @@ export default async (req: Request) => {
       return new Response(null, { status: resp.status })
     }
 
-    const body = await resp.text()
+    const body = await readCappedText(resp, MAX_SCRIPT_BYTES, "Umami script")
 
     return new Response(body, {
       status: 200,
@@ -38,7 +40,10 @@ export default async (req: Request) => {
         "X-Content-Type-Options": "nosniff",
       },
     })
-  } catch {
+  } catch (err) {
+    if (isResponseTooLargeError(err)) {
+      return new Response(null, { status: 413 })
+    }
     return new Response(null, { status: 502 })
   }
 }

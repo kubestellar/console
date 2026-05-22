@@ -5,6 +5,8 @@
  * MSW service worker blocking external image requests in demo mode.
  */
 
+import { isResponseTooLargeError, readCappedBuffer } from "./_shared/read-capped-json";
+
 /** Standard YouTube video ID length */
 const YOUTUBE_VIDEO_ID_LEN = 11;
 
@@ -13,6 +15,7 @@ const YOUTUBE_VIDEO_ID_LEN = 11;
  * for non-existent video IDs. Real thumbnails are significantly larger.
  */
 const DEFAULT_THUMBNAIL_MAX_BYTES = 1200;
+const MAX_THUMBNAIL_BYTES = 2_097_152;
 
 /** Timeout for fetching thumbnails from YouTube CDN */
 const YOUTUBE_CDN_TIMEOUT_MS = 10_000;
@@ -40,7 +43,7 @@ export default async (req: Request) => {
       return new Response("thumbnail not found", { status: 404 });
     }
 
-    const body = await resp.arrayBuffer();
+    const body = await readCappedBuffer(resp, MAX_THUMBNAIL_BYTES, "YouTube thumbnail");
 
     // YouTube returns a tiny default placeholder for non-existent video IDs
     // instead of a 404. Detect by size — real thumbnails are much larger.
@@ -55,7 +58,10 @@ export default async (req: Request) => {
         "Cache-Control": "public, max-age=86400",
       },
     });
-  } catch {
+  } catch (err) {
+    if (isResponseTooLargeError(err)) {
+      return new Response("thumbnail too large", { status: 413 });
+    }
     return new Response("failed to fetch thumbnail", { status: 502 });
   }
 };
