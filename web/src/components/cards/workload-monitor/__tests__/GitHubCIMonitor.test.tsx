@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { GitHubCIMonitor } from '../GitHubCIMonitor'
 
@@ -122,11 +122,16 @@ describe('GitHubCIMonitor', () => {
     setupCache()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   describe('loading state', () => {
     it('shows skeleton when loading with no workflows yet', () => {
       setupCache({ isLoading: true, workflows: [] })
       const { container } = render(<GitHubCIMonitor />)
-      expect(container.querySelector('.animate-pulse, [class*="skeleton"]') ?? container.innerHTML).toBeTruthy()
+      const skeletons = container.querySelectorAll('.animate-pulse')
+      expect(skeletons.length).toBeGreaterThan(0)
       expect(screen.queryByText('GitHub CI')).not.toBeInTheDocument()
     })
   })

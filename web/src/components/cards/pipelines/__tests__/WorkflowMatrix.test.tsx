@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WorkflowMatrix } from '../WorkflowMatrix'
 import { DEMO_MATRIX, type MatrixPayload } from '../../../../hooks/useGitHubPipelines'
@@ -111,22 +111,25 @@ describe('WorkflowMatrix', () => {
 
     it('renders one heatmap cell per day with status-specific colors', () => {
       setupMatrix(makeMatrixWithKnownCells())
-      const { container } = render(<WorkflowMatrix />)
+      render(<WorkflowMatrix />)
+
+      const goTestsRow = screen.getByText('Go Tests').closest('.flex.items-center.gap-2')
+      expect(goTestsRow).not.toBeNull()
+      const goTestsScope = within(goTestsRow as HTMLElement)
       // Cells render newest-first (server order reversed for display)
-      const goTestsCells = container.querySelectorAll('[aria-label^="2026-05-"]')
-      expect(goTestsCells.length).toBeGreaterThanOrEqual(2)
-      expect(
-        screen.getByRole('link', { name: '2026-05-22: failure' }).className,
-      ).toMatch(/bg-red-500/)
-      expect(
-        screen.getByRole('link', { name: '2026-05-21: success' }).className,
-      ).toMatch(/bg-green-500/)
-      expect(
-        screen.getByLabelText('2026-05-21: timed_out').className,
-      ).toMatch(/bg-orange-500/)
-      expect(
-        screen.getByLabelText('2026-05-22: no run').className,
-      ).toMatch(/bg-muted/)
+      expect(goTestsScope.getAllByRole('link')).toHaveLength(2)
+      expect(goTestsScope.getByRole('link', { name: '2026-05-22: failure' }).className).toMatch(
+        /bg-red-500/,
+      )
+      expect(goTestsScope.getByRole('link', { name: '2026-05-21: success' }).className).toMatch(
+        /bg-green-500/,
+      )
+
+      const releaseRow = screen.getByText('Release').closest('.flex.items-center.gap-2')
+      expect(releaseRow).not.toBeNull()
+      const releaseScope = within(releaseRow as HTMLElement)
+      expect(releaseScope.getByLabelText('2026-05-21: timed_out').className).toMatch(/bg-orange-500/)
+      expect(releaseScope.getByLabelText('2026-05-22: no run').className).toMatch(/bg-muted/)
     })
 
     it('links cells with htmlUrl to GitHub', () => {

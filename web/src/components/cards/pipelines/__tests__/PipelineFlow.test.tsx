@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { PipelineFlow } from '../PipelineFlow'
 import { DEMO_FLOW, type FlowPayload } from '../../../../hooks/useGitHubPipelines'
@@ -117,9 +117,15 @@ class MockResizeObserver {
   unobserve = vi.fn()
 }
 
+const OriginalResizeObserver = globalThis.ResizeObserver
+
 describe('PipelineFlow', () => {
   beforeAll(() => {
     globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+  })
+
+  afterAll(() => {
+    globalThis.ResizeObserver = OriginalResizeObserver
   })
 
   beforeEach(() => {
