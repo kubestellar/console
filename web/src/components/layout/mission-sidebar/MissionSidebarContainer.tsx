@@ -245,7 +245,7 @@ export function MissionSidebar() {
 
     startMission({
       type: 'custom',
-      title: newMissionPrompt.slice(0, 50) + (newMissionPrompt.length > 50 ? '...' : ''),
+      title: newMissionPrompt,
       description: newMissionPrompt,
       initialPrompt: newMissionPrompt,
       skipReview: true,

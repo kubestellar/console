@@ -215,4 +215,30 @@ describe('MissionSidebar visibility', () => {
     expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('missionSidebar.newMissionPlaceholder')).not.toBeInTheDocument()
   })
+
+  it('starts a custom mission with the full prompt as the title', () => {
+    mockMissionState.isSidebarOpen = true
+    const prompt = 'Install OpenTelemetry Operator on the cluster and verify collector wiring stays intact'
+
+    render(
+      <MemoryRouter>
+        <MissionSidebar />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New Mission' }))
+    fireEvent.change(screen.getByPlaceholderText('missionSidebar.newMissionPlaceholder'), {
+      target: { value: prompt },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'missionSidebar.start' }))
+
+    expect(mockMissionState.startMission).toHaveBeenCalledWith({
+      type: 'custom',
+      title: prompt,
+      description: prompt,
+      initialPrompt: prompt,
+      skipReview: true,
+    })
+  })
 })
