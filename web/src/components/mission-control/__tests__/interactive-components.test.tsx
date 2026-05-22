@@ -61,7 +61,7 @@ vi.mock('framer-motion', () => ({
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string, options?: { count?: number; phaseCount?: number }) => {
+    t: (key: string, options?: Record<string, unknown>) => {
       // Handle pluralization and interpolation for LaunchSequence strings
       if (key === 'missionControl.launchSequence.missionFailed') return 'Mission failed'
       if (key === 'missionControl.launchSequence.missionCancelled') return 'Mission cancelled'
@@ -71,7 +71,15 @@ vi.mock('react-i18next', () => ({
       if (key === 'missionControl.launchSequence.deployingProjects_other' && options) {
         return `Deploying ${options.count} projects in ${options.phaseCount} phase`
       }
-      // Default: return the key as-is
+      if (options && typeof options.defaultValue === 'string') {
+        let value = options.defaultValue
+        for (const [name, replacement] of Object.entries(options)) {
+          if (name !== 'defaultValue') {
+            value = value.replace(`{{${name}}}`, String(replacement))
+          }
+        }
+        return value
+      }
       return key
     },
   }),
@@ -464,6 +472,80 @@ describe('LaunchSequence', () => {
         }),
       ]))
     })
+  })
+
+  it('shows live mission activity inside the launch panel', async () => {
+    const onUpdateProgress = vi.fn()
+    const missionUpdatedAt = new Date()
+    mockUseMissions.mockImplementation(() => ({
+      startMission: mockStartMission,
+      missions: [{
+        id: 'mission-123',
+        title: 'Mission Control deployment',
+        description: 'Deploy falco',
+        type: 'deploy',
+        status: 'running',
+        progress: 64,
+        currentStep: 'Applying Falco resources',
+        tokenUsage: { input: 120, output: 340, total: 460 },
+        messages: [
+          {
+            id: 'sys-1',
+            role: 'system',
+            content: 'Connected to the target cluster.',
+            timestamp: missionUpdatedAt,
+          },
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'Installing Falco Helm chart and verifying rollout.',
+            timestamp: missionUpdatedAt,
+            agent: 'claude',
+          },
+        ],
+        createdAt: missionUpdatedAt,
+        updatedAt: missionUpdatedAt,
+      }],
+    }))
+
+    const stateWithProgress: MissionControlState = {
+      ...mockState,
+      assignments: [{
+        clusterName: 'cluster-1',
+        clusterContext: 'cluster-1',
+        provider: 'kind',
+        projectNames: ['falco'],
+        readiness: {
+          cpuHeadroomPercent: 80,
+          memHeadroomPercent: 80,
+          storageHeadroomPercent: 80,
+          overallScore: 80,
+        },
+        warnings: [],
+      }],
+      phases: [{ phase: 1, name: 'Security', projectNames: ['falco'] }],
+      launchProgress: [{
+        phase: 1,
+        status: 'running',
+        projects: [{ name: 'falco', missionId: 'mission-123', status: 'running' }],
+      }],
+    }
+
+    render(
+      <LaunchSequence
+        state={stateWithProgress}
+        onUpdateProgress={onUpdateProgress}
+        onComplete={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('mission-control-live-activity')).toBeInTheDocument()
+    expect(screen.getByText('Live mission activity')).toBeInTheDocument()
+    expect(screen.getByTestId('mission-control-live-step')).toHaveTextContent('Applying Falco resources')
+    expect(screen.getByTestId('mission-control-live-progress')).toHaveTextContent('64%')
+    expect(screen.getByText('460 tokens used')).toBeInTheDocument()
+    expect(screen.getByText('Connected to the target cluster.')).toBeInTheDocument()
+    expect(screen.getByText('Installing Falco Helm chart and verifying rollout.')).toBeInTheDocument()
   })
 })
 
