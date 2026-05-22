@@ -81,7 +81,7 @@ describe('treeFetchers kubara recursion guard', () => {
       loaded: true,
     }))
 
-    expect(apiGet).toHaveBeenCalledWith(
+    expect(apiGet.mock.calls[0][0]).toBe(
       `/api/github/repos/kubara-io/kubara/contents/${KUBARA_CHART_PATH}/templates/namespace.yaml`
     )
     expect(content).toContain('kind: Namespace')
