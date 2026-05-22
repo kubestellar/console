@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MS_PER_DAY } from '../../../lib/constants/time'
+import { getDemoGitHubData } from '../GitHubActivity.utils'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -45,29 +48,70 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
-  }),
-  commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
-}))
-
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
   ToastProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
+
+vi.mock('../pipelines/PipelineFilterContext', () => ({
+  usePipelineFilter: () => null,
+}))
+
+const mockRefetch = vi.fn()
+const mockUseCache = vi.fn()
+
+vi.mock('../../../lib/cache', () => ({
+  useCache: (...args: unknown[]) => mockUseCache(...args),
+}))
+
+function makeStorage(initial: Record<string, string> = {}): Storage {
+  const store = { ...initial }
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value },
+    removeItem: (key: string) => { delete store[key] },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]) },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+    get length() { return Object.keys(store).length },
+  } as Storage
+}
+
+function buildLoadedCacheData(overrides?: {
+  prs?: ReturnType<typeof getDemoGitHubData>['prs']
+  issues?: ReturnType<typeof getDemoGitHubData>['issues']
+}) {
+  const demo = getDemoGitHubData('kubestellar/console')
+  return {
+    repoInfo: demo.repoInfo,
+    prs: overrides?.prs ?? demo.prs,
+    issues: overrides?.issues ?? demo.issues,
+    releases: demo.releases,
+    contributors: demo.contributors,
+    openPRCount: demo.openPRCount,
+    openIssueCount: demo.openIssueCount,
+  }
+}
 
 import { GitHubActivity } from '../GitHubActivity'
 
 describe('GitHubActivity', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('localStorage', makeStorage())
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+    mockUseCache.mockReturnValue({
+      data: buildLoadedCacheData(),
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      isDemoFallback: true,
+      refetch: mockRefetch,
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('renders without crashing', () => {
@@ -80,16 +124,141 @@ describe('GitHubActivity', () => {
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })
 
-  it('renders correctly in demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+  it('shows loading skeleton when data is loading and repoInfo is absent', () => {
+    mockUseCache.mockReturnValue({
+      data: {
+        repoInfo: null,
+        prs: [],
+        issues: [],
+        releases: [],
+        contributors: [],
+        openPRCount: 0,
+        openIssueCount: 0,
+      },
+      isLoading: true,
+      isRefreshing: false,
+      error: null,
+      isDemoFallback: false,
+      refetch: mockRefetch,
+    })
+
     const { container } = render(<GitHubActivity />)
-    expect(container).toBeTruthy()
+    expect(container.querySelector('.h-full')).toBeTruthy()
+    expect(screen.queryByText('cards:github.fetchError')).not.toBeInTheDocument()
   })
 
-  it('renders correctly in non-demo mode', () => {
-    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
-    const { container } = render(<GitHubActivity />)
-    expect(container).toBeTruthy()
+  it('renders error banner with message and retry when fetch fails', () => {
+    const fetchError = 'Failed to fetch repo: Console proxy rate limit exceeded (not GitHub).'
+    mockUseCache.mockReturnValue({
+      data: {
+        repoInfo: null,
+        prs: [],
+        issues: [],
+        releases: [],
+        contributors: [],
+        openPRCount: 0,
+        openIssueCount: 0,
+      },
+      isLoading: false,
+      isRefreshing: false,
+      error: fetchError,
+      isDemoFallback: false,
+      refetch: mockRefetch,
+    })
+
+    render(<GitHubActivity />)
+
+    expect(screen.getByText('cards:github.fetchError')).toBeInTheDocument()
+    expect(screen.getByText(fetchError)).toBeInTheDocument()
+    expect(screen.getByText('common:common.retry')).toBeInTheDocument()
+    expect(screen.getByText('common:common.error')).toBeInTheDocument()
   })
 
+  it('shows stale count in stats when open PRs are older than 14 days', () => {
+    const staleUpdatedAt = new Date(Date.now() - 15 * MS_PER_DAY).toISOString()
+    const demo = getDemoGitHubData('kubestellar/console')
+    const stalePr = { ...demo.prs[0], state: 'open' as const, updated_at: staleUpdatedAt, merged_at: null }
+
+    mockUseCache.mockReturnValue({
+      data: buildLoadedCacheData({ prs: [stalePr, ...demo.prs.slice(1)] }),
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      isDemoFallback: true,
+      refetch: mockRefetch,
+    })
+
+    render(<GitHubActivity />)
+
+    const openPrsStat = screen.getByText('cards:github.openPRs').closest('div')?.parentElement
+    expect(openPrsStat).toBeTruthy()
+    const statBlock = within(openPrsStat as HTMLElement)
+    expect(statBlock.getByText(/1/)).toBeInTheDocument()
+    expect(statBlock.getByText(/cards:github\.stale/)).toBeInTheDocument()
+  })
+
+  it('renders stale badge on an open PR list item older than 14 days', () => {
+    const staleUpdatedAt = new Date(Date.now() - 15 * MS_PER_DAY).toISOString()
+    const demo = getDemoGitHubData('kubestellar/console')
+    const stalePr = {
+      ...demo.prs[0],
+      number: 9001,
+      title: 'stale-open-pr-for-test',
+      state: 'open' as const,
+      updated_at: staleUpdatedAt,
+      merged_at: null,
+    }
+
+    mockUseCache.mockReturnValue({
+      data: buildLoadedCacheData({ prs: [stalePr] }),
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      isDemoFallback: true,
+      refetch: mockRefetch,
+    })
+
+    render(<GitHubActivity />)
+
+    expect(screen.getByText(/#9001 stale-open-pr-for-test/)).toBeInTheDocument()
+    expect(screen.getAllByText('cards:github.stale').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('opens repo editor and adds a repository via inline CRUD', async () => {
+    const user = userEvent.setup()
+    render(<GitHubActivity />)
+
+    const configureButtons = screen.getAllByTitle('cards:github.configureRepo')
+    await user.click(configureButtons[0])
+
+    const input = screen.getByPlaceholderText('owner/repo (e.g., facebook/react)')
+    await user.type(input, 'facebook/react')
+    await user.click(screen.getByTitle('cards:githubActivity.addRepo'))
+
+    expect(screen.getByText('facebook/react')).toBeInTheDocument()
+    expect(localStorage.getItem('github_activity_saved_repos')).toContain('facebook/react')
+  })
+
+  it('selects a different saved repo when clicking a repo chip', async () => {
+    localStorage.setItem(
+      'github_activity_saved_repos',
+      JSON.stringify(['kubestellar/console', 'kubernetes/kubernetes']),
+    )
+
+    const user = userEvent.setup()
+    render(<GitHubActivity />)
+
+    const configureButtons = screen.getAllByTitle('cards:github.configureRepo')
+    await user.click(configureButtons[0])
+
+    await user.click(screen.getByText('kubernetes/kubernetes'))
+
+    expect(localStorage.getItem('github_activity_repo')).toBe('kubernetes/kubernetes')
+  })
+
+  it('renders demo PR content when cache returns demo fallback data', () => {
+    render(<GitHubActivity />)
+    expect(screen.getByText(/#842 feat: Add multi-cluster GPU scheduling/)).toBeInTheDocument()
+    expect(screen.getByText('cards:github.pullRequests')).toBeInTheDocument()
+  })
 })
