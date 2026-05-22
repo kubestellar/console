@@ -117,7 +117,8 @@ describe("acmm-badge", () => {
       "fetch",
       vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ detectedIds: ["acmm:claude-md"] }),
+        headers: new Headers({ "content-length": "50" }),
+        text: async () => JSON.stringify({ detectedIds: ["acmm:claude-md"] }),
       }),
     );
 
