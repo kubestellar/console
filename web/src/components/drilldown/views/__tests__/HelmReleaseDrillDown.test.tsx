@@ -1,65 +1,14 @@
 /**
  * RTL interaction tests for HelmReleaseDrillDown (#15406, Part of #4189).
  */
+import './drilldown-interaction-mocks'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, within } from '@testing-library/react'
 import {
   mockDrillToDeployment,
   mockRunHelm,
-  mockUseTranslation,
   renderWithDrillDown,
 } from './drilldown-interaction-helpers'
-
-vi.mock('../../../../lib/demoMode', () => ({
-  isDemoMode: () => false,
-  getDemoMode: () => false,
-  isNetlifyDeployment: false,
-  isDemoModeForced: false,
-  canToggleDemoMode: () => true,
-  setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(),
-  subscribeDemoMode: () => () => {},
-  isDemoToken: () => false,
-  hasRealToken: () => true,
-  setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
-}))
-
-vi.mock('../../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => false,
-  default: () => false,
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  hasRealToken: () => true,
-  isDemoModeForced: false,
-  isNetlifyDeployment: false,
-  canToggleDemoMode: () => true,
-  isDemoToken: () => false,
-  setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(),
-  emitLogin: vi.fn(),
-  emitEvent: vi.fn(),
-  analyticsReady: Promise.resolve(),
-  emitDrillDownOpened: vi.fn(),
-  emitDrillDownClosed: vi.fn(),
-}))
-
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => mockUseTranslation(),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-vi.mock('../../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ isConnected: true }),
-}))
-
-vi.mock('../../../../hooks/useDrillDownWebSocket', () => ({
-  useDrillDownWebSocket: () => ({ runKubectl: vi.fn(), runHelm: mockRunHelm }),
-}))
 
 vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useDrillDown')>()
@@ -94,14 +43,6 @@ vi.mock('../../../modals', () => ({
     handleAIAction: vi.fn(),
     isAgentConnected: false,
   }),
-}))
-
-vi.mock('../../../../lib/cn', () => ({
-  cn: (...classes: (string | false | undefined)[]) => classes.filter(Boolean).join(' '),
-}))
-
-vi.mock('../../../../lib/clipboard', () => ({
-  copyToClipboard: vi.fn(),
 }))
 
 import { HelmReleaseDrillDown } from '../HelmReleaseDrillDown'
@@ -224,7 +165,7 @@ describe('HelmReleaseDrillDown interactions', () => {
 
   it('loads the full manifest resource list when the resources tab is opened', async () => {
     const manyResourceManifest = [
-      ...Array.from({ length: 12 }, (_, index) => `apiVersion: v1
+      ...Array.from({ length: 12 }, (_, index) => `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web-${index}
@@ -266,11 +207,13 @@ metadata:
 
     fireEvent.click(screen.getByRole('button', { name: 'drilldown.tabs.resources' }))
 
-    await waitFor(() => {
-      expect(screen.getByText('web')).toBeInTheDocument()
+    const resourcesPanel = await waitFor(() => {
+      const heading = screen.getByText('drilldown.helm.manifestResources')
+      expect(heading).toBeInTheDocument()
+      return heading.closest('div')!.parentElement!
     })
 
-    fireEvent.click(screen.getByText('web').closest('div')!)
+    fireEvent.click(within(resourcesPanel).getByText('web'))
 
     expect(mockDrillToDeployment).toHaveBeenCalledWith('cluster-a', 'default', 'web')
   })

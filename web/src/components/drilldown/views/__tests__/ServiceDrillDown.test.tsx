@@ -1,68 +1,14 @@
 /**
  * RTL interaction tests for ServiceDrillDown (#15406, Part of #4189).
  */
+import './drilldown-interaction-mocks'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
 import {
   mockDrillToPod,
   mockRunKubectl,
-  mockUseTranslation,
   renderWithDrillDown,
 } from './drilldown-interaction-helpers'
-
-vi.mock('../../../../lib/demoMode', () => ({
-  isDemoMode: () => false,
-  getDemoMode: () => false,
-  isNetlifyDeployment: false,
-  isDemoModeForced: false,
-  canToggleDemoMode: () => true,
-  setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(),
-  subscribeDemoMode: () => () => {},
-  isDemoToken: () => false,
-  hasRealToken: () => true,
-  setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
-}))
-
-vi.mock('../../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => false,
-  default: () => false,
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  hasRealToken: () => true,
-  isDemoModeForced: false,
-  isNetlifyDeployment: false,
-  canToggleDemoMode: () => true,
-  isDemoToken: () => false,
-  setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(),
-  emitLogin: vi.fn(),
-  emitEvent: vi.fn(),
-  analyticsReady: Promise.resolve(),
-  emitAddCardModalOpened: vi.fn(),
-  emitCardExpanded: vi.fn(),
-  emitCardRefreshed: vi.fn(),
-  emitDrillDownOpened: vi.fn(),
-  emitDrillDownClosed: vi.fn(),
-}))
-
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => mockUseTranslation(),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-vi.mock('../../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ isConnected: true }),
-}))
-
-vi.mock('../../../../hooks/useDrillDownWebSocket', () => ({
-  useDrillDownWebSocket: () => ({ runKubectl: mockRunKubectl, runHelm: vi.fn() }),
-}))
 
 vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useDrillDown')>()
@@ -82,10 +28,6 @@ vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
     useDrillDown: () => ({ close: vi.fn() }),
   }
 })
-
-vi.mock('../../../../lib/clipboard', () => ({
-  copyToClipboard: vi.fn().mockResolvedValue(true),
-}))
 
 import ServiceDrillDown from '../ServiceDrillDown'
 
@@ -190,7 +132,7 @@ describe('ServiceDrillDown interactions', () => {
       expect(screen.getByText('metrics-pod-0')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText('metrics-pod-0').closest('div')!)
+    fireEvent.click(screen.getByText('10.244.1.8'))
 
     expect(mockDrillToPod).toHaveBeenCalledWith('cluster-a', 'kube-system', 'metrics-pod-0')
   })

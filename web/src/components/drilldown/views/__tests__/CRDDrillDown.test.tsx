@@ -1,64 +1,11 @@
 /**
  * RTL interaction tests for CRDDrillDown (#15406, Part of #4189).
  */
+import './drilldown-interaction-mocks'
+import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent, waitFor } from '@testing-library/react'
-import {
-  mockRunKubectl,
-  mockUseTranslation,
-  renderWithDrillDown,
-} from './drilldown-interaction-helpers'
-
-vi.mock('../../../../lib/demoMode', () => ({
-  isDemoMode: () => false,
-  getDemoMode: () => false,
-  isNetlifyDeployment: false,
-  isDemoModeForced: false,
-  canToggleDemoMode: () => true,
-  setDemoMode: vi.fn(),
-  toggleDemoMode: vi.fn(),
-  subscribeDemoMode: () => () => {},
-  isDemoToken: () => false,
-  hasRealToken: () => true,
-  setDemoToken: vi.fn(),
-  isFeatureEnabled: () => true,
-}))
-
-vi.mock('../../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => false,
-  default: () => false,
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  hasRealToken: () => true,
-  isDemoModeForced: false,
-  isNetlifyDeployment: false,
-  canToggleDemoMode: () => true,
-  isDemoToken: () => false,
-  setDemoToken: vi.fn(),
-  setGlobalDemoMode: vi.fn(),
-}))
-
-vi.mock('../../../../lib/analytics', () => ({
-  emitNavigate: vi.fn(),
-  emitLogin: vi.fn(),
-  emitEvent: vi.fn(),
-  analyticsReady: Promise.resolve(),
-  emitDrillDownOpened: vi.fn(),
-  emitDrillDownClosed: vi.fn(),
-}))
-
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => mockUseTranslation(),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-vi.mock('../../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ isConnected: true }),
-}))
-
-vi.mock('../../../../hooks/useDrillDownWebSocket', () => ({
-  useDrillDownWebSocket: () => ({ runKubectl: mockRunKubectl, runHelm: vi.fn() }),
-}))
+import { mockRunKubectl, renderWithDrillDown } from './drilldown-interaction-helpers'
 
 vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useDrillDown')>()
@@ -86,11 +33,7 @@ vi.mock('../../../modals', () => ({
 }))
 
 vi.mock('../../PageErrorBoundary', () => ({
-  PageErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
-}))
-
-vi.mock('../../../../lib/cn', () => ({
-  cn: (...classes: (string | false | undefined)[]) => classes.filter(Boolean).join(' '),
+  PageErrorBoundary: ({ children }: { children: ReactNode }) => children,
 }))
 
 import { CRDDrillDown } from '../CRDDrillDown'
