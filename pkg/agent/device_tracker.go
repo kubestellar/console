@@ -156,10 +156,13 @@ func (t *DeviceTracker) scanDevices() {
 	snapshotCh := make(chan DeviceSnapshot, 64)
 
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxClusterFanOut)
 	for _, cluster := range clusters {
 		cl := cluster
 		wg.Add(1)
+		sem <- struct{}{}
 		safego.GoWith("device-tracker/"+cl.Name, func() {
+			defer func() { <-sem }()
 			defer wg.Done()
 			clusterCtx, clusterCancel := context.WithTimeout(ctx, deviceTrackerPerClusterTimeout)
 			defer clusterCancel()

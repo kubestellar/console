@@ -90,11 +90,14 @@ func handleClusterResourceStreamSSE[T any](s *Server, w http.ResponseWriter, r *
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	totalItems := 0
+	sem := make(chan struct{}, maxClusterFanOut)
 
 	for _, cl := range activeClusters {
 		clusterName := cl.Name
 		wg.Add(1)
+		sem <- struct{}{}
 		safego.GoWith("resource-stream/"+clusterName, func() {
+			defer func() { <-sem }()
 			defer wg.Done()
 
 			if s.shouldSkipClusterResource(resourceName, clusterName) {

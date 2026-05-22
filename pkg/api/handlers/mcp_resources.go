@@ -628,10 +628,13 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	clusterCtx, clusterCancel := context.WithCancel(c.Context())
 	defer clusterCancel()
 
+	sem := make(chan struct{}, maxConcurrentClusterQueries)
 	for _, cl := range clusters {
 		wg.Add(1)
 		clusterName := cl.Name
+		sem <- struct{}{}
 		safego.GoWith("mcp-resources/"+clusterName, func() {
+			defer func() { <-sem }()
 			defer wg.Done()
 
 			ctx, cancel := context.WithTimeout(clusterCtx, podNetworkStatsTimeout)

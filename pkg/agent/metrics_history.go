@@ -228,10 +228,13 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	} else {
 		var snapMu sync.Mutex
 		var wg sync.WaitGroup
+		sem := make(chan struct{}, maxClusterFanOut)
 		for _, cluster := range clusters {
 			cl := cluster
 			wg.Add(1)
+			sem <- struct{}{}
 			safego.GoWith("metrics-history/pods/"+cl.Name, func() {
+				defer func() { <-sem }()
 				defer wg.Done()
 				pods, podErr := mh.k8sClient.FindPodIssues(ctx, cl.Context, "")
 				if podErr != nil {
@@ -257,7 +260,9 @@ func (mh *MetricsHistory) captureSnapshot() error {
 		for _, cluster := range clusters {
 			cl := cluster
 			wg.Add(1)
+			sem <- struct{}{}
 			safego.GoWith("metrics-history/gpu/"+cl.Name, func() {
+				defer func() { <-sem }()
 				defer wg.Done()
 				gpuNodes, err := mh.k8sClient.GetGPUNodes(ctx, cl.Context)
 				if err != nil {
