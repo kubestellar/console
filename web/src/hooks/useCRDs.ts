@@ -152,8 +152,12 @@ export function useCRDs(): UseCRDsResult {
     fetcher: fetchCRDs,
   })
   const result = useCachedCRDs()
+  const effectiveIsDemoFallback = result.isDemoFallback && !result.isLoading
 
-  const isDemoFallback = !clustersLoading && (result.isDemoFallback || (!result.isLoading && result.error !== null))
+  const isDemoFallback = !clustersLoading && (
+    effectiveIsDemoFallback ||
+    (!result.isLoading && result.error !== null)
+  )
 
   return {
     crds: isDemoFallback ? demoData : result.data,

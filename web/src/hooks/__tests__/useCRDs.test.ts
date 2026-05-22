@@ -22,6 +22,12 @@ let mockClustersReturn = {
   isLoading: false,
 }
 
+let mockCacheState: Partial<{
+  isDemoFallback: boolean
+  isLoading: boolean
+  isRefreshing: boolean
+}> = {}
+
 vi.mock('../mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
@@ -99,10 +105,10 @@ vi.mock('../../lib/cache', () => {
     const isFailed = consecutiveFailures >= FAILURE_THRESHOLD
     return {
       data,
-      isLoading,
-      isRefreshing: false,
+      isLoading: mockCacheState.isLoading ?? isLoading,
+      isRefreshing: mockCacheState.isRefreshing ?? false,
       isFailed,
-      isDemoFallback: false,
+      isDemoFallback: mockCacheState.isDemoFallback ?? false,
       error,
       consecutiveFailures,
       lastRefresh,
@@ -195,6 +201,7 @@ function resetState() {
     ],
     isLoading: false,
   }
+  mockCacheState = {}
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +243,21 @@ describe('useCRDs', () => {
     expect(result.current.isLoading).toBe(true)
     // fetch should not be called yet
     expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('keeps demo fallback disabled while the cache is still loading', () => {
+    mockCacheState = {
+      isDemoFallback: true,
+      isLoading: true,
+    }
+    mockFetch.mockImplementation(() => new Promise(() => {}))
+
+    const { result } = renderHook(() => useCRDs())
+
+    expect(result.current.isLoading).toBe(true)
+    expect(result.current.isDemoData).toBe(false)
+    expect(result.current.isDemoFallback).toBe(false)
+    expect(result.current.crds).toEqual([])
   })
 
   it('falls back to demo data on 503 (no k8s client)', async () => {
