@@ -192,7 +192,12 @@ export function StorageOverview() {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div
           className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 cursor-default"
-          title={hasRealData ? `Total storage capacity: ${formatStorageStat(stats.totalStorageGB)} across ${stats.clustersWithStorage} cluster${stats.clustersWithStorage !== 1 ? 's' : ''}` : 'No data available - clusters may be offline'}
+          title={hasRealData
+            ? t('storageOverview.totalCapacityTooltip', {
+                capacity: formatStorageStat(stats.totalStorageGB),
+                count: stats.clustersWithStorage,
+              })
+            : t('storageOverview.noDataTooltip')}
         >
           <div className="flex items-center gap-2 mb-1">
             <Database className="w-4 h-4 text-purple-400" />
@@ -208,7 +213,7 @@ export function StorageOverview() {
 
         <div
           className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-default transition-colors"
-          title={stats.totalPVCs > 0 ? `${stats.totalPVCs} Persistent Volume Claims` : 'No PVCs found'}
+          title={stats.totalPVCs > 0 ? t('storageOverview.pvcCountTooltip', { count: stats.totalPVCs }) : t('storageOverview.noPvcsTooltip')}
         >
           <div className="flex items-center gap-2 mb-1">
             <HardDrive className="w-4 h-4 text-blue-400" />
@@ -225,7 +230,7 @@ export function StorageOverview() {
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
         <div
           className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 cursor-default transition-colors"
-          title={stats.boundPVCs > 0 ? `${stats.boundPVCs} PVC${stats.boundPVCs !== 1 ? 's' : ''} successfully bound` : 'No bound PVCs'}
+          title={stats.boundPVCs > 0 ? t('storageOverview.boundTooltip', { count: stats.boundPVCs }) : t('storageOverview.noBoundTooltip')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <CheckCircle className="w-3 h-3 text-green-400" />
@@ -235,7 +240,7 @@ export function StorageOverview() {
         </div>
         <div
           className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 cursor-default transition-colors"
-          title={stats.pendingPVCs > 0 ? `${stats.pendingPVCs} PVC${stats.pendingPVCs !== 1 ? 's' : ''} pending` : 'No pending PVCs'}
+          title={stats.pendingPVCs > 0 ? t('storageOverview.pendingTooltip', { count: stats.pendingPVCs }) : t('storageOverview.noPendingTooltip')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <Clock className="w-3 h-3 text-yellow-400" />
@@ -245,7 +250,7 @@ export function StorageOverview() {
         </div>
         <div
           className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-default transition-colors"
-          title={stats.failedPVCs > 0 ? `${stats.failedPVCs} PVC${stats.failedPVCs !== 1 ? 's' : ''} in failed/lost state` : 'No failed PVCs'}
+          title={stats.failedPVCs > 0 ? t('storageOverview.failedTooltip', { count: stats.failedPVCs }) : t('storageOverview.noFailedTooltip')}
         >
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="w-3 h-3 text-red-400" />
@@ -261,7 +266,7 @@ export function StorageOverview() {
           <div className="text-xs text-muted-foreground mb-2">{t('storageOverview.storageClasses')}</div>
           <div className="space-y-1.5">
             {stats.storageClasses.slice(0, 5).map(([name, count]) => (
-              <div key={name} className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded bg-secondary/30 cursor-default" title={`Storage class "${name}" has ${count} PVC${count !== 1 ? 's' : ''}`}>
+              <div key={name} className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded bg-secondary/30 cursor-default" title={t('storageOverview.storageClassTooltip', { name, count })}>
                 <span className="text-sm text-foreground truncate" title={name}>{name}</span>
                 <span className="text-xs text-muted-foreground">{t('storageOverview.nPVCs', { count })}</span>
               </div>
