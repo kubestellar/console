@@ -108,11 +108,6 @@ function validateMockClusterResponse(response: MockClusterResponse): MockCluster
 
 async function waitForDashboardReady(page: Page) {
   await page.waitForLoadState('domcontentloaded')
-  await page.waitForLoadState('networkidle').catch(() => {})
-  // Firefox can close the page during navigation transitions - add explicit check
-  if (page.isClosed()) {
-    throw new Error('Page was closed during navigation')
-  }
   await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
 }
 
@@ -603,23 +598,11 @@ test.describe('Dashboard Live Data Loading', () => {
     const cards = cardsGrid.locator(VISIBLE_GRID_CARD_SELECTOR)
     await expect(cards.first()).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
-    // Wait for network to settle before checking for demo badges
-    // Firefox can be slower to render demo fallback state
-    await page.waitForLoadState('networkidle').catch(() => {})
-    
-    const demoBadge = cardsGrid.locator('[data-testid="demo-badge"]:visible').first()
-    const demoBadgeAppeared = await demoBadge
-      .isVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
-      .catch(() => false)
-
-    expect.soft(
-      demoBadgeAppeared,
+    const demoBadge = cardsGrid.locator('[data-testid="demo-badge"]').first()
+    await expect(
+      demoBadge,
       'Expected at least one Demo badge in the dashboard cards after API fallback',
-    ).toBe(true)
-
-    if (!demoBadgeAppeared) {
-      console.warn('Dashboard API fallback did not render a visible Demo badge — check isDemoData flag and CardWrapper yellow-outline rendering')
-    }
+    ).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
   })
 })
 
@@ -639,22 +622,15 @@ test.describe('Dashboard Live Card Data Validation', () => {
     const mockPodResponse = { pods: mockPods }
 
     await page.route('**/api/mcp/**', (route) => {
-      if (route.request().url().includes('/pods')) {
-        return route.fallback()
-      }
+      const url = new URL(route.request().url())
+      const isPodsRequest = url.pathname.includes('/api/mcp/pods')
+
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(API_RESPONSES.mcp()),
+        body: JSON.stringify(isPodsRequest ? mockPodResponse : API_RESPONSES.mcp()),
       })
     })
-    await page.route('**/api/mcp/pods**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockPodResponse),
-      })
-    )
 
     const podsApiPromise = page.waitForResponse(
       (resp) => resp.url().includes('/api/mcp/pods') && resp.status() === 200
