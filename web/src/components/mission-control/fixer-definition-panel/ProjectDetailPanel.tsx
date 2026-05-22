@@ -14,10 +14,11 @@ interface AlternativeOption extends ProjectAlternative {
 interface ProjectDetailPanelProps {
   project: PayloadProject
   allProjects: PayloadProject[]
+  onAddAlternative?: (project: PayloadProject) => void
   onReplace?: (oldName: string, newProject: PayloadProject) => void
 }
 
-export function ProjectDetailPanel({ project, allProjects, onReplace }: ProjectDetailPanelProps) {
+export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onReplace }: ProjectDetailPanelProps) {
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
   const fetchedRef = useRef('')
@@ -153,54 +154,99 @@ export function ProjectDetailPanel({ project, allProjects, onReplace }: ProjectD
             {isSwapped && <span className="text-amber-400 normal-case font-normal ml-1">(swapped from original)</span>}
           </h4>
           <div className="space-y-2">
-            {availableAlternatives.map((alternative) => (
-              <div
-                key={alternative.name}
-                className={cn(
-                  'rounded-lg border p-2.5 transition-colors',
-                  alternative.isCurrent
-                    ? 'border-primary/40 bg-primary/5'
-                    : 'border-border hover:border-primary/30',
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-foreground">{alternative.displayName}</span>
-                    {alternative.isCurrent && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
-                        Selected
-                      </span>
+            {availableAlternatives.map((alternative) => {
+              const alternativeProject = buildAlternativeProject(project, alternative)
+              const canAddAlternative = !alternative.isCurrent && Boolean(onAddAlternative)
+              const canSwapAlternative = !alternative.isCurrent && Boolean(onReplace)
+
+              return (
+                <div
+                  key={alternative.name}
+                  className={cn(
+                    'rounded-lg border p-2.5 transition-colors',
+                    alternative.isCurrent
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border hover:border-primary/40 hover:bg-primary/5',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    {canAddAlternative ? (
+                      <button
+                        type="button"
+                        onClick={() => onAddAlternative?.(alternativeProject)}
+                        className="min-w-0 flex-1 text-left focus:outline-hidden focus:ring-2 focus:ring-primary/50 rounded"
+                        aria-label={`Add ${alternative.displayName} to mission`}
+                      >
+                        <AlternativeSummary alternative={alternative} />
+                      </button>
+                    ) : (
+                      <div className="min-w-0 flex-1">
+                        <AlternativeSummary alternative={alternative} />
+                      </div>
                     )}
-                    {alternative.isOriginal && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-medium">
-                        AI Original
+                    {alternative.isCurrent ? (
+                      <span className="shrink-0 text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary">
+                        Current
                       </span>
+                    ) : (
+                      <div className="flex shrink-0 items-center gap-1">
+                        {canAddAlternative && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary">
+                            Add
+                          </span>
+                        )}
+                        {canSwapAlternative && (
+                          <button
+                            type="button"
+                            onClick={() => onReplace?.(project.name, alternativeProject)}
+                            className="text-[10px] px-2 py-0.5 rounded bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+                          >
+                            Swap
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                  {!alternative.isCurrent && onReplace && (
-                    <button
-                      onClick={() => onReplace(project.name, {
-                        name: alternative.name,
-                        displayName: alternative.displayName,
-                        reason: alternative.reason,
-                        category: project.category,
-                        priority: project.priority,
-                        dependencies: project.dependencies,
-                      })}
-                      className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      Swap
-                    </button>
-                  )}
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{alternative.reason}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
     </>
   )
+}
+
+function AlternativeSummary({ alternative }: { alternative: AlternativeOption }) {
+  return (
+    <>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-medium text-foreground">{alternative.displayName}</span>
+        {alternative.isCurrent && (
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+            Selected
+          </span>
+        )}
+        {alternative.isOriginal && (
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-medium">
+            AI Original
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground mt-0.5">{alternative.reason}</p>
+    </>
+  )
+}
+
+function buildAlternativeProject(project: PayloadProject, alternative: AlternativeOption): PayloadProject {
+  return {
+    name: alternative.name,
+    displayName: alternative.displayName,
+    reason: alternative.reason,
+    category: project.category,
+    priority: project.priority,
+    dependencies: project.dependencies,
+  }
 }
 
 function buildAvailableAlternatives(project: PayloadProject, allProjects: PayloadProject[]): AlternativeOption[] {

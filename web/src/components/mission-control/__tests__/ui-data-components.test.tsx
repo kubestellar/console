@@ -4,6 +4,7 @@ import { PayloadCard } from '../PayloadCard'
 import { PayloadGrid } from '../PayloadGrid'
 import { ClusterReadinessCard } from '../ClusterReadinessCard'
 import { FixerDefinitionPanel } from '../FixerDefinitionPanel'
+import { ProjectDetailPanel } from '../fixer-definition-panel/ProjectDetailPanel'
 import type { PayloadProject } from '../types'
 
 // Mock framer-motion to avoid animation issues in tests
@@ -19,6 +20,14 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (str: string) => str,
+  }),
+}))
+
+vi.mock('../../missions/browser/missionCache', () => ({
+  fetchMissionContent: vi.fn().mockResolvedValue({
+    mission: {
+      steps: [],
+    },
   }),
 }))
 
@@ -238,6 +247,32 @@ describe('ClusterReadinessCard', () => {
     const checkbox = screen.getByRole('checkbox')
     fireEvent.click(checkbox)
     expect(onToggle).toHaveBeenCalledWith('falco', true)
+  })
+})
+
+describe('ProjectDetailPanel', () => {
+  it('lets users click an alternative to add it directly from the sidebar', () => {
+    const onAddAlternative = vi.fn()
+
+    render(
+      <ProjectDetailPanel
+        project={mockProject}
+        allProjects={[mockProject]}
+        onAddAlternative={onAddAlternative}
+      />
+    )
+
+    const alternativeButton = screen.getByRole('button', { name: /add tetragon to mission/i })
+    fireEvent.click(alternativeButton)
+
+    expect(onAddAlternative).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tetragon',
+      displayName: 'Tetragon',
+      reason: 'eBPF-based security observability by Cilium team',
+      category: 'Security',
+      priority: 'required',
+      dependencies: ['prometheus'],
+    }))
   })
 })
 

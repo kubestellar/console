@@ -152,6 +152,10 @@ export function FixerDefinitionPanel({
               <ProjectDetailPanel
                 project={projects.find((project) => project.name === stickyProject.name) ?? stickyProject}
                 allProjects={projects}
+                onAddAlternative={(newProject) => {
+                  onAddProject(newProject)
+                  setStickyProject(newProject)
+                }}
                 onReplace={onReplaceProject ? (oldName, newProject) => {
                   onReplaceProject(oldName, newProject)
                   setStickyProject(newProject)
