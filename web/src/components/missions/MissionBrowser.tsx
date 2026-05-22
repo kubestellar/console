@@ -4,7 +4,7 @@
  * Full-screen file-explorer-style dialog for browsing and importing mission files.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../lib/auth'
 import { NAVBAR_HEIGHT_PX } from '../../lib/constants/ui'
 import { useClusterContext } from '../../hooks/useClusterContext'
@@ -47,6 +47,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [showFilters, setShowFilters] = useState(!isMobile)
   const [activeTab, setActiveTab] = useState<BrowserTab>('recommended')
   const [isDragging, setIsDragging] = useState(false)
+
+  const refreshTimerRef = useRef<number | null>(null)
 
   const watchedSources = useMissionWatchedSources()
   const recommendations = useMissionRecommendations(isOpen, clusterContext)
@@ -106,6 +108,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+    }
+  }, [isOpen])
+
   const handleTabChange = (tab: BrowserTab) => {
     content.resetContentView()
     setActiveTab(tab)
@@ -118,9 +129,13 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
 
   const handleRefreshNode = (node: TreeNode) => {
     tree.refreshNode(node)
-    window.setTimeout(() => {
+    if (refreshTimerRef.current !== null) {
+      window.clearTimeout(refreshTimerRef.current)
+    }
+    refreshTimerRef.current = window.setTimeout(() => {
       void tree.toggleNode(node)
       void handleSelectNode(node)
+      refreshTimerRef.current = null
     }, TREE_REFRESH_DELAY_MS)
   }
 
