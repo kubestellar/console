@@ -48,7 +48,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [activeTab, setActiveTab] = useState<BrowserTab>('recommended')
   const [isDragging, setIsDragging] = useState(false)
 
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refreshTimerRef = useRef<number | null>(null)
 
   const clearRefreshTimer = useCallback(() => {
     if (refreshTimerRef.current !== null) {
