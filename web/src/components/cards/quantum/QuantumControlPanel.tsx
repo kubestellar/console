@@ -49,7 +49,7 @@ const DEMO_STATUS: SystemStatus = DEMO_QUANTUM_STATUS
 
 export const QuantumControlPanel: React.FC = () => {
   const { t } = useTranslation('cards')
-  const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
+  const { isAuthenticated, login, isLoading: authIsLoading, token } = useAuth()
   const { open: openDrillDown, close: closeDrillDown } = useDrillDown()
   const [control, setControl] = useState<ControlState>(DEMO_DATA)
   const [mutationError, setMutationError] = useState<string | null>(null)
@@ -143,6 +143,7 @@ export const QuantumControlPanel: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: 'include',
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
@@ -170,7 +171,7 @@ export const QuantumControlPanel: React.FC = () => {
         onClose: closeDrillDown,
       },
     })
-  }, [ibmAuthenticated, openDrillDown, closeDrillDown, refetchAuthStatus])
+  }, [ibmAuthenticated, openDrillDown, closeDrillDown, refetchAuthStatus, token])
 
   // Clear IBM Quantum credentials
   const handleClearCredentials = useCallback(async () => {
@@ -226,6 +227,7 @@ export const QuantumControlPanel: React.FC = () => {
           headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           credentials: 'include',
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
@@ -249,13 +251,17 @@ export const QuantumControlPanel: React.FC = () => {
       headers: {
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: 'include',
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       body: JSON.stringify(payload),
       })
 
-      if (!response.ok) throw new Error('Execution failed')
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => '')
+        throw new Error(`Execution failed: HTTP ${response.status} ${errBody.slice(0, 200)}`)
+      }
 
       const result = await response.json()
       setControl(prev => ({
@@ -294,6 +300,7 @@ export const QuantumControlPanel: React.FC = () => {
       headers: {
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: 'include',
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
