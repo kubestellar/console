@@ -454,15 +454,18 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
    
   }
 
+  // Keep a stable ref to refetch so setInterval always calls the latest closure
+  const refetchRef = useRef(refetch)
+  refetchRef.current = refetch
+
   useEffect(() => {
-    refetch(false).catch((err: unknown) => {
+    refetchRef.current(false).catch((err: unknown) => {
       console.error('[useLLMdServers] Initial fetch error:', err)
     })
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetchRef.current(true), REFRESH_INTERVAL_MS)
     return () => {
       clearInterval(interval)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Compute status from servers
@@ -594,11 +597,14 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
    
   }
 
+  // Keep a stable ref to refetch so setInterval always calls the latest closure
+  const modelsRefetchRef = useRef(refetch)
+  modelsRefetchRef.current = refetch
+
   useEffect(() => {
-    refetch(false)
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    modelsRefetchRef.current(false)
+    const interval = setInterval(() => modelsRefetchRef.current(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return {

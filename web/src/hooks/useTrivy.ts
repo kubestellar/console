@@ -10,7 +10,7 @@
  * - Demo fallback when no clusters are connected
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -271,6 +271,9 @@ export function useTrivy() {
   const fetchInProgress = useRef(false)
 
   const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
+  // Stable identity for cluster list — prevents stale closures when clusters
+  // swap but count stays the same (#15366)
+  const clustersKey = useMemo(() => [...clusters].sort().join(','), [clusters])
 
   const refetch = useCallback(async (silent = false) => {
     // In-cluster mode: kubectlProxy requires kc-agent which isn't available.
@@ -356,7 +359,7 @@ export function useTrivy() {
       // (prevents premature empty state while useClusters is still resolving)
       setIsLoading(false)
     }
-  }, [clusters.length, isDemoMode, clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clusters.length, isDemoMode, clustersLoading, clustersKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register with unified mode transition system so skeleton/refetch works
   // in sync with all other cards when demo mode is toggled
@@ -387,7 +390,7 @@ export function useTrivy() {
 
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [clusters.length, refetch, isDemoMode])
+  }, [clusters.length, refetch, isDemoMode, clustersKey])
 
   const isDemoData = isDemoMode
   const installed = Object.values(statuses).some(s => s.installed)
