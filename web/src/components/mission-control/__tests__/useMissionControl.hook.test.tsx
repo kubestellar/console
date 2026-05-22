@@ -310,6 +310,9 @@ describe('useMissionControl hook', () => {
     act(() => {
       result.current.setTitle('Secure clusters')
       result.current.setPhase('launching')
+    })
+
+    act(() => {
       result.current.updateLaunchProgress([
         {
           phase: 1,

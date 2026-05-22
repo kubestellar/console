@@ -483,7 +483,7 @@ describe('StellarProvider — SSE events', () => {
       detail: 'Done',
       severity: 'info',
     }
-    mockStellarApi.listActivity.mockResolvedValueOnce([completionActivity])
+    mockStellarApi.listActivity.mockResolvedValue([completionActivity])
     const { capturedRef } = renderWithProvider()
     await act(async () => { await Promise.resolve() })
     const es = eventSourceInstances[0]
@@ -496,8 +496,10 @@ describe('StellarProvider — SSE events', () => {
       await Promise.resolve()
     })
     expect(capturedRef.current?.solveProgress['e1']).toBeUndefined()
-    expect(mockStellarApi.listActivity).toHaveBeenCalled()
-    expect(capturedRef.current?.activity[0]).toMatchObject({ id: 'activity-1', solveId: 's1' })
+    await waitFor(() => {
+      expect(mockStellarApi.listActivity).toHaveBeenCalled()
+      expect(capturedRef.current?.activity[0]).toMatchObject({ id: 'activity-1', solveId: 's1' })
+    })
   })
 
   it('handles digest SSE event — sets nudge with digest content', async () => {

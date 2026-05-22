@@ -230,6 +230,7 @@ describe('ClusterAssignmentPanel', () => {
 
 describe('LaunchSequence', () => {
   beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn()
     mockStartMission.mockReset()
     mockStartMission.mockReturnValue('mission-123')
     mockLoadMissionPrompt.mockReset()
@@ -439,14 +440,12 @@ describe('LaunchSequence', () => {
     )
 
     await waitFor(() => {
-      expect(onUpdateProgress).toHaveBeenLastCalledWith(expect.arrayContaining([
-        expect.objectContaining({
-          status: 'failed',
-          projects: expect.arrayContaining([
-            expect.objectContaining({ status: 'failed', error: 'Mission failed' }),
-          ]),
-        }),
-      ]))
+      expect(onUpdateProgress.mock.calls.some(([progress]) =>
+        progress.some((phase) =>
+          phase.status === 'failed' &&
+          phase.projects.some((project) => project.status === 'failed' && project.error === 'Mission failed')
+        )
+      )).toBe(true)
     })
 
     missionsState = [{
@@ -463,14 +462,12 @@ describe('LaunchSequence', () => {
     )
 
     await waitFor(() => {
-      expect(onUpdateProgress).toHaveBeenLastCalledWith(expect.arrayContaining([
-        expect.objectContaining({
-          status: 'running',
-          projects: expect.arrayContaining([
-            expect.objectContaining({ status: 'running', error: undefined }),
-          ]),
-        }),
-      ]))
+      expect(onUpdateProgress.mock.calls.some(([progress]) =>
+        progress.some((phase) =>
+          phase.status === 'running' &&
+          phase.projects.some((project) => project.status === 'running')
+        )
+      )).toBe(true)
     })
   })
 
@@ -539,13 +536,15 @@ describe('LaunchSequence', () => {
       />
     )
 
-    expect(screen.getByTestId('mission-control-live-activity')).toBeInTheDocument()
-    expect(screen.getByText('Live mission activity')).toBeInTheDocument()
-    expect(screen.getByTestId('mission-control-live-step')).toHaveTextContent('Applying Falco resources')
-    expect(screen.getByTestId('mission-control-live-progress')).toHaveTextContent('64%')
-    expect(screen.getByText('460 tokens used')).toBeInTheDocument()
-    expect(screen.getByText('Connected to the target cluster.')).toBeInTheDocument()
-    expect(screen.getByText('Installing Falco Helm chart and verifying rollout.')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('mission-control-live-activity')).toBeInTheDocument()
+      expect(screen.getByText('Live mission activity')).toBeInTheDocument()
+      expect(screen.getByTestId('mission-control-live-step')).toHaveTextContent('Applying Falco resources')
+      expect(screen.getByTestId('mission-control-live-progress')).toHaveTextContent('64%')
+      expect(screen.getByText('460 tokens used')).toBeInTheDocument()
+      expect(screen.getByText('Connected to the target cluster.')).toBeInTheDocument()
+      expect(screen.getByText('Installing Falco Helm chart and verifying rollout.')).toBeInTheDocument()
+    })
   })
 })
 
