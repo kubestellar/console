@@ -106,8 +106,8 @@ normalize_mission_json() {
 
   echo "$json" | jq '
     . as $raw
-    | ($raw.mission // {}) as $mission
-    | if ($mission | type) == "object" then
+    | ($raw.mission) as $mission
+    | if ($mission != null and ($mission | type) == "object") then
         $mission + {
           version: ($raw.version // $mission.version // "kc-mission-v1"),
           name: ($raw.name // $mission.name),

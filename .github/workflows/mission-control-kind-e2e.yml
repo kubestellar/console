@@ -33,7 +33,7 @@ concurrency:
 env:
   NODE_VERSION: '22'
   GO_VERSION_FILE: go.mod
-  KIND_VERSION: 'v0.27.0'
+  KIND_VERSION: 'v0.29.0'
   KUBECTL_VERSION: 'v1.31.4'
   BACKEND_PORT: '8080'
   AGENT_PORT: '8585'
