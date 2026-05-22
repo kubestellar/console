@@ -499,7 +499,7 @@ export function GuideDetailPanel({ guide, hoveredRun, onRunHover }: {
         {hoveredRun && (
           <div className="flex items-center gap-1.5 mb-1">
             <div className={`w-1.5 h-1.5 rounded-full ${
-              hoveredRun.status !== 'completed' ? 'bg-blue-400' : hoveredRun.conclusion === 'success' ? 'bg-green-400' : 'bg-red-400'
+              hoveredRun.status !== 'completed' ? 'bg-blue-500' : hoveredRun.conclusion === 'success' ? 'bg-green-500' : 'bg-red-500'
             }`} />
             <span className="text-2xs text-muted-foreground font-mono">
               Run #{hoveredRun.runNumber} &middot; {formatTimeAgo(hoveredRun.createdAt)}

@@ -634,7 +634,7 @@ export const QuantumControlPanel: React.FC = () => {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Status:</span>
-                    <span className={`font-semibold ${isHealthy ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                    <span className={`font-semibold ${isHealthy ? 'text-green-400' : 'text-yellow-400'}`}>
                       {displayStatus.loop_running ? 'loop_running' : displayStatus.status}
                     </span>
                   </div>
