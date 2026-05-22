@@ -243,14 +243,15 @@ export async function fetchTreeChildren(node: TreeNode): Promise<TreeNode[]> {
  * Used by `MissionBrowser.selectNode`. Returns the entries to display in the
  * directory listing pane. Filters out hidden / non-mission entries.
  */
-export async function fetchDirectoryEntries(node: TreeNode): Promise<BrowseEntry[]> {
+export async function fetchDirectoryEntries(node: TreeNode, signal?: AbortSignal): Promise<BrowseEntry[]> {
   if (node.source === 'community') {
     const { data: entries } = await api.get<BrowseEntry[]>(
-      `/api/missions/browse?path=${encodeURIComponent(node.path)}`
+      `/api/missions/browse?path=${encodeURIComponent(node.path)}`,
+      signal ? { signal } : undefined
     )
     // #6421 — Hide dot-prefixed entries and the index.json manifest.
     // Only mission files or directories may appear in the listing.
-    return entries.filter(e =>
+    return (entries || []).filter(e =>
       !isHiddenEntry(e.name) &&
       (e.type === 'directory' || isMissionFile(e.name))
     )
@@ -262,7 +263,7 @@ export async function fetchDirectoryEntries(node: TreeNode): Promise<BrowseEntry
     const apiPath = subPath
       ? `/api/github/repos/${owner}/${repo}/contents/${subPath}`
       : `/api/github/repos/${owner}/${repo}/contents/`
-    const { data: ghEntries } = await api.get<GitHubEntry[]>(apiPath)
+    const { data: ghEntries } = await api.get<GitHubEntry[]>(apiPath, signal ? { signal } : undefined)
     return (ghEntries || [])
       .filter(e => e.type === 'dir' || isMissionFile(e.name))
       .map(e => ({
@@ -278,6 +279,11 @@ export async function fetchDirectoryEntries(node: TreeNode): Promise<BrowseEntry
 // ============================================================================
 // File selection — fetch raw file content for a file node
 // ============================================================================
+
+function getExternalFetchSignal(signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+}
 
 /** Sample Chart.yaml content for Kubara catalog nodes. */
 function kubaraSampleChartYaml(chartName: string): string {
@@ -306,10 +312,11 @@ function getKubaraSampleContent(node: TreeNode): string {
  *
  * Returns `null` for unsupported sources (e.g. `local`, which uses FileReader).
  */
-export async function fetchNodeFileContent(node: TreeNode): Promise<string | null> {
+export async function fetchNodeFileContent(node: TreeNode, signal?: AbortSignal): Promise<string | null> {
   if (node.source === 'community') {
     const { data } = await api.get<string>(
-      `/api/missions/file?path=${encodeURIComponent(node.path)}`
+      `/api/missions/file?path=${encodeURIComponent(node.path)}`,
+      signal ? { signal } : undefined
     )
     return typeof data === 'string' ? data : JSON.stringify(data, null, 2)
   }
@@ -325,7 +332,8 @@ export async function fetchNodeFileContent(node: TreeNode): Promise<string | nul
     // Fetch raw file content via GitHub Contents API proxy
     const { owner, repo, subPath } = splitOwnerRepo(node)
     const { data: ghFile } = await api.get<GitHubFile>(
-      `/api/github/repos/${owner}/${repo}/contents/${subPath}`
+      `/api/github/repos/${owner}/${repo}/contents/${subPath}`,
+      signal ? { signal } : undefined
     )
     // GitHub returns base64-encoded content for files
     if (ghFile.content && ghFile.encoding === 'base64') {
@@ -333,7 +341,8 @@ export async function fetchNodeFileContent(node: TreeNode): Promise<string | nul
     }
     if (ghFile.download_url) {
       const rawResp = await fetch(ghFile.download_url, {
-        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+        signal: getExternalFetchSignal(signal),
+      })
       return await rawResp.text()
     }
     return JSON.stringify(ghFile)

@@ -59,6 +59,10 @@ interface UseMissionContentViewerOptions {
   revealMissionInTree: (mission: MissionExport) => Promise<void>
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
 export function useMissionContentViewer({
   isOpen,
   activeTab,
@@ -321,12 +325,15 @@ export function useMissionContentViewer({
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  useEffect(() => () => {
+    abortControllerRef.current?.abort()
+  }, [])
+
   const selectNode = useCallback(async (node: TreeNode) => {
-    // Cancel any in-flight fetch from previous selectNode call
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
+    abortControllerRef.current?.abort()
+
     const controller = new AbortController()
+    const { signal } = controller
     abortControllerRef.current = controller
 
     setSelectedMission(null)
@@ -338,20 +345,19 @@ export function useMissionContentViewer({
     if (node.type === 'directory') {
       setLoading(true)
       try {
-        const entries = await fetchDirectoryEntries(node)
-        // Only update state if this fetch wasn't aborted
-        if (!controller.signal.aborted) {
+        const entries = await fetchDirectoryEntries(node, signal)
+        if (!signal.aborted) {
           setDirectoryEntries(entries)
         }
-      } catch (err) {
-        // Ignore abort errors
-        if (err instanceof Error && err.name === 'AbortError') return
-        if (!controller.signal.aborted) {
-          setDirectoryEntries([])
-          showToast(t('missions.browser.loadDirectoryFailed'), 'error')
-        }
+      } catch (error) {
+        if (isAbortError(error) || signal.aborted) return
+        setDirectoryEntries([])
+        showToast(t('missions.browser.loadDirectoryFailed'), 'error')
       } finally {
-        if (!controller.signal.aborted) {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null
+        }
+        if (!signal.aborted) {
           setLoading(false)
         }
       }
@@ -360,23 +366,20 @@ export function useMissionContentViewer({
 
     setLoading(true)
     try {
-      const content = node.source === 'local' ? (node.content ?? null) : await fetchNodeFileContent(node)
-      if (content === null) return
-      // Only update state if this fetch wasn't aborted
-      if (!controller.signal.aborted) {
-        setDirectoryEntries([])
-        applySelectedFileContent(node, content)
-      }
-    } catch (err) {
-      // Ignore abort errors
-      if (err instanceof Error && err.name === 'AbortError') return
-      if (!controller.signal.aborted) {
-        setRawContent(null)
-        setSelectedMission(null)
-        showToast(t('missions.browser.loadFileFailed'), 'error')
-      }
+      const content = node.source === 'local' ? (node.content ?? null) : await fetchNodeFileContent(node, signal)
+      if (content === null || signal.aborted) return
+      setDirectoryEntries([])
+      applySelectedFileContent(node, content)
+    } catch (error) {
+      if (isAbortError(error) || signal.aborted) return
+      setRawContent(null)
+      setSelectedMission(null)
+      showToast(t('missions.browser.loadFileFailed'), 'error')
     } finally {
-      if (!controller.signal.aborted) {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null
+      }
+      if (!signal.aborted) {
         setLoading(false)
       }
     }
