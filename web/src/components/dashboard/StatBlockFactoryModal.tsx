@@ -28,6 +28,15 @@ import { StatusBadge } from '../ui/StatusBadge'
 // Demo/preview constants
 const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
 const SAVE_MESSAGE_TIMEOUT_MS = 3000 // Duration to display save/error messages before auto-clearing
+const STAT_BLOCK_ID_PREFIX = 'stat-block'
+
+function createStatBlockId(): string {
+  const randomId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${String(Math.random()).replace('0.', '')}`
+
+  return `${STAT_BLOCK_ID_PREFIX}-${randomId}`
+}
 
 interface StatBlockFactoryModalProps {
   isOpen: boolean
@@ -84,7 +93,7 @@ function getIcon(name: string): LucideIcon {
 
 function createEmptyBlock(): BlockEditorItem {
   return {
-    id: `stat_${Date.now()}`,
+    id: createStatBlockId(),
     label: '',
     icon: 'Activity',
     color: 'purple',
@@ -294,15 +303,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
   }
 
   const updateBlock = (idx: number, field: keyof BlockEditorItem, value: string) => {
-    setBlocks(prev => prev.map((b, i) => {
-      if (i !== idx) return b
-      const updated = { ...b, [field]: value }
-      // Auto-generate id from label
-      if (field === 'label' && !b.id.startsWith('stat_custom_')) {
-        updated.id = value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || b.id
-      }
-      return updated
-    }))
+    setBlocks(prev => prev.map((b, i) => i === idx ? { ...b, [field]: value } : b))
   }
 
   const removeBlock = (idx: number) => {
@@ -373,7 +374,7 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
       if (result.title) setTitle(result.title)
       if (result.blocks && result.blocks.length > 0) {
         setBlocks(result.blocks.map(b => ({
-          id: b.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `stat_${Date.now()}`,
+          id: createStatBlockId(),
           label: b.label,
           icon: b.icon || 'Activity',
           color: (AVAILABLE_COLORS.includes(b.color as StatBlockColor) ? b.color : 'purple') as StatBlockColor,
