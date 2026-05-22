@@ -166,6 +166,25 @@ func TestQuantumProxyPostRequestRequiresBearerToken(t *testing.T) {
 		}
 	})
 
+	t.Run("invalid header token falls back to valid cookie", func(t *testing.T) {
+		atomic.StoreInt32(&upstreamCalls, 0)
+		req := httptest.NewRequest(http.MethodPost, "/api/quantum/execute", bytes.NewBufferString(`{"shots":1}`))
+		req.Header.Set("Authorization", "Bearer stale-or-invalid-token")
+		req.AddCookie(&http.Cookie{Name: "kc_auth", Value: generateQuantumTestToken(t, secret)})
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req, 5000)
+		if err != nil {
+			t.Fatalf("app.Test: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+		if got := atomic.LoadInt32(&upstreamCalls); got != 1 {
+			t.Fatalf("expected 1 upstream request, got %d", got)
+		}
+	})
+
 	t.Run("invalid kc_auth cookie returns 401", func(t *testing.T) {
 		atomic.StoreInt32(&upstreamCalls, 0)
 		req := httptest.NewRequest(http.MethodPost, "/api/quantum/execute", bytes.NewBufferString(`{"shots":1}`))

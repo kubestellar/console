@@ -197,29 +197,41 @@ func (h *QuantumProxyHandler) requireBearerToken(c *fiber.Ctx) error {
 	// Mirrors the standard jwtAuth middleware so OAuth-mode users (who hold
 	// only an HttpOnly cookie, not a localStorage token) can call mutation
 	// endpoints. PR #14935 introduced header-only auth which broke OAuth flow.
-	var tokenString string
-
+	//
+	// If the header token fails validation (e.g., a stale localStorage JWT
+	// left over after the cookie session was refreshed), fall back to the
+	// cookie before returning 401 so OAuth users aren't blocked by stale
+	// client state.
+	headerToken := ""
 	trimmedHeader := strings.TrimSpace(c.Get("Authorization"))
 	if len(trimmedHeader) > len(quantumBearerScheme) && strings.EqualFold(trimmedHeader[:len(quantumBearerScheme)], quantumBearerScheme) {
-		tokenString = strings.TrimSpace(trimmedHeader[len(quantumBearerScheme):])
+		headerToken = strings.TrimSpace(trimmedHeader[len(quantumBearerScheme):])
 	}
+	cookieToken := c.Cookies("kc_auth")
 
-	if tokenString == "" {
-		tokenString = c.Cookies("kc_auth")
-	}
-
-	if tokenString == "" {
+	if headerToken == "" && cookieToken == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
 
-	claims, err := middleware.ValidateJWT(tokenString, h.jwtSecret)
-	if err != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+	// Try the header token first when present.
+	if headerToken != "" {
+		if claims, err := middleware.ValidateJWT(headerToken, h.jwtSecret); err == nil {
+			c.Locals("userID", claims.UserID)
+			c.Locals("githubLogin", claims.GitHubLogin)
+			return nil
+		}
+		// Header token invalid; fall through to cookie attempt below.
 	}
 
-	c.Locals("userID", claims.UserID)
-	c.Locals("githubLogin", claims.GitHubLogin)
-	return nil
+	if cookieToken != "" {
+		if claims, err := middleware.ValidateJWT(cookieToken, h.jwtSecret); err == nil {
+			c.Locals("userID", claims.UserID)
+			c.Locals("githubLogin", claims.GitHubLogin)
+			return nil
+		}
+	}
+
+	return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
 }
 
 // ProxyPostRequest handles POST requests to quantum endpoints
