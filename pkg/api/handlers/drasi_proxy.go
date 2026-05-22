@@ -203,10 +203,19 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 		return fiber.NewError(fiber.StatusBadRequest, "url must be http or https")
 	}
 	// Only localhost / loopback is intentionally allowed for drasi-server.
-	// Unspecified bind-all hosts must not be dialed through the proxy.
+	// Reject unspecified bind-all hosts and IP literals that resolve to
+	// private/reserved ranges (defense-in-depth — DialContext also checks at
+	// connect time, but early rejection avoids DNS lookup overhead and
+	// eliminates TOCTOU gaps).
 	host := base.Hostname()
 	if host == "0.0.0.0" || host == "::" {
 		return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
+	}
+	// If the host is an IP literal, validate against blocked CIDRs immediately.
+	if ip := net.ParseIP(host); ip != nil {
+		if isDrasiBlockedIP(ip) {
+			return fiber.NewError(fiber.StatusForbidden, "url host is not allowed (private/reserved IP)")
+		}
 	}
 	full := *base
 	full.Path = strings.TrimRight(base.Path, "/") + upstreamPath
