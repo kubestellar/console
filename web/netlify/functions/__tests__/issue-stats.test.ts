@@ -13,8 +13,12 @@ const { mockGet, mockSetJSON } = vi.hoisted(() => ({
   mockSetJSON: vi.fn(),
 }));
 
+// issue-stats.mts uses store.get(key, { type: "json" }) — Netlify returns a parsed object, not a string.
 vi.mock("@netlify/blobs", () => ({
-  getStore: () => ({ get: mockGet, setJSON: mockSetJSON }),
+  getStore: () => ({
+    get: mockGet,
+    setJSON: mockSetJSON,
+  }),
 }));
 
 import handler from "../issue-stats.mts";
@@ -121,6 +125,7 @@ describe("issue-stats", () => {
 
   it("returns cached stats on blob cache hit", async () => {
     const cachedStats = [{ date: "2026-05-20", opened: 1, closed: 0, prsMerged: 0 }];
+    // Parsed shape returned by get(..., { type: "json" }) in issue-stats.mts
     mockGet.mockResolvedValue({
       timestamp: Date.now(),
       stats: cachedStats,

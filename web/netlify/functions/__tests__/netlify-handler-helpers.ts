@@ -1,6 +1,7 @@
 /**
  * Shared helpers for Netlify function handler tests (#15397).
  */
+import { expect } from "vitest";
 
 /** Fake token — must never appear in response bodies */
 export const FAKE_GITHUB_TOKEN = "gho_TEST_TOKEN_15397_do_not_leak";
