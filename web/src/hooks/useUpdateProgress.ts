@@ -131,6 +131,8 @@ export function useUpdateProgress() {
     async function waitForBackend() {
       const pctPerAttempt = (RESTART_MAX_PCT - RESTART_BASE_PCT) / BACKEND_POLL_MAX
       for (let i = 0; i < BACKEND_POLL_MAX; i++) {
+        if (unmounted) return
+
         const pct = Math.round(RESTART_BASE_PCT + (i * pctPerAttempt))
         const elapsed = Math.round((i * BACKEND_POLL_MS) / MS_PER_SECOND)
 
@@ -165,6 +167,7 @@ export function useUpdateProgress() {
         } catch {
           // Backend not ready yet
         }
+        if (unmounted) return
         await new Promise(r => setTimeout(r, BACKEND_POLL_MS))
       }
       // Timed out — show done anyway (backend might be on a different port)
