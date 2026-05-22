@@ -257,6 +257,7 @@ export function FixerDefinitionPanel({
                   onReplaceProject(oldName, newProject)
                   setStickyProject(newProject)
                 } : undefined}
+                onSelectAlternative={setStickyProject}
               />
             </motion.div>
           ) : (

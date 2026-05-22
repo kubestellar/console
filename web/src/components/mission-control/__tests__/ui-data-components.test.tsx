@@ -278,6 +278,29 @@ describe('ProjectDetailPanel', () => {
       dependencies: ['prometheus'],
     }))
   })
+
+  it('lets users click an existing alternative to view it from the sidebar', () => {
+    const onSelectAlternative = vi.fn()
+    const existingAlternative: PayloadProject = {
+      ...mockProject,
+      name: 'tetragon',
+      displayName: 'Tetragon',
+      reason: 'eBPF-based security observability by Cilium team',
+    }
+
+    render(
+      <ProjectDetailPanel
+        project={mockProject}
+        allProjects={[mockProject, existingAlternative]}
+        onSelectAlternative={onSelectAlternative}
+      />
+    )
+
+    const alternativeButton = screen.getByRole('button', { name: /view tetragon details/i })
+    fireEvent.click(alternativeButton)
+
+    expect(onSelectAlternative).toHaveBeenCalledWith(existingAlternative)
+  })
 })
 
 describe('FixerDefinitionPanel', () => {

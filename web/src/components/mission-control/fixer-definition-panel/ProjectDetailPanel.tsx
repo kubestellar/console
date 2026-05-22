@@ -7,6 +7,7 @@ import { cn } from '../../../lib/cn'
 import { ALTERNATIVES, ALTERNATIVES_DISPLAY, type ProjectAlternative } from './fixerDefinitionPanel.constants'
 
 interface AlternativeOption extends ProjectAlternative {
+  existingProject?: PayloadProject
   isCurrent: boolean
   isOriginal: boolean
 }
@@ -16,9 +17,10 @@ interface ProjectDetailPanelProps {
   allProjects: PayloadProject[]
   onAddAlternative?: (project: PayloadProject) => void
   onReplace?: (oldName: string, newProject: PayloadProject) => void
+  onSelectAlternative?: (project: PayloadProject) => void
 }
 
-export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onReplace }: ProjectDetailPanelProps) {
+export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onReplace, onSelectAlternative }: ProjectDetailPanelProps) {
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
   const fetchedRef = useRef('')
@@ -156,8 +158,21 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
           <div className="space-y-2">
             {availableAlternatives.map((alternative) => {
               const alternativeProject = buildAlternativeProject(project, alternative)
-              const canAddAlternative = !alternative.isCurrent && Boolean(onAddAlternative)
-              const canSwapAlternative = !alternative.isCurrent && Boolean(onReplace)
+              const canSelectAlternative = !alternative.isCurrent && Boolean(alternative.existingProject && onSelectAlternative)
+              const canAddAlternative = !alternative.isCurrent && !alternative.existingProject && Boolean(onAddAlternative)
+              const canSwapAlternative = !alternative.isCurrent && !alternative.existingProject && Boolean(onReplace)
+              const isRowClickable = canAddAlternative || canSelectAlternative
+              const actionLabel = canSelectAlternative
+                ? `View ${alternative.displayName} details`
+                : `Add ${alternative.displayName} to mission`
+              const handleAlternativeClick = () => {
+                if (alternative.existingProject) {
+                  onSelectAlternative?.(alternative.existingProject)
+                  return
+                }
+
+                onAddAlternative?.(alternativeProject)
+              }
 
               return (
                 <div
@@ -167,23 +182,23 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
                     alternative.isCurrent
                       ? 'border-primary/40 bg-primary/5'
                       : 'border-border hover:border-primary/40 hover:bg-primary/5',
+                    isRowClickable && 'cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-primary/50',
                   )}
+                  role={isRowClickable ? 'button' : undefined}
+                  tabIndex={isRowClickable ? 0 : undefined}
+                  onClick={isRowClickable ? handleAlternativeClick : undefined}
+                  onKeyDown={isRowClickable ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      handleAlternativeClick()
+                    }
+                  } : undefined}
+                  aria-label={isRowClickable ? actionLabel : undefined}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    {canAddAlternative ? (
-                      <button
-                        type="button"
-                        onClick={() => onAddAlternative?.(alternativeProject)}
-                        className="min-w-0 flex-1 text-left focus:outline-hidden focus:ring-2 focus:ring-primary/50 rounded"
-                        aria-label={`Add ${alternative.displayName} to mission`}
-                      >
-                        <AlternativeSummary alternative={alternative} />
-                      </button>
-                    ) : (
-                      <div className="min-w-0 flex-1">
-                        <AlternativeSummary alternative={alternative} />
-                      </div>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <AlternativeSummary alternative={alternative} />
+                    </div>
                     {alternative.isCurrent ? (
                       <span className="shrink-0 text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary">
                         Current
@@ -195,10 +210,18 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
                             Add
                           </span>
                         )}
+                        {canSelectAlternative && (
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-secondary text-foreground">
+                            View
+                          </span>
+                        )}
                         {canSwapAlternative && (
                           <button
                             type="button"
-                            onClick={() => onReplace?.(project.name, alternativeProject)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              onReplace?.(project.name, alternativeProject)
+                            }}
                             className="text-[10px] px-2 py-0.5 rounded bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
                           >
                             Swap
@@ -259,19 +282,20 @@ function buildAvailableAlternatives(project: PayloadProject, allProjects: Payloa
       name: lookupKey,
       displayName: ALTERNATIVES_DISPLAY[lookupKey]?.displayName ?? lookupKey,
       reason: ALTERNATIVES_DISPLAY[lookupKey]?.reason ?? 'Original AI recommendation',
+      existingProject: findAlternativeProject(allProjects, lookupKey, project.name),
       isCurrent: false,
       isOriginal: true,
     })
   }
 
   for (const alternative of alternatives) {
-    // Filter out self-referential alternatives (same as current project)
     if (alternative.name.toLowerCase().trim() === project.name.toLowerCase().trim()) {
       continue
     }
-    
+
     allAlternatives.push({
       ...alternative,
+      existingProject: findAlternativeProject(allProjects, alternative.name, project.name),
       isCurrent: alternative.name === project.name,
       isOriginal: false,
     })
@@ -287,7 +311,15 @@ function buildAvailableAlternatives(project: PayloadProject, allProjects: Payloa
     })
   }
 
-  return allAlternatives.filter((alternative) =>
-    alternative.isCurrent || !allProjects.some((candidate) => candidate.name === alternative.name && candidate.name !== project.name),
-  )
+  return allAlternatives
+}
+
+function findAlternativeProject(allProjects: PayloadProject[], alternativeName: string, currentProjectName: string): PayloadProject | undefined {
+  const normalizedAlternativeName = alternativeName.toLowerCase().trim()
+  const normalizedCurrentProjectName = currentProjectName.toLowerCase().trim()
+
+  return allProjects.find((candidate) => {
+    const normalizedCandidateName = candidate.name.toLowerCase().trim()
+    return normalizedCandidateName === normalizedAlternativeName && normalizedCandidateName !== normalizedCurrentProjectName
+  })
 }
