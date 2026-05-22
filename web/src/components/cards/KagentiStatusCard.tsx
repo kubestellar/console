@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bot, Hammer, Wrench, Server } from 'lucide-react'
 import { useKagentiAgents, useKagentiBuilds, useKagentiTools } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
@@ -43,6 +44,7 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
 }
 
 export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
+  const { t } = useTranslation('cards')
   const {
     data: agents,
     isLoading: agentsLoading,
@@ -147,22 +149,22 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
         <MetricTile
           icon={Bot}
-          label="Agents"
+          label={t('kagenti.agents')}
           value={agents.length}
-          sub={`${stats.readyAgents} ready`}
+          sub={`${stats.readyAgents} ${t('kagenti.ready')}`}
           accent="bg-purple-500/20 text-purple-400"
         />
         <MetricTile
           icon={Wrench}
-          label="MCP Tools"
+          label={t('kagenti.mcpTools')}
           value={tools.length}
           accent="bg-cyan-500/20 text-cyan-400"
         />
         <MetricTile
           icon={Hammer}
-          label="Builds"
+          label={t('kagenti.builds')}
           value={builds.length}
-          sub={stats.activeBuilds > 0 ? `${stats.activeBuilds} active` : undefined}
+          sub={stats.activeBuilds > 0 ? `${stats.activeBuilds} ${t('kagenti.active')}` : undefined}
           accent="bg-blue-500/20 text-blue-400"
         />
       </div>
@@ -170,7 +172,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Framework distribution */}
       {maxFramework.length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Frameworks</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.frameworks')}</div>
           <div className="space-y-1">
             {maxFramework.slice(0, 4).map(([fw, count]) => (
               <div key={fw} className="flex items-center gap-2">
@@ -192,14 +194,14 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Cluster breakdown */}
       {Object.keys(stats.clusterAgents).length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Clusters</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.clusters')}</div>
           <div className="space-y-1">
             {Object.entries(stats.clusterAgents).map(([cluster, counts]) => (
               <div key={cluster} className="flex items-center gap-2 text-sm">
                 <Server className="w-3.5 h-3.5 text-muted-foreground/40" />
                 <span className="text-muted-foreground truncate flex-1">{cluster}</span>
-                <span className="text-purple-400">{counts.agents} agents</span>
-                <span className="text-cyan-400">{counts.tools} tools</span>
+                <span className="text-purple-400">{counts.agents} {t('kagenti.agentsLowercase')}</span>
+                <span className="text-cyan-400">{counts.tools} {t('kagenti.toolsLowercase')}</span>
               </div>
             ))}
           </div>
@@ -209,7 +211,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       {/* Recent builds */}
       {recentBuilds.length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Recent Builds</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.recentBuilds')}</div>
           <div className="space-y-1">
             {recentBuilds.map(b => (
               <div key={`${b.cluster}-${b.namespace}-${b.name}`} className="flex items-center gap-2 text-sm">

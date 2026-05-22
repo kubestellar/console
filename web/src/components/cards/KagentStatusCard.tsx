@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bot, Wrench, Cpu, Server } from 'lucide-react'
 import { useKagentCRDAgents, useKagentCRDTools, useKagentCRDModels } from '../../hooks/mcp/kagent_crds'
 import { useCardLoadingState } from './CardDataContext'
@@ -34,6 +35,7 @@ function MetricTile({ icon: Icon, label, value, sub, accent }: {
 }
 
 export function KagentStatusCard({ config }: KagentStatusCardProps) {
+  const { t } = useTranslation('cards')
   const {
     data: agents,
     isLoading: agentsLoading,
@@ -135,23 +137,23 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
         <MetricTile
           icon={Bot}
-          label="Agents"
+          label={t('kagenti.agents')}
           value={agents.length}
-          sub={`${stats.readyAgents} ready`}
+          sub={`${stats.readyAgents} ${t('kagenti.ready')}`}
           accent="bg-blue-500/20 text-blue-400"
         />
         <MetricTile
           icon={Wrench}
-          label="Tool Servers"
+          label={t('kagenti.toolServers')}
           value={tools.length}
-          sub={`${stats.totalDiscoveredTools} tools`}
+          sub={`${stats.totalDiscoveredTools} ${t('kagenti.toolsLowercase')}`}
           accent="bg-cyan-500/20 text-cyan-400"
         />
         <MetricTile
           icon={Cpu}
-          label="Model Configs"
+          label={t('kagenti.modelConfigs')}
           value={models.length}
-          sub={`${stats.providerCount} provider${stats.providerCount !== 1 ? 's' : ''}`}
+          sub={`${stats.providerCount} ${stats.providerCount !== 1 ? t('kagenti.providers') : t('kagenti.provider')}`}
           accent="bg-emerald-500/20 text-emerald-400"
         />
       </div>
@@ -159,7 +161,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
       {/* Runtime distribution */}
       {runtimeEntries.length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Runtimes</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.runtimes')}</div>
           <div className="space-y-1">
             {runtimeEntries.map(([rt, count]) => (
               <div key={rt} className="flex items-center gap-2">
@@ -181,15 +183,15 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
       {/* Cluster breakdown */}
       {Object.keys(stats.clusterData).length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Clusters</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.clusters')}</div>
           <div className="space-y-1">
             {Object.entries(stats.clusterData).map(([cluster, counts]) => (
               <div key={cluster} className="flex items-center gap-2 text-sm">
                 <Server className="w-3.5 h-3.5 text-muted-foreground/40" />
                 <span className="text-muted-foreground truncate flex-1">{cluster}</span>
-                <span className="text-blue-400">{counts.agents} agents</span>
-                <span className="text-cyan-400">{counts.tools} tools</span>
-                <span className="text-emerald-400">{counts.models} models</span>
+                <span className="text-blue-400">{counts.agents} {t('kagenti.agentsLowercase')}</span>
+                <span className="text-cyan-400">{counts.tools} {t('kagenti.toolsLowercase')}</span>
+                <span className="text-emerald-400">{counts.models} {t('kagenti.modelsLowercase')}</span>
               </div>
             ))}
           </div>

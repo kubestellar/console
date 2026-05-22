@@ -1487,7 +1487,22 @@
     "noAgents": "No agents discovered",
     "noTools": "No tools registered",
     "scanNow": "Scan Now",
-    "viewTopology": "View Topology"
+    "viewTopology": "View Topology",
+    "mcpTools": "MCP Tools",
+    "builds": "Builds",
+    "ready": "ready",
+    "active": "active",
+    "frameworks": "Frameworks",
+    "clusters": "Clusters",
+    "recentBuilds": "Recent Builds",
+    "agentsLowercase": "agents",
+    "toolsLowercase": "tools",
+    "toolServers": "Tool Servers",
+    "modelConfigs": "Model Configs",
+    "provider": "provider",
+    "providers": "providers",
+    "runtimes": "Runtimes",
+    "modelsLowercase": "models"
   },
   "prow": {
     "jobName": "Job Name",
