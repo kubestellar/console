@@ -2753,6 +2753,9 @@
       "failedToSaveLabels": "Failed to save labels",
       "failedToSaveAnnotations": "Failed to save annotations"
     },
+    "success": {
+      "podDeleted": "Pod {{name}} deleted successfully"
+    },
     "buildpack": {
       "noBuilds": "No builds found",
       "availableAIActions": "Available AI Actions",

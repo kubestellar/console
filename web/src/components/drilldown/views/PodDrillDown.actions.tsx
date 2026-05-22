@@ -186,6 +186,7 @@ Please:
           if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
             setDeleteError(msg.payload?.error || t('drilldown.errors.failedToDeletePod'))
           } else {
+            showToast(t('drilldown.success.podDeleted', { name: podName }), 'success')
             closeDrillDown()
           }
         }
