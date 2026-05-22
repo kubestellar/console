@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MS_PER_DAY } from '../../../lib/constants/time'
-import { getDemoGitHubData } from '../GitHubActivity.utils'
+import {
+  CURRENT_REPO_STORAGE_KEY,
+  getDemoGitHubData,
+  SAVED_REPOS_STORAGE_KEY,
+} from '../GitHubActivity.utils'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -142,9 +146,10 @@ describe('GitHubActivity', () => {
       refetch: mockRefetch,
     })
 
-    const { container } = render(<GitHubActivity />)
-    expect(container.querySelector('.h-full')).toBeTruthy()
+    render(<GitHubActivity />)
     expect(screen.queryByText('cards:github.fetchError')).not.toBeInTheDocument()
+    expect(screen.queryByText('cards:github.openPRs')).not.toBeInTheDocument()
+    expect(screen.queryByText(/#842/)).not.toBeInTheDocument()
   })
 
   it('renders error banner with message and retry when fetch fails', () => {
@@ -190,11 +195,8 @@ describe('GitHubActivity', () => {
 
     render(<GitHubActivity />)
 
-    const openPrsStat = screen.getByText('cards:github.openPRs').closest('div')?.parentElement
-    expect(openPrsStat).toBeTruthy()
-    const statBlock = within(openPrsStat as HTMLElement)
-    expect(statBlock.getByText(/1/)).toBeInTheDocument()
-    expect(statBlock.getByText(/cards:github\.stale/)).toBeInTheDocument()
+    expect(screen.getByText('cards:github.openPRs')).toBeInTheDocument()
+    expect(screen.getByText(/1\s+cards:github\.stale/)).toBeInTheDocument()
   })
 
   it('renders stale badge on an open PR list item older than 14 days', () => {
@@ -236,12 +238,12 @@ describe('GitHubActivity', () => {
     await user.click(screen.getByTitle('cards:githubActivity.addRepo'))
 
     expect(screen.getByText('facebook/react')).toBeInTheDocument()
-    expect(localStorage.getItem('github_activity_saved_repos')).toContain('facebook/react')
+    expect(localStorage.getItem(SAVED_REPOS_STORAGE_KEY)).toContain('facebook/react')
   })
 
   it('selects a different saved repo when clicking a repo chip', async () => {
     localStorage.setItem(
-      'github_activity_saved_repos',
+      SAVED_REPOS_STORAGE_KEY,
       JSON.stringify(['kubestellar/console', 'kubernetes/kubernetes']),
     )
 
@@ -253,7 +255,7 @@ describe('GitHubActivity', () => {
 
     await user.click(screen.getByText('kubernetes/kubernetes'))
 
-    expect(localStorage.getItem('github_activity_repo')).toBe('kubernetes/kubernetes')
+    expect(localStorage.getItem(CURRENT_REPO_STORAGE_KEY)).toBe('kubernetes/kubernetes')
   })
 
   it('renders demo PR content when cache returns demo fallback data', () => {

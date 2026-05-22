@@ -7,14 +7,13 @@ import { MS_PER_DAY } from '../../../lib/constants/time'
 import {
   DEFAULT_REPO,
   CURRENT_REPO_STORAGE_KEY,
+  SAVED_REPOS_STORAGE_KEY,
   getDemoGitHubData,
   getSavedRepos,
   githubFetchError,
   isStale,
   saveRepos,
 } from '../GitHubActivity.utils'
-
-const SAVED_REPOS_STORAGE_KEY = 'github_activity_saved_repos'
 
 function makeStorage(initial: Record<string, string> = {}): Storage {
   const store = { ...initial }
@@ -115,6 +114,10 @@ describe('getSavedRepos / saveRepos', () => {
     vi.stubGlobal('localStorage', makeStorage())
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('returns default repo when localStorage is empty', () => {
     expect(getSavedRepos()).toEqual([DEFAULT_REPO])
   })
@@ -132,11 +135,8 @@ describe('getSavedRepos / saveRepos', () => {
   })
 
   it('returns default repo when window is undefined (SSR)', () => {
-    const originalWindow = globalThis.window
-    // @ts-expect-error — simulate SSR environment
-    delete globalThis.window
+    vi.stubGlobal('window', undefined)
     expect(getSavedRepos()).toEqual([DEFAULT_REPO])
-    globalThis.window = originalWindow
   })
 
   it('saveRepos silently ignores localStorage quota errors', () => {
