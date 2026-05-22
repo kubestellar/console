@@ -2,7 +2,12 @@
  * Vitest handler tests for analytics-accm.mts (#15403, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { assertResponseHasNoSecrets, makeNetlifyRequest, readJson } from "./netlify-handler-helpers";
+import {
+  assertResponseHasNoSecrets,
+  FAKE_GITHUB_TOKEN,
+  makeNetlifyRequest,
+  readJson,
+} from "./netlify-handler-helpers";
 import type { ACCMData } from "../analytics-accm/helpers";
 
 const { mockGet, mockSet } = vi.hoisted(() => ({
@@ -79,7 +84,7 @@ describe("analytics-accm", () => {
     mockFetchWorkflowRuns.mockResolvedValue([]);
 
     envGet = vi.fn((key: string) => {
-      if (key === "GITHUB_TOKEN") return "gho_TEST_TOKEN_do_not_leak";
+      if (key === "GITHUB_TOKEN") return FAKE_GITHUB_TOKEN;
       return undefined;
     });
     vi.stubGlobal("Netlify", { env: { get: envGet } });
@@ -108,7 +113,7 @@ describe("analytics-accm", () => {
     expect(body.weeklyActivity).toHaveLength(1);
     expect(body.weeklyActivity[0].week).toBe("2026-W20");
     expect(mockFetchRecentPRs).not.toHaveBeenCalled();
-    assertResponseHasNoSecrets(JSON.stringify(body), ["gho_TEST_TOKEN_do_not_leak"]);
+    assertResponseHasNoSecrets(JSON.stringify(body), [FAKE_GITHUB_TOKEN]);
   });
 
   it("serves valid blob cache without calling gist or GitHub", async () => {
@@ -146,6 +151,6 @@ describe("analytics-accm", () => {
     expect(res.status).toBe(502);
     const body = await readJson<{ error: string }>(res);
     expect(body.error).toBe("Failed to fetch ACCM metrics");
-    assertResponseHasNoSecrets(JSON.stringify(body), ["gho_TEST_TOKEN_do_not_leak"]);
+    assertResponseHasNoSecrets(JSON.stringify(body), [FAKE_GITHUB_TOKEN]);
   });
 });
