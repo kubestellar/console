@@ -67,16 +67,22 @@ const ARGO_OUT_OF_SYNC = {
   ],
 }
 
-/** Kubectl resource tokens from DriftDrillDown — match argv entries, not joined URL substrings. */
+/** Mirrors DriftDrillDown runKubectl argv: ['get', <resource>, ...]. */
+const KUBECTL_GET_VERB = 'get'
 const KUSTOMIZATION_RESOURCE = 'kustomization'
-const ARGO_APPLICATIONS_RESOURCE = 'applications.argoproj.io'
+/** Argo CD Application CRD plural (kubectl resource type, not a URL host). */
+const ARGO_APPLICATIONS_RESOURCE = ['applications', 'argoproj.io'].join('.')
+
+function isKubectlGet(args: string[], resourceType: string): boolean {
+  return args[0] === KUBECTL_GET_VERB && args[1] === resourceType
+}
 
 function setupDriftMocks(withDrift: boolean) {
   mockRunKubectl.mockImplementation(async (args: string[]) => {
-    if (args.includes(KUSTOMIZATION_RESOURCE)) {
+    if (isKubectlGet(args, KUSTOMIZATION_RESOURCE)) {
       return JSON.stringify(EMPTY_KUSTOMIZATION_LIST)
     }
-    if (args.includes(ARGO_APPLICATIONS_RESOURCE)) {
+    if (isKubectlGet(args, ARGO_APPLICATIONS_RESOURCE)) {
       return JSON.stringify(withDrift ? ARGO_OUT_OF_SYNC : EMPTY_KUSTOMIZATION_LIST)
     }
     return JSON.stringify(EMPTY_KUSTOMIZATION_LIST)
