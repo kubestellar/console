@@ -189,7 +189,7 @@ describe('EventsTimeline', () => {
   it('passes array-backed chart data to ECharts', () => {
     mockEvents.mockReturnValue({
       events: [
-        { type: 'Warning', reason: 'BackOff', message: 'Pod is backing off', object: 'Pod/app-1', namespace: 'default', cluster: 'prod-cluster', count: '32', lastSeen: new Date(Date.now() - 1000).toISOString() },
+        { type: 'Warning', reason: 'BackOff', message: 'Pod is backing off', object: 'Pod/app-1', namespace: 'default', cluster: 'prod-cluster', count: '32', lastSeen: new Date(Date.now() - 30 * 60 * 1000).toISOString() },
       ],
       isLoading: false,
       isRefreshing: false,
@@ -212,7 +212,7 @@ describe('EventsTimeline', () => {
     render(<EventsTimeline />)
 
     expect(screen.getByTestId('events-timeline-chart')).toBeTruthy()
-    const chartProps = mockLazyEChart.mock.calls[0]?.[0] as { option: ChartOptionShape }
+    const chartProps = mockLazyEChart.mock.calls.at(-1)?.[0] as { option: ChartOptionShape }
     expect(Array.isArray(chartProps.option.xAxis.data)).toBe(true)
     expect(Array.isArray(chartProps.option.series)).toBe(true)
     expect(Array.isArray(chartProps.option.series[0]?.data)).toBe(true)
