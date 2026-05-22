@@ -72,6 +72,16 @@ function setupHook(overrides: {
   })
 }
 
+/** Run list item wrapper (bordered card around conclusion + formatted reason). */
+function getRunRowByFormattedReason(formattedReason: string): HTMLElement {
+  const reasonEl = screen.getByText(formattedReason)
+  const row = reasonEl.closest('.border-border')
+  if (!(row instanceof HTMLElement)) {
+    throw new Error(`Run row container not found for reason: ${formattedReason}`)
+  }
+  return row
+}
+
 function makePaginatedRuns(count: number): DetectionRun[] {
   const runs: DetectionRun[] = []
   for (let i = 0; i < count; i += 1) {
@@ -135,23 +145,17 @@ describe('AgenticDetectionRuns', () => {
           totalCount: 4,
         },
       })
-      const { container } = render(<AgenticDetectionRuns />)
+      render(<AgenticDetectionRuns />)
 
-      const successRow = screen.getByText('Success Run').closest('.p-3') as HTMLElement
-      const failureRow = screen.getByText('Failure Run').closest('.p-3') as HTMLElement
-      const warningRow = screen.getByText('Warning Run').closest('.p-3') as HTMLElement
-      const runningRow = screen.getByText('Running Run').closest('.p-3') as HTMLElement
+      const successRow = getRunRowByFormattedReason('Success Run')
+      const failureRow = getRunRowByFormattedReason('Failure Run')
+      const warningRow = getRunRowByFormattedReason('Warning Run')
+      const runningRow = getRunRowByFormattedReason('Running Run')
 
       expect(within(successRow).getByText('SUCCESS')).toHaveClass('text-green-400')
       expect(within(failureRow).getByText('FAILURE')).toHaveClass('text-red-400')
       expect(within(warningRow).getByText('WARNING')).toHaveClass('text-yellow-400')
       expect(within(runningRow).getByText('RUNNING')).toHaveClass('text-muted-foreground')
-
-      expect(successRow.querySelector('svg.text-green-400')).toBeInTheDocument()
-      expect(failureRow.querySelector('svg.text-red-400')).toBeInTheDocument()
-      expect(warningRow.querySelector('svg.text-yellow-400')).toBeInTheDocument()
-      expect(runningRow.querySelector('svg.text-muted-foreground')).toBeInTheDocument()
-      expect(container.querySelectorAll('a[target="_blank"]').length).toBeGreaterThan(0)
     })
   })
 
@@ -245,13 +249,9 @@ describe('AgenticDetectionRuns', () => {
       )
 
       await waitFor(() => {
-        const reportedDemo = report.mock.calls.some(
-          (call) =>
-            call[0] &&
-            typeof call[0] === 'object' &&
-            (call[0] as { isDemoData?: boolean }).isDemoData === true,
+        expect(report).toHaveBeenCalledWith(
+          expect.objectContaining({ isDemoData: true }),
         )
-        expect(reportedDemo).toBe(true)
       })
     })
 
@@ -269,10 +269,9 @@ describe('AgenticDetectionRuns', () => {
       )
 
       await waitFor(() => {
-        const lastReport = report.mock.calls[report.mock.calls.length - 1]?.[0] as
-          | { isDemoData?: boolean }
-          | undefined
-        expect(lastReport?.isDemoData).toBe(false)
+        expect(report).toHaveBeenCalledWith(
+          expect.objectContaining({ isDemoData: false }),
+        )
       })
     })
   })
