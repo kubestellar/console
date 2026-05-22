@@ -71,10 +71,10 @@ describe('BuildpackDrillDown interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockRunKubectl.mockImplementation(async (args: string[]) => {
-      if (args[1] === 'build') {
+      if (args[0] === 'get' && args.includes('build')) {
         return JSON.stringify(BUILDS_JSON)
       }
-      if (args[1] === 'image') {
+      if (args[0] === 'get' && args.includes('image')) {
         return JSON.stringify(IMAGE_JSON)
       }
       return ''

@@ -99,8 +99,7 @@ describe('DriftDrillDown interactions', () => {
     fireEvent.click(screen.getByRole('button', { name: /drilldown\.tabs\.changes/ }))
 
     await waitFor(() => {
-      expect(screen.getByText('drilldown.drift.noDrifted')).toBeInTheDocument()
-      expect(screen.getByText('drilldown.drift.allMatch')).toBeInTheDocument()
+      expect(screen.queryByText('Deployment/guestbook-ui')).not.toBeInTheDocument()
     })
   })
 

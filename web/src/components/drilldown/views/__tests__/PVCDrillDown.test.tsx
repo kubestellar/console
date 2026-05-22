@@ -111,7 +111,7 @@ describe('PVCDrillDown interactions', () => {
 
     renderWithDrillDown(<PVCDrillDown data={BOUND_DATA} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'drilldown.describe' }))
+    fireEvent.click(screen.getByRole('button', { name: /^(drilldown\.describe|Describe)$/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/Name: data-vol/)).toBeInTheDocument()

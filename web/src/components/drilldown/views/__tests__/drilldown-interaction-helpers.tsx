@@ -16,10 +16,16 @@ export const mockStartMission = vi.fn()
 export const mockRunKubectl = vi.fn()
 export const mockRunHelm = vi.fn()
 
-/** Standard i18n mock — returns translation keys as visible text. */
+type TranslationOptions = { defaultValue?: string; [key: string]: unknown }
+
+/** Standard i18n mock — keys by default; honors i18next positional or object defaults. */
 export function mockUseTranslation() {
   return {
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: string | TranslationOptions) => {
+      if (typeof options === 'string') return options
+      if (options && typeof options.defaultValue === 'string') return options.defaultValue
+      return key
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }
 }
