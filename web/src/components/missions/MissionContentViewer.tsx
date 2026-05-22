@@ -319,7 +319,16 @@ export function useMissionContentViewer({
     }
   }, [handleImport, showToast, t])
 
+  const abortControllerRef = useRef<AbortController | null>(null)
+
   const selectNode = useCallback(async (node: TreeNode) => {
+    // Cancel any in-flight fetch from previous selectNode call
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     setSelectedMission(null)
     setUnstructuredContent(null)
     setRawContent(null)
@@ -330,12 +339,21 @@ export function useMissionContentViewer({
       setLoading(true)
       try {
         const entries = await fetchDirectoryEntries(node)
-        setDirectoryEntries(entries)
-      } catch {
-        setDirectoryEntries([])
-        showToast(t('missions.browser.loadDirectoryFailed'), 'error')
+        // Only update state if this fetch wasn't aborted
+        if (!controller.signal.aborted) {
+          setDirectoryEntries(entries)
+        }
+      } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') return
+        if (!controller.signal.aborted) {
+          setDirectoryEntries([])
+          showToast(t('missions.browser.loadDirectoryFailed'), 'error')
+        }
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
       }
       return
     }
@@ -344,14 +362,23 @@ export function useMissionContentViewer({
     try {
       const content = node.source === 'local' ? (node.content ?? null) : await fetchNodeFileContent(node)
       if (content === null) return
-      setDirectoryEntries([])
-      applySelectedFileContent(node, content)
-    } catch {
-      setRawContent(null)
-      setSelectedMission(null)
-      showToast(t('missions.browser.loadFileFailed'), 'error')
+      // Only update state if this fetch wasn't aborted
+      if (!controller.signal.aborted) {
+        setDirectoryEntries([])
+        applySelectedFileContent(node, content)
+      }
+    } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') return
+      if (!controller.signal.aborted) {
+        setRawContent(null)
+        setSelectedMission(null)
+        showToast(t('missions.browser.loadFileFailed'), 'error')
+      }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) {
+        setLoading(false)
+      }
     }
   }, [applySelectedFileContent, showToast, t])
 
