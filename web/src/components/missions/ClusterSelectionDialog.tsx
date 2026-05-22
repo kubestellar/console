@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react'
 import { Server, Check, CheckCheck, RefreshCw, Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { useClusters } from '../../hooks/mcp/clusters'
@@ -22,6 +23,7 @@ interface ClusterSelectionDialogProps {
 }
 
 export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel }: ClusterSelectionDialogProps) {
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
@@ -80,7 +82,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
 
   return (
     <BaseModal isOpen={open} onClose={onCancel} size="md">
-      <BaseModal.Header title="Select Target Clusters" description={missionTitle} icon={Server} onClose={onCancel} />
+      <BaseModal.Header title={t('missions.browser.clusterSelection.title')} description={missionTitle} icon={Server} onClose={onCancel} />
 
       <BaseModal.Content noPadding>
         {/* Search + bulk actions */}
@@ -90,7 +92,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search clusters..."
+                placeholder={t('missions.browser.clusterSelection.searchPlaceholder')}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
@@ -105,28 +107,28 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
             className="flex items-center gap-1 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
           >
             <CheckCheck className="w-3 h-3" />
-            {allSelected ? 'Deselect All' : 'Select All'}
+            {allSelected ? t('missions.browser.clusterSelection.deselectAll') : t('missions.browser.clusterSelection.selectAll')}
           </button>
           <button
             onClick={invertSelection}
             className="flex items-center gap-1 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
           >
             <RefreshCw className="w-3 h-3" />
-            Invert
+            {t('missions.browser.clusterSelection.invert')}
           </button>
           {selected.size > 0 && (
-            <span className="ml-auto text-2xs text-purple-400">{selected.size} selected</span>
+            <span className="ml-auto text-2xs text-purple-400">{t('missions.browser.clusterSelection.selected', { count: selected.size })}</span>
           )}
         </div>
 
         {/* Cluster list */}
         <div className="p-3 flex-1 overflow-y-auto scroll-enhanced space-y-1">
           {isLoading && (
-            <p className="text-xs text-muted-foreground text-center py-4">Loading clusters...</p>
+            <p className="text-xs text-muted-foreground text-center py-4">{t('missions.browser.clusterSelection.loading')}</p>
           )}
 
           {!isLoading && onlineClusters.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No online clusters found</p>
+            <p className="text-xs text-muted-foreground text-center py-4">{t('missions.browser.clusterSelection.noOnlineClusters')}</p>
           )}
 
           {filteredOnline.map(cluster => {
@@ -178,7 +180,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-muted-foreground truncate">{cluster.name}</p>
-                  <p className="text-2xs text-red-400">Offline</p>
+                  <p className="text-2xs text-red-400">{t('missions.browser.clusterSelection.offline')}</p>
                 </div>
               </div>
             )
@@ -192,7 +194,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
           size="sm"
           onClick={() => onSelect([])}
         >
-          Skip (use current context)
+          {t('missions.browser.clusterSelection.skip')}
         </Button>
         <Button
           variant="accent"
@@ -201,7 +203,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
           disabled={selected.size === 0}
           className="ml-auto"
         >
-          Run on {selected.size || '...'} cluster{selected.size !== 1 ? 's' : ''}
+          {t('missions.browser.clusterSelection.runOnClusters', { count: selected.size || 0 })}
         </Button>
       </BaseModal.Footer>
     </BaseModal>

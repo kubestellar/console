@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { Loader2, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import type { FileScanResult, ScanFinding } from '../../lib/missions/types'
 import { PROGRESS_SIMULATION_MS } from '../../lib/constants/network'
@@ -24,6 +25,7 @@ export function ScanProgressOverlay({
   onComplete,
   onDismiss,
 }: ScanProgressOverlayProps) {
+  const { t } = useTranslation()
   const [visibleFindings, setVisibleFindings] = useState<ScanFinding[]>([])
 
   useEffect(() => {
@@ -74,8 +76,8 @@ export function ScanProgressOverlay({
             <div role="status" aria-live="polite" aria-label="Scanning mission file">
               <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
             </div>
-            <p className="text-sm font-medium text-foreground">Scanning mission file…</p>
-            <p className="text-xs text-muted-foreground">Validating schema and checking content</p>
+            <p className="text-sm font-medium text-foreground">{t('missions.scan.scanningFile')}</p>
+            <p className="text-xs text-muted-foreground">{t('missions.scan.validatingContent')}</p>
           </div>
         )}
 
@@ -88,7 +90,7 @@ export function ScanProgressOverlay({
             )}
 
             <p className={cn('text-sm font-medium', result.valid ? 'text-green-400' : 'text-red-400')}>
-              {result.valid ? 'Scan passed' : 'Issues found'}
+              {result.valid ? t('missions.scan.scanPassed') : t('missions.scan.issuesFound')}
             </p>
 
             {visibleFindings.length > 0 && (
@@ -110,7 +112,7 @@ export function ScanProgressOverlay({
                 onClick={onDismiss}
                 className="mt-2 px-3 py-1.5 text-xs bg-secondary hover:bg-secondary/80 text-foreground rounded-lg transition-colors"
               >
-                Dismiss
+                {t('missions.scan.dismiss')}
               </button>
             )}
           </div>

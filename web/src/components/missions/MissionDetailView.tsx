@@ -291,7 +291,7 @@ export function MissionDetailView({
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to listing
+          {t('missions.detail.links.backToListing')}
         </button>
       )}
 
@@ -450,11 +450,11 @@ export function MissionDetailView({
 
           {/* Section completeness badges */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sections:</span>
-            <SectionBadge present={(mission.steps || []).length > 0} label="Install" />
-            <SectionBadge present={(mission.uninstall || []).length > 0} label="Uninstall" />
-            <SectionBadge present={(mission.upgrade || []).length > 0} label="Upgrade" />
-            <SectionBadge present={(mission.troubleshooting || []).length > 0} label="Troubleshooting" />
+            <span className="text-xs text-muted-foreground">{t('missions.detail.sections.sections')}</span>
+            <SectionBadge present={(mission.steps || []).length > 0} label={t('missions.detail.sections.install')} />
+            <SectionBadge present={(mission.uninstall || []).length > 0} label={t('missions.detail.sections.uninstall')} />
+            <SectionBadge present={(mission.upgrade || []).length > 0} label={t('missions.detail.sections.upgrade')} />
+            <SectionBadge present={(mission.troubleshooting || []).length > 0} label={t('missions.detail.sections.troubleshooting')} />
           </div>
 
           {/* Source links */}
@@ -468,7 +468,7 @@ export function MissionDetailView({
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Repository
+                  {t('missions.detail.links.repository')}
                 </a>
               )}
               {sourceUrls.docs && sourceUrls.docs !== sourceUrls.repo && (
@@ -479,7 +479,7 @@ export function MissionDetailView({
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Documentation
+                  {t('missions.detail.links.documentation')}
                 </a>
               )}
               {sourceUrls.helm && (
@@ -490,7 +490,7 @@ export function MissionDetailView({
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Helm Chart
+                  {t('missions.detail.links.helmChart')}
                 </a>
               )}
               {sourceUrls.issue && (
@@ -501,7 +501,7 @@ export function MissionDetailView({
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Issue
+                  {t('missions.detail.links.issue')}
                 </a>
               )}
               {sourceUrls.pr && (
@@ -512,7 +512,7 @@ export function MissionDetailView({
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ExternalLink className="w-3 h-3" />
-                  Pull Request
+                  {t('missions.detail.links.pullRequest')}
                 </a>
               )}
             </div>
@@ -521,7 +521,7 @@ export function MissionDetailView({
           {/* Prerequisites */}
           {mission.prerequisites && mission.prerequisites.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-foreground mb-2">Prerequisites</h3>
+              <h3 className="text-sm font-medium text-foreground mb-2">{t('missions.detail.sections.prerequisites')}</h3>
               <ul className="space-y-1">
                 {mission.prerequisites.map((p, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -543,7 +543,7 @@ export function MissionDetailView({
                   onClick={onRetry}
                   className="shrink-0 px-3 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors"
                 >
-                  Retry
+                  {t('missions.detail.sections.retry')}
                 </button>
               )}
             </div>

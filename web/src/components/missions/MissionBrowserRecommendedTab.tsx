@@ -88,8 +88,8 @@ export function MissionBrowserRecommendedTab({
             <div className="text-sm space-y-2">
               <p className="font-medium text-yellow-300">
                 {tokenError === 'rate_limited'
-                  ? 'GitHub API rate limit reached'
-                  : 'GitHub token is invalid or expired'}
+                  ? t('missions.recommended.tokenError.rateLimited')
+                  : t('missions.recommended.tokenError.tokenInvalid')}
               </p>
               <p className="text-muted-foreground">
                 The fix browser needs a GitHub personal access token to fetch missions. Add one to
@@ -138,7 +138,7 @@ export function MissionBrowserRecommendedTab({
       {/* Recommended for You / Explore CNCF Fixes */}
       {(recommendations.length > 0 || loadingRecommendations) && (
         <CollapsibleSection
-          title={hasCluster ? 'Recommended for Your Cluster' : 'Explore CNCF Fixes'}
+          title={hasCluster ? t('missions.recommended.title.withCluster') : t('missions.recommended.title.withoutCluster')}
           defaultOpen={true}
           badge={
             <span className="flex items-center gap-2 text-xs text-purple-400">
@@ -152,7 +152,7 @@ export function MissionBrowserRecommendedTab({
                   resetMissionCache()
                 }}
                 className="p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
-                title="Refresh recommendations"
+                title={t('missions.recommended.refreshRecommendations')}
               >
                 <RefreshCw className="w-3 h-3" />
               </button>
@@ -164,8 +164,8 @@ export function MissionBrowserRecommendedTab({
           {!loadingRecommendations && (
             <p className="text-xs text-muted-foreground mb-3 -mt-1">
               {hasCluster
-                ? '🎯 Matched based on your cluster resources, labels, and detected issues'
-                : '🌐 Showing popular CNCF community fixes — connect a cluster for personalized recommendations'}
+                ? t('missions.recommended.subtitle.withCluster')
+                : t('missions.recommended.subtitle.withoutCluster')}
             </p>
           )}
 
@@ -174,10 +174,10 @@ export function MissionBrowserRecommendedTab({
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
                 <span className="flex-1">
-                  {searchProgress.step === 'Connecting' && 'Connecting to knowledge base…'}
+                  {searchProgress.step === 'Connecting' && t('missions.recommended.progress.connecting')}
                   {searchProgress.step === 'Scanning' && (
                     <>
-                      Scanning{' '}
+                      {t('missions.recommended.progress.scanning')}{' '}
                       <span className="text-purple-400 font-mono">{searchProgress.detail}</span>
                     </>
                   )}
@@ -185,7 +185,7 @@ export function MissionBrowserRecommendedTab({
                 </span>
                 {searchProgress.found > 0 && (
                   <span className="text-xs text-purple-400 tabular-nums">
-                    {searchProgress.found} found · {searchProgress.scanned} scanned
+                    {t('missions.recommended.progress.found', { found: searchProgress.found, scanned: searchProgress.scanned })}
                   </span>
                 )}
               </div>
@@ -238,7 +238,7 @@ export function MissionBrowserRecommendedTab({
             onClick={() => emitFixerGitHubLink()}
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            Browse all fixes on GitHub
+            {t('missions.recommended.browseGitHub')}
           </a>
           {searchProgress.step === 'Done' && searchProgress.found > 0 && (
             <span className="text-xs text-muted-foreground/60 ml-auto">{searchProgress.detail}</span>
@@ -267,9 +267,9 @@ export function MissionBrowserRecommendedTab({
           onImport={onImportDirectoryEntry}
         />
       ) : selectedPath ? (
-        <EmptyState message="No files in this directory" />
+        <EmptyState message={t('missions.browser.emptyState.noFiles')} />
       ) : (
-        <EmptyState message="Select a folder from the sidebar to browse missions" />
+        <EmptyState message={t('missions.browser.emptyState.selectFolder')} />
       )}
     </>
   )

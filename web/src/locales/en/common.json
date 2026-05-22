@@ -4625,7 +4625,28 @@
       "importSuccess": "Imported \"{{title}}\" successfully.",
       "importFileFailed": "Failed to import file. The file may be unavailable or the network request failed.",
       "loadDirectoryFailed": "Failed to load directory contents. The directory may be unavailable or the network request failed.",
-      "loadFileFailed": "Failed to load file. The file may be unavailable or the network request failed."
+      "loadFileFailed": "Failed to load file. The file may be unavailable or the network request failed.",
+      "emptyState": {
+        "failed": "Failed to load missions",
+        "retry": "Retry",
+        "noFiles": "No files in this directory",
+        "selectFolder": "Select a folder from the sidebar to browse missions"
+      },
+      "clusterSelection": {
+        "title": "Select Target Clusters",
+        "deselectAll": "Deselect All",
+        "selectAll": "Select All",
+        "invert": "Invert",
+        "loading": "Loading clusters...",
+        "noOnlineClusters": "No online clusters found",
+        "offline": "Offline",
+        "skip": "Skip (use current context)",
+        "runOnClusters": "Run on {{count}} cluster",
+        "runOnClusters_one": "Run on {{count}} cluster",
+        "runOnClusters_other": "Run on {{count}} clusters",
+        "searchPlaceholder": "Search clusters...",
+        "selected": "{{count}} selected"
+      }
     },
     "kagenti": {
       "providerUnavailableTitle": "Kagenti provider unavailable",
@@ -4671,7 +4692,52 @@
         "preview": "Preview",
         "viewRaw": "View Raw",
         "improve": "Improve"
+      },
+      "sections": {
+        "install": "Install",
+        "uninstall": "Uninstall",
+        "upgrade": "Upgrade",
+        "troubleshooting": "Troubleshooting",
+        "sections": "Sections:",
+        "prerequisites": "Prerequisites",
+        "retry": "Retry"
+      },
+      "links": {
+        "repository": "Repository",
+        "documentation": "Documentation",
+        "helmChart": "Helm Chart",
+        "issue": "Issue",
+        "pullRequest": "Pull Request",
+        "backToListing": "Back to listing"
       }
+    },
+    "scan": {
+      "scanningFile": "Scanning mission file…",
+      "validatingContent": "Validating schema and checking content",
+      "scanPassed": "Scan passed",
+      "issuesFound": "Issues found",
+      "dismiss": "Dismiss"
+    },
+    "recommended": {
+      "tokenError": {
+        "rateLimited": "GitHub API rate limit reached",
+        "tokenInvalid": "GitHub token is invalid or expired"
+      },
+      "title": {
+        "withCluster": "Recommended for Your Cluster",
+        "withoutCluster": "Explore CNCF Fixes"
+      },
+      "subtitle": {
+        "withCluster": "🎯 Matched based on your cluster resources, labels, and detected issues",
+        "withoutCluster": "🌐 Showing popular CNCF community fixes — connect a cluster for personalized recommendations"
+      },
+      "progress": {
+        "connecting": "Connecting to knowledge base…",
+        "scanning": "Scanning",
+        "found": "{{found}} found · {{scanned}} scanned"
+      },
+      "browseGitHub": "Browse all fixes on GitHub",
+      "refreshRecommendations": "Refresh recommendations"
     }
   },
   "confirmMissionPrompt": {
