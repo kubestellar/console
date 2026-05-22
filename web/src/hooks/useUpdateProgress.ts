@@ -53,6 +53,10 @@ export function useUpdateProgress() {
   const progressRef = useRef<UpdateProgress | null>(null)
   /** Track current reconnect attempt number */
   const reconnectAttemptsRef = useRef(0)
+  const isMountedRef = useRef(true)
+  const backendPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const backendPollSleepResolveRef = useRef<(() => void) | null>(null)
+  const backendPollAbortRef = useRef<AbortController | null>(null)
 
   const staleDetectionRef = useRef<WsStaleDetectionController | null>(null)
 
@@ -122,16 +126,43 @@ export function useUpdateProgress() {
   }, [])
 
   useEffect(() => {
-    let unmounted = false
+    isMountedRef.current = true
     let reconnectTimer: ReturnType<typeof setTimeout>
+
+    const clearBackendPollTimer = () => {
+      if (backendPollTimerRef.current) {
+        clearTimeout(backendPollTimerRef.current)
+        backendPollTimerRef.current = null
+      }
+    }
+
+    const stopBackendPolling = () => {
+      backendPollAbortRef.current?.abort()
+      backendPollAbortRef.current = null
+      clearBackendPollTimer()
+      backendPollSleepResolveRef.current?.()
+      backendPollSleepResolveRef.current = null
+    }
+
+    const waitForPollInterval = () => new Promise<void>(resolve => {
+      backendPollSleepResolveRef.current = () => {
+        backendPollSleepResolveRef.current = null
+        resolve()
+      }
+      backendPollTimerRef.current = setTimeout(() => {
+        backendPollTimerRef.current = null
+        backendPollSleepResolveRef.current?.()
+      }, BACKEND_POLL_MS)
+    })
 
     // After kc-agent reconnects during a restart, the Go backend may still
     // be building/starting. Poll /health before showing "done" so the
     // "Refresh" link only appears when the backend is actually ready.
     async function waitForBackend() {
+      stopBackendPolling()
       const pctPerAttempt = (RESTART_MAX_PCT - RESTART_BASE_PCT) / BACKEND_POLL_MAX
       for (let i = 0; i < BACKEND_POLL_MAX; i++) {
-        if (unmounted) return
+        if (!isMountedRef.current) return
 
         const pct = Math.round(RESTART_BASE_PCT + (i * pctPerAttempt))
         const elapsed = Math.round((i * BACKEND_POLL_MS) / MS_PER_SECOND)
@@ -152,24 +183,39 @@ export function useUpdateProgress() {
 
         setProgress({ status: 'restarting', message, progress: pct })
 
+        const controller = new AbortController()
+        backendPollAbortRef.current = controller
+        const fetchTimeout = setTimeout(() => {
+          controller.abort()
+        }, FETCH_DEFAULT_TIMEOUT_MS)
+
         try {
-          const resp = await fetch('/health', { cache: 'no-store', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+          const resp = await fetch('/health', { cache: 'no-store', signal: controller.signal })
           if (resp.ok) {
             const data = await resp.json()
             // The loading server returns {"status":"starting"} while the backend
             // initializes. Only show "done" when the real server returns "ok" —
             // otherwise the user refreshes into a loading page or blank screen.
             if (data.status === 'ok') {
+              if (!isMountedRef.current) return
               setProgress({ status: 'done', message: 'Update complete — restart successful', progress: 100 })
               return
             }
           }
         } catch {
           // Backend not ready yet
+        } finally {
+          clearTimeout(fetchTimeout)
+          if (backendPollAbortRef.current === controller) {
+            backendPollAbortRef.current = null
+          }
         }
-        if (unmounted) return
-        await new Promise(r => setTimeout(r, BACKEND_POLL_MS))
+
+        if (!isMountedRef.current) return
+        await waitForPollInterval()
       }
+
+      if (!isMountedRef.current) return
       // Timed out — show done anyway (backend might be on a different port)
       setProgress({ status: 'done', message: 'Update complete — restart successful', progress: 100 })
     }
@@ -190,7 +236,7 @@ export function useUpdateProgress() {
           }
 
           if (currentProgress && currentProgress.status === 'restarting') {
-            waitForBackend()
+            void waitForBackend()
           }
         }
 
@@ -206,6 +252,7 @@ export function useUpdateProgress() {
                 staleDetection.start()
               } else {
                 staleDetection.stop()
+                stopBackendPolling()
               }
 
               setProgress(nextProgress)
@@ -229,8 +276,8 @@ export function useUpdateProgress() {
           console.debug(`[UpdateProgress] Connection lost, reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
           reconnectTimer = setTimeout(() => {
-            if (!unmounted) {
-              connect(reconnectAttemptsRef.current + 1)
+            if (isMountedRef.current) {
+              void connect(reconnectAttemptsRef.current + 1)
             }
           }, delay)
         }
@@ -249,8 +296,8 @@ export function useUpdateProgress() {
         console.debug(`[UpdateProgress] Agent unavailable, retrying in ${Math.round(delay)}ms (attempt ${reconnectAttemptsRef.current + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
         reconnectTimer = setTimeout(() => {
-          if (!unmounted) {
-            connect(reconnectAttemptsRef.current + 1)
+          if (isMountedRef.current) {
+            void connect(reconnectAttemptsRef.current + 1)
           }
         }, delay)
       }
@@ -259,11 +306,12 @@ export function useUpdateProgress() {
     // Skip agent WebSocket on Netlify deployments (no local agent available)
     if (isNetlifyDeployment) return
 
-    connect()
+    void connect()
 
     return () => {
-      unmounted = true
+      isMountedRef.current = false
       clearTimeout(reconnectTimer)
+      stopBackendPolling()
       staleDetection.stop()
       if (wsRef.current) {
         wsRef.current.close()
