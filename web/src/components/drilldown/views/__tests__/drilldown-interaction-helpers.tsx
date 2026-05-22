@@ -19,7 +19,7 @@ export const mockRunHelm = vi.fn()
 /** Standard i18n mock — returns translation keys as visible text. */
 export function mockUseTranslation() {
   return {
-    t: (key: string) => key,
+    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }
 }

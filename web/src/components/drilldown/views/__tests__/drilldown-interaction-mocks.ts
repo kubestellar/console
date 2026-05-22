@@ -53,7 +53,15 @@ vi.mock('../../../../lib/analytics', () => ({
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => mockUseTranslation(),
-  Trans: ({ children }: { children: ReactNode }) => children,
+  Trans: ({
+    children,
+    defaults,
+    i18nKey,
+  }: {
+    children?: ReactNode
+    defaults?: string
+    i18nKey?: string
+  }) => children ?? defaults ?? i18nKey ?? null,
 }))
 
 vi.mock('../../../../hooks/useLocalAgent', () => ({

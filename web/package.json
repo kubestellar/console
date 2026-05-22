@@ -17,6 +17,7 @@
     "test:netlify-identity": "vitest run netlify/functions/__tests__/identity-oidc-rbac.test.ts",
     "test:drilldown-gaps": "vitest run src/components/drilldown/views/__tests__ -t \"DrillDown interactions\"",
     "test:netlify-missions-analytics": "vitest run netlify/functions/__tests__/missions-browse.test.ts netlify/functions/__tests__/missions-scores.test.ts netlify/functions/__tests__/analytics-dashboard.test.ts netlify/functions/__tests__/analytics-accm.test.ts",
+    "test:drilldown-views": "vitest run src/components/drilldown/views/__tests__/KustomizationDrillDown.test.tsx src/components/drilldown/views/__tests__/DriftDrillDown.test.tsx src/components/drilldown/views/__tests__/BuildpackDrillDown.test.tsx src/components/drilldown/views/__tests__/PVCDrillDown.test.tsx",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:e2e": "npm run build && playwright test",
