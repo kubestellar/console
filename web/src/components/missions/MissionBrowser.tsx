@@ -4,7 +4,7 @@
  * Full-screen file-explorer-style dialog for browsing and importing mission files.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../lib/auth'
 import { NAVBAR_HEIGHT_PX } from '../../lib/constants/ui'
 import { useClusterContext } from '../../hooks/useClusterContext'
@@ -48,7 +48,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [activeTab, setActiveTab] = useState<BrowserTab>('recommended')
   const [isDragging, setIsDragging] = useState(false)
 
-  const refreshTimerRef = useRef<number | null>(null)
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current !== null) {
+      window.clearTimeout(refreshTimerRef.current)
+      refreshTimerRef.current = null
+    }
+  }, [])
+
+  const handleClose = useCallback(() => {
+    clearRefreshTimer()
+    onClose()
+  }, [clearRefreshTimer, onClose])
 
   const watchedSources = useMissionWatchedSources()
   const recommendations = useMissionRecommendations(isOpen, clusterContext)
@@ -68,7 +80,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     isOpen,
     activeTab,
     setActiveTab,
-    onClose,
+    onClose: handleClose,
     onImport,
     initialMission,
     installerMissions: recommendations.installerMissions,
@@ -102,20 +114,21 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') handleClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, handleClose])
 
   useEffect(() => {
-    return () => {
-      if (refreshTimerRef.current !== null) {
-        window.clearTimeout(refreshTimerRef.current)
-        refreshTimerRef.current = null
-      }
+    if (!isOpen) {
+      clearRefreshTimer()
     }
-  }, [isOpen])
+
+    return () => {
+      clearRefreshTimer()
+    }
+  }, [clearRefreshTimer, isOpen])
 
   const handleTabChange = (tab: BrowserTab) => {
     content.resetContentView()
@@ -129,13 +142,11 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
 
   const handleRefreshNode = (node: TreeNode) => {
     tree.refreshNode(node)
-    if (refreshTimerRef.current !== null) {
-      window.clearTimeout(refreshTimerRef.current)
-    }
+    clearRefreshTimer()
     refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null
       void tree.toggleNode(node)
       void handleSelectNode(node)
-      refreshTimerRef.current = null
     }, TREE_REFRESH_DELAY_MS)
   }
 
@@ -201,7 +212,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
           activeFilterCount={filters.activeFilterCount}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          onClose={onClose}
+          onClose={handleClose}
           isSmallScreen={isSmallScreen}
         />
 
