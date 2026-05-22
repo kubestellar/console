@@ -35,14 +35,29 @@ function runBadInputSuite(name: string, handler: HandlerFn, path: string) {
       expect(body.error).toContain("Invalid cluster");
     });
 
-    it("returns 405 for POST", async () => {
+    it("returns 405 for POST with Allow header", async () => {
       const res = await handler(makeIdentityRequest(path, { method: "POST" }));
       expect(res.status).toBe(405);
+      expect(res.headers.get("Allow")).toBe("GET, OPTIONS");
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toContain("Method not allowed");
     });
   });
 }
+
+describe("wrapIdentityDemoResponse — CORS preflight", () => {
+  it("returns 204 OPTIONS with Access-Control-Allow-Methods and Allow-Headers", async () => {
+    const res = await oidcSummaryHandler(
+      makeIdentityRequest(API_OIDC_SUMMARY, { method: "OPTIONS" }),
+    );
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Methods")).toBe("GET, OPTIONS");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toBe("Content-Type");
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://console.kubestellar.io",
+    );
+  });
+});
 
 function runUpstreamErrorSuite(name: string, handler: HandlerFn, path: string) {
   describe(`${name} — upstream/serialization error`, () => {

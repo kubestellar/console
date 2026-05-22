@@ -15,11 +15,13 @@ function jsonResponse(
   body: unknown,
   status: number,
   corsHeaders: Record<string, string>,
+  extraHeaders?: Record<string, string>,
 ): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       ...corsHeaders,
+      ...extraHeaders,
       "Content-Type": "application/json",
     },
   });
@@ -32,14 +34,19 @@ export async function wrapIdentityDemoResponse(
   req: Request,
   body: unknown,
 ): Promise<Response> {
-  const corsHeaders = buildCorsHeaders(req, CORS_OPTIONS);
-
   if (req.method === "OPTIONS") {
     return handlePreflight(req, CORS_OPTIONS);
   }
 
+  const corsHeaders = buildCorsHeaders(req, CORS_OPTIONS);
+
   if (req.method !== "GET") {
-    return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
+    return jsonResponse(
+      { error: "Method not allowed" },
+      405,
+      corsHeaders,
+      { Allow: CORS_OPTIONS.methods },
+    );
   }
 
   const cluster = new URL(req.url).searchParams.get("cluster");
