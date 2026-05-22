@@ -14,10 +14,13 @@
 
 import { getStore } from "@netlify/blobs";
 import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATHS } from "../../src/lib/acmm/scannableIdsByLevel";
+import { readCappedJson } from "./_shared/read-capped-json";
 
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const API_TIMEOUT_MS = 15_000;
+/** Trusted origin for scan endpoint — prevents SSRF via Host header manipulation */
+const TRUSTED_SCAN_ORIGIN = process.env.SITE_URL || "https://console.kubestellar.io";
 /** Maximum upstream response size (512 KB — tree JSON is typically < 200 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
 const BLOB_CACHE_STORE = "acmm-scan";
@@ -183,7 +186,7 @@ async function fetchFromScanEndpoint(origin: string, repo: string, force = false
   if (!res.ok) {
     throw new Error(`scan returned ${res.status}`);
   }
-  const body = (await res.json()) as { detectedIds?: string[] };
+  const body = await readCappedJson<{ detectedIds?: string[] }>(res, "scan endpoint");
   return body.detectedIds || [];
 }
 
@@ -279,7 +282,7 @@ export default async (req: Request) => {
   // If we have stale Blob data, use it as guaranteed fallback.
   let detectedIds: string[] | null = null;
   try {
-    detectedIds = await fetchFromScanEndpoint(url.origin, repo, force);
+    detectedIds = await fetchFromScanEndpoint(TRUSTED_SCAN_ORIGIN, repo, force);
     // Persist to Blobs for next request
     writeBlobCache(repo, detectedIds).catch((err) => {
       console.error('[acmm-badge] blob cache write failed', err instanceof Error ? err.message : err)
