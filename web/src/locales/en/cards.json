@@ -1509,9 +1509,27 @@
     "providerCount_one": "{{count}} provider",
     "providerCount_other": "{{count}} providers",
     "kagentiEmptyTitle": "No Kagenti Agents Found",
-    "kagentiEmptyDescription": "Install the kagenti-operator to deploy AI agents on your clusters",
-    "kagentEmptyTitle": "No Kagent CRDs Found",
-    "kagentEmptyDescription": "Install kagent to deploy AI agents on your clusters"
+    "kagentiEmptyDescription": "Install the kagenti-operator to deploy AI agents on your clusters"
+  },
+  "kagent": {
+    "agents": "Agents",
+    "toolServers": "Tool Servers",
+    "modelConfigs": "Model Configs",
+    "runtimes": "Runtimes",
+    "clusters": "Clusters",
+    "readyCount_one": "{{count}} ready",
+    "readyCount_other": "{{count}} ready",
+    "agentCount_one": "{{count}} agent",
+    "agentCount_other": "{{count}} agents",
+    "toolCount_one": "{{count}} tool",
+    "toolCount_other": "{{count}} tools",
+    "modelCount_one": "{{count}} model",
+    "modelCount_other": "{{count}} models",
+    "providerCount_one": "{{count}} provider",
+    "providerCount_other": "{{count}} providers",
+    "emptyTitle": "No Kagent CRDs Found",
+    "emptyDescription": "Install kagent to deploy AI agents on your clusters",
+    "byo": "BYO"
   },
   "prow": {
     "jobName": "Job Name",

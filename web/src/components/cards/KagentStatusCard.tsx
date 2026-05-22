@@ -130,9 +130,9 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Bot className="w-10 h-10 text-muted-foreground/30 mb-3" />
-        <div className="text-sm font-medium text-muted-foreground">{t('kagenti.kagentEmptyTitle')}</div>
+        <div className="text-sm font-medium text-muted-foreground">{t('kagent.emptyTitle')}</div>
         <div className="text-xs text-muted-foreground mt-1 max-w-[200px]">
-          {t('kagenti.kagentEmptyDescription')}
+          {t('kagent.emptyDescription')}
         </div>
       </div>
     )
@@ -146,23 +146,23 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
         <MetricTile
           icon={Bot}
-          label={t('kagenti.agents')}
+          label={t('kagent.agents')}
           value={agentItems.length}
-          sub={t('kagenti.readyCount', { count: stats.readyAgents })}
+          sub={t('kagent.readyCount', { count: stats.readyAgents })}
           accent="bg-blue-500/20 text-blue-400"
         />
         <MetricTile
           icon={Wrench}
-          label={t('kagenti.toolServers')}
+          label={t('kagent.toolServers')}
           value={toolItems.length}
-          sub={t('kagenti.toolCount', { count: stats.totalDiscoveredTools })}
+          sub={t('kagent.toolCount', { count: stats.totalDiscoveredTools })}
           accent="bg-cyan-500/20 text-cyan-400"
         />
         <MetricTile
           icon={Cpu}
-          label={t('kagenti.modelConfigs')}
+          label={t('kagent.modelConfigs')}
           value={modelItems.length}
-          sub={t('kagenti.providerCount', { count: stats.providerCount })}
+          sub={t('kagent.providerCount', { count: stats.providerCount })}
           accent="bg-emerald-500/20 text-emerald-400"
         />
       </div>
@@ -170,11 +170,11 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
       {/* Runtime distribution */}
       {runtimeEntries.length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.runtimes')}</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagent.runtimes')}</div>
           <div className="space-y-1">
             {runtimeEntries.map(([runtime, count]) => (
               <div key={runtime} className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground w-20 truncate">{runtime}</div>
+                <div className="text-sm text-muted-foreground w-20 truncate">{runtime === DEFAULT_RUNTIME ? t('kagent.byo') : runtime}</div>
                 {/* Semantic muted tint on progress track — adapts to both themes. */}
                 <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <div
@@ -192,15 +192,15 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
       {/* Cluster breakdown */}
       {Object.keys(stats.clusterData).length > 0 && (
         <div className="px-1">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagenti.clusters')}</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{t('kagent.clusters')}</div>
           <div className="space-y-1">
             {Object.entries(stats.clusterData).map(([cluster, counts]) => (
               <div key={cluster} className="flex items-center gap-2 text-sm">
                 <Server className="w-3.5 h-3.5 text-muted-foreground/40" />
                 <span className="text-muted-foreground truncate flex-1">{cluster}</span>
-                <span className="text-blue-400">{t('kagenti.agentCount', { count: counts.agents })}</span>
-                <span className="text-cyan-400">{t('kagenti.toolCount', { count: counts.tools })}</span>
-                <span className="text-emerald-400">{t('kagenti.modelCount', { count: counts.models })}</span>
+                <span className="text-blue-400">{t('kagent.agentCount', { count: counts.agents })}</span>
+                <span className="text-cyan-400">{t('kagent.toolCount', { count: counts.tools })}</span>
+                <span className="text-emerald-400">{t('kagent.modelCount', { count: counts.models })}</span>
               </div>
             ))}
           </div>
