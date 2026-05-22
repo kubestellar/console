@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - 'web/src/components/**/*.tsx'
+      - 'web/src/components/**/*.ts'
       - 'web/src/hooks/**/*.ts'
+      - 'web/src/hooks/**/*.tsx'
 
 permissions:
   contents: read
@@ -13,30 +15,34 @@ permissions:
 
 jobs:
   detect-untested:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Find new components without tests
         id: detect
         run: |
           NEW_FILES=$(git diff --name-only origin/main...HEAD \
-            -- 'web/src/components/**/*.tsx' 'web/src/hooks/**/*.ts' \
+            -- 'web/src/components/**/*.tsx' 'web/src/components/**/*.ts' \
+            'web/src/hooks/**/*.ts' 'web/src/hooks/**/*.tsx' \
             | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' || true)
 
           UNTESTED=""
           for f in $NEW_FILES; do
             BASE=$(basename "$f" .tsx)
             BASE=$(basename "$BASE" .ts)
-            TEST_EXISTS=$(find web/src -name "${BASE}.test.*" -o -name "${BASE}.spec.*" 2>/dev/null | head -1)
+            TEST_EXISTS=$(git ls-files "web/src" | grep -E "${BASE}\.(test|spec)\." | head -1)
             if [ -z "$TEST_EXISTS" ]; then
               UNTESTED="$UNTESTED $f"
             fi
           done
 
+          UNTESTED=$(echo "$UNTESTED" | xargs)
           echo "untested=$UNTESTED" >> "$GITHUB_OUTPUT"
           if [ -n "$UNTESTED" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
@@ -48,19 +54,33 @@ jobs:
         if: steps.detect.outputs.found == 'true'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
-          # Pass user-controlled data via env to prevent template-literal injection
-          # (fixes: file paths in ${{ }} expressions inside github-script blocks).
           UNTESTED_FILES: ${{ steps.detect.outputs.untested }}
         with:
           script: |
+            const marker = '<!-- auto-test-generator -->';
             const untested = (process.env.UNTESTED_FILES || '').trim().split(/\s+/).filter(Boolean);
             const list = untested.map(f => `- \`${f}\``).join('\n');
-            const body = `## Auto Test Generator\n\n` +
+            const body = `${marker}\n## Auto Test Generator\n\n` +
               `The following new files have no corresponding test file:\n\n${list}\n\n` +
-              `Please add tests or apply the \`skip-auto-test\` label to suppress this check.`;
-            await github.rest.issues.createComment({
+              `Please add tests or apply the \`needs-tests\` label to track this PR.`;
+            const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body,
             });
+            const existing = comments.find(c => c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
