@@ -5,7 +5,7 @@
  * - Dismissed insights persist only in sessionStorage (current session)
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../../ui/Toast'
 
@@ -14,9 +14,12 @@ const INSIGHT_ACKNOWLEDGE_KEY = 'acknowledged-insights'
 /** sessionStorage key for dismissed insight IDs (session only) */
 const INSIGHT_DISMISS_KEY = 'dismissed-insights-session'
 
-type ErrorCallback = () => void
+type ErrorHandlers = {
+  showToast: (message: string, type: 'error' | 'warning') => void
+  t: (key: string) => string
+}
 
-function loadSet(storage: Storage, key: string, onError?: ErrorCallback): Set<string> {
+function loadSet(storage: Storage, key: string, handlers: ErrorHandlers): Set<string> {
   try {
     const raw = storage.getItem(key)
     if (!raw) return new Set()
@@ -28,43 +31,37 @@ function loadSet(storage: Storage, key: string, onError?: ErrorCallback): Set<st
     return new Set(parsed.filter((v): v is string => typeof v === 'string'))
   } catch (err: unknown) {
     console.error(`[useInsightActions] Failed to load ${key} from storage:`, err)
-    onError?.()
+    handlers.showToast(handlers.t('insights.failedToLoadPreferences'), 'warning')
     return new Set()
   }
 }
 
-function saveSet(storage: Storage, key: string, set: Set<string>, onError?: ErrorCallback): void {
+function saveSet(storage: Storage, key: string, set: Set<string>, handlers: ErrorHandlers): void {
   try {
     storage.setItem(key, JSON.stringify(Array.from(set)))
   } catch (err: unknown) {
     console.error(`[useInsightActions] Failed to save ${key} to storage:`, err)
-    onError?.()
+    handlers.showToast(handlers.t('insights.failedToSave'), 'error')
   }
 }
 
 export function useInsightActions() {
   const { t } = useTranslation('cards')
   const { showToast } = useToast()
-  const loadFailedRef = useRef(false)
+  const handlers = { showToast, t }
 
   const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(
-    () => loadSet(localStorage, INSIGHT_ACKNOWLEDGE_KEY, () => { loadFailedRef.current = true })
+    () => loadSet(localStorage, INSIGHT_ACKNOWLEDGE_KEY, handlers)
   )
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(
-    () => loadSet(sessionStorage, INSIGHT_DISMISS_KEY, () => { loadFailedRef.current = true })
+    () => loadSet(sessionStorage, INSIGHT_DISMISS_KEY, handlers)
   )
-
-  useEffect(() => {
-    if (loadFailedRef.current) {
-      showToast(t('insights.failedToLoadPreferences'), 'warning')
-    }
-  }, [t, showToast])
 
   const acknowledgeInsight = (id: string) => {
     setAcknowledgedIds(prev => {
       const next = new Set(prev)
       next.add(id)
-      saveSet(localStorage, INSIGHT_ACKNOWLEDGE_KEY, next, () => showToast(t('insights.failedToSave'), 'error'))
+      saveSet(localStorage, INSIGHT_ACKNOWLEDGE_KEY, next, handlers)
       return next
     })
   }
@@ -73,7 +70,7 @@ export function useInsightActions() {
     setDismissedIds(prev => {
       const next = new Set(prev)
       next.add(id)
-      saveSet(sessionStorage, INSIGHT_DISMISS_KEY, next, () => showToast(t('insights.failedToSave'), 'error'))
+      saveSet(sessionStorage, INSIGHT_DISMISS_KEY, next, handlers)
       return next
     })
   }
