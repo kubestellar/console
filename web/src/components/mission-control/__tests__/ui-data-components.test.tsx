@@ -31,6 +31,10 @@ vi.mock('../../missions/browser/missionCache', () => ({
   }),
 }))
 
+vi.mock('../../../lib/kubara', () => ({
+  fetchKubaraCatalog: vi.fn().mockResolvedValue([]),
+}))
+
 const mockProject: PayloadProject = {
   name: 'falco',
   displayName: 'Falco',
@@ -370,5 +374,66 @@ describe('FixerDefinitionPanel', () => {
     )
     
     expect(screen.getAllByText('Thinking...').length).toBeGreaterThan(0)
+  })
+
+  it('shows substring-matched suggestions while adding workloads manually', () => {
+    render(
+      <FixerDefinitionPanel
+        state={mockState as unknown as typeof mockState}
+        onDescriptionChange={vi.fn()}
+        onTitleChange={vi.fn()}
+        onTargetClustersChange={vi.fn()}
+        onAskAI={vi.fn()}
+        onAddProject={vi.fn()}
+        onRemoveProject={vi.fn()}
+        onUpdatePriority={vi.fn()}
+        aiStreaming={false}
+        planningMission={null}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Add Manually'))
+    fireEvent.change(screen.getByPlaceholderText('Search workloads (e.g., Falco, Tetragon, Prometheus)'), {
+      target: { value: 'tet' },
+    })
+
+    expect(screen.getByText('Tetragon')).toBeDefined()
+    expect(screen.getByText('Choose a suggestion or press Enter to add the top match.')).toBeDefined()
+  })
+
+  it('only allows valid manual workloads to be added', () => {
+    const onAddProject = vi.fn()
+    render(
+      <FixerDefinitionPanel
+        state={mockState as unknown as typeof mockState}
+        onDescriptionChange={vi.fn()}
+        onTitleChange={vi.fn()}
+        onTargetClustersChange={vi.fn()}
+        onAskAI={vi.fn()}
+        onAddProject={onAddProject}
+        onRemoveProject={vi.fn()}
+        onUpdatePriority={vi.fn()}
+        aiStreaming={false}
+        planningMission={null}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Add Manually'))
+    const input = screen.getByPlaceholderText('Search workloads (e.g., Falco, Tetragon, Prometheus)')
+    const addButton = screen.getByRole('button', { name: 'Add' })
+
+    fireEvent.change(input, { target: { value: 'wewewewew' } })
+    expect(addButton).toBeDisabled()
+    expect(screen.getByText('No matching workloads found. Only workloads from the suggestion list can be added.')).toBeDefined()
+
+    fireEvent.change(input, { target: { value: 'tet' } })
+    expect(addButton).not.toBeDisabled()
+
+    fireEvent.click(addButton)
+
+    expect(onAddProject).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'tetragon',
+      displayName: 'Tetragon',
+    }))
   })
 })

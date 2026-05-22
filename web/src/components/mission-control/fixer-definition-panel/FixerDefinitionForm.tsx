@@ -5,6 +5,7 @@ import { Button } from '../../ui/Button'
 import { PayloadGrid } from '../PayloadGrid'
 import type { Mission } from '../../../hooks/useMissions'
 import type { MissionControlState, PayloadProject } from '../types'
+import type { ManualWorkloadOption } from './fixerDefinitionPanel.constants'
 import { ExecutiveAnalysis } from './ExecutiveAnalysis'
 import { TargetClusterSelector } from './TargetClusterSelector'
 import { AIStreamingPreview } from './AIStreamingPreview'
@@ -21,6 +22,9 @@ interface FixerDefinitionFormProps {
   planningFailed: boolean
   showManualAdd: boolean
   manualName: string
+  manualSuggestions: ManualWorkloadOption[]
+  manualHelperText: string
+  manualAddDisabled: boolean
   installedProjects?: Set<string>
   onTitleChange: (title: string) => void
   onDescriptionChange: (description: string) => void
@@ -30,6 +34,7 @@ interface FixerDefinitionFormProps {
   onToggleManualAdd: () => void
   onManualNameChange: (name: string) => void
   onManualAdd: () => void
+  onManualSuggestionSelect: (option: ManualWorkloadOption) => void
   onRemoveProject: (name: string) => void
   onUpdatePriority: (name: string, priority: PayloadProject['priority']) => void
   onCardClick: (project: PayloadProject) => void
@@ -46,6 +51,9 @@ export function FixerDefinitionForm({
   planningFailed,
   showManualAdd,
   manualName,
+  manualSuggestions,
+  manualHelperText,
+  manualAddDisabled,
   installedProjects,
   onTitleChange,
   onDescriptionChange,
@@ -55,6 +63,7 @@ export function FixerDefinitionForm({
   onToggleManualAdd,
   onManualNameChange,
   onManualAdd,
+  onManualSuggestionSelect,
   onRemoveProject,
   onUpdatePriority,
   onCardClick,
@@ -159,27 +168,53 @@ export function FixerDefinitionForm({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="mb-3 flex items-center gap-2"
+            className="mb-3 rounded-lg border border-border bg-secondary/20 p-3"
           >
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                value={manualName}
-                onChange={(event) => onManualNameChange(event.target.value)}
-                placeholder="Project name (e.g., Falco, Prometheus, Cilium)"
-                className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    onManualAdd()
-                  }
-                }}
-                autoFocus
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={manualName}
+                  onChange={(event) => onManualNameChange(event.target.value)}
+                  placeholder="Search workloads (e.g., Falco, Tetragon, Prometheus)"
+                  className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      onManualAdd()
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+              <Button variant="primary" size="sm" onClick={onManualAdd} disabled={manualAddDisabled}>
+                Add
+              </Button>
             </div>
-            <Button variant="primary" size="sm" onClick={onManualAdd} disabled={!manualName.trim()}>
-              Add
-            </Button>
+
+            <p className="mt-2 text-xs text-muted-foreground">{manualHelperText}</p>
+
+            {manualSuggestions.length > 0 && (
+              <div className="mt-3 overflow-hidden rounded-lg border border-border/70 bg-background/60">
+                {manualSuggestions.map((option, index) => (
+                  <button
+                    key={option.name}
+                    type="button"
+                    onClick={() => onManualSuggestionSelect(option)}
+                    className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-secondary/70"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground">{option.displayName}</div>
+                      <div className="text-xs text-muted-foreground">{option.name}</div>
+                    </div>
+                    <div className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {index === 0 ? 'Top match' : option.category}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 

@@ -6,13 +6,23 @@ FixerDefinitionPanel  * Phase 1 of Mission Control.
  * Right: project details for the selected payload item.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Info } from 'lucide-react'
+import { fetchKubaraCatalog } from '../../../lib/kubara'
 import type { Mission } from '../../../hooks/useMissions'
 import { getAssistantContentSinceLastUser } from '../useMissionControl'
 import type { MissionControlState, PayloadProject } from '../types'
-import { PLACEHOLDER_EXAMPLES } from './fixerDefinitionPanel.constants'
+import {
+  buildStaticManualWorkloadOptions,
+  findManualWorkloadOption,
+  humanizeWorkloadName,
+  MANUAL_WORKLOAD_SUGGESTION_LIMIT,
+  matchesManualWorkloadQuery,
+  mergeManualWorkloadOptions,
+  type ManualWorkloadOption,
+  PLACEHOLDER_EXAMPLES,
+} from './fixerDefinitionPanel.constants'
 import { MissionSummarySidebar } from './MissionSummarySidebar'
 import { FixerDefinitionForm } from './FixerDefinitionForm'
 import { ProjectDetailPanel } from './ProjectDetailPanel'
@@ -30,6 +40,21 @@ interface FixerDefinitionPanelProps {
   aiStreaming: boolean
   planningMission: Mission | null | undefined
   installedProjects?: Set<string>
+}
+
+const MANUAL_PLACEHOLDER_INTERVAL_MS = 4000
+const MANUAL_WORKLOAD_REASON_FALLBACK = 'Available workload from the Mission Control catalog'
+
+function buildProjectFromManualOption(option: ManualWorkloadOption): PayloadProject {
+  return {
+    name: option.name,
+    displayName: option.displayName,
+    reason: option.reason || MANUAL_WORKLOAD_REASON_FALLBACK,
+    category: option.category,
+    priority: option.priority,
+    dependencies: option.dependencies,
+    kubaraChart: option.kubaraChart,
+  }
 }
 
 export function FixerDefinitionPanel({
@@ -50,15 +75,42 @@ export function FixerDefinitionPanel({
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [manualName, setManualName] = useState('')
   const [stickyProject, setStickyProject] = useState<PayloadProject | null>(null)
+  const [manualWorkloads, setManualWorkloads] = useState<ManualWorkloadOption[]>(() => buildStaticManualWorkloadOptions())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const projects = state.projects || []
 
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIdx((value) => (value + 1) % PLACEHOLDER_EXAMPLES.length)
-    }, 4000)
+    }, MANUAL_PLACEHOLDER_INTERVAL_MS)
 
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchKubaraCatalog()
+      .then((catalog) => {
+        if (cancelled || (catalog || []).length === 0) return
+        const kubaraOptions: ManualWorkloadOption[] = (catalog || []).map((chart) => ({
+          name: chart.name,
+          displayName: humanizeWorkloadName(chart.name),
+          reason: chart.description || MANUAL_WORKLOAD_REASON_FALLBACK,
+          category: 'Helm Chart',
+          priority: 'recommended',
+          dependencies: [],
+          kubaraChart: { repoPath: `helm/${chart.name}` },
+        }))
+        setManualWorkloads((previous) => mergeManualWorkloadOptions(previous, kubaraOptions))
+      })
+      .catch(() => {
+        // Static suggestions already cover the manual-add fallback.
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const latestAIContent = getAssistantContentSinceLastUser(planningMission?.messages)
@@ -79,6 +131,53 @@ export function FixerDefinitionPanel({
     }
   }, [projects, stickyProject?.name])
 
+  const selectedProjectNames = useMemo(
+    () => new Set(projects.map((project) => project.name.toLowerCase())),
+    [projects],
+  )
+
+  const availableManualWorkloads = useMemo(
+    () => manualWorkloads.filter((option) => !selectedProjectNames.has(option.name.toLowerCase())),
+    [manualWorkloads, selectedProjectNames],
+  )
+
+  const manualSuggestions = useMemo(() => {
+    return availableManualWorkloads
+      .filter((option) => matchesManualWorkloadQuery(option, manualName))
+      .slice(0, MANUAL_WORKLOAD_SUGGESTION_LIMIT)
+  }, [availableManualWorkloads, manualName])
+
+  const exactManualOption = useMemo(
+    () => findManualWorkloadOption(availableManualWorkloads, manualName),
+    [availableManualWorkloads, manualName],
+  )
+
+  const duplicateManualOption = useMemo(
+    () => findManualWorkloadOption(manualWorkloads, manualName),
+    [manualName, manualWorkloads],
+  )
+
+  const nextManualOption = manualName.trim()
+    ? exactManualOption ?? manualSuggestions[0] ?? null
+    : null
+
+  const manualHelperText = useMemo(() => {
+    const trimmedName = manualName.trim()
+    if (!trimmedName) {
+      return 'Search workloads by name. Suggestions update as you type.'
+    }
+    if (duplicateManualOption && selectedProjectNames.has(duplicateManualOption.name.toLowerCase())) {
+      return `${duplicateManualOption.displayName} is already selected.`
+    }
+    if (manualSuggestions.length === 0) {
+      return 'No matching workloads found. Only workloads from the suggestion list can be added.'
+    }
+    if (!exactManualOption) {
+      return 'Choose a suggestion or press Enter to add the top match.'
+    }
+    return 'Ready to add this workload.'
+  }, [duplicateManualOption, exactManualOption, manualName, manualSuggestions.length, selectedProjectNames])
+
   const handleSubmit = () => {
     if (!state.title && state.description.trim()) {
       const firstSentence = state.description.split(/[.!?\n]/)[0].trim()
@@ -88,19 +187,13 @@ export function FixerDefinitionPanel({
     onAskAI(state.description, state.projects)
   }
 
-  const handleManualAdd = () => {
-    if (!manualName.trim()) {
+  const handleManualAdd = (option?: ManualWorkloadOption) => {
+    const nextOption = option ?? nextManualOption
+    if (!nextOption) {
       return
     }
 
-    onAddProject({
-      name: manualName.toLowerCase().replace(/\s+/g, '-'),
-      displayName: manualName.trim(),
-      reason: 'Manually added',
-      category: 'Custom',
-      priority: 'recommended',
-      dependencies: [],
-    })
+    onAddProject(buildProjectFromManualOption(nextOption))
     setManualName('')
     setShowManualAdd(false)
   }
@@ -124,6 +217,9 @@ export function FixerDefinitionPanel({
         planningFailed={planningFailed}
         showManualAdd={showManualAdd}
         manualName={manualName}
+        manualSuggestions={manualSuggestions}
+        manualHelperText={manualHelperText}
+        manualAddDisabled={!nextManualOption}
         installedProjects={installedProjects}
         onTitleChange={onTitleChange}
         onDescriptionChange={onDescriptionChange}
@@ -132,7 +228,8 @@ export function FixerDefinitionPanel({
         onRetry={() => onAskAI(state.description, state.projects)}
         onToggleManualAdd={() => setShowManualAdd((value) => !value)}
         onManualNameChange={setManualName}
-        onManualAdd={handleManualAdd}
+        onManualAdd={() => handleManualAdd()}
+        onManualSuggestionSelect={handleManualAdd}
         onRemoveProject={onRemoveProject}
         onUpdatePriority={onUpdatePriority}
         onCardClick={setStickyProject}

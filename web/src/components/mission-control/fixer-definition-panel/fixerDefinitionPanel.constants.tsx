@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Box, Eye, Layers, Lock, Network, Shield } from 'lucide-react'
+import type { PayloadProject } from '../types'
 
 export const PLACEHOLDER_EXAMPLES = [
   'Production-grade security compliance with runtime protection and policy enforcement...',
@@ -14,6 +15,22 @@ export interface ProjectAlternative {
   displayName: string
   reason: string
 }
+
+export interface ManualWorkloadOption extends ProjectAlternative {
+  category: string
+  priority: PayloadProject['priority']
+  dependencies: string[]
+  kubaraChart?: {
+    repoPath: string
+  }
+}
+
+export const MANUAL_WORKLOAD_SUGGESTION_LIMIT = 8
+
+const DEFAULT_MANUAL_WORKLOAD_CATEGORY = 'Suggested workload'
+const DEFAULT_MANUAL_WORKLOAD_PRIORITY: PayloadProject['priority'] = 'recommended'
+const MANUAL_WORKLOAD_NORMALIZE_REGEX = /[^a-z0-9]+/g
+const MANUAL_WORKLOAD_SEPARATOR_REGEX = /[-_\s]+/g
 
 export const ALTERNATIVES: Record<string, ProjectAlternative[]> = {
   falco: [
@@ -80,6 +97,65 @@ export const ALTERNATIVES_DISPLAY: Record<string, ProjectAlternative> = {
   cilium: { name: 'cilium', displayName: 'Cilium', reason: 'eBPF-based networking and security' },
   'cert-manager': { name: 'cert-manager', displayName: 'cert-manager', reason: 'Automated TLS certificate management' },
   'trivy-operator': { name: 'trivy-operator', displayName: 'Trivy Operator', reason: 'Aqua vulnerability scanning for Kubernetes' },
+}
+
+function createManualWorkloadOption(option: ProjectAlternative): ManualWorkloadOption {
+  return {
+    ...option,
+    category: DEFAULT_MANUAL_WORKLOAD_CATEGORY,
+    priority: DEFAULT_MANUAL_WORKLOAD_PRIORITY,
+    dependencies: [],
+  }
+}
+
+export function humanizeWorkloadName(name: string): string {
+  return name
+    .split(MANUAL_WORKLOAD_SEPARATOR_REGEX)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
+}
+
+export function normalizeManualWorkloadSearchText(value: string): string {
+  return value.toLowerCase().replace(MANUAL_WORKLOAD_NORMALIZE_REGEX, '')
+}
+
+export function mergeManualWorkloadOptions(
+  existing: ManualWorkloadOption[],
+  incoming: ManualWorkloadOption[],
+): ManualWorkloadOption[] {
+  const merged = new Map<string, ManualWorkloadOption>()
+  for (const option of [...existing, ...incoming]) {
+    const key = option.name.toLowerCase()
+    if (!merged.has(key)) merged.set(key, option)
+  }
+  return Array.from(merged.values()).sort((left, right) => left.displayName.localeCompare(right.displayName))
+}
+
+export function matchesManualWorkloadQuery(option: ManualWorkloadOption, query: string): boolean {
+  const normalizedQuery = normalizeManualWorkloadSearchText(query)
+  if (!normalizedQuery) return true
+  return [option.name, option.displayName].some((value) =>
+    normalizeManualWorkloadSearchText(value).includes(normalizedQuery),
+  )
+}
+
+export function findManualWorkloadOption(
+  options: ManualWorkloadOption[],
+  input: string,
+): ManualWorkloadOption | null {
+  const normalizedInput = normalizeManualWorkloadSearchText(input)
+  if (!normalizedInput) return null
+  return options.find((option) =>
+    normalizeManualWorkloadSearchText(option.name) === normalizedInput
+    || normalizeManualWorkloadSearchText(option.displayName) === normalizedInput,
+  ) ?? null
+}
+
+export function buildStaticManualWorkloadOptions(): ManualWorkloadOption[] {
+  const alternatives = Object.values(ALTERNATIVES).flat().map(createManualWorkloadOption)
+  const display = Object.values(ALTERNATIVES_DISPLAY).map(createManualWorkloadOption)
+  return mergeManualWorkloadOptions([], [...display, ...alternatives])
 }
 
 const CATEGORY_ICONS: Record<string, ReactNode> = {
