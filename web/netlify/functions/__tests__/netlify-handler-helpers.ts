@@ -1,5 +1,5 @@
 /**
- * Shared helpers for Netlify function handler tests (#15397).
+ * Shared helpers for Netlify function handler tests (#15397, #15399).
  */
 import { expect } from "vitest";
 
@@ -7,6 +7,16 @@ import { expect } from "vitest";
 export const FAKE_GITHUB_TOKEN = "gho_TEST_TOKEN_15397_do_not_leak";
 
 export const FAKE_MUTATE_AUTH_TOKEN = "mutate-auth-token-15397-secret";
+
+/** Field names that must never appear in identity demo API responses */
+export const FORBIDDEN_IDENTITY_RESPONSE_KEYS = [
+  "client_secret",
+  "refresh_token",
+  "access_token",
+  "password",
+  "GITHUB_TOKEN",
+  "GITHUB_MUTATIONS_TOKEN",
+] as const;
 
 export async function readJson<T = unknown>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
@@ -19,6 +29,28 @@ export function assertResponseHasNoSecrets(
   for (const secret of secrets) {
     expect(bodyText).not.toContain(secret);
   }
+}
+
+export function assertNoForbiddenIdentityFields(bodyText: string): void {
+  for (const field of FORBIDDEN_IDENTITY_RESPONSE_KEYS) {
+    expect(bodyText).not.toContain(`"${field}"`);
+  }
+  assertResponseHasNoSecrets(bodyText, [
+    FAKE_GITHUB_TOKEN,
+    "github_pat_",
+    "Bearer gho_",
+  ]);
+}
+
+export function makeIdentityRequest(
+  path: string,
+  options?: { method?: string; search?: string },
+): Request {
+  const search = options?.search ? `?${options.search}` : "";
+  return new Request(`https://console.kubestellar.io${path}${search}`, {
+    method: options?.method ?? "GET",
+    headers: { Origin: "https://console.kubestellar.io" },
+  });
 }
 
 export function freshBlobCacheEntry<T>(payload: T): string {
