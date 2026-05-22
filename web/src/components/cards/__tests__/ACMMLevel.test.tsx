@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { CardDataReportContext } from '../CardDataContext'
 import { ACMMLevel } from '../ACMMLevel'
 import {
   buildACMMContext,
+  buildACMMContextFromScan,
   buildScanResult,
   DEMO_DETECTED_IDS,
   TEST_REPO,
@@ -38,12 +39,14 @@ describe('ACMMLevel', () => {
 
   it('renders level badge and numeric role for live scan data', () => {
     const scan = buildScanResult({ isDemoData: false })
-    mockUseACMM.mockReturnValue(buildACMMContext({ isDemoData: false }))
-    const { container } = render(<ACMMLevel />)
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
+    render(<ACMMLevel />)
 
     expect(screen.getByText(TEST_REPO)).toBeInTheDocument()
-    const levelBadge = container.querySelector('.text-2xl.font-bold')
-    expect(levelBadge).toHaveTextContent(`L${scan.level.level}`)
+    const levelShortName = scan.level.levelName.split(' / ')[0]
+    const gauge = screen.getByText(levelShortName).closest('.relative')
+    expect(gauge).not.toBeNull()
+    expect(within(gauge as HTMLElement).getByText(`L${scan.level.level}`)).toBeInTheDocument()
     expect(screen.getByText(scan.level.characteristic)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /source/i })).toHaveAttribute(
       'href',
@@ -51,17 +54,28 @@ describe('ACMMLevel', () => {
     )
   })
 
-  it('shows foundations prerequisite counts when prerequisites exist', () => {
-    const detectedIds = new Set(DEMO_DETECTED_IDS)
-    const level = computeLevel(detectedIds)
-    mockUseACMM.mockReturnValue(buildACMMContext({ isDemoData: false }))
+  it('shows foundations prerequisite counts for demo fixture data', () => {
+    const level = computeLevel(new Set(DEMO_DETECTED_IDS))
+    expect(level.prerequisites.total).toBeGreaterThan(0)
+    const scan = buildScanResult({ isDemoData: false })
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
     render(<ACMMLevel />)
 
-    if (level.prerequisites.total > 0) {
-      expect(
-        screen.getByText(`${level.prerequisites.met}/${level.prerequisites.total}`),
-      ).toBeInTheDocument()
+    expect(
+      screen.getByText(`${level.prerequisites.met}/${level.prerequisites.total}`),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Foundations:')).toBeInTheDocument()
+  })
+
+  it('does not render foundations block when prerequisites total is zero', () => {
+    const scan = buildScanResult({ detectedIds: ['acmm:claude-md'], isDemoData: false })
+    const scanNoPrereq = {
+      ...scan,
+      level: { ...scan.level, prerequisites: { met: 0, total: 0 } },
     }
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scanNoPrereq))
+    render(<ACMMLevel />)
+    expect(screen.queryByText('Foundations:')).not.toBeInTheDocument()
   })
 
   it('reports isDemoData to CardDataReportContext when scan uses demo fallback', async () => {

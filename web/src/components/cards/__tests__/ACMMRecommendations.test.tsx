@@ -3,14 +3,22 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CardDataReportContext } from '../CardDataContext'
 import { ACMMRecommendations } from '../ACMMRecommendations'
-import { buildACMMContext, buildScanResult } from './acmmTestFixtures'
+import {
+  buildACMMContext,
+  buildACMMContextFromScan,
+  buildScanResult,
+  TEST_REPO,
+} from './acmmTestFixtures'
+import { SOURCES_BY_ID } from '../../../lib/acmm/sources'
 
 const mockUseACMM = vi.fn()
 const mockStartMission = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback ?? key,
+  }),
 }))
 
 vi.mock('../../acmm/ACMMProvider', () => ({
@@ -33,6 +41,19 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
   ),
 }))
 
+/** Walk up from criterion heading to the card root that contains its CTA button. */
+function recommendationCardRoot(criterionName: string): HTMLElement {
+  const heading = screen.getByText(criterionName)
+  let el: HTMLElement | null = heading.parentElement
+  while (el && !el.querySelector(`button[title*="Ask the selected agent"]`)) {
+    el = el.parentElement
+  }
+  if (!el) {
+    throw new Error(`Recommendation card not found for: ${criterionName}`)
+  }
+  return el
+}
+
 describe('ACMMRecommendations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -49,40 +70,53 @@ describe('ACMMRecommendations', () => {
 
   it('renders top recommendations with per-item Ask agent CTA', () => {
     const scan = buildScanResult({ isDemoData: false })
-    mockUseACMM.mockReturnValue(buildACMMContext({ isDemoData: false }))
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
     render(<ACMMRecommendations />)
 
     expect(scan.recommendations.length).toBeGreaterThan(0)
     const first = scan.recommendations[0]
     expect(screen.getByText(first.criterion.name)).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /ask agent for help/i }).length).toBeGreaterThan(0)
+    expect(
+      within(recommendationCardRoot(first.criterion.name)).getByRole('button', {
+        name: /ask agent for help/i,
+      }),
+    ).toBeInTheDocument()
   })
 
   it('renders source citation links when recommendation sources have URLs', () => {
     const scan = buildScanResult({ isDemoData: false })
-    mockUseACMM.mockReturnValue(buildACMMContext({ isDemoData: false }))
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
     render(<ACMMRecommendations />)
 
     const withUrl = scan.recommendations.find((r) =>
-      r.sources.some((s) => s === 'acmm' || s === 'fullsend'),
+      r.sources.some((s) => Boolean(SOURCES_BY_ID[s]?.url)),
     )
     expect(withUrl).toBeDefined()
-    const links = screen.getAllByRole('link')
+    const card = recommendationCardRoot(withUrl!.criterion.name)
+    const links = within(card).getAllByRole('link')
     expect(links.length).toBeGreaterThan(0)
-    expect(links.some((a) => (a as HTMLAnchorElement).href.startsWith('http'))).toBe(true)
+    const sourceId = withUrl!.sources.find((s) => SOURCES_BY_ID[s]?.url)
+    expect(sourceId).toBeDefined()
+    expect(
+      links.some((a) =>
+        (a as HTMLAnchorElement).href.includes(
+          new URL(SOURCES_BY_ID[sourceId!].url!).hostname,
+        ),
+      ),
+    ).toBe(true)
   })
 
   it('launches a mission when Ask agent for help is clicked on a recommendation', async () => {
     const user = userEvent.setup()
     const scan = buildScanResult({ isDemoData: false })
-    mockUseACMM.mockReturnValue(buildACMMContext({ isDemoData: false }))
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
     render(<ACMMRecommendations />)
 
     const first = scan.recommendations[0]
-    const recRow = screen.getByText(first.criterion.name).closest('.rounded-md')
-    expect(recRow).not.toBeNull()
     await user.click(
-      within(recRow as HTMLElement).getByRole('button', { name: /ask agent for help/i }),
+      screen.getByTitle(
+        `Ask the selected agent to add the "${first.criterion.name}" criterion to ${TEST_REPO}`,
+      ),
     )
     expect(mockStartMission).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -91,21 +125,19 @@ describe('ACMMRecommendations', () => {
     )
   })
 
-  it('shows empty recommendations copy when all criteria are detected', () => {
-    const scan = buildScanResult({ isDemoData: false })
-    mockUseACMM.mockReturnValue({
-      ...buildACMMContext({ detectedIds: [...scan.detectedIds] }),
-      targetLevel: scan.level.level,
-    })
+  it('shows empty recommendations copy when recommendations list is empty', () => {
+    const scan = buildScanResult({ recommendations: [], isDemoData: false })
+    mockUseACMM.mockReturnValue(
+      buildACMMContextFromScan(scan, scan.level.level),
+    )
     render(<ACMMRecommendations />)
 
-    if (scan.recommendations.length === 0) {
-      expect(
-        screen.getByText('Nothing to recommend — this repo covers all registered criteria.'),
-      ).toBeInTheDocument()
-    } else {
-      expect(screen.getByText('Top recommendations')).toBeInTheDocument()
-    }
+    expect(
+      screen.getByText('Nothing to recommend — this repo covers all registered criteria.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /ask agent for help with all/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('reports isDemoData to CardDataReportContext when scan uses demo fallback', async () => {
@@ -130,7 +162,8 @@ describe('ACMMRecommendations', () => {
 
   it('reports isDemoData false for live scan data', async () => {
     const report = vi.fn()
-    mockUseACMM.mockReturnValue(buildACMMContext({ isDemoData: false }))
+    const scan = buildScanResult({ isDemoData: false })
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
     render(
       <CardDataReportContext.Provider value={{ report }}>
         <ACMMRecommendations />

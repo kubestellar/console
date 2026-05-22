@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { CardDataReportContext } from '../CardDataContext'
 import { ACMMFeedbackLoops } from '../ACMMFeedbackLoops'
 import { ALL_CRITERIA } from '../../../lib/acmm/sources'
-import { buildACMMContext, buildScanResult } from './acmmTestFixtures'
+import { buildACMMContext, buildACMMContextFromScan, buildScanResult } from './acmmTestFixtures'
 
 const mockUseACMM = vi.fn()
 const mockStartMission = vi.fn()
@@ -93,10 +93,7 @@ describe('ACMMFeedbackLoops', () => {
   it('reports isDemoData false when live scan data is shown', async () => {
     const report = vi.fn()
     const scan = buildScanResult({ isDemoData: false })
-    mockUseACMM.mockReturnValue({
-      ...buildACMMContext({ isDemoData: false }),
-      scan,
-    })
+    mockUseACMM.mockReturnValue(buildACMMContextFromScan(scan))
     render(
       <CardDataReportContext.Provider value={{ report }}>
         <ACMMFeedbackLoops />

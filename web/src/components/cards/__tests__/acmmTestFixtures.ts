@@ -4,12 +4,16 @@
  */
 import { computeLevel } from '../../../lib/acmm/computeLevel'
 import { computeRecommendations } from '../../../lib/acmm/computeRecommendations'
-import type { UseACMMScanResult } from '../../../hooks/useCachedACMMScan'
-import type { ACMMScanData } from '../../../hooks/useCachedACMMScan'
+import type { Recommendation } from '../../../lib/acmm/computeRecommendations'
+import type { ACMMScanData, UseACMMScanResult } from '../../../hooks/useCachedACMMScan'
 
 export const TEST_REPO = 'kubestellar/console'
 
-/** Same seed set as demoScan() in useCachedACMMScan — lands at L5+ in computeLevel. */
+/** Fixed timestamps — avoids non-determinism from Date.now() in fixtures. */
+export const FIXTURE_SCANNED_AT = '2026-05-22T12:00:00.000Z'
+export const FIXTURE_LAST_REFRESH_MS = Date.parse(FIXTURE_SCANNED_AT)
+
+/** Same seed set as demoScan() in useCachedACMMScan — lands at L4+ in computeLevel. */
 export const DEMO_DETECTED_IDS: string[] = [
   'acmm:prereq-test-suite',
   'acmm:prereq-e2e',
@@ -51,7 +55,7 @@ export function buildScanData(
 ): ACMMScanData {
   return {
     repo,
-    scannedAt: '2026-05-22T12:00:00.000Z',
+    scannedAt: FIXTURE_SCANNED_AT,
     detectedIds,
     weeklyActivity: [],
   }
@@ -60,11 +64,14 @@ export function buildScanData(
 export function buildScanResult(
   overrides: Partial<{
     detectedIds: string[]
+    recommendations: Recommendation[]
     isLoading: boolean
     isRefreshing: boolean
     isDemoData: boolean
+    isDemoFallback: boolean
     isFailed: boolean
     consecutiveFailures: number
+    lastRefresh: number | null
     repo: string
     forceRefetch: () => Promise<void>
   }> = {},
@@ -72,8 +79,11 @@ export function buildScanResult(
   const detectedList = overrides.detectedIds ?? DEMO_DETECTED_IDS
   const detectedIds = new Set(detectedList)
   const level = computeLevel(detectedIds)
-  const recommendations = computeRecommendations(detectedIds, level)
+  const recommendations =
+    overrides.recommendations ?? computeRecommendations(detectedIds, level)
   const data = buildScanData(detectedList, overrides.repo ?? TEST_REPO)
+  const isDemoData = overrides.isDemoData ?? false
+  const isDemoFallback = overrides.isDemoFallback ?? isDemoData
 
   return {
     data,
@@ -82,12 +92,12 @@ export function buildScanResult(
     recommendations,
     isLoading: overrides.isLoading ?? false,
     isRefreshing: overrides.isRefreshing ?? false,
-    isDemoFallback: overrides.isDemoData ?? false,
-    isDemoData: overrides.isDemoData ?? false,
+    isDemoFallback,
+    isDemoData,
     error: null,
     isFailed: overrides.isFailed ?? false,
     consecutiveFailures: overrides.consecutiveFailures ?? 0,
-    lastRefresh: Date.now(),
+    lastRefresh: overrides.lastRefresh ?? FIXTURE_LAST_REFRESH_MS,
     refetch: async () => {},
     forceRefetch: overrides.forceRefetch ?? (async () => {}),
   }
@@ -98,6 +108,14 @@ export function buildACMMContext(
   targetLevel?: number,
 ) {
   const scan = buildScanResult(scanOverrides)
+  return buildACMMContextFromScan(scan, targetLevel)
+}
+
+/** Use when tests need the same scan instance for assertions and mocked context. */
+export function buildACMMContextFromScan(
+  scan: UseACMMScanResult,
+  targetLevel?: number,
+) {
   return {
     repo: scan.data.repo,
     setRepo: () => {},
