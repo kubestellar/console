@@ -4622,7 +4622,10 @@
       "stepsCount": "{{count}} steps",
       "stepsCount_one": "{{count}} step",
       "stepsCount_other": "{{count}} steps",
-      "importSuccess": "Imported \"{{title}}\" successfully."
+      "importSuccess": "Imported \"{{title}}\" successfully.",
+      "importFileFailed": "Failed to import file. The file may be unavailable or the network request failed.",
+      "loadDirectoryFailed": "Failed to load directory contents. The directory may be unavailable or the network request failed.",
+      "loadFileFailed": "Failed to load file. The file may be unavailable or the network request failed."
     },
     "kagenti": {
       "providerUnavailableTitle": "Kagenti provider unavailable",

@@ -315,9 +315,9 @@ export function useMissionContentViewer({
       const parsed = typeof content === 'string' ? JSON.parse(content) : content
       void handleImport(parsed, raw)
     } catch {
-      // Ignore directory entry import failures — the detail view already exposes retries.
+      showToast(t('missions.browser.importFileFailed'), 'error')
     }
-  }, [handleImport])
+  }, [handleImport, showToast, t])
 
   const selectNode = useCallback(async (node: TreeNode) => {
     setSelectedMission(null)
@@ -333,6 +333,7 @@ export function useMissionContentViewer({
         setDirectoryEntries(entries)
       } catch {
         setDirectoryEntries([])
+        showToast(t('missions.browser.loadDirectoryFailed'), 'error')
       } finally {
         setLoading(false)
       }
@@ -348,10 +349,11 @@ export function useMissionContentViewer({
     } catch {
       setRawContent(null)
       setSelectedMission(null)
+      showToast(t('missions.browser.loadFileFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [applySelectedFileContent])
+  }, [applySelectedFileContent, showToast, t])
 
   const handleCopyLink = useCallback((mission: MissionExport, event: React.MouseEvent) => {
     event.stopPropagation()
