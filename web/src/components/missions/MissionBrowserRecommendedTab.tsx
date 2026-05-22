@@ -32,6 +32,8 @@ interface SearchProgress {
   scanned: number
 }
 
+type TranslationValues = Record<string, number | string>
+
 interface MissionBrowserRecommendedTabProps {
   tokenError: 'rate_limited' | 'token_invalid' | null
   missionFetchError: string | null
@@ -56,6 +58,16 @@ interface MissionBrowserRecommendedTabProps {
   onSelectNode: (node: TreeNode) => void
 }
 
+function interpolateFallback(template: string, values?: TranslationValues) {
+  if (!values) {
+    return template
+  }
+
+  return Object.entries(values).reduce((text, [key, value]) => {
+    return text.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'g'), String(value))
+  }, template)
+}
+
 export function MissionBrowserRecommendedTab({
   tokenError,
   missionFetchError,
@@ -78,6 +90,11 @@ export function MissionBrowserRecommendedTab({
 }: MissionBrowserRecommendedTabProps) {
   const { t } = useTranslation(['common'])
 
+  const tWithFallback = (key: string, fallback: string, values?: TranslationValues) => {
+    const translated = t(key, { ...values, defaultValue: fallback })
+    return translated === key ? interpolateFallback(fallback, values) : translated
+  }
+
   return (
     <>
       {/* Token / rate-limit guidance banner */}
@@ -88,8 +105,14 @@ export function MissionBrowserRecommendedTab({
             <div className="text-sm space-y-2">
               <p className="font-medium text-yellow-300">
                 {tokenError === 'rate_limited'
-                  ? t('missions.recommended.tokenError.rateLimited')
-                  : t('missions.recommended.tokenError.tokenInvalid')}
+                  ? tWithFallback(
+                      'missions.recommended.tokenError.rateLimited',
+                      'GitHub API rate limit reached',
+                    )
+                  : tWithFallback(
+                      'missions.recommended.tokenError.tokenInvalid',
+                      'GitHub token is invalid or expired',
+                    )}
               </p>
               <p className="text-muted-foreground">
                 The fix browser needs a GitHub personal access token to fetch missions. Add one to
@@ -121,7 +144,7 @@ export function MissionBrowserRecommendedTab({
                     GITHUB_TOKEN=ghp_your_token_here
                   </pre>
                 </li>
-                <li>{t('common.restartConsole')}</li>
+                <li>{tWithFallback('restartConsole', 'Restart the console')}</li>
               </ol>
             </div>
           </div>
@@ -138,7 +161,9 @@ export function MissionBrowserRecommendedTab({
       {/* Recommended for You / Explore CNCF Fixes */}
       {(recommendations.length > 0 || loadingRecommendations) && (
         <CollapsibleSection
-          title={hasCluster ? t('missions.recommended.title.withCluster') : t('missions.recommended.title.withoutCluster')}
+          title={hasCluster
+            ? tWithFallback('missions.recommended.title.withCluster', 'Recommended for Your Cluster')
+            : tWithFallback('missions.recommended.title.withoutCluster', 'Explore CNCF Fixes')}
           defaultOpen={true}
           badge={
             <span className="flex items-center gap-2 text-xs text-purple-400">
@@ -152,7 +177,7 @@ export function MissionBrowserRecommendedTab({
                   resetMissionCache()
                 }}
                 className="p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
-                title={t('missions.recommended.refreshRecommendations')}
+                title={tWithFallback('missions.recommended.refreshRecommendations', 'Refresh recommendations')}
               >
                 <RefreshCw className="w-3 h-3" />
               </button>
@@ -164,8 +189,14 @@ export function MissionBrowserRecommendedTab({
           {!loadingRecommendations && (
             <p className="text-xs text-muted-foreground mb-3 -mt-1">
               {hasCluster
-                ? t('missions.recommended.subtitle.withCluster')
-                : t('missions.recommended.subtitle.withoutCluster')}
+                ? tWithFallback(
+                    'missions.recommended.subtitle.withCluster',
+                    '🎯 Matched based on your cluster resources, labels, and detected issues',
+                  )
+                : tWithFallback(
+                    'missions.recommended.subtitle.withoutCluster',
+                    '🌐 Showing popular CNCF community fixes — connect a cluster for personalized recommendations',
+                  )}
             </p>
           )}
 
@@ -174,10 +205,14 @@ export function MissionBrowserRecommendedTab({
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
                 <span className="flex-1">
-                  {searchProgress.step === 'Connecting' && t('missions.recommended.progress.connecting')}
+                  {searchProgress.step === 'Connecting' &&
+                    tWithFallback(
+                      'missions.recommended.progress.connecting',
+                      'Connecting to knowledge base…',
+                    )}
                   {searchProgress.step === 'Scanning' && (
                     <>
-                      {t('missions.recommended.progress.scanning')}{' '}
+                      {tWithFallback('missions.recommended.progress.scanning', 'Scanning')}{' '}
                       <span className="text-purple-400 font-mono">{searchProgress.detail}</span>
                     </>
                   )}
@@ -185,7 +220,10 @@ export function MissionBrowserRecommendedTab({
                 </span>
                 {searchProgress.found > 0 && (
                   <span className="text-xs text-purple-400 tabular-nums">
-                    {t('missions.recommended.progress.found', { found: searchProgress.found, scanned: searchProgress.scanned })}
+                    {tWithFallback('missions.recommended.progress.found', '{{found}} found · {{scanned}} scanned', {
+                      found: searchProgress.found,
+                      scanned: searchProgress.scanned,
+                    })}
                   </span>
                 )}
               </div>
@@ -238,7 +276,7 @@ export function MissionBrowserRecommendedTab({
             onClick={() => emitFixerGitHubLink()}
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            {t('missions.recommended.browseGitHub')}
+            {tWithFallback('missions.recommended.browseGitHub', 'Browse all fixes on GitHub')}
           </a>
           {searchProgress.step === 'Done' && searchProgress.found > 0 && (
             <span className="text-xs text-muted-foreground/60 ml-auto">{searchProgress.detail}</span>
@@ -267,9 +305,13 @@ export function MissionBrowserRecommendedTab({
           onImport={onImportDirectoryEntry}
         />
       ) : selectedPath ? (
-        <EmptyState message={t('missions.browser.emptyState.noFiles')} />
+        <EmptyState
+          message={tWithFallback('missions.browser.emptyState.noFiles', 'No files in this directory')}
+        />
       ) : (
-        <EmptyState message={t('missions.browser.emptyState.selectFolder')} />
+        <EmptyState
+          message={tWithFallback('missions.browser.emptyState.selectFolder', 'Select a folder from the sidebar to browse missions')}
+        />
       )}
     </>
   )
