@@ -93,31 +93,30 @@ describe('FalcoAlertsCard', () => {
       expect(screen.getByText('1h ago')).toBeInTheDocument()
     })
 
-    it('applies critical severity styling', () => {
+    it('tags critical alerts with data-severity', () => {
       render(<FalcoAlertsCard config={{}} />)
-      const criticalRow = screen.getByText('Container escape attempt detected').closest('.rounded-lg')
-      expect(criticalRow?.className).toMatch(/bg-red-500\/10/)
-      expect(criticalRow?.className).toMatch(/text-red-400/)
+      const criticalRow = screen.getByLabelText('critical Falco alert')
+      expect(criticalRow).toHaveAttribute('data-severity', 'critical')
+      expect(criticalRow).toHaveTextContent('Container escape attempt detected')
     })
 
-    it('applies warning severity styling', () => {
+    it('tags warning alerts with data-severity', () => {
       render(<FalcoAlertsCard config={{}} />)
-      const warningRow = screen.getByText('Privileged pod spawned').closest('.rounded-lg')
-      expect(warningRow?.className).toMatch(/bg-yellow-500\/10/)
-      expect(warningRow?.className).toMatch(/text-yellow-400/)
+      const warningRow = screen.getByLabelText('warning Falco alert')
+      expect(warningRow).toHaveAttribute('data-severity', 'warning')
+      expect(warningRow).toHaveTextContent('Privileged pod spawned')
     })
 
-    it('applies info severity styling', () => {
+    it('tags info alerts with data-severity', () => {
       render(<FalcoAlertsCard config={{}} />)
-      const infoRow = screen.getByText('Shell spawned in container').closest('.rounded-lg')
-      expect(infoRow?.className).toMatch(/bg-blue-500\/10/)
-      expect(infoRow?.className).toMatch(/text-blue-400/)
+      const infoRow = screen.getByLabelText('info Falco alert')
+      expect(infoRow).toHaveAttribute('data-severity', 'info')
+      expect(infoRow).toHaveTextContent('Shell spawned in container')
     })
 
-    it('renders severity icons for each alert row', () => {
+    it('renders one severity-marked row per demo alert', () => {
       const { container } = render(<FalcoAlertsCard config={{}} />)
-      const alertRows = container.querySelectorAll('.rounded-lg.text-xs')
-      expect(alertRows.length).toBe(3)
+      expect(container.querySelectorAll('[data-severity]')).toHaveLength(3)
     })
   })
 

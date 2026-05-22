@@ -100,6 +100,8 @@ export function FalcoAlertsCard({ config: _config }: CardConfig) {
         {demoAlerts.map((alert, index) => (
           <div
             key={index}
+            data-severity={alert.severity}
+            aria-label={`${alert.severity} Falco alert`}
             className={`flex items-start gap-2 p-2 rounded-lg text-xs ${
               alert.severity === 'critical' ? 'bg-red-500/10 text-red-400' :
                 alert.severity === 'warning' ? 'bg-yellow-500/10 text-yellow-400' :

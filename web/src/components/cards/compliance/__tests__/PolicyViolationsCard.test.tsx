@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PolicyViolationsCard } from '../PolicyViolationsCard'
 import type { KyvernoClusterStatus } from '../../../../hooks/useKyverno'
+
+type TranslationOptions = {
+  policy?: string
+  checked?: number
+  total?: number
+}
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -10,11 +17,15 @@ import type { KyvernoClusterStatus } from '../../../../hooks/useKyverno'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string, opts?: Record<string, unknown>) => {
-    if (opts && 'policy' in opts) return `view-${opts.policy}`
-    if (opts && 'checked' in opts) return `checking-${opts.checked}-${opts.total}`
-    return key
-  } }),
+  useTranslation: () => ({
+    t: (key: string, opts?: TranslationOptions) => {
+      if (opts?.policy != null) return `view-${opts.policy}`
+      if (opts?.checked != null && opts?.total != null) {
+        return `checking-${opts.checked}-${opts.total}`
+      }
+      return key
+    },
+  }),
 }))
 
 const mockUseKyverno = vi.fn()
@@ -38,7 +49,7 @@ vi.mock('../../CardDataContext', () => ({
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({
-  StatusBadge: ({ children, color }: { children: React.ReactNode; color: string }) => (
+  StatusBadge: ({ children, color }: { children: ReactNode; color: string }) => (
     <span data-testid="status-badge" data-color={color}>{children}</span>
   ),
 }))

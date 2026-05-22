@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { OPAPolicies } from '../OPAPolicies'
 
 // ---------------------------------------------------------------------------
@@ -13,11 +13,12 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('../DynamicCardErrorBoundary', () => ({
-  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DynamicCardErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
+const mockIsDemoMode = vi.fn(() => true)
 vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => true,
+  isDemoMode: () => mockIsDemoMode(),
 }))
 
 const mockUseDemoMode = vi.fn()
@@ -102,7 +103,7 @@ vi.mock('../../ui/RefreshIndicator', () => ({
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({
-  StatusBadge: ({ children }: { children: React.ReactNode }) => (
+  StatusBadge: ({ children }: { children: ReactNode }) => (
     <span data-testid="status-badge">{children}</span>
   ),
 }))
@@ -112,6 +113,7 @@ vi.mock('../../ui/StatusBadge', () => ({
 // ---------------------------------------------------------------------------
 
 function setupDefaults({ shouldUseDemoData = true, isDemoMode = true } = {}) {
+  mockIsDemoMode.mockReturnValue(isDemoMode)
   mockUseDemoMode.mockReturnValue({ isDemoMode })
   mockUseCardDemoState.mockReturnValue({ shouldUseDemoData })
   mockUseCardLoadingState.mockReturnValue({})
@@ -224,6 +226,7 @@ describe('OPAPolicies', () => {
   describe('scanning state', () => {
     it('shows scanning indicator when not in demo and clusters are loading', () => {
       setupDefaults({ shouldUseDemoData: false, isDemoMode: false })
+      mockIsDemoMode.mockReturnValue(false)
       mockUseClusters.mockReturnValue({
         deduplicatedClusters: [],
         isLoading: true,
@@ -232,6 +235,7 @@ describe('OPAPolicies', () => {
       })
       render(<OPAPolicies />)
       expect(screen.getByText('Scanning clusters...')).toBeInTheDocument()
+      expect(screen.queryByText('kind-hub')).not.toBeInTheDocument()
     })
   })
 
