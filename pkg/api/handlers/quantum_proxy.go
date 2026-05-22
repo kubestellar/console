@@ -193,12 +193,21 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 }
 
 func (h *QuantumProxyHandler) requireBearerToken(c *fiber.Ctx) error {
+	// Token resolution: Authorization header -> HttpOnly kc_auth cookie.
+	// Mirrors the standard jwtAuth middleware so OAuth-mode users (who hold
+	// only an HttpOnly cookie, not a localStorage token) can call mutation
+	// endpoints. PR #14935 introduced header-only auth which broke OAuth flow.
+	var tokenString string
+
 	trimmedHeader := strings.TrimSpace(c.Get("Authorization"))
-	if len(trimmedHeader) <= len(quantumBearerScheme) || !strings.EqualFold(trimmedHeader[:len(quantumBearerScheme)], quantumBearerScheme) {
-		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
+	if len(trimmedHeader) > len(quantumBearerScheme) && strings.EqualFold(trimmedHeader[:len(quantumBearerScheme)], quantumBearerScheme) {
+		tokenString = strings.TrimSpace(trimmedHeader[len(quantumBearerScheme):])
 	}
 
-	tokenString := strings.TrimSpace(trimmedHeader[len(quantumBearerScheme):])
+	if tokenString == "" {
+		tokenString = c.Cookies("kc_auth")
+	}
+
 	if tokenString == "" {
 		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
 	}
