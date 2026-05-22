@@ -420,7 +420,8 @@ describe('FixerDefinitionPanel', () => {
       target: { value: 'tet' },
     })
 
-    expect(screen.getByText('Tetragon')).toBeDefined()
+    expect(screen.getAllByText('Tetragon').length).toBeGreaterThan(0)
+    expect(screen.getByText('Top match')).toBeDefined()
     expect(screen.getByText('Choose a suggestion or press Enter to add the top match.')).toBeDefined()
   })
 

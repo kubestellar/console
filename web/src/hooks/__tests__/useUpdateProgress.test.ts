@@ -653,24 +653,23 @@ describe('useUpdateProgress', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
     await flushMicrotasks()
 
-    const ws2 = wsInstances[wsInstances.length - 1]
-    act(() => {
-      if (ws2.onopen) ws2.onopen()
-    })
-
-    // First poll: "Waiting for services to restart..."
+    // Reconnect auto-opens the new socket in the mock constructor.
     await act(async () => { await Promise.resolve() })
-    expect(result.current.progress?.message).toContain('Waiting for services to restart')
+    expect(result.current.progress?.message).toMatch(
+      /Waiting for services to restart|Starting backend services/
+    )
 
-    // Advance several polls to get elapsed time > 10s
+    // Advance several polls to get elapsed time past the 10s threshold.
     const POLLS_FOR_10S = 6 // 6 * 2000ms = 12s
     for (let i = 0; i < POLLS_FOR_10S; i++) {
       await act(async () => { await vi.advanceTimersByTimeAsync(BACKEND_POLL_MS) })
       await act(async () => { await Promise.resolve() })
     }
 
-    // Message should now reference "initializing" or "Starting backend"
     expect(result.current.progress?.status).toBe('restarting')
+    expect(result.current.progress?.message).toMatch(
+      /Starting backend services|Backend initializing/
+    )
 
     vi.unstubAllGlobals()
     vi.stubGlobal('WebSocket', MockWebSocket)

@@ -9,7 +9,7 @@
  *         notification ack/dismiss, task CRUD, fallback outside provider
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act, renderHook } from '@testing-library/react'
+import { render, screen, act, renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
 
 // ---------------------------------------------------------------------------

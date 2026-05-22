@@ -115,11 +115,15 @@ describe("acmm-badge", () => {
     mockGet.mockResolvedValue(null);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers({ "content-length": "50" }),
-        text: async () => JSON.stringify({ detectedIds: ["acmm:claude-md"] }),
-      }),
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ detectedIds: ["acmm:claude-md"] }), {
+          status: 200,
+          headers: {
+            "content-length": "35",
+            "content-type": "application/json",
+          },
+        }),
+      ),
     );
 
     const res = await handler(makeRequest("owner/repo"));
