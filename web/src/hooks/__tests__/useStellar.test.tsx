@@ -471,7 +471,19 @@ describe('StellarProvider — SSE events', () => {
     expect(capturedRef.current?.solveProgress['e1'].status).toBe('running')
   })
 
-  it('handles solve_complete SSE event — removes solve progress', async () => {
+  it('handles solve_complete SSE event — removes solve progress and refreshes activity', async () => {
+    const completionActivity = {
+      id: 'activity-1',
+      userId: 'system',
+      ts: new Date().toISOString(),
+      kind: 'solve_resolved',
+      eventId: 'e1',
+      solveId: 's1',
+      title: 'AI mission resolved',
+      detail: 'Done',
+      severity: 'info',
+    }
+    mockStellarApi.listActivity.mockResolvedValueOnce([completionActivity])
     const { capturedRef } = renderWithProvider()
     await act(async () => { await Promise.resolve() })
     const es = eventSourceInstances[0]
@@ -481,8 +493,11 @@ describe('StellarProvider — SSE events', () => {
     })
     await act(async () => {
       es._triggerEvent('solve_complete', { solveId: 's1', eventId: 'e1', status: 'complete', summary: 'Done' })
+      await Promise.resolve()
     })
     expect(capturedRef.current?.solveProgress['e1']).toBeUndefined()
+    expect(mockStellarApi.listActivity).toHaveBeenCalled()
+    expect(capturedRef.current?.activity[0]).toMatchObject({ id: 'activity-1', solveId: 's1' })
   })
 
   it('handles digest SSE event — sets nudge with digest content', async () => {

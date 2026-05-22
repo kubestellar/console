@@ -379,8 +379,12 @@ function useStellarSource() {
         delete copy[payload.eventId]
         return copy
       })
-      // Refetch solves so the terminal state lands.
+      // Refetch the terminal solve snapshot and activity log immediately.
+      // This covers the case where solve_complete arrives before the matching
+      // activity SSE (or that activity event is dropped during reconnect), so
+      // the Stellar log still shows the completion row right away.
       stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
+      stellarApi.listActivity(STELLAR_ACTIVITY_LIMIT).then(setActivity).catch(() => { /* ignore */ })
     })
     es.addEventListener('action_bumped', (e) => {
       const payload = parseStellarEvent<{ id: string }>(e, 'action_bumped')
