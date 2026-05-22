@@ -6,6 +6,7 @@
  */
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../../ui/Toast'
 import { Palette, Undo2, Redo2, RotateCcw } from 'lucide-react'
 import { BaseModal } from '../../../lib/modals'
 import { DashboardCustomizerSidebar } from './DashboardCustomizerSidebar'
@@ -73,6 +74,7 @@ export function DashboardCustomizer({
 }: DashboardCustomizerProps) {
   const { t: _t } = useTranslation()
   const t = _t as (key: string, defaultValue?: string) => string
+  const { showToast } = useToast()
   // User-driven section selection (null = use initialSection prop)
   const [userSelectedSection, setUserSelectedSection] = useState<CustomizerSection | null>(null)
   const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
@@ -180,6 +182,7 @@ export function DashboardCustomizer({
                   href = getCustomDashboardRoute(createdDashboard.id)
                 } catch (error: unknown) {
                   console.error('[DashboardCustomizer] backend create failed, falling back to local dashboard:', error)
+                  showToast(t('dashboardCreateFallback', 'Dashboard saved locally — sync will retry later'), 'warning')
                 }
 
                 addItem({ name, icon, href, type: 'link' }, 'primary')

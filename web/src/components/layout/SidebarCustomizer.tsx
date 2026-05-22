@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
 import {
   DndContext,
   closestCenter,
@@ -60,6 +61,7 @@ type PendingChanges = {
 
 export function SidebarCustomizer({ isOpen, onClose, embedded = false }: SidebarCustomizerProps) {
   const { t } = useTranslation(['common', 'cards'])
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const {
     config,
@@ -179,6 +181,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
       href = getCustomDashboardRoute(createdDashboard.id)
     } catch (error: unknown) {
       console.error('[SidebarCustomizer] backend create failed, falling back to local dashboard:', error)
+      showToast(t('common:dashboardCreateFallback', 'Dashboard saved locally — sync will retry later'), 'warning')
     }
 
     addItem({ name, icon: quickIcon, href, type: 'link', description }, 'primary')

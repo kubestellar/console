@@ -2463,12 +2463,30 @@
     }
   },
   "missionControl": {
-    "summary": {
-      "historyTitle": "Mission Control history",
-      "runFootprint": "{{workloads}} workloads · {{clusters}} clusters",
-      "progressLine": "Progress: {{progress}}%",
-      "nextDirections": "Next directions",
-      "defaultGuidance": "Reopen this Mission Control session to review the deployed tools and recommended next steps."
+    "launchSequence": {
+      "noProjectsTitle": "No projects to deploy",
+      "noProjectsDescription": "Your mission has no cluster assignments. Go back to the Chart Course phase to assign projects before launching.",
+      "dryRunCompleteTitle": "Dry Run Complete!",
+      "missionCompleteTitle": "Mission Complete!",
+      "dryRunIssuesTitle": "Dry Run Completed with Issues",
+      "missionIssuesTitle": "Mission Completed with Issues",
+      "dryRunInProgressTitle": "Dry Run In Progress",
+      "launchInProgressTitle": "Launch Sequence In Progress",
+      "allPhasesFinished": "All deployment phases have finished.",
+      "deployingProjects": "Deploying {{count}} project in {{phaseCount}} phase",
+      "deployingProjects_one": "Deploying {{count}} project in {{phaseCount}} phase",
+      "deployingProjects_other": "Deploying {{count}} projects in {{phaseCount}} phase",
+      "deployingProjectsPlural": "Deploying {{count}} project in {{phaseCount}} phases",
+      "deployingProjectsPlural_one": "Deploying {{count}} project in {{phaseCount}} phases",
+      "deployingProjectsPlural_other": "Deploying {{count}} projects in {{phaseCount}} phases",
+      "phaseLabel": "Phase {{phase}}:",
+      "retryFailed": "Retry Failed",
+      "missionCancelled": "Mission cancelled",
+      "missionFailed": "Mission failed",
+      "defaultMissionTitle": "Mission Control deployment",
+      "dryRunPrefix": "[DRY RUN] ",
+      "dryRunValidation": "Dry-run validation",
+      "unifiedDeployment": "Unified deployment"
     }
   },
   "feedback": {
@@ -4837,16 +4855,19 @@
   },
   "stellar": {
     "eventCard": {
-      "details": "details",
-      "importanceScore": "Importance: {{score}}",
-      "attemptCount": "Tried {{count}}×",
-      "undoThis": "Undo this",
       "tryAiMission": "Try AI mission",
-      "tryAiMissionTitle": "Hand this off to an AI mission on your connected agent for deeper investigation and autonomous fix",
-      "solveAlreadyInProgress": "Stellar is already solving this event",
-      "actionTitle": "{{action}} for {{title}}",
-      "autoHandling": "Stellar is handling this autonomously",
-      "solving": "Solving...",
+      "details": "details →",
+      "importanceScore": "importance score: {{score}}",
+      "attemptCount": "✦ Stellar tried {{count}}× — see details",
+      "undoThis": "Undo this",
+      "tryAiMissionTitle": "Escalate to an AI mission on your connected agent",
+      "solveAlreadyInProgress": "Solve already in progress",
+      "solving": "Solving…",
+      "autoHandling": "Stellar is handling this — no input needed.",
+      "actionTitle": "{{action}}: {{title}}",
+      "monitoring": "Monitoring durability",
+      "recheckIn": "Recheck in {{countdown}}",
+      "recheckNow": "Checking now…",
       "actions": {
         "investigate": "Investigate",
         "restart": "Restart",
@@ -4937,27 +4958,6 @@
         "error": "Error"
       }
     },
-    "eventCard": {
-      "tryAiMission": "Try AI mission",
-      "details": "details →",
-      "importanceScore": "importance score: {{score}}",
-      "attemptCount": "✦ Stellar tried {{count}}× — see details",
-      "undoThis": "Undo this",
-      "tryAiMissionTitle": "Escalate to an AI mission on your connected agent",
-      "solveAlreadyInProgress": "Solve already in progress",
-      "solving": "Solving…",
-      "autoHandling": "Stellar is handling this — no input needed.",
-      "actionTitle": "{{action}}: {{title}}",
-      "monitoring": "Monitoring durability",
-      "recheckIn": "Recheck in {{countdown}}",
-      "recheckNow": "Checking now…",
-      "actions": {
-        "investigate": "Investigate",
-        "restart": "Restart",
-        "scale": "Scale",
-        "solve": "Solve"
-      }
-    },
     "recommendedTasks": {
       "stellarSuggests": "Stellar suggests",
       "scheduled": "scheduled",
@@ -5043,31 +5043,5 @@
       "eventListAriaLabel": "Events being processed in this batch"
     }
   },
-  "missionControl": {
-    "launchSequence": {
-      "noProjectsTitle": "No projects to deploy",
-      "noProjectsDescription": "Your mission has no cluster assignments. Go back to the Chart Course phase to assign projects before launching.",
-      "dryRunCompleteTitle": "Dry Run Complete!",
-      "missionCompleteTitle": "Mission Complete!",
-      "dryRunIssuesTitle": "Dry Run Completed with Issues",
-      "missionIssuesTitle": "Mission Completed with Issues",
-      "dryRunInProgressTitle": "Dry Run In Progress",
-      "launchInProgressTitle": "Launch Sequence In Progress",
-      "allPhasesFinished": "All deployment phases have finished.",
-      "deployingProjects": "Deploying {{count}} project in {{phaseCount}} phase",
-      "deployingProjects_one": "Deploying {{count}} project in {{phaseCount}} phase",
-      "deployingProjects_other": "Deploying {{count}} projects in {{phaseCount}} phase",
-      "deployingProjectsPlural": "Deploying {{count}} project in {{phaseCount}} phases",
-      "deployingProjectsPlural_one": "Deploying {{count}} project in {{phaseCount}} phases",
-      "deployingProjectsPlural_other": "Deploying {{count}} projects in {{phaseCount}} phases",
-      "phaseLabel": "Phase {{phase}}:",
-      "retryFailed": "Retry Failed",
-      "missionCancelled": "Mission cancelled",
-      "missionFailed": "Mission failed",
-      "defaultMissionTitle": "Mission Control deployment",
-      "dryRunPrefix": "[DRY RUN] ",
-      "dryRunValidation": "Dry-run validation",
-      "unifiedDeployment": "Unified deployment"
-    }
-  }
+  "dashboardCreateFallback": "Dashboard saved locally — sync will retry later"
 }
