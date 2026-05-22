@@ -143,7 +143,7 @@ export function MissionChatSavedPreRun({
         </div>
       ) : (
         mission.description && (
-          <div className="mx-1 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap rounded-lg bg-secondary/20 border border-border/50">
+          <div className="mx-1 px-3 py-2 text-sm text-muted-foreground whitespace-pre-wrap break-words rounded-lg bg-secondary/20 border border-border/50">
             {mission.description}
           </div>
         )

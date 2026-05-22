@@ -127,7 +127,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
             </div>
           )
         ) : (
-          <p className={cn("text-foreground whitespace-pre-wrap", FONT_SIZE_CLASSES[fontSize].split(' ')[0])}>{msg.content}</p>
+          <p className={cn("text-foreground whitespace-pre-wrap break-words", FONT_SIZE_CLASSES[fontSize].split(' ')[0])}>{msg.content}</p>
         )}
         <div className="flex items-center gap-2 mt-1">
           <span className="text-2xs text-muted-foreground">

@@ -153,4 +153,26 @@ describe('MissionChat layout', () => {
     expect(within(composer).getByPlaceholderText('Ask a follow-up question...')).toBeInTheDocument()
     expect(within(composer).queryByTestId('orbit-setup-offer')).not.toBeInTheDocument()
   })
+
+  it('keeps saved mission descriptions fully wrapped and exposes full header text via tooltips', () => {
+    const title = 'Mission title that should clamp cleanly with an ellipsis instead of cutting off mid-word'
+    const description = 'Mission description should stay fully visible in the saved mission panel with normal wrapping, while the header subtitle truncates on a word boundary and still exposes the full text on hover for the operator.'
+
+    render(<MissionChat mission={createMission({ title, description, status: 'saved', messages: [] })} />)
+
+    const headerTitle = screen.getByTitle(title)
+    const headerSubtitle = screen.getByTitle(description)
+    const savedDescription = within(screen.getByTestId('saved-mission-prerun')).getByText(description)
+
+    expect(headerTitle.textContent).toContain('…')
+    expect(headerTitle.textContent).not.toBe(title)
+    expect(headerTitle.className).toContain('break-words')
+    expect(headerSubtitle.textContent).toContain('…')
+    expect(headerSubtitle.textContent).not.toBe(description)
+    expect(headerSubtitle.className).toContain('break-words')
+    expect(savedDescription.className).toContain('whitespace-pre-wrap')
+    expect(savedDescription.className).toContain('break-words')
+    expect(savedDescription.className).not.toContain('truncate')
+    expect(savedDescription.className).not.toContain('line-clamp')
+  })
 })

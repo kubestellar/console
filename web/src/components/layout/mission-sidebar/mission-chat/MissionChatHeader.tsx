@@ -4,7 +4,8 @@ import type { Mission } from '../../../../hooks/useMissions'
 import { cn } from '../../../../lib/cn'
 import { AgentBadge } from '../../../agent/AgentIcon'
 import { STATUS_CONFIG, TYPE_ICONS } from '../types'
-import { getMissionAgentProvider } from './missionChatUtils'
+import { MISSION_HEADER_DESCRIPTION_PREVIEW_LENGTH, MISSION_HEADER_TITLE_PREVIEW_LENGTH } from './missionChatConstants'
+import { getMissionAgentProvider, truncateMissionTextAtWordBoundary } from './missionChatUtils'
 
 interface MissionChatHeaderProps {
   config: typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]
@@ -51,6 +52,8 @@ export function MissionChatHeader({
   const StatusIcon = config.icon
   const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
   const missionAgentProvider = getMissionAgentProvider(mission.agent)
+  const truncatedTitle = truncateMissionTextAtWordBoundary(mission.title, MISSION_HEADER_TITLE_PREVIEW_LENGTH)
+  const truncatedDescription = truncateMissionTextAtWordBoundary(mission.description, MISSION_HEADER_DESCRIPTION_PREVIEW_LENGTH)
 
   return (
     <>
@@ -88,11 +91,16 @@ export function MissionChatHeader({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1 flex-1 min-w-0 group">
-              <h3 className="font-semibold text-foreground flex-1 truncate">{mission.title}</h3>
+            <div className="flex items-start gap-1 flex-1 min-w-0 group">
+              <h3
+                className="font-semibold text-foreground flex-1 min-w-0 leading-tight break-words"
+                title={truncatedTitle.isTruncated ? mission.title : undefined}
+              >
+                {truncatedTitle.text}
+              </h3>
               <button
                 onClick={onStartEditingTitle}
-                className="p-0.5 rounded transition-colors text-muted-foreground hover:bg-secondary"
+                className="p-0.5 rounded transition-colors text-muted-foreground hover:bg-secondary shrink-0"
                 title={t('missionChat.renameTitle', { defaultValue: 'Rename mission' })}
                 data-testid="mission-title-edit-btn"
               >
@@ -152,14 +160,21 @@ export function MissionChatHeader({
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs text-muted-foreground flex-1 line-clamp-2">{mission.description}</p>
+        <div className="flex items-start gap-2 flex-wrap min-w-0">
+          <p
+            className="text-xs text-muted-foreground flex-1 min-w-0 break-words leading-relaxed"
+            title={truncatedDescription.isTruncated ? mission.description : undefined}
+          >
+            {truncatedDescription.text}
+          </p>
           {mission.agent && missionAgentProvider && (
             <AgentBadge provider={missionAgentProvider} name={mission.agent} />
           )}
         </div>
         {mission.cluster && (
-          <span className="text-xs text-purple-400 mt-1 inline-block">Cluster: {mission.cluster}</span>
+          <span className="text-xs text-purple-400 mt-1 inline-block">
+            {t('missionChat.clusterLabel', { cluster: mission.cluster })}
+          </span>
         )}
       </div>
 
