@@ -282,8 +282,16 @@ export function useMissionControl() {
   const setOverlay = (overlay: OverlayMode) => setState((prev) => ({ ...prev, overlay }))
   const setDeployMode = (deployMode: 'phased' | 'yolo') => setState((prev) => ({ ...prev, deployMode }))
   const setDryRun = (isDryRun: boolean) => setState((prev) => ({ ...prev, isDryRun }))
-  const updateLaunchProgress = useCallback((launchProgress: PhaseProgress[]) => setState((prev) => ({ ...prev, launchProgress })), [])
-  const setGroundControlDashboardId = (groundControlDashboardId: string) => setState((prev) => ({ ...prev, groundControlDashboardId }))
+  const updateLaunchProgress = useCallback((launchProgress: PhaseProgress[]) => {
+    const nextState = { ...stateRef.current, launchProgress }
+    setState(nextState)
+    archiveToHistory(nextState, nextState.planningMissionId)
+  }, [])
+  const setGroundControlDashboardId = (groundControlDashboardId: string) => {
+    const nextState = { ...stateRef.current, groundControlDashboardId }
+    setState(nextState)
+    archiveToHistory(nextState, nextState.planningMissionId)
+  }
 
   const reset = () => {
     const missionId = state.planningMissionId

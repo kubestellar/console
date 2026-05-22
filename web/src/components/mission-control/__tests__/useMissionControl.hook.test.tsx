@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useMissionControl } from '../useMissionControl'
+import { loadHistoryEntry } from '../useMissionControl.state'
 import type { MissionControlState, PayloadProject } from '../types'
 import * as useMissionsModule from '../../../hooks/useMissions'
 import * as useClustersModule from '../../../hooks/mcp/clusters'
@@ -301,6 +302,38 @@ describe('useMissionControl hook', () => {
       result.current.acknowledgeStaleClusters()
     })
     expect(result.current.staleClusterNames).toHaveLength(0)
+  })
+
+  it('archives launch progress snapshots so mission control history reopens the clicked run', () => {
+    const { result } = renderHook(() => useMissionControl())
+
+    act(() => {
+      result.current.setTitle('Secure clusters')
+      result.current.setPhase('launching')
+      result.current.updateLaunchProgress([
+        {
+          phase: 1,
+          status: 'running',
+          projects: [
+            {
+              name: 'falco',
+              missionId: 'deploy-mission-1',
+              status: 'running',
+            },
+          ],
+        },
+      ])
+    })
+
+    expect(loadHistoryEntry('deploy-mission-1')).toMatchObject({
+      title: 'Secure clusters',
+      phase: 'launching',
+      launchProgress: [
+        expect.objectContaining({
+          projects: [expect.objectContaining({ missionId: 'deploy-mission-1' })],
+        }),
+      ],
+    })
   })
 
   it('hydrates state from a plan', () => {
