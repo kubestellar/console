@@ -17,6 +17,19 @@ import {
 // ---------------------------------------------------------------------------
 
 const MAX_RESPONSE_BYTES = 512_000;
+const MAX_ERROR_BODY_BYTES = 1_024;
+
+async function readCappedText(res: Response, maxBytes: number): Promise<string> {
+  const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
+  if (contentLength > maxBytes) {
+    return `[body too large: ${contentLength} bytes]`;
+  }
+  const text = await res.text();
+  if (text.length > maxBytes) {
+    return text.slice(0, maxBytes) + "…[truncated]";
+  }
+  return text;
+}
 
 async function readCappedJson<T>(res: Response): Promise<T> {
   const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
@@ -81,7 +94,7 @@ async function fetchPaginated<T>(
 
     if (!res.ok) {
       if (res.status === 404) return allItems;
-      const body = await res.text();
+      const body = await readCappedText(res, MAX_ERROR_BODY_BYTES);
       throw new Error(`GitHub API ${res.status}: ${body.slice(0, 300)}`);
     }
 
