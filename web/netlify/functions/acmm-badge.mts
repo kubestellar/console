@@ -21,8 +21,12 @@ const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const API_TIMEOUT_MS = 15_000;
 /** Trusted origin for scan endpoint — prevents SSRF via Host header manipulation */
 const TRUSTED_SCAN_ORIGIN = process.env.SITE_URL || "https://console.kubestellar.io";
-/** Maximum upstream response size (512 KB — tree JSON is typically < 200 KB) */
-const MAX_RESPONSE_BYTES = 512_000;
+/**
+ * Maximum upstream response size for ACMM GitHub tree reads.
+ * kubestellar/console currently returns ~1.8 MB from the trees API, so the
+ * previous 512 KB cap forced the badge down its fallback paths.
+ */
+const MAX_RESPONSE_BYTES = 3_000_000;
 const BLOB_CACHE_STORE = "acmm-scan";
 const BLOB_CACHE_TTL_MS = 60 * 60 * 1000;
 const LEVEL_COMPLETION_THRESHOLD = 0.7;

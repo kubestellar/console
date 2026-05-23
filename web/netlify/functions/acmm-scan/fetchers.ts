@@ -16,7 +16,9 @@ import type { WeeklyActivity, GitTreeEntry } from "./helpers";
 // Response size cap
 // ---------------------------------------------------------------------------
 
-const MAX_RESPONSE_BYTES = 512_000;
+// The GitHub trees API payload for this repo is ~1.8 MB, so the generic
+// 512 KB cap introduced in #15312 falsely trips the ACMM scan into demo mode.
+const MAX_RESPONSE_BYTES = 3_000_000;
 
 async function readCappedJson<T>(res: Response): Promise<T> {
   const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
