@@ -1,8 +1,8 @@
 /**
  * CardWrapper — shared shell for every dashboard card (#15264).
  *
- * PR A: demo badge, failure banner, collapse persistence, expand modal sizing,
- * mode-switch skeleton. Lazy modals / snooze / missions integration deferred to PR B.
+ * PR A: demo badge, failure banner, collapse write, expand modal outer sizing,
+ * mode-switch skeleton. PR B: error boundary, collapse restore, modal content heights.
  *
  * Run from web/:  npm run test:card-wrapper
  * (Do not run npx vitest from repo root — that skips vite.config.ts jsdom + @/ aliases.)
@@ -68,6 +68,8 @@ vi.mock('../../../hooks/useSnoozedCards', () => ({
 vi.mock('../../../lib/analytics', () => ({
   emitCardExpanded: vi.fn(),
   emitCardRefreshed: vi.fn(),
+  emitError: vi.fn(),
+  markErrorReported: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -290,6 +292,162 @@ describe('CardWrapper', () => {
 
       expect(document.querySelector('[data-card-skeleton="true"]')).toBeTruthy()
       expect(screen.getByTestId('card-child')).toBeInTheDocument()
+    })
+  })
+
+  describe('error boundary — child throws', () => {
+    // ErrorThrower: controlled throw via prop
+    function ErrorThrower({ shouldThrow }: { shouldThrow: boolean }) {
+      if (shouldThrow) throw new Error('boom')
+      return <div data-testid="card-child">recovered</div>
+    }
+
+    it('renders CardErrorFallback when child throws', () => {
+      // suppress React's console.error for expected boundary errors
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      render(
+        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
+          <ErrorThrower shouldThrow={true} />
+        </CardWrapper>,
+      )
+      spy.mockRestore()
+
+      expect(screen.getByText('cardWrapper.renderErrorTitle')).toBeInTheDocument()
+      expect(screen.getByText('cardWrapper.renderErrorMessage')).toBeInTheDocument()
+    })
+
+    it('recovers after retry when shouldThrow is reset to false', async () => {
+      const user = userEvent.setup()
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      let shouldThrow = true
+
+      const { rerender } = render(
+        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
+          <ErrorThrower shouldThrow={shouldThrow} />
+        </CardWrapper>,
+      )
+      spy.mockRestore()
+
+      // Error fallback is shown
+      expect(screen.getByText('cardWrapper.renderErrorTitle')).toBeInTheDocument()
+
+      // Fix the throw, then click retry
+      shouldThrow = false
+      rerender(
+        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
+          <ErrorThrower shouldThrow={shouldThrow} />
+        </CardWrapper>,
+      )
+
+      const retryBtn = screen.getByRole('button', { name: /cardWrapper\.renderRetryLeft/i })
+      await user.click(retryBtn)
+
+      await waitFor(() => {
+        expect(screen.getByText('recovered')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error fallback even when isDemoData is true', () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      render(
+        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={true}>
+          <ErrorThrower shouldThrow={true} />
+        </CardWrapper>,
+      )
+      spy.mockRestore()
+
+      expect(screen.getByText('cardWrapper.renderErrorTitle')).toBeInTheDocument()
+    })
+
+    it('calls onRefresh when retry button clicked on CardFailureBanner', async () => {
+      const user = userEvent.setup()
+      const onRefresh = vi.fn()
+      renderCardWrapper({ isFailed: true, consecutiveFailures: 1, onRefresh })
+
+      const retryBtn = screen.getByRole('button', { name: 'cardWrapper.failureRetry' })
+      await user.click(retryBtn)
+
+      expect(onRefresh).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('collapse restore on remount', () => {
+    it('starts expanded when localStorage has no entry', () => {
+      renderCardWrapper({ cardId: TEST_CARD_ID })
+      expect(screen.getByText(CHILD_CONTENT_TEXT)).toBeInTheDocument()
+    })
+
+    it('starts collapsed when cardId is already in localStorage on mount', () => {
+      localStorage.setItem(
+        COLLAPSED_CARDS_STORAGE_KEY,
+        JSON.stringify([TEST_CARD_ID]),
+      )
+      renderCardWrapper({ cardId: TEST_CARD_ID })
+      expect(screen.queryByText(CHILD_CONTENT_TEXT)).not.toBeInTheDocument()
+    })
+
+    it('removes cardId from localStorage when user expands a pre-collapsed card', async () => {
+      const user = userEvent.setup()
+      localStorage.setItem(
+        COLLAPSED_CARDS_STORAGE_KEY,
+        JSON.stringify([TEST_CARD_ID]),
+      )
+      renderCardWrapper({ cardId: TEST_CARD_ID })
+
+      const expandBtn = screen.getByRole('button', { name: 'Expand card' })
+      await user.click(expandBtn)
+
+      await waitFor(() => {
+        const stored = JSON.parse(
+          localStorage.getItem(COLLAPSED_CARDS_STORAGE_KEY) ?? '[]',
+        ) as string[]
+        expect(stored).not.toContain(TEST_CARD_ID)
+      })
+      expect(screen.getByText(CHILD_CONTENT_TEXT)).toBeInTheDocument()
+    })
+
+    it('falls back to expanded when localStorage contains corrupt JSON', () => {
+      localStorage.setItem(COLLAPSED_CARDS_STORAGE_KEY, 'not-json')
+      expect(() => renderCardWrapper({ cardId: TEST_CARD_ID })).not.toThrow()
+      expect(screen.getByText(CHILD_CONTENT_TEXT)).toBeInTheDocument()
+    })
+  })
+
+  describe('expanded modal content-container sizing', () => {
+    it('default card type uses max-w-4xl / min-h-[80vh] container', async () => {
+      const user = userEvent.setup()
+      renderCardWrapper({ cardType: TEST_CARD_TYPE }) // 'cluster_health'
+
+      await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
+
+      const modal = await screen.findByTestId('drilldown-modal')
+      expect(modal).toHaveClass('max-w-4xl')
+      expect(modal).toHaveClass('min-h-[80vh]')
+
+      const content = modal.querySelector('.scroll-enhanced')
+      expect(content).toHaveClass('max-h-[calc(80vh-80px)]')
+    })
+
+    it('LARGE_EXPANDED_CARDS content container uses h-[calc(95vh-80px)]', async () => {
+      const user = userEvent.setup()
+      renderCardWrapper({ cardType: LARGE_EXPANDED_CARD_TYPE }) // 'cluster_comparison'
+
+      await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
+
+      const modal = await screen.findByTestId('drilldown-modal')
+      const content = modal.querySelector('.scroll-enhanced')
+      expect(content).toHaveClass('h-[calc(95vh-80px)]')
+    })
+
+    it('FULLSCREEN_EXPANDED_CARDS content container uses h-[calc(98vh-80px)]', async () => {
+      const user = userEvent.setup()
+      renderCardWrapper({ cardType: FULLSCREEN_CARD_TYPE }) // 'cluster_locations'
+
+      await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
+
+      const modal = await screen.findByTestId('drilldown-modal')
+      const content = modal.querySelector('.scroll-enhanced')
+      expect(content).toHaveClass('h-[calc(98vh-80px)]')
     })
   })
 })
