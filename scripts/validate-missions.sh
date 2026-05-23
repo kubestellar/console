@@ -199,7 +199,7 @@ build_schema_validation_payload() {
       end;
 
     {
-      version: (.version // "kc-mission-v1"),
+      version: .version,
       name: .name,
       title: (.title // .name // "Untitled mission"),
       description: (.description // ""),
