@@ -134,8 +134,6 @@ jobs:
         run: |
           set -e
 
-          set -x
-
           # 0. Pre-flight: Validate READ_TOKEN is non-empty
           if [ -z "$READ_TOKEN" ]; then
             echo "::error::READ_TOKEN (GITHUB_TOKEN) is empty — cannot proceed"
@@ -152,6 +150,7 @@ jobs:
               key, algorithm="RS256"))
           PY
           )
+          echo "::add-mask::$JWT"
 
           # 2. Exchange for installation token
           curl -sS -X POST \
@@ -160,6 +159,7 @@ jobs:
             "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens" \
             -o /tmp/app-install-token.json
           TOKEN=$(python3 -c "import json; print(json.load(open('/tmp/app-install-token.json'))['token'])")
+          echo "::add-mask::$TOKEN"
 
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
             echo "::error::Failed to obtain installation token"
