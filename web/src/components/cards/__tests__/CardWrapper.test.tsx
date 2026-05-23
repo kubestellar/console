@@ -127,6 +127,22 @@ function CardStateReporter({ state }: { state: CardDataState }) {
   return <div data-testid="card-child">{CHILD_CONTENT_TEXT}</div>
 }
 
+/** Suppress expected React error-boundary console.error; always restores the spy. */
+function withSuppressedConsoleError(run: () => void) {
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    run()
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+function expectModalScrollContent(modal: HTMLElement) {
+  const content = modal.querySelector('.scroll-enhanced')
+  expect(content).not.toBeNull()
+  return content as HTMLElement
+}
+
 describe('CardWrapper', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -213,6 +229,17 @@ describe('CardWrapper', () => {
       await waitFor(() => {
         expect(screen.queryByTestId('card-failure-banner')).not.toBeInTheDocument()
       })
+    })
+
+    it('calls onRefresh when retry button is clicked', async () => {
+      const user = userEvent.setup()
+      const onRefresh = vi.fn()
+      renderCardWrapper({ isFailed: true, consecutiveFailures: 1, onRefresh })
+
+      const retryBtn = screen.getByRole('button', { name: 'cardWrapper.failureRetry' })
+      await user.click(retryBtn)
+
+      expect(onRefresh).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -303,14 +330,13 @@ describe('CardWrapper', () => {
     }
 
     it('renders CardErrorFallback when child throws', () => {
-      // suppress React's console.error for expected boundary errors
-      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      render(
-        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
-          <ErrorThrower shouldThrow={true} />
-        </CardWrapper>,
-      )
-      spy.mockRestore()
+      withSuppressedConsoleError(() => {
+        render(
+          <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
+            <ErrorThrower shouldThrow={true} />
+          </CardWrapper>,
+        )
+      })
 
       expect(screen.getByText('cardWrapper.renderErrorTitle')).toBeInTheDocument()
       expect(screen.getByText('cardWrapper.renderErrorMessage')).toBeInTheDocument()
@@ -318,22 +344,22 @@ describe('CardWrapper', () => {
 
     it('recovers after retry when shouldThrow is reset to false', async () => {
       const user = userEvent.setup()
-      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
       let shouldThrow = true
+      let rerender: ReturnType<typeof render>['rerender']
 
-      const { rerender } = render(
-        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
-          <ErrorThrower shouldThrow={shouldThrow} />
-        </CardWrapper>,
-      )
-      spy.mockRestore()
+      withSuppressedConsoleError(() => {
+        const result = render(
+          <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
+            <ErrorThrower shouldThrow={shouldThrow} />
+          </CardWrapper>,
+        )
+        rerender = result.rerender
+      })
 
-      // Error fallback is shown
       expect(screen.getByText('cardWrapper.renderErrorTitle')).toBeInTheDocument()
 
-      // Fix the throw, then click retry
       shouldThrow = false
-      rerender(
+      rerender!(
         <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={false}>
           <ErrorThrower shouldThrow={shouldThrow} />
         </CardWrapper>,
@@ -348,26 +374,15 @@ describe('CardWrapper', () => {
     })
 
     it('shows error fallback even when isDemoData is true', () => {
-      const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      render(
-        <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={true}>
-          <ErrorThrower shouldThrow={true} />
-        </CardWrapper>,
-      )
-      spy.mockRestore()
+      withSuppressedConsoleError(() => {
+        render(
+          <CardWrapper cardId={TEST_CARD_ID} cardType={TEST_CARD_TYPE} isDemoData={true}>
+            <ErrorThrower shouldThrow={true} />
+          </CardWrapper>,
+        )
+      })
 
       expect(screen.getByText('cardWrapper.renderErrorTitle')).toBeInTheDocument()
-    })
-
-    it('calls onRefresh when retry button clicked on CardFailureBanner', async () => {
-      const user = userEvent.setup()
-      const onRefresh = vi.fn()
-      renderCardWrapper({ isFailed: true, consecutiveFailures: 1, onRefresh })
-
-      const retryBtn = screen.getByRole('button', { name: 'cardWrapper.failureRetry' })
-      await user.click(retryBtn)
-
-      expect(onRefresh).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -424,8 +439,7 @@ describe('CardWrapper', () => {
       expect(modal).toHaveClass('max-w-4xl')
       expect(modal).toHaveClass('min-h-[80vh]')
 
-      const content = modal.querySelector('.scroll-enhanced')
-      expect(content).toHaveClass('max-h-[calc(80vh-80px)]')
+      expect(expectModalScrollContent(modal)).toHaveClass('max-h-[calc(80vh-80px)]')
     })
 
     it('LARGE_EXPANDED_CARDS content container uses h-[calc(95vh-80px)]', async () => {
@@ -435,8 +449,7 @@ describe('CardWrapper', () => {
       await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
 
       const modal = await screen.findByTestId('drilldown-modal')
-      const content = modal.querySelector('.scroll-enhanced')
-      expect(content).toHaveClass('h-[calc(95vh-80px)]')
+      expect(expectModalScrollContent(modal)).toHaveClass('h-[calc(95vh-80px)]')
     })
 
     it('FULLSCREEN_EXPANDED_CARDS content container uses h-[calc(98vh-80px)]', async () => {
@@ -446,8 +459,7 @@ describe('CardWrapper', () => {
       await user.click(screen.getByRole('button', { name: 'Expand full screen' }))
 
       const modal = await screen.findByTestId('drilldown-modal')
-      const content = modal.querySelector('.scroll-enhanced')
-      expect(content).toHaveClass('h-[calc(98vh-80px)]')
+      expect(expectModalScrollContent(modal)).toHaveClass('h-[calc(98vh-80px)]')
     })
   })
 })
