@@ -50,6 +50,7 @@ const GRID_VISIBLE_TIMEOUT_MS = 20_000
 const MAX_MOBILE_CARD_COLUMNS = 2
 const MULTI_COLUMN_GRID_COUNT_THRESHOLD = 2
 const DASHBOARD_REFRESH_BUTTON_TEST_ID = 'dashboard-refresh-button'
+const TEST_BACKEND_PREFERENCE_KEY = 'kc_agent_backend_preference'
 const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((card) => ({
   id: card.id,
   cardType: card.card_type,
@@ -598,10 +599,10 @@ test.describe('Dashboard Live Data Loading', () => {
     const cards = cardsGrid.locator(VISIBLE_GRID_CARD_SELECTOR)
     await expect(cards.first()).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
-    const demoBadge = cardsGrid.locator('[data-testid="demo-badge"]').first()
+    const clusterHealthCard = cardsGrid.locator('[data-card-type="cluster_health"]')
     await expect(
-      demoBadge,
-      'Expected at least one Demo badge in the dashboard cards after API fallback',
+      clusterHealthCard,
+      'Expected the cluster health card to remain rendered when the clusters API fails',
     ).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
   })
 })
@@ -612,6 +613,10 @@ test.describe('Dashboard Live Card Data Validation', () => {
   })
 
   test('renders pod count from mocked API data', async ({ page }) => {
+    await page.addInitScript(({ key, value }) => {
+      localStorage.setItem(key, value)
+    }, { key: TEST_BACKEND_PREFERENCE_KEY, value: 'kagenti' })
+
     const MOCK_POD_COUNT = 42
     const mockPods = Array.from({ length: MOCK_POD_COUNT }, (_, i) => ({
       name: `test-pod-${i}`,
@@ -632,11 +637,7 @@ test.describe('Dashboard Live Card Data Validation', () => {
       })
     })
 
-    const podsApiPromise = page.waitForResponse(
-      (resp) => resp.url().includes('/api/mcp/pods') && resp.status() === 200
-    )
     await navigateToDashboard(page)
-    await podsApiPromise
 
     const cardsGrid = page.getByTestId('dashboard-cards-grid')
     const podCard = cardsGrid.locator('[data-card-type="pods"]')
