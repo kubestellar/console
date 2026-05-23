@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -215,12 +216,29 @@ func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
 			queued = nil
 		}
 		runs := append(inProgress, queued...)
-		for _, r := range runs {
-			jobs, jobsErr := h.fetchJobs(ctx, repo, r.ID)
-			if jobsErr != nil {
-				continue
+		// Fetch jobs in parallel to avoid N+1 sequential API calls.
+		type flowResult struct {
+			run  ghpWorkflowRun
+			jobs []ghpJob
+		}
+		results := make([]flowResult, len(runs))
+		var wg sync.WaitGroup
+		for i, r := range runs {
+			wg.Add(1)
+			go func(idx int, run ghpWorkflowRun) {
+				defer wg.Done()
+				jobs, jobsErr := h.fetchJobs(ctx, repo, run.ID)
+				if jobsErr != nil {
+					return
+				}
+				results[idx] = flowResult{run: run, jobs: jobs}
+			}(i, r)
+		}
+		wg.Wait()
+		for _, res := range results {
+			if res.jobs != nil {
+				all = append(all, ghpFlowRun{Run: res.run, Jobs: res.jobs})
 			}
-			all = append(all, ghpFlowRun{Run: r, Jobs: jobs})
 		}
 	}
 	// Newest first by createdAt (lexical works for ISO strings)
@@ -264,12 +282,21 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 	if len(rows) > ghpFailuresLimit {
 		rows = rows[:ghpFailuresLimit]
 	}
-	for i := range rows {
-		jobs, jobsErr := h.fetchJobs(ctx, rows[i].Repo, rows[i].RunID)
-		if jobsErr != nil {
-			continue
+	// Fetch failed steps in parallel to avoid N+1 sequential API calls.
+	{
+		var wg sync.WaitGroup
+		for i := range rows {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+				jobs, jobsErr := h.fetchJobs(ctx, rows[idx].Repo, rows[idx].RunID)
+				if jobsErr != nil {
+					return
+				}
+				rows[idx].FailedStep = ghpFirstFailedStep(jobs)
+			}(i)
 		}
-		rows[i].FailedStep = ghpFirstFailedStep(jobs)
+		wg.Wait()
 	}
 	return ghpFailuresPayload{Runs: rows}, nil
 }

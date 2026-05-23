@@ -1,4 +1,4 @@
-import { Suspense, type KeyboardEventHandler, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, type KeyboardEventHandler, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, Box, Layers, Loader2, RefreshCw, Server, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
@@ -72,6 +72,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const [showAllLabels, setShowAllLabels] = useState(false)
   const [showAllAnnotations, setShowAllAnnotations] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const cachedOwnerChain = podData.cache.ownerChain || []
 
@@ -132,7 +133,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const handleCopy = useCallback((field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }, [])
   const handleKeyDown: KeyboardEventHandler<HTMLButtonElement> = e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -145,6 +147,12 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     if (passedLabels) setLabels(passedLabels)
     if (passedAnnotations) setAnnotations(passedAnnotations)
   }, [passedLabels, passedAnnotations])
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!podData.describeOutput || (labels && annotations)) return

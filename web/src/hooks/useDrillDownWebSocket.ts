@@ -150,12 +150,11 @@ export function useDrillDownWebSocket(cluster: string) {
 
   // Close all tracked WebSocket connections on unmount
   useEffect(() => {
-    const wsSet = activeWsRef.current
     return () => {
-      for (const ws of (Array.from(wsSet) || [])) {
+      for (const ws of Array.from(activeWsRef.current)) {
         try { ws.close() } catch { /* already closed */ }
       }
-      wsSet.clear()
+      activeWsRef.current.clear()
     }
   }, [])
 
