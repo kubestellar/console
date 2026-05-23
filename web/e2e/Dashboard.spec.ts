@@ -33,6 +33,8 @@ const MOBILE_VIEWPORT_HEIGHT_PX = 667
 const TABLET_VIEWPORT_WIDTH_PX = 768
 const TABLET_VIEWPORT_HEIGHT_PX = 1024
 const KEYBOARD_FOCUS_SEQUENCE_LENGTH = 5
+const STANDARD_TAB_KEY = 'Tab'
+const WEBKIT_FULL_KEYBOARD_TAB_KEY = 'Alt+Tab'
 const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
 const REFRESH_BUTTON_ACCESSIBLE_NAME = 'Refresh cluster data'
 const ADD_CARD_DIALOG_TITLE = 'Console Studio'
@@ -474,9 +476,10 @@ test.describe('Dashboard Page', () => {
       expect(h1Count).toBeGreaterThanOrEqual(1)
     })
 
-    test('supports keyboard navigation', async ({ page }) => {
+    test('supports keyboard navigation', async ({ page, browserName }) => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
+      const tabKey = browserName === 'webkit' ? WEBKIT_FULL_KEYBOARD_TAB_KEY : STANDARD_TAB_KEY
       const expectedFocusOrder = await page.evaluate(({ selector, limit }) => {
         const isVisible = (element: Element) => {
           const htmlElement = element as HTMLElement
@@ -526,10 +529,12 @@ test.describe('Dashboard Page', () => {
       })
 
       for (const expectedElement of expectedFocusOrder) {
-        await page.keyboard.press('Tab')
+        // WebKit mirrors Safari's reduced keyboard-access mode for plain Tab.
+        // Alt+Tab exercises the full in-page focus order so buttons remain reachable.
+        await page.keyboard.press(tabKey)
         await expect(
           page.locator(`[data-e2e-focus-order="${expectedElement.index}"]`),
-          `Expected Tab to focus ${expectedElement.label}`,
+          `Expected keyboard navigation to focus ${expectedElement.label}`,
         ).toBeFocused()
       }
     })
