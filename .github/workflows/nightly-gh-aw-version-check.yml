@@ -30,7 +30,12 @@ jobs:
           echo "Current version: v${CURRENT_VERSION}"
 
           # Get latest stable release (exclude pre-releases — upstream tags -rc / pre-release cuts we shouldn't auto-bump to)
-          LATEST_VERSION=$(gh release list --repo github/gh-aw --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName' | sed 's/^v//')
+          # Note: github/gh-aw is a private repo; GITHUB_TOKEN may not have access.
+          LATEST_VERSION=$(gh release list --repo github/gh-aw --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null | sed 's/^v//')
+          if [ -z "$LATEST_VERSION" ]; then
+            echo "::notice::Could not fetch latest gh-aw version (likely token lacks access to github/gh-aw). Skipping."
+            exit 0
+          fi
           echo "Latest version: v${LATEST_VERSION}"
 
           if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
