@@ -367,7 +367,7 @@ export function useOpenKruiseStatus(): UseOpenKruiseStatusResult {
     isLoading,
     isRefreshing,
     isFailed,
-    isDemoFallback,
+    isDemoFallback: isDemoFallback && !isLoading,
     consecutiveFailures,
     lastRefresh,
     refetch,

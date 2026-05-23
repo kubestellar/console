@@ -189,10 +189,11 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   const currentWeather = weatherData.current
   const forecast = weatherData.forecast
   const hourlyForecast = weatherData.hourly
+  const effectiveIsDemoData = isDemoFallback && !isLoading
   // #6219: pass isFailed through so CardWrapper enters its error render path
   // immediately on a failed fetch instead of waiting for CARD_LOADING_TIMEOUT_MS.
   const hasData = !!currentWeather
-  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoFallback, isFailed, lastRefresh })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: effectiveIsDemoData, isFailed, lastRefresh })
 
   // Save locations to sessionStorage whenever they change.
   // Location preferences are user-selected city names, not credentials or sensitive cluster data.
