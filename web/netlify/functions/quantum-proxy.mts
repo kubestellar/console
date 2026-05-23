@@ -341,9 +341,18 @@ export default async (req: Request, context: Context): Promise<Response> => {
     });
 
     const responseBody = await readResponseBodyWithCap(response);
+
+    // Allowlist safe response headers — never forward hop-by-hop or sensitive upstream headers.
+    const safeHeaders = new Headers();
+    const ALLOWED_HEADERS = ["content-type", "cache-control", "etag", "x-request-id"];
+    for (const name of ALLOWED_HEADERS) {
+      const value = response.headers.get(name);
+      if (value) safeHeaders.set(name, value);
+    }
+
     return new Response(responseBody, {
       status: response.status,
-      headers: response.headers,
+      headers: safeHeaders,
     });
   } catch (error) {
     if (error instanceof Error && error.message === OVERSIZED_RESPONSE_ERROR) {

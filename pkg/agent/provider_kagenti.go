@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kubestellar/console/pkg/kagenti_provider"
@@ -30,6 +31,7 @@ missing or incomplete, say so instead of guessing.
 type KagentiProvider struct {
 	baseURL     string
 	directAgent string
+	mu          sync.RWMutex // guards agentName and namespace
 	agentName   string
 	namespace   string
 	client      *kagenti_provider.KagentiClient
@@ -73,11 +75,13 @@ func (p *KagentiProvider) findDefaultAgent(ctx context.Context) {
 		return
 	}
 
+	p.mu.Lock()
 	p.agentName = agents[0].Name
 	p.namespace = agents[0].Namespace
 	if p.namespace == "" {
 		p.namespace = kagentiDefaultAgentNamespace
 	}
+	p.mu.Unlock()
 }
 
 func (p *KagentiProvider) Name() string {
@@ -89,14 +93,19 @@ func (p *KagentiProvider) DisplayName() string {
 }
 
 func (p *KagentiProvider) Description() string {
+	p.mu.RLock()
+	agentName := p.agentName
+	namespace := p.namespace
+	p.mu.RUnlock()
+
 	if p.directAgent != "" {
-		if p.agentName != "" {
-			return fmt.Sprintf("Cluster-native AI Agent (%s/%s @ %s)", p.namespace, p.agentName, p.directAgent)
+		if agentName != "" {
+			return fmt.Sprintf("Cluster-native AI Agent (%s/%s @ %s)", namespace, agentName, p.directAgent)
 		}
 		return fmt.Sprintf("Cluster-native AI Agent (%s)", p.directAgent)
 	}
-	if p.agentName != "" {
-		return fmt.Sprintf("Cluster-native AI Agent (%s/%s)", p.namespace, p.agentName)
+	if agentName != "" {
+		return fmt.Sprintf("Cluster-native AI Agent (%s/%s)", namespace, agentName)
 	}
 	return "Cluster-native AI Agent"
 }
@@ -110,7 +119,11 @@ func (p *KagentiProvider) IsAvailable() bool {
 		return false
 	}
 
-	if p.agentName != "" || p.namespace != "" {
+	p.mu.RLock()
+	hasAgent := p.agentName != "" || p.namespace != ""
+	p.mu.RUnlock()
+
+	if hasAgent {
 		return true
 	}
 
@@ -144,9 +157,16 @@ func (p *KagentiProvider) Handshake(ctx context.Context) *HandshakeResult {
 		}
 	}
 
-	if p.agentName == "" {
+	p.mu.RLock()
+	agentName := p.agentName
+	p.mu.RUnlock()
+
+	if agentName == "" {
 		p.findDefaultAgent(ctx)
-		if p.agentName == "" {
+		p.mu.RLock()
+		agentName = p.agentName
+		p.mu.RUnlock()
+		if agentName == "" {
 			return &HandshakeResult{
 				Ready:   false,
 				State:   "connected",
@@ -154,8 +174,15 @@ func (p *KagentiProvider) Handshake(ctx context.Context) *HandshakeResult {
 			}
 		}
 	}
-	if p.namespace == "" {
+
+	p.mu.RLock()
+	namespace := p.namespace
+	p.mu.RUnlock()
+	if namespace == "" {
+		p.mu.Lock()
 		p.namespace = kagentiDefaultAgentNamespace
+		namespace = kagentiDefaultAgentNamespace
+		p.mu.Unlock()
 	}
 
 	if p.directAgent != "" {
@@ -169,7 +196,7 @@ func (p *KagentiProvider) Handshake(ctx context.Context) *HandshakeResult {
 	return &HandshakeResult{
 		Ready:   true,
 		State:   "connected",
-		Message: fmt.Sprintf("Connected to Kagenti controller. Selected agent: %s/%s", p.namespace, p.agentName),
+		Message: fmt.Sprintf("Connected to Kagenti controller. Selected agent: %s/%s", namespace, agentName),
 	}
 }
 
@@ -212,14 +239,26 @@ func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatR
 		return nil, fmt.Errorf("no kagenti endpoint is configured")
 	}
 
-	if p.agentName == "" {
+	p.mu.RLock()
+	agentName := p.agentName
+	namespace := p.namespace
+	p.mu.RUnlock()
+
+	if agentName == "" {
 		p.findDefaultAgent(ctx)
-		if p.agentName == "" {
+		p.mu.RLock()
+		agentName = p.agentName
+		namespace = p.namespace
+		p.mu.RUnlock()
+		if agentName == "" {
 			return nil, fmt.Errorf("no kagenti agent is available")
 		}
 	}
-	if p.namespace == "" {
-		p.namespace = kagentiDefaultAgentNamespace
+	if namespace == "" {
+		namespace = kagentiDefaultAgentNamespace
+		p.mu.Lock()
+		p.namespace = namespace
+		p.mu.Unlock()
 	}
 
 	// Convert conversation history to the format expected by the kagenti client
@@ -234,7 +273,7 @@ func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatR
 
 	prompt := p.buildPrompt(req)
 
-	stream, err := p.client.Invoke(ctx, p.namespace, p.agentName, prompt, req.SessionID, history)
+	stream, err := p.client.Invoke(ctx, namespace, agentName, prompt, req.SessionID, history)
 	if err != nil {
 		return nil, err
 	}

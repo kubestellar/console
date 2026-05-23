@@ -33,7 +33,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -77,8 +76,7 @@ var drasiBlockedCIDRs = func() []*net.IPNet {
 	for _, cidr := range cidrs {
 		_, ipnet, err := net.ParseCIDR(cidr)
 		if err != nil {
-			slog.Error("[DrasiProxy] failed to parse blocked CIDR", "cidr", cidr, "error", err)
-			os.Exit(1)
+			panic(fmt.Sprintf("[DrasiProxy] invalid blocked CIDR %q: %v", cidr, err))
 		}
 		nets = append(nets, ipnet)
 	}
