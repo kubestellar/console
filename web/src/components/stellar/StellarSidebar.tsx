@@ -30,6 +30,7 @@ const STELLAR_BADGE_FONT_SIZE_PX = 9
 const STELLAR_UNREAD_COUNT_CAP = 99
 const STELLAR_ATTENTION_BUBBLE_OFFSET_RIGHT_PX = 50
 const STELLAR_ATTENTION_BUBBLE_OFFSET_TOP_PX = 60
+const ATTENTION_BUBBLE_Z_INDEX = 40
 
 function getTargetHash(target: StellarRailItem): string {
   return new URL(target.href, window.location.origin).hash
@@ -165,7 +166,7 @@ export function StellarSidebar() {
           style={{
             right: STELLAR_ATTENTION_BUBBLE_OFFSET_RIGHT_PX,
             top: STELLAR_ATTENTION_BUBBLE_OFFSET_TOP_PX,
-            zIndex: 1000,
+            zIndex: ATTENTION_BUBBLE_Z_INDEX,
           }}
           aria-label={t('stellar.attentionBubble')}
         >
