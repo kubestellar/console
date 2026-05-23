@@ -109,6 +109,15 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     }
   }, [isOpen])
 
+  // Reset submenu expanded states whenever the dropdown closes so that
+  // reopening it always shows a clean collapsed state (#15457).
+  useEffect(() => {
+    if (!isOpen) {
+      setShowLanguageSubmenu(false)
+      setShowDevPanel(false)
+    }
+  }, [isOpen])
+
   // Close dropdown when clicking outside.
   // Uses 'click' (not 'mousedown') so the event fires after React's onClick
   // has already processed the toggle. Using 'mousedown' can race with the
