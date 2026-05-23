@@ -12,8 +12,9 @@ on:
       - '.github/workflows/helm-test.yml'
   workflow_call: {}
 
-# Least-privilege: read-only by default; jobs declare write scopes individually
-permissions: read-all
+# Minimum permissions: checkout only — no write scopes needed
+permissions:
+  contents: read
 
 jobs:
   helm-lint-and-template:
