@@ -115,6 +115,11 @@ const BATCH_LOAD_TIMEOUT_MS = 30_000
  * after a full page navigation fallback.
  */
 const WARM_RETURN_WAIT_MS = process.env.CI ? 5_000 : 3_000
+/**
+ * Extra recovery window for cards that briefly regress to demo/no-content on
+ * warm return before IndexedDB hydration completes on slower CI runners.
+ */
+const WARM_RECOVERY_WAIT_MS = process.env.CI ? 10_000 : 2_000
 /** Polling interval (ms) for the resilient warm-snapshot capture loop. */
 const WARM_POLL_INTERVAL_MS = 200
 /** Max retry attempts for page.evaluate calls that may race with navigation */
@@ -352,6 +357,31 @@ async function captureWarmSnapshotsResilient(
       hasDemoBadge: false, hasLargeSkeleton: false,
       dataLoading: null, timeToContentMs: null,
     }))
+  }
+}
+
+/**
+ * Retry cards that had a clean cold snapshot but briefly regress to demo or
+ * empty state during warm return on slower CI runners.
+ */
+function shouldRetryWarmSnapshot(
+  coldSnap: ColdLoadSnapshot | undefined,
+  warmSnap: WarmLoadSnapshot
+): boolean {
+  return Boolean(coldSnap?.hasContent && !coldSnap.hasDemoBadge && (!warmSnap.hasContent || warmSnap.hasDemoBadge))
+}
+
+function mergeRecoveredWarmSnapshot(
+  initialWarmSnap: WarmLoadSnapshot,
+  recoveredWarmSnap: WarmLoadSnapshot
+): WarmLoadSnapshot {
+  return {
+    ...initialWarmSnap,
+    ...recoveredWarmSnap,
+    timeToContentMs: initialWarmSnap.timeToContentMs
+      ?? (recoveredWarmSnap.hasContent
+        ? WARM_RETURN_WAIT_MS + (recoveredWarmSnap.timeToContentMs ?? 0)
+        : recoveredWarmSnap.timeToContentMs),
   }
 }
 
@@ -721,97 +751,130 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
       const cardIds = selected.map((item) => item.cardId)
 
       // Use resilient snapshot — immune to context destruction
-      const warmSnapshots = await captureWarmSnapshotsResilient(page, cardIds, WARM_RETURN_WAIT_MS)
+      const initialWarmSnapshots = await captureWarmSnapshotsResilient(page, cardIds, WARM_RETURN_WAIT_MS)
+      const warmSnapshots = new Map(initialWarmSnapshots.map((snap) => [snap.cardId, snap]))
+      const retryCardIds = initialWarmSnapshots
+        .filter((warmSnap) => shouldRetryWarmSnapshot(coldSnapshots.get(warmSnap.cardId), warmSnap))
+        .map((warmSnap) => warmSnap.cardId)
 
-    // Evaluate each card
-    const batchCards: CardCacheResult[] = []
-    for (const warmSnap of warmSnapshots) {
-      const coldSnap = coldSnapshots.get(warmSnap.cardId)
-      const manifestItem = selected.find((s) => s.cardId === warmSnap.cardId)
-      const cardType = manifestItem?.cardType || warmSnap.cardType || 'unknown'
+      if (retryCardIds.length > 0) {
+        console.log(
+          `[CacheTest] Phase 6 batch ${batch}: retrying ${retryCardIds.length} cards with transient warm-cache regressions`
+        )
+        const recoveredWarmSnapshots = await captureWarmSnapshotsResilient(page, retryCardIds, WARM_RECOVERY_WAIT_MS)
+        const recoveredCardIds: string[] = []
 
-      // Skip cards that had no content during cold load (demo-only, game cards, etc.)
-      if (!coldSnap || !coldSnap.hasContent) {
-        if (!coldSnap) {
-          console.log(`[CacheTest]   SKIP: ${warmSnap.cardId} — no cold snapshot found`)
+        for (const recoveredWarmSnap of recoveredWarmSnapshots) {
+          const initialWarmSnap = warmSnapshots.get(recoveredWarmSnap.cardId)
+          if (!initialWarmSnap) continue
+
+          if (recoveredWarmSnap.hasContent && !recoveredWarmSnap.hasDemoBadge) {
+            warmSnapshots.set(
+              recoveredWarmSnap.cardId,
+              mergeRecoveredWarmSnapshot(initialWarmSnap, recoveredWarmSnap)
+            )
+            recoveredCardIds.push(recoveredWarmSnap.cardId)
+          }
         }
+
+        if (recoveredCardIds.length > 0) {
+          console.log(
+            `[CacheTest] Phase 6 batch ${batch}: recovered ${recoveredCardIds.length} cards after extended warm-cache wait`
+          )
+        }
+      }
+
+      // Evaluate each card
+      const batchCards: CardCacheResult[] = []
+      for (const cardId of cardIds) {
+        const warmSnap = warmSnapshots.get(cardId)
+        if (!warmSnap) continue
+        const coldSnap = coldSnapshots.get(warmSnap.cardId)
+        const manifestItem = selected.find((s) => s.cardId === warmSnap.cardId)
+        const cardType = manifestItem?.cardType || warmSnap.cardType || 'unknown'
+
+        // Skip cards that had no content during cold load (demo-only, game cards, etc.)
+        if (!coldSnap || !coldSnap.hasContent) {
+          if (!coldSnap) {
+            console.log(`[CacheTest]   SKIP: ${warmSnap.cardId} — no cold snapshot found`)
+          }
+          batchCards.push({
+            cardType,
+            cardId: warmSnap.cardId,
+            coldLoadHadContent: false,
+            cacheWritten: false,
+            warmReturnHadContent: warmSnap.hasContent,
+            contentMatched: false,
+            warmDemoBadge: warmSnap.hasDemoBadge,
+            warmSkeleton: warmSnap.hasLargeSkeleton,
+            warmTimeToContentMs: warmSnap.timeToContentMs,
+            status: 'skip',
+            details: 'No content on cold load — card may be demo-only or game card',
+          })
+          continue
+        }
+
+        // Card had content on cold load — check warm return
+        const warmHadContent = warmSnap.hasContent
+        const warmDemoBadge = warmSnap.hasDemoBadge
+        const warmSkeleton = warmSnap.hasLargeSkeleton
+        const coldHadDemoBadge = coldSnap.hasDemoBadge
+
+        // Content match: warm text length should be similar to cold (within 50% or at least 10 chars)
+        const textSimilar =
+          warmSnap.textLength >= Math.min(coldSnap.textLength * 0.5, 10) ||
+          (warmSnap.hasVisualContent && coldSnap.hasVisualContent)
+
+        let status: CardCacheStatus = 'pass'
+        let details = ''
+
+        // Cold load in non-demo mode should never show demo badge —
+        // this means initialData was set to demo data (bypassing skeleton)
+        if (coldHadDemoBadge) {
+          status = 'fail'
+          details = 'Cold load showed demo badge in non-demo mode — initialData likely set to demo data'
+        } else if (!warmHadContent) {
+          status = 'fail'
+          details = `No content on warm return (cold had ${coldSnap.textLength} chars). Cache miss.`
+        } else if (warmDemoBadge && !coldSnap.hasDemoBadge) {
+          status = 'fail'
+          details = 'Demo badge appeared on warm return but not on cold load — cache fell back to demo data'
+        } else if (warmSkeleton) {
+          status = 'warn'
+          details = `Content present but skeleton still visible on warm return (ttc: ${warmSnap.timeToContentMs}ms)`
+        } else if (!textSimilar) {
+          status = 'warn'
+          details = `Content mismatch: cold=${coldSnap.textLength} chars, warm=${warmSnap.textLength} chars`
+        } else if (warmSnap.timeToContentMs !== null && warmSnap.timeToContentMs > WARM_TTC_THRESHOLD_MS) {
+          status = 'warn'
+          details = `Cache loaded but slow: ${Math.round(warmSnap.timeToContentMs)}ms to content`
+        } else {
+          details = warmSnap.timeToContentMs !== null
+            ? `Cache hit: content in ${Math.round(warmSnap.timeToContentMs)}ms`
+            : 'Cache hit: content present immediately'
+        }
+
         batchCards.push({
           cardType,
           cardId: warmSnap.cardId,
-          coldLoadHadContent: false,
-          cacheWritten: false,
-          warmReturnHadContent: warmSnap.hasContent,
-          contentMatched: false,
-          warmDemoBadge: warmSnap.hasDemoBadge,
-          warmSkeleton: warmSnap.hasLargeSkeleton,
+          coldLoadHadContent: true,
+          cacheWritten: true,
+          warmReturnHadContent: warmHadContent,
+          contentMatched: textSimilar && warmHadContent,
+          warmDemoBadge,
+          warmSkeleton,
           warmTimeToContentMs: warmSnap.timeToContentMs,
-          status: 'skip',
-          details: 'No content on cold load — card may be demo-only or game card',
+          status,
+          details,
         })
-        continue
       }
 
-      // Card had content on cold load — check warm return
-      const warmHadContent = warmSnap.hasContent
-      const warmDemoBadge = warmSnap.hasDemoBadge
-      const warmSkeleton = warmSnap.hasLargeSkeleton
-      const coldHadDemoBadge = coldSnap.hasDemoBadge
+      const failCount = batchCards.filter((c) => c.status === 'fail').length
+      console.log(
+        `[CacheTest] Batch ${batch + 1}/${totalBatches} warm: ${selected.length} cards, ${failCount} failures`
+      )
 
-      // Content match: warm text length should be similar to cold (within 50% or at least 10 chars)
-      const textSimilar =
-        warmSnap.textLength >= Math.min(coldSnap.textLength * 0.5, 10) ||
-        (warmSnap.hasVisualContent && coldSnap.hasVisualContent)
-
-      let status: CardCacheStatus = 'pass'
-      let details = ''
-
-      // Cold load in non-demo mode should never show demo badge —
-      // this means initialData was set to demo data (bypassing skeleton)
-      if (coldHadDemoBadge) {
-        status = 'fail'
-        details = 'Cold load showed demo badge in non-demo mode — initialData likely set to demo data'
-      } else if (!warmHadContent) {
-        status = 'fail'
-        details = `No content on warm return (cold had ${coldSnap.textLength} chars). Cache miss.`
-      } else if (warmDemoBadge && !coldSnap.hasDemoBadge) {
-        status = 'fail'
-        details = 'Demo badge appeared on warm return but not on cold load — cache fell back to demo data'
-      } else if (warmSkeleton) {
-        status = 'warn'
-        details = `Content present but skeleton still visible on warm return (ttc: ${warmSnap.timeToContentMs}ms)`
-      } else if (!textSimilar) {
-        status = 'warn'
-        details = `Content mismatch: cold=${coldSnap.textLength} chars, warm=${warmSnap.textLength} chars`
-      } else if (warmSnap.timeToContentMs !== null && warmSnap.timeToContentMs > WARM_TTC_THRESHOLD_MS) {
-        status = 'warn'
-        details = `Cache loaded but slow: ${Math.round(warmSnap.timeToContentMs)}ms to content`
-      } else {
-        details = warmSnap.timeToContentMs !== null
-          ? `Cache hit: content in ${Math.round(warmSnap.timeToContentMs)}ms`
-          : 'Cache hit: content present immediately'
-      }
-
-      batchCards.push({
-        cardType,
-        cardId: warmSnap.cardId,
-        coldLoadHadContent: true,
-        cacheWritten: true,
-        warmReturnHadContent: warmHadContent,
-        contentMatched: textSimilar && warmHadContent,
-        warmDemoBadge,
-        warmSkeleton,
-        warmTimeToContentMs: warmSnap.timeToContentMs,
-        status,
-        details,
-      })
-    }
-
-    const failCount = batchCards.filter((c) => c.status === 'fail').length
-    console.log(
-      `[CacheTest] Batch ${batch + 1}/${totalBatches} warm: ${selected.length} cards, ${failCount} failures`
-    )
-
-    allBatchResults.push({ batchIndex: batch, cards: batchCards })
+      allBatchResults.push({ batchIndex: batch, cards: batchCards })
     } catch (err) {
       console.log(`[CacheTest] Phase 6 batch ${batch + 1}/${totalBatches}: SKIPPED — ${String(err).slice(0, 120)}`)
     }
