@@ -238,7 +238,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
         </div>
       </div>
 
-      <div className="border-b border-border px-6"><div className="flex gap-1">{TABS.map(tab => { const Icon = tab.icon; return <button type="button" key={tab.id} onClick={() => setActiveTab(tab.id)} onKeyDown={handleKeyDown} className={cn('flex min-h-11 items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background', activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground')}><Icon className="h-4 w-4" />{tab.label}</button> })}</div></div>
+      <div className="border-b border-border px-6"><div className="flex gap-1" role="tablist">{TABS.map(tab => { const Icon = tab.icon; return <button type="button" key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} onKeyDown={handleKeyDown} className={cn('flex min-h-11 items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background', activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground')}><Icon className="h-4 w-4" />{tab.label}</button> })}</div></div>
 
       <div className="space-y-6 p-6">
         {activeTab === 'overview' && <div className="space-y-6">
