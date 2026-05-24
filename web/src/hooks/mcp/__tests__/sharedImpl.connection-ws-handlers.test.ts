@@ -96,6 +96,7 @@ function resetSharedWsState() {
   sharedWebSocket.ws = null
   sharedWebSocket.connecting = false
   sharedWebSocket.reconnectAttempts = 0
+  sharedWebSocket.authFailed = false
   if (sharedWebSocket.reconnectTimeout) {
     clearTimeout(sharedWebSocket.reconnectTimeout)
     sharedWebSocket.reconnectTimeout = null
