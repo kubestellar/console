@@ -155,13 +155,22 @@ func (h *GitHubPipelinesHandler) buildMatrixFromQuery(c *fiber.Ctx) (any, error)
 
 	ctx := c.UserContext()
 	fresh := make([]ghpWorkflowRun, 0, 256)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
 	for _, repo := range repos {
-		runs, fetchErr := h.fetchRuns(ctx, repo, fmt.Sprintf("per_page=%d", ghpMatrixRunsPerRepo))
-		if fetchErr != nil {
-			continue
-		}
-		fresh = append(fresh, runs...)
+		wg.Add(1)
+		go func(r string) {
+			defer wg.Done()
+			runs, fetchErr := h.fetchRuns(ctx, r, fmt.Sprintf("per_page=%d", ghpMatrixRunsPerRepo))
+			if fetchErr != nil {
+				return
+			}
+			mu.Lock()
+			fresh = append(fresh, runs...)
+			mu.Unlock()
+		}(repo)
 	}
+	wg.Wait()
 	h.history.merge(fresh)
 	snap := h.history.snapshot()
 
@@ -206,41 +215,50 @@ func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
 
 	ctx := c.UserContext()
 	all := make([]ghpFlowRun, 0)
+	var flowMu sync.Mutex
+	var repoWg sync.WaitGroup
 	for _, repo := range repos {
-		inProgress, errP := h.fetchRuns(ctx, repo, fmt.Sprintf("status=in_progress&per_page=%d", ghpFlowMaxRunsPerRepo))
-		if errP != nil {
-			continue
-		}
-		queued, errQ := h.fetchRuns(ctx, repo, fmt.Sprintf("status=queued&per_page=%d", ghpFlowMaxRunsPerRepo))
-		if errQ != nil {
-			queued = nil
-		}
-		runs := append(inProgress, queued...)
-		// Fetch jobs in parallel to avoid N+1 sequential API calls.
-		type flowResult struct {
-			run  ghpWorkflowRun
-			jobs []ghpJob
-		}
-		results := make([]flowResult, len(runs))
-		var wg sync.WaitGroup
-		for i, r := range runs {
-			wg.Add(1)
-			go func(idx int, run ghpWorkflowRun) {
-				defer wg.Done()
-				jobs, jobsErr := h.fetchJobs(ctx, repo, run.ID)
-				if jobsErr != nil {
-					return
-				}
-				results[idx] = flowResult{run: run, jobs: jobs}
-			}(i, r)
-		}
-		wg.Wait()
-		for _, res := range results {
-			if res.jobs != nil {
-				all = append(all, ghpFlowRun{Run: res.run, Jobs: res.jobs})
+		repoWg.Add(1)
+		go func(repo string) {
+			defer repoWg.Done()
+			inProgress, errP := h.fetchRuns(ctx, repo, fmt.Sprintf("status=in_progress&per_page=%d", ghpFlowMaxRunsPerRepo))
+			if errP != nil {
+				return
 			}
-		}
+			queued, errQ := h.fetchRuns(ctx, repo, fmt.Sprintf("status=queued&per_page=%d", ghpFlowMaxRunsPerRepo))
+			if errQ != nil {
+				queued = nil
+			}
+			runs := append(inProgress, queued...)
+			// Fetch jobs in parallel to avoid N+1 sequential API calls.
+			type flowResult struct {
+				run  ghpWorkflowRun
+				jobs []ghpJob
+			}
+			results := make([]flowResult, len(runs))
+			var wg sync.WaitGroup
+			for i, r := range runs {
+				wg.Add(1)
+				go func(idx int, run ghpWorkflowRun) {
+					defer wg.Done()
+					jobs, jobsErr := h.fetchJobs(ctx, repo, run.ID)
+					if jobsErr != nil {
+						return
+					}
+					results[idx] = flowResult{run: run, jobs: jobs}
+				}(i, r)
+			}
+			wg.Wait()
+			flowMu.Lock()
+			for _, res := range results {
+				if res.jobs != nil {
+					all = append(all, ghpFlowRun{Run: res.run, Jobs: res.jobs})
+				}
+			}
+			flowMu.Unlock()
+		}(repo)
 	}
+	repoWg.Wait()
 	// Newest first by createdAt (lexical works for ISO strings)
 	sort.Slice(all, func(i, j int) bool {
 		return all[i].Run.CreatedAt > all[j].Run.CreatedAt
@@ -256,26 +274,37 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 
 	ctx := c.UserContext()
 	rows := make([]ghpFailureRow, 0)
+	var failMu sync.Mutex
+	var failWg sync.WaitGroup
 	for _, repo := range repos {
-		runs, fetchErr := h.fetchRuns(ctx, repo, fmt.Sprintf("status=failure&per_page=%d", ghpFailuresOverfetch))
-		if fetchErr != nil {
-			continue
-		}
-		for _, r := range runs {
-			rows = append(rows, ghpFailureRow{
-				Repo:         repo,
-				RunID:        r.ID,
-				Workflow:     r.Name,
-				HTMLURL:      r.HTMLURL,
-				Branch:       r.HeadBranch,
-				Event:        r.Event,
-				Conclusion:   r.Conclusion,
-				CreatedAt:    r.CreatedAt,
-				DurationMs:   ghpFailureDuration(r),
-				PullRequests: r.PullRequests,
-			})
-		}
+		failWg.Add(1)
+		go func(repo string) {
+			defer failWg.Done()
+			runs, fetchErr := h.fetchRuns(ctx, repo, fmt.Sprintf("status=failure&per_page=%d", ghpFailuresOverfetch))
+			if fetchErr != nil {
+				return
+			}
+			localRows := make([]ghpFailureRow, 0, len(runs))
+			for _, r := range runs {
+				localRows = append(localRows, ghpFailureRow{
+					Repo:         repo,
+					RunID:        r.ID,
+					Workflow:     r.Name,
+					HTMLURL:      r.HTMLURL,
+					Branch:       r.HeadBranch,
+					Event:        r.Event,
+					Conclusion:   r.Conclusion,
+					CreatedAt:    r.CreatedAt,
+					DurationMs:   ghpFailureDuration(r),
+					PullRequests: r.PullRequests,
+				})
+			}
+			failMu.Lock()
+			rows = append(rows, localRows...)
+			failMu.Unlock()
+		}(repo)
 	}
+	failWg.Wait()
 	sort.Slice(rows, func(i, j int) bool {
 		return rows[i].CreatedAt > rows[j].CreatedAt
 	})

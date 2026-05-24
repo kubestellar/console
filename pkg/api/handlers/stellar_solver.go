@@ -356,21 +356,29 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 			ApprovedBy:  "stellar-solver",
 			ApprovedAt:  &now,
 		}
-		_ = h.store.CreateStellarAction(ctx, action)
-		_ = h.store.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
+		if err := h.store.CreateStellarAction(ctx, action); err != nil {
+			slog.Warn("[StellarSolver] failed to create action", "solveId", solve.ID, "error", err)
+		}
+		if err := h.store.UpdateStellarActionStatus(ctx, action.ID, "running", "", ""); err != nil {
+			slog.Warn("[StellarSolver] failed to update action status to running", "actionId", action.ID, "error", err)
+		}
 		outcome, dispatchErr := scheduler.Dispatch(ctx, h.k8sClient, *action)
 		status := "completed"
 		if dispatchErr != nil {
 			status = "failed"
 			outcome = dispatchErr.Error()
 		}
-		_ = h.store.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+		if err := h.store.UpdateStellarActionStatus(ctx, action.ID, status, outcome, ""); err != nil {
+			slog.Warn("[StellarSolver] failed to update action status", "actionId", action.ID, "status", status, "error", err)
+		}
 
 		if dispatchErr == nil {
 			// Restart succeeded. Mark the solve resolved and broadcast green ✓
 			// so every card for this workload reflects the fix.
 			summary := fmt.Sprintf("Tried %s and it worked. %s", eval.RecommendedAction.Type, outcome)
-			_ = full.UpdateSolveStatus(ctx, solve.ID, "resolved", summary, "", "")
+			if err := full.UpdateSolveStatus(ctx, solve.ID, "resolved", summary, "", ""); err != nil {
+				slog.Warn("[StellarSolver] failed to update solve status", "solveId", solve.ID, "error", err)
+			}
 			h.logActivity(ctx, &store.StellarActivity{
 				Kind:      "solve_resolved",
 				EventID:   notif.ID,
