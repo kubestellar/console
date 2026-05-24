@@ -1,5 +1,6 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true,
@@ -161,5 +162,86 @@ describe('ClusterGroups', () => {
     })
     const { container } = render(<ClusterGroups />)
     expect(container).toBeTruthy()
+  })
+
+  it('opens CreateGroupForm when Clicking "New Group"', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    render(<ClusterGroups />)
+    
+    const newGroupButton = screen.getByText('cards:clusterGroups.newGroup')
+    fireEvent.click(newGroupButton)
+    
+    expect(screen.getByText('cards:clusterGroups.newClusterGroup')).toBeInTheDocument()
+  })
+
+  it('renders a list of groups with names and cluster counts', () => {
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    mockUseClusterGroups.mockReturnValue({
+      groups: [
+        { name: 'Group A', kind: 'static', clusters: ['c1', 'c2'], color: 'blue' },
+        { name: 'Group B', kind: 'dynamic', clusters: ['c3'], color: 'green' }
+      ],
+      createGroup: vi.fn(),
+      updateGroup: vi.fn(),
+      deleteGroup: vi.fn(),
+      isPersisted: false,
+    })
+    
+    render(<ClusterGroups />)
+    
+    expect(screen.getByText('Group A')).toBeInTheDocument()
+    expect(screen.getByText('Group B')).toBeInTheDocument()
+    // Should show cluster counts (2/2 and 1/1 because mockUseClusters returns empty by default)
+    // Wait, ClusterGroups.tsx calculates healthyCount using clusterHealthMap.
+    // If clusters list is empty, healthyCount will be number of clusters since they aren't in map as false.
+    expect(screen.getByText(/2\/2/)).toBeInTheDocument()
+    expect(screen.getByText(/1\/1/)).toBeInTheDocument()
+  })
+
+  it('opens EditGroupForm when clicking edit button', () => {
+    mockUseClusterGroups.mockReturnValue({
+      groups: [{ name: 'Group A', kind: 'static', clusters: ['c1'], color: 'blue' }],
+      createGroup: vi.fn(),
+      updateGroup: vi.fn(),
+      deleteGroup: vi.fn(),
+      isPersisted: false,
+    })
+    
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    render(<ClusterGroups />)
+    
+    const editButton = screen.getByLabelText('cards:clusterGroups.editGroup')
+    fireEvent.click(editButton)
+    
+    // EditGroupForm should render. It likely has a "Save Changes" button or similar.
+    // In ClusterGroupsForms.tsx, EditGroupForm is similar to CreateGroupForm.
+    // Let's check for "Group Name" input or a specific title.
+    // Actually, EditGroupForm in ClusterGroups.tsx is rendered within the same loop.
+    expect(screen.getByText(/common.edit.*Group A/)).toBeInTheDocument()
+  })
+
+  it('calls deleteGroup when confirmation is accepted', () => {
+    const deleteGroup = vi.fn()
+    mockUseClusterGroups.mockReturnValue({
+      groups: [{ name: 'Group A', kind: 'static', clusters: ['c1'], color: 'blue' }],
+      createGroup: vi.fn(),
+      updateGroup: vi.fn(),
+      deleteGroup,
+      isPersisted: false,
+    })
+    
+    mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
+    render(<ClusterGroups />)
+    
+    const deleteButton = screen.getByLabelText('cards:clusterGroups.deleteGroup')
+    fireEvent.click(deleteButton)
+    
+    // ConfirmDialog should be open.
+    // It has a title 'cards:clusterGroups.deleteGroup' (same as button labal but in a dialog).
+    // And a confirm button with text 'common:actions.delete'.
+    const confirmButton = screen.getByText('common:actions.delete')
+    fireEvent.click(confirmButton)
+    
+    expect(deleteGroup).toHaveBeenCalledWith('Group A')
   })
 })

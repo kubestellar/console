@@ -1,5 +1,6 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -89,6 +90,77 @@ describe('ComputeOverview', () => {
   it('calls useCardLoadingState during render', () => {
     render(<ComputeOverview />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('aggregates CPU cores correctly across clusters', () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [
+        { name: 'c1', cpuCores: 8, healthy: true, reachable: true, nodeCount: 1, podCount: 10 },
+        { name: 'c2', cpuCores: 16, healthy: true, reachable: true, nodeCount: 2, podCount: 20 }
+      ],
+      deduplicatedClusters: [
+        { name: 'c1', cpuCores: 8, healthy: true, reachable: true, nodeCount: 1, podCount: 10 },
+        { name: 'c2', cpuCores: 16, healthy: true, reachable: true, nodeCount: 2, podCount: 20 }
+      ],
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+    })
+    
+    render(<ComputeOverview />)
+    
+    // Total should be 24
+    expect(screen.getByText('24')).toBeInTheDocument()
+    // It should also show "computeOverview.cpuCores" label
+    expect(screen.getByText('computeOverview.cpuCores')).toBeInTheDocument()
+  })
+
+  it('aggregates Memory GB correctly across clusters', () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [
+        { name: 'c1', cpuCores: 8, memoryGB: 16, healthy: true, reachable: true, nodeCount: 1, podCount: 10 },
+        { name: 'c2', cpuCores: 16, memoryGB: 32, healthy: true, reachable: true, nodeCount: 2, podCount: 20 }
+      ],
+      deduplicatedClusters: [
+        { name: 'c1', cpuCores: 8, memoryGB: 16, healthy: true, reachable: true, nodeCount: 1, podCount: 10 },
+        { name: 'c2', cpuCores: 16, memoryGB: 32, healthy: true, reachable: true, nodeCount: 2, podCount: 20 }
+      ],
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+    })
+    
+    render(<ComputeOverview />)
+    
+    // Total should be 48.
+    expect(screen.getByText(/48/)).toBeInTheDocument()
+  })
+
+  it('renders empty state when no clusters are available', () => {
+    mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: true, hasData: false, isRefreshing: false })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    
+    render(<ComputeOverview />)
+    
+    expect(screen.getByText('computeOverview.noComputeData')).toBeInTheDocument()
+  })
+
+  it('does not double count deduplicated clusters', () => {
+    // raw clusters has 3 items, but deduplicated only has 2
+    mockUseClusters.mockReturnValue({
+      clusters: [
+        { name: 'c1', cpuCores: 10, healthy: true, reachable: true, nodeCount: 1, podCount: 1 },
+        { name: 'c1-alias', cpuCores: 10, healthy: true, reachable: true, nodeCount: 1, podCount: 1 },
+        { name: 'c2', cpuCores: 5, healthy: true, reachable: true, nodeCount: 1, podCount: 1 }
+      ],
+      deduplicatedClusters: [
+        { name: 'c1', cpuCores: 10, healthy: true, reachable: true, nodeCount: 1, podCount: 1 },
+        { name: 'c2', cpuCores: 5, healthy: true, reachable: true, nodeCount: 1, podCount: 1 }
+      ],
+      isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now(),
+    })
+    
+    render(<ComputeOverview />)
+    
+    // Should show 15, not 25
+    expect(screen.getByText('15')).toBeInTheDocument()
+    expect(screen.queryByText('25')).not.toBeInTheDocument()
   })
 
   it('renders skeleton UI when data is loading', () => {
