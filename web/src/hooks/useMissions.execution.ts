@@ -104,6 +104,7 @@ export function createMissionExecutionApi(
       ))
 
       void (async () => {
+        try {
         let target = getSelectedKagentiAgentFromStorage()
         if (!target) {
           const discovery = await discoverKagentiProviderAgent()
@@ -233,6 +234,34 @@ export function createMissionExecutionApi(
             ))
           },
         })
+        } catch (err) {
+          // If kagentiProviderChat throws (vs calling onError), ensure the
+          // mission is unlocked so it doesn't get permanently stuck.
+          if (state.executingMissions.current.has(missionId)) {
+            state.executingMissions.current.delete(missionId)
+            const errorMsg = err instanceof Error ? err.message : String(err)
+            emitMissionError(missionType, 'kagenti_unexpected_error', errorMsg)
+            state.setMissions(prev => prev.map(mission =>
+              mission.id === missionId
+                ? {
+                    ...mission,
+                    status: 'failed',
+                    currentStep: undefined,
+                    updatedAt: new Date(),
+                    messages: [
+                      ...getMissionMessages(mission.messages),
+                      {
+                        id: generateMessageId('kagenti-unexpected-error'),
+                        role: 'system',
+                        content: `**Unexpected Error**\n\n${err instanceof Error ? err.message : String(err)}`,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : mission,
+            ))
+          }
+        }
       })()
 
       return
