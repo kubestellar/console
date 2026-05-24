@@ -347,6 +347,10 @@ type Store interface {
 	GetUserDashboards(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Dashboard, error)
 	GetDefaultDashboard(ctx context.Context, userID uuid.UUID) (*models.Dashboard, error)
 	CreateDashboard(ctx context.Context, dashboard *models.Dashboard) error
+	// ImportDashboardAtomic creates a dashboard and all its cards in a single
+	// transaction. If any card insert fails the entire import is rolled back.
+	// Returns ErrDashboardCardLimitReached if maxCards is exceeded.
+	ImportDashboardAtomic(ctx context.Context, dashboard *models.Dashboard, cards []*models.Card, maxCards int) error
 	UpdateDashboard(ctx context.Context, dashboard *models.Dashboard) error
 	DeleteDashboard(ctx context.Context, id uuid.UUID) error
 

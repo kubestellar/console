@@ -104,6 +104,12 @@ func (m *MockStore) GetDefaultDashboard(ctx context.Context, userID uuid.UUID) (
 func (m *MockStore) CreateDashboard(ctx context.Context, dashboard *models.Dashboard) error {
 	return nil
 }
+func (m *MockStore) ImportDashboardAtomic(ctx context.Context, dashboard *models.Dashboard, cards []*models.Card, maxCards int) error {
+	if dashboard.ID == uuid.Nil {
+		dashboard.ID = uuid.New()
+	}
+	return nil
+}
 func (m *MockStore) CreateDashboardTx(ctx context.Context, tx *sql.Tx, dashboard *models.Dashboard) error {
 	if dashboard.ID == uuid.Nil {
 		dashboard.ID = uuid.New()

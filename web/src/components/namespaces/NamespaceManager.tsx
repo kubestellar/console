@@ -96,21 +96,21 @@ export function NamespaceManager() {
   const lastFetchKeyRef = useRef<string>('')
 
   // Get all available clusters
-  const allClusterNames = deduplicatedClusters.map(c => c.name)
+  const allClusterNames = (deduplicatedClusters || []).map(c => c.name)
 
   // Get target clusters based on global filter selection
   // We don't check permissions upfront - let the API handle auth errors per-cluster
   const targetClusters = isAllClustersSelected
-    ? deduplicatedClusters.map(c => c.name)
-    : selectedClusters
+    ? (deduplicatedClusters || []).map(c => c.name)
+    : (selectedClusters || [])
 
 
   // Filter namespaces from cache based on selected clusters (no refetch needed)
-  const namespaces = allNamespaces.filter(ns => targetClusters.includes(ns.cluster))
+  const namespaces = (allNamespaces || []).filter(ns => targetClusters.includes(ns.cluster))
 
   const getClusterRequestName = useCallback((cluster: string): string => {
-    const matchingCluster = deduplicatedClusters.find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
-      || clusters.find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
+    const matchingCluster = (deduplicatedClusters || []).find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
+      || (clusters || []).find(currentCluster => currentCluster.name === cluster || currentCluster.context === cluster)
     return matchingCluster?.context || cluster
   }, [clusters, deduplicatedClusters])
 
@@ -118,7 +118,7 @@ export function NamespaceManager() {
   // Uses progressive loading - updates UI as each cluster completes
   const fetchNamespaces = useCallback(async (force = false) => {
     const offlineClusters = new Set(
-      clusters
+      (clusters || [])
         .filter(cluster => cluster.reachable === false)
         .map(cluster => cluster.name)
     )
@@ -624,8 +624,8 @@ export function NamespaceManager() {
           {groupBy === 'cluster' ? (
             // Group by Cluster view
             <>
-              {targetClusters.map(clusterName => {
-                const cluster = clusters.find(c => c.name === clusterName)
+              {(targetClusters || []).map(clusterName => {
+                const cluster = (clusters || []).find(c => c.name === clusterName)
                 const isUnreachable = cluster?.reachable === false
                 const clusterNamespaces = filteredNamespaces
                   .filter(ns => ns.cluster === clusterName)
@@ -865,8 +865,8 @@ export function NamespaceManager() {
       {/* Create Namespace Modal */}
       {showCreateModal && (
         <CreateNamespaceModal
-          clusters={targetClusters.filter(clusterName => {
-            const cluster = clusters.find(c => c.name === clusterName)
+          clusters={(targetClusters || []).filter(clusterName => {
+            const cluster = (clusters || []).find(c => c.name === clusterName)
             return cluster?.reachable !== false
           })}
           onClose={() => closeCreateModal()}

@@ -36,14 +36,14 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   const { users: allOpenshiftUsers, isLoading: openshiftInitialLoading } = useAllOpenShiftUsers(allClusters)
 
   // Only show loading state on initial load when there's no data
-  const sasLoading = sasInitialLoading && allServiceAccounts.length === 0
-  const openshiftUsersLoading = openshiftInitialLoading && allOpenshiftUsers.length === 0
+  const sasLoading = sasInitialLoading && (allServiceAccounts || []).length === 0
+  const openshiftUsersLoading = openshiftInitialLoading && (allOpenshiftUsers || []).length === 0
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading || usersLoading || sasInitialLoading || openshiftInitialLoading,
     isRefreshing: usersRefreshing || clustersRefreshing,
-    hasAnyData: allClusters.length > 0 || allUsers.length > 0 || allServiceAccounts.length > 0,
+    hasAnyData: (allClusters || []).length > 0 || (allUsers || []).length > 0 || (allServiceAccounts || []).length > 0,
     isFailed: Boolean(usersError),
     consecutiveFailures: usersError ? 1 : 0,
     isDemoData: isDemoMode })
@@ -52,8 +52,8 @@ export function UserManagement({ config: _config }: UserManagementProps) {
 
   // Filter clusters by global filter (already deduplicated from hook)
   const clusters = useMemo(() => {
-    if (isAllClustersSelected) return allClusters
-    return allClusters.filter(c => selectedClusters.includes(c.name))
+    if (isAllClustersSelected) return allClusters || []
+    return (allClusters || []).filter(c => selectedClusters.includes(c.name))
   }, [isAllClustersSelected, allClusters, selectedClusters])
 
   // Ensure current user is always included from auth context
@@ -77,26 +77,26 @@ export function UserManagement({ config: _config }: UserManagementProps) {
   // Extract unique namespaces from service accounts (filtered by cluster if selected)
   const namespaces = useMemo(() => {
     const filteredSAs = selectedCluster
-      ? allServiceAccounts.filter(sa => sa.cluster === selectedCluster)
-      : allServiceAccounts
-    const nsSet = new Set(filteredSAs.map(sa => sa.namespace))
+      ? (allServiceAccounts || []).filter(sa => sa.cluster === selectedCluster)
+      : (allServiceAccounts || [])
+    const nsSet = new Set((filteredSAs || []).map(sa => sa.namespace))
     return Array.from(nsSet).sort()
   }, [allServiceAccounts, selectedCluster])
 
   // Pre-filter OpenShift users by in-tab cluster dropdown (before passing to useCardData)
   const openshiftUsersPreFiltered = useMemo(() => {
-    if (!selectedCluster) return allOpenshiftUsers
-    return allOpenshiftUsers.filter(u => u.cluster === selectedCluster)
+    if (!selectedCluster) return allOpenshiftUsers || []
+    return (allOpenshiftUsers || []).filter(u => u.cluster === selectedCluster)
   }, [selectedCluster, allOpenshiftUsers])
 
   // Pre-filter service accounts by in-tab cluster and namespace dropdowns
   const serviceAccountsPreFiltered = useMemo(() => {
-    let result = allServiceAccounts
+    let result = allServiceAccounts || []
     if (selectedCluster) {
-      result = result.filter(sa => sa.cluster === selectedCluster)
+      result = (result || []).filter(sa => sa.cluster === selectedCluster)
     }
     if (selectedNamespace) {
-      result = result.filter(sa => sa.namespace === selectedNamespace)
+      result = (result || []).filter(sa => sa.namespace === selectedNamespace)
     }
     return result
   }, [allServiceAccounts, selectedCluster, selectedNamespace])
