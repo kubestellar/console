@@ -74,6 +74,7 @@ vi.mock('../lib/missions/preflightCheck', () => ({
   getRemediationActions: vi.fn().mockReturnValue([]),
   resolveRequiredTools: vi.fn(() => []),
   runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
+  runClusterReadinessCheck: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
@@ -161,6 +162,13 @@ async function startMissionWithConnection(
   )
   const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
   return { missionId, requestId }
+}
+
+async function flushMissionPreflightChain() {
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
 }
 
 // ── Pre-seed a mission in localStorage without going through the WS flow ──────
@@ -390,7 +398,8 @@ describe('startMission preflight for different types', () => {
   })
 
   it('runs preflight for upgrade-type missions', async () => {
-    const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
+    const { runPreflightCheck, runClusterReadinessCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runClusterReadinessCheck).mockResolvedValueOnce({ ok: true })
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({ ok: true })
 
     const { result } = renderHook(() => useMissions(), { wrapper })
@@ -400,8 +409,9 @@ describe('startMission preflight for different types', () => {
         type: 'upgrade',
       })
     })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
 
+    expect(runClusterReadinessCheck).toHaveBeenCalled()
     expect(runPreflightCheck).toHaveBeenCalled()
   })
 
@@ -448,7 +458,8 @@ describe('startMission preflight for different types', () => {
 
 describe('retryPreflight with cluster context', () => {
   it('injects cluster context into prompt on retry success', async () => {
-    const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
+    const { runPreflightCheck, runClusterReadinessCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runClusterReadinessCheck).mockResolvedValueOnce({ ok: true })
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({
       ok: false,
       error: { code: 'EXPIRED_CREDENTIALS', message: 'Token expired' },
@@ -463,17 +474,14 @@ describe('retryPreflight with cluster context', () => {
         type: 'deploy',
       })
     })
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
 
     // Retry with success
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({ ok: true })
 
     act(() => { result.current.retryPreflight(missionId) })
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
 
     // Should have proceeded to execute, which creates a WebSocket
     expect(MockWebSocket.lastInstance).not.toBeNull()
@@ -541,8 +549,7 @@ describe('runSavedMission edge cases', () => {
 
     const { result } = renderHook(() => useMissions(), { wrapper })
     act(() => { result.current.runSavedMission('desc-only-1') })
-    // Flush microtask queue so the preflight .then() chain resolves
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
@@ -551,6 +558,7 @@ describe('runSavedMission edge cases', () => {
     expect(chatCall).toBeDefined()
     const prompt = JSON.parse(chatCall![0]).payload.prompt
     expect(prompt).toContain('Deploy the application')
+    expect(prompt).toContain('CRITICAL VERIFICATION REQUIREMENTS')
   })
 
   it('injects multi-cluster targeting with context flags', async () => {
@@ -572,17 +580,18 @@ describe('runSavedMission edge cases', () => {
 
     const { result } = renderHook(() => useMissions(), { wrapper })
     act(() => { result.current.runSavedMission('multi-cluster-1', 'cluster-a, cluster-b') })
-    // Flush microtask queue so the preflight .then() chain resolves
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
       (call: string[]) => JSON.parse(call[0]).type === 'chat',
     )
+    expect(chatCall).toBeDefined()
     const prompt = JSON.parse(chatCall![0]).payload.prompt
     // Multi-cluster targeting includes context flags for each cluster
     expect(prompt).toContain('Target clusters: cluster-a, cluster-b')
     expect(prompt).toContain('respective kubectl context')
+    expect(prompt).toContain('CRITICAL VERIFICATION REQUIREMENTS')
   })
 
   it('opens sidebar and sets active mission when running saved mission', () => {
@@ -1306,8 +1315,7 @@ describe('runSavedMission wsSend failure', () => {
 
       const { result } = renderHook(() => useMissions(), { wrapper })
       act(() => { result.current.runSavedMission('wsfail-1') })
-      // Flush microtask queue so the preflight .then() chain resolves
-      await act(async () => { await Promise.resolve() })
+      await flushMissionPreflightChain()
 
       // Do NOT simulate WS open — let ensureConnection's 5s timeout fire
       await act(async () => { vi.advanceTimersByTime(6_000) })

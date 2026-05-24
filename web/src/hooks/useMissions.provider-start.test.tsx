@@ -74,6 +74,7 @@ vi.mock('../lib/missions/preflightCheck', () => ({
   getRemediationActions: vi.fn().mockReturnValue([]),
   resolveRequiredTools: vi.fn(() => []),
   runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
+  runClusterReadinessCheck: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
@@ -168,6 +169,13 @@ async function startMissionWithConnection(
   )
   const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
   return { missionId, requestId }
+}
+
+async function flushMissionPreflightChain() {
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
 }
 
 // ── Pre-seed a mission in localStorage without going through the WS flow ──────
@@ -321,13 +329,15 @@ describe('startMission', () => {
     act(() => {
       missionId = result.current.startMission({ ...defaultParams, type: 'deploy' })
     })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     await act(async () => {
       MockWebSocket.lastInstance?.simulateOpen()
     })
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
       (call: string[]) => JSON.parse(call[0]).type === 'chat',
     )
+    expect(chatCall).toBeDefined()
+    expect(JSON.parse(chatCall![0]).payload.prompt).toContain('CRITICAL VERIFICATION REQUIREMENTS')
     const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
 
     act(() => {

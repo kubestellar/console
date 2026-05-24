@@ -68,6 +68,7 @@ vi.mock('../lib/missions/preflightCheck', () => ({
   getRemediationActions: vi.fn().mockReturnValue([]),
   resolveRequiredTools: vi.fn(() => []),
   runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
+  runClusterReadinessCheck: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
@@ -155,6 +156,13 @@ async function startMissionWithConnection(
   )
   const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
   return { missionId, requestId }
+}
+
+async function flushMissionPreflightChain() {
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
 }
 
 // ── Pre-seed a mission in localStorage without going through the WS flow ──────
@@ -328,8 +336,7 @@ describe('runSavedMission', () => {
     // Should have a user message now
     const mission = result.current.missions.find(m => m.id === missionId)
     expect(mission?.messages.some(m => m.role === 'user')).toBe(true)
-    // Flush microtask queue so the preflight .then() chain resolves
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     // Should transition to running when WS opens
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
     const updated = result.current.missions.find(m => m.id === missionId)
@@ -360,8 +367,7 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.runSavedMission(missionId) })
-    // Flush microtask queue so the preflight .then() chain resolves
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
@@ -378,16 +384,18 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.runSavedMission(missionId, 'cluster-a') })
-    // Flush microtask queue so the preflight .then() chain resolves
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
       (call: string[]) => JSON.parse(call[0]).type === 'chat',
     )
+    expect(chatCall).toBeDefined()
     const payload = JSON.parse(chatCall![0]).payload
     expect(payload.prompt).toContain('Target cluster: cluster-a')
     expect(payload.prompt).toContain('--context=cluster-a')
+    expect(payload.prompt).toContain('CRITICAL VERIFICATION REQUIREMENTS')
+    expect(payload.prompt).toContain('kubectl get pods -n <namespace> and helm ls -n <namespace>')
   })
 
   it('injects multi-cluster targeting into the prompt', async () => {
@@ -395,15 +403,16 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.runSavedMission(missionId, 'cluster-a, cluster-b') })
-    // Flush microtask queue so the preflight .then() chain resolves
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
     const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
       (call: string[]) => JSON.parse(call[0]).type === 'chat',
     )
+    expect(chatCall).toBeDefined()
     const payload = JSON.parse(chatCall![0]).payload
     expect(payload.prompt).toContain('Target clusters: cluster-a, cluster-b')
+    expect(payload.prompt).toContain('CRITICAL VERIFICATION REQUIREMENTS')
   })
 
   it('fails the mission when ensureConnection rejects', async () => {
@@ -412,6 +421,7 @@ describe('runSavedMission', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     await act(async () => { result.current.runSavedMission(missionId) })
+    await flushMissionPreflightChain()
 
     const mission = result.current.missions.find(m => m.id === missionId)
     expect(mission?.status).toBe('failed')

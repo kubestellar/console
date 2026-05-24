@@ -76,6 +76,7 @@ vi.mock('../lib/missions/preflightCheck', () => ({
   getRemediationActions: vi.fn().mockReturnValue([]),
   resolveRequiredTools: vi.fn(() => []),
   runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
+  runClusterReadinessCheck: vi.fn().mockResolvedValue({ ok: true }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
@@ -164,6 +165,13 @@ async function startMissionWithConnection(
   )
   const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
   return { missionId, requestId }
+}
+
+async function flushMissionPreflightChain() {
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => { await Promise.resolve() })
 }
 
 // ── Pre-seed a mission in localStorage without going through the WS flow ──────
@@ -527,7 +535,8 @@ describe('stream gap detection', () => {
 
 describe('preflight check', () => {
   it('blocks mission when preflight check fails', async () => {
-    const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
+    const { runPreflightCheck, runClusterReadinessCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runClusterReadinessCheck).mockResolvedValueOnce({ ok: true })
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({
       ok: false,
       error: { code: 'MISSING_CREDENTIALS', message: 'No kubeconfig found' },
@@ -537,9 +546,7 @@ describe('preflight check', () => {
     act(() => {
       result.current.startMission({ ...defaultParams, cluster: 'my-cluster', type: 'deploy' })
     })
-    // Wait for preflight to resolve
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
 
     const mission = result.current.missions[0]
     expect(mission.status).toBe('blocked')
@@ -642,7 +649,8 @@ describe('preflight check', () => {
 
   it('retryPreflight transitions blocked mission back to pending', async () => {
     // First, create a blocked mission
-    const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
+    const { runPreflightCheck, runClusterReadinessCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runClusterReadinessCheck).mockResolvedValueOnce({ ok: true })
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({
       ok: false,
       error: { code: 'EXPIRED_CREDENTIALS', message: 'Token expired' },
@@ -653,8 +661,7 @@ describe('preflight check', () => {
     act(() => {
       missionId = result.current.startMission({ ...defaultParams, cluster: 'my-cluster', type: 'deploy' })
     })
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
 
     // Now retry — mock success
@@ -667,8 +674,7 @@ describe('preflight check', () => {
     expect(result.current.missions.find(m => m.id === missionId)?.currentStep).toBe('Re-running preflight check...')
 
     // Let the retry resolve
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
 
     // Should now have a system message about preflight passing
     const mission = result.current.missions.find(m => m.id === missionId)
@@ -676,7 +682,8 @@ describe('preflight check', () => {
   })
 
   it('retryPreflight re-blocks when still failing', async () => {
-    const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
+    const { runPreflightCheck, runClusterReadinessCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runClusterReadinessCheck).mockResolvedValueOnce({ ok: true })
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({
       ok: false,
       error: { code: 'RBAC_DENIED', message: 'No permissions' },
@@ -687,8 +694,7 @@ describe('preflight check', () => {
     act(() => {
       missionId = result.current.startMission({ ...defaultParams, cluster: 'c', type: 'deploy' })
     })
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
 
     // Retry, still failing
     vi.mocked(runPreflightCheck).mockResolvedValueOnce({
@@ -697,8 +703,7 @@ describe('preflight check', () => {
     })
 
     act(() => { result.current.retryPreflight(missionId) })
-    await act(async () => { await Promise.resolve() })
-    await act(async () => { await Promise.resolve() })
+    await flushMissionPreflightChain()
 
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
     // PreflightFailure component renders the error; no duplicate system message (#13464)
