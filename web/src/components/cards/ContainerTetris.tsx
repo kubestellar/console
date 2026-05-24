@@ -341,6 +341,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
               {row.map((cell, colIdx) => (
                 <div
                   key={colIdx}
+                  data-color={cell || 'empty'}
                   className={`${cellSize} border border-gray-800 ${cell || 'bg-gray-900'}`}
                 />
               ))}
@@ -359,6 +360,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
                   {row.map((cell, c) => (
                     <div
                       key={c}
+                      data-color={cell ? TETROMINOES[nextPiece.type].color : 'empty'}
                       className={`${previewCellSize} ${cell ? TETROMINOES[nextPiece.type].color : 'bg-gray-900'}`}
                     />
                   ))}

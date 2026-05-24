@@ -100,6 +100,7 @@ export function PodDeleteSection({
             : t('drilldown.confirmDelete.unmanagedPod', { name: podName })
         }
         confirmLabel={t('drilldown.actions.deletePod')}
+        cancelLabel={t('common.cancel')}
         variant="danger"
       />
     </>

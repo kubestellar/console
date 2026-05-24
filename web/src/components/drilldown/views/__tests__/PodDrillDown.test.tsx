@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import React from 'react'
 
@@ -158,8 +158,7 @@ vi.mock('../../../cards/console-missions/shared', () => ({
 // Additional mocks needed to fully mock AsyncData hook with state changes
 vi.mock('../../../../hooks/useAsyncData', () => ({
   useAsyncData: vi.fn((fetcher: any, deps: any, options: any) => {
-    const fetcherStr = fetcher ? fetcher.toString() : ''
-    if (fetcherStr.includes('aiAnalysisFetcher') || (options?.initialData === null && options?.enabled === false)) {
+    if (options?.enabled === false) {
       const [data, setData] = React.useState(mockAiAnalysisData)
       const [loading, setLoading] = React.useState(mockAiAnalysisLoading)
       const [error, setError] = React.useState(mockAiAnalysisError)
@@ -462,7 +461,8 @@ metadata:
     expect(screen.getByText('managed-delete-msg-pod1')).toBeInTheDocument()
 
     // Test clicking Cancel
-    const cancelBtn = screen.getByRole('button', { name: 'Cancel' })
+    const dialog1 = screen.getByRole('dialog')
+    const cancelBtn = within(dialog1).getByRole('button', { name: 'common.cancel' })
     await userEvent.click(cancelBtn)
     expect(mockSetShowDeletePodConfirm).toHaveBeenCalledWith(false)
 
@@ -471,7 +471,8 @@ metadata:
     rerender(<PodDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1', status: 'Failed' }} />)
 
     // Test clicking Confirm Delete
-    const confirmBtn = screen.getByRole('button', { name: 'drilldown.actions.deletePod' })
+    const dialog2 = screen.getByRole('dialog')
+    const confirmBtn = within(dialog2).getByRole('button', { name: 'drilldown.actions.deletePod' })
     await userEvent.click(confirmBtn)
     expect(mockSetShowDeletePodConfirm).toHaveBeenCalledWith(false)
     expect(mockHandleDeletePod).toHaveBeenCalled()
