@@ -8,6 +8,7 @@ import {
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
   KUBECTL_DEFAULT_TIMEOUT_MS,
   MAX_CONCURRENT_KUBECTL_REQUESTS,
+  MAX_PENDING_KUBECTL_REQUESTS,
   FOCUS_DELAY_MS,
 } from './constants'
 import { reportBackendAvailable, reportBackendUnavailable } from './backendHealthEvents'
@@ -231,6 +232,10 @@ export class KubectlProxyConnection {
   ): Promise<KubectlResponse> {
     if (options.priority) {
       return this.execImmediate(args, options)
+    }
+
+    if (this.requestQueue.length >= MAX_PENDING_KUBECTL_REQUESTS) {
+      return Promise.reject(new Error('Too many pending kubectl requests'))
     }
 
     return new Promise((resolve, reject) => {

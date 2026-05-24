@@ -67,12 +67,18 @@ func resolveStellarProviderHostIPs(host string) ([]net.IP, error) {
 	if parsed := net.ParseIP(host); parsed != nil {
 		return []net.IP{parsed}, nil
 	}
-	ips, err := net.LookupIP(host)
+	ctx, cancel := context.WithTimeout(context.Background(), dnsLookupTimeout)
+	defer cancel()
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve host")
 	}
-	if len(ips) == 0 {
+	if len(addrs) == 0 {
 		return nil, fmt.Errorf("host resolved to no addresses")
+	}
+	ips := make([]net.IP, len(addrs))
+	for i, a := range addrs {
+		ips[i] = a.IP
 	}
 	return ips, nil
 }

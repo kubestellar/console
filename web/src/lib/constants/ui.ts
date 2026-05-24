@@ -82,6 +82,8 @@ export const CLUSTER_MARKER_FONT_SIZE = 8
 
 // ── Kubectl proxy thresholds ────────────────────────────────────────────
 export const MAX_CONCURRENT_KUBECTL_REQUESTS = 4
+/** Hard cap on queued kubectl requests; prevents unbounded memory growth when WS is disconnected */
+export const MAX_PENDING_KUBECTL_REQUESTS = 64
 export const POD_RESTART_ISSUE_THRESHOLD = 5
 
 // ── Clipboard feedback ───────────────────────────────────────────────

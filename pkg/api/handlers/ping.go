@@ -151,6 +151,9 @@ func PingHandler(c *fiber.Ctx) error {
 	})
 }
 
+// dnsLookupTimeout caps DNS resolution to prevent indefinite blocking.
+const dnsLookupTimeout = 5 * time.Second
+
 // isPrivateHost checks whether a hostname resolves to a blocked IP.
 func isPrivateHost(host string) bool {
 	// Block well-known internal hostnames
@@ -160,8 +163,10 @@ func isPrivateHost(host string) bool {
 		return true
 	}
 
-	// Resolve and check IPs
-	ips, err := net.LookupHost(host)
+	// Resolve and check IPs (with timeout to prevent indefinite blocking)
+	ctx, cancel := context.WithTimeout(context.Background(), dnsLookupTimeout)
+	defer cancel()
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
 	if err != nil {
 		return false // Let the actual request fail naturally
 	}
