@@ -335,7 +335,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
       {/* Game area - relative container for overlays */}
       <div className="flex-1 flex items-center justify-center gap-4 relative">
         {/* Main board */}
-        <div className="border border-border rounded overflow-hidden bg-gray-900">
+        <div data-testid="tetris-board" className="border border-border rounded overflow-hidden bg-gray-900">
           {displayBoard.map((row, rowIdx) => (
             <div key={rowIdx} className="flex">
               {row.map((cell, colIdx) => (
@@ -353,7 +353,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
           {/* Next piece preview */}
           <div>
             <div className="text-xs text-muted-foreground mb-1">{t('containerTetris.next')}</div>
-            <div className="border border-border rounded p-1 bg-gray-900">
+            <div data-testid="tetris-next-preview" className="border border-border rounded p-1 bg-gray-900">
               {nextPiece.shape.map((row, r) => (
                 <div key={r} className="flex">
                   {row.map((cell, c) => (
