@@ -10,7 +10,7 @@ function formatCountdownShort(recheckAt: number): string {
   const seconds = Math.floor(ms / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
-  
+
   if (hours > 0) {
     const remainingMinutes = minutes % 60
     return `${hours}h ${remainingMinutes}m`
@@ -252,7 +252,7 @@ export function EventCard({
       )}
       {solveStatus && (
         <div className="mt-1.5">
-          <div className="mb-0.75" style={{
+          <div className="mb-1" style={{
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <span className="text-[11px] font-mono" style={{
