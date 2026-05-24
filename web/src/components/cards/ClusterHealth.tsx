@@ -186,7 +186,7 @@ export function ClusterHealth() {
   }, [displayClusters, selectedClusters, isAllClustersSelected, gpuNodes])
 
   const {
-    unreachableClusters, tokenExpiredClusters, networkOfflineClusters,
+    tokenExpiredClusters, networkOfflineClusters,
     healthyClusters, unhealthyClusters, totalNodes, totalCPUs, totalPods,
     totalGPUs, assignedGPUs,
   } = clusterStats
