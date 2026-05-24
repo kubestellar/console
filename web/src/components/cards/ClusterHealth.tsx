@@ -179,7 +179,7 @@ export function ClusterHealth() {
     const assignedGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
 
     return {
-      unreachableClusters, tokenExpiredClusters, networkOfflineClusters,
+      tokenExpiredClusters, networkOfflineClusters,
       healthyClusters, unhealthyClusters, totalNodes, totalCPUs, totalPods,
       totalGPUs, assignedGPUs,
     }
