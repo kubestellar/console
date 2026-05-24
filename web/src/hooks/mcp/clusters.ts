@@ -223,7 +223,8 @@ export function useClusters() {
     const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(dataState.clusters)
     const result = deduplicateClustersByServer(sharedMetricsClusters)
 
-    return result
+    // #15569 — Ensure we always return an array, never undefined
+    return result || []
   }, [dataState.clusters])
 
   // Completeness metadata for aggregated metrics (issue #6114). A cluster is
