@@ -170,7 +170,7 @@ async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string
   });
 
   if (!resp.ok) {
-    const body = await resp.text();
+    const body = (await resp.text()).slice(0, 500);
     throw new Error(`Token exchange failed (${resp.status}): ${body}`);
   }
 

@@ -87,13 +87,13 @@ export function Missions(_props: MissionsProps) {
   const { t } = useTranslation(['common', 'cards'])
 
   // Translated config objects created here so they have access to t()
-  const STATUS_CONFIG: Record<DeployMissionStatus, {
+  const STATUS_CONFIG = useMemo<Record<DeployMissionStatus, {
     icon: typeof Rocket
     color: string
     bg: string
     label: string
     animateClass?: string
-  }> = {
+  }>>(() => ({
     launching: {
       icon: Rocket,
       color: 'text-blue-400',
@@ -120,7 +120,7 @@ export function Missions(_props: MissionsProps) {
       icon: AlertTriangle,
       color: 'text-orange-400',
       bg: 'bg-orange-500/20',
-      label: t('cards:missionStatus.partial', 'Partial') } }
+      label: t('cards:missionStatus.partial', 'Partial') } }), [t])
 
   // ClusterStatusRow renders a row's text (`color`), a progress bar
   // (`barColor`), and a status label. The `bg` field used to be declared here
@@ -131,28 +131,28 @@ export function Missions(_props: MissionsProps) {
   // text color which IS rendered. Tinted accent colors
   // (yellow/green/red at /20 + /500) already read on both light and dark
   // themes, so no dark: variants needed.
-  const CLUSTER_STATUS_CONFIG: Record<DeployClusterStatus['status'], {
+  const CLUSTER_STATUS_CONFIG = useMemo<Record<DeployClusterStatus['status'], {
     color: string
     barColor: string
     label: string
-  }> = {
+  }>>(() => ({
     pending: { color: 'text-muted-foreground', barColor: 'bg-muted-foreground', label: t('cards:clusterStatus.pending', 'Pending') },
     applying: { color: 'text-yellow-400', barColor: 'bg-yellow-500', label: t('cards:clusterStatus.applying', 'Applying') },
     running: { color: 'text-green-400', barColor: 'bg-green-500', label: t('cards:clusterStatus.running', 'Running') },
-    failed: { color: 'text-red-400', barColor: 'bg-red-500', label: t('cards:clusterStatus.failed', 'Failed') } }
+    failed: { color: 'text-red-400', barColor: 'bg-red-500', label: t('cards:clusterStatus.failed', 'Failed') } }), [t])
 
-  const SORT_OPTIONS: { value: SortByOption; label: string }[] = [
+  const SORT_OPTIONS = useMemo<{ value: SortByOption; label: string }[]>(() => [
     { value: 'status', label: t('common:sortBy.status', 'Status') },
     { value: 'workload', label: t('common:sortBy.workload', 'Workload') },
     { value: 'time', label: t('common:sortBy.time', 'Time') },
     { value: 'clusters', label: t('common:sortBy.clusters', 'Clusters') },
-  ]
+  ], [t])
 
-  const DEP_ACTION_STYLES: Record<string, { color: string; label: string }> = {
+  const DEP_ACTION_STYLES = useMemo<Record<string, { color: string; label: string }>>(() => ({
     created: { color: 'text-green-400', label: t('cards:dependencyAction.created', 'Created') },
     updated: { color: 'text-blue-400', label: t('cards:dependencyAction.updated', 'Updated') },
     skipped: { color: 'text-muted-foreground', label: t('cards:dependencyAction.skipped', 'Skipped') },
-    failed: { color: 'text-red-400', label: t('cards:dependencyAction.failed', 'Failed') } }
+    failed: { color: 'text-red-400', label: t('cards:dependencyAction.failed', 'Failed') } }), [t])
 
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
   const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()

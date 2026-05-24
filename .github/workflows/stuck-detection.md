@@ -58,13 +58,14 @@ updated:<{4_HOURS_AGO}
 
 ### Step 2: Find Stuck PRs
 
-Query for Copilot PRs that may be stuck:
+Query for Copilot PRs that may be stuck. Run these as separate single-line searches:
 
 ```
-repo:kubestellar/console is:pr is:open
-author:Copilot OR author:copilot-swe-agent
-draft:true
-updated:<{1_HOUR_AGO}
+repo:kubestellar/console is:pr is:open author:Copilot draft:true updated:<{1_HOUR_AGO}
+```
+
+```
+repo:kubestellar/console is:pr is:open author:copilot-swe-agent draft:true updated:<{1_HOUR_AGO}
 ```
 
 ### Step 3: Find Unanswered Copilot Comments

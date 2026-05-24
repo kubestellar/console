@@ -198,7 +198,7 @@ export const ResourceTrend = memo(function ResourceTrend() {
   // ("Rendered more hooks than during the previous render") when the
   // loading state flipped, because the useMemo below was skipped on the
   // first render and then called on later renders.
-  const getLines = () => {
+  const lines = useMemo(() => {
     switch (view) {
       case 'compute':
         return [
@@ -216,9 +216,7 @@ export const ResourceTrend = memo(function ResourceTrend() {
           { dataKey: 'pods', color: '#9333ea', name: 'Pods' },
         ]
     }
-  }
-
-  const lines = getLines()
+  }, [view])
 
   const chartOption = useMemo(() => ({
     backgroundColor: 'transparent',

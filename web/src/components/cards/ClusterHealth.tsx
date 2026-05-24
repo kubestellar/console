@@ -159,31 +159,37 @@ export function ClusterHealth() {
   }, [gpuNodes])
 
   // Stats based on globally filtered clusters (not affected by local search/cluster filter)
-  const filteredForStats = isAllClustersSelected
-    ? displayClusters
-    : displayClusters.filter(c => selectedClusters.includes(c.name))
+  const clusterStats = useMemo(() => {
+    const filteredForStats = isAllClustersSelected
+      ? displayClusters
+      : displayClusters.filter(c => selectedClusters.includes(c.name))
 
-  // Use shared isClusterHealthy / isClusterUnreachable from clusters/utils.ts
-  // so that Dashboard, My Clusters, and Sidebar all produce identical counts.
+    const unreachableClusters = filteredForStats.filter(c => isClusterUnreachable(c)).length
+    const tokenExpiredClusters = filteredForStats.filter(c => isClusterTokenExpired(c)).length
+    const networkOfflineClusters = unreachableClusters - tokenExpiredClusters
+    const healthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c)).length
+    const unhealthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && !isClusterHealthy(c)).length
+    const totalNodes = filteredForStats.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+    const totalCPUs = filteredForStats.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
+    const totalPods = filteredForStats.reduce((sum, c) => sum + (c.podCount || 0), 0)
+    const filteredGPUNodes = isAllClustersSelected
+      ? gpuNodes
+      : gpuNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
+    const totalGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuCount, 0)
+    const assignedGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
 
-  // Stats — uses the same shared helpers as Clusters.tsx and Sidebar.tsx
-  const unreachableClusters = filteredForStats.filter(c => isClusterUnreachable(c)).length
-  // Token expired = unreachable due to auth error
-  const tokenExpiredClusters = filteredForStats.filter(c => isClusterTokenExpired(c)).length
-  // Network offline = unreachable but NOT due to auth error
-  const networkOfflineClusters = unreachableClusters - tokenExpiredClusters
-  // Healthy = not unreachable and (healthy flag OR has reporting nodes)
-  const healthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && isClusterHealthy(c)).length
-  // Unhealthy = not unreachable and not healthy
-  const unhealthyClusters = filteredForStats.filter(c => !isClusterUnreachable(c) && !isClusterHealthy(c)).length
-  const totalNodes = filteredForStats.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalCPUs = filteredForStats.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
-  const totalPods = filteredForStats.reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const filteredGPUNodes = isAllClustersSelected
-    ? gpuNodes
-    : gpuNodes.filter(n => selectedClusters.some(c => n.cluster.startsWith(c)))
-  const totalGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuCount, 0)
-  const assignedGPUs = filteredGPUNodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+    return {
+      tokenExpiredClusters, networkOfflineClusters,
+      healthyClusters, unhealthyClusters, totalNodes, totalCPUs, totalPods,
+      totalGPUs, assignedGPUs,
+    }
+  }, [displayClusters, selectedClusters, isAllClustersSelected, gpuNodes])
+
+  const {
+    tokenExpiredClusters, networkOfflineClusters,
+    healthyClusters, unhealthyClusters, totalNodes, totalCPUs, totalPods,
+    totalGPUs, assignedGPUs,
+  } = clusterStats
 
   // Show skeleton structure during loading to prevent layout shift
   if (isLoading) {
