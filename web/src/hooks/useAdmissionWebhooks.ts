@@ -161,7 +161,7 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
   const isDemoDataRef = useRef(isDemoData)
   isDemoDataRef.current = isDemoData
 
-  const refetch = useCallback(async (silent = false) => {
+  const refetch = useCallback(async (silent = false, signal?: AbortSignal) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
     }
@@ -172,7 +172,7 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
     try {
       const res = await fetch('/api/admission-webhooks', {
         headers: authHeaders(),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        signal: signal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (res.status === STATUS_SERVICE_UNAVAILABLE) {
@@ -198,7 +198,10 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
       setLastRefresh(Date.now())
       initialLoadDone.current = true
       saveToCache(data.webhooks || [], false)
-    } catch {
+    } catch (err: unknown) {
+      // Aborted requests (unmount / navigation) should not count as failures
+      if (err instanceof DOMException && err.name === 'AbortError') return
+
       // Only fall back to demo data if we have no real data yet.
       // If we already have real (non-demo) data, a transient error should
       // not overwrite it — otherwise a valid empty-webhook state is silently
@@ -221,10 +224,12 @@ export function useAdmissionWebhooks(): UseAdmissionWebhooksResult {
     }
   }, []) // No dependency on clusters — uses refs instead
 
-  // Initial load
+  // Initial load — abort in-flight request on unmount
   useEffect(() => {
     if (!clustersLoading) {
-      refetch()
+      const controller = new AbortController()
+      refetch(false, controller.signal)
+      return () => controller.abort()
     }
   }, [clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -445,17 +445,30 @@ export function createMissionExecutionApi(
 
       // For deploy/upgrade missions, verify cluster is fully ready (not just accepting connections)
       const isDeployMission = ['deploy', 'upgrade'].includes(params.type || '')
-      const readinessPromise = missionNeedsCluster && isDeployMission && clusterContexts.length > 0
+      const kubectlExecFn = (args: string[], options?: { context?: string; timeout?: number; priority?: boolean }) =>
+        kubectlProxy.exec(args, options)
+
+      // Build readiness and preflight promises — run them in parallel since they
+      // are independent checks against the same cluster(s).
+      const readinessPromise: Promise<PreflightResult> = missionNeedsCluster && isDeployMission && clusterContexts.length > 0
         ? Promise.all(
-            clusterContexts.map(context =>
-              runClusterReadinessCheck((args, options) => kubectlProxy.exec(args, options), context),
-            ),
+            clusterContexts.map(context => runClusterReadinessCheck(kubectlExecFn, context)),
           ).then(results => results.find(result => !result.ok) || { ok: true as const })
         : missionNeedsCluster && isDeployMission
-          ? runClusterReadinessCheck((args, options) => kubectlProxy.exec(args, options))
+          ? runClusterReadinessCheck(kubectlExecFn)
           : Promise.resolve({ ok: true } as PreflightResult)
 
-      readinessPromise.then(readiness => {
+      const preflightPromise: Promise<PreflightResult> = missionNeedsCluster && clusterContexts.length > 0
+        ? Promise.all(
+            clusterContexts.map(context => runPreflightCheck(kubectlExecFn, context)),
+          ).then(results => results.find(result => !result.ok) || { ok: true as const })
+        : missionNeedsCluster
+          ? runPreflightCheck(kubectlExecFn)
+          : Promise.resolve({ ok: true } as PreflightResult)
+
+      // Run both checks concurrently — fail fast if either reports a problem
+      Promise.all([readinessPromise, preflightPromise]).then(([readiness, preflight]) => {
+        // Check readiness first (more fundamental)
         if (!readiness.ok && 'error' in readiness && readiness.error) {
           state.setMissions(prev => prev.map(mission =>
             mission.id === missionId
@@ -475,17 +488,6 @@ export function createMissionExecutionApi(
           return
         }
 
-      const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
-        ? Promise.all(
-            clusterContexts.map(context =>
-              runPreflightCheck((args, options) => kubectlProxy.exec(args, options), context),
-            ),
-          ).then(results => results.find(result => !result.ok) || { ok: true as const })
-        : missionNeedsCluster
-          ? runPreflightCheck((args, options) => kubectlProxy.exec(args, options))
-          : Promise.resolve({ ok: true } as PreflightResult)
-
-      preflightPromise.then(preflight => {
         if (!preflight.ok && 'error' in preflight && preflight.error) {
           state.setMissions(prev => prev.map(mission =>
             mission.id === missionId
@@ -520,24 +522,7 @@ export function createMissionExecutionApi(
                 preflightError: {
                   code: 'UNKNOWN_EXECUTION_FAILURE',
                   message: error instanceof Error ? error.message : 'Unknown error',
-                  details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
-                },
-              }
-            : mission,
-        ))
-      })
-      }) // end readinessPromise.then
-      .catch(error => {
-        state.setMissions(prev => prev.map(mission =>
-          mission.id === missionId
-            ? {
-                ...mission,
-                status: 'blocked' as MissionStatus,
-                currentStep: 'Cluster readiness check error',
-                preflightError: {
-                  code: 'UNKNOWN_EXECUTION_FAILURE',
-                  message: error instanceof Error ? error.message : 'Unknown error',
-                  details: { hint: 'The cluster readiness check threw an unexpected error. Verify the cluster is reachable.' },
+                  details: { hint: 'A preflight check threw an unexpected error. Retry or check cluster connectivity.' },
                 },
               }
             : mission,
