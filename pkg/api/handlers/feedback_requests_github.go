@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -354,11 +355,21 @@ func (h *FeedbackHandler) getCachedOrFetchPRs(ctx context.Context) []GitHubPR {
 	h.prCacheMu.RUnlock()
 
 	v, _, _ := h.prFetchGroup.Do("prs", func() (interface{}, error) {
-		allPRs := make([]GitHubPR, 0)
-		for _, state := range []string{"open", "closed"} {
-			prs := h.fetchPRPages(ctx, state)
-			allPRs = append(allPRs, prs...)
-		}
+		var openPRs, closedPRs []GitHubPR
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			openPRs = h.fetchPRPages(ctx, "open")
+		}()
+		go func() {
+			defer wg.Done()
+			closedPRs = h.fetchPRPages(ctx, "closed")
+		}()
+		wg.Wait()
+		allPRs := make([]GitHubPR, 0, len(openPRs)+len(closedPRs))
+		allPRs = append(allPRs, openPRs...)
+		allPRs = append(allPRs, closedPRs...)
 
 		h.prCacheMu.Lock()
 		// Re-check: another goroutine may have populated the cache while we fetched.

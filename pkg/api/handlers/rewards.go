@@ -177,17 +177,33 @@ func (h *RewardsHandler) resolveToken() string {
 func (h *RewardsHandler) fetchUserRewards(ctx context.Context, login, token string) (*GitHubRewardsResponse, error) {
 	yearStart := fmt.Sprintf("%d-01-01T00:00:00Z", time.Now().Year())
 
+	type repoResult struct {
+		items []searchItem
+		err   error
+		repo  string
+	}
+
+	results := make([]repoResult, len(h.repos))
+	var wg sync.WaitGroup
+	for i, repo := range h.repos {
+		wg.Add(1)
+		go func(idx int, r string) {
+			defer wg.Done()
+			items, err := h.listRepoItems(ctx, r, login, yearStart, token)
+			results[idx] = repoResult{items: items, err: err, repo: r}
+		}(i, repo)
+	}
+	wg.Wait()
+
 	contributions := make([]GitHubContribution, 0)
 	var fetchErr error
-
-	for _, repo := range h.repos {
-		items, err := h.listRepoItems(ctx, repo, login, yearStart, token)
-		if err != nil {
-			slog.Error("[rewards] failed to list items", "repo", repo, "user", login, "error", err)
-			fetchErr = fmt.Errorf("list %s failed: %w", repo, err)
+	for _, res := range results {
+		if res.err != nil {
+			slog.Error("[rewards] failed to list items", "repo", res.repo, "user", login, "error", res.err)
+			fetchErr = fmt.Errorf("list %s failed: %w", res.repo, res.err)
 			continue
 		}
-		for _, item := range items {
+		for _, item := range res.items {
 			if item.PullRequest != nil {
 				contributions = append(contributions, classifyPR(item)...)
 			} else {
