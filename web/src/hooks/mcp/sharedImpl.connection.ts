@@ -22,11 +22,13 @@ export const sharedWebSocket: {
   connecting: boolean
   reconnectTimeout: ReturnType<typeof setTimeout> | null
   reconnectAttempts: number
+  authFailed: boolean
 } = {
   ws: null,
   connecting: false,
   reconnectTimeout: null,
   reconnectAttempts: 0,
+  authFailed: false,
 }
 
 // Track if backend WebSocket is known unavailable
@@ -51,6 +53,11 @@ export async function connectSharedWebSocket() {
   // Set connecting flag FIRST to prevent race conditions (JS is single-threaded but
   // multiple React hook instances can call this in quick succession during initial render)
   if (sharedWebSocket.connecting || sharedWebSocket.ws?.readyState === WebSocket.OPEN) {
+    return
+  }
+
+  // Don't retry if auth has already failed — wait for token refresh/re-login
+  if (sharedWebSocket.authFailed) {
     return
   }
 
@@ -94,6 +101,7 @@ export async function connectSharedWebSocket() {
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
+        sharedWebSocket.authFailed = true
         ws.close()
         return
       }
@@ -106,8 +114,10 @@ export async function connectSharedWebSocket() {
           sharedWebSocket.ws = ws
           sharedWebSocket.connecting = false
           sharedWebSocket.reconnectAttempts = 0 // Reset on successful connection
+          sharedWebSocket.authFailed = false // Clear any previous auth failure
           wsBackendUnavailable = false // Backend is available
         } else if (msg.type === 'error') {
+          sharedWebSocket.authFailed = true
           ws.close()
         } else if (msg.type === 'kubeconfig_changed' || msg.type === 'clusters_updated') {
           // Reset failure tracking on fresh kubeconfig
@@ -133,6 +143,11 @@ export async function connectSharedWebSocket() {
     ws.onclose = () => {
       sharedWebSocket.ws = null
       sharedWebSocket.connecting = false
+
+      // Auth failures are terminal — don't retry with the same invalid token
+      if (sharedWebSocket.authFailed) {
+        return
+      }
 
       // Exponential backoff for reconnection (silent)
       if (sharedWebSocket.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
