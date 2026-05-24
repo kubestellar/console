@@ -43,7 +43,7 @@ export function ApprovalCard({
           Reject
         </button>
       </div>
-      {error && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--s-critical)' }}>{error}</div>}
+      {error && <div className="mt-1.5" style={{ fontSize: 11, color: 'var(--s-critical)' }}>{error}</div>}
     </div>
   )
 }

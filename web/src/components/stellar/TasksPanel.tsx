@@ -50,7 +50,7 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
       </button>
 
       {expanded && (
-        <div style={{ paddingBottom: 6 }}>
+        <div className="pb-1.5">
           {tasks.length === 0 ? (
             <div style={{ padding: '2px 12px 8px', color: 'var(--s-text-dim)', fontSize: 11 }}>
               No open tasks.

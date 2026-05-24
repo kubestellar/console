@@ -92,7 +92,7 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
         {solve.summary}{limitNote}
       </div>
       {expanded && (
-        <div style={{ marginTop: 6, fontSize: 11, color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)' }}>
+        <div className="mt-1.5" style={{ fontSize: 11, color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)' }}>
           <div>actions taken: {solve.actionsTaken}</div>
           <div>started: {new Date(solve.startedAt).toLocaleString()}</div>
           {solve.endedAt && <div>ended: {new Date(solve.endedAt).toLocaleString()}</div>}

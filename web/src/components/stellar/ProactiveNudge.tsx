@@ -38,11 +38,11 @@ export function ProactiveNudge({ nudge, onDismiss, onApplySuggestion }: Proactiv
           </button>
         )}
         {nudge.reasoning && (
-          <details style={{ marginTop: 4 }}>
+          <details className="mt-1">
             <summary style={{ fontSize: 10, color: 'var(--s-text-dim)', cursor: 'pointer', userSelect: 'none' }}>
               why Stellar flagged this
             </summary>
-            <div style={{ fontSize: 11, color: 'var(--s-text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+            <div className="mt-1" style={{ fontSize: 11, color: 'var(--s-text-muted)', lineHeight: 1.5 }}>
               {nudge.reasoning}
             </div>
           </details>

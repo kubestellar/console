@@ -263,7 +263,7 @@ export function WatchDetailModal({
 
           {/* Stellar's actions — attempt history for this workload */}
           <SectionHeader title="Stellar's actions" />
-          <div style={{ marginBottom: 12 }}>
+          <div className="mb-3">
             {!attemptSummary || attemptSummary.recent.length === 0 ? (
               <div style={{ fontSize: 11, color: 'var(--s-text-dim)', fontStyle: 'italic', padding: '4px 10px' }}>
                 No attempts in last 24 hours.
@@ -318,7 +318,7 @@ export function WatchDetailModal({
           {relatedEvents.length > 0 && (
             <>
               <SectionHeader title={`Event timeline (${relatedEvents.length})`} />
-              <div style={{ marginBottom: 12 }}>
+              <div className="mb-3">
                 {relatedEvents.slice(0, EVENT_TIMELINE_LIMIT).map(ev => (
                   <div key={ev.id} style={{
                     display: 'flex', alignItems: 'center', gap: 8,
@@ -404,7 +404,7 @@ function SectionHeader({ title }: { title: string }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div className="mb-3">
       <SectionHeader title={title} />
       <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--s-text)' }}>{children}</div>
     </div>

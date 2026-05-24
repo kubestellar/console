@@ -251,9 +251,9 @@ export function EventCard({
         </div>
       )}
       {solveStatus && (
-        <div style={{ marginTop: 6 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3,
+        <div className="mt-1.5">
+          <div className="mb-0.75" style={{
+            display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <span className="text-[11px] font-mono" style={{
               fontWeight: 600,
