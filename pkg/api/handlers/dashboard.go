@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -321,64 +320,47 @@ func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
 		)
 	}
 
-	dashboard := &models.Dashboard{
-		UserID: userID,
-		Name:   input.Name,
-		Layout: input.Layout,
-	}
-	if err := h.store.CreateDashboard(c.UserContext(), dashboard); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create dashboard")
-	}
-
-	// Validate card types before persisting any cards (#7009). Reject
-	// unknown types upfront so we never need a partial rollback.
+	// Validate card types before persisting anything.
 	for i, ce := range input.Cards {
 		if !isValidCardType(models.CardType(ce.CardType)) {
-			// Clean up the dashboard we just created before returning.
-			if err := h.store.DeleteDashboard(c.UserContext(), dashboard.ID); err != nil {
-				slog.Error("Failed to rollback dashboard on invalid card type",
-					slog.String("dashboard_id", dashboard.ID.String()),
-					slog.Int("card_index", i),
-					slog.String("card_type", ce.CardType),
-					slog.String("error", err.Error()))
-			}
 			return fiber.NewError(fiber.StatusBadRequest,
 				fmt.Sprintf("card[%d]: unknown card_type %q", i, ce.CardType))
 		}
 	}
 
+	dashboard := &models.Dashboard{
+		UserID: userID,
+		Name:   input.Name,
+		Layout: input.Layout,
+	}
+
+	// Build card models from the export payload.
+	cards := make([]*models.Card, 0, len(input.Cards))
 	for _, ce := range input.Cards {
-		card := &models.Card{
-			DashboardID: dashboard.ID,
-			CardType:    models.CardType(ce.CardType),
-			Config:      ce.Config,
-			Position:    ce.Position,
+		cards = append(cards, &models.Card{
+			CardType: models.CardType(ce.CardType),
+			Config:   ce.Config,
+			Position: ce.Position,
+		})
+	}
+
+	// Atomic import: creates dashboard + all cards in a single transaction.
+	// A crash or error mid-way rolls back everything — no orphans.
+	if err := h.store.ImportDashboardAtomic(c.UserContext(), dashboard, cards, MaxCardsPerDashboard); err != nil {
+		if errors.Is(err, store.ErrDashboardCardLimitReached) {
+			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Card limit reached during import")
 		}
-		// Use CreateCardWithLimit to keep the invariant consistent with the
-		// regular AddCard path (closes TOCTOU against concurrent creates).
-		if err := h.store.CreateCardWithLimit(c.UserContext(), card, MaxCardsPerDashboard); err != nil {
-			// Rollback: delete the partially-created dashboard and any cards
-			if rbErr := h.store.DeleteDashboard(c.UserContext(), dashboard.ID); rbErr != nil {
-				slog.Error("Failed to rollback dashboard on card creation failure",
-					slog.String("dashboard_id", dashboard.ID.String()),
-					slog.String("card_creation_error", err.Error()),
-					slog.String("rollback_error", rbErr.Error()))
-			}
-			if errors.Is(err, store.ErrDashboardCardLimitReached) {
-				return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Card limit reached during import")
-			}
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to create card")
-		}
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to import dashboard")
 	}
 
 	// Return the full dashboard with cards
-	cards, err := h.store.GetDashboardCards(c.UserContext(), dashboard.ID)
+	importedCards, err := h.store.GetDashboardCards(c.UserContext(), dashboard.ID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get cards")
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(models.DashboardWithCards{
 		Dashboard: *dashboard,
-		Cards:     cards,
+		Cards:     importedCards,
 	})
 }

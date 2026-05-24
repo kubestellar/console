@@ -78,10 +78,6 @@ func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 
-	if err := h.persistenceStore.Save(); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to save config"})
-	}
-
 	// Restart watcher if needed. Use a background context instead of the
 	// request-scoped context so the watcher survives after the HTTP response
 	// is sent. The request context is cancelled when the handler returns,

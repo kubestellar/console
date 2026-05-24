@@ -117,6 +117,27 @@ func (s *SQLiteStore) CreateDashboardTx(ctx context.Context, tx *sql.Tx, dashboa
 	return s.createDashboard(ctx, tx, dashboard)
 }
 
+// ImportDashboardAtomic creates a dashboard and all its cards in a single
+// transaction. If any step fails, the entire operation is rolled back —
+// no orphan dashboard or partial card set can remain.
+func (s *SQLiteStore) ImportDashboardAtomic(ctx context.Context, dashboard *models.Dashboard, cards []*models.Card, maxCards int) error {
+	return s.WithTransaction(ctx, func(tx *sql.Tx) error {
+		if err := s.createDashboard(ctx, tx, dashboard); err != nil {
+			return fmt.Errorf("create dashboard: %w", err)
+		}
+		if len(cards) > maxCards {
+			return ErrDashboardCardLimitReached
+		}
+		for i, card := range cards {
+			card.DashboardID = dashboard.ID
+			if err := s.createCard(ctx, tx, card); err != nil {
+				return fmt.Errorf("create card[%d]: %w", i, err)
+			}
+		}
+		return nil
+	})
+}
+
 func (s *SQLiteStore) createDashboard(ctx context.Context, execer sqlContextExecer, dashboard *models.Dashboard) error {
 	if dashboard.ID == uuid.Nil {
 		dashboard.ID = uuid.New()

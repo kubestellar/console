@@ -252,7 +252,7 @@ export function EventCard({
       )}
       {solveStatus && (
         <div className="mt-1.5">
-          <div className="mb-0.75" style={{
+          <div className="mb-[3px]" style={{
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <span className="text-[11px] font-mono" style={{
