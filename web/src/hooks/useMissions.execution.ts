@@ -3,6 +3,7 @@ import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/agentFetch'
 import {
   runPreflightCheck,
+  runClusterReadinessCheck,
   runToolPreflightCheck,
   type PreflightResult,
 } from '../lib/missions/preflightCheck'
@@ -441,6 +442,39 @@ export function createMissionExecutionApi(
         !shouldSkipClusterPreflight(params.context) &&
         (!!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || ''))
       const clusterContexts = params.cluster?.split(',').map(cluster => cluster.trim()).filter(Boolean) || []
+
+      // For deploy/upgrade missions, verify cluster is fully ready (not just accepting connections)
+      const isDeployMission = ['deploy', 'upgrade'].includes(params.type || '')
+      const readinessPromise = missionNeedsCluster && isDeployMission && clusterContexts.length > 0
+        ? Promise.all(
+            clusterContexts.map(context =>
+              runClusterReadinessCheck((args, options) => kubectlProxy.exec(args, options), context),
+            ),
+          ).then(results => results.find(result => !result.ok) || { ok: true as const })
+        : missionNeedsCluster && isDeployMission
+          ? runClusterReadinessCheck((args, options) => kubectlProxy.exec(args, options))
+          : Promise.resolve({ ok: true } as PreflightResult)
+
+      readinessPromise.then(readiness => {
+        if (!readiness.ok && 'error' in readiness && readiness.error) {
+          state.setMissions(prev => prev.map(mission =>
+            mission.id === missionId
+              ? {
+                  ...mission,
+                  status: 'blocked' as MissionStatus,
+                  currentStep: 'Cluster readiness check failed',
+                  preflightError: readiness.error,
+                }
+              : mission,
+          ))
+          emitMissionError(
+            params.type || 'custom',
+            readiness.error?.code || 'preflight_unknown',
+            readiness.error?.message,
+          )
+          return
+        }
+
       const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
         ? Promise.all(
             clusterContexts.map(context =>
@@ -487,6 +521,23 @@ export function createMissionExecutionApi(
                   code: 'UNKNOWN_EXECUTION_FAILURE',
                   message: error instanceof Error ? error.message : 'Unknown error',
                   details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
+                },
+              }
+            : mission,
+        ))
+      })
+      }) // end readinessPromise.then
+      .catch(error => {
+        state.setMissions(prev => prev.map(mission =>
+          mission.id === missionId
+            ? {
+                ...mission,
+                status: 'blocked' as MissionStatus,
+                currentStep: 'Cluster readiness check error',
+                preflightError: {
+                  code: 'UNKNOWN_EXECUTION_FAILURE',
+                  message: error instanceof Error ? error.message : 'Unknown error',
+                  details: { hint: 'The cluster readiness check threw an unexpected error. Verify the cluster is reachable.' },
                 },
               }
             : mission,

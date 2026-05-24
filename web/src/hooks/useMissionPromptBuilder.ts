@@ -76,6 +76,13 @@ export function buildEnhancedPrompt(params: StartMissionParams): {
       'Never run commands that require interactive input (login prompts, confirmation dialogs, browser OAuth flows). ' +
       'Always use non-interactive flags (--yes, -y, --non-interactive, --no-input, --batch) or pipe "yes" where needed. ' +
       'If a step requires interactive authentication, stop and tell the user to complete it manually in their own terminal first.'
+
+    enhancedPrompt += '\n\nCRITICAL VERIFICATION REQUIREMENTS:\n' +
+      '- After every install/deploy step, VERIFY success by running: kubectl get pods -n <namespace> and helm ls -n <namespace>\n' +
+      '- Do NOT claim success unless you can show actual kubectl output proving resources exist and are Running/Ready\n' +
+      '- If ANY tool call fails, returns an error, or times out: STOP IMMEDIATELY and report the failure\n' +
+      '- If the cluster API server returns errors or connection failures, STOP and report "cluster unreachable"\n' +
+      '- NEVER fabricate or assume tool output — every claim must be backed by actual command results\n'
   }
 
   // Auto-match and inject resolution context for relevant mission types

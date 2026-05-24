@@ -628,12 +628,47 @@ roleRef:
 // Preflight Runner
 // ============================================================================
 
-interface KubectlExecFn {
+export interface KubectlExecFn {
   (args: string[], options?: { context?: string; timeout?: number; priority?: boolean }): Promise<{
     output: string
     exitCode: number
     error?: string
   }>
+}
+
+/**
+ * Verify that the Kubernetes API server is fully ready (not just accepting connections).
+ * Probes the /readyz endpoint to detect half-up clusters.
+ */
+export async function runClusterReadinessCheck(
+  kubectlExec: KubectlExecFn,
+  context?: string,
+): Promise<PreflightResult> {
+  try {
+    const args = ['get', '--raw', '/readyz']
+    const result = await kubectlExec(args, { context, timeout: 10_000, priority: true })
+    if (result.exitCode !== 0 || !(result.output || '').toLowerCase().includes('ok')) {
+      return {
+        ok: false,
+        error: {
+          code: 'CLUSTER_UNREACHABLE',
+          message: 'The Kubernetes API server is not fully ready. It may still be starting up. Wait for the cluster to be fully ready before deploying.',
+        },
+        context,
+      }
+    }
+    return { ok: true, context }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err ?? 'Unknown error')
+    return {
+      ok: false,
+      error: {
+        code: 'CLUSTER_UNREACHABLE',
+        message: `Failed to verify cluster readiness: ${message}`,
+      },
+      context,
+    }
+  }
 }
 
 interface AllowedPermission {
