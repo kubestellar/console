@@ -42,6 +42,11 @@ const (
 	ghpMatrixSparseMinCells = 1
 	ghpReleaseOverfetch     = 10 // fetch recent releases so we can sort by published_at
 
+	// ghpMaxConcurrentFetches bounds per-request goroutine fan-out for GitHub
+	// API calls (job fetches, repo fetches). Prevents spike in outbound
+	// connections and memory when many repos/runs are queried.
+	ghpMaxConcurrentFetches = 8
+
 	// ghpMaxAllocItems is the upper bound for slice sizes derived from API
 	// responses. Prevents allocation-size-overflow if GitHub returns a
 	// malformed or unexpectedly large total_count / array (go/allocation-size-overflow).

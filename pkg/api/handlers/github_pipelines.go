@@ -168,10 +168,13 @@ func (h *GitHubPipelinesHandler) buildMatrixFromQuery(c *fiber.Ctx) (any, error)
 	fresh := make([]ghpWorkflowRun, 0, 256)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		wg.Add(1)
 		go func(r string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			runs, fetchErr := h.fetchRuns(ctx, r, fmt.Sprintf("per_page=%d", ghpMatrixRunsPerRepo))
 			if fetchErr != nil {
 				return
@@ -228,10 +231,13 @@ func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
 	all := make([]ghpFlowRun, 0)
 	var flowMu sync.Mutex
 	var repoWg sync.WaitGroup
+	repoSem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		repoWg.Add(1)
 		go func(repo string) {
 			defer repoWg.Done()
+			repoSem <- struct{}{}
+			defer func() { <-repoSem }()
 			inProgress, errP := h.fetchRuns(ctx, repo, fmt.Sprintf("status=in_progress&per_page=%d", ghpFlowMaxRunsPerRepo))
 			if errP != nil {
 				return
@@ -241,17 +247,20 @@ func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
 				queued = nil
 			}
 			runs := append(inProgress, queued...)
-			// Fetch jobs in parallel to avoid N+1 sequential API calls.
+			// Fetch jobs in parallel (bounded) to avoid N+1 sequential API calls.
 			type flowResult struct {
 				run  ghpWorkflowRun
 				jobs []ghpJob
 			}
 			results := make([]flowResult, len(runs))
 			var wg sync.WaitGroup
+			jobSem := make(chan struct{}, ghpMaxConcurrentFetches)
 			for i, r := range runs {
 				wg.Add(1)
 				go func(idx int, run ghpWorkflowRun) {
 					defer wg.Done()
+					jobSem <- struct{}{}
+					defer func() { <-jobSem }()
 					jobs, jobsErr := h.fetchJobs(ctx, repo, run.ID)
 					if jobsErr != nil {
 						return
@@ -287,10 +296,13 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 	rows := make([]ghpFailureRow, 0)
 	var failMu sync.Mutex
 	var failWg sync.WaitGroup
+	repoSem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		failWg.Add(1)
 		go func(repo string) {
 			defer failWg.Done()
+			repoSem <- struct{}{}
+			defer func() { <-repoSem }()
 			runs, fetchErr := h.fetchRuns(ctx, repo, fmt.Sprintf("status=failure&per_page=%d", ghpFailuresOverfetch))
 			if fetchErr != nil {
 				return
@@ -322,13 +334,16 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 	if len(rows) > ghpFailuresLimit {
 		rows = rows[:ghpFailuresLimit]
 	}
-	// Fetch failed steps in parallel to avoid N+1 sequential API calls.
+	// Fetch failed steps in parallel (bounded) to avoid N+1 sequential API calls.
 	{
 		var wg sync.WaitGroup
+		jobSem := make(chan struct{}, ghpMaxConcurrentFetches)
 		for i := range rows {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
+				jobSem <- struct{}{}
+				defer func() { <-jobSem }()
 				jobs, jobsErr := h.fetchJobs(ctx, rows[idx].Repo, rows[idx].RunID)
 				if jobsErr != nil {
 					return
