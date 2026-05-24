@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
@@ -94,35 +94,38 @@ export function AlertDrillDown({ data }: Props) {
   }, [])
 
   // Resource context for AI actions
-  const resourceContext: ResourceContext = {
+  const resourceContext: ResourceContext = useMemo(() => ({
     kind: 'Alert',
     name: alertName,
     cluster,
     namespace,
     status: alertState,
     labels: alertLabels,
-  }
+  }), [alertName, cluster, namespace, alertState, alertLabels])
 
   // Collect issues from alert data
-  const issues = alertMessage
+  const issues = useMemo(() => alertMessage
     ? [{ name: alertName, message: alertMessage, severity: alertSeverity }]
-    : []
+    : [], [alertMessage, alertName, alertSeverity])
+
+  // Additional context for AI
+  const additionalContext = useMemo(() => ({
+    alertSeverity,
+    alertState,
+    alertAnnotations,
+    alertStartsAt,
+    alertSource,
+  }), [alertSeverity, alertState, alertAnnotations, alertStartsAt, alertSource])
 
   // Use modal AI hook
   const { defaultAIActions, handleAIAction, isAgentConnected } = useModalAI({
     resource: resourceContext,
     issues,
-    additionalContext: {
-      alertSeverity,
-      alertState,
-      alertAnnotations,
-      alertStartsAt,
-      alertSource,
-    },
+    additionalContext,
   })
 
   // Fetch source alert rule
-  const fetchSourceRule = async () => {
+  const fetchSourceRule = useCallback(async () => {
     if (!agentConnected || sourceRule || !alertSource) return
     setSourceLoading(true)
     try {
@@ -156,7 +159,7 @@ export function AlertDrillDown({ data }: Props) {
       // Ignore errors
     }
     if (mountedRef.current) setSourceLoading(false)
-  }
+  }, [agentConnected, sourceRule, alertSource, runKubectl, alertName, t])
 
   // Track if we've already loaded data
   const hasLoadedRef = useRef(false)

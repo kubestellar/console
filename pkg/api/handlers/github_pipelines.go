@@ -108,8 +108,19 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	}
 	h.history.merge(releaseRuns)
 
-	releaseTag := ghpLatestReleaseTag(ctx, h, pulseRepo)
-	weeklyTag := ghpLatestWeeklyTag(ctx, h, pulseRepo)
+	// Fetch release tag and weekly tag in parallel — independent GitHub API calls.
+	var releaseTag, weeklyTag *string
+	var tagWg sync.WaitGroup
+	tagWg.Add(2)
+	go func() {
+		defer tagWg.Done()
+		releaseTag = ghpLatestReleaseTag(ctx, h, pulseRepo)
+	}()
+	go func() {
+		defer tagWg.Done()
+		weeklyTag = ghpLatestWeeklyTag(ctx, h, pulseRepo)
+	}()
+	tagWg.Wait()
 
 	var lastRun *ghpPulseLastRun
 	streak := 0

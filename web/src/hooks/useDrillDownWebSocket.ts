@@ -5,6 +5,10 @@ import { appendWsAuthToken } from '../lib/utils/wsAuth'
 const DEFAULT_TIMEOUT_MS = 10000
 const DEFAULT_HELM_TIMEOUT_MS = KUBECTL_MEDIUM_TIMEOUT_MS
 
+// Maximum allowed WebSocket message size (5 MB). Messages exceeding this
+// are dropped to prevent OOM from a malicious or malfunctioning agent.
+const MAX_WS_PAYLOAD_BYTES = 5 * 1024 * 1024
+
 interface KubectlMessage {
   id?: string
   type?: string
@@ -51,7 +55,12 @@ export function useDrillDownWebSocket(cluster: string) {
    */
   const parseWsMessage = useCallback((event: MessageEvent): KubectlMessage | null => {
     try {
-      return JSON.parse(event.data) as KubectlMessage
+      const raw = typeof event.data === 'string' ? event.data : ''
+      if (raw.length > MAX_WS_PAYLOAD_BYTES) {
+        console.warn('[useDrillDownWebSocket] Dropping oversized WS message:', raw.length, 'chars')
+        return null
+      }
+      return JSON.parse(raw) as KubectlMessage
     } catch (err) {
       console.error('[useDrillDownWebSocket] Failed to parse WebSocket message:', err)
       return null
