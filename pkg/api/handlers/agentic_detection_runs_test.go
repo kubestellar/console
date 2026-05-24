@@ -196,20 +196,20 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 		fakeGitHubComment(
 			"github-actions",
 			"Conclusion: warning | Reason: parse_error\nhttps://github.com/kubestellar/console/actions/runs/11111",
-			"https://github.com/kubestellar/console/issues/13634#issuecomment-1",
+			"https://github.com/kubestellar/console/issues/15554#issuecomment-1",
 			now.Add(-1*time.Hour),
 		),
 		fakeGitHubComment(
 			"github-actions",
 			"Conclusion: failure | Reason: agent_failure\nhttps://github.com/kubestellar/console/actions/runs/22222",
-			"https://github.com/kubestellar/console/issues/13634#issuecomment-2",
+			"https://github.com/kubestellar/console/issues/15554#issuecomment-2",
 			now.Add(-2*time.Hour),
 		),
 		// human comment — must be filtered out
 		fakeGitHubComment(
 			"human-user",
 			"Conclusion: success | Reason: ok",
-			"https://github.com/kubestellar/console/issues/13634#issuecomment-3",
+			"https://github.com/kubestellar/console/issues/15554#issuecomment-3",
 			now.Add(-3*time.Hour),
 		),
 	}

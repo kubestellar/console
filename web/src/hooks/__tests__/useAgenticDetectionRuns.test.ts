@@ -103,12 +103,12 @@ describe('useAgenticDetectionRuns', () => {
           workflowUrl: 'https://github.com/kubestellar/console/actions/runs/123',
           runId: '123',
           commentedAt: new Date().toISOString(),
-          commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-1',
+          commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-1',
         },
       ]
       const demoData: DetectionRunsData = {
         runs: demoRuns,
-        issueUrl: 'https://github.com/kubestellar/console/issues/13634',
+        issueUrl: 'https://github.com/kubestellar/console/issues/15554',
         totalCount: 1,
         source: 'demo',
         cachedAt: new Date().toISOString(),
@@ -131,7 +131,7 @@ describe('useAgenticDetectionRuns', () => {
           workflowUrl: 'https://github.com/kubestellar/console/actions/runs/25864572226',
           runId: '25864572226',
           commentedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-12345',
+          commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-12345',
         },
         {
           conclusion: 'failure',
@@ -139,7 +139,7 @@ describe('useAgenticDetectionRuns', () => {
           workflowUrl: 'https://github.com/kubestellar/console/actions/runs/25864572224',
           runId: '25864572224',
           commentedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-          commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-12343',
+          commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-12343',
         },
       ]
       demoRuns.forEach(run => {

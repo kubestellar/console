@@ -1,6 +1,6 @@
 // Package handlers — Agentic Workflows Detection Runs
 //
-// Fetches detection run data from GitHub issue #13634, which tracks
+// Fetches detection run data from GitHub issue #15554, which tracks
 // all workflow runs where threat detection flagged problems.
 package handlers
 
@@ -21,7 +21,7 @@ import (
 
 const (
 	awDetectionRunsTimeout     = 15 * time.Second
-	awDetectionRunsIssueNumber = 13634
+	awDetectionRunsIssueNumber = 15554
 	awDetectionRunsRepo        = "kubestellar/console"
 	awMaxDetectionRuns         = 50
 	awMaxResponseBytes         = 5 * 1024 * 1024 // 5 MB
@@ -71,7 +71,7 @@ type GitHubIssueComment struct {
 	} `json:"user"`
 }
 
-// GetDetectionRuns returns detection runs from issue #13634.
+// GetDetectionRuns returns detection runs from issue #15554.
 func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
 	if isDemoMode(c) {
 		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())

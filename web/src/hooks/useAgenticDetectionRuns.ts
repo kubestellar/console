@@ -1,5 +1,5 @@
 /**
- * useAgenticDetectionRuns — fetch detection run data from issue #13634.
+ * useAgenticDetectionRuns — fetch detection run data from issue #15554.
  *
  * This hook fetches data about agentic workflow runs where threat
  * detection flagged problems (parse errors, agent failures, etc.).
@@ -43,7 +43,7 @@ const DEMO_DATA: DetectionRunsData = {
       workflowUrl: 'https://github.com/kubestellar/console/actions/runs/25864572226',
       runId: '25864572226',
       commentedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-12345',
+      commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-12345',
     },
     {
       conclusion: 'warning',
@@ -51,7 +51,7 @@ const DEMO_DATA: DetectionRunsData = {
       workflowUrl: 'https://github.com/kubestellar/console/actions/runs/25864572225',
       runId: '25864572225',
       commentedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-12344',
+      commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-12344',
     },
     {
       conclusion: 'failure',
@@ -59,10 +59,10 @@ const DEMO_DATA: DetectionRunsData = {
       workflowUrl: 'https://github.com/kubestellar/console/actions/runs/25864572224',
       runId: '25864572224',
       commentedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-      commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-12343',
+      commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-12343',
     },
   ],
-  issueUrl: 'https://github.com/kubestellar/console/issues/13634',
+  issueUrl: 'https://github.com/kubestellar/console/issues/15554',
   totalCount: 3,
   source: 'demo',
   cachedAt: new Date().toISOString(),

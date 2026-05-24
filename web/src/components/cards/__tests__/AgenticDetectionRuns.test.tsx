@@ -15,7 +15,7 @@ import type { DetectionRun, DetectionRunsData } from '../../../hooks/useAgenticD
 import { AgenticDetectionRuns } from '../AgenticDetectionRuns'
 
 const ITEMS_PER_PAGE = 10
-const GITHUB_ISSUE_URL = 'https://github.com/kubestellar/console/issues/13634'
+const GITHUB_ISSUE_URL = 'https://github.com/kubestellar/console/issues/15554'
 const GITHUB_WORKFLOW_URL = 'https://github.com/kubestellar/console/actions/runs/12345'
 const MS_PER_HOUR = 60 * 60 * 1000
 
@@ -32,7 +32,7 @@ function makeRun(overrides: Partial<DetectionRun> = {}): DetectionRun {
     workflowUrl: GITHUB_WORKFLOW_URL,
     runId: 'run-1',
     commentedAt: new Date().toISOString(),
-    commentUrl: 'https://github.com/kubestellar/console/issues/13634#issuecomment-1',
+    commentUrl: 'https://github.com/kubestellar/console/issues/15554#issuecomment-1',
     ...overrides,
   }
 }
