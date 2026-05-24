@@ -83,6 +83,8 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
     namespaceRef.current = namespace
   }, [prowCluster, namespace])
 
+  const mountedRef = useRef(true)
+
   // Stable callback — refs prevent stale closure over prowCluster/namespace
   const refetch = useCallback(async (silent = false) => {
     if (!silent) {
@@ -97,6 +99,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
         ['get', 'prowjobs', '-n', namespaceRef.current, '-o', 'json', '--sort-by=.metadata.creationTimestamp'],
         { context: prowClusterRef.current, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }
       )
+      if (!mountedRef.current) return
       if (response.exitCode !== 0) {
         throw new Error(response.error || 'Failed to get ProwJobs')
       }
@@ -132,12 +135,14 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
       setLastRefresh(new Date())
       initialLoadDone.current = true
     } catch (err: unknown) {
+      if (!mountedRef.current) return
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {
         setError(err instanceof Error ? err.message : 'Failed to fetch ProwJobs')
       }
     } finally {
+      if (!mountedRef.current) return
       if (!silent) {
         setIsLoading(false)
       }
@@ -147,6 +152,7 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
 
   // Return demo data when in demo mode; otherwise fetch and poll live data
   useEffect(() => {
+    mountedRef.current = true
     if (demoMode) {
       setJobs(getDemoProwJobs())
       setIsLoading(false)
@@ -160,7 +166,10 @@ export function useProwJobs(prowCluster = 'prow', namespace = 'prow') {
     // Live mode: fetch from kubectlProxy
     refetch(false)
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
-    return () => clearInterval(interval)
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+    }
   }, [demoMode, refetch])
 
   // Compute status from jobs

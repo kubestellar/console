@@ -348,6 +348,7 @@ export function useRBACFindings() {
   const [error, setError] = useState<string | null>(null)
   const fetchInProgress = useRef(false)
   const initialLoadDone = useRef(!!cachedSnapshot)
+  const mountedRef = useRef(true)
 
   const clusters = useMemo(() => allClusters.filter(c => c.reachable === true).map(c => c.name), [allClusters])
 
@@ -383,6 +384,7 @@ export function useRBACFindings() {
       })
 
       const settled = await settledWithConcurrency(tasks)
+      if (!mountedRef.current) return
 
       const allFindings: RBACFinding[] = []
       const clusterErrors: string[] = []
@@ -412,6 +414,7 @@ export function useRBACFindings() {
         setConsecutiveFailures(0)
       }
     } catch (err: unknown) {
+      if (!mountedRef.current) return
       setError(err instanceof Error ? err.message : 'Failed to fetch RBAC data')
       setIsLoading(false)
       setIsRefreshing(false)
@@ -423,6 +426,7 @@ export function useRBACFindings() {
 
   // Demo mode
   useEffect(() => {
+    mountedRef.current = true
     if (isDemoMode) {
       setFindings(DEMO_FINDINGS)
       setIsLoading(false)
@@ -430,7 +434,7 @@ export function useRBACFindings() {
       setConsecutiveFailures(0)
       setError(null)
       initialLoadDone.current = true
-      return
+      return () => { mountedRef.current = false }
     }
 
     if (clusters.length > 0) {
@@ -438,6 +442,7 @@ export function useRBACFindings() {
     } else if (!clustersLoading) {
       setIsLoading(false)
     }
+    return () => { mountedRef.current = false }
   }, [clusters.length, isDemoMode, clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register with unified mode transition system

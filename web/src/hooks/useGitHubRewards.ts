@@ -157,6 +157,7 @@ export function summarizeContributions(contributions: GitHubContribution[]): {
 
 async function fetchRecentContributions(
   login: string,
+  parentSignal?: AbortSignal,
 ): Promise<GitHubContribution[]> {
   const orgFilter = CONTRIBUTIONS_SEARCH_ORGS.map(o => `org:${o}`).join('+')
   const query = `author:${encodeURIComponent(login)}+${orgFilter}`
@@ -167,7 +168,7 @@ async function fetchRecentContributions(
 
     const res = await fetch(url, {
       headers: { Accept: 'application/vnd.github.v3+json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      signal: parentSignal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
     if (!res.ok) {
       if (allContributions.length > 0) break
@@ -228,16 +229,16 @@ export function useGitHubRewards() {
     }
   }, [githubLogin, isDemoUser])
 
-  const fetchRewards = useCallback(async () => {
+  const fetchRewards = useCallback(async (signal?: AbortSignal) => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
 
     setIsLoading(true)
     try {
       const [rewardsRes, contributions] = await Promise.all([
         fetch(`${REWARDS_API_BASE}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+          signal: signal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         }),
-        fetchRecentContributions(githubLogin).catch(() => [] as GitHubContribution[]),
+        fetchRecentContributions(githubLogin, signal).catch(() => [] as GitHubContribution[]),
       ])
 
       if (!rewardsRes.ok) throw new Error(`API error: ${rewardsRes.status}`)
@@ -286,9 +287,15 @@ export function useGitHubRewards() {
   useEffect(() => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
 
-    fetchRewards()
-    const interval = setInterval(fetchRewards, REFRESH_INTERVAL_MS)
-    return () => clearInterval(interval)
+    const controller = new AbortController()
+    fetchRewards(controller.signal)
+    const interval = setInterval(() => {
+      if (!controller.signal.aborted) fetchRewards(controller.signal)
+    }, REFRESH_INTERVAL_MS)
+    return () => {
+      controller.abort()
+      clearInterval(interval)
+    }
   }, [fetchRewards, isAuthenticated, isDemoUser, githubLogin])
 
   return {
