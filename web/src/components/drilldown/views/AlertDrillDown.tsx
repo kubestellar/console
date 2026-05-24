@@ -83,6 +83,15 @@ export function AlertDrillDown({ data }: Props) {
   const [aiAnalysis] = useState<string | null>(null)
   const [aiAnalysisLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const mountedRef = useRef(true)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+      clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   // Resource context for AI actions
   const resourceContext: ResourceContext = {
@@ -122,6 +131,7 @@ export function AlertDrillDown({ data }: Props) {
         'get', 'prometheusrules.monitoring.coreos.com',
         '-A', '-o', 'json'
       ])
+      if (!mountedRef.current) return
       if (output) {
         let rules
         try {
@@ -145,7 +155,7 @@ export function AlertDrillDown({ data }: Props) {
     } catch {
       // Ignore errors
     }
-    setSourceLoading(false)
+    if (mountedRef.current) setSourceLoading(false)
   }
 
   // Track if we've already loaded data
@@ -160,7 +170,8 @@ export function AlertDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Start AI diagnosis

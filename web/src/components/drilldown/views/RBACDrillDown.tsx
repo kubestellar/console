@@ -64,6 +64,15 @@ export function RBACDrillDown({ data }: Props) {
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const mountedRef = useRef(true)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+      clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
 
   /**
@@ -130,9 +139,11 @@ export function RBACDrillDown({ data }: Props) {
           : runKubectl(['get', 'rolebindings', '--all-namespaces', '-o', 'json']),
       ])
 
+      if (!mountedRef.current) return
       setClusterBindings(parseBindings(crbOut, 'ClusterRoleBinding'))
       setRoleBindings(parseBindings(rbOut, 'RoleBinding'))
     } catch (err) {
+      if (!mountedRef.current) return
       const errMsg = err instanceof Error ? err.message : 'Failed to fetch bindings'
       setLoadError(errMsg)
       setClusterBindings([])
@@ -147,12 +158,14 @@ export function RBACDrillDown({ data }: Props) {
     const bindings = [...clusterBindings, ...roleBindings]
     const parts: string[] = []
     for (const b of bindings.slice(0, MAX_BINDINGS_TO_DESCRIBE)) {
+      if (!mountedRef.current) return
       const args = b.kind === 'ClusterRoleBinding'
         ? ['describe', 'clusterrolebinding', b.name]
         : ['describe', 'rolebinding', b.name, '-n', b.namespace || 'default']
       const out = await runKubectl(args)
       if (out) parts.push(out)
     }
+    if (!mountedRef.current) return
     setDescribeOutput(parts.join('\n---\n') || t('drilldown.empty.noBindingsFound'))
     setDescribeLoading(false)
   }, [agentConnected, clusterBindings, describeOutput, roleBindings, runKubectl, t])
@@ -163,12 +176,14 @@ export function RBACDrillDown({ data }: Props) {
     const bindings = [...clusterBindings, ...roleBindings]
     const parts: string[] = []
     for (const b of bindings.slice(0, MAX_BINDINGS_TO_DESCRIBE)) {
+      if (!mountedRef.current) return
       const args = b.kind === 'ClusterRoleBinding'
         ? ['get', 'clusterrolebinding', b.name, '-o', 'yaml']
         : ['get', 'rolebinding', b.name, '-n', b.namespace || 'default', '-o', 'yaml']
       const out = await runKubectl(args)
       if (out) parts.push(out)
     }
+    if (!mountedRef.current) return
     setYamlOutput(parts.join('\n---\n') || t('drilldown.empty.noBindingsFound'))
     setYamlLoading(false)
   }, [agentConnected, clusterBindings, roleBindings, runKubectl, yamlOutput, t])
@@ -213,7 +228,8 @@ export function RBACDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const totalBindings = clusterBindings.length + roleBindings.length

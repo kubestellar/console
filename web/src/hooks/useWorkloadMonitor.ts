@@ -6,7 +6,6 @@ import type {
   ResourceHealthStatus } from '../types/workloadMonitor'
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
@@ -73,6 +72,7 @@ export function useWorkloadMonitor(
 
   const hasLoadedOnce = useRef(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   // Store latest params in refs so fetchData can read them without being recreated
   const clusterRef = useRef(cluster)
@@ -88,6 +88,10 @@ export function useWorkloadMonitor(
     const w = workloadRef.current
     if (!c || !ns || !w) return
 
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     const isInitialLoad = !hasLoadedOnce.current
     if (isInitialLoad) {
       setIsLoading(true)
@@ -98,7 +102,7 @@ export function useWorkloadMonitor(
     try {
       const res = await fetch(
         `/api/workloads/monitor/${encodeURIComponent(c)}/${encodeURIComponent(ns)}/${encodeURIComponent(w)}`,
-        { headers: authHeaders(), signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
+        { headers: authHeaders(), signal: controller.signal },
       )
 
       if (!res.ok) {
@@ -107,6 +111,7 @@ export function useWorkloadMonitor(
       }
 
       const data: WorkloadMonitorResponse = await res.json()
+      if (controller.signal.aborted) return
       setResources(data.resources)
       setIssues(data.issues || [])
       setOverallStatus(data.status)
@@ -117,12 +122,15 @@ export function useWorkloadMonitor(
       setLastRefresh(new Date())
       hasLoadedOnce.current = true
     } catch (err: unknown) {
+      if (controller.signal.aborted) return
       const fetchError = err instanceof Error ? err : new Error('Unknown error')
       setError(fetchError)
       setConsecutiveFailures(prev => prev + 1)
     } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      if (!controller.signal.aborted) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
     }
   }, [])
 
@@ -149,6 +157,7 @@ export function useWorkloadMonitor(
     }
 
     return () => {
+      abortRef.current?.abort()
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null

@@ -29,9 +29,13 @@ export function YAMLDrillDown({ data }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    return () => clearTimeout(copiedTimerRef.current)
+    return () => {
+      clearTimeout(copiedTimerRef.current)
+      abortRef.current?.abort()
+    }
   }, [])
 
   useEffect(() => {
@@ -40,6 +44,10 @@ export function YAMLDrillDown({ data }: Props) {
   }, [cluster, namespace, resourceType, resourceName])
 
   const fetchYAML = async () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setIsLoading(true)
     setError(null)
     try {
@@ -49,14 +57,18 @@ export function YAMLDrillDown({ data }: Props) {
         type: resourceType,
         name: resourceName,
       })
-      const { data: response } = await api.get<{ yaml: string }>(`/api/mcp/resource-yaml?${params}`)
+      const { data: response } = await api.get<{ yaml: string }>(`/api/mcp/resource-yaml?${params}`, { signal: controller.signal })
+      if (controller.signal.aborted) return
       setYAML(response.yaml || getDemoYAML(resourceType, resourceName, namespace))
     } catch {
+      if (controller.signal.aborted) return
       // Use demo YAML if API fails
       setYAML(getDemoYAML(resourceType, resourceName, namespace))
       setError('Using example YAML - live fetch requires MCP')
     } finally {
-      setIsLoading(false)
+      if (!controller.signal.aborted) {
+        setIsLoading(false)
+      }
     }
   }
 
