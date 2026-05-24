@@ -52,7 +52,6 @@ const GRID_VISIBLE_TIMEOUT_MS = 20_000
 const MAX_MOBILE_CARD_COLUMNS = 2
 const MULTI_COLUMN_GRID_COUNT_THRESHOLD = 2
 const DASHBOARD_REFRESH_BUTTON_TEST_ID = 'dashboard-refresh-button'
-const TEST_BACKEND_PREFERENCE_KEY = 'kc_agent_backend_preference'
 const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((card) => ({
   id: card.id,
   cardType: card.card_type,
@@ -618,36 +617,41 @@ test.describe('Dashboard Live Card Data Validation', () => {
   })
 
   test('renders pod count from mocked API data', async ({ page }) => {
-    await page.addInitScript(({ key, value }) => {
-      localStorage.setItem(key, value)
-    }, { key: TEST_BACKEND_PREFERENCE_KEY, value: 'kagenti' })
-
     const MOCK_POD_COUNT = 42
-    const mockPods = Array.from({ length: MOCK_POD_COUNT }, (_, i) => ({
-      name: `test-pod-${i}`,
-      namespace: 'default',
-      cluster: 'test-cluster',
-      status: 'Running',
-    }))
-    const mockPodResponse = { pods: mockPods }
+    const mockClusterResponse: MockClusterResponse = validateMockClusterResponse({
+      clusters: [
+        { name: 'test-cluster-a', healthy: true, reachable: true, nodeCount: 3, podCount: 30 },
+        { name: 'test-cluster-b', healthy: true, reachable: true, nodeCount: 2, podCount: 12 },
+      ],
+    })
 
     await page.route('**/api/mcp/**', (route) => {
-      const url = new URL(route.request().url())
-      const isPodsRequest = url.pathname.includes('/api/mcp/pods')
-
+      if (route.request().url().includes('/clusters')) {
+        return route.fallback()
+      }
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(isPodsRequest ? mockPodResponse : API_RESPONSES.mcp()),
+        body: JSON.stringify(API_RESPONSES.mcp()),
       })
     })
+    await page.route('**/api/mcp/clusters**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockClusterResponse),
+      })
+    )
 
+    const clustersApiPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
+    )
     await navigateToDashboard(page)
+    await clustersApiPromise
 
-    const cardsGrid = page.getByTestId('dashboard-cards-grid')
-    const podCard = cardsGrid.locator('[data-card-type="pods"]')
-    await expectVisible(podCard, 'Pod card not present on default dashboard')
-    await expect(podCard).toContainText(new RegExp(String.raw`(?<!\d)${MOCK_POD_COUNT}(?!\d)`))
+    const podStatBlock = page.getByTestId('stat-block-pods-count')
+    await expectVisible(podStatBlock, 'Pod stat block not visible on default dashboard')
+    await expect(podStatBlock).toContainText(String(MOCK_POD_COUNT))
   })
 
   test('renders cluster health status from mocked API data', async ({ page }) => {
