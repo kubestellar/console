@@ -291,10 +291,6 @@ describe('ContainerTetris Component Layer', () => {
 
     const cells = getBoardCells()
     expect(cells[0][4].getAttribute('data-color')).toBe('bg-yellow-500')
-      return cells[0][4].className.includes('bg-yellow-500')
-    })
-
-    const cells = getBoardCells()
     expect(cells[0][4].className).toContain('bg-yellow-500')
   })
 
