@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true,
@@ -164,12 +165,13 @@ describe('ClusterGroups', () => {
     expect(container).toBeTruthy()
   })
 
-  it('opens CreateGroupForm when Clicking "New Group"', () => {
+  it('opens CreateGroupForm when Clicking "New Group"', async () => {
+    const user = userEvent.setup()
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     render(<ClusterGroups />)
     
-    const newGroupButton = screen.getByText('cards:clusterGroups.newGroup')
-    fireEvent.click(newGroupButton)
+    const newGroupButton = screen.getByRole('button', { name: 'cards:clusterGroups.newGroup' })
+    await user.click(newGroupButton)
     
     expect(screen.getByText('cards:clusterGroups.newClusterGroup')).toBeInTheDocument()
   })
@@ -191,14 +193,13 @@ describe('ClusterGroups', () => {
     
     expect(screen.getByText('Group A')).toBeInTheDocument()
     expect(screen.getByText('Group B')).toBeInTheDocument()
-    // Should show cluster counts (2/2 and 1/1 because mockUseClusters returns empty by default)
-    // Wait, ClusterGroups.tsx calculates healthyCount using clusterHealthMap.
-    // If clusters list is empty, healthyCount will be number of clusters since they aren't in map as false.
+    // Verify that the computed cluster counts match the expected format (healthy/total)
     expect(screen.getByText(/2\/2/)).toBeInTheDocument()
     expect(screen.getByText(/1\/1/)).toBeInTheDocument()
   })
 
-  it('opens EditGroupForm when clicking edit button', () => {
+  it('opens EditGroupForm when clicking edit button', async () => {
+    const user = userEvent.setup()
     mockUseClusterGroups.mockReturnValue({
       groups: [{ name: 'Group A', kind: 'static', clusters: ['c1'], color: 'blue' }],
       createGroup: vi.fn(),
@@ -210,17 +211,14 @@ describe('ClusterGroups', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     render(<ClusterGroups />)
     
-    const editButton = screen.getByLabelText('cards:clusterGroups.editGroup')
-    fireEvent.click(editButton)
+    const editButton = screen.getByRole('button', { name: 'cards:clusterGroups.editGroup' })
+    await user.click(editButton)
     
-    // EditGroupForm should render. It likely has a "Save Changes" button or similar.
-    // In ClusterGroupsForms.tsx, EditGroupForm is similar to CreateGroupForm.
-    // Let's check for "Group Name" input or a specific title.
-    // Actually, EditGroupForm in ClusterGroups.tsx is rendered within the same loop.
     expect(screen.getByText(/common.edit.*Group A/)).toBeInTheDocument()
   })
 
-  it('calls deleteGroup when confirmation is accepted', () => {
+  it('calls deleteGroup when confirmation is accepted', async () => {
+    const user = userEvent.setup()
     const deleteGroup = vi.fn()
     mockUseClusterGroups.mockReturnValue({
       groups: [{ name: 'Group A', kind: 'static', clusters: ['c1'], color: 'blue' }],
@@ -233,14 +231,11 @@ describe('ClusterGroups', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     render(<ClusterGroups />)
     
-    const deleteButton = screen.getByLabelText('cards:clusterGroups.deleteGroup')
-    fireEvent.click(deleteButton)
+    const deleteButton = screen.getByRole('button', { name: 'cards:clusterGroups.deleteGroup' })
+    await user.click(deleteButton)
     
-    // ConfirmDialog should be open.
-    // It has a title 'cards:clusterGroups.deleteGroup' (same as button labal but in a dialog).
-    // And a confirm button with text 'common:actions.delete'.
-    const confirmButton = screen.getByText('common:actions.delete')
-    fireEvent.click(confirmButton)
+    const confirmButton = screen.getByRole('button', { name: 'common:actions.delete' })
+    await user.click(confirmButton)
     
     expect(deleteGroup).toHaveBeenCalledWith('Group A')
   })

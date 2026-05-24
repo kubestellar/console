@@ -107,10 +107,10 @@ describe('ComputeOverview', () => {
     
     render(<ComputeOverview />)
     
-    // Total should be 24
-    expect(screen.getByText('24')).toBeInTheDocument()
-    // It should also show "computeOverview.cpuCores" label
-    expect(screen.getByText('computeOverview.cpuCores')).toBeInTheDocument()
+    // Find the CPU Cores card and verify its total count
+    const cpuLabel = screen.getByText('computeOverview.cpuCores')
+    const cpuCard = cpuLabel.closest('.cursor-pointer')
+    expect(cpuCard).toHaveTextContent('24')
   })
 
   it('aggregates Memory GB correctly across clusters', () => {
@@ -128,8 +128,10 @@ describe('ComputeOverview', () => {
     
     render(<ComputeOverview />)
     
-    // Total should be 48.
-    expect(screen.getByText(/48/)).toBeInTheDocument()
+    // Find the Memory card and verify its total count
+    const memoryLabel = screen.getByText('common:common.memory')
+    const memoryCard = memoryLabel.closest('.cursor-pointer')
+    expect(memoryCard).toHaveTextContent(/48/)
   })
 
   it('renders empty state when no clusters are available', () => {
@@ -158,9 +160,11 @@ describe('ComputeOverview', () => {
     
     render(<ComputeOverview />)
     
-    // Should show 15, not 25
-    expect(screen.getByText('15')).toBeInTheDocument()
-    expect(screen.queryByText('25')).not.toBeInTheDocument()
+    // Find the CPU Cores card and verify it shows 15, not 25
+    const cpuLabel = screen.getByText('computeOverview.cpuCores')
+    const cpuCard = cpuLabel.closest('.cursor-pointer')
+    expect(cpuCard).toHaveTextContent('15')
+    expect(cpuCard).not.toHaveTextContent('25')
   })
 
   it('renders skeleton UI when data is loading', () => {

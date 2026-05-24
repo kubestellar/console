@@ -107,9 +107,9 @@ describe('FleetComplianceHeatmap', () => {
     const amberCell = screen.getByText('65%')
     const redCell = screen.getByText('45%')
     
-    expect(greenCell.className).toContain('bg-green-500')
-    expect(amberCell.className).toContain('bg-yellow-500')
-    expect(redCell.className).toContain('bg-red-500')
+    expect(greenCell).toHaveClass('bg-green-500/20')
+    expect(amberCell).toHaveClass('bg-yellow-500/20')
+    expect(redCell).toHaveClass('bg-red-500/20')
   })
 
   it('renders correct background for Kyverno violation boundaries', () => {
@@ -132,9 +132,9 @@ describe('FleetComplianceHeatmap', () => {
     const amberCell = screen.getByText('5 violations')
     const redCell = screen.getByText('11 violations')
     
-    expect(greenCell.className).toContain('bg-green-500')
-    expect(amberCell.className).toContain('bg-yellow-500')
-    expect(redCell.className).toContain('bg-red-500')
+    expect(greenCell).toHaveClass('bg-green-500/20')
+    expect(amberCell).toHaveClass('bg-yellow-500/20')
+    expect(redCell).toHaveClass('bg-red-500/20')
   })
 
   it('renders correct background for Trivy crit+high boundaries', () => {
@@ -157,9 +157,9 @@ describe('FleetComplianceHeatmap', () => {
     const amberCell = screen.getByText('3 crit/high')
     const redCell = screen.getByText('7 crit/high')
     
-    expect(greenCell.className).toContain('bg-green-500')
-    expect(amberCell.className).toContain('bg-yellow-500')
-    expect(redCell.className).toContain('bg-red-500')
+    expect(greenCell).toHaveClass('bg-green-500/20')
+    expect(amberCell).toHaveClass('bg-yellow-500/20')
+    expect(redCell).toHaveClass('bg-red-500/20')
   })
 
   it('handles empty data by rendering clusters from fallback', () => {
