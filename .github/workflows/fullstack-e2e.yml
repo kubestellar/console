@@ -104,7 +104,22 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: web
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
+        run: |
+          # Retry up to 3 times with 10-minute timeout per attempt
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt to install Playwright browsers..."
+            if timeout 600 npx playwright install --with-deps chromium; then
+              echo "Successfully installed Playwright browsers on attempt $attempt"
+              exit 0
+            fi
+            if [ $attempt -lt 3 ]; then
+              echo "Attempt $attempt failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+          echo "Failed to install Playwright browsers after 3 attempts"
+          exit 1
 
       - name: Run full-stack smoke spec
         working-directory: web
