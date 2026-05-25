@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { getClusterHealthState, isClusterUnreachable } from '../clusters/utils'

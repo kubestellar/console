@@ -1,3 +1,4 @@
+// Prefer direct imports from sub-modules for better tree-shaking.
 // Dashboard Runtime (for YAML-based builder)
 export {
   DashboardRuntime,

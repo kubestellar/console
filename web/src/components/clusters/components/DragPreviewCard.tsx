@@ -1,5 +1,5 @@
 import { GripVertical } from 'lucide-react'
-import { DashboardCard } from '../../../lib/dashboards'
+import type { DashboardCard } from '../../../lib/dashboards/types'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
 
 export interface DragPreviewCardProps {

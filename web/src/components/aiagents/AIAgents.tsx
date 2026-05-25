@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { useKagentiSummary } from '../../hooks/mcp/kagenti'
 import { StatBlockValue } from '../ui/StatsOverview'
-import { DashboardPage } from '../../lib/dashboards'
+import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { useTranslation } from 'react-i18next'
 import { AgentIcon } from '../agent/AgentIcon'
 import { ExternalLink } from 'lucide-react'

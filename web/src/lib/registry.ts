@@ -36,8 +36,8 @@ import {
   getDashboardDefinition,
   getAllDashboardDefinitions,
   registerStatsValueGetter as registerDashboardStatsValueGetter,
-} from './dashboards'
-import type { DashboardDefinition } from './dashboards'
+} from './dashboards/DashboardRuntime'
+import type { DashboardDefinition } from './dashboards/types'
 
 import {
   registerModal,

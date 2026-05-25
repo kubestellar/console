@@ -10,7 +10,7 @@ vi.mock('../cards', () => ({
   registerRenderer: vi.fn(),
 }))
 
-vi.mock('../dashboards', () => ({
+vi.mock('../dashboards/DashboardRuntime', () => ({
   registerDashboard: vi.fn(),
   getDashboardDefinition: vi.fn(),
   getAllDashboardDefinitions: vi.fn(() => []),
@@ -42,7 +42,7 @@ import {
 } from '../registry'
 
 import { registerCard, getCardDefinition, getAllCardDefinitions, registerDataHook, registerDrillAction, registerRenderer } from '../cards'
-import { registerDashboard, getDashboardDefinition, getAllDashboardDefinitions } from '../dashboards'
+import { registerDashboard, getDashboardDefinition, getAllDashboardDefinitions } from '../dashboards/DashboardRuntime'
 import { registerModal, getModalDefinition, getAllModalDefinitions, registerSectionRenderer } from '../modals'
 import { registerStats, getStatsDefinition, getAllStatsDefinitions, registerStatValueGetter } from '../stats'
 

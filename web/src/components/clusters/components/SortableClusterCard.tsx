@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, AlertTriangle } from 'lucide-react'
 import { CardWrapper } from '../../cards/CardWrapper'
 import { CARD_COMPONENTS, DEMO_DATA_CARDS } from '../../cards/cardRegistry'
-import { DashboardCard } from '../../../lib/dashboards'
+import type { DashboardCard } from '../../../lib/dashboards/types'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
 import { useMobile } from '../../../hooks/useMobile'
 

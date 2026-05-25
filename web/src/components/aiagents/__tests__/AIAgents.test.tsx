@@ -64,7 +64,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock DashboardPage to render children and expose props
-vi.mock('../../../lib/dashboards', () => ({
+vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ children, beforeCards, title, isDemoData, isLoading }: Record<string, unknown>) => (
     <div data-testid="dashboard-page" data-title={title as string} data-demo={String(isDemoData)} data-loading={String(isLoading)}>
       {beforeCards as React.ReactNode}

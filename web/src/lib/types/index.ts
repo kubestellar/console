@@ -64,7 +64,11 @@ export type {
   DashboardContextValue,
   NewCardInput,
   DashboardTemplate,
-  DashboardRuntimeProps,
+} from '../dashboards/types'
+
+export type { DashboardRuntimeProps } from '../dashboards/DashboardRuntime'
+
+export type {
   UseDashboardDnDResult,
   UseDashboardCardsResult,
   UseDashboardAutoRefreshResult,
@@ -72,13 +76,16 @@ export type {
   UseDashboardShowCardsResult,
   UseDashboardOptions,
   UseDashboardResult,
+} from '../dashboards/dashboardHooks'
+
+export type {
   SortableDashboardCardProps,
   DragPreviewCardProps,
   DashboardHeaderProps,
   DashboardCardsSectionProps,
   DashboardEmptyCardsProps,
   DashboardCardsGridProps,
-} from '../dashboards'
+} from '../dashboards/DashboardComponents'
 
 // ============================================================================
 // Modal Types

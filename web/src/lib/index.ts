@@ -69,6 +69,9 @@ export {
   getAllDashboardDefinitions,
   registerStatsValueGetter,
   parseDashboardYAML,
+} from './dashboards/DashboardRuntime'
+
+export {
   // Hooks
   useDashboardDnD,
   useDashboardCards,
@@ -76,6 +79,9 @@ export {
   useDashboardModals,
   useDashboardShowCards,
   useDashboard,
+} from './dashboards/dashboardHooks'
+
+export {
   // Components
   SortableDashboardCard,
   DragPreviewCard,
@@ -83,7 +89,7 @@ export {
   DashboardCardsSection,
   DashboardEmptyCards,
   DashboardCardsGrid,
-} from './dashboards'
+} from './dashboards/DashboardComponents'
 
 // ============================================================================
 // Modal Library

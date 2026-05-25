@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Settings } from 'lucide-react'
-import { DashboardCard } from '../../../lib/dashboards'
+import type { DashboardCard } from '../../../lib/dashboards/types'
 import { formatCardTitle } from '../../../lib/formatCardTitle'
 import { BaseModal } from '../../../lib/modals'
 import { useTranslation } from 'react-i18next'
