@@ -187,12 +187,15 @@ function DeploymentDrillDownContent({ data }: Props) {
         try {
           deploy = JSON.parse(output)
         } catch {
+          // Batch state updates to prevent flicker
           setPods([])
           setReplicaSets([])
           return
         }
         const liveReplicas = deploy.spec?.replicas || 0
         const liveReady = deploy.status?.readyReplicas || 0
+        
+        // Batch state updates to prevent flicker
         setReplicas(liveReplicas)
         setReadyReplicas(liveReady)
         setLabels(deploy.metadata?.labels || {})
@@ -201,6 +204,7 @@ function DeploymentDrillDownContent({ data }: Props) {
         // If live data shows healthy, clear the stale failure reason/message.
         // If still unhealthy, derive reason from deployment conditions.
         if (liveReady === liveReplicas && liveReplicas > 0) {
+          // Batch state updates together
           setLiveReason(undefined)
           setLiveMessage(undefined)
         } else {
@@ -213,6 +217,7 @@ function DeploymentDrillDownContent({ data }: Props) {
               (c.type === 'ReplicaFailure' && c.status === 'True')
           )
           if (failedCondition) {
+            // Batch state updates together
             setLiveReason(failedCondition.reason || liveReason)
             setLiveMessage(failedCondition.message || liveMessage)
           }

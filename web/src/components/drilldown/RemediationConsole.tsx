@@ -146,11 +146,13 @@ function RemediationConsoleContent({
   }
 
   const startRemediation = async () => {
+    abortRef.current = false
+    
+    // Batch state updates together to prevent render flicker
+    setLogs([])
     setIsRunning(true)
     setIsComplete(false)
-    setLogs([])
     setIsLoadingInitialData(true)
-    abortRef.current = false
 
     // Initial log
     addLog({
@@ -198,10 +200,12 @@ function RemediationConsoleContent({
         message: 'Remediation analysis complete',
       })
       addTokens(BASE_TOKEN_ESTIMATE + flow.length * TOKENS_PER_STEP_ESTIMATE)
+      // Batch state updates together
+      setIsRunning(false)
+      setIsComplete(true)
+    } else {
+      setIsRunning(false)
     }
-
-    setIsRunning(false)
-    setIsComplete(true)
   }
 
   const stopRemediation = () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useReducer, type ReactNode } from 'react'
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../lib/cn'
@@ -23,6 +23,11 @@ type HandshakeErrorDetail = {
   isAuthError?: boolean
 }
 
+interface GateState {
+  handshakeState: HandshakeState
+  errorDetails: HandshakeErrorDetail[]
+}
+
 interface InitialInfrastructureGateProps {
   children: ReactNode
 }
@@ -44,23 +49,45 @@ const isAuthenticationError = (error: unknown): boolean => {
   )
 }
 
+type GateAction = 
+  | { type: 'RESET' }
+  | { type: 'SET_READY' }
+  | { type: 'SET_ERROR'; payload: HandshakeErrorDetail[]; isAuthError: boolean }
+
+const gateReducer = (state: GateState, action: GateAction): GateState => {
+  switch (action.type) {
+    case 'RESET':
+      return { handshakeState: 'loading', errorDetails: [] }
+    case 'SET_READY':
+      return { handshakeState: 'ready', errorDetails: [] }
+    case 'SET_ERROR':
+      return {
+        handshakeState: action.isAuthError ? 'auth-required' : 'error',
+        errorDetails: action.payload,
+      }
+    default:
+      return state
+  }
+}
+
 export function InitialInfrastructureGate({ children }: InitialInfrastructureGateProps) {
   const { t } = useTranslation('common')
-  const [attempt, setAttempt] = useState(0)
-  const [handshakeState, setHandshakeState] = useState<HandshakeState>('loading')
-  const [errorDetails, setErrorDetails] = useState<HandshakeErrorDetail[]>([])
+  const [attempt, setAttempt] = useReducer((count) => count + 1, 0)
+  const [{ handshakeState, errorDetails }, dispatch] = useReducer(gateReducer, {
+    handshakeState: 'loading',
+    errorDetails: [],
+  })
 
   useEffect(() => {
     // In demo mode there is no real backend — skip the handshake entirely
     // so the hosted demo (console.kubestellar.io) renders immediately.
     if (isDemoMode()) {
-      setHandshakeState('ready')
+      dispatch({ type: 'SET_READY' })
       return
     }
 
     const controller = new AbortController()
-    setHandshakeState('loading')
-    setErrorDetails([])
+    dispatch({ type: 'RESET' })
 
     const runHandshake = async () => {
       const results = await Promise.allSettled([
@@ -101,12 +128,11 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
       }
 
       if (failures.length > 0) {
-        setErrorDetails(failures)
-        setHandshakeState(hasAuthError ? 'auth-required' : 'error')
+        dispatch({ type: 'SET_ERROR', payload: failures, isAuthError: hasAuthError })
         return
       }
 
-      setHandshakeState('ready')
+      dispatch({ type: 'SET_READY' })
     }
 
     void runHandshake()

@@ -49,8 +49,9 @@ export function Arcade() {
             id="arcade-pin"
             checked={pinned}
             onChange={(e) => {
-              setPinned(e.target.checked)
-              setRememberPosition(location.pathname, e.target.checked)
+              const newValue = e.target.checked
+              setPinned(newValue)
+              setRememberPosition(location.pathname, newValue)
             }}
             className="rounded border-border w-3.5 h-3.5"
           />
