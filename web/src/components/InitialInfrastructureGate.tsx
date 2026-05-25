@@ -247,7 +247,7 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
               {t('chunkError.reloadPage', 'Reload page')}
             </Button>
             <Button
-              onClick={() => setAttempt(current => current + 1)}
+              onClick={() => setAttempt()}
               variant="secondary"
               size="md"
             >
@@ -299,7 +299,7 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
-            onClick={() => setAttempt(current => current + 1)}
+            onClick={() => setAttempt()}
             variant="primary"
             size="md"
             icon={<RefreshCw className="w-4 h-4" aria-hidden="true" />}
