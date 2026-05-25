@@ -31,6 +31,7 @@ const (
 	rewardsGitHubAPITimeout      = 30 * time.Second
 	estimatedRewardsItemsCap     = rewardsPerPage * 4
 	estimatedRewardsPageItemsCap = rewardsPerPage
+	rewardsMaxConcurrentFetches  = 5                // Bounded concurrency for per-repo fan-out
 )
 
 // RewardsConfig holds configuration for the rewards handler.
@@ -185,10 +186,13 @@ func (h *RewardsHandler) fetchUserRewards(ctx context.Context, login, token stri
 
 	results := make([]repoResult, len(h.repos))
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, rewardsMaxConcurrentFetches)
 	for i, repo := range h.repos {
 		wg.Add(1)
 		go func(idx int, r string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			items, err := h.listRepoItems(ctx, r, login, yearStart, token)
 			results[idx] = repoResult{items: items, err: err, repo: r}
 		}(i, repo)
