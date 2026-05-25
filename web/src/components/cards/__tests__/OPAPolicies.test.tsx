@@ -19,6 +19,7 @@ vi.mock('../DynamicCardErrorBoundary', () => ({
 const mockIsDemoMode = vi.fn(() => true)
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
+  isNetlifyDeployment: false,
 }))
 
 const mockUseDemoMode = vi.fn()

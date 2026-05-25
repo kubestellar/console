@@ -126,7 +126,10 @@ describe('useGPUReservations', () => {
     const { result } = renderHook(() => useGPUReservations(true))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(mockGet).toHaveBeenCalledWith('/api/gpu/reservations?mine=true')
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/gpu/reservations?mine=true',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
   })
 
   it('does not pass query param when onlyMine is false', async () => {
@@ -135,7 +138,10 @@ describe('useGPUReservations', () => {
     const { result } = renderHook(() => useGPUReservations(false))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(mockGet).toHaveBeenCalledWith('/api/gpu/reservations')
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/gpu/reservations',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
   })
 
   it('handles non-array API response by defaulting to empty array', async () => {

@@ -61,7 +61,7 @@ jobs:
         id: test
         working-directory: web
         env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
+          NODE_OPTIONS: '--max-old-space-size=6144'
         run: |
           npx vitest run --coverage --coverage.reportOnFailure \
             --reporter=default --reporter=json \
