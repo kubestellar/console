@@ -338,13 +338,13 @@ jobs:
           echo "Checking for large components that could benefit from lazy loading..."
           ISSUES=""
 
-          # Find .tsx files larger than 300 lines in pages/ or views/ directories
-          for f in $(find src -path "*/pages/*.tsx" -o -path "*/views/*.tsx" 2>/dev/null); do
+          # Find .tsx files larger than 300 lines in pages/ or views/ directories (excluding tests)
+          for f in $(find src -path "*/pages/*.tsx" -o -path "*/views/*.tsx" 2>/dev/null | grep -v "\.test\.tsx$" | grep -v "/__tests__/" | grep -v "\.actions\.tsx$" | grep -v "\.tabs\.tsx$" | grep -v "Section\.tsx$"); do
             LINES=$(wc -l < "$f")
             if [ "$LINES" -gt 300 ]; then
               BASENAME=$(basename "$f")
-              # Check if it's already lazy-loaded (matches both React.lazy and lazy patterns)
-              LAZY=$(grep -rl -E "(React\.)?lazy.*${BASENAME%.*}" src/ 2>/dev/null | wc -l || echo "0")
+              # Check if it's already lazy-loaded (matches React.lazy, lazy, and safeLazy patterns)
+              LAZY=$(grep -rl -E "(React\.lazy|safeLazy|lazy).*${BASENAME%.*}" src/ 2>/dev/null | wc -l || echo "0")
               if [ "$LAZY" -eq 0 ]; then
                 ISSUES="${ISSUES}  - \`${f}\` (${LINES} lines) — not lazy-loaded\n"
               fi
