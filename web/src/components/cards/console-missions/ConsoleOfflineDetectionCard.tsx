@@ -41,10 +41,12 @@ import {
   buildGpuItems,
   buildPredictionItems,
   generatePredictionId,
+  buildRootCauseGroups,
 } from './offlineDataTransforms'
 import { UnifiedItemsList } from './UnifiedItemsList'
-import { RootCauseAnalyzer, type RootCauseGroup } from './RootCauseAnalyzer'
+import { RootCauseAnalyzer } from './RootCauseAnalyzer'
 import { AIAnalysisPanel } from './AIAnalysisPanel'
+import { buildAnalysisMissionConfig } from './offlineAnalysis'
 import {
   getNodesCache,
   subscribeToNodes,
@@ -629,63 +631,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const filteredGpuCount = categorizedItems.gpu.length
   const filteredPredictionCount = categorizedItems.prediction.length
 
-  // ============================================================================
-  // Root Cause Grouping
-  // ============================================================================
-  const rootCauseGroups = useMemo((): RootCauseGroup[] => {
-    const groups = new Map<string, RootCauseGroup>()
-
-    sortedItems.forEach(item => {
-      let groupKey: string
-      let groupDetails: string
-
-      if (item.rootCause) {
-        groupKey = item.rootCause.cause
-        groupDetails = item.rootCause.details
-      } else if (item.category === 'gpu') {
-        groupKey = 'GPU exhaustion'
-        groupDetails = 'No GPUs available on these nodes'
-      } else if (item.category === 'prediction') {
-        const risk = item.predictionData
-        if (risk?.type === 'pod-crash') {
-          groupKey = 'Pod crash risk'
-          groupDetails = 'Pods with high restart counts likely to crash again'
-        } else if (risk?.type === 'resource-exhaustion') {
-          groupKey = risk.metric === 'cpu' ? 'CPU pressure' : 'Memory pressure'
-          groupDetails = `Clusters approaching ${risk.metric?.toUpperCase()} limits`
-        } else if (risk?.type === 'gpu-exhaustion') {
-          groupKey = 'GPU capacity risk'
-          groupDetails = 'GPU nodes at full capacity with no headroom'
-        } else {
-          groupKey = 'AI-detected risk'
-          groupDetails = risk?.reason || 'Anomaly detected by AI analysis'
-        }
-      } else {
-        groupKey = item.reason || 'Unknown'
-        groupDetails = item.reasonDetailed || item.reason
-      }
-
-      if (!groups.has(groupKey)) {
-        groups.set(groupKey, {
-          cause: groupKey,
-          details: groupDetails,
-          items: [],
-          severity: item.severity,
-          categories: new Set() })
-      }
-
-      const group = groups.get(groupKey)!
-      group.items.push(item)
-      group.categories.add(item.category)
-      if (item.severity === 'critical') group.severity = 'critical'
-      else if (item.severity === 'warning' && group.severity === 'info') group.severity = 'warning'
-    })
-
-    return Array.from(groups.values()).sort((a, b) => {
-      if (b.items.length !== a.items.length) return b.items.length - a.items.length
-      return (ALERT_SEVERITY_ORDER as Record<string, number>)[a.severity] - (ALERT_SEVERITY_ORDER as Record<string, number>)[b.severity]
-    })
-  }, [sortedItems])
+  const rootCauseGroups = useMemo(
+    () => buildRootCauseGroups(sortedItems, ALERT_SEVERITY_ORDER as Record<string, number>),
+    [sortedItems],
+  )
 
   // Fixed: immutable Set update pattern
   const toggleGroupExpand = useCallback((cause: string) => {
@@ -708,96 +657,21 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   )
 
   const doStartAnalysis = () => {
-    const filteredOfflineItems = isFiltered
-      ? categorizedItems.offline
-      : unifiedItems.filter(i => i.category === 'offline')
-    const filteredOfflineNodes = filteredOfflineItems
-      .map(i => i.nodeData)
-      .filter((node): node is NonNullable<typeof node> => !!node)
-    const filteredClusterHealthIssues = filteredOfflineItems
-      .map(i => i.clusterIssueData)
-      .filter((issue): issue is NonNullable<typeof issue> => !!issue)
-    const filteredGpuIssuesList = isFiltered
-      ? categorizedItems.gpu.map(i => i.gpuData).filter((data): data is NonNullable<typeof data> => !!data)
-      : gpuIssues
-    const filteredPredictedRisks = isFiltered
-      ? categorizedItems.prediction.map(i => i.predictionData).filter((data): data is NonNullable<typeof data> => !!data)
-      : predictedRisks
-
-    const nodesSummary = filteredOfflineNodes.map(node => {
-      const item = filteredOfflineItems.find(entry => entry.nodeData?.name === node.name && entry.nodeData?.cluster === node.cluster)
-      const rootCause = item?.rootCause
-      let line = `- Node ${node.name} (${node.cluster || 'unknown'}): Status=${node.unschedulable ? 'Cordoned' : node.status}`
-      if (rootCause) {
-        line += `\n  Root Cause: ${rootCause.cause}`
-        line += `\n  Details: ${rootCause.details}`
-      }
-      return line
-    }).join('\n')
-
-    const clusterHealthSummary = filteredClusterHealthIssues.map(issue =>
-      `- Cluster ${issue.cluster}: ${issue.reason}${issue.reasonDetailed ? `\n  Details: ${issue.reasonDetailed}` : ''}`
-    ).join('\n')
-
-    const gpuSummary = filteredGpuIssuesList.map(g =>
-      `- Node ${g.nodeName} (${g.cluster}): ${g.reason}`
-    ).join('\n')
-
-    const predictedSummary = filteredPredictedRisks.map(r => {
-      const sourceLabel = r.source === 'ai' ? `AI (${r.confidence || 0}% confidence)` : 'Heuristic'
-      const trendLabel = r.trend ? ` [${r.trend}]` : ''
-      let entry = `- [${r.severity.toUpperCase()}] [${sourceLabel}]${trendLabel} ${r.name} (${r.cluster || 'unknown'}):\n  Summary: ${r.reason}`
-      if (r.reasonDetailed) {
-        entry += `\n  Details: ${r.reasonDetailed}`
-      }
-      return entry
-    }).join('\n\n')
-
-    const filteredAICount = filteredPredictedRisks.filter(r => r.source === 'ai').length
-    const filteredHeuristicCount = filteredPredictedRisks.filter(r => r.source === 'heuristic').length
-    const hasCurrentIssues = filteredTotalIssues > 0
-    const hasPredictions = filteredTotalPredicted > 0
-
-    startMission({
-      title: hasPredictions && !hasCurrentIssues ? 'Predictive Health Analysis' : 'Health Issue Analysis',
-      description: hasCurrentIssues
-        ? `Analyzing ${filteredTotalIssues} issues${hasPredictions ? ` + ${filteredTotalPredicted} predicted risks` : ''}`
-        : `Analyzing ${filteredTotalPredicted} predicted failure risks (${filteredAICount} AI, ${filteredHeuristicCount} heuristic)`,
-      type: 'troubleshoot',
-      initialPrompt: `I need help analyzing ${hasCurrentIssues ? 'current issues and ' : ''}potential failures in my Kubernetes clusters.
-
-${hasCurrentIssues ? `**Current Cluster Health Issues (${filteredClusterHealthIssues.length}):**
-${clusterHealthSummary || 'None detected'}
-
-**Current Node Issues (${filteredOfflineNodes.length}):**
-${nodesSummary || 'None detected'}
-
-**Current GPU Issues (${filteredGpuIssuesList.length}):**
-${gpuSummary || 'None detected'}
-
-` : ''}**Predicted Failure Risks (${filteredTotalPredicted} total: ${filteredAICount} AI-detected, ${filteredHeuristicCount} threshold-based):**
-${predictedSummary || 'None predicted'}
-
-Please:
-1. ${hasCurrentIssues ? 'Identify root causes for the current cluster and node issues' : 'Analyze the predicted risks and their likelihood'}
-2. ${hasPredictions ? 'Assess the predicted failures - which are most likely to occur? Consider the AI confidence levels and trends.' : 'Check for patterns in the current issues'}
-3. Provide preventive actions to avoid predicted failures
-4. ${hasCurrentIssues ? 'Provide remediation steps for the current issues' : 'Recommend monitoring thresholds to catch issues earlier'}
-5. Prioritize by severity and potential impact
-6. Suggest proactive measures to prevent future failures`,
-      context: {
-        offlineNodes: filteredOfflineNodes.slice(0, 20),
-        clusterHealthIssues: filteredClusterHealthIssues.slice(0, 20),
-        gpuIssues: filteredGpuIssuesList,
-        predictedRisks: filteredPredictedRisks.slice(0, 20),
-        affectedClusters: new Set([
-          ...filteredOfflineNodes.map(node => node.cluster || 'unknown'),
-          ...filteredClusterHealthIssues.map(issue => issue.cluster),
-          ...filteredGpuIssuesList.map(g => g.cluster)
-        ]).size,
-        criticalPredicted: filteredCriticalPredicted,
-        aiPredictionCount: filteredAICount,
-        heuristicPredictionCount: filteredHeuristicCount } })
+    const missionConfig = buildAnalysisMissionConfig({
+      unifiedItems,
+      categorizedItems: {
+        offline: categorizedItems.offline,
+        gpu: categorizedItems.gpu,
+        prediction: categorizedItems.prediction,
+      },
+      gpuIssues,
+      predictedRisks,
+      filteredTotalIssues,
+      filteredTotalPredicted,
+      filteredCriticalPredicted,
+      isFiltered,
+    })
+    startMission(missionConfig)
   }
 
   const handleStartAnalysis = () => checkKeyAndRun(doStartAnalysis)

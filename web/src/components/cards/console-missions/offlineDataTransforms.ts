@@ -58,6 +58,14 @@ export type GpuIssue = {
   reason: string
 }
 
+export type RootCauseGroup = {
+  cause: string
+  details: string
+  items: UnifiedItem[]
+  severity: 'critical' | 'warning' | 'info'
+  categories: Set<string>
+}
+
 export type OfflineDetectionDataSource = {
   hasData: boolean
   isLoading?: boolean
@@ -252,4 +260,64 @@ export function buildPredictionItems(predictedRisks: PredictedRisk[]): UnifiedIt
 // ============================================================================
 export function generatePredictionId(type: string, name: string, cluster?: string): string {
   return `heuristic-${type}-${name}-${cluster || 'unknown'}`
+}
+
+/** Build grouped root-cause view data from sorted unified items. */
+export function buildRootCauseGroups(
+  sortedItems: UnifiedItem[],
+  severityOrder: Record<string, number>,
+): RootCauseGroup[] {
+  const groups = new Map<string, RootCauseGroup>()
+
+  sortedItems.forEach(item => {
+    let groupKey: string
+    let groupDetails: string
+
+    if (item.rootCause) {
+      groupKey = item.rootCause.cause
+      groupDetails = item.rootCause.details
+    } else if (item.category === 'gpu') {
+      groupKey = 'GPU exhaustion'
+      groupDetails = 'No GPUs available on these nodes'
+    } else if (item.category === 'prediction') {
+      const risk = item.predictionData
+      if (risk?.type === 'pod-crash') {
+        groupKey = 'Pod crash risk'
+        groupDetails = 'Pods with high restart counts likely to crash again'
+      } else if (risk?.type === 'resource-exhaustion') {
+        groupKey = risk.metric === 'cpu' ? 'CPU pressure' : 'Memory pressure'
+        groupDetails = `Clusters approaching ${risk.metric?.toUpperCase()} limits`
+      } else if (risk?.type === 'gpu-exhaustion') {
+        groupKey = 'GPU capacity risk'
+        groupDetails = 'GPU nodes at full capacity with no headroom'
+      } else {
+        groupKey = 'AI-detected risk'
+        groupDetails = risk?.reason || 'Anomaly detected by AI analysis'
+      }
+    } else {
+      groupKey = item.reason || 'Unknown'
+      groupDetails = item.reasonDetailed || item.reason
+    }
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        cause: groupKey,
+        details: groupDetails,
+        items: [],
+        severity: item.severity,
+        categories: new Set(),
+      })
+    }
+
+    const group = groups.get(groupKey)!
+    group.items.push(item)
+    group.categories.add(item.category)
+    if (item.severity === 'critical') group.severity = 'critical'
+    else if (item.severity === 'warning' && group.severity === 'info') group.severity = 'warning'
+  })
+
+  return Array.from(groups.values()).sort((a, b) => {
+    if (b.items.length !== a.items.length) return b.items.length - a.items.length
+    return severityOrder[a.severity] - severityOrder[b.severity]
+  })
 }

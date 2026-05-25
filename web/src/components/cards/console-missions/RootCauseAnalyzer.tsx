@@ -6,15 +6,9 @@ import { ChevronRight, CheckCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
-import type { UnifiedItem } from './offlineDataTransforms'
+import type { UnifiedItem, RootCauseGroup } from './offlineDataTransforms'
 
-export type RootCauseGroup = {
-  cause: string
-  details: string
-  items: UnifiedItem[]
-  severity: 'critical' | 'warning' | 'info'
-  categories: Set<string>
-}
+export type { RootCauseGroup } from './offlineDataTransforms'
 
 type RootCauseAnalyzerProps = {
   rootCauseGroups: RootCauseGroup[]
