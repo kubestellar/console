@@ -136,6 +136,8 @@ class AgentManager {
   private lastBrowserWakeCheckAt = 0
   private lastActivityAt = 0 // Timestamp of last activity for adaptive polling (#14192)
   private activityCooldownTimeout: ReturnType<typeof setTimeout> | null = null
+  private abortControllerRef: AbortController | null = null
+  private hasBrowserWakeListeners = false
   private readonly handleVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
       this.handleBrowserWake('visibilitychange')
@@ -171,6 +173,9 @@ class AgentManager {
   }
 
   stop() {
+    this.isStarted = false
+    this.abortControllerRef?.abort()
+    this.abortControllerRef = null
     if (this.pollInterval) {
       clearInterval(this.pollInterval)
       this.pollInterval = null
@@ -186,7 +191,6 @@ class AgentManager {
     this.removeBrowserWakeListeners()
     this.lastBrowserWakeCheckAt = 0
     this.lastActivityAt = 0
-    this.isStarted = false
     this.isChecking = false // Reset so next start can check immediately
   }
 
@@ -200,17 +204,19 @@ class AgentManager {
   }
 
   private addBrowserWakeListeners() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
+    if (typeof window === 'undefined' || typeof document === 'undefined' || this.hasBrowserWakeListeners) return
     document.addEventListener('visibilitychange', this.handleVisibilityChange)
     window.addEventListener('focus', this.handleWindowFocus)
     window.addEventListener('online', this.handleWindowOnline)
+    this.hasBrowserWakeListeners = true
   }
 
   private removeBrowserWakeListeners() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return
+    if (typeof window === 'undefined' || typeof document === 'undefined' || !this.hasBrowserWakeListeners) return
     document.removeEventListener('visibilitychange', this.handleVisibilityChange)
     window.removeEventListener('focus', this.handleWindowFocus)
     window.removeEventListener('online', this.handleWindowOnline)
+    this.hasBrowserWakeListeners = false
   }
 
   private handleBrowserWake(source: 'visibilitychange' | 'focus' | 'online') {
@@ -290,6 +296,12 @@ class AgentManager {
       return
     }
     this.isChecking = true
+    this.abortControllerRef?.abort()
+    this.abortControllerRef = new AbortController()
+    const signal = AbortSignal.any([
+      this.abortControllerRef.signal,
+      AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS),
+    ])
 
     try {
       // Use plain fetch() instead of agentFetch() for the health check.
@@ -312,17 +324,27 @@ class AgentManager {
       const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS) })
+        signal,
+      })
 
       if (!response.ok) {
         throw new Error(`Agent returned ${response.status}`)
       }
 
       const data = await response.json()
+      if (signal.aborted || !this.isStarted) {
+        return
+      }
+
       const authResponse = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
+        signal,
       })
+
+      if (signal.aborted || !this.isStarted) {
+        return
+      }
 
       if (AUTH_ERROR_STATUS_CODES.has(authResponse.status)) {
         const isUnauthorized = authResponse.status === HTTP_UNAUTHORIZED_STATUS
@@ -403,7 +425,15 @@ class AgentManager {
           error: null })
       }
       // If wasDisconnected but not enough successes yet, don't change status
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return
+      }
+
+      if (!this.isStarted) {
+        return
+      }
+
       this.failureCount++
       this.successCount = 0 // Reset success count on failure
       // Only mark as disconnected after multiple consecutive failures
@@ -425,6 +455,9 @@ class AgentManager {
         this.adjustPollInterval(DISCONNECTED_POLL_INTERVAL)
       }
     } finally {
+      if (this.abortControllerRef?.signal === signal) {
+        this.abortControllerRef = null
+      }
       this.isChecking = false
     }
   }
