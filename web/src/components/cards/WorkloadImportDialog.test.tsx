@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WorkloadImportDialog } from './WorkloadImportDialog'
@@ -24,11 +24,6 @@ vi.mock('../../lib/modals/useModalNavigation', () => ({
   useModalFocusTrap: vi.fn(),
 }))
 
-// Mock URL.createObjectURL since jsdom doesn't support it and DOMPurify or custom scripts might use it.
-if (typeof window !== 'undefined') {
-  window.URL.createObjectURL = vi.fn()
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -37,10 +32,31 @@ describe('WorkloadImportDialog', () => {
   let mockOnClose: () => void
   let mockOnImport: (workloads: Workload[]) => void
 
+  let originalCreateObjectURL: typeof window.URL.createObjectURL
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockOnClose = vi.fn()
     mockOnImport = vi.fn()
+
+    if (typeof window !== 'undefined') {
+      originalCreateObjectURL = window.URL.createObjectURL
+      Object.defineProperty(window.URL, 'createObjectURL', {
+        writable: true,
+        configurable: true,
+        value: vi.fn(),
+      })
+    }
+  })
+
+  afterEach(() => {
+    if (typeof window !== 'undefined') {
+      Object.defineProperty(window.URL, 'createObjectURL', {
+        writable: true,
+        configurable: true,
+        value: originalCreateObjectURL,
+      })
+    }
   })
 
   // ---- 1. Renders all import source tabs ----
@@ -455,7 +471,7 @@ metadata:
 
     // Checks banner is displayed
     expect(screen.getByTestId('demo-warning-banner')).toBeInTheDocument()
-    expect(screen.getByText(/Demo Mode: Workload import is simulated or disabled/)).toBeInTheDocument()
+    expect(screen.getByText(/demoModeWarning/)).toBeInTheDocument()
 
     const textarea = screen.getByPlaceholderText('yamlPlaceholder')
     await user.type(textarea, 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: nginx')

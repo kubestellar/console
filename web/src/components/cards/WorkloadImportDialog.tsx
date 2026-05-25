@@ -95,18 +95,12 @@ function parseYamlDocuments(text: string): { resources: ParsedResource[]; errors
       const name = (metadata?.name as string) || 'unnamed'
       const namespace = (metadata?.namespace as string) || 'default'
 
-      // Try to extract the first container image
       const spec = obj.spec as Record<string, unknown> | undefined
-      let templateSpec: Record<string, unknown> | undefined
-
-      if (kind === 'CronJob') {
-        const jobTemplateSpec = (spec?.jobTemplate as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
-        templateSpec = (jobTemplateSpec?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
-      } else {
-        templateSpec = (
-          (spec?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
-        )
-      }
+      const templateSpec =
+        kind === 'CronJob'
+          ? (((spec?.jobTemplate as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined)
+              ?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
+          : ((spec?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined)
 
       const containers = (templateSpec?.containers as Array<Record<string, unknown>> | undefined) || []
       const image = (containers[0]?.image as string) || 'unknown'
@@ -469,7 +463,7 @@ export function WorkloadImportDialog({
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleYamlImport}
-          disabled={!yamlText.trim() || importSuccess || isDemoData}
+          disabled={!yamlText.trim() || importSuccess || isDemoData || isLoading}
           loading={isLoading}
         >
           {t('workloadImport.import')}
@@ -547,7 +541,7 @@ export function WorkloadImportDialog({
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleHelmImport}
-          disabled={!helmRepoUrl.trim() || !helmChartName.trim() || !helmReleaseName.trim() || importSuccess || isDemoData}
+          disabled={!helmRepoUrl.trim() || !helmChartName.trim() || !helmReleaseName.trim() || importSuccess || isDemoData || isLoading}
           loading={isLoading}
         >
           {t('workloadImport.import')}
@@ -596,7 +590,7 @@ export function WorkloadImportDialog({
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleGithubImport}
-          disabled={!githubUrl.trim() || importSuccess || isDemoData}
+          disabled={!githubUrl.trim() || importSuccess || isDemoData || isLoading}
           loading={isLoading}
         >
           {t('workloadImport.import')}
@@ -636,7 +630,7 @@ export function WorkloadImportDialog({
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleKustomizeImport}
-          disabled={!kustomizeUrl.trim() || importSuccess || isDemoData}
+          disabled={!kustomizeUrl.trim() || importSuccess || isDemoData || isLoading}
           loading={isLoading}
         >
           {t('workloadImport.import')}
@@ -681,7 +675,11 @@ export function WorkloadImportDialog({
         {isDemoData && (
           <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20" data-testid="demo-warning-banner">
             <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0" />
-            <span className="text-sm text-yellow-400">Demo Mode: Workload import is simulated or disabled.</span>
+            <span className="text-sm text-yellow-400">
+              {t('workloadImport.demoModeWarning', {
+                defaultValue: 'Demo Mode: Workload import is simulated or disabled.',
+              })}
+            </span>
           </div>
         )}
         {importSuccess && (
