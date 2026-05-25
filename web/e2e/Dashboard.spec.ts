@@ -998,7 +998,12 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       { timeout: STAT_BLOCK_TIMEOUT_MS },
     )
 
+    // Ensure element is scrolled into view and fully interactive before clicking
+    await clustersStatBlock.scrollIntoViewIfNeeded()
     await clustersStatBlock.click()
+
+    // Wait for navigation or drilldown to trigger (mobile-chrome needs more time)
+    await page.waitForTimeout(500)
 
     const drilldownModal = page.getByTestId('drilldown-modal')
     const openedDrilldown = await drilldownModal
