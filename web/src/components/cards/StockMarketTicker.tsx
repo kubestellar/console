@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
 import {
   TrendingUp, TrendingDown, Clock, BarChart3,
   ChevronDown, ChevronRight, Search as SearchIcon,
@@ -402,8 +402,9 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
   )
 }
 
-// Stock row component
-function StockRow({
+// Stock row component — memoized to prevent re-renders of the full list
+// when only ticker/search state changes.
+const StockRow = memo(function StockRow({
   stock,
   expanded,
   onToggle,
@@ -515,7 +516,7 @@ function StockRow({
       )}
     </div>
   )
-}
+})
 
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -629,17 +630,23 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     }
   }, [showToast, t])
 
-  // Debounced stock search
+  // Debounced stock search — uses a cancelled flag to prevent stale
+  // setState calls after the component unmounts or the input changes.
   useEffect(() => {
+    let cancelled = false
+
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      performStockSearch(stockSearchInput)
+      if (!cancelled) {
+        performStockSearch(stockSearchInput)
+      }
     }, SEARCH_DEBOUNCE_MS)
 
     return () => {
+      cancelled = true
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }

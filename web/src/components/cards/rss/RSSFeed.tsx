@@ -417,12 +417,17 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
   }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed])
 
-  // Fetch on mount
+  // Fetch on mount — runs once. The fetch is async but the component is
+  // long-lived (dashboard card), so stale-setState risk is minimal.
   const feedInitRef = useRef(false)
   useEffect(() => {
     if (feedInitRef.current) return
     feedInitRef.current = true
     fetchFeed()
+    return () => {
+      // Reset init flag on unmount so a remount re-fetches.
+      feedInitRef.current = false
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
