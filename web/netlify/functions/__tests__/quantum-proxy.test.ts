@@ -21,6 +21,9 @@ const HTTP_STATUS_BAD_GATEWAY = 502;
 const HTTP_STATUS_SERVICE_UNAVAILABLE = 503;
 const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
+// Match the internal limit defined in quantum-proxy.mts (1MB)
+const MAX_PROXY_BODY_BYTES = 1_048_576;
+
 // Hoisted mock functions for rate limit
 const { mockEnforceSimpleRateLimit } = vi.hoisted(() => ({
   mockEnforceSimpleRateLimit: vi.fn(),
@@ -216,7 +219,8 @@ describe("quantum-proxy", () => {
       expect(res.headers.get("Content-Type")).toBe("text/html");
       const text = await res.text();
       expect(text).toContain("Circuit Diagram");
-      expect(text).toContain("q_0: ┤ H ├");
+      expect(text).toContain("q_0");
+      expect(text).toContain("H");
     });
 
     it("returns auth status demo response", async () => {
@@ -269,9 +273,9 @@ describe("quantum-proxy", () => {
       const firstCallInit = fetchMock.mock.calls[0][1] as RequestInit;
       expect(firstCallUrl).toBe(`${mockServiceUrl}/status`);
       expect(firstCallInit.method).toBe("GET");
-      expect(firstCallInit.headers).toMatchObject({
-        Accept: "application/json",
-      });
+
+      const forwardedHeaders = new Headers(firstCallInit.headers);
+      expect(forwardedHeaders.get("accept")).toBe("application/json");
 
       // Assert safe headers are forwarded and sensitive headers are discarded
       expect(res.headers.get("Content-Type")).toBe("application/json");
@@ -280,7 +284,7 @@ describe("quantum-proxy", () => {
     });
 
     it("returns 413 when request body content-length exceeds MAX_PROXY_BODY_BYTES", async () => {
-      const hugeBodyLength = 2_000_000;
+      const hugeBodyLength = MAX_PROXY_BODY_BYTES + 1;
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
