@@ -44,7 +44,7 @@ export interface LeaderboardCacheEntry {
 
 export interface GitHubRewardsResponse {
   total_points: number;
-  contributions: unknown[];
+  contributions: readonly [];
   breakdown: LeaderboardBreakdown;
   bonus_points: number;
   level: string;

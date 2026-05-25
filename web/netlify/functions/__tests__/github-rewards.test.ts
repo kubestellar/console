@@ -101,7 +101,12 @@ describe("github-rewards", () => {
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_NO_CONTENT);
       expect(res.headers.get("access-control-allow-origin")).toBe("*");
-      expect(res.headers.get("access-control-allow-methods")).toContain("GET, OPTIONS");
+      
+      const allowedMethods = (res.headers.get("access-control-allow-methods") ?? "")
+        .split(",")
+        .map((method) => method.trim());
+      expect(allowedMethods).toContain("GET");
+      expect(allowedMethods).toContain("OPTIONS");
     });
 
     it("returns 405 Method Not Allowed for unsupported methods", async () => {
