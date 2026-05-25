@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 // Types, constants, and shared variables are in github_pipelines_types.go
@@ -85,9 +86,26 @@ func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 	}
 }
 
+type ghpBuildRequest struct {
+	ctx       context.Context
+	repoQuery string
+	daysQuery string
+}
+
+func ghpBuildRequestFromFiber(c *fiber.Ctx) ghpBuildRequest {
+	return ghpBuildRequest{
+		ctx:       c.UserContext(),
+		repoQuery: c.Query("repo"),
+		daysQuery: c.Query("days"),
+	}
+}
+
 func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
-	ctx := c.UserContext()
-	pulseRepo := c.Query("repo")
+	return h.buildPulseFromRequest(ghpBuildRequestFromFiber(c))
+}
+
+func (h *GitHubPipelinesHandler) buildPulseFromRequest(req ghpBuildRequest) (any, error) {
+	pulseRepo := req.repoQuery
 	if pulseRepo == "" {
 		pulseRepo = ghpNightlyReleaseRepo
 	} else if !ghpIsAllowedRepo(pulseRepo) {
@@ -95,7 +113,7 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	}
 
 	releaseRuns, err := h.fetchWorkflowRuns(
-		ctx,
+		req.ctx,
 		pulseRepo,
 		ghpNightlyReleaseWFFile,
 		fmt.Sprintf("per_page=%d", ghpPulseWindowDays),
@@ -114,11 +132,11 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 	tagWg.Add(2)
 	go func() {
 		defer tagWg.Done()
-		releaseTag = ghpLatestReleaseTag(ctx, h, pulseRepo)
+		releaseTag = ghpLatestReleaseTag(req.ctx, h, pulseRepo)
 	}()
 	go func() {
 		defer tagWg.Done()
-		weeklyTag = ghpLatestWeeklyTag(ctx, h, pulseRepo)
+		weeklyTag = ghpLatestWeeklyTag(req.ctx, h, pulseRepo)
 	}()
 	tagWg.Wait()
 
@@ -158,13 +176,17 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 }
 
 func (h *GitHubPipelinesHandler) buildMatrixFromQuery(c *fiber.Ctx) (any, error) {
-	days := ghpParseMatrixDays(c.Query("days"))
-	repos, err := ghpResolveRepos(c.Query("repo"))
+	return h.buildMatrixFromRequest(ghpBuildRequestFromFiber(c))
+}
+
+func (h *GitHubPipelinesHandler) buildMatrixFromRequest(req ghpBuildRequest) (any, error) {
+	days := ghpParseMatrixDays(req.daysQuery)
+	repos, err := ghpResolveRepos(req.repoQuery)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := c.UserContext()
+	ctx := req.ctx
 	fresh := make([]ghpWorkflowRun, 0, 256)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -222,12 +244,16 @@ func (h *GitHubPipelinesHandler) buildMatrixFromQuery(c *fiber.Ctx) (any, error)
 }
 
 func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
-	repos, err := ghpResolveRepos(c.Query("repo"))
+	return h.buildFlowFromRequest(ghpBuildRequestFromFiber(c))
+}
+
+func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any, error) {
+	repos, err := ghpResolveRepos(req.repoQuery)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := c.UserContext()
+	ctx := req.ctx
 	all := make([]ghpFlowRun, 0)
 	var flowMu sync.Mutex
 	var repoWg sync.WaitGroup
@@ -287,12 +313,16 @@ func (h *GitHubPipelinesHandler) buildFlowFromQuery(c *fiber.Ctx) (any, error) {
 }
 
 func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, error) {
-	repos, err := ghpResolveRepos(c.Query("repo"))
+	return h.buildFailuresFromRequest(ghpBuildRequestFromFiber(c))
+}
+
+func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (any, error) {
+	repos, err := ghpResolveRepos(req.repoQuery)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := c.UserContext()
+	ctx := req.ctx
 	rows := make([]ghpFailureRow, 0)
 	var failMu sync.Mutex
 	var failWg sync.WaitGroup
@@ -358,11 +388,39 @@ func (h *GitHubPipelinesHandler) buildFailuresFromQuery(c *fiber.Ctx) (any, erro
 
 // ghpAllPayload bundles all four pipeline views into a single response.
 func (h *GitHubPipelinesHandler) buildAll(c *fiber.Ctx) (any, error) {
-	pulse, pulseErr := h.buildPulse(c)
-	matrix, matrixErr := h.buildMatrixFromQuery(c)
-	failures, failuresErr := h.buildFailuresFromQuery(c)
-	flow, flowErr := h.buildFlowFromQuery(c)
+	req := ghpBuildRequestFromFiber(c)
+	g, gctx := errgroup.WithContext(req.ctx)
+	req.ctx = gctx
 
+	var pulse any
+	var matrix any
+	var failures any
+	var flow any
+	var pulseErr error
+	var matrixErr error
+	var failuresErr error
+	var flowErr error
+
+	g.Go(func() error {
+		pulse, pulseErr = h.buildPulseFromRequest(req)
+		return nil
+	})
+	g.Go(func() error {
+		matrix, matrixErr = h.buildMatrixFromRequest(req)
+		return nil
+	})
+	g.Go(func() error {
+		failures, failuresErr = h.buildFailuresFromRequest(req)
+		return nil
+	})
+	g.Go(func() error {
+		flow, flowErr = h.buildFlowFromRequest(req)
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
 	if pulseErr != nil && matrixErr != nil && failuresErr != nil && flowErr != nil {
 		return nil, fmt.Errorf("all views failed: pulse=%v, matrix=%v, failures=%v, flow=%v",
 			pulseErr, matrixErr, failuresErr, flowErr)
