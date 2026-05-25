@@ -112,6 +112,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({
     isDemoMode: mockState.isDemoMode,
   }),
+  isDemoModeForced: false,
 }))
 
 vi.mock('../CardDataContext', () => ({
@@ -125,6 +126,7 @@ vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
   return {
     ...actual,
+    commonComparators: actual.commonComparators,
     useCardData: (items: unknown[], _opts: unknown) => ({
       items,
       allFilteredItems: items,
@@ -571,12 +573,15 @@ describe('UserManagement', () => {
         if (trashButton) {
           await user.click(trashButton)
 
-          // Find and click confirm button
+          // Find and click confirm button (label is "Delete" from translation)
           await waitFor(() => {
-            expect(screen.getByText(/Confirm/i)).toBeTruthy()
+            const allDeleteButtons = screen.getAllByText(/Delete/i)
+            expect(allDeleteButtons.length).toBeGreaterThan(0)
           })
 
-          const confirmButton = screen.getByText(/Confirm/i)
+          // The confirm dialog's delete button is distinct from the row trash button
+          const allDeleteButtons = screen.getAllByRole('button', { name: /delete/i })
+          const confirmButton = allDeleteButtons[allDeleteButtons.length - 1]
           await user.click(confirmButton)
 
           // Delete should be called with correct ID
@@ -634,10 +639,12 @@ describe('UserManagement', () => {
           await user.click(trashButton)
 
           await waitFor(() => {
-            expect(screen.getByText(/Confirm/i)).toBeTruthy()
+            const allDeleteButtons = screen.getAllByText(/Delete/i)
+            expect(allDeleteButtons.length).toBeGreaterThan(0)
           })
 
-          const confirmButton = screen.getByText(/Confirm/i)
+          const allDeleteButtons = screen.getAllByRole('button', { name: /delete/i })
+          const confirmButton = allDeleteButtons[allDeleteButtons.length - 1]
           await user.click(confirmButton)
 
           await waitFor(() => {
@@ -719,7 +726,8 @@ describe('UserManagement', () => {
   })
 
   describe('User list rendering', () => {
-    it('renders all users in the list', () => {
+    it('renders all users in the list', async () => {
+      const user = userEvent.setup()
       mockState.users = [
         mockCurrentUser,
         makeConsoleUser({ id: 'user-2', github_login: 'alice', role: 'editor' }),
@@ -729,7 +737,7 @@ describe('UserManagement', () => {
       render(<UserManagement />)
 
       const consoleTab = screen.getByRole('tab', { name: /console users/i })
-      expect(consoleTab).toBeTruthy()
+      await user.click(consoleTab)
 
       // All users should be visible
       expect(screen.getByText(/currentuser/)).toBeTruthy()
@@ -737,13 +745,14 @@ describe('UserManagement', () => {
       expect(screen.getByText(/bob/)).toBeTruthy()
     })
 
-    it('shows user avatars when avatar_url is present', () => {
+    it('shows user avatars when avatar_url is present', async () => {
+      const user = userEvent.setup()
       mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
       const consoleTab = screen.getByRole('tab', { name: /console users/i })
-      expect(consoleTab).toBeTruthy()
+      await user.click(consoleTab)
 
       // Avatar image should be rendered
       const avatar = screen.getByAltText(/User avatar|currentuser/)
@@ -751,7 +760,8 @@ describe('UserManagement', () => {
       expect(avatar.getAttribute('src')).toContain('example.com')
     })
 
-    it('shows initials when avatar_url is missing', () => {
+    it('shows initials when avatar_url is missing', async () => {
+      const user = userEvent.setup()
       mockState.users = [
         makeConsoleUser({
           id: 'user-no-avatar',
@@ -764,21 +774,26 @@ describe('UserManagement', () => {
       render(<UserManagement />)
 
       const consoleTab = screen.getByRole('tab', { name: /console users/i })
-      expect(consoleTab).toBeTruthy()
+      await user.click(consoleTab)
 
       // Should show initial "T" for testuser
       expect(screen.getByText(/T/)).toBeTruthy()
     })
 
-    it('displays user email when present', () => {
+    it('displays user email when present', async () => {
+      const user = userEvent.setup()
       mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
+      const consoleTab = screen.getByRole('tab', { name: /console users/i })
+      await user.click(consoleTab)
+
       expect(screen.getByText('current@example.com')).toBeTruthy()
     })
 
-    it('displays role badges with correct styling', () => {
+    it('displays role badges with correct styling', async () => {
+      const user = userEvent.setup()
       mockState.users = [
         makeConsoleUser({ id: 'admin-user', github_login: 'adminuser', role: 'admin' }),
         makeConsoleUser({ id: 'editor-user', github_login: 'editoruser', role: 'editor' }),
@@ -786,6 +801,9 @@ describe('UserManagement', () => {
       ]
 
       render(<UserManagement />)
+
+      const consoleTab = screen.getByRole('tab', { name: /console users/i })
+      await user.click(consoleTab)
 
       // All role badges should be visible
       const roleBadges = screen.getAllByText(/admin|editor|viewer/)
