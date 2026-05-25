@@ -17,9 +17,9 @@ export function QuantumCredentialsDrillDown({ data }: Props) {
   })
   const [credentialError, setCredentialError] = useState<string | null>(null)
   const [credentialSaving, setCredentialSaving] = useState(false)
-  const ibmAuthenticated = (data.ibmAuthenticated as boolean) || false
-  const onSave = data.onSave as ((form: CredentialForm) => Promise<void>) | undefined
-  const onClose = data.onClose as (() => void) | undefined
+  const ibmAuthenticated = data.ibmAuthenticated === true
+  const onSave = typeof data.onSave === 'function' ? data.onSave as (form: CredentialForm) => Promise<void> : undefined
+  const onClose = typeof data.onClose === 'function' ? data.onClose as () => void : undefined
 
   const handleSaveCredentials = async () => {
     if (!onSave) return
@@ -61,6 +61,13 @@ export function QuantumCredentialsDrillDown({ data }: Props) {
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-red-700 dark:text-red-300">{credentialError}</p>
+          </div>
+        )}
+
+        {!onSave && (
+          <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-yellow-700 dark:text-yellow-300">Saving is unavailable because this dialog was opened without a valid save handler.</p>
           </div>
         )}
 
@@ -112,7 +119,7 @@ export function QuantumCredentialsDrillDown({ data }: Props) {
       <div className="flex gap-2 p-4 border-t border-border bg-card/50">
         <button
           onClick={handleSaveCredentials}
-          disabled={credentialSaving || !credentialForm.apiKey.trim() || !credentialForm.crn.trim()}
+          disabled={!onSave || credentialSaving || !credentialForm.apiKey.trim() || !credentialForm.crn.trim()}
           className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:opacity-50 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors"
         >
           {credentialSaving ? (

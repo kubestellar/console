@@ -17,12 +17,16 @@ interface Props {
 export function YAMLDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const { showToast } = useToast()
-  const cluster = data.cluster as string
-  const namespace = data.namespace as string
-  const resourceType = data.resourceType as string
-  const resourceName = data.resourceName as string
+  const cluster = typeof data.cluster === 'string' ? data.cluster : ''
+  const namespace = typeof data.namespace === 'string' ? data.namespace : ''
+  const resourceType = typeof data.resourceType === 'string' ? data.resourceType : ''
+  const resourceName = typeof data.resourceName === 'string' ? data.resourceName : ''
   const { drillToCluster, drillToNamespace } = useDrillDownActions()
   const clusterShort = cluster.split('/').pop() || cluster
+  const hasRequiredContext = Boolean(cluster && resourceType && resourceName)
+  const resourceTypeLabel = resourceType || t('drilldown.yaml.resourceTypeFallback', 'resource')
+  const resourceNameLabel = resourceName || t('drilldown.yaml.resourceNameFallback', 'unknown')
+  const resourceLocation = [namespace, clusterShort].filter(Boolean).join(' - ')
 
   const [yaml, setYAML] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
@@ -39,11 +43,24 @@ export function YAMLDrillDown({ data }: Props) {
   }, [])
 
   useEffect(() => {
+    if (!hasRequiredContext) {
+      setYAML('')
+      setError(t('drilldown.yaml.missingContext', 'Unable to load YAML because the selected resource is missing required details.'))
+      setIsLoading(false)
+      return
+    }
     fetchYAML()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchYAML is defined below and uses the same deps
-  }, [cluster, namespace, resourceType, resourceName])
+  }, [cluster, namespace, resourceType, resourceName, hasRequiredContext, t])
 
   const fetchYAML = async () => {
+    if (!hasRequiredContext) {
+      setYAML('')
+      setError(t('drilldown.yaml.missingContext', 'Unable to load YAML because the selected resource is missing required details.'))
+      setIsLoading(false)
+      return
+    }
+
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
@@ -108,7 +125,7 @@ export function YAMLDrillDown({ data }: Props) {
     <div className="space-y-4">
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
-        {namespace && (
+        {namespace && cluster && (
           <button
             onClick={() => drillToNamespace(cluster, namespace)}
             className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
@@ -118,37 +135,43 @@ export function YAMLDrillDown({ data }: Props) {
             <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
           </button>
         )}
-        <button
-          onClick={() => drillToCluster(cluster)}
-          className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-        >
-          <Server className="w-4 h-4 text-blue-400" />
-          <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
-          <ClusterBadge cluster={clusterShort} size="sm" />
-        </button>
+        {cluster && (
+          <button
+            onClick={() => drillToCluster(cluster)}
+            className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+          >
+            <Server className="w-4 h-4 text-blue-400" />
+            <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+            <ClusterBadge cluster={clusterShort} size="sm" />
+          </button>
+        )}
       </div>
 
       {/* Resource Info */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-foreground">
-            {resourceType}/{resourceName}
+            {resourceTypeLabel}/{resourceNameLabel}
           </h3>
-          <p className="text-sm text-muted-foreground">
-            {namespace} - {clusterShort}
-          </p>
+          {resourceLocation && (
+            <p className="text-sm text-muted-foreground">
+              {resourceLocation}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={fetchYAML}
-            className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
+            disabled={!hasRequiredContext}
+            className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('common.refresh')}
           >
             <RefreshCw className={`w-4 h-4 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={handleCopy}
-            className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
+            disabled={!yaml}
+            className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Copy to clipboard"
           >
             {copied ? (
@@ -159,7 +182,8 @@ export function YAMLDrillDown({ data }: Props) {
           </button>
           <button
             onClick={downloadYAML}
-            className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors"
+            disabled={!yaml}
+            className="p-2 rounded-lg bg-card/50 border border-border hover:bg-card transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Download YAML"
           >
             <Download className="w-4 h-4 text-muted-foreground" />

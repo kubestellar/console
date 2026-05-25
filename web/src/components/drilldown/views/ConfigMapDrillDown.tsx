@@ -21,12 +21,14 @@ type TabType = 'overview' | 'data' | 'describe' | 'yaml'
 
 export function ConfigMapDrillDown({ data }: Props) {
   const { t } = useTranslation()
-  const cluster = data.cluster as string
-  const namespace = data.namespace as string
-  const configmapName = data.configmap as string
+  const cluster = typeof data.cluster === 'string' ? data.cluster : ''
+  const namespace = typeof data.namespace === 'string' ? data.namespace : ''
+  const configmapName = typeof data.configmap === 'string' ? data.configmap : ''
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster } = useDrillDownActions()
   const { runKubectl } = useDrillDownWebSocket(cluster)
+  const clusterShort = cluster.split('/').pop() || cluster
+  const hasRequiredContext = Boolean(cluster && namespace && configmapName)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [configmapData, setConfigmapData] = useState<Record<string, string> | null>(null)
@@ -61,7 +63,7 @@ export function ConfigMapDrillDown({ data }: Props) {
 
   // Fetch ConfigMap data
   const fetchData = async () => {
-    if (!agentConnected) return
+    if (!agentConnected || !hasRequiredContext) return
 
     try {
       const output = await runKubectl(['get', 'configmap', configmapName, '-n', namespace, '-o', 'json'])
@@ -83,19 +85,25 @@ export function ConfigMapDrillDown({ data }: Props) {
   }
 
   const fetchDescribe = async () => {
-    if (!agentConnected || describeOutput) return
+    if (!agentConnected || !hasRequiredContext || describeOutput) return
     setDescribeLoading(true)
-    const output = await runKubectl(['describe', 'configmap', configmapName, '-n', namespace])
-    setDescribeOutput(output)
-    setDescribeLoading(false)
+    try {
+      const output = await runKubectl(['describe', 'configmap', configmapName, '-n', namespace])
+      setDescribeOutput(output)
+    } finally {
+      setDescribeLoading(false)
+    }
   }
 
   const fetchYaml = async () => {
-    if (!agentConnected || yamlOutput) return
+    if (!agentConnected || !hasRequiredContext || yamlOutput) return
     setYamlLoading(true)
-    const output = await runKubectl(['get', 'configmap', configmapName, '-n', namespace, '-o', 'yaml'])
-    setYamlOutput(output)
-    setYamlLoading(false)
+    try {
+      const output = await runKubectl(['get', 'configmap', configmapName, '-n', namespace, '-o', 'yaml'])
+      setYamlOutput(output)
+    } finally {
+      setYamlLoading(false)
+    }
   }
 
   // Track if we've already loaded data to prevent refetching
@@ -104,6 +112,15 @@ export function ConfigMapDrillDown({ data }: Props) {
   // Pre-fetch tab data when agent connects
   // Batched to limit concurrent WebSocket connections (max 2 at a time)
   useEffect(() => {
+    if (!hasRequiredContext) {
+      setConfigmapData({})
+      setLabels({})
+      setDescribeOutput(null)
+      setYamlOutput(null)
+      setDescribeLoading(false)
+      setYamlLoading(false)
+      return
+    }
     if (!agentConnected || hasLoadedRef.current) return
     hasLoadedRef.current = true
 
@@ -119,7 +136,7 @@ export function ConfigMapDrillDown({ data }: Props) {
     }
 
     loadData()
-  }, [agentConnected, fetchData, fetchDescribe, fetchYaml])
+  }, [agentConnected, fetchData, fetchDescribe, fetchYaml, hasRequiredContext])
 
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
@@ -142,28 +159,32 @@ export function ConfigMapDrillDown({ data }: Props) {
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center gap-6 text-sm">
-          <button
-            onClick={() => drillToNamespace(cluster, namespace)}
-            className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-purple-400" />
-            <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
-            <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-            <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => drillToCluster(cluster)}
-            className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
-          >
-            <Server className="w-4 h-4 text-blue-400" />
-            <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
-            <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
-            <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+          {namespace && cluster && (
+            <button
+              onClick={() => drillToNamespace(cluster, namespace)}
+              className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+            >
+              <Layers className="w-4 h-4 text-purple-400" />
+              <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
+              <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
+              <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+          {cluster && (
+            <button
+              onClick={() => drillToCluster(cluster)}
+              className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
+            >
+              <Server className="w-4 h-4 text-blue-400" />
+              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
+              <ClusterBadge cluster={clusterShort} size="sm" />
+              <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -195,6 +216,11 @@ export function ConfigMapDrillDown({ data }: Props) {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            {!hasRequiredContext && (
+              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-400">
+                {t('drilldown.configmap.missingContext', 'Unable to load this ConfigMap because the selected resource is missing required details.')}
+              </div>
+            )}
             {/* Basic Info */}
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
               <div className="flex items-center gap-3">
