@@ -19,14 +19,13 @@ vi.mock('../DynamicCardErrorBoundary', () => ({
 const { mockIsDemoMode } = vi.hoisted(() => ({
   mockIsDemoMode: vi.fn(() => true),
 }))
-vi.mock('../../../lib/demoMode', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../lib/demoMode')>()
-  return {
-    ...actual,
-    isDemoMode: () => mockIsDemoMode(),
-    isNetlifyDeployment: false,
-  }
-})
+vi.mock('../../../lib/demoMode', () => ({
+  isDemoMode: () => mockIsDemoMode(),
+  isDemoModeForced: false,
+  isNetlifyDeployment: false,
+  subscribeDemoMode: () => () => {},
+  toggleDemoMode: vi.fn(),
+}))
 
 const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
@@ -54,13 +53,25 @@ vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: vi.fn().mockResolvedValue({ json: () => Promise.resolve({ clusters: [] }) }),
 }))
 
-vi.mock('../OPAPolicies.utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../OPAPolicies.utils')>()
-  return {
-    ...actual,
-    runClusterChecks: vi.fn(),
-  }
-})
+vi.mock('../OPAPolicies.utils', () => ({
+  OPA_LIST_TIMEOUT_MS: 25_000,
+  MIN_POLICY_PATH_PARTS: 4,
+  checkState: { inProgress: false, checkedClusters: new Set<string>() },
+  generateDemoStatuses: () => ({
+    'kind-hub': { installed: true, version: '3.14.0', policies: 5, violations: 1, constraintTemplates: 3 },
+    'kind-worker1': { installed: true, version: '3.14.0', policies: 3, violations: 0, constraintTemplates: 2 },
+    'kind-worker2': { installed: false },
+  }),
+  checkGatekeeperInstalled: vi.fn(),
+  checkGatekeeperDetails: vi.fn(),
+  createSortComparators: () => ({
+    name: (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name),
+    status: () => 0,
+    policies: () => 0,
+    violations: () => 0,
+  }),
+  runClusterChecks: vi.fn(),
+}))
 
 const DEMO_CLUSTER_NAMES = ['kind-hub', 'kind-worker1', 'kind-worker2'] as const
 

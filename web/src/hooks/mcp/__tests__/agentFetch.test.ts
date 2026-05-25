@@ -23,6 +23,9 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
     ...actual,
     LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
     MCP_HOOK_TIMEOUT_MS: 30_000,
+    // Explicitly include to avoid flaky "no export" errors when importOriginal
+    // resolves barrel re-exports in a non-deterministic order in CI.
+    DEFAULT_REFRESH_INTERVAL_MS: actual.DEFAULT_REFRESH_INTERVAL_MS ?? 120_000,
   }
 })
 vi.mock('../../../lib/constants/network', async (importOriginal) => {

@@ -34,13 +34,10 @@ vi.mock('../demoMode', async (importOriginal) => {
   }
 })
 
-vi.mock('../utils/wsAuth', async () => {
-  const actual = await vi.importActual<typeof import('../utils/wsAuth')>('../utils/wsAuth')
-  return {
-    ...actual,
-    appendWsAuthToken: (url: string) => url,
-  }
-})
+vi.mock('../utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => url,
+  getWsAuthToken: () => null,
+}))
 
 vi.mock('../../hooks/useBackendHealth', () => ({
   isInClusterMode: () => false,
