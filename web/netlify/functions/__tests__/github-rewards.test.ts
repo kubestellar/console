@@ -3,7 +3,6 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  TEST_CORS_ORIGIN,
   makeNetlifyRequest,
   readJson,
   assertResponseHasNoSecrets,
@@ -24,7 +23,7 @@ vi.mock("@netlify/blobs", () => ({
 
 import handler, { _testOnly } from "../github-rewards.mts";
 
-const { MAX_RESPONSE_BYTES, LEADERBOARD_URL, LEADERBOARD_CACHE_KEY } = _testOnly;
+const { MAX_RESPONSE_BYTES, LEADERBOARD_URL, LEADERBOARD_CACHE_KEY, LEADERBOARD_CACHE_TTL_MS } = _testOnly;
 
 // Named constants for HTTP status codes to prevent magic numbers
 const HTTP_STATUS_OK = 200;
@@ -61,7 +60,7 @@ interface LeaderboardData {
 
 interface GitHubRewardsResponse {
   total_points: number;
-  contributions: never[];
+  contributions: unknown[];
   breakdown: LeaderboardBreakdown;
   bonus_points: number;
   level: string;
@@ -288,6 +287,7 @@ describe("github-rewards", () => {
       await handler(req);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls[0][0]).toBe(LEADERBOARD_URL);
       expect(mockSetJSON).toHaveBeenCalledWith(LEADERBOARD_CACHE_KEY, expect.any(Object));
 
       const cacheObj = mockSetJSON.mock.calls[0][1];
@@ -311,7 +311,7 @@ describe("github-rewards", () => {
     });
 
     it("proceeds to fetch from upstream when the cache entry is expired", async () => {
-      const oneHourAgo = Date.now() - 61 * 60 * 1000;
+      const oneHourAgo = Date.now() - (LEADERBOARD_CACHE_TTL_MS + 1000);
       mockGet.mockResolvedValue({
         data: SAMPLE_LEADERBOARD,
         storedAt: oneHourAgo,
