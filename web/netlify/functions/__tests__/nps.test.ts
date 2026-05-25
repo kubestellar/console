@@ -8,6 +8,7 @@ import {
   readJson,
   assertResponseHasNoSecrets,
 } from "./netlify-handler-helpers";
+import handler, { MAX_BODY_BYTES } from "../nps.mts";
 
 // Named constants for HTTP status codes to avoid magic numbers
 const HTTP_STATUS_OK = 200;
@@ -19,8 +20,35 @@ const HTTP_STATUS_REQUEST_TOO_LARGE = 413;
 const HTTP_STATUS_RATE_LIMITED = 429;
 const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
-// Match internal limit defined in nps.mts (4KB)
-const MAX_BODY_BYTES = 4_096;
+// Types matching the NPS aggregate structure for absolute type safety
+interface NpsTrendItem {
+  month: string;
+  npsScore: number;
+  count: number;
+  avgScore: number;
+}
+
+interface NpsRecentItem {
+  score: number;
+  category: string;
+  feedback?: string;
+  timestamp: string;
+}
+
+interface NpsAggregation {
+  totalResponses: number;
+  npsScore: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  promoterPct: number;
+  passivePct: number;
+  detractorPct: number;
+  averageScore: number;
+  scoreMax: number;
+  trend: NpsTrendItem[];
+  recent: NpsRecentItem[];
+}
 
 // Hoisted mocks for Netlify Blobs
 const { mockGet, mockSet } = vi.hoisted(() => ({
@@ -44,7 +72,7 @@ vi.mock("../_shared/rate-limit", () => ({
   enforceSimpleRateLimit: mockEnforceSimpleRateLimit,
 }));
 
-import handler from "../nps.mts";
+// Handler import is now situated at the top of the test file
 
 describe("nps", () => {
   beforeEach(() => {
@@ -99,6 +127,7 @@ describe("nps", () => {
 
     it("returns 413 when content-length header exceeds MAX_BODY_BYTES limit", async () => {
       const hugeBodyLength = MAX_BODY_BYTES + 1;
+      const hugeBody = "a".repeat(hugeBodyLength);
       const req = new Request("https://example.test/.netlify/functions/nps", {
         method: "POST",
         headers: {
@@ -106,7 +135,7 @@ describe("nps", () => {
           "Content-Type": "application/json",
           "content-length": String(hugeBodyLength),
         },
-        body: JSON.stringify({ score: 4 }),
+        body: hugeBody,
       });
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
@@ -210,7 +239,7 @@ describe("nps", () => {
       const req = makeNetlifyRequest("/.netlify/functions/nps");
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_OK);
-      const aggregation = await readJson<any>(res);
+      const aggregation = await readJson<NpsAggregation>(res);
       expect(aggregation).toEqual({
         totalResponses: 0,
         npsScore: 0,
@@ -241,7 +270,7 @@ describe("nps", () => {
       const req = makeNetlifyRequest("/.netlify/functions/nps");
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_OK);
-      const aggregation = await readJson<any>(res);
+      const aggregation = await readJson<NpsAggregation>(res);
 
       expect(aggregation.totalResponses).toBe(4);
       // Promoters: 1, Detractors: 1, Passives: 2

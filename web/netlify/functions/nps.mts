@@ -79,7 +79,7 @@ const RATE_LIMIT_STORE_NAME = "nps-rate-limit";
 /** One NPS submission per IP per 24 hours */
 const NPS_RATE_LIMIT_MAX_REQUESTS = 1;
 /** Maximum allowed request body size (bytes). */
-const MAX_BODY_BYTES = 4_096;
+export const MAX_BODY_BYTES = 4_096;
 /** Rate-limit window for NPS POSTs */
 const NPS_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
