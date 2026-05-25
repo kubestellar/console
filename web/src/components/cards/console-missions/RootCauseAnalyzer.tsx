@@ -6,7 +6,7 @@ import { ChevronRight, CheckCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
-import type { UnifiedItem, RootCauseGroup } from './offlineDataTransforms'
+import type { RootCauseGroup } from './offlineDataTransforms'
 
 export type { RootCauseGroup } from './offlineDataTransforms'
 

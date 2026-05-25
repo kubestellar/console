@@ -23,7 +23,7 @@ export interface AnalysisContext {
 export interface AnalysisMissionConfig {
   title: string
   description: string
-  type: string
+  type: 'custom' | 'deploy' | 'upgrade' | 'repair' | 'troubleshoot' | 'analyze' | 'maintain'
   initialPrompt: string
   context: {
     offlineNodes: NodeData[]
