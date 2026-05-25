@@ -6,18 +6,25 @@ const { mockIsDemoMode, mockEmitAgentTokenFailure, mockIsLocalAgentSuppressed } 
   mockIsLocalAgentSuppressed: vi.fn(() => false),
 }))
 
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: mockIsDemoMode,
-  isNetlifyDeployment: false,
-}))
+vi.mock('../../../lib/demoMode', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/demoMode')>()
+  return {
+    ...actual,
+    isDemoMode: mockIsDemoMode,
+    isNetlifyDeployment: false,
+  }
+})
 vi.mock('../../../lib/analytics', () => ({
   emitAgentTokenFailure: mockEmitAgentTokenFailure,
 }))
-vi.mock('../../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-  MCP_HOOK_TIMEOUT_MS: 30_000,
-  DEFAULT_REFRESH_INTERVAL_MS: 120_000,
-}))
+vi.mock('../../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/constants')>()
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+    MCP_HOOK_TIMEOUT_MS: 30_000,
+  }
+})
 vi.mock('../../../lib/constants/network', () => ({
   isLocalAgentSuppressed: mockIsLocalAgentSuppressed,
 }))

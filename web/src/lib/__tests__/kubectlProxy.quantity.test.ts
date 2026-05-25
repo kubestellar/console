@@ -18,16 +18,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mocks — declared before importing the module under test
 // ---------------------------------------------------------------------------
 
-// Track whether we're simulating a Netlify environment
-let mockIsNetlify = false
-
-vi.mock('../demoMode', () => ({
-  isDemoModeForced: false,
-  isDemoMode: () => false,
-  get isNetlifyDeployment() {
-    return mockIsNetlify
-  },
+const { demoModeState } = vi.hoisted(() => ({
+  demoModeState: { isNetlify: false },
 }))
+
+vi.mock('../demoMode', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../demoMode')>()
+  return {
+    ...actual,
+    isDemoModeForced: false,
+    isDemoMode: () => false,
+    get isNetlifyDeployment() {
+      return demoModeState.isNetlify
+    },
+  }
+})
 
 vi.mock('../utils/wsAuth', async () => {
   const actual = await vi.importActual<typeof import('../utils/wsAuth')>('../utils/wsAuth')
@@ -170,7 +175,7 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: false })
   sentMessages = []
   activeWs = null
-  mockIsNetlify = false
+  demoModeState.isNetlify = false
   vi.stubGlobal('WebSocket', FakeWebSocket)
 })
 

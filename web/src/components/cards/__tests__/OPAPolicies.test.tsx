@@ -16,11 +16,17 @@ vi.mock('../DynamicCardErrorBoundary', () => ({
   DynamicCardErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
-const mockIsDemoMode = vi.fn(() => true)
-vi.mock('../../../lib/demoMode', () => ({
-  isDemoMode: () => mockIsDemoMode(),
-  isNetlifyDeployment: false,
+const { mockIsDemoMode } = vi.hoisted(() => ({
+  mockIsDemoMode: vi.fn(() => true),
 }))
+vi.mock('../../../lib/demoMode', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/demoMode')>()
+  return {
+    ...actual,
+    isDemoMode: () => mockIsDemoMode(),
+    isNetlifyDeployment: false,
+  }
+})
 
 const mockUseDemoMode = vi.fn()
 vi.mock('../../../hooks/useDemoMode', () => ({
