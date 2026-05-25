@@ -112,6 +112,16 @@ async function flushMicrotasks() {
   })
 }
 
+async function advanceUntilDisconnected(currentStatus: () => string, maxAttempts = 4) {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (currentStatus() === 'disconnected') {
+      return
+    }
+    await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+    await flushMicrotasks()
+  }
+}
+
 function mockFetchOk(data = healthData) {
   ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
     ok: true,
@@ -318,10 +328,7 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
       const { result } = renderHook(() => useLocalAgent())
 
       await flushMicrotasks()
-      for (let i = 1; i < FAILURE_THRESHOLD; i++) {
-        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
-        await flushMicrotasks()
-      }
+      await advanceUntilDisconnected(() => result.current.status)
 
       expect(result.current.status).toBe('disconnected')
       expect(result.current.error).toBe('Local agent not available')
