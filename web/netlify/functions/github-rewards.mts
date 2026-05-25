@@ -212,3 +212,11 @@ export default async (req: Request) => {
 export const config = {
   path: "/api/rewards/github",
 };
+
+/** @internal */
+export const _testOnly = {
+  MAX_RESPONSE_BYTES,
+  LEADERBOARD_URL,
+  LEADERBOARD_CACHE_TTL_MS,
+  LEADERBOARD_CACHE_KEY,
+};
