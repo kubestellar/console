@@ -29,7 +29,7 @@ import {
   LEADERBOARD_CACHE_TTL_MS,
   type LeaderboardData,
   type GitHubRewardsResponse,
-} from "../github-rewards.constants";
+} from "../_shared/github-rewards.constants";
 
 // Named constants for HTTP status codes to prevent magic numbers
 const HTTP_STATUS_OK = 200;
@@ -101,7 +101,7 @@ describe("github-rewards", () => {
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_NO_CONTENT);
       expect(res.headers.get("access-control-allow-origin")).toBe("*");
-      
+
       const allowedMethods = (res.headers.get("access-control-allow-methods") ?? "")
         .split(",")
         .map((method) => method.trim());

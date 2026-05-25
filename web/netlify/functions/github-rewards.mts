@@ -23,7 +23,7 @@ import {
   type LeaderboardData,
   type LeaderboardCacheEntry,
   type GitHubRewardsResponse,
-} from "./github-rewards.constants";
+} from "./_shared/github-rewards.constants";
 
 // ---------------------------------------------------------------------------
 // Helpers
