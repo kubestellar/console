@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,7 +17,6 @@ import (
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
-	"golang.org/x/sync/singleflight"
 )
 
 // githubAPITimeout is the timeout for HTTP requests to the GitHub API.
@@ -206,34 +203,6 @@ const maxIssuePages = 5
 
 // issuesPerPage is the number of issues requested per GitHub API call.
 const issuesPerPage = 50
-
-// FeedbackHandler handles feature requests and feedback
-type FeedbackHandler struct {
-	store         store.Store
-	githubToken   string
-	webhookSecret string
-	repoOwner     string
-	repoName      string
-	httpClient    *http.Client // shared HTTP client for connection reuse
-	// appTokenProvider is the kubestellar-console-bot GitHub App. When
-	// configured, issues are created authenticated as the App so the
-	// rewards classifier can distinguish console submissions from
-	// github.com submissions (anti-gaming). Nil means App auth is not
-	// configured and the handler falls back to the PAT in githubToken.
-	appTokenProvider *GitHubAppTokenProvider
-	// attributionProxyURL is the Netlify Function URL that acts as the
-	// central App-attribution proxy. When set and a per-user client
-	// credential is present, issue creation is proxied here first so
-	// GitHub stamps `performed_via_github_app.slug`. Falls back to
-	// direct App token or PAT when proxy is unavailable or unconfigured.
-	attributionProxyURL string
-
-	prCacheMu   sync.RWMutex
-	prCache     []GitHubPR
-	prCacheTime time.Time
-	// #7057 — singleflight group coalesces concurrent cold-cache PR fetches.
-	prFetchGroup singleflight.Group
-}
 
 // FeedbackConfig holds configuration for the feedback handler
 type FeedbackConfig struct {
