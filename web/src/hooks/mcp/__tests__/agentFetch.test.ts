@@ -25,9 +25,13 @@ vi.mock('../../../lib/constants', async (importOriginal) => {
     MCP_HOOK_TIMEOUT_MS: 30_000,
   }
 })
-vi.mock('../../../lib/constants/network', () => ({
-  isLocalAgentSuppressed: mockIsLocalAgentSuppressed,
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/constants/network')>()
+  return {
+    ...actual,
+    isLocalAgentSuppressed: mockIsLocalAgentSuppressed,
+  }
+})
 
 import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState } from '../agentFetch'
 
