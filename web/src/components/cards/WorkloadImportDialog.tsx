@@ -97,9 +97,17 @@ function parseYamlDocuments(text: string): { resources: ParsedResource[]; errors
 
       // Try to extract the first container image
       const spec = obj.spec as Record<string, unknown> | undefined
-      const templateSpec = (
-        (spec?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
-      )
+      let templateSpec: Record<string, unknown> | undefined
+
+      if (kind === 'CronJob') {
+        const jobTemplateSpec = (spec?.jobTemplate as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
+        templateSpec = (jobTemplateSpec?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
+      } else {
+        templateSpec = (
+          (spec?.template as Record<string, unknown> | undefined)?.spec as Record<string, unknown> | undefined
+        )
+      }
+
       const containers = (templateSpec?.containers as Array<Record<string, unknown>> | undefined) || []
       const image = (containers[0]?.image as string) || 'unknown'
 
@@ -140,13 +148,21 @@ interface WorkloadImportDialogProps {
   isOpen: boolean
   onClose: () => void
   onImport: (workloads: Workload[]) => void
+  isDemoData?: boolean
+  isLoading?: boolean
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImportDialogProps) {
+export function WorkloadImportDialog({
+  isOpen,
+  onClose,
+  onImport,
+  isDemoData = false,
+  isLoading = false,
+}: WorkloadImportDialogProps) {
   const { t } = useTranslation('cards')
   const [activeTab, setActiveTab] = useState<ImportTab>('yaml')
 
@@ -453,7 +469,8 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleYamlImport}
-          disabled={!yamlText.trim() || importSuccess}
+          disabled={!yamlText.trim() || importSuccess || isDemoData}
+          loading={isLoading}
         >
           {t('workloadImport.import')}
         </Button>
@@ -530,7 +547,8 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleHelmImport}
-          disabled={!helmRepoUrl.trim() || !helmChartName.trim() || !helmReleaseName.trim() || importSuccess}
+          disabled={!helmRepoUrl.trim() || !helmChartName.trim() || !helmReleaseName.trim() || importSuccess || isDemoData}
+          loading={isLoading}
         >
           {t('workloadImport.import')}
         </Button>
@@ -578,7 +596,8 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleGithubImport}
-          disabled={!githubUrl.trim() || importSuccess}
+          disabled={!githubUrl.trim() || importSuccess || isDemoData}
+          loading={isLoading}
         >
           {t('workloadImport.import')}
         </Button>
@@ -617,7 +636,8 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleKustomizeImport}
-          disabled={!kustomizeUrl.trim() || importSuccess}
+          disabled={!kustomizeUrl.trim() || importSuccess || isDemoData}
+          loading={isLoading}
         >
           {t('workloadImport.import')}
         </Button>
@@ -658,6 +678,12 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
       />
 
       <BaseModal.Content className="min-h-[520px]">
+        {isDemoData && (
+          <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20" data-testid="demo-warning-banner">
+            <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0" />
+            <span className="text-sm text-yellow-400">Demo Mode: Workload import is simulated or disabled.</span>
+          </div>
+        )}
         {importSuccess && (
           <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
             <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
