@@ -30,7 +30,7 @@ const CLEANUP_BUCKET_CURSOR_KEY = "cleanup-bucket-cursor";
 const PRESENCE_CLEANUP_DELETE_LIMIT = 100;
 const MAX_SESSION_ID_LEN = 64;
 /** Maximum allowed request body size (bytes). */
-const MAX_BODY_BYTES = 4_096;
+export const MAX_BODY_BYTES = 4_096;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 const PRESENCE_WRITE_RATE_LIMIT_MAX_REQUESTS = 120;
 const PRESENCE_WRITE_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
