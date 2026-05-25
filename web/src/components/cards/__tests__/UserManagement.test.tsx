@@ -6,10 +6,31 @@ import type { ConsoleUser, UserRole } from '../../../types/users'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockUpdateUserRole = vi.fn()
-const mockDeleteUser = vi.fn()
-const mockDrillToRBAC = vi.fn()
-const mockShowToast = vi.fn()
+const { mockUpdateUserRole, mockDeleteUser, mockDrillToRBAC, mockShowToast, mockState } = vi.hoisted(() => ({
+  mockUpdateUserRole: vi.fn(),
+  mockDeleteUser: vi.fn(),
+  mockDrillToRBAC: vi.fn(),
+  mockShowToast: vi.fn(),
+  mockState: {
+    users: [] as ConsoleUser[],
+    isLoading: false,
+    isRefreshing: false,
+    usersError: null as string | null,
+    isDemoMode: false,
+    showSkeleton: false,
+    showEmptyState: false,
+    currentUser: {
+      id: 'current-user',
+      github_id: 'current-123',
+      github_login: 'currentuser',
+      email: 'current@example.com',
+      avatar_url: 'https://example.com/avatar.jpg',
+      role: 'admin' as UserRole,
+      onboarded: true,
+      created_at: new Date().toISOString(),
+    } satisfies ConsoleUser,
+  },
+}))
 
 const makeConsoleUser = (overrides: Partial<ConsoleUser> = {}): ConsoleUser => ({
   id: 'user-1',
@@ -39,21 +60,12 @@ const mockViewerUser: ConsoleUser = makeConsoleUser({
   role: 'viewer',
 })
 
-// Default mock state
-let mockUsers: ConsoleUser[] = []
-let mockIsLoading = false
-let mockIsRefreshing = false
-let mockUsersError: string | null = null
-let mockIsDemoMode = false
-let mockShowSkeleton = false
-let mockShowEmptyState = false
-
 vi.mock('../../../hooks/useUsers', () => ({
   useConsoleUsers: () => ({
-    users: mockUsers,
-    isLoading: mockIsLoading,
-    isRefreshing: mockIsRefreshing,
-    error: mockUsersError,
+    users: mockState.users,
+    isLoading: mockState.isLoading,
+    isRefreshing: mockState.isRefreshing,
+    error: mockState.usersError,
     updateUserRole: mockUpdateUserRole,
     deleteUser: mockDeleteUser,
   }),
@@ -91,21 +103,21 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
-    user: mockCurrentUser,
+    user: mockState.currentUser,
     isAuthenticated: true,
   }),
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({
-    isDemoMode: mockIsDemoMode,
+    isDemoMode: mockState.isDemoMode,
   }),
 }))
 
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: () => ({
-    showSkeleton: mockShowSkeleton,
-    showEmptyState: mockShowEmptyState,
+    showSkeleton: mockState.showSkeleton,
+    showEmptyState: mockState.showEmptyState,
   }),
 }))
 
@@ -190,18 +202,19 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
 describe('UserManagement', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUsers = []
-    mockIsLoading = false
-    mockIsRefreshing = false
-    mockUsersError = null
-    mockIsDemoMode = false
-    mockShowSkeleton = false
-    mockShowEmptyState = false
+    mockState.users = []
+    mockState.isLoading = false
+    mockState.isRefreshing = false
+    mockState.usersError = null
+    mockState.isDemoMode = false
+    mockState.showSkeleton = false
+    mockState.showEmptyState = false
+    mockState.currentUser = { ...mockCurrentUser }
   })
 
   describe('Loading states', () => {
     it('renders skeleton when showSkeleton is true', () => {
-      mockShowSkeleton = true
+      mockState.showSkeleton = true
       render(<UserManagement />)
       
       // Skeleton should have pulse animations
@@ -212,7 +225,7 @@ describe('UserManagement', () => {
     })
 
     it('renders empty state when showEmptyState is true', () => {
-      mockShowEmptyState = true
+      mockState.showEmptyState = true
       render(<UserManagement />)
       
       expect(screen.queryByTestId('search')).toBeNull()
@@ -221,17 +234,9 @@ describe('UserManagement', () => {
 
   describe('Admin gating', () => {
     it('non-admin viewer → role-change and delete controls not rendered', () => {
-      // Override auth mock to make current user a viewer
-      vi.mocked(vi.importMock('../../../lib/auth')).then((mod) => {
-        vi.doMock('../../../lib/auth', () => ({
-          useAuth: () => ({
-            user: { ...mockCurrentUser, role: 'viewer' },
-            isAuthenticated: true,
-          }),
-        }))
-      })
+      mockState.currentUser = { ...mockCurrentUser, role: 'viewer' }
 
-      mockUsers = [
+      mockState.users = [
         makeConsoleUser({ id: 'user-1', github_login: 'user1', role: 'viewer' }),
         makeConsoleUser({ id: 'user-2', github_login: 'user2', role: 'editor' }),
       ]
@@ -252,7 +257,7 @@ describe('UserManagement', () => {
     it('admin viewer → role-change and delete controls visible and enabled', async () => {
       const user = userEvent.setup()
       
-      mockUsers = [
+      mockState.users = [
         mockCurrentUser, // admin
         makeConsoleUser({ id: 'user-2', github_login: 'user2', role: 'viewer' }),
       ]
@@ -277,7 +282,7 @@ describe('UserManagement', () => {
     it('current logged-in user row → delete button disabled (cannot self-delete)', async () => {
       const user = userEvent.setup()
       
-      mockUsers = [mockCurrentUser, mockViewerUser]
+      mockState.users = [mockCurrentUser, mockViewerUser]
 
       render(<UserManagement />)
 
@@ -297,7 +302,7 @@ describe('UserManagement', () => {
     it('current logged-in user row → cannot demote own admin role', async () => {
       const user = userEvent.setup()
       
-      mockUsers = [mockCurrentUser, mockViewerUser]
+      mockState.users = [mockCurrentUser, mockViewerUser]
 
       render(<UserManagement />)
 
@@ -331,7 +336,7 @@ describe('UserManagement', () => {
         role: 'viewer',
       })
 
-      mockUsers = [mockCurrentUser, targetUser]
+      mockState.users = [mockCurrentUser, targetUser]
 
       render(<UserManagement />)
 
@@ -383,7 +388,7 @@ describe('UserManagement', () => {
         role: 'viewer',
       })
 
-      mockUsers = [mockCurrentUser, targetUser]
+      mockState.users = [mockCurrentUser, targetUser]
 
       render(<UserManagement />)
 
@@ -425,7 +430,7 @@ describe('UserManagement', () => {
         role: 'viewer',
       })
 
-      mockUsers = [mockCurrentUser, targetUser]
+      mockState.users = [mockCurrentUser, targetUser]
 
       render(<UserManagement />)
 
@@ -476,7 +481,7 @@ describe('UserManagement', () => {
         role: 'viewer',
       })
 
-      mockUsers = [mockCurrentUser, targetUser]
+      mockState.users = [mockCurrentUser, targetUser]
 
       render(<UserManagement />)
 
@@ -531,7 +536,7 @@ describe('UserManagement', () => {
         role: 'viewer',
       })
 
-      mockUsers = [mockCurrentUser, targetUser]
+      mockState.users = [mockCurrentUser, targetUser]
 
       render(<UserManagement />)
 
@@ -593,7 +598,7 @@ describe('UserManagement', () => {
         role: 'viewer',
       })
 
-      mockUsers = [mockCurrentUser, targetUser]
+      mockState.users = [mockCurrentUser, targetUser]
 
       render(<UserManagement />)
 
@@ -641,15 +646,15 @@ describe('UserManagement', () => {
 
   describe('Demo mode', () => {
     it('isDemoData=true → demo badge shown; mutation controls disabled', () => {
-      mockIsDemoMode = true
-      mockUsers = [mockCurrentUser, mockViewerUser]
+      mockState.isDemoMode = true
+      mockState.users = [mockCurrentUser, mockViewerUser]
 
       render(<UserManagement />)
 
       // Demo mode should disable mutation controls
       // This is handled by the CardWrapper which we're not rendering in isolation
       // But we verify isDemoMode is being passed correctly
-      expect(mockIsDemoMode).toBe(true)
+      expect(mockState.isDemoMode).toBe(true)
     })
   })
 
@@ -657,7 +662,7 @@ describe('UserManagement', () => {
     it('tabs are keyboard navigable with arrow keys', async () => {
       const user = userEvent.setup()
       
-      mockUsers = [mockCurrentUser]
+      mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
@@ -683,7 +688,7 @@ describe('UserManagement', () => {
     it('Home key navigates to first tab', async () => {
       const user = userEvent.setup()
       
-      mockUsers = [mockCurrentUser]
+      mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
@@ -697,7 +702,7 @@ describe('UserManagement', () => {
     it('End key navigates to last tab', async () => {
       const user = userEvent.setup()
       
-      mockUsers = [mockCurrentUser]
+      mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
@@ -711,7 +716,7 @@ describe('UserManagement', () => {
 
   describe('User list rendering', () => {
     it('renders all users in the list', () => {
-      mockUsers = [
+      mockState.users = [
         mockCurrentUser,
         makeConsoleUser({ id: 'user-2', github_login: 'alice', role: 'editor' }),
         makeConsoleUser({ id: 'user-3', github_login: 'bob', role: 'viewer' }),
@@ -729,7 +734,7 @@ describe('UserManagement', () => {
     })
 
     it('shows user avatars when avatar_url is present', () => {
-      mockUsers = [mockCurrentUser]
+      mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
@@ -743,7 +748,7 @@ describe('UserManagement', () => {
     })
 
     it('shows initials when avatar_url is missing', () => {
-      mockUsers = [
+      mockState.users = [
         makeConsoleUser({
           id: 'user-no-avatar',
           github_login: 'testuser',
@@ -762,7 +767,7 @@ describe('UserManagement', () => {
     })
 
     it('displays user email when present', () => {
-      mockUsers = [mockCurrentUser]
+      mockState.users = [mockCurrentUser]
 
       render(<UserManagement />)
 
@@ -770,7 +775,7 @@ describe('UserManagement', () => {
     })
 
     it('displays role badges with correct styling', () => {
-      mockUsers = [
+      mockState.users = [
         makeConsoleUser({ id: 'admin-user', github_login: 'adminuser', role: 'admin' }),
         makeConsoleUser({ id: 'editor-user', github_login: 'editoruser', role: 'editor' }),
         makeConsoleUser({ id: 'viewer-user', github_login: 'vieweruser', role: 'viewer' }),
