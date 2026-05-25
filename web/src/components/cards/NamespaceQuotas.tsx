@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, AlertTriangle } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import {
   useClusters,
@@ -70,13 +70,40 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const isFetchingData = quotasLoading || limitsLoading
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isInitialLoading || isFetchingData,
     isRefreshing: clustersRefreshing || namespacesRefreshing,
     hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed: clustersFailed,
-    consecutiveFailures: clustersFailures })
+    consecutiveFailures: clustersFailures,
+  })
+
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex flex-col min-h-card">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+          <Skeleton variant="text" width={140} height={20} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <Skeleton variant="rounded" height={32} className="mb-4" />
+        <div className="space-y-3">
+          <Skeleton variant="rounded" height={50} />
+          <Skeleton variant="rounded" height={50} />
+          <Skeleton variant="rounded" height={50} />
+        </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <AlertTriangle className="w-6 h-6 text-red-400" />
+        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch data')}</p>
+      </div>
+    )
+  }
 
   // Handle save quota
   const handleSaveQuota = async (spec: { cluster: string; namespace: string; name: string; hard: Record<string, string> }) => {
