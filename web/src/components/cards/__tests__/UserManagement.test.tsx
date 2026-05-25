@@ -121,38 +121,42 @@ vi.mock('../CardDataContext', () => ({
   }),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: (items: unknown[], _opts: unknown) => ({
-    items,
-    allFilteredItems: items,
-    totalItems: (items as unknown[]).length,
-    currentPage: 1,
-    totalPages: 1,
-    itemsPerPage: 10,
-    goToPage: vi.fn(),
-    needsPagination: false,
-    setItemsPerPage: vi.fn(),
-    filters: {
-      search: '',
-      setSearch: vi.fn(),
-      localClusterFilter: [],
-      toggleClusterFilter: vi.fn(),
-      clearClusterFilter: vi.fn(),
-      availableClusters: [],
-      showClusterFilter: false,
-      setShowClusterFilter: vi.fn(),
-      clusterFilterRef: { current: null },
-    },
-    sorting: {
-      sortBy: 'name',
-      setSortBy: vi.fn(),
-      sortDirection: 'asc',
-      setSortDirection: vi.fn(),
-    },
-    containerRef: { current: null },
-    containerStyle: {},
-  }),
-}))
+vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
+  return {
+    ...actual,
+    useCardData: (items: unknown[], _opts: unknown) => ({
+      items,
+      allFilteredItems: items,
+      totalItems: (items as unknown[]).length,
+      currentPage: 1,
+      totalPages: 1,
+      itemsPerPage: 10,
+      goToPage: vi.fn(),
+      needsPagination: false,
+      setItemsPerPage: vi.fn(),
+      filters: {
+        search: '',
+        setSearch: vi.fn(),
+        localClusterFilter: [],
+        toggleClusterFilter: vi.fn(),
+        clearClusterFilter: vi.fn(),
+        availableClusters: [],
+        showClusterFilter: false,
+        setShowClusterFilter: vi.fn(),
+        clusterFilterRef: { current: null },
+      },
+      sorting: {
+        sortBy: 'name',
+        setSortBy: vi.fn(),
+        sortDirection: 'asc',
+        setSortDirection: vi.fn(),
+      },
+      containerRef: { current: null },
+      containerStyle: {},
+    }),
+  }
+})
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
