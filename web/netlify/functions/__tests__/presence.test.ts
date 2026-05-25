@@ -7,7 +7,9 @@ import {
   makeNetlifyRequest,
   readJson,
 } from "./netlify-handler-helpers";
-import handler, { MAX_BODY_BYTES } from "../presence.mts";
+import handler, { _testOnly } from "../presence.mts";
+
+const { MAX_BODY_BYTES } = _testOnly;
 
 // Named constants for HTTP status codes to avoid magic numbers
 const HTTP_STATUS_OK = 200;
@@ -74,7 +76,8 @@ describe("presence", () => {
       return undefined;
     });
 
-    mockList.mockImplementation(({ prefix, paginate }) => {
+    mockList.mockImplementation((opts = {}) => {
+      const { prefix, paginate } = opts;
       const matchedKeys = Array.from(mockStoreData.keys())
         .filter((key) => !prefix || key.startsWith(prefix));
       const matchedBlobs = matchedKeys.map((key) => ({
@@ -105,6 +108,7 @@ describe("presence", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   describe("CORS & HTTP Method Validation", () => {
@@ -189,9 +193,7 @@ describe("presence", () => {
 
   describe("POST Session Registration & Missing Inputs", () => {
     it("successfully registers valid session ID and returns 204", async () => {
-      vi.stubGlobal("Date", {
-        now: () => 120_000, // Bucket 4
-      });
+      vi.spyOn(Date, "now").mockReturnValue(120_000); // Bucket 4
 
       const req = new Request("https://example.test/.netlify/functions/presence", {
         method: "POST",
@@ -248,10 +250,7 @@ describe("presence", () => {
     });
 
     it("correctly deduplicates multiple listings of the same session ID across active buckets", async () => {
-      // Mock Date.now to 120_000 (Bucket 4)
-      vi.stubGlobal("Date", {
-        now: () => 120_000,
-      });
+      vi.spyOn(Date, "now").mockReturnValue(120_000); // Bucket 4
 
       // Populate store with sessions:
       // Active buckets window for bucket 4 goes back Math.ceil(90000 / 30000) + 1 = 4 buckets.
@@ -274,9 +273,7 @@ describe("presence", () => {
     it("cleans up expired TTL buckets older than the active window", async () => {
       // Math.ceil(90000 / 30000) + 1 = 4 buckets.
       // If currentBucket is 6, newestExpiredBucket = 6 - 4 = 2.
-      vi.stubGlobal("Date", {
-        now: () => 180_000, // Bucket 6
-      });
+      vi.spyOn(Date, "now").mockReturnValue(180_000); // Bucket 6
 
       // session-2-old-user is expired (bucket 2 is older than active window [3..6])
       mockStoreData.set("session-2-old-user", "60000");
