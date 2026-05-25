@@ -1,23 +1,24 @@
 import { getStore } from "@netlify/blobs";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
-const ALLOWED_HOSTS = new Set([
-  "console.kubestellar.io",
-  "localhost",
-  "127.0.0.1",
-]);
+const ALLOWED_ORIGINS = [
+  "https://console.kubestellar.io",
+  "https://kubestellar-console.netlify.app",
+  "http://localhost:5174",
+  "http://localhost:8080",
+];
 
-function getAllowedCorsOrigin(origin: string): string {
-  if (!origin) return "https://console.kubestellar.io";
-  try {
-    const hostname = new URL(origin).hostname;
-    if (ALLOWED_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
-      return origin;
-    }
-  } catch {
-    /* ignore */
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
   }
-  return "https://console.kubestellar.io";
+
+  return headers;
 }
 
 const STORE_NAME = "presence";
@@ -156,12 +157,9 @@ async function countActiveSessions(store: ReturnType<typeof getStore>, currentBu
 export default async (req: Request) => {
   const store = getStore(STORE_NAME);
 
-  const origin = req.headers.get("origin") || "";
-  const corsOrigin = getAllowedCorsOrigin(origin);
+  const origin = req.headers.get("origin");
   const headers = {
-    "Access-Control-Allow-Origin": corsOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    ...getCorsHeaders(origin),
     "Cache-Control": "no-cache, no-store",
   };
 
