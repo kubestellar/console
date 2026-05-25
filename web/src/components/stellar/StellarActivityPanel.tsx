@@ -88,12 +88,9 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
         }}>
           Stellar log
         </span>
-        <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 10,
-          color: 'var(--s-info)', background: 'rgba(56,139,253,0.1)',
-          border: '1px solid rgba(56,139,253,0.25)',
-          borderRadius: 10, padding: '0 5px',
-        }}>
+        <span
+          className="rounded-full border border-[var(--s-brand)] bg-[var(--s-brand-dim)] px-[5px] font-mono text-[10px] text-[var(--s-brand)]"
+        >
           {activity.length}
         </span>
         <div style={{ flex: 1 }} />
@@ -197,13 +194,10 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      style={{
-        background: active ? 'rgba(56,139,253,0.12)' : 'transparent',
-        border: `1px solid ${active ? 'var(--s-info)' : 'var(--s-border-muted)'}`,
-        color: active ? 'var(--s-info)' : 'var(--s-text-muted)',
-        fontFamily: 'var(--s-mono)', fontSize: 10,
-        padding: '1px 8px', borderRadius: 10, cursor: 'pointer',
-      }}
+      className={active
+        ? 'rounded-full border border-[var(--s-brand)] bg-[var(--s-brand-dim)] px-2 py-px font-mono text-[10px] text-[var(--s-brand)]'
+        : 'rounded-full border border-[var(--s-border-muted)] bg-transparent px-2 py-px font-mono text-[10px] text-[var(--s-text-muted)]'
+      }
     >
       {children}
     </button>

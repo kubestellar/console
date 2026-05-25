@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useStellar } from '../../hooks/useStellar'
-import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
 import {
   STELLAR_NAVIGATION_EVENT,
   STELLAR_RAIL_ITEMS,
@@ -73,7 +72,7 @@ export function StellarSidebar() {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="stellar-theme relative">
       <nav
         aria-label="Stellar shortcuts"
         style={{
@@ -120,7 +119,7 @@ export function StellarSidebar() {
                 border: 'none',
                 cursor: 'pointer',
                 background: active ? 'var(--s-brand)' : 'transparent',
-                color: active ? STELLAR_DARK_BG : onStellarRoute ? 'var(--s-text)' : 'var(--s-brand)',
+                color: active ? 'var(--s-brand-foreground)' : onStellarRoute ? 'var(--s-text)' : 'var(--s-brand)',
                 fontSize: STELLAR_NAV_FONT_SIZE_PX,
                 lineHeight: 1,
                 display: 'grid',

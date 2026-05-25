@@ -287,7 +287,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
             type="button"
             onClick={() => exportEntries(sortedEntries, csvColumns, getResultLabel)}
             disabled={sortedEntries.length === 0}
-            className="inline-flex items-center justify-center rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm font-medium text-[var(--s-text)] transition hover:border-[var(--s-border-focus)] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-md border border-[var(--s-border)] bg-[var(--s-surface-2)] px-3 py-2 text-sm font-medium text-[var(--s-text)] transition hover:border-[var(--s-border-focus)] hover:text-[var(--s-text)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t('stellar.auditLog.exportCsv')}
           </button>
@@ -333,7 +333,7 @@ export function StellarAuditLogSection({ className }: StellarAuditLogSectionProp
                   className={cn(
                     'rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] transition',
                     selectedRange === option.value
-                      ? 'border-[var(--s-border-focus)] bg-blue-500/10 text-blue-300'
+                      ? 'border-[var(--s-border-focus)] bg-[var(--s-brand-dim)] text-[var(--s-brand)]'
                       : 'border-[var(--s-border)] bg-[var(--s-surface-2)] text-[var(--s-text-muted)] hover:text-[var(--s-text)]',
                   )}
                 >

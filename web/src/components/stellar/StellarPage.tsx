@@ -159,7 +159,7 @@ export function StellarPage() {
       id={STELLAR_SECTION_ID.OVERVIEW}
       tabIndex={-1}
       data-testid="stellar-section-overview"
-      className="bg-[var(--s-bg)] text-[var(--s-text)]"
+      className="stellar-theme bg-[var(--s-bg)] text-[var(--s-text)]"
       style={{ minHeight: `calc(100vh - ${APP_TOP_NAV_OFFSET_PX}px)` }}
     >
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-4 md:px-6 lg:px-8">

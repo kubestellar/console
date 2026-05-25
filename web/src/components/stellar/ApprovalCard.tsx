@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { StellarAction } from '../../types/stellar'
-import { STELLAR_DARK_BG } from '../../lib/theme/chartColors'
 
 export function ApprovalCard({
   action,
@@ -14,7 +13,7 @@ export function ApprovalCard({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   return (
-    <div style={{ background: 'var(--s-surface-2)', border: '1px solid rgba(227,179,65,0.4)', borderRadius: 'var(--s-r)', padding: '8px 10px', marginBottom: 4 }}>
+    <div style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-warning)', borderRadius: 'var(--s-r)', padding: '8px 10px', marginBottom: 4 }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text)', marginBottom: 3 }}>{action.description}</div>
       <div style={{ fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-text-muted)', marginBottom: 8 }}>
         {action.actionType} · {action.cluster}{action.namespace ? `/${action.namespace}` : ''}
@@ -27,7 +26,7 @@ export function ApprovalCard({
             onApprove(action.confirmToken).catch((e) => setError(e instanceof Error ? e.message : 'approval failed')).finally(() => setBusy(false))
           }}
           disabled={busy}
-          style={{ background: 'var(--s-success)', color: STELLAR_DARK_BG, border: 'none', borderRadius: 'var(--s-rs)', padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          style={{ background: 'var(--s-success)', color: 'var(--s-success-foreground)', border: 'none', borderRadius: 'var(--s-rs)', padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
         >
           {busy ? '...' : 'Approve'}
         </button>
