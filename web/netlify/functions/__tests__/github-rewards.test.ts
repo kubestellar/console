@@ -21,9 +21,15 @@ vi.mock("@netlify/blobs", () => ({
   }),
 }));
 
-import handler, { _testOnly } from "../github-rewards.mts";
-
-const { MAX_RESPONSE_BYTES, LEADERBOARD_URL, LEADERBOARD_CACHE_KEY, LEADERBOARD_CACHE_TTL_MS } = _testOnly;
+import handler from "../github-rewards.mts";
+import {
+  MAX_RESPONSE_BYTES,
+  LEADERBOARD_URL,
+  LEADERBOARD_CACHE_KEY,
+  LEADERBOARD_CACHE_TTL_MS,
+  type LeaderboardData,
+  type GitHubRewardsResponse,
+} from "../github-rewards.constants";
 
 // Named constants for HTTP status codes to prevent magic numbers
 const HTTP_STATUS_OK = 200;
@@ -31,44 +37,6 @@ const HTTP_STATUS_NO_CONTENT = 204;
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_METHOD_NOT_ALLOWED = 405;
 const HTTP_STATUS_SERVICE_UNAVAILABLE = 503;
-
-// Interface definitions matching the API contract for absolute type safety
-interface LeaderboardBreakdown {
-  bug_issues: number;
-  feature_issues: number;
-  other_issues: number;
-  prs_opened: number;
-  prs_merged: number;
-}
-
-interface LeaderboardEntry {
-  login: string;
-  avatar_url: string;
-  total_points: number;
-  level: string;
-  level_rank: number;
-  breakdown: LeaderboardBreakdown;
-  bonus_points: number;
-  rank: number;
-}
-
-interface LeaderboardData {
-  generated_at: string;
-  git_hash: string;
-  entries: LeaderboardEntry[];
-}
-
-interface GitHubRewardsResponse {
-  total_points: number;
-  contributions: unknown[];
-  breakdown: LeaderboardBreakdown;
-  bonus_points: number;
-  level: string;
-  rank: number;
-  cached_at: string;
-  leaderboard_generated_at: string;
-  from_cache: boolean;
-}
 
 const mockFetch = vi.fn();
 

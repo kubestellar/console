@@ -13,66 +13,17 @@
  */
 
 import { getStore } from "@netlify/blobs";
-
-const LEADERBOARD_URL = "https://kubestellar.io/data/leaderboard.json";
-const CACHE_STORE = "github-rewards";
-/** Cache the full leaderboard for 1 hour — it only changes once daily */
-const LEADERBOARD_CACHE_TTL_MS = 60 * 60 * 1_000;
-const LEADERBOARD_CACHE_KEY = "__leaderboard__";
-/** Request timeout for fetching leaderboard JSON */
-const FETCH_TIMEOUT_MS = 15_000;
-/** Maximum upstream response size (512 KB) */
-const MAX_RESPONSE_BYTES = 512_000;
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface LeaderboardEntry {
-  login: string;
-  avatar_url: string;
-  total_points: number;
-  level: string;
-  level_rank: number;
-  breakdown: {
-    bug_issues: number;
-    feature_issues: number;
-    other_issues: number;
-    prs_opened: number;
-    prs_merged: number;
-  };
-  bonus_points: number;
-  rank: number;
-}
-
-interface LeaderboardData {
-  generated_at: string;
-  git_hash: string;
-  entries: LeaderboardEntry[];
-}
-
-interface LeaderboardCacheEntry {
-  data: LeaderboardData;
-  storedAt: number;
-}
-
-interface GitHubRewardsResponse {
-  total_points: number;
-  contributions: never[];
-  breakdown: {
-    bug_issues: number;
-    feature_issues: number;
-    other_issues: number;
-    prs_opened: number;
-    prs_merged: number;
-  };
-  bonus_points: number;
-  level: string;
-  rank: number;
-  cached_at: string;
-  leaderboard_generated_at: string;
-  from_cache: boolean;
-}
+import {
+  LEADERBOARD_URL,
+  CACHE_STORE,
+  LEADERBOARD_CACHE_TTL_MS,
+  LEADERBOARD_CACHE_KEY,
+  FETCH_TIMEOUT_MS,
+  MAX_RESPONSE_BYTES,
+  type LeaderboardData,
+  type LeaderboardCacheEntry,
+  type GitHubRewardsResponse,
+} from "./github-rewards.constants";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -211,12 +162,4 @@ export default async (req: Request) => {
 
 export const config = {
   path: "/api/rewards/github",
-};
-
-/** @internal */
-export const _testOnly = {
-  MAX_RESPONSE_BYTES,
-  LEADERBOARD_URL,
-  LEADERBOARD_CACHE_TTL_MS,
-  LEADERBOARD_CACHE_KEY,
 };
