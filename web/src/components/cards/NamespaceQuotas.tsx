@@ -340,6 +340,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
       />
 
       <QuotaModal
+        key={editingQuota ? `edit-${editingQuota.cluster}-${editingQuota.namespace}-${editingQuota.name}` : 'new'}
         isOpen={isModalOpen}
         onClose={() => {
           closeModal()
