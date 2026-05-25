@@ -169,6 +169,7 @@ export const config = {
   path: "/api/rewards/bonus",
 };
 
+/** @internal */
 export const _testOnly = {
   MAX_RESPONSE_BYTES,
   GITHUB_LOGIN_REGEX,

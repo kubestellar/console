@@ -11,7 +11,7 @@ import {
 } from "./netlify-handler-helpers";
 import handler, { _testOnly } from "../bonus-points.mts";
 
-const { MAX_RESPONSE_BYTES, CACHE_TTL_MS, resetCache } = _testOnly;
+const { MAX_RESPONSE_BYTES, resetCache } = _testOnly;
 
 // Named constants for HTTP status codes to avoid magic numbers
 const HTTP_STATUS_OK = 200;
@@ -98,11 +98,10 @@ describe("bonus-points", () => {
 
   describe("Regex Matching & Points Aggregation", () => {
     it("returns 0 points when no issues exist on GitHub", async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "2" }),
-        text: async () => "[]",
-      });
+      mockFetch.mockResolvedValue(new Response("[]", {
+        status: 200,
+        headers: { "content-length": "2" },
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
@@ -123,11 +122,10 @@ describe("bonus-points", () => {
           state: "closed",
         },
       ];
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "100" }),
-        text: async () => JSON.stringify(mockIssues),
-      });
+      mockFetch.mockResolvedValue(new Response(JSON.stringify(mockIssues), {
+        status: 200,
+        headers: { "content-length": "100" },
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
@@ -170,11 +168,10 @@ describe("bonus-points", () => {
           state: "closed",
         },
       ];
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "500" }),
-        text: async () => JSON.stringify(mockIssues),
-      });
+      mockFetch.mockResolvedValue(new Response(JSON.stringify(mockIssues), {
+        status: 200,
+        headers: { "content-length": "500" },
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
@@ -212,11 +209,10 @@ describe("bonus-points", () => {
           state: "closed",
         },
       ];
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "500" }),
-        text: async () => JSON.stringify(mockIssues),
-      });
+      mockFetch.mockResolvedValue(new Response(JSON.stringify(mockIssues), {
+        status: 200,
+        headers: { "content-length": "500" },
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
@@ -236,11 +232,10 @@ describe("bonus-points", () => {
           state: "closed",
         },
       ];
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "100" }),
-        text: async () => JSON.stringify(mockIssues),
-      });
+      mockFetch.mockResolvedValue(new Response(JSON.stringify(mockIssues), {
+        status: 200,
+        headers: { "content-length": "100" },
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
@@ -253,11 +248,10 @@ describe("bonus-points", () => {
 
   describe("Caching & Authenticated Fetch Operations", () => {
     it("caches downstream results and avoids redundant fetch calls", async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "2" }),
-        text: async () => "[]",
-      });
+      mockFetch.mockImplementation(() => new Response("[]", {
+        status: 200,
+        headers: { "content-length": "2" },
+      }));
 
       // Request 1: hits GitHub API
       const res1 = await handler(makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat"));
@@ -271,11 +265,10 @@ describe("bonus-points", () => {
     });
 
     it("bypasses cache when resetCache() is executed", async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "2" }),
-        text: async () => "[]",
-      });
+      mockFetch.mockImplementation(() => new Response("[]", {
+        status: 200,
+        headers: { "content-length": "2" },
+      }));
 
       await handler(makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat"));
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -289,11 +282,10 @@ describe("bonus-points", () => {
     });
 
     it("applies GITHUB_TOKEN Authorization header when configured in env", async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": "2" }),
-        text: async () => "[]",
-      });
+      mockFetch.mockImplementation(() => new Response("[]", {
+        status: 200,
+        headers: { "content-length": "2" },
+      }));
 
       await handler(makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat"));
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -305,11 +297,10 @@ describe("bonus-points", () => {
 
   describe("Error Handling & Protection Against Exception Leaking", () => {
     it("returns 502 with clean error response when GitHub API rejects with 4xx", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
+      mockFetch.mockResolvedValue(new Response("", {
         status: 403,
         statusText: "Rate limit exceeded",
-      });
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
@@ -320,11 +311,10 @@ describe("bonus-points", () => {
 
     it("returns 502 with clean error response when response payload exceeds limit", async () => {
       const oversizedLength = MAX_RESPONSE_BYTES + 1;
-      mockFetch.mockResolvedValue({
-        ok: true,
-        headers: new Headers({ "content-length": String(oversizedLength) }),
-        text: async () => "a".repeat(oversizedLength),
-      });
+      mockFetch.mockResolvedValue(new Response("a".repeat(oversizedLength), {
+        status: 200,
+        headers: { "content-length": String(oversizedLength) },
+      }));
 
       const req = makeNetlifyRequest("/.netlify/functions/bonus-points?login=rishi-jat");
       const res = await handler(req);
