@@ -23,7 +23,6 @@ import {
   kagentiProviderChat,
   discoverKagentiProviderAgent,
 } from '../lib/kagentiProviderBackend'
-import { logger } from '@/lib/logger'
 
 export interface MissionMessagingActions {
   sendMessage: (missionId: string, content: string) => void

@@ -41,7 +41,7 @@ export interface MissionStartActions {
 
 export function createMissionStartActions(
   state: MissionProviderState,
-  stateUtils: MissionStateUtils,
+  _stateUtils: MissionStateUtils,
   executionApi: Pick<MissionExecutionApi, 'executeMission' | 'preflightAndExecute'>,
 ): MissionStartActions {
   const startMission = (params: StartMissionParams): string => {
