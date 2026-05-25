@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -194,9 +195,12 @@ func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, limit int) ([]Ste
 		if err := rows.Scan(&e.ID, &tsRaw, &e.UserID, &e.Action, &e.EntityType, &e.EntityID, &e.Cluster, &e.Detail); err != nil {
 			return nil, err
 		}
-		t, _ := time.Parse("2006-01-02T15:04:05Z", tsRaw)
-		if t.IsZero() {
-			t, _ = time.Parse("2006-01-02 15:04:05", tsRaw)
+		t, err := time.Parse("2006-01-02T15:04:05Z", tsRaw)
+		if err != nil {
+			t, err = time.Parse("2006-01-02 15:04:05", tsRaw)
+			if err != nil {
+				slog.Warn("[StellarStore] unparseable timestamp in events row", "id", e.ID, "raw", tsRaw)
+			}
 		}
 		e.Ts = t.UTC()
 		out = append(out, e)
