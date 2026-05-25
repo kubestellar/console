@@ -45,10 +45,18 @@ export function KVCacheMonitor() {
 
   const selectedStack = stackContext?.selectedStack ?? null
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
-  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing } = usePrometheusMetrics(
+  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing, lastRefresh: metricsLastRefresh } = usePrometheusMetrics(
     selectedStack?.cluster,
     selectedStack?.namespace,
   )
+
+  const lastUpdated = useMemo(() => {
+    const stackLastRefresh = stackContext?.lastRefresh ?? null
+    if (stackLastRefresh && metricsLastRefresh) {
+      return stackLastRefresh > metricsLastRefresh ? stackLastRefresh : metricsLastRefresh
+    }
+    return stackLastRefresh ?? metricsLastRefresh ?? null
+  }, [metricsLastRefresh, stackContext?.lastRefresh])
 
   useReportCardDataState({
     consecutiveFailures: 0,
@@ -56,6 +64,7 @@ export function KVCacheMonitor() {
     isDemoData: showDemoBadge,
     isFailed: false,
     isRefreshing: (stackContext?.isRefreshing ?? false) || metricsRefreshing,
+    lastUpdated,
   })
 
   generateStatsRef.current = () =>

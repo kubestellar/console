@@ -38,6 +38,7 @@ interface StreamState {
   status: string
   error: string | null
   since: string
+  lastRefresh: number | null
 }
 
 let streamState: StreamState = {
@@ -47,6 +48,7 @@ let streamState: StreamState = {
   status: '',
   error: null,
   since: '0',
+  lastRefresh: null,
 }
 
 const subscribers = new Set<() => void>()
@@ -87,6 +89,7 @@ export function resetBenchmarkStream(since: string) {
     status: '',
     error: null,
     since,
+    lastRefresh: null,
   }
   notifySubscribers()
   started = true
@@ -154,6 +157,7 @@ function startGlobalStream(since: string) {
                     ...streamState,
                     reports: [...streamState.reports, ...batch],
                     status: 'streaming',
+                    lastRefresh: Date.now(),
                   }
                   notifySubscribers()
                 } catch {
@@ -231,12 +235,14 @@ export function useCachedBenchmarkReports() {
   const hasStreamedData = stream.reports.length > 0
   const effectiveData = hasStreamedData ? stream.reports : cacheResult.data
   const effectiveIsDemoFallback = hasStreamedData ? false : (cacheResult.isDemoFallback && !cacheResult.isLoading)
+  const effectiveLastRefresh = hasStreamedData ? stream.lastRefresh : cacheResult.lastRefresh
 
   return {
     ...cacheResult,
     data: effectiveData,
     isDemoFallback: effectiveIsDemoFallback,
     isLoading: cacheResult.isLoading || (stream.isStreaming && !hasStreamedData),
+    lastRefresh: effectiveLastRefresh,
     isStreaming: stream.isStreaming,
     streamProgress: stream.reports.length,
     streamStatus: stream.status,

@@ -53,11 +53,19 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDirection }) {
 
 export function HardwareLeaderboard() {
   const { t } = useTranslation()
-  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   // Use hook data directly — it already returns cached live data or demo fallback.
   // Calling generateBenchmarkReports() here would bypass the warm cache (#3397).
   const effectiveReports = reports ?? []
-  useReportCardDataState({ isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, hasData: effectiveReports.length > 0 })
+  useReportCardDataState({
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    isLoading,
+    isRefreshing,
+    hasData: effectiveReports.length > 0,
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null,
+  })
 
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<SortDirection>('desc')

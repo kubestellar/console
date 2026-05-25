@@ -57,16 +57,25 @@ export function LLMdFlow() {
   const { isExpanded } = useCardExpanded()
   const selectedStack = stackContext?.selectedStack
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
-  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing } = usePrometheusMetrics(
+  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing, lastRefresh: metricsLastRefresh } = usePrometheusMetrics(
     selectedStack?.cluster,
     selectedStack?.namespace,
   )
+  const lastUpdated = useMemo(() => {
+    const stackLastRefresh = stackContext?.lastRefresh ?? null
+    if (stackLastRefresh && metricsLastRefresh) {
+      return stackLastRefresh > metricsLastRefresh ? stackLastRefresh : metricsLastRefresh
+    }
+    return stackLastRefresh ?? metricsLastRefresh ?? null
+  }, [metricsLastRefresh, stackContext?.lastRefresh])
+
   useReportCardDataState({
     isDemoData: showDemoBadge,
     isRefreshing: (stackContext?.isRefreshing ?? false) || metricsRefreshing,
     isFailed: false,
     consecutiveFailures: 0,
     hasData: true,
+    lastUpdated,
   })
   const { nodePositions: rawPositions, connections, nodeLabels } = useMemo(() => {
     if (!selectedStack && isDemoMode) {

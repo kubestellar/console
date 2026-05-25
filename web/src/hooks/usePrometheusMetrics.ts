@@ -25,6 +25,7 @@ export interface PrometheusMetricsResult {
   loading: boolean
   isRefreshing: boolean
   error: string | null
+  lastRefresh: Date | null
 }
 
 // The 6 vLLM metric queries we need
@@ -83,8 +84,10 @@ export function usePrometheusMetrics(
   const [loading, setLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const hasFetchedRef = useRef(false)
+  const targetRef = useRef<string | null>(null)
 
   const fetchMetrics = useCallback(async () => {
     if (!cluster || !namespace) return
@@ -153,6 +156,7 @@ export function usePrometheusMetrics(
       } else {
         setMetrics(podMap)
         setError(null)
+        setLastRefresh(new Date())
       }
     } catch (e: unknown) {
       if (controller.signal.aborted) return
@@ -177,8 +181,19 @@ export function usePrometheusMetrics(
       setError(null)
       setLoading(false)
       setIsRefreshing(false)
+      setLastRefresh(null)
       hasFetchedRef.current = false
+      targetRef.current = null
       return
+    }
+
+    const targetKey = `${cluster}/${namespace}`
+    if (targetRef.current !== targetKey) {
+      targetRef.current = targetKey
+      setMetrics(null)
+      setError(null)
+      setLastRefresh(null)
+      hasFetchedRef.current = false
     }
 
     // Fetch immediately, then poll
@@ -191,5 +206,5 @@ export function usePrometheusMetrics(
     }
   }, [fetchMetrics, pollIntervalMs, cluster, namespace])
 
-  return { metrics, loading, isRefreshing, error }
+  return { metrics, loading, isRefreshing, error, lastRefresh }
 }

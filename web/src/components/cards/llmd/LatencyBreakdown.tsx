@@ -46,7 +46,7 @@ interface ChartRow {
 
 function LatencyBreakdownInternal() {
   const { t } = useTranslation()
-  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = reports ?? []
   const hasData = effectiveReports.length > 0
   useCardLoadingState({
@@ -56,6 +56,7 @@ function LatencyBreakdownInternal() {
     isFailed,
     consecutiveFailures,
     isRefreshing,
+    lastRefresh,
   })
 
   const filterOpts = getFilterOptions(effectiveReports)

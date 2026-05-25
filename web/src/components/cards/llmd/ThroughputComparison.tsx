@@ -11,8 +11,6 @@ import { Zap, TrendingUp } from 'lucide-react'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
 import {
-  generateBenchmarkReports } from '../../../lib/llmd/benchmarkMockData'
-import {
   groupByExperiment,
   getFilterOptions,
   type ExperimentGroup } from '../../../lib/llmd/benchmarkDataUtils'
@@ -37,8 +35,8 @@ interface ChartRow {
 
 export function ThroughputComparison() {
   const { t } = useTranslation()
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
-  const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
+  const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
+  const effectiveReports = reports ?? []
   const hasData = effectiveReports.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
@@ -47,6 +45,7 @@ export function ThroughputComparison() {
     isFailed,
     consecutiveFailures,
     isRefreshing,
+    lastRefresh,
   })
 
   const filterOpts = getFilterOptions(effectiveReports)
