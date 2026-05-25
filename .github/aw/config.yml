@@ -45,6 +45,10 @@ safe-outputs:
     - "*.md"  # Don't modify documentation without approval
     - "package-lock.json"  # Let npm handle this
     - "go.sum"  # Let go mod handle this
+  # Threat detection configuration
+  threat-detection:
+    continue-on-error: true   # Warnings only (default)
+    # continue-on-error: false  # Strict mode — block safe outputs
 
 # Retry configuration
 retry:
