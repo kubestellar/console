@@ -181,11 +181,20 @@ export function useGPUReservations(onlyMine = false) {
   // This ensures authenticated users on cluster deployments always see live reservation data.
   const effectiveDemo = demoMode && !(isInClusterMode() && hasRealToken())
 
+  const abortRef = useRef<AbortController | null>(null)
+
   const fetchReservations = useCallback(async (silent = false) => {
+    // Abort any in-flight request before starting a new one
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     if (!silent) setIsLoading(true)
     try {
       const query = onlyMine ? '?mine=true' : ''
-      const { data } = await api.get<GPUReservation[]>(`/api/gpu/reservations${query}`)
+      const { data } = await api.get<GPUReservation[]>(`/api/gpu/reservations${query}`, {
+        signal: controller.signal,
+      })
       const safeData = Array.isArray(data) ? data : []
       // In demo mode, use demo data when the DB is empty (localhost with no reservations)
       if (effectiveDemo && safeData.length === 0) {
@@ -195,6 +204,8 @@ export function useGPUReservations(onlyMine = false) {
       }
       setError(null)
     } catch (err: unknown) {
+      // Ignore aborted requests — component is unmounting or a newer fetch replaced this one
+      if (controller.signal.aborted) return
       // API unreachable — fall back to demo data when in demo mode
       if (effectiveDemo) {
         setReservations(DEMO_RESERVATIONS)
@@ -214,6 +225,7 @@ export function useGPUReservations(onlyMine = false) {
     intervalRef.current = setInterval(() => fetchReservations(true), REFRESH_INTERVAL_MS)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      abortRef.current?.abort()
     }
   }, [fetchReservations])
 
