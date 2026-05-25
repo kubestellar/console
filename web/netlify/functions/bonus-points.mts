@@ -168,3 +168,12 @@ export default async (req: Request) => {
 export const config = {
   path: "/api/rewards/bonus",
 };
+
+export const _testOnly = {
+  MAX_RESPONSE_BYTES,
+  GITHUB_LOGIN_REGEX,
+  CACHE_TTL_MS,
+  resetCache: () => {
+    cache = null;
+  },
+};
