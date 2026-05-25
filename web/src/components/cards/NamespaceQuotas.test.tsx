@@ -71,6 +71,8 @@ vi.mock('../ui/Skeleton', () => ({
 function setupMocks(overrides: {
   clusters?: any[]
   clustersLoading?: boolean
+  clustersFailed?: boolean
+  clustersFailures?: number
   resourceQuotas?: any[]
   quotasLoading?: boolean
   limitRanges?: any[]
@@ -79,13 +81,15 @@ function setupMocks(overrides: {
   namespacesLoading?: boolean
   isDemoMode?: boolean
   isDemoFallback?: boolean
+  showSkeleton?: boolean
+  showEmptyState?: boolean
 } = {}) {
   mockUseClusters.mockReturnValue({
     deduplicatedClusters: overrides.clusters ?? [{ name: 'cluster-1' }, { name: 'cluster-2' }],
     isLoading: overrides.clustersLoading ?? false,
     isRefreshing: false,
-    isFailed: false,
-    consecutiveFailures: 0,
+    isFailed: overrides.clustersFailed ?? false,
+    consecutiveFailures: overrides.clustersFailures ?? 0,
   })
 
   mockUseResourceQuotas.mockReturnValue({
@@ -139,6 +143,11 @@ function setupMocks(overrides: {
 
   mockUseDemoMode.mockReturnValue({
     isDemoMode: overrides.isDemoMode ?? false,
+  })
+
+  mockUseCardLoadingState.mockReturnValue({
+    showSkeleton: overrides.showSkeleton ?? false,
+    showEmptyState: overrides.showEmptyState ?? false,
   })
 }
 
