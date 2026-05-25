@@ -10,7 +10,7 @@ import { buildCorsHeaders, handlePreflight } from "./_shared"
 
 const PLAYLIST_ID = "PL1ALKGr_qZKc-xehA_8iUCdiKsCo6p6nD";
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
-const MAX_RESPONSE_BYTES = 512_000; // 512 KB — playlist data is typically < 100 KB
+export const MAX_RESPONSE_BYTES = 512_000; // 512 KB — playlist data is typically < 100 KB
 
 interface PlaylistVideo {
   id: string;

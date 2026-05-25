@@ -24,7 +24,7 @@ const MAX_POSTS = 3;
 const PREVIEW_MAX_LEN = 200;
 
 /** Maximum upstream response size (512 KB) — reject unexpectedly large feeds */
-const MAX_RESPONSE_BYTES = 512 * 1024;
+export const MAX_RESPONSE_BYTES = 512 * 1024;
 
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",

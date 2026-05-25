@@ -6,12 +6,11 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  TEST_CORS_ORIGIN,
   makeNetlifyRequest,
   readJson,
 } from "./netlify-handler-helpers";
 
-import handler from "../youtube-playlist.mts";
+import handler, { MAX_RESPONSE_BYTES } from "../youtube-playlist.mts";
 
 // Named constants for HTTP status codes to prevent magic numbers
 const HTTP_STATUS_OK = 200;
@@ -19,8 +18,11 @@ const HTTP_STATUS_NO_CONTENT = 204;
 const HTTP_STATUS_FORBIDDEN = 403;
 const HTTP_STATUS_BAD_GATEWAY = 502;
 
-/** Maximum upstream response size matching the handler constant */
-const MAX_RESPONSE_BYTES = 512_000;
+/**
+ * Oversized response test threshold: exactly one byte above the max so the test
+ * continues to validate the intended boundary condition dynamically.
+ */
+const TEST_OVERSIZED_RESPONSE_BYTES = MAX_RESPONSE_BYTES + 1;
 
 const mockFetch = vi.fn();
 
@@ -103,12 +105,16 @@ describe("youtube-playlist", () => {
 
   describe("Invidious API Primary Path", () => {
     it("returns videos from the first successful Invidious instance", async () => {
-      mockFetch.mockResolvedValueOnce(
-        new Response(JSON.stringify(SAMPLE_INVIDIOUS_RESPONSE), {
-          status: 200,
-          headers: { "content-length": "200" },
-        })
-      );
+      mockFetch.mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : (input as Request).url || input.toString();
+        if (url.includes("/api/v1/playlists/")) {
+          return new Response(JSON.stringify(SAMPLE_INVIDIOUS_RESPONSE), {
+            status: 200,
+            headers: { "content-length": "200" },
+          });
+        }
+        return new Response("", { status: 404 });
+      });
 
       const req = makeNetlifyRequest("/.netlify/functions/youtube-playlist");
       const res = await handler(req);
@@ -124,34 +130,22 @@ describe("youtube-playlist", () => {
     });
 
     it("skips Invidious instance with empty videos array and falls back", async () => {
-      // First Invidious instance returns empty videos array
-      mockFetch.mockResolvedValueOnce(
-        new Response(JSON.stringify({ videos: [] }), {
-          status: 200,
-          headers: { "content-length": "20" },
-        })
-      );
-      // Second Invidious instance also empty
-      mockFetch.mockResolvedValueOnce(
-        new Response(JSON.stringify({ videos: [] }), {
-          status: 200,
-          headers: { "content-length": "20" },
-        })
-      );
-      // Third Invidious instance also empty
-      mockFetch.mockResolvedValueOnce(
-        new Response(JSON.stringify({ videos: [] }), {
-          status: 200,
-          headers: { "content-length": "20" },
-        })
-      );
-      // RSS fallback succeeds
-      mockFetch.mockResolvedValueOnce(
-        new Response(SAMPLE_ATOM_FEED, {
-          status: 200,
-          headers: { "content-length": String(SAMPLE_ATOM_FEED.length) },
-        })
-      );
+      mockFetch.mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : (input as Request).url || input.toString();
+        if (url.includes("/api/v1/playlists/")) {
+          return new Response(JSON.stringify({ videos: [] }), {
+            status: 200,
+            headers: { "content-length": "20" },
+          });
+        }
+        if (url.includes("/feeds/videos.xml")) {
+          return new Response(SAMPLE_ATOM_FEED, {
+            status: 200,
+            headers: { "content-length": String(SAMPLE_ATOM_FEED.length) },
+          });
+        }
+        return new Response("", { status: 404 });
+      });
 
       const req = makeNetlifyRequest("/.netlify/functions/youtube-playlist");
       const res = await handler(req);
@@ -164,23 +158,22 @@ describe("youtube-playlist", () => {
     });
 
     it("skips Invidious instances with oversized content-length", async () => {
-      const oversizedLength = MAX_RESPONSE_BYTES + 1;
-      // All 3 Invidious instances return oversized content-length
-      for (let i = 0; i < 3; i++) {
-        mockFetch.mockResolvedValueOnce(
-          new Response(JSON.stringify(SAMPLE_INVIDIOUS_RESPONSE), {
+      mockFetch.mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : (input as Request).url || input.toString();
+        if (url.includes("/api/v1/playlists/")) {
+          return new Response(JSON.stringify(SAMPLE_INVIDIOUS_RESPONSE), {
             status: 200,
-            headers: { "content-length": String(oversizedLength) },
-          })
-        );
-      }
-      // RSS fallback succeeds
-      mockFetch.mockResolvedValueOnce(
-        new Response(SAMPLE_ATOM_FEED, {
-          status: 200,
-          headers: { "content-length": String(SAMPLE_ATOM_FEED.length) },
-        })
-      );
+            headers: { "content-length": String(TEST_OVERSIZED_RESPONSE_BYTES) },
+          });
+        }
+        if (url.includes("/feeds/videos.xml")) {
+          return new Response(SAMPLE_ATOM_FEED, {
+            status: 200,
+            headers: { "content-length": String(SAMPLE_ATOM_FEED.length) },
+          });
+        }
+        return new Response("", { status: 404 });
+      });
 
       const req = makeNetlifyRequest("/.netlify/functions/youtube-playlist");
       const res = await handler(req);
@@ -192,21 +185,25 @@ describe("youtube-playlist", () => {
   });
 
   describe("RSS Feed Fallback Path", () => {
-    /** Helper: make all 3 Invidious instances fail, then return given RSS response */
-    function mockAllInvidiousFailed(): void {
-      for (let i = 0; i < 3; i++) {
-        mockFetch.mockRejectedValueOnce(new Error("Invidious timeout"));
-      }
+    /** Helper: make all Invidious instance calls fail, then return specific RSS response */
+    function mockAllInvidiousFailed(rssResponse?: Response): void {
+      mockFetch.mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : (input as Request).url || input.toString();
+        if (url.includes("/api/v1/playlists/")) {
+          throw new Error("Invidious timeout");
+        }
+        if (url.includes("/feeds/videos.xml")) {
+          return rssResponse || new Response(SAMPLE_ATOM_FEED, {
+            status: 200,
+            headers: { "content-length": String(SAMPLE_ATOM_FEED.length) },
+          });
+        }
+        return new Response("", { status: 404 });
+      });
     }
 
     it("parses Atom feed entries with description and published fields", async () => {
       mockAllInvidiousFailed();
-      mockFetch.mockResolvedValueOnce(
-        new Response(SAMPLE_ATOM_FEED, {
-          status: 200,
-          headers: { "content-length": String(SAMPLE_ATOM_FEED.length) },
-        })
-      );
 
       const req = makeNetlifyRequest("/.netlify/functions/youtube-playlist");
       const res = await handler(req);
@@ -223,8 +220,7 @@ describe("youtube-playlist", () => {
     });
 
     it("returns 502 with empty videos array when RSS feed has no entries", async () => {
-      mockAllInvidiousFailed();
-      mockFetch.mockResolvedValueOnce(
+      mockAllInvidiousFailed(
         new Response(EMPTY_ATOM_FEED, {
           status: 200,
           headers: { "content-length": String(EMPTY_ATOM_FEED.length) },
@@ -241,8 +237,7 @@ describe("youtube-playlist", () => {
     });
 
     it("returns 502 when RSS upstream returns non-ok status", async () => {
-      mockAllInvidiousFailed();
-      mockFetch.mockResolvedValueOnce(
+      mockAllInvidiousFailed(
         new Response("", { status: 500, statusText: "Internal Server Error" })
       );
 
@@ -255,12 +250,10 @@ describe("youtube-playlist", () => {
     });
 
     it("returns 502 when RSS response body exceeds size limit", async () => {
-      mockAllInvidiousFailed();
-      const oversizedLength = MAX_RESPONSE_BYTES + 1;
-      mockFetch.mockResolvedValueOnce(
+      mockAllInvidiousFailed(
         new Response("x".repeat(1000), {
           status: 200,
-          headers: { "content-length": String(oversizedLength) },
+          headers: { "content-length": String(TEST_OVERSIZED_RESPONSE_BYTES) },
         })
       );
 

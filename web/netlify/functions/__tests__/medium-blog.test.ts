@@ -10,15 +10,18 @@ import {
   readJson,
 } from "./netlify-handler-helpers";
 
-import handler from "../medium-blog.mts";
+import handler, { MAX_RESPONSE_BYTES } from "../medium-blog.mts";
 
 // Named constants for HTTP status codes to prevent magic numbers
 const HTTP_STATUS_OK = 200;
 const HTTP_STATUS_NO_CONTENT = 204;
 const HTTP_STATUS_BAD_GATEWAY = 502;
 
-/** Maximum upstream response size matching the handler constant */
-const MAX_RESPONSE_BYTES = 512 * 1024;
+/**
+ * Oversized response test threshold: exactly one byte above the max so the test
+ * continues to validate the intended boundary condition dynamically.
+ */
+const TEST_OVERSIZED_RESPONSE_BYTES = MAX_RESPONSE_BYTES + 1;
 
 /** Allowed production origin for CORS echoing */
 const PROD_ORIGIN = "https://console.kubestellar.io";
@@ -201,6 +204,7 @@ describe("medium-blog", () => {
         headers: { Origin: PROD_ORIGIN },
       });
       const res = await handler(req);
+      expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<MediumSuccessResponse>(res);
 
       // First post uses <description> with <p> and <b> tags
@@ -287,7 +291,7 @@ describe("medium-blog", () => {
     });
 
     it("returns 502 when content-length exceeds MAX_RESPONSE_BYTES", async () => {
-      const oversizedLength = MAX_RESPONSE_BYTES + 1;
+      const oversizedLength = TEST_OVERSIZED_RESPONSE_BYTES;
       mockFetch.mockResolvedValueOnce(
         new Response("x", {
           status: 200,
@@ -307,7 +311,7 @@ describe("medium-blog", () => {
     });
 
     it("returns 502 when response body exceeds MAX_RESPONSE_BYTES", async () => {
-      const oversizedBody = "a".repeat(MAX_RESPONSE_BYTES + 1);
+      const oversizedBody = "a".repeat(TEST_OVERSIZED_RESPONSE_BYTES);
       mockFetch.mockResolvedValueOnce(
         new Response(oversizedBody, {
           status: 200,
