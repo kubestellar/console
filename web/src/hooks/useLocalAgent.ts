@@ -427,7 +427,11 @@ class AgentManager {
       // If wasDisconnected but not enough successes yet, don't change status
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        return
+        // Only ignore intentional aborts (cleanup / superseded request).
+        // Timeout aborts indicate the agent is unreachable and should count as failures.
+        if (this.abortControllerRef?.signal.aborted) {
+          return
+        }
       }
 
       if (!this.isStarted) {
