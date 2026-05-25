@@ -51,6 +51,18 @@ const QualityDashboard: React.FC = () => {
     );
   }
 
+  if (loadingState.showEmptyState) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <div className="text-center text-muted-foreground">
+          <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-red-400" />
+          <p className="text-sm font-medium">{t('quality.fetchFailed', 'Failed to fetch quality data')}</p>
+          <p className="text-xs mt-1">{t('quality.tryAgain', 'Please refresh the page or try again later.')}</p>
+        </div>
+      </div>
+    );
+  }
+
   // Display the dashboard with stats from the hook
   return (
     <div className="space-y-4 p-1">
