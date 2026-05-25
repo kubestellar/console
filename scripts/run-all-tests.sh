@@ -151,14 +151,14 @@ for script in "${ALL_SCRIPTS[@]}"; do
   echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
 
   # Run the script and capture output + exit code + duration.
-  # Cap at 2400s (40 min): unit-test takes ~1200s with 1395 test files running
+  # Cap at 3600s (60 min): unit-test takes ~1800s with 1453 test files running
   # serially (maxWorkers=1 to avoid OOM). Other non-Playwright suites are well
   # under 5 minutes. This guard prevents a truly hung suite from blocking the
   # entire run while still allowing healthy suites to complete.
   SUITE_START=$(date +%s)
   SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
   SUITE_EXIT=0
-  timeout 2400s bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+  timeout 3600s bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
   SUITE_END=$(date +%s)
   SUITE_DURATION=$((SUITE_END - SUITE_START))
 
