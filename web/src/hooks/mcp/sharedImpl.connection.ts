@@ -170,6 +170,17 @@ export async function connectSharedWebSocket() {
   }
 }
 
+// Reset auth failure state — call when a fresh token becomes available.
+// This clears the deadlock where authFailed blocks reconnection even after
+// a valid token has been stored.
+export function resetAuthFailed() {
+  if (!sharedWebSocket.authFailed) return
+  sharedWebSocket.authFailed = false
+  sharedWebSocket.reconnectAttempts = 0
+  // Trigger reconnection now that a valid token may be available
+  connectSharedWebSocket()
+}
+
 // Cleanup WebSocket connection
 export function cleanupSharedWebSocket() {
   if (sharedWebSocket.reconnectTimeout) {

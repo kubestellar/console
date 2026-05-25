@@ -5,6 +5,7 @@ import {
   MCP_HOOK_TIMEOUT_MS,
 } from '../../lib/constants'
 import { isLocalAgentSuppressed } from '../../lib/constants/network'
+import { resetAuthFailed } from './sharedImpl.connection'
 
 // Re-export as a live getter. LOCAL_AGENT_HTTP_URL is a mutable `let` that
 // gets set to '' by suppressLocalAgent() (in-cluster deployments). A `const`
@@ -69,6 +70,7 @@ export function getAgentToken(): Promise<string> {
         const token = data.token || ''
         if (token) {
           localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+          resetAuthFailed()
         } else {
           agentTokenNegativeCacheUntil = Date.now() + AGENT_TOKEN_NEGATIVE_CACHE_MS
           if (!agentTokenFailureEmitted) {

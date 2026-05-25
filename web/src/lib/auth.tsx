@@ -6,6 +6,7 @@ import { clearPermissionsCache } from '../hooks/usePermissions'
 import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
+import { resetAuthFailed } from '../hooks/mcp/sharedImpl.connection'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
 /** localStorage key for the kc-agent shared secret (must match shared.ts) */
 const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
@@ -326,7 +327,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 })
                 if (agentRes.ok) {
                   const agentData = await agentRes.json()
-                  if (agentData.token) localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, agentData.token)
+                  if (agentData.token) {
+                    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, agentData.token)
+                    resetAuthFailed()
+                  }
                 }
               } catch {
                 // Non-fatal — agent auth will fail but session is intact
