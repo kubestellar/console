@@ -97,7 +97,7 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 		slog.Error("stellar: digest generation failed", "error", err, "userID", userID)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "digest generation failed"})
 	}
-	_ = h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
+	if err := h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
 		UserID:     userID,
 		Cluster:    "",
 		Category:   "digest",
@@ -105,7 +105,9 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 		Tags:       []string{"digest"},
 		Importance: 5,
 		ExpiresAt:  ptr(time.Now().AddDate(0, 0, 30)),
-	})
+	}); err != nil {
+		slog.Warn("stellar: digest memory entry failed", "userID", userID, "error", err)
+	}
 
 	return c.JSON(fiber.Map{
 		"digest":      response.Content,
@@ -307,8 +309,10 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		StartedAt:    now,
 		CompletedAt:  &now,
 	}
-	_ = h.store.CreateStellarExecution(c.UserContext(), execution)
-	_ = h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
+	if err := h.store.CreateStellarExecution(c.UserContext(), execution); err != nil {
+		slog.Warn("stellar: quick-ask execution persist failed", "userID", userID, "error", err)
+	}
+	if err := h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
 		UserID:     userID,
 		Cluster:    firstOrUnknown(state.ClustersWatching),
 		Category:   "quick-ask",
@@ -317,7 +321,9 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		Tags:       []string{"quick-ask"},
 		Importance: 3,
 		ExpiresAt:  ptr(now.AddDate(0, 0, 7)),
-	})
+	}); err != nil {
+		slog.Warn("stellar: quick-ask memory entry persist failed", "userID", userID, "error", err)
+	}
 	if auditable, ok := h.store.(interface {
 		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
 	}); ok {
@@ -372,7 +378,9 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 	lastSeen, _ := h.store.GetUserLastSeen(c.UserContext(), userID)
 	awayThreshold := 15 * time.Minute
 	isReturning := lastSeen != nil && time.Since(*lastSeen) > awayThreshold
-	_ = h.store.UpsertUserLastSeen(c.UserContext(), userID)
+	if err := h.store.UpsertUserLastSeen(c.UserContext(), userID); err != nil {
+		slog.Warn("stellar: upsert user last-seen failed", "userID", userID, "error", err)
+	}
 
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
@@ -442,7 +450,9 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				if writeSSE(w, "observation", payload) != nil {
 					return false
 				}
-				_ = h.store.MarkObservationShown(streamCtx, next.ID)
+				if err := h.store.MarkObservationShown(streamCtx, next.ID); err != nil {
+					slog.Warn("stellar: mark observation shown failed", "observationID", next.ID, "error", err)
+				}
 			}
 			state, err := h.buildState(streamCtx, userID)
 			if err != nil {
@@ -456,7 +466,11 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				return false
 			}
 			// Push current active watches so the frontend stays in sync
-			activeWatches, _ := h.store.GetActiveWatches(streamCtx, userID)
+			activeWatches, watchErr := h.store.GetActiveWatches(streamCtx, userID)
+			if watchErr != nil {
+				slog.Warn("stellar: fetch active watches failed", "userID", userID, "error", watchErr)
+				activeWatches = []store.StellarWatch{}
+			}
 			if writeSSE(w, "watches", activeWatches) != nil {
 				return false
 			}
@@ -496,8 +510,12 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing required fields"})
 	}
 
-	// Process event asynchronously (non-blocking)
-	safego.GoWith("stellar-process-event", func() { h.ProcessEvent(context.Background(), event) })
+	// Process event asynchronously (non-blocking) with a bounded lifetime.
+	safego.GoWith("stellar-process-event", func() {
+		processCtx, cancel := context.WithTimeout(context.Background(), stellarProcessEventTimeout)
+		defer cancel()
+		h.ProcessEvent(processCtx, event)
+	})
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"status": "accepted"})
 }
@@ -546,6 +564,7 @@ const (
 	catchUpMemoryLookbackLimit   = 5
 	catchUpMaxEventHighlights    = 3
 	catchUpMaxResolvedHighlights = 2
+	stellarProcessEventTimeout   = 2 * time.Minute
 )
 
 type catchUpPayload struct {
