@@ -100,10 +100,23 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           const sourceChunkRules = [
+            // Specific card registry files first (most specific matches first)
             ['card-registry', ['/src/components/cards/cardRegistry.ts']],
             ['card-registry-data', ['/src/config/cards/', '/src/components/cards/cardMetadata.ts', '/src/components/cards/cardDescriptors.registry.ts']],
+            // Split page components into separate chunks by feature area (before general dashboard/layout)
+            ['pages-admin', ['/src/components/cluster-admin/', '/src/components/settings/', '/src/components/namespaces/']],
+            ['pages-workloads', ['/src/components/workloads/', '/src/components/pods/', '/src/components/deployments/', '/src/components/compute/', '/src/components/nodes/']],
+            ['pages-network', ['/src/components/services/', '/src/components/network/', '/src/components/storage/']],
+            ['pages-security', ['/src/components/security/', '/src/components/compliance/', '/src/components/data-compliance/']],
+            ['pages-platform', ['/src/components/gitops/', '/src/components/cicd/', '/src/components/operators/', '/src/components/helm/']],
+            ['pages-aiml', ['/src/components/aiml/', '/src/components/aiagents/', '/src/components/llmd-benchmarks/']],
+            ['pages-misc', ['/src/components/alerts/', '/src/components/cost/', '/src/components/events/', '/src/components/logs/', '/src/components/deploy/', '/src/components/gpu/', '/src/components/arcade/', '/src/components/marketplace/', '/src/components/clusters/']],
+            // Split card components into their own chunk (after card-registry rules, before dashboard)
+            ['cards', ['/src/components/cards/']],
+            // Split drilldown views into their own chunk
+            ['drilldown', ['/src/components/drilldown/']],
+            // Dashboard and layout
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
-            // Split app-shell into smaller chunks to reduce initial bundle size
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
