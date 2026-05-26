@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { OrbitCadence, OrbitRunHistoryEntry } from '../../../lib/missions/types'
 
@@ -25,6 +25,14 @@ function historyEntry(hoursAgo: number, result: OrbitRunHistoryEntry['result'], 
     result,
     summary,
   }
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(res => {
+    resolve = res
+  })
+  return { promise, resolve }
 }
 
 function renderComponent(overrides?: Partial<ComponentProps<typeof OrbitStatusTracker>>) {
@@ -196,5 +204,32 @@ describe('OrbitStatusTracker', () => {
     await user.click(screen.getByRole('button', { name: 'orbit.runNow' }))
 
     expect(onRunNow).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a loading state while running now', async () => {
+    const user = userEvent.setup()
+    const deferred = createDeferred<void>()
+    const onRunNow = vi.fn(() => deferred.promise)
+
+    render(
+      <OrbitStatusTracker
+        history={[]}
+        cadence="weekly"
+        lastRunAt={null}
+        onRunNow={onRunNow}
+        onChangeCadence={vi.fn()}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: 'orbit.runNow' })
+    await user.click(button)
+
+    expect(onRunNow).toHaveBeenCalledTimes(1)
+    expect(button).toBeDisabled()
+    expect(button.querySelector('.animate-spin')).not.toBeNull()
+
+    deferred.resolve()
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'orbit.runNow' })).not.toBeDisabled())
   })
 })

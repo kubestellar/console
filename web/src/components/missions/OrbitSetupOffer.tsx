@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Orbit, Satellite, LayoutDashboard, ChevronDown, ChevronUp, Check, ExternalLink } from 'lucide-react'
+import { Orbit, Satellite, LayoutDashboard, ChevronDown, ChevronUp, Check, ExternalLink, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '../../lib/cn'
 import { useGroundControlDashboard } from '../../hooks/useGroundControlDashboard'
@@ -35,7 +35,7 @@ interface OrbitSetupOfferProps {
     projects: string[]
     clusters: string[]
     missionControlStateKey?: string
-  }) => void
+  }) => Promise<void> | void
   /** Callback when Ground Control dashboard is created */
   onDashboardCreated: (dashboardId: string) => void
   /** Callback when user skips */
@@ -94,7 +94,7 @@ export function OrbitSetupOffer({
         const template = applicableTemplates.find(t => t.orbitType === orbitType)
         if (!template) continue
 
-        onCreateOrbit({
+        await Promise.resolve(onCreateOrbit({
           orbitType,
           cadence,
           autoRun,
@@ -102,7 +102,7 @@ export function OrbitSetupOffer({
           projects: (projects || []).map(p => p.name),
           clusters: clusters || [],
           missionControlStateKey,
-        })
+        }))
         emitOrbitMissionCreated(orbitType, cadence)
       }
 
@@ -249,11 +249,13 @@ export function OrbitSetupOffer({
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
                 selectedOrbits.size > 0
-                  ? 'bg-purple-500 text-white hover:bg-purple-600'
+                  ? isCreating
+                    ? 'bg-purple-500 text-white cursor-not-allowed'
+                    : 'bg-purple-500 text-white hover:bg-purple-600'
                   : 'bg-secondary text-muted-foreground cursor-not-allowed',
               )}
             >
-              <Orbit className="w-3.5 h-3.5" />
+              {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Orbit className="w-3.5 h-3.5" />}
               {isCreating ? 'Setting up...' : t('orbit.setupOrbit')}
             </button>
           </div>

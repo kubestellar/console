@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // ── Mocks ────────────────────────────────────────────────────────────────
@@ -82,6 +82,14 @@ vi.mock('../../setup/SetupInstructionsDialog', () => ({
 
 import { StandaloneOrbitDialog } from '../StandaloneOrbitDialog'
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(res => {
+    resolve = res
+  })
+  return { promise, resolve }
+}
+
 describe('StandaloneOrbitDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -91,6 +99,31 @@ describe('StandaloneOrbitDialog', () => {
     const { container } = render(<StandaloneOrbitDialog onClose={vi.fn()} />)
     expect(container).toBeTruthy()
     expect(screen.getByText('orbit.standaloneTitle')).toBeInTheDocument()
+  })
+
+  it('shows a loading state while creating an orbit mission', async () => {
+    const user = userEvent.setup()
+    const deferred = createDeferred<string>()
+    const onClose = vi.fn()
+    saveMissionMock.mockReturnValue(deferred.promise)
+
+    render(
+      <StandaloneOrbitDialog
+        onClose={onClose}
+        prefill={{ clusters: ['prod-us-east-1'] }}
+      />,
+    )
+
+    const createButton = screen.getByRole('button', { name: 'orbit.standaloneCreate' })
+    await user.click(createButton)
+
+    expect(saveMissionMock).toHaveBeenCalledTimes(1)
+    expect(createButton).toBeDisabled()
+    expect(createButton.querySelector('.animate-spin')).not.toBeNull()
+
+    deferred.resolve('mission-123')
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
   // Issue 9373: clicking Create with no clusters selected should open

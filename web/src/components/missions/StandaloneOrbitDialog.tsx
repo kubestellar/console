@@ -8,7 +8,7 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Satellite, Orbit, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Satellite, Orbit, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { useMissions } from '../../hooks/useMissions'
@@ -245,6 +245,7 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
     (prefill?.clusters?.length ?? 0) > 0
   )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   // Issue 9373: confirm before creating an orbit with an empty cluster selection
   // (which would otherwise silently target every connected cluster).
   const [showAllClustersConfirm, setShowAllClustersConfirm] = useState(false)
@@ -285,7 +286,7 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
   // Actually build + persist the orbit mission. Split out so both the
   // primary Create button and the "run on all clusters" confirmation
   // can invoke it (Issue 9373).
-  const persistOrbitMission = useCallback(() => {
+  const persistOrbitMission = useCallback(async () => {
     if (!selectedOrbit) return
 
     const template = templates.find(tpl => tpl.orbitType === selectedOrbit)
@@ -310,19 +311,24 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
       ...(Object.keys(activeFilters).length > 0 ? { resourceFilters: activeFilters } : {}),
     }
 
-    saveMission({
-      type: 'maintain',
-      title,
-      description: template.description,
-      missionClass: 'orbit',
-      steps: template.steps.map(s => ({ title: s.title, description: s.description })),
-      tags: ['orbit', selectedOrbit, cadence],
-      initialPrompt: template.description + buildScopeString(activeFilters),
-      context: { orbitConfig },
-    })
+    setIsCreating(true)
+    try {
+      await Promise.resolve(saveMission({
+        type: 'maintain',
+        title,
+        description: template.description,
+        missionClass: 'orbit',
+        steps: template.steps.map(s => ({ title: s.title, description: s.description })),
+        tags: ['orbit', selectedOrbit, cadence],
+        initialPrompt: template.description + buildScopeString(activeFilters),
+        context: { orbitConfig },
+      }))
 
-    emitOrbitMissionCreated(selectedOrbit, cadence)
-    onClose()
+      emitOrbitMissionCreated(selectedOrbit, cadence)
+      onClose()
+    } finally {
+      setIsCreating(false)
+    }
   }, [selectedOrbit, cadence, autoRun, selectedClusters, resourceFilters, templates, saveMission, onClose])
 
   const handleCreate = useCallback(() => {
@@ -342,12 +348,12 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
       return
     }
 
-    persistOrbitMission()
+    void persistOrbitMission()
   }, [selectedOrbit, selectedClusters, clusters.length, persistOrbitMission])
 
   const handleConfirmAllClusters = useCallback(() => {
     setShowAllClustersConfirm(false)
-    persistOrbitMission()
+    void persistOrbitMission()
   }, [persistOrbitMission])
 
   return (
@@ -543,15 +549,17 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
           </button>
           <button
             onClick={handleCreate}
-            disabled={!selectedOrbit}
+            disabled={!selectedOrbit || isCreating}
             className={cn(
               'flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors',
               selectedOrbit
-                ? 'bg-purple-500 text-white hover:bg-purple-600'
+                ? isCreating
+                  ? 'bg-purple-500 text-white cursor-not-allowed'
+                  : 'bg-purple-500 text-white hover:bg-purple-600'
                 : 'bg-secondary text-muted-foreground cursor-not-allowed',
             )}
           >
-            <Satellite className="w-3.5 h-3.5" />
+            {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Satellite className="w-3.5 h-3.5" />}
             {t('orbit.standaloneCreate')}
           </button>
         </div>
@@ -570,6 +578,7 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
       confirmLabel={t('orbit.confirmAllClustersContinue')}
       cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
       variant="warning"
+      isLoading={isCreating}
     />
     </>
   )

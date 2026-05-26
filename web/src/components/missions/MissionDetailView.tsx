@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   ArrowLeft,
   Download,
+  Loader2,
   Eye,
   Code,
   Star,
@@ -59,7 +60,7 @@ interface MissionDetailViewProps {
   rawContent: string | null
   showRaw: boolean
   onToggleRaw: () => void
-  onImport: () => void
+  onImport: () => Promise<void> | void
   onBack: () => void
   onImprove?: () => void
   matchScore?: number
@@ -221,6 +222,7 @@ export function MissionDetailView({
   onRetry }: MissionDetailViewProps) {
   const { t } = useTranslation()
   const [linkCopied, setLinkCopied] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -228,6 +230,16 @@ export function MissionDetailView({
       if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
     }
   }, [])
+
+  const handleImport = async () => {
+    setIsImporting(true)
+    try {
+      await Promise.resolve(onImport())
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
   const tabs: TabDef[] = [
     {
       id: 'install',
@@ -351,10 +363,16 @@ export function MissionDetailView({
             </button>
           )}
           <button
-            onClick={onImport}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+            onClick={handleImport}
+            disabled={isImporting}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg text-white transition-colors',
+              isImporting
+                ? 'bg-purple-600 cursor-not-allowed'
+                : 'bg-purple-600 hover:bg-purple-500'
+            )}
           >
-            <Download className="w-4 h-4" />
+            {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             {importLabel}
           </button>
         </div>

@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, AlertTriangle, XCircle, Clock, Play, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, XCircle, Clock, Play, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import type { OrbitRunHistoryEntry, OrbitCadence } from '../../lib/missions/types'
 import { ORBIT_CADENCE_HOURS } from '../../lib/constants/orbit'
 import { cn } from '../../lib/cn'
@@ -23,7 +23,7 @@ interface OrbitStatusTrackerProps {
   history: OrbitRunHistoryEntry[]
   cadence: OrbitCadence
   lastRunAt?: string | null
-  onRunNow: () => void
+  onRunNow: () => Promise<void> | void
   onChangeCadence: (cadence: OrbitCadence) => void
 }
 
@@ -39,6 +39,16 @@ export function OrbitStatusTracker({
   const { t } = useTranslation()
   const [showAll, setShowAll] = useState(false)
   const [showCadenceMenu, setShowCadenceMenu] = useState(false)
+  const [isRunningNow, setIsRunningNow] = useState(false)
+
+  const handleRunNow = async () => {
+    setIsRunningNow(true)
+    try {
+      await Promise.resolve(onRunNow())
+    } finally {
+      setIsRunningNow(false)
+    }
+  }
 
   const visibleHistory = showAll ? (history || []) : (history || []).slice(0, VISIBLE_HISTORY_COUNT)
   const hasMore = (history || []).length > VISIBLE_HISTORY_COUNT
@@ -94,10 +104,16 @@ export function OrbitStatusTracker({
           </div>
           {/* Run Now */}
           <button
-            onClick={onRunNow}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+            onClick={handleRunNow}
+            disabled={isRunningNow}
+            className={cn(
+              'flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-primary rounded-md transition-colors',
+              isRunningNow
+                ? 'bg-primary/10 cursor-not-allowed'
+                : 'bg-primary/10 hover:bg-primary/20'
+            )}
           >
-            <Play className="w-3 h-3" />
+            {isRunningNow ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
             {t('orbit.runNow')}
           </button>
         </div>

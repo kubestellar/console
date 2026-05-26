@@ -370,6 +370,7 @@ describe('OrbitSetupOffer', () => {
 
     const button = screen.getByRole('button', { name: 'Setting up...' })
     expect(button).toBeDisabled()
+    expect(button.querySelector('.animate-spin')).not.toBeNull()
 
     deferred.resolve({ dashboardId: 'dashboard-42' })
     expect(await screen.findByText(/2 orbits configured \(weekly\)\. Ground Control dashboard created\./)).toBeInTheDocument()
