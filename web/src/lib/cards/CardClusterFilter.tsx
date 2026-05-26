@@ -3,8 +3,8 @@ import { type RefObject, useEffect, useRef, useState } from 'react'
 import { ChevronDown, Filter, Server } from 'lucide-react'
 import { useCardType } from '../../components/cards/CardWrapper'
 import { ClusterStatusDot, getClusterState, type ClusterState } from '../../components/ui/ClusterStatusBadge'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { emitCardClusterFilterChanged } from '../analytics'
-import { moveFocusByKey } from '../a11y/rovingFocus'
 import type { ClusterWithHealth } from './cardHooks'
 
 export interface CardClusterFilterProps {
@@ -39,6 +39,7 @@ export function CardClusterFilter({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
+  const keyboardNav = useKeyboardNav({ selector: 'button:not([disabled])', orientation: 'vertical', onEscape: () => setIsOpen(false) })
 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
@@ -63,11 +64,8 @@ export function CardClusterFilter({
   useEffect(() => {
     if (!isOpen || !dropdownPos) return
 
-    const focusTarget = dropdownRef.current?.querySelector<HTMLElement>(
-      'button[aria-pressed="true"], button:not([disabled])',
-    )
-    focusTarget?.focus()
-  }, [dropdownPos, isOpen])
+    keyboardNav.focusMatchingItem({ preferredSelector: 'button[aria-pressed="true"]', fallbackSelector: 'button:not([disabled])' })
+  }, [dropdownPos, isOpen, keyboardNav])
 
   if (availableClusters.length < minClusters) return null
 
@@ -81,6 +79,8 @@ export function CardClusterFilter({
           event.preventDefault()
           setIsOpen(true)
         }}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${selectedClusters.length > 0
           ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
           : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
@@ -93,18 +93,20 @@ export function CardClusterFilter({
 
       {isOpen && dropdownPos && createPortal(
         <div
-          ref={dropdownRef}
+          ref={(node) => {
+            dropdownRef.current = node
+            keyboardNav.containerRef.current = node
+          }}
+          role="listbox"
+          aria-label="Cluster filter"
           className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-dropdown"
           style={{ top: dropdownPos.top, left: dropdownPos.left }}
           onMouseDown={e => e.stopPropagation()}
           onKeyDown={(event) => {
+            keyboardNav.handleKeyDown(event)
             if (event.key === 'Escape') {
-              setIsOpen(false)
               buttonRef.current?.focus()
-              return
             }
-
-            moveFocusByKey(event, { selector: 'button:not([disabled])', orientation: 'vertical' })
           }}
         >
           <div className="p-1">

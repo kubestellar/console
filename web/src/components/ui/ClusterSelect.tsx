@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { ClusterStatusDot, getClusterState, type ClusterState } from './ClusterStatusBadge'
 import type { ClusterErrorType } from '../../lib/errorClassifier'
 import { cn } from '../../lib/cn'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { Button } from './Button'
 import { useModalState } from '../../lib/modals'
-import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 
 interface ClusterInfo {
   name: string
@@ -43,6 +43,7 @@ export function ClusterSelect({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const keyboardNav = useKeyboardNav({ selector: 'button[role="option"]:not([disabled])', orientation: 'vertical', onEscape: close })
 
   const calculatePosition = useCallback(() => {
     if (!buttonRef.current) return null
@@ -65,11 +66,11 @@ export function ClusterSelect({
   useEffect(() => {
     if (!isOpen || !dropdownPos) return
 
-    const focusTarget = dropdownRef.current?.querySelector<HTMLElement>(
-      'button[role="option"][aria-selected="true"], button[role="option"]:not([disabled])',
-    )
-    focusTarget?.focus()
-  }, [dropdownPos, isOpen])
+    keyboardNav.focusMatchingItem({
+      preferredSelector: 'button[role="option"][aria-selected="true"]',
+      fallbackSelector: 'button[role="option"]:not([disabled])',
+    })
+  }, [dropdownPos, isOpen, keyboardNav])
 
   // Close on click outside
   useEffect(() => {
@@ -134,20 +135,20 @@ export function ClusterSelect({
 
       {isOpen && dropdownPos && createPortal(
         <div
-          ref={dropdownRef}
+          ref={(node) => {
+            dropdownRef.current = node
+            keyboardNav.containerRef.current = node
+          }}
           role="listbox"
           aria-label={placeholder.replace(/\.+$/, '')}
           className="fixed max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
           style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
           onMouseDown={e => e.stopPropagation()}
           onKeyDown={(event) => {
+            keyboardNav.handleKeyDown(event)
             if (event.key === 'Escape') {
-              close()
               buttonRef.current?.focus()
-              return
             }
-
-            moveFocusByKey(event, { selector: 'button[role="option"]:not([disabled])', orientation: 'vertical' })
           }}
         >
           <div className="p-1">

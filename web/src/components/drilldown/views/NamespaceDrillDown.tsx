@@ -7,6 +7,7 @@ import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
+import { useTabKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { cn } from '../../../lib/cn'
 
 type TabType = 'issues' | 'events' | 'resources'
@@ -25,6 +26,7 @@ export function NamespaceDrillDown({ data }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('issues')
   const [resourceFilter, setResourceFilter] = useState<ResourceFilter>('all')
   const [resourceSearch, setResourceSearch] = useState('')
+  const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<TabType>({ tabs: ['issues', 'events', 'resources'], activeTab, onChange: setActiveTab })
 
   const { issues: allPodIssues } = usePodIssues(cluster)
   const { issues: allDeploymentIssues } = useDeploymentIssues()
@@ -122,11 +124,11 @@ export function NamespaceDrillDown({ data }: Props) {
 
       {/* Tabs */}
       <div className="border-b border-border">
-        <div className="flex gap-0">
+        <div {...tabListProps} className="flex gap-0">
           {tabs.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              {...getTabProps(tab.id)}
               className={cn(
                 'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
                 activeTab === tab.id
@@ -152,7 +154,7 @@ export function NamespaceDrillDown({ data }: Props) {
 
       {/* Tab Content */}
       {activeTab === 'issues' && (
-        <div className="space-y-6">
+        <div {...getTabPanelProps('issues')} className="space-y-6">
           {/* Deployment Issues */}
           {deploymentIssues.length > 0 && (
             <div>
@@ -240,7 +242,7 @@ export function NamespaceDrillDown({ data }: Props) {
       )}
 
       {activeTab === 'events' && (
-        <div className="space-y-4">
+        <div {...getTabPanelProps('events')} className="space-y-4">
           {/* Quick action to view full events drilldown */}
           <div className="flex justify-end">
             <button
@@ -280,7 +282,7 @@ export function NamespaceDrillDown({ data }: Props) {
       )}
 
       {activeTab === 'resources' && (
-        <div className="space-y-4">
+        <div {...getTabPanelProps('resources')} className="space-y-4">
           {/* Search and Filter Controls */}
           <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">

@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Layers, Server, Database, Eye, EyeOff, Lock } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { useTabKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
@@ -48,6 +49,7 @@ export function ConfigMapDrillDown({ data }: Props) {
   // alongside the per-key buttons for the common case.
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set())
   const [revealAll, setRevealAll] = useState(false)
+  const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<TabType>({ tabs: ['overview', 'data', 'describe', 'yaml'], activeTab, onChange: setActiveTab })
 
   const toggleReveal = (key: string) => {
     setRevealedKeys(prev => {
@@ -190,13 +192,13 @@ export function ConfigMapDrillDown({ data }: Props) {
 
       {/* Tabs */}
       <div className="border-b border-border px-6">
-        <div className="flex gap-1">
+        <div {...tabListProps} className="flex gap-1">
           {TABS.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                {...getTabProps(tab.id)}
                 className={cn(
                   'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
                   activeTab === tab.id
@@ -215,7 +217,7 @@ export function ConfigMapDrillDown({ data }: Props) {
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div {...getTabPanelProps('overview')} className="space-y-6">
             {!hasRequiredContext && (
               <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm text-yellow-400">
                 {t('drilldown.configmap.missingContext', 'Unable to load this ConfigMap because the selected resource is missing required details.')}
@@ -276,7 +278,7 @@ export function ConfigMapDrillDown({ data }: Props) {
         )}
 
         {activeTab === 'data' && (
-          <div className="space-y-4">
+          <div {...getTabPanelProps('data')} className="space-y-4">
             {/* #6211: master reveal toggle for ConfigMaps. ConfigMaps often
                 hold non-sensitive config so a single "Reveal all" is more
                 ergonomic than the per-key dance, but we keep the per-key
@@ -354,7 +356,7 @@ export function ConfigMapDrillDown({ data }: Props) {
         )}
 
         {activeTab === 'describe' && (
-          <div>
+          <div {...getTabPanelProps('describe')}>
             {describeLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -381,7 +383,7 @@ export function ConfigMapDrillDown({ data }: Props) {
         )}
 
         {activeTab === 'yaml' && (
-          <div className="space-y-3">
+          <div {...getTabPanelProps('yaml')} className="space-y-3">
             {/* #6211: same masking model the Data tab uses, applied to the
                 YAML view so that tab isn't a bypass for the per-key reveal.
                 ConfigMap YAML uses the same `data:` block shape as Secret

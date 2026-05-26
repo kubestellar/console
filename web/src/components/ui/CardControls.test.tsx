@@ -261,6 +261,62 @@ describe('CardControls', () => {
     })
   })
 
+  it('supports keyboard navigation in the sort menu', async () => {
+    const user = userEvent.setup()
+    const mockOnSortChange = vi.fn()
+
+    render(
+      <CardControls
+        sortOptions={mockSortOptions}
+        sortBy="date"
+        onSortChange={mockOnSortChange}
+      />
+    )
+
+    const sortButton = screen.getByRole('button', { name: /sort/i })
+    sortButton.focus()
+    await user.keyboard('{ArrowDown}')
+
+    expect(await screen.findByRole('option', { name: 'Date' })).toHaveFocus()
+
+    await user.keyboard('{End}')
+    expect(screen.getByRole('option', { name: 'Status' })).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => {
+      expect(mockOnSortChange).toHaveBeenCalledWith('status')
+    })
+  })
+
+  it('supports keyboard navigation in the limit menu', async () => {
+    const user = userEvent.setup()
+    const mockOnLimitChange = vi.fn()
+
+    render(
+      <CardControls
+        limit={5}
+        onLimitChange={mockOnLimitChange}
+        showLimit={true}
+      />
+    )
+
+    const limitButton = screen.getByRole('button', { name: /show/i })
+    limitButton.focus()
+    await user.keyboard('{ArrowDown}')
+
+    expect(await screen.findByRole('option', { name: '5' })).toHaveFocus()
+
+    await user.keyboard('{End}')
+    expect(screen.getByRole('option', { name: 'All' })).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => {
+      expect(mockOnLimitChange).toHaveBeenCalledWith('unlimited')
+    })
+  })
+
   it('closes limit dropdown after selecting an option', async () => {
     const user = userEvent.setup()
     const mockOnLimitChange = vi.fn()

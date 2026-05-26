@@ -13,7 +13,6 @@ import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { useCache } from '../../../lib/cache'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { useToast } from '../../ui/Toast'
-import { useDropdownKeyNav } from '../../../hooks/useDropdownKeyNav'
 import type {
   GeocodingResult,
   ForecastDay,
@@ -286,9 +285,6 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     setCitySearchResults([])
   }
 
-  // Keyboard navigation for city search dropdown
-  const handleCityDropdownKeyDown = useDropdownKeyNav(() => setShowCityDropdown(false))
-
   // Save current location
   const saveCurrentLocation = () => {
     const exists = savedLocations.some(loc => loc.id === currentLocation.id)
@@ -372,8 +368,16 @@ export function Weather({ config }: { config?: WeatherConfig }) {
                 value={citySearchInput}
                 onChange={(e) => setCitySearchInput(e.target.value)}
                 onFocus={() => citySearchResults.length > 0 && setShowCityDropdown(true)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'ArrowDown' || citySearchResults.length === 0) return
+                  event.preventDefault()
+                  setShowCityDropdown(true)
+                }}
                 className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground placeholder:text-muted-foreground"
                 placeholder="Type city name..."
+                aria-expanded={showCityDropdown}
+                aria-controls="weather-city-results"
+                aria-autocomplete="list"
               />
               {isSearching && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
@@ -381,9 +385,13 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
               {/* City Search Dropdown */}
               {showCityDropdown && citySearchResults.length > 0 && (
-                <div 
+                <div
+                  id="weather-city-results"
+                  ref={(node) => {
+                    cityDropdownNav.containerRef.current = node
+                  }}
                   className="absolute z-50 w-full mt-1 bg-secondary/95 backdrop-blur-xs border border-border/30 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                  onKeyDown={handleCityDropdownKeyDown}
+                  onKeyDown={cityDropdownNav.handleKeyDown}
                   role="listbox"
                   aria-label="City search results"
                 >

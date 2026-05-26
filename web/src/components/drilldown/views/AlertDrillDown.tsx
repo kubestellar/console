@@ -10,6 +10,7 @@ import {
   Code
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { useTabKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
@@ -83,6 +84,7 @@ export function AlertDrillDown({ data }: Props) {
   const [aiAnalysis] = useState<string | null>(null)
   const [aiAnalysisLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<TabType>({ tabs: ['overview', 'labels', 'source', 'ai'], activeTab, onChange: setActiveTab })
   const mountedRef = useRef(true)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -295,13 +297,13 @@ Please:
 
       {/* Tabs */}
       <div className="border-b border-border px-6">
-        <div className="flex gap-1">
+        <div {...tabListProps} className="flex gap-1">
           {TABS.map((tab) => {
             const Icon = tab.icon
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                {...getTabProps(tab.id)}
                 className={cn(
                   'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
                   activeTab === tab.id
@@ -320,7 +322,7 @@ Please:
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div {...getTabPanelProps('overview')} className="space-y-6">
             {/* Alert Info Card */}
             <div className={cn('p-4 rounded-lg border', severityStyle.bg, severityStyle.border)}>
               <div className="flex items-start gap-3">
@@ -429,7 +431,7 @@ Please:
         )}
 
         {activeTab === 'labels' && (
-          <div className="space-y-4">
+          <div {...getTabPanelProps('labels')} className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground">{t('drilldown.alertDetail.allLabels', { count: labelEntries.length })}</h4>
             </div>
@@ -466,7 +468,7 @@ Please:
         )}
 
         {activeTab === 'source' && (
-          <div className="space-y-4">
+          <div {...getTabPanelProps('source')} className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">{t('drilldown.alertDetail.alertRuleSource')}</h4>
             {sourceLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -487,7 +489,7 @@ Please:
         )}
 
         {activeTab === 'ai' && (
-          <div className="space-y-4">
+          <div {...getTabPanelProps('ai')} className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <ConsoleAIIcon className="w-5 h-5" />

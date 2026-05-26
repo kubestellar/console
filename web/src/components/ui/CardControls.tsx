@@ -3,6 +3,7 @@ import { type KeyboardEvent, useState, useRef, useEffect } from 'react'
 import { cn } from '../../lib/cn'
 import { emitCardSortChanged, emitCardSortDirectionChanged, emitCardLimitChanged } from '../../lib/analytics'
 import { useCardType } from '../cards/CardWrapper'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { Button } from './Button'
 
 interface LimitOption {
@@ -58,6 +59,8 @@ export function CardControls<T extends string = string>({
   const sortRef = useRef<HTMLDivElement>(null)
   const sortMenuRef = useRef<HTMLDivElement>(null)
   const shouldFocusSortOptionRef = useRef(false)
+  const limitNav = useKeyboardNav({ selector: '[role="option"]:not([disabled])', orientation: 'vertical', onEscape: () => setLimitOpen(false) })
+  const sortNav = useKeyboardNav({ selector: '[role="option"]:not([disabled])', orientation: 'vertical', onEscape: () => setSortOpen(false) })
 
   const toggleDirection = () => {
     if (onSortDirectionChange) {
@@ -82,11 +85,15 @@ export function CardControls<T extends string = string>({
   }, [])
 
   useEffect(() => {
+    if (!limitOpen) return
+    limitNav.focusMatchingItem({ preferredSelector: '[role="option"][aria-selected="true"]' })
+  }, [limitNav, limitOpen])
+
+  useEffect(() => {
     if (!sortOpen || !shouldFocusSortOptionRef.current) return
-    const items = sortMenuRef.current?.querySelectorAll<HTMLElement>('[role="option"]:not([disabled])')
-    items?.[0]?.focus()
+    sortNav.focusMatchingItem({ preferredSelector: '[role="option"][aria-selected="true"]' })
     shouldFocusSortOptionRef.current = false
-  }, [sortOpen])
+  }, [sortNav, sortOpen])
 
   const handleSortToggle = () => {
     const nextSortOpen = !sortOpen
@@ -121,27 +128,37 @@ export function CardControls<T extends string = string>({
             variant="ghost"
             size="sm"
             onClick={() => { setLimitOpen(!limitOpen); setSortOpen(false) }}
+            onKeyDown={(event) => {
+              if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !limitOpen) {
+                event.preventDefault()
+                setLimitOpen(true)
+                setSortOpen(false)
+              }
+            }}
+            aria-haspopup="listbox"
+            aria-expanded={limitOpen}
             className="bg-secondary/50 hover:bg-secondary"
             iconRight={<ChevronDown className={cn('w-3 h-3 transition-transform', limitOpen && 'rotate-180')} />}
           >
             Show: {currentLimitLabel}
           </Button>
           {limitOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1"
-              onKeyDown={(e) => {
-                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                e.preventDefault()
-                const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-                const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                else items[Math.max(idx - 1, 0)]?.focus()
+            <div
+              ref={(node) => {
+                limitNav.containerRef.current = node
               }}
+              role="listbox"
+              aria-label="Limit options"
+              className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1"
+              onKeyDown={limitNav.handleKeyDown}
             >
               {LIMIT_OPTIONS.map(option => (
                 <Button
                   key={String(option.value)}
                   variant="ghost"
                   size="sm"
+                  role="option"
+                  aria-selected={limit === option.value}
                   onClick={() => { onLimitChange(option.value); setLimitOpen(false); emitCardLimitChanged(String(option.value), cardType) }}
                   className={cn(
                     'w-full justify-start px-3 py-1.5 text-xs',
@@ -175,18 +192,14 @@ export function CardControls<T extends string = string>({
             </Button>
             {sortOpen && (
               <div
-                ref={sortMenuRef}
+                ref={(node) => {
+                  sortMenuRef.current = node
+                  sortNav.containerRef.current = node
+                }}
                 role="listbox"
                 aria-label="Sort options"
                 className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1"
-                onKeyDown={(e) => {
-                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                  e.preventDefault()
-                  const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]:not([disabled])')
-                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                  else items[Math.max(idx - 1, 0)]?.focus()
-                }}
+                onKeyDown={sortNav.handleKeyDown}
               >
                 {sortOptions.map(option => (
                   <Button
