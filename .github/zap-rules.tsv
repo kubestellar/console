@@ -1,6 +1,7 @@
 # ZAP Baseline Scan Rule Overrides
 # Format: rule_id	action	description
-# Actions: IGNORE (skip), WARN (report but don't fail), FAIL (report and fail)
+# Actions: IGNORE (skip), WARN (report but don't fail), FAIL (report and fail),
+# OUTOFSCOPE (ignore a URL regex for a specific rule id)
 #
 # These rules are tuned for console.kubestellar.io which is a Netlify-hosted
 # React SPA with a Go backend API proxy.
@@ -22,6 +23,13 @@
 10049	IGNORE	Storable and Cacheable Content
 10050	IGNORE	Retrieved from Cache
 10109	IGNORE	Modern Web Application
+
+# #15750: `/api/github-pipelines` includes GitHub workflow names in its JSON
+# payload. ZAP rule 10099 misclassifies the workflow title "Select tests from
+# PR context" as SQL source disclosure even though it's ordinary Actions
+# metadata. Scope only this route out for 10099 so unexpected SQL disclosures
+# on other URLs still surface.
+10099	OUTOFSCOPE	https://console\.kubestellar\.io/api/github-pipelines.*
 
 # CSP rule 10055: DO NOT blanket-IGNORE (#6321 follow-up to #6318).
 # The two current findings (script-src unsafe-eval + style-src

@@ -60,21 +60,27 @@ jobs:
         if: always()
         id: zap-results
         env:
-          # Documented alert exceptions — known false positives or intentional
-          # configurations that should not trigger nightly issues. Each line is
-          # matched against the ZAP alert `name` field. Adding to this list
-          # requires a PR review.
-          #
-          # CSP exceptions (#6321): intentional 'unsafe-*' directives required
-          # by dynamic-cards `new Function()` and React inline style props.
-          # See netlify.toml:148-168 for full rationale.
-          #
-          # Source Code Disclosure - SQL: false positive — /api/github-pipelines
-          # returns workflow names containing "Update" which trigger rule 10099.
-          DOCUMENTED_EXCEPTIONS: |
+          # #6321: documented CSP exceptions — intentional 'unsafe-*'
+          # directives that cannot be removed without breaking
+          # load-bearing features (dynamic-cards `new Function()` and
+          # React inline style props). See netlify.toml:148-168 for
+          # full rationale and compensating controls. This filter is
+          # the source of truth for "which CSP alerts are expected";
+          # adding to the list requires a PR review. Matching against
+          # the alert `name` field lets us silence ONLY these two
+          # sub-findings while still catching future CSP regressions
+          # under the same rule id 10055.
+          DOCUMENTED_CSP_EXCEPTIONS: |
             CSP: script-src unsafe-eval
             CSP: style-src unsafe-inline
-            Source Code Disclosure - SQL
+          # #15750: GitHub workflow names can legitimately contain SQL verbs
+          # (for example, "Select tests from PR context") in the
+          # `/api/github-pipelines` payload. That data is metadata from the
+          # GitHub Actions API, not leaked SQL source. Match the exact
+          # plugin/url/evidence signature so future 10099 findings elsewhere
+          # still surface.
+          DOCUMENTED_SQL_DISCLOSURE_PATH: /api/github-pipelines
+          DOCUMENTED_SQL_DISCLOSURE_EVIDENCE: Select tests from PR context
         run: |
           # ZAP baseline outputs a summary to stdout; check for alerts
           ALERT_COUNT=0
@@ -86,12 +92,22 @@ jobs:
             # Build a jq filter that excludes each documented exception by name.
             # We read the exception list from the env var so adding a new
             # documented exception is a one-line YAML edit, not a jq rewrite.
-            EXCLUDE_JQ='[.site[].alerts[] | select(.name as $n | ($exceptions | split("\n") | map(select(length > 0)) | index($n) | not))]'
+            # Keep the SQL-disclosure suppression signature-based so ZAP still
+            # reports unexpected 10099 hits on other routes or evidence.
+            EXCLUDE_JQ='[.site[].alerts[]
+              | select(.name as $n | ($exceptions | split("\n") | map(select(length > 0)) | index($n) | not))
+              | select(
+                  (.pluginid != "10099") or
+                  (((.instances // []) as $instances
+                    | ($instances | length > 0)
+                      and ($instances | all(.[]; ((.uri // "") | contains($sql_path)) and (.evidence // "") == $sql_evidence)))
+                    | not)
+                )]'
 
-            ALERT_COUNT=$(jq  --arg exceptions "$DOCUMENTED_EXCEPTIONS" "$EXCLUDE_JQ | length" report_json.json 2>/dev/null || echo 0)
-            HIGH_COUNT=$(jq   --arg exceptions "$DOCUMENTED_EXCEPTIONS" "$EXCLUDE_JQ | map(select(.riskcode == \"3\")) | length" report_json.json 2>/dev/null || echo 0)
-            MEDIUM_COUNT=$(jq --arg exceptions "$DOCUMENTED_EXCEPTIONS" "$EXCLUDE_JQ | map(select(.riskcode == \"2\")) | length" report_json.json 2>/dev/null || echo 0)
-            LOW_COUNT=$(jq    --arg exceptions "$DOCUMENTED_EXCEPTIONS" "$EXCLUDE_JQ | map(select(.riskcode == \"1\")) | length" report_json.json 2>/dev/null || echo 0)
+            ALERT_COUNT=$(jq  --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" --arg sql_path "$DOCUMENTED_SQL_DISCLOSURE_PATH" --arg sql_evidence "$DOCUMENTED_SQL_DISCLOSURE_EVIDENCE" "$EXCLUDE_JQ | length" report_json.json 2>/dev/null || echo 0)
+            HIGH_COUNT=$(jq   --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" --arg sql_path "$DOCUMENTED_SQL_DISCLOSURE_PATH" --arg sql_evidence "$DOCUMENTED_SQL_DISCLOSURE_EVIDENCE" "$EXCLUDE_JQ | map(select(.riskcode == \"3\")) | length" report_json.json 2>/dev/null || echo 0)
+            MEDIUM_COUNT=$(jq --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" --arg sql_path "$DOCUMENTED_SQL_DISCLOSURE_PATH" --arg sql_evidence "$DOCUMENTED_SQL_DISCLOSURE_EVIDENCE" "$EXCLUDE_JQ | map(select(.riskcode == \"2\")) | length" report_json.json 2>/dev/null || echo 0)
+            LOW_COUNT=$(jq    --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" --arg sql_path "$DOCUMENTED_SQL_DISCLOSURE_PATH" --arg sql_evidence "$DOCUMENTED_SQL_DISCLOSURE_EVIDENCE" "$EXCLUDE_JQ | map(select(.riskcode == \"1\")) | length" report_json.json 2>/dev/null || echo 0)
           fi
 
           echo "alert_count=$ALERT_COUNT" >> "$GITHUB_OUTPUT"
@@ -109,18 +125,28 @@ jobs:
         if: always() && steps.zap-results.outputs.has_findings == 'true'
         id: zap-summary
         env:
-          # Keep in sync with the parse step's DOCUMENTED_EXCEPTIONS
-          DOCUMENTED_EXCEPTIONS: |
+          # #6321 + #15750: keep the summary in sync with the parse step — if
+          # we've excluded a documented exception from the count, we
+          # shouldn't render it in the issue body either.
+          DOCUMENTED_CSP_EXCEPTIONS: |
             CSP: script-src unsafe-eval
             CSP: style-src unsafe-inline
-            Source Code Disclosure - SQL
+          DOCUMENTED_SQL_DISCLOSURE_PATH: /api/github-pipelines
+          DOCUMENTED_SQL_DISCLOSURE_EVIDENCE: Select tests from PR context
         run: |
           SUMMARY=""
           if [ -f report_json.json ]; then
-            SUMMARY=$(jq -r --arg exceptions "$DOCUMENTED_EXCEPTIONS" '
+            SUMMARY=$(jq -r --arg exceptions "$DOCUMENTED_CSP_EXCEPTIONS" --arg sql_path "$DOCUMENTED_SQL_DISCLOSURE_PATH" --arg sql_evidence "$DOCUMENTED_SQL_DISCLOSURE_EVIDENCE" '
               [.site[].alerts[]
                | select(.riskcode == "2" or .riskcode == "3")
                | select(.name as $n | ($exceptions | split("\n") | map(select(length > 0)) | index($n) | not))
+               | select(
+                   (.pluginid != "10099") or
+                   (((.instances // []) as $instances
+                     | ($instances | length > 0)
+                       and ($instances | all(.[]; ((.uri // "") | contains($sql_path)) and (.evidence // "") == $sql_evidence)))
+                     | not)
+                 )
                | "- **\(.riskdesc)**: \(.name) (\(.count) instance(s))"]
               | join("\n")
             ' report_json.json 2>/dev/null || echo "Could not parse alerts")
