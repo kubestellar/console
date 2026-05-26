@@ -614,7 +614,7 @@ export function Login() {
             <GlobeAnimation
               width="100%"
               height="100%"
-              showLoader={true}
+              showLoader={false}
               enableControls={true}
             />
           </Suspense>
