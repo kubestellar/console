@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { Mission } from '../../../../hooks/useMissions'
 import { MissionSidebar, MissionSidebarToggle } from '../MissionSidebar'
+import { HISTORY_PANEL_KEY } from '../missionSidebarConstants'
 
 interface MockMissionState {
   missions: Array<{ status: string }>
@@ -146,6 +147,7 @@ vi.mock('../../../missions/SaveResolutionDialog', () => ({
 beforeEach(() => {
   mockIsMobile = false
   lastMissionControlProps = null
+  localStorage.removeItem(HISTORY_PANEL_KEY)
   mockMissionState = {
     missions: [],
     activeMission: null,
