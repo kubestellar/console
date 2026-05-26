@@ -94,6 +94,13 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
   const launchSubmittingRef = useRef(false)
 
+  // Track the highest phase the user has reached so they can click back to any visited phase
+  const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
+  const [highestReached, setHighestReached] = useState(currentStepIndex)
+  useEffect(() => {
+    setHighestReached(prev => Math.max(prev, currentStepIndex))
+  }, [currentStepIndex])
+
   // Initialize Mission Control before the dialog paints so a fresh open never
   // flashes stale state and historical opens land on the selected run.
   useLayoutEffect(() => {
@@ -223,13 +230,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     [handleClose]
   )
 
-  // Track the highest phase the user has reached so they can click back to any visited phase
-  const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
-  const [highestReached, setHighestReached] = useState(currentStepIndex)
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
-  useEffect(() => {
-    setHighestReached(prev => Math.max(prev, currentStepIndex))
-  }, [currentStepIndex])
 
   useEffect(() => {
     if (!open || state.phase !== 'blueprint') {
