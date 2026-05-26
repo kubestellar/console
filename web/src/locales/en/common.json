@@ -2729,6 +2729,7 @@
     "keepInOrbit": "Keep it in orbit",
     "keepInOrbitDescription": "Set up recurring maintenance to keep your deployment healthy.",
     "setupOrbit": "Set Up Orbit",
+    "settingUp": "Setting up...",
     "skip": "Skip",
     "healthCheck": "Health Check",
     "healthCheckDescription": "Verify pod readiness, service endpoints, and resource availability.",

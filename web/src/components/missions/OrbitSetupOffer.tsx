@@ -256,7 +256,7 @@ export function OrbitSetupOffer({
               )}
             >
               {isCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Orbit className="w-3.5 h-3.5" />}
-              {isCreating ? 'Setting up...' : t('orbit.setupOrbit')}
+              {isCreating ? t('orbit.settingUp') : t('orbit.setupOrbit')}
             </button>
           </div>
         </div>

@@ -368,7 +368,7 @@ describe('OrbitSetupOffer', () => {
 
     await user.click(screen.getByRole('button', { name: 'orbit.setupOrbit' }))
 
-    const button = screen.getByRole('button', { name: 'Setting up...' })
+    const button = screen.getByRole('button', { name: 'orbit.settingUp' })
     expect(button).toBeDisabled()
     expect(button.querySelector('.animate-spin')).not.toBeNull()
 
