@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, ReactNode } from 'react'
 import { emitDrillDownOpened, emitDrillDownClosed } from '../lib/analytics'
 

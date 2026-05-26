@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import i18n from '../i18n'
 
 /**

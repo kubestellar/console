@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { Maximize2 } from 'lucide-react'

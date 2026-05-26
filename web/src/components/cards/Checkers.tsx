@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useRef } from 'react'
 import { Box, Server, Crown, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'

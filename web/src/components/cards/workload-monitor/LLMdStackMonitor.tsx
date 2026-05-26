@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 // Modal safety: the ApiKeyPromptModal imported here uses BaseModal with its own
 // close controls, and the cluster-filter dropdown is an anchored flyout (not a
 // backdrop modal). closeOnBackdropClick={false} semantics apply to the inline

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useMemo } from 'react'
 import { Search, Server, Layers, Rocket, Box, Settings as SettingsIcon, AlertCircle, HardDrive, Cpu, Ship, Zap, CheckCircle, XCircle, AlertTriangle, Activity, Filter, ChevronRight } from 'lucide-react'
 import { useClusterData } from '../../../hooks/useClusterData'

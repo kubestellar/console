@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { Smartphone } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES, type WidgetCardDefinition } from '../../../lib/widgets/widgetRegistry'

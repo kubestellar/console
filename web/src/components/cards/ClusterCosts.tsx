@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useMemo, useState, useEffect, useCallback, memo } from 'react'
 import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'

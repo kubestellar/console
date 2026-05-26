@@ -56,6 +56,22 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      'src/**/*.test.{ts,tsx}',
+      'src/**/*.spec.{ts,tsx}',
+      'src/**/*.stories.{ts,tsx}',
+      'src/e2e/**',
+    ],
+    rules: {
+      'max-lines': ['warn', {
+        max: 800,
+        skipBlankLines: true,
+        skipComments: true,
+      }],
+    },
+  },
   // The shared form components themselves necessarily render native elements —
   // disable the raw-element guards for those files only.
   {

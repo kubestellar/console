@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RotateCcw, Trophy, Pause, Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'

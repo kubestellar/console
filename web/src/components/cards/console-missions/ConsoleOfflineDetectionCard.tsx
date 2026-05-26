@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 // Modal safety: the ApiKeyPromptModal used here is the shared BaseModal-based
 // prompt that already guards its own close behavior; no form state on this
 // card can be lost to a backdrop click. Treat as closeOnBackdropClick={false}.

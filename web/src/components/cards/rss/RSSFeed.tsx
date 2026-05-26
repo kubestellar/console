@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 // Modal safety: the filter/settings panels here are inline flyouts, not portal
 // modals — no backdrop to click. Any form state lives in local React state and
 // is only written on explicit save. Treat as closeOnBackdropClick={false}.

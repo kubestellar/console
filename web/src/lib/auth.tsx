@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { MS_PER_SECOND } from './constants/time'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from './api'

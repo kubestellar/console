@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react'
 import {
   TrendingUp, TrendingDown, Clock, BarChart3,

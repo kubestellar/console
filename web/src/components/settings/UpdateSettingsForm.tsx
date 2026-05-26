@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
