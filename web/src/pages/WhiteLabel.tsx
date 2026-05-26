@@ -459,9 +459,12 @@ export function WhiteLabel() {
             <span className="text-white font-medium">150+ cards, 30 dashboards, AI missions</span> — all rebranded to your project.
           </p>
 
-          <p className="text-base text-slate-400 max-w-2xl mx-auto mb-10">
-            No fork needed. Set <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded">CONSOLE_PROJECT=yourproject</code> and{' '}
-            <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded">APP_NAME=&quot;Your Console&quot;</code> — done.
+          <p className="text-base text-slate-400 max-w-2xl mx-auto mb-10 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2">
+            <span>No fork needed. Set</span>
+            <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded whitespace-nowrap">CONSOLE_PROJECT=yourproject</code>
+            <span>and</span>
+            <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded whitespace-nowrap">APP_NAME=&quot;Your Console&quot;</code>
+            <span>— done.</span>
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
