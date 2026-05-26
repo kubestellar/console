@@ -455,13 +455,30 @@ function DeploymentDrillDownContent({ data }: Props) {
     }
   }
 
+  const handleButtonLikeKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>,
+    action: () => void,
+    disabled = false,
+  ) => {
+    if (disabled) {
+      return
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action()
+    }
+  }
+
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-6 text-sm">
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => drillToNamespace(cluster, namespace)}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToNamespace(cluster, namespace))}
             className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >
             <Layers className="w-4 h-4 text-purple-400" />
@@ -470,9 +487,12 @@ function DeploymentDrillDownContent({ data }: Props) {
             <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </button>
-          <button
+          </div>
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => drillToCluster(cluster)}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToCluster(cluster))}
             className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >
             <Server className="w-4 h-4 text-blue-400" />
@@ -481,20 +501,29 @@ function DeploymentDrillDownContent({ data }: Props) {
             <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </button>
+          </div>
         </div>
         {/* Issue 9283: Refresh all tabs — Events/Describe/YAML used to cache
             forever with no way to refetch. */}
-        <button
-          type="button"
-          onClick={handleRefreshAll}
-          disabled={!agentConnected || isRefreshing}
+        <div
+          role="button"
+          tabIndex={!agentConnected || isRefreshing ? -1 : 0}
+          aria-disabled={!agentConnected || isRefreshing}
+          onClick={() => {
+            if (agentConnected && !isRefreshing) {
+              handleRefreshAll()
+            }
+          }}
+          onKeyDown={(event) => handleButtonLikeKeyDown(event, handleRefreshAll, !agentConnected || isRefreshing)}
           title={t('drilldown.deployment.refreshAll')}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card disabled:opacity-50"
+          className={cn(
+            'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card',
+            !agentConnected || isRefreshing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+          )}
         >
           <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           <span>{t('drilldown.deployment.refresh')}</span>
-        </button>
+        </div>
       </div>
 
       {/* Tabs */}

@@ -193,12 +193,12 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
                 'You are viewing the Console in demo mode. This message does not indicate a real authentication failure.',
               )}
             </p>
-            <p className="mb-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+            <div className="mb-6 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
               {t(
                 'startupHandshake.demoAuthHint',
                 'Reload the page to reset the demo session and continue exploring the demo experience.',
               )}
-            </p>
+            </div>
             <div className="flex items-center justify-center">
               <Button
                 onClick={() => window.location.reload()}
@@ -221,12 +221,12 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
           <h2 className="mb-2 text-lg font-semibold text-foreground">
             {t('startupHandshake.authRequiredTitle', 'Authentication Required')}
           </h2>
-          <p className="mb-6 text-sm text-muted-foreground">
+          <div className="mb-6 text-sm text-muted-foreground">
             {t(
               'startupHandshake.authRequiredDescription',
               'Your session has expired or authentication credentials are missing. Please sign in again to continue using the console.',
             )}
-          </p>
+          </div>
           <div className="mb-6 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left">
             <h3 className="mb-2 text-sm font-semibold text-foreground">
               {t('startupHandshake.authRecoveryTitle', 'Recovery Steps')}
@@ -266,13 +266,13 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
         <h2 className="text-lg font-semibold text-foreground mb-2">
           {t('startupHandshake.errorTitle', 'Infrastructure Connection Error')}
         </h2>
-        <p className="text-sm text-muted-foreground mb-6">
+        <div className="text-sm text-muted-foreground mb-6">
           {t(
             'startupHandshake.errorDescription',
             'The console could not complete its startup handshake within {{timeoutSeconds}} seconds. Verify that the backend can reach the Kubernetes API, then retry.',
             { timeoutSeconds: INITIAL_HANDSHAKE_TIMEOUT_SECONDS },
           )}
-        </p>
+        </div>
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-left">
           <h3 className="text-sm font-semibold text-foreground mb-2">
             {t('startupHandshake.detailsTitle', 'Technical details')}
@@ -291,12 +291,12 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
             ))}
           </ul>
         </div>
-        <p className="text-sm text-muted-foreground mt-4 mb-6">
+        <div className="text-sm text-muted-foreground mt-4 mb-6">
           {t(
             'startupHandshake.actionHint',
             'Check backend logs, kubeconfig access, and cluster network connectivity before retrying.',
           )}
-        </p>
+        </div>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             onClick={() => setAttempt()}

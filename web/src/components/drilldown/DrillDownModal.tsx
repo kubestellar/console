@@ -82,13 +82,13 @@ class DrillDownErrorBoundary extends Component<
           <h3 className="text-base font-semibold text-foreground mb-1">
             Failed to load view
           </h3>
-          <p className="text-sm text-muted-foreground mb-4 max-w-md">
+          <div className="text-sm text-muted-foreground mb-4 max-w-md">
             An error occurred while rendering this drilldown view.
-          </p>
+          </div>
           {this.state.error && (
-            <p className="text-xs text-muted-foreground/70 font-mono mb-4 break-all max-w-md">
+            <div className="text-xs text-muted-foreground/70 font-mono mb-4 break-all max-w-md">
               {this.state.error.message}
-            </p>
+            </div>
           )}
           <div className="flex items-center gap-3">
             <Button

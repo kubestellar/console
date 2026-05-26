@@ -376,6 +376,20 @@ Labels:       app=${resourceName.split('-')[0]}
     }
   }
 
+  const handleButtonLikeKeyDown = (
+    event: KeyboardEvent<HTMLElement>,
+    action: () => void,
+    disabled = false,
+  ) => {
+    if (disabled) {
+      return
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action()
+    }
+  }
+
   // Quick commands for the shell
   const quickCommands = [
     { label: 'Get Pods', cmd: `kubectl get pods -n ${namespace}` },
@@ -440,22 +454,29 @@ Labels:       app=${resourceName.split('-')[0]}
               </p>
             </div>
           </div>
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={onClose}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, onClose)}
             aria-label="Close"
-            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+            className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
           >
             <X className="w-5 h-5" />
-          </button>
+          </div>
         </div>
 
         {/* Tabs */}
         <div className="flex border-b border-border">
-          <button
+          <div
+            role="tab"
+            tabIndex={0}
+            aria-selected={activeTab === 'ai'}
             onClick={() => setActiveTab('ai')}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => setActiveTab('ai'))}
             aria-label={t('remediation.aiAnalysis')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer',
               activeTab === 'ai'
                 ? 'text-purple-400 border-b-2 border-purple-500'
                 : 'text-muted-foreground hover:text-foreground'
@@ -463,15 +484,22 @@ Labels:       app=${resourceName.split('-')[0]}
           >
             <Sparkles className="w-4 h-4" />
             {t('remediation.aiAnalysis')}
-          </button>
-          <button
+          </div>
+          <div
+            role="tab"
+            tabIndex={0}
+            aria-selected={activeTab === 'shell'}
             onClick={() => {
               setActiveTab('shell')
               setTimeout(() => shellInputRef.current?.focus(), FOCUS_DELAY_MS)
             }}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => {
+              setActiveTab('shell')
+              setTimeout(() => shellInputRef.current?.focus(), FOCUS_DELAY_MS)
+            })}
             aria-label={t('remediation.shell')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer',
               activeTab === 'shell'
                 ? 'text-green-400 border-b-2 border-green-500'
                 : 'text-muted-foreground hover:text-foreground'
@@ -479,7 +507,7 @@ Labels:       app=${resourceName.split('-')[0]}
           >
             <Terminal className="w-4 h-4" />
             {t('remediation.shell')}
-          </button>
+          </div>
         </div>
 
         {/* Console Output */}
@@ -637,13 +665,23 @@ Labels:       app=${resourceName.split('-')[0]}
                 className="flex-1 bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground"
                 autoFocus
               />
-              <button
-                onClick={() => executeCommand(shellCommand)}
-                disabled={isExecuting || !shellCommand.trim()}
-                className="p-2 rounded hover:bg-card/50 text-muted-foreground hover:text-green-400 disabled:opacity-50"
+              <div
+                role="button"
+                tabIndex={isExecuting || !shellCommand.trim() ? -1 : 0}
+                aria-disabled={isExecuting || !shellCommand.trim()}
+                onClick={() => {
+                  if (!isExecuting && shellCommand.trim()) {
+                    executeCommand(shellCommand)
+                  }
+                }}
+                onKeyDown={(event) => handleButtonLikeKeyDown(event, () => executeCommand(shellCommand), isExecuting || !shellCommand.trim())}
+                className={cn(
+                  'p-2 rounded hover:bg-card/50 text-muted-foreground hover:text-green-400',
+                  isExecuting || !shellCommand.trim() ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                )}
               >
                 <Send className="w-4 h-4" />
-              </button>
+              </div>
             </div>
           </div>
         )}
@@ -654,23 +692,29 @@ Labels:       app=${resourceName.split('-')[0]}
             {activeTab === 'ai' && (
               <>
                 {!isRunning && !isComplete && (
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={startRemediation}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground transition-colors"
+                    onKeyDown={(event) => handleButtonLikeKeyDown(event, startRemediation)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground transition-colors cursor-pointer"
                   >
                     <Play className="w-4 h-4" />
                     {t('remediation.startRemediation')}
-                  </button>
+                  </div>
                 )}
                 {isRunning && (
                   <>
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setIsPaused(!isPaused)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-foreground transition-colors"
+                      onKeyDown={(event) => handleButtonLikeKeyDown(event, () => setIsPaused(!isPaused))}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-foreground transition-colors cursor-pointer"
                     >
                       {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                       {isPaused ? t('remediation.resume') : t('remediation.pause')}
-                    </button>
+                    </div>
                     <button
                       onClick={stopRemediation}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-foreground transition-colors"
@@ -696,14 +740,24 @@ Labels:       app=${resourceName.split('-')[0]}
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={copyLogs}
-              disabled={logs.length === 0}
-              className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
+            <div
+              role="button"
+              tabIndex={logs.length === 0 ? -1 : 0}
+              aria-disabled={logs.length === 0}
+              onClick={() => {
+                if (logs.length > 0) {
+                  copyLogs()
+                }
+              }}
+              onKeyDown={(event) => handleButtonLikeKeyDown(event, copyLogs, logs.length === 0)}
+              className={cn(
+                'p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground',
+                logs.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+              )}
               title={t('remediation.copyLogs')}
             >
               <Copy className="w-4 h-4" />
-            </button>
+            </div>
             <button
               onClick={downloadLogs}
               disabled={logs.length === 0}

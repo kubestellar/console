@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Copy, Check, Download, RefreshCw, Server, Layers } from 'lucide-react'
 import { api } from '../../../lib/api'
 import { useToast } from '../../ui/Toast'
@@ -113,6 +113,13 @@ export function YAMLDrillDown({ data }: Props) {
     emitDataExported('yaml_download', resourceType)
   }
 
+  const handleButtonLikeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>, action: () => void) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      action()
+    }
+  }
+
   if (isLoading && !yaml) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -126,24 +133,30 @@ export function YAMLDrillDown({ data }: Props) {
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
         {namespace && cluster && (
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => drillToNamespace(cluster, namespace)}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToNamespace(cluster, namespace))}
             className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >
             <Layers className="w-4 h-4 text-purple-400" />
             <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
             <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-          </button>
+          </div>
         )}
         {cluster && (
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => drillToCluster(cluster)}
+            onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToCluster(cluster))}
             className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >
             <Server className="w-4 h-4 text-blue-400" />
             <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
             <ClusterBadge cluster={clusterShort} size="sm" />
-          </button>
+          </div>
         )}
       </div>
 
