@@ -5,11 +5,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Check } from 'lucide-react'
+import { AlertCircle, Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
-import { useToast } from '../ui/Toast'
 import type { MissionExport } from '../../lib/missions/types'
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -25,14 +24,14 @@ interface FixerCardProps {
   mission: MissionExport
   onImport: () => void
   onSelect: () => void
-  onCopyLink?: (e: React.MouseEvent) => void
+  onCopyLink?: (e: React.MouseEvent) => Promise<boolean> | boolean
   compact?: boolean
 }
 
 export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: FixerCardProps) {
   const { t } = useTranslation()
-  const { showToast } = useToast()
   const [linkCopied, setLinkCopied] = useState(false)
+  const [linkCopyFailed, setLinkCopyFailed] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -41,6 +40,42 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
       if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
     }
   }, [])
+
+  const resetLinkFeedback = () => {
+    if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+    linkCopiedTimeoutRef.current = setTimeout(() => {
+      setLinkCopied(false)
+      setLinkCopyFailed(false)
+    }, UI_FEEDBACK_TIMEOUT_MS)
+  }
+
+  const handleCopyLink = async (event: React.MouseEvent) => {
+    event.stopPropagation()
+    if (!onCopyLink) return
+
+    try {
+      const copied = await Promise.resolve(onCopyLink(event))
+      setLinkCopied(copied)
+      setLinkCopyFailed(!copied)
+      resetLinkFeedback()
+    } catch {
+      setLinkCopied(false)
+      setLinkCopyFailed(true)
+      resetLinkFeedback()
+    }
+  }
+
+  const copyButtonLabel = linkCopyFailed
+    ? t('missions.browser.copyFailed')
+    : linkCopied
+      ? t('missions.browser.copied')
+      : t('feedback.share')
+
+  const copyButtonAriaLabel = linkCopyFailed
+    ? t('missions.browser.copyLinkFailed')
+    : linkCopied
+      ? t('missions.browser.linkCopied')
+      : t('missions.browser.copyShareableLink')
 
   if (compact) {
     return (
@@ -85,22 +120,22 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
           {onCopyLink && (
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                onCopyLink(e)
-                  .then(() => {
-                    setLinkCopied(true)
-                    if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
-                    linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
-                  })
-                  .catch(() => {
-                    showToast('Failed to copy link', 'error')
-                  })
+                void handleCopyLink(e)
               }}
-              className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
-              title={t('missions.browser.copyShareableLink')}
-              aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
+              className={cn(
+                'p-0.5 rounded transition-colors',
+                linkCopyFailed
+                  ? 'text-red-400 hover:text-red-300'
+                  : 'text-muted-foreground/50 hover:text-purple-400'
+              )}
+              title={copyButtonAriaLabel}
+              aria-label={copyButtonAriaLabel}
             >
-              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
+              {linkCopyFailed
+                ? <AlertCircle className="w-3.5 h-3.5" />
+                : linkCopied
+                  ? <Check className="w-3.5 h-3.5 text-green-400" />
+                  : <Link className="w-3.5 h-3.5" />}
             </button>
           )}
           <span className={cn('px-1.5 py-0.5 text-2xs font-medium rounded-full', typeStyle.bg, typeStyle.color)}>
@@ -155,23 +190,23 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
           {onCopyLink && (
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                onCopyLink(e)
-                  .then(() => {
-                    setLinkCopied(true)
-                    if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
-                    linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
-                  })
-                  .catch(() => {
-                    showToast('Failed to copy link', 'error')
-                  })
+                void handleCopyLink(e)
               }}
-              className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
-              title={t('missions.browser.copyShareableLink')}
-              aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
+              className={cn(
+                'inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded border transition-colors',
+                linkCopyFailed
+                  ? 'border-red-500/40 text-red-400 hover:text-red-300'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              )}
+              title={copyButtonAriaLabel}
+              aria-label={copyButtonAriaLabel}
             >
-              {linkCopied ? <Check className="w-3 h-3 text-green-400" /> : <Link className="w-3 h-3" />}
-              {linkCopied ? t('missions.browser.copied') : t('feedback.share')}
+              {linkCopyFailed
+                ? <AlertCircle className="w-3 h-3" />
+                : linkCopied
+                  ? <Check className="w-3 h-3 text-green-400" />
+                  : <Link className="w-3 h-3" />}
+              {copyButtonLabel}
             </button>
           )}
           <button

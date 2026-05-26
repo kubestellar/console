@@ -187,12 +187,20 @@ export function useMissionContentViewer({
   useEffect(() => {
     if (!isOpen) return
 
-    clearSelectedMission()
-    setDirectoryEntries([])
-    setUnstructuredContent(null)
-    setScanResult(null)
-    setIsScanning(false)
-    pendingImportRef.current = null
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      clearSelectedMission()
+      setDirectoryEntries([])
+      setUnstructuredContent(null)
+      setScanResult(null)
+      setIsScanning(false)
+      pendingImportRef.current = null
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [clearSelectedMission, isOpen])
 
   useEffect(() => {
@@ -385,12 +393,17 @@ export function useMissionContentViewer({
     }
   }, [applySelectedFileContent, showToast, t])
 
-  const handleCopyLink = useCallback((mission: MissionExport, event: React.MouseEvent) => {
+  const handleCopyLink = useCallback(async (mission: MissionExport, event: React.MouseEvent) => {
     event.stopPropagation()
     const url = getMissionShareUrl(mission)
-    void copyToClipboard(url)
+    const didCopy = await copyToClipboard(url)
+    if (!didCopy) {
+      showToast(t('missions.browser.copyLinkFailed'), 'error')
+      return false
+    }
     emitFixerLinkCopied(mission.title, mission.cncfProject)
-  }, [])
+    return true
+  }, [showToast, t])
 
   const resetContentView = useCallback(() => {
     clearSelectedMission()

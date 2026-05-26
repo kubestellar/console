@@ -33,7 +33,7 @@ interface MissionBrowserFixesTabProps {
   viewMode: ViewMode
   onSelectMission: (mission: MissionExport) => void
   onImportMission: (mission: MissionExport) => void
-  onCopyLink: (mission: MissionExport, e: React.MouseEvent) => void
+  onCopyLink: (mission: MissionExport, e: React.MouseEvent) => Promise<boolean>
 }
 
 export function MissionBrowserFixesTab({

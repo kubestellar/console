@@ -225,14 +225,13 @@ async function generateAISummary(mission: Mission): Promise<AISummary> {
     // we have already settled the promise; suppress any subsequent
     // onerror/onclose handlers from rejecting again.
     let settled = false
-    let timeout: ReturnType<typeof setTimeout> | undefined
     const settle = (fn: () => void) => {
       if (settled) return
       settled = true
-      if (timeout !== undefined) clearTimeout(timeout)
+      clearTimeout(timeout)
       fn()
     }
-    timeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       settle(() => {
         ws.close()
         reject(new Error('Timeout waiting for AI summary'))
@@ -408,10 +407,16 @@ export function SaveResolutionDialog({
   // lets the init useEffect depend only on isOpen + mission.id.
   const missionRef = useRef(mission)
   const signatureRef = useRef(autoDetectedSignature)
+  const translationRef = useRef(t)
+  const showToastRef = useRef(showToast)
   useEffect(() => {
     missionRef.current = mission
     signatureRef.current = autoDetectedSignature
   }, [mission, autoDetectedSignature])
+  useEffect(() => {
+    translationRef.current = t
+    showToastRef.current = showToast
+  }, [t, showToast])
 
   // Form state
   const [title, setTitle] = useState('')
@@ -445,9 +450,12 @@ export function SaveResolutionDialog({
       setSteps(aiSummary.steps.length > 0 ? aiSummary.steps : [''])
       setYaml(aiSummary.yaml || '')
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to generate summary'
-      setAiError(errorMessage)
-      showToast(errorMessage, 'error')
+      const translate = translationRef.current
+      const errorMessage = err instanceof Error
+        ? err.message
+        : translate('dashboard.missions.aiSummaryFailed')
+      setAiError(translate('dashboard.missions.aiSummaryFallbackDetail', { error: errorMessage }))
+      showToastRef.current(translate('dashboard.missions.aiSummaryFallbackNotice'), 'warning')
       // Fall back to basic extraction
       setTitle(currentMission.title)
       setIssueType(signatureRef.current.type || '')
@@ -455,14 +463,22 @@ export function SaveResolutionDialog({
     } finally {
       setIsGenerating(false)
     }
-  }, [showToast])
+  }, [])
 
   // Initialize form when dialog opens - auto-generate AI summary.
   // Depends only on isOpen + mission.id so streaming message updates on the
   // active mission don't re-fire the effect (which would re-open the AI
   // WebSocket and freeze the UI — issue #9163).
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+      return
+    }
+
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) {
+        return
+      }
       setError(null)
       setAiError(null)
 
@@ -475,9 +491,12 @@ export function SaveResolutionDialog({
       setYaml('')
 
       // Generate AI summary
-      generateSummary()
+      void generateSummary()
+    })
+
+    return () => {
+      cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, mission.id, generateSummary])
 
   const handleAddStep = () => {

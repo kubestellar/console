@@ -37,7 +37,7 @@ export interface MissionContentController {
   handleImportDirectoryEntry: (entry: BrowseEntry) => Promise<void>
   handleScanComplete: (result: FileScanResult) => void
   handleScanDismiss: () => void
-  handleCopyLink: (mission: MissionExport, event: React.MouseEvent) => void
+  handleCopyLink: (mission: MissionExport, event: React.MouseEvent) => Promise<boolean>
   clearSelectedMission: () => void
   resetContentView: () => void
 }
