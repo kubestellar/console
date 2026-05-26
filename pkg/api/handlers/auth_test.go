@@ -852,3 +852,43 @@ func TestCookieSameSiteStrict(t *testing.T) {
 	assert.Equal(t, http.SameSiteStrictMode, sameSite,
 		"kc_auth cookie must be SameSite=Strict (#6588)")
 }
+
+func TestJWTCookieSecureFlagFollowsRequestProtocol(t *testing.T) {
+	t.Run("https request sets secure even with http frontend url", func(t *testing.T) {
+		app, mockStore, handler := setupAuthTest()
+		app.Get("/auth/dev", handler.devModeLogin)
+
+		mockStore.On("GetUserByGitHubID", "dev-dev-user").Return(nil, nil).Once()
+		mockStore.On("CreateUser", mock.Anything).Return(nil).Once()
+		mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
+
+		req := httptest.NewRequest(http.MethodGet, "https://console.example.com/auth/dev", nil)
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+
+		cookie := findResponseCookie(t, resp, jwtCookieName)
+		assert.True(t, cookie.Secure, "kc_auth cookie must be Secure on HTTPS requests")
+	})
+
+	t.Run("http request clears secure even with https frontend url", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		handler := NewAuthHandler(mockStore, AuthConfig{
+			JWTSecret:   "test-secret",
+			FrontendURL: "https://console.example.com",
+			DevMode:     true,
+		})
+		app.Get("/auth/dev", handler.devModeLogin)
+
+		mockStore.On("GetUserByGitHubID", "dev-dev-user").Return(nil, nil).Once()
+		mockStore.On("CreateUser", mock.Anything).Return(nil).Once()
+		mockStore.On("UpdateLastLogin", mock.Anything).Return(nil).Once()
+
+		req := httptest.NewRequest(http.MethodGet, "http://console.example.com/auth/dev", nil)
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+
+		cookie := findResponseCookie(t, resp, jwtCookieName)
+		assert.False(t, cookie.Secure, "kc_auth cookie must reflect the request protocol, not FRONTEND_URL")
+	})
+}
