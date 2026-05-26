@@ -168,7 +168,18 @@ export function RecentFailures() {
                   <td className="py-1.5 pr-2 text-muted-foreground truncate max-w-[120px]" title={r.branch}>
                     {r.branch}
                     {(r.pullRequests?.length ?? 0) > 0 && (
-                      <a href={sanitizeUrl(r.pullRequests![0].url || `https://github.com/${r.repo}/pull/${r.pullRequests![0].number}`)} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{r.pullRequests![0].number}</a>
+                      <button
+                        type="button"
+                        onClick={() => window.open(
+                          sanitizeUrl(r.pullRequests![0].url || `https://github.com/${r.repo}/pull/${r.pullRequests![0].number}`),
+                          '_blank',
+                          'noopener,noreferrer',
+                        )}
+                        className="ml-1 inline-flex items-center border-0 bg-transparent p-0 text-blue-400 hover:underline"
+                        title={`Open PR #${r.pullRequests![0].number}`}
+                      >
+                        #{r.pullRequests![0].number}
+                      </button>
                     )}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">

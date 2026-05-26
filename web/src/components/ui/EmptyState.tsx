@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Plus, LucideIcon } from 'lucide-react'
 
 /**
@@ -18,8 +18,8 @@ import { Plus, LucideIcon } from 'lucide-react'
  *  - EmptyStateAction is now a discriminated union so callers cannot
  *    supply both onClick and href at the same time. TypeScript enforces
  *    the mutual exclusion at compile time.
- *  - Internal href targets render as react-router <Link> to preserve SPA
- *    navigation. External URLs (http(s)) render as plain <a target=_blank>.
+ *  - Href actions render as buttons so empty-state CTAs stay valid even when
+ *    this component is nested inside a clickable container.
  */
 
 /** Matches fully-qualified URLs — anything with an http:// or https:// scheme. */
@@ -67,31 +67,26 @@ export interface EmptyStateProps {
 }
 
 function ActionButton({ action, variant }: { action: EmptyStateAction, variant: 'primary' | 'secondary' }) {
+  const navigate = useNavigate()
   const Icon = action.icon ?? Plus
   const classes = variant === 'primary'
     ? 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition-colors'
     : 'inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground rounded-lg transition-colors'
 
   if ('href' in action && action.href) {
-    // #6423 (Copilot comment on EmptyState.tsx:57) — internal href values
-    // were rendering as plain <a>, which triggers a full page reload and
-    // loses React state / SPA routing. Route internal paths through the
-    // react-router Link component; only fall back to a plain anchor for
-    // absolute external URLs (with rel=noopener to avoid window.opener
-    // leaks).
-    if (EXTERNAL_URL_REGEX.test(action.href)) {
-      return (
-        <a href={action.href} className={classes} target="_blank" rel="noopener noreferrer">
-          <Icon className="w-4 h-4" aria-hidden="true" />
-          {action.label}
-        </a>
-      )
+    const handleClick = () => {
+      if (EXTERNAL_URL_REGEX.test(action.href)) {
+        window.open(action.href, '_blank', 'noopener,noreferrer')
+        return
+      }
+      navigate(action.href)
     }
+
     return (
-      <Link to={action.href} className={classes}>
+      <button type="button" onClick={handleClick} className={classes}>
         <Icon className="w-4 h-4" aria-hidden="true" />
         {action.label}
-      </Link>
+      </button>
     )
   }
   return (

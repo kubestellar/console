@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { Server } from 'lucide-react'
 import { EmptyState } from '../EmptyState'
 
 /**
  * #6423 — tests covering the Copilot review comments on PR #6413 EmptyState.
  * Verifies the discriminated-union props (button OR link, never both),
- * internal href -> <Link>, and external href -> <a target=_blank>.
+ * internal href navigation, and external href window opening.
  */
 
 function renderWithRouter(node: React.ReactElement) {
@@ -46,31 +46,42 @@ describe('EmptyState', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
-  it('renders action with internal href as a react-router Link', () => {
-    renderWithRouter(
-      <EmptyState
-        title="Empty"
-        action={{ label: 'Connect a cluster', href: '/clusters', icon: Server }}
-      />
+  it('navigates when action uses an internal href', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route
+            path="/"
+            element={(
+              <EmptyState
+                title="Empty"
+                action={{ label: 'Connect a cluster', href: '/clusters', icon: Server }}
+              />
+            )}
+          />
+          <Route path="/clusters" element={<div>Clusters page</div>} />
+        </Routes>
+      </MemoryRouter>
     )
-    const link = screen.getByRole('link', { name: /connect a cluster/i })
-    // Link renders as an <a> with an href of the to prop.
-    expect(link).toHaveAttribute('href', '/clusters')
-    // Internal links should NOT open in a new tab.
-    expect(link).not.toHaveAttribute('target')
+
+    fireEvent.click(screen.getByRole('button', { name: /connect a cluster/i }))
+    expect(screen.getByText('Clusters page')).toBeInTheDocument()
   })
 
-  it('renders action with external href as an anchor with target=_blank and rel=noopener', () => {
+  it('opens a new tab when action uses an external href', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+
     renderWithRouter(
       <EmptyState
         title="Empty"
         action={{ label: 'Docs', href: 'https://kubestellar.io/docs' }}
       />
     )
-    const link = screen.getByRole('link', { name: /docs/i })
-    expect(link).toHaveAttribute('href', 'https://kubestellar.io/docs')
-    expect(link).toHaveAttribute('target', '_blank')
-    expect(link.getAttribute('rel') ?? '').toContain('noopener')
+
+    fireEvent.click(screen.getByRole('button', { name: /docs/i }))
+    expect(openSpy).toHaveBeenCalledWith('https://kubestellar.io/docs', '_blank', 'noopener,noreferrer')
+
+    openSpy.mockRestore()
   })
 
   it('renders both primary and secondary actions', () => {
