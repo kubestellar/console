@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { StatusBadge } from '../../ui/StatusBadge'
 import type { DetailPanelProps, MetricType } from './KVCacheMonitor.types'
 import { InfoSparkline } from './KVCacheMonitorChart'
 import { getDisplayPodName } from './KVCacheMonitor.utils'
@@ -11,7 +12,13 @@ const DETAIL_PANEL_HEIGHT = 32
 
 const METRIC_OPTIONS: MetricType[] = ['util', 'hitRate']
 
+const DEMO_DETAIL_HISTORY = {
+  hitRate: [0.9, 0.91, 0.92, 0.93, 0.92, 0.94],
+  util: [58, 61, 64, 67, 69, 72],
+}
+
 export const KVCacheMonitorDetailPanel = memo(function KVCacheMonitorDetailPanel({
+  isDemoData,
   onClose,
   onToggleMetric,
   panelPosition,
@@ -25,7 +32,9 @@ export const KVCacheMonitorDetailPanel = memo(function KVCacheMonitorDetailPanel
     () => (stats || []).find(stat => stat.podName === selectedPod) || null,
     [selectedPod, stats],
   )
-  const selectedHistory = selectedPod ? podHistory[selectedPod] : undefined
+  const selectedHistory = selectedPod
+    ? podHistory[selectedPod] || (isDemoData ? DEMO_DETAIL_HISTORY : undefined)
+    : undefined
 
   if (typeof document === 'undefined') {
     return null
@@ -43,7 +52,10 @@ export const KVCacheMonitorDetailPanel = memo(function KVCacheMonitorDetailPanel
           transition={{ duration: 0.15 }}
         >
           <div className="mb-2 flex flex-wrap items-center justify-between gap-y-2">
-            <span className="text-sm font-medium text-white">{getDisplayPodName(t, selectedStat.podName, 14)}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-white">{getDisplayPodName(t, selectedStat.podName, 14)}</span>
+              {isDemoData && <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>}
+            </div>
             <button className="p-1 text-xs text-muted-foreground hover:text-white" onClick={onClose} type="button">
               ✕
             </button>

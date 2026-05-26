@@ -35,6 +35,7 @@ export interface HeatmapLegendItem {
 
 export interface VisualizationProps {
   gaugeRefs: MutableRefObject<Record<string, HTMLButtonElement | null>>
+  isDemoData: boolean
   isExpanded: boolean
   onGaugeClick: (podName: string, element: HTMLButtonElement | null) => void
   selectedPod: string | null
@@ -44,6 +45,7 @@ export interface VisualizationProps {
 }
 
 export interface DetailPanelProps {
+  isDemoData: boolean
   onClose: () => void
   onToggleMetric: (metric: MetricType) => void
   panelPosition: PanelPosition | null

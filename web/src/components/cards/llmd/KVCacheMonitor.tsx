@@ -58,6 +58,8 @@ export function KVCacheMonitor() {
     return stackLastRefresh ?? metricsLastRefresh ?? null
   }, [metricsLastRefresh, stackContext?.lastRefresh])
 
+  const isDemoData = !selectedStack && isDemoMode
+
   useReportCardDataState({
     consecutiveFailures: 0,
     hasData: true,
@@ -164,6 +166,7 @@ export function KVCacheMonitor() {
 
       <div className="relative flex-1 overflow-visible">
         <KVCacheMonitorDetailPanel
+          isDemoData={isDemoData}
           onClose={handleDetailPanelClose}
           onToggleMetric={toggleMetric}
           panelPosition={panelPosition}
@@ -176,6 +179,7 @@ export function KVCacheMonitor() {
 
         <KVCacheMonitorVisualization
           gaugeRefs={gaugeRefs}
+          isDemoData={isDemoData}
           isExpanded={isExpanded}
           onGaugeClick={handleGaugeClick}
           selectedPod={selectedPod}

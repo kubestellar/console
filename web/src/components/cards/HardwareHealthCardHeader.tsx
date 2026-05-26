@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { CardControlsRow, CardSearchInput } from '../../lib/cards/CardComponents'
 import { SNOOZE_DURATIONS, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 import { cn } from '../../lib/cn'
+import { StatusBadge } from '../ui/StatusBadge'
 import { CARD_UI_STRINGS } from './strings'
 import type { SortField, ViewMode } from './HardwareHealthCard.types'
 
@@ -47,6 +48,7 @@ interface HardwareHealthCardHeaderProps {
   handleRetry: () => void
   isRetrying: boolean
   isRefreshing: boolean
+  isDemoData: boolean
 }
 
 export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
@@ -87,6 +89,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
   handleRetry,
   isRetrying,
   isRefreshing,
+  isDemoData,
 }: HardwareHealthCardHeaderProps) {
   const { t } = useTranslation(['cards', 'common'])
 
@@ -112,14 +115,18 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
         </div>
       )}
 
+      <div className="mb-3 flex items-center justify-end">
+        {isDemoData && <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>}
+      </div>
+
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-1.5 @md:gap-2 mb-4">
         <div className={cn('p-2 rounded-lg border', criticalCount > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20')}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
-          <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>Critical</div>
+          <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>{t('common:common.critical', 'Critical')}</div>
         </div>
         <div className={cn('p-2 rounded-lg border', warningCount > 0 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20')}>
           <div className="text-xl font-bold text-foreground">{warningCount}</div>
-          <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>Warning</div>
+          <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>{t('common:common.warning', 'Warning')}</div>
         </div>
         <button
           onClick={() => onViewModeChange('inventory')}
@@ -127,7 +134,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
           aria-label={t('cards:hardwareHealth.viewNodesInventoryAria')}
         >
           <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
-          <div className="text-2xs text-muted-foreground">Nodes Tracked</div>
+          <div className="text-2xs text-muted-foreground">{t('cards:hardwareHealth.nodesTracked', 'Nodes Tracked')}</div>
         </button>
       </div>
 
@@ -140,7 +147,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
             aria-pressed={viewMode === 'inventory'}
           >
             <List className="w-3.5 h-3.5" />
-            Inventory
+            {t('cards:hardwareHealth.inventory', 'Inventory')}
             {deduplicatedInventoryCount > 0 && (
               <span className="ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full bg-muted text-muted-foreground">{deduplicatedInventoryCount}</span>
             )}
@@ -152,7 +159,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
             aria-pressed={viewMode === 'alerts'}
           >
             <AlertCircle className="w-3.5 h-3.5" />
-            Alerts
+            {t('cards:hardwareHealth.alerts', 'Alerts')}
             {activeAlertCount > 0 && (
               <span className={cn('ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full', criticalCount > 0 ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400')}>{activeAlertCount}</span>
             )}
@@ -188,7 +195,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
                 </button>
                 {snoozeAllMenuOpen && (
                   <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
-                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b border-border mb-1">Snooze All ({visibleAlertIds.length})</div>
+                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b border-border mb-1">{t('cards:hardwareHealth.snoozeAllVisibleCount', 'Snooze All ({{count}})', { count: visibleAlertIds.length })}</div>
                     {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
                       <button
                         key={duration}
@@ -208,7 +215,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
                           className="w-full px-3 py-1.5 text-xs text-left text-yellow-400 hover:bg-muted/50 transition-colors"
                           aria-label={t('cards:hardwareHealth.clearAllSnoozesAria')}
                         >
-                          Clear all snoozes
+                          {t('cards:hardwareHealth.clearAllSnoozes', 'Clear all snoozes')}
                         </button>
                       </>
                     )}

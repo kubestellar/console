@@ -5,10 +5,14 @@ import { cn } from '../../lib/cn'
 import { copyToClipboard } from '../../lib/clipboard'
 import { downloadText } from '../../lib/download'
 import { useTranslation } from 'react-i18next'
+import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/Toast'
 import type { YAMLManifest } from './Kubectl.types'
 
+const RECENT_MANIFEST_LIMIT = 5
+
 interface YAMLEditorPanelProps {
+  isDemoData: boolean
   yamlContent: string
   yamlError: string | null
   yamlManifests: YAMLManifest[]
@@ -25,6 +29,7 @@ interface YAMLEditorPanelProps {
 }
 
 export function YAMLEditorPanel({
+  isDemoData,
   yamlContent,
   yamlError,
   yamlManifests,
@@ -41,12 +46,18 @@ export function YAMLEditorPanel({
 }: YAMLEditorPanelProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
+  const recentManifests = (yamlManifests || []).slice(-RECENT_MANIFEST_LIMIT).reverse()
 
   const handleExport = () => {
     if (!yamlContent.trim()) return
     const result = downloadText('manifest.yaml', yamlContent, 'text/yaml')
     if (!result.ok) {
-      showToast(`Failed to export YAML: ${result.error?.message || 'unknown error'}`, 'error')
+      showToast(
+        t('cards:kubectl.exportYamlFailed', 'Failed to export YAML: {{error}}', {
+          error: result.error?.message || t('common:common.unknown', 'unknown error'),
+        }),
+        'error',
+      )
     }
   }
 
@@ -56,6 +67,7 @@ export function YAMLEditorPanel({
         <div className="flex items-center gap-2">
           <FileCode className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-blue-300">{t('cards:kubectl.yamlEditor')}</span>
+          {isDemoData && <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -64,18 +76,18 @@ export function YAMLEditorPanel({
               'px-2 py-1 text-xs rounded',
               isDryRun ? 'bg-yellow-500/20 text-yellow-400' : 'bg-secondary text-muted-foreground'
             )}
-            title={isDryRun ? 'Dry-run enabled' : 'Dry-run disabled'}
+            title={isDryRun ? t('cards:kubectl.dryRunEnabled', 'Dry-run enabled') : t('cards:kubectl.dryRunDisabled', 'Dry-run disabled')}
           >
             {t('cards:kubectl.dryRun')}
           </button>
           <button
             onClick={() => {
               copyToClipboard(yamlContent)
-              onAddOutput('YAML copied to clipboard!')
+              onAddOutput(t('cards:kubectl.yamlCopied', 'YAML copied to clipboard!'))
             }}
             disabled={!yamlContent.trim()}
             className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="Copy YAML"
+            title={t('cards:kubectl.copyYaml', 'Copy YAML')}
           >
             <Copy className="w-3.5 h-3.5" />
           </button>
@@ -83,7 +95,7 @@ export function YAMLEditorPanel({
             onClick={handleExport}
             disabled={!yamlContent.trim()}
             className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="Download YAML"
+            title={t('cards:kubectl.downloadYaml', 'Download YAML')}
           >
             <Download className="w-3.5 h-3.5" />
           </button>
@@ -95,7 +107,7 @@ export function YAMLEditorPanel({
           onContentChange(e.target.value)
           onValidate(e.target.value)
         }}
-        placeholder="Paste or write your YAML manifest here..."
+        placeholder={t('cards:kubectl.yamlPlaceholder', 'Paste or write your YAML manifest here...')}
         className="w-full h-40 px-3 py-2 text-xs font-mono bg-black/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50 resize-none"
       />
       {yamlError && (
@@ -130,14 +142,14 @@ export function YAMLEditorPanel({
       </div>
 
       {/* Saved Manifests */}
-      {yamlManifests.length > 0 && (
+      {recentManifests.length > 0 && (
         <div className="mt-3 pt-3 border-t border-border/30">
           <div className="flex items-center gap-2 mb-2">
             <FileText className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">{t('cards:kubectl.savedManifests')}</span>
           </div>
           <div className="space-y-1">
-            {yamlManifests.slice(-5).reverse().map(manifest => (
+            {recentManifests.map(manifest => (
               <button
                 key={manifest.id}
                 onClick={() => onLoadManifest(manifest)}

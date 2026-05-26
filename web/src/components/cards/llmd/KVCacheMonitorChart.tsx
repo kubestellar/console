@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { TrendingDown, TrendingUp } from 'lucide-react'
+import type { KVCacheStats } from '../../../lib/llmd/mockData'
 import { HorseshoeGauge } from './shared/HorseshoeGauge'
 import type { SummaryStatsProps, VisualizationProps } from './KVCacheMonitor.types'
 import {
@@ -39,6 +40,42 @@ interface InfoSparklineProps {
 interface TrendSparklineProps {
   history: number[]
 }
+
+const DEMO_VISUALIZATION_STATS: KVCacheStats[] = [
+  {
+    cluster: 'demo-cluster',
+    evictionRate: 0.01,
+    hitRate: 0.94,
+    lastUpdated: new Date('2026-05-26T00:00:00Z'),
+    namespace: 'llm-d',
+    podName: 'Prefill (3)',
+    totalCapacityGB: 240,
+    usedGB: 164.4,
+    utilizationPercent: 69,
+  },
+  {
+    cluster: 'demo-cluster',
+    evictionRate: 0.02,
+    hitRate: 0.96,
+    lastUpdated: new Date('2026-05-26T00:00:00Z'),
+    namespace: 'llm-d',
+    podName: 'Decode (4)',
+    totalCapacityGB: 320,
+    usedGB: 176,
+    utilizationPercent: 55,
+  },
+  {
+    cluster: 'demo-cluster',
+    evictionRate: 0.015,
+    hitRate: 0.9,
+    lastUpdated: new Date('2026-05-26T00:00:00Z'),
+    namespace: 'llm-d',
+    podName: 'Unified (2)',
+    totalCapacityGB: 96,
+    usedGB: 57.6,
+    utilizationPercent: 60,
+  },
+]
 
 const PremiumGauge = memo(function PremiumGauge({ label, maxValue, size = 140, sublabel, value }: PremiumGaugeProps) {
   const percentage = maxValue > 0 ? Math.min((value / maxValue) * 100, 100) : 0
@@ -295,6 +332,7 @@ export const TrendSparkline = memo(function TrendSparkline({ history }: TrendSpa
 
 export const KVCacheMonitorVisualization = memo(function KVCacheMonitorVisualization({
   gaugeRefs,
+  isDemoData,
   isExpanded,
   onGaugeClick,
   selectedPod,
@@ -302,7 +340,7 @@ export const KVCacheMonitorVisualization = memo(function KVCacheMonitorVisualiza
   t,
   viewMode,
 }: VisualizationProps) {
-  const safeStats = stats || []
+  const safeStats = (stats || []).length > 0 ? stats : isDemoData ? DEMO_VISUALIZATION_STATS : []
 
   return (
     <AnimatePresence mode="wait">

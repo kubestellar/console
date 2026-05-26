@@ -16,9 +16,12 @@ import { formatTimeAgo } from '../../../lib/formatters'
 import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCardLoadingState } from '../CardDataContext'
-import { GuideRow } from './NightlyE2EGuideRow'
+import { GuideRow, GuideRowSkeleton } from './NightlyE2EGuideRow'
 import { GuideDetailPanel, NightlySummaryPanel } from './NightlyE2EDetailPanel'
 import { PLATFORM_COLORS, PLATFORM_ORDER } from './nightlyE2E.constants'
+
+const SUMMARY_SKELETON_COUNT = 4
+const GUIDE_ROW_SKELETON_COUNT = 6
 
 export function NightlyE2EStatus() {
   const { t } = useTranslation(['cards', 'common'])
@@ -89,14 +92,14 @@ export function NightlyE2EStatus() {
     return (
       <div className="p-4 h-full flex flex-col gap-3 overflow-hidden">
         <div className="grid grid-cols-2 @md:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: SUMMARY_SKELETON_COUNT }).map((_, i) => (
             <Skeleton key={i} variant="rounded" height={64} />
           ))}
         </div>
         <div className="flex flex-1 min-h-0 gap-3">
           <div className="flex-1 space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} variant="rounded" height={36} />
+            {Array.from({ length: GUIDE_ROW_SKELETON_COUNT }).map((_, i) => (
+              <GuideRowSkeleton key={i} />
             ))}
           </div>
           <div className="w-[420px] shrink-0">

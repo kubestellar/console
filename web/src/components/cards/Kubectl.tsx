@@ -15,6 +15,56 @@ import { AIAssistantPanel } from './KubectlAIPanel'
 import { YAMLEditorPanel } from './KubectlYAMLEditorPanel'
 import { CommandHistoryPanel } from './KubectlHistoryPanel'
 
+const DEMO_YAML_CONTENT = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-cache-warmer
+  namespace: llm-d
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llm-cache-warmer
+  template:
+    metadata:
+      labels:
+        app: llm-cache-warmer
+    spec:
+      containers:
+      - name: warmer
+        image: ghcr.io/kubestellar/demo-cache-warmer:v1.4.2
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"`
+
+const DEMO_MANIFEST_TIMESTAMP = new Date('2026-05-26T09:30:00Z')
+
+const DEMO_YAML_MANIFESTS: YAMLManifest[] = [
+  {
+    id: 'demo-manifest-cache-warmer',
+    name: 'llm-cache-warmer',
+    content: DEMO_YAML_CONTENT,
+    timestamp: DEMO_MANIFEST_TIMESTAMP,
+  },
+]
+
+const DEMO_COMMAND_HISTORY: CommandHistoryItem[] = [
+  {
+    id: 'demo-history-get-pods',
+    command: 'get pods -n llm-d',
+    context: 'demo-cluster',
+    output: 'NAME READY STATUS RESTARTS AGE\nllm-cache-warmer-7dd68 1/1 Running 0 18m',
+    success: true,
+    timestamp: new Date('2026-05-26T09:22:00Z'),
+  },
+]
+
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
@@ -48,6 +98,8 @@ export function Kubectl() {
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('table')
   const [isDryRun, setIsDryRun] = useState(false)
   const [showFormatMenu, setShowFormatMenu] = useState(false)
+  const demoCommandHistory = commandHistory.length > 0 ? commandHistory : isDemoMode ? DEMO_COMMAND_HISTORY : []
+  const demoYamlManifests = yamlManifests.length > 0 ? yamlManifests : isDemoMode ? DEMO_YAML_MANIFESTS : []
   const outputRef = useRef<HTMLDivElement>(null)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const formatMenuBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -304,6 +356,17 @@ export function Kubectl() {
     handleValidateYAML(manifest.content)
   }
 
+  const toggleYAMLEditor = () => {
+    const nextOpen = !showYAMLEditor
+    if (nextOpen && isDemoMode && !yamlContent.trim()) {
+      const demoManifest = DEMO_YAML_MANIFESTS[0]
+      setYamlContent(demoManifest.content)
+      setSelectedManifest(demoManifest.id)
+      setYamlError(null)
+    }
+    setShowYAMLEditor(nextOpen)
+  }
+
   return (
     <div className="h-full flex flex-col min-h-card overflow-hidden">
       {/* Header with controls */}
@@ -336,7 +399,7 @@ export function Kubectl() {
             <Sparkles className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setShowYAMLEditor(!showYAMLEditor)}
+            onClick={toggleYAMLEditor}
             className={cn(
               'p-1.5 rounded-lg transition-colors',
               showYAMLEditor ? 'bg-blue-500/20 text-blue-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
@@ -377,9 +440,10 @@ export function Kubectl() {
       {/* YAML Editor Panel */}
       {showYAMLEditor && (
         <YAMLEditorPanel
+          isDemoData={isDemoMode}
           yamlContent={yamlContent}
           yamlError={yamlError}
-          yamlManifests={yamlManifests}
+          yamlManifests={demoYamlManifests}
           selectedManifest={selectedManifest}
           isDryRun={isDryRun}
           isExecuting={isExecuting}
@@ -399,7 +463,7 @@ export function Kubectl() {
       {/* Command History Panel */}
       {showHistory && (
         <CommandHistoryPanel
-          history={commandHistory}
+          history={demoCommandHistory}
           onSelectCommand={handleSelectCommand}
         />
       )}

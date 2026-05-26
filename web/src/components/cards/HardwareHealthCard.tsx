@@ -431,6 +431,7 @@ export function HardwareHealthCard() {
         handleRetry={handleRetry}
         isRetrying={isRetrying}
         isRefreshing={isRefreshing}
+        isDemoData={isDemoFallback}
       />
 
       <HardwareHealthCardContent

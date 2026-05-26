@@ -21,6 +21,9 @@ import type { NightlyGuideStatus, NightlyRun } from '../../../lib/llmd/nightlyE2
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { ApiKeyPromptModal, useApiKeyCheck } from '../console-missions/shared'
 import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
+import { Skeleton } from '../../ui/Skeleton'
+
+const GUIDE_RUN_DOT_COUNT = 7
 
 export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, onMouseLeave }: {
   run: NightlyRun
@@ -313,6 +316,21 @@ export function TrendIndicator({ trend, passRate }: { trend: 'up' | 'down' | 'st
   )
 }
 
+export function GuideRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+      <Skeleton variant="circular" width={14} height={14} />
+      <Skeleton variant="text" width={200} height={16} />
+      <div className="flex items-center gap-1.5 shrink-0">
+        {Array.from({ length: GUIDE_RUN_DOT_COUNT }).map((_, index) => (
+          <Skeleton key={index} variant="circular" width={12} height={12} />
+        ))}
+      </div>
+      <Skeleton variant="text" width={48} height={14} className="ml-auto" />
+    </div>
+  )
+}
+
 export function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }: {
   guide: NightlyGuideStatus
   delay: number
@@ -368,7 +386,7 @@ export function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }:
           />
         ))}
         {/* Pad with empty dots if fewer than 7 runs */}
-        {Array.from({ length: Math.max(0, 7 - guide.runs.length) }).map((_, i) => (
+        {Array.from({ length: Math.max(0, GUIDE_RUN_DOT_COUNT - guide.runs.length) }).map((_, i) => (
           <div key={`empty-${i}`} className="w-3 h-3 rounded-full bg-border/50" />
         ))}
       </div>

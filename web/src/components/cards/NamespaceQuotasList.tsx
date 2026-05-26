@@ -2,6 +2,7 @@ import { memo, type CSSProperties, type RefObject } from 'react'
 
 // Split helper component; parent card owns useCardLoadingState.
 import { ChevronRight, Gauge, Pencil, Plus, Trash2, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { type ResourceQuota } from '../../hooks/useMCP'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -36,6 +37,7 @@ interface NamespaceQuotasListProps {
   paginatedQuotas: QuotaUsage[]
   paginatedLimits: LimitRangeItem[]
   uniqueQuotas: ResourceQuota[]
+  isDemoData: boolean
   isFetchingData: boolean
   onEditQuota: (quota: ResourceQuota) => void
   onDeleteQuota: (target: QuotaDeleteTarget) => void
@@ -56,6 +58,7 @@ export const NamespaceQuotasList = memo(function NamespaceQuotasList({
   paginatedQuotas,
   paginatedLimits,
   uniqueQuotas,
+  isDemoData,
   isFetchingData,
   onEditQuota,
   onDeleteQuota,
@@ -64,34 +67,40 @@ export const NamespaceQuotasList = memo(function NamespaceQuotasList({
   containerRef,
   containerStyle,
 }: NamespaceQuotasListProps) {
+  const { t } = useTranslation(['cards', 'common'])
+  const quotaItems = paginatedQuotas || []
+  const limitItems = paginatedLimits || []
+  const availableQuotas = uniqueQuotas || []
+
   return (
     <>
       {/* Local Search */}
       <CardSearchInput
         value={searchValue}
         onChange={onSearchChange}
-        placeholder="Search quotas..."
+        placeholder={t('cards:namespaceQuotas.searchQuotas')}
         className="mb-4"
       />
 
       {/* Scope badge */}
       <div className="flex items-center gap-2 mb-4 min-w-0 overflow-hidden">
         {selectedCluster === 'all' ? (
-          <StatusBadge color="blue" size="md" className="shrink-0">All Clusters</StatusBadge>
+          <StatusBadge color="blue" size="md" className="shrink-0">{t('cards:namespaceQuotas.allClustersLabel', 'All Clusters')}</StatusBadge>
         ) : (
           <div className="shrink-0"><ClusterBadge cluster={selectedCluster} /></div>
         )}
         <span className="text-muted-foreground shrink-0">/</span>
         {selectedNamespace === 'all' ? (
-          <StatusBadge color="purple" size="md" className="shrink-0">All Namespaces</StatusBadge>
+          <StatusBadge color="purple" size="md" className="shrink-0">{t('cards:namespaceQuotas.allNamespaces')}</StatusBadge>
         ) : (
           <span className="text-sm text-foreground truncate min-w-0">{selectedNamespace}</span>
         )}
+        {isDemoData && <StatusBadge color="yellow" size="xs" className="shrink-0">{t('common:common.demo')}</StatusBadge>}
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 p-1 rounded-lg bg-secondary/30">
-        {tabs.map(tab => (
+        {(tabs || []).map(tab => (
           <button
             key={tab.key}
             onClick={() => onTabChange(tab.key)}
@@ -117,23 +126,23 @@ export const NamespaceQuotasList = memo(function NamespaceQuotasList({
           </>
         ) : activePagination.totalItems === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm py-8">
-            <p>No {activeTab === 'quotas' ? 'resource quotas' : 'limit ranges'} found</p>
+            <p>{activeTab === 'quotas' ? t('cards:namespaceQuotas.noQuotas') : t('cards:namespaceQuotas.noLimitRanges')}</p>
             {activeTab === 'quotas' && (
               <button
                 onClick={onCreateQuota}
                 className="mt-3 flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
               >
                 <Plus className="w-4 h-4" />
-                Create GPU Quota
+                {t('cards:namespaceQuotas.createGpuQuota')}
               </button>
             )}
           </div>
         ) : activeTab === 'quotas' ? (
-          paginatedQuotas.map((quota, idx) => {
+          quotaItems.map((quota, idx) => {
             const color = getColor(quota.percent)
             const Icon = getIcon(quota.resource)
             const showScope = selectedCluster === 'all' || selectedNamespace === 'all'
-            const fullQuota = uniqueQuotas.find(
+            const fullQuota = availableQuotas.find(
               q => q.cluster === quota.cluster && q.namespace === quota.namespace && q.name === quota.quotaName
             )
             return (
@@ -163,14 +172,14 @@ export const NamespaceQuotasList = memo(function NamespaceQuotasList({
                         <button
                           onClick={() => onEditQuota(fullQuota)}
                           className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-blue-400"
-                          title="Edit quota"
+                          title={t('cards:namespaceQuotas.editQuota')}
                         >
                           <Pencil className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => onDeleteQuota({ cluster: fullQuota.cluster ?? '', namespace: fullQuota.namespace, name: fullQuota.name })}
                           className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-red-400"
-                          title="Delete quota"
+                          title={t('cards:namespaceQuotas.deleteQuota')}
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -203,7 +212,7 @@ export const NamespaceQuotasList = memo(function NamespaceQuotasList({
             )
           })
         ) : (
-          paginatedLimits.map((item, idx) => {
+          limitItems.map((item, idx) => {
             const showScope = selectedCluster === 'all' || selectedNamespace === 'all'
             return (
               <div
@@ -230,10 +239,10 @@ export const NamespaceQuotasList = memo(function NamespaceQuotasList({
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div className="mt-2 ml-6 text-xs text-muted-foreground space-y-1">
-                  {item.limits.default && <div>Default: {formatLimits(item.limits.default)}</div>}
-                  {item.limits.defaultRequest && <div>Default Request: {formatLimits(item.limits.defaultRequest)}</div>}
-                  {item.limits.max && <div>Max: {formatLimits(item.limits.max)}</div>}
-                  {item.limits.min && <div>Min: {formatLimits(item.limits.min)}</div>}
+                  {item.limits.default && <div>{t('cards:namespaceQuotas.default')}: {formatLimits(item.limits.default)}</div>}
+                  {item.limits.defaultRequest && <div>{t('cards:namespaceQuotas.defaultRequest')}: {formatLimits(item.limits.defaultRequest)}</div>}
+                  {item.limits.max && <div>{t('cards:namespaceQuotas.max')}: {formatLimits(item.limits.max)}</div>}
+                  {item.limits.min && <div>{t('cards:namespaceQuotas.min')}: {formatLimits(item.limits.min)}</div>}
                 </div>
               </div>
             )
