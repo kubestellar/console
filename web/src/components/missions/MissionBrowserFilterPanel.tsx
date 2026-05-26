@@ -9,6 +9,7 @@
  */
 
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { CATEGORY_FILTERS } from './missionBrowserConstants'
 
@@ -83,6 +84,9 @@ export function MissionBrowserFilterPanel({
   recommendationsTotal,
   filteredRecommendationsCount,
 }: MissionBrowserFilterPanelProps) {
+  const { t } = useTranslation()
+  const showNoMatches = activeFilterCount > 0 && recommendationsTotal > 0 && filteredRecommendationsCount === 0
+
   return (
     <div className="px-4 py-2.5 bg-card border-b border-border space-y-2 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
       {/* Row 1: Clear all + Match % + Source + Category */}
@@ -93,7 +97,7 @@ export function MissionBrowserFilterPanel({
             className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
           >
             <X className="w-3 h-3" />
-            Clear all
+            {t('actions.clearAll')}
           </button>
         )}
 
@@ -258,7 +262,7 @@ export function MissionBrowserFilterPanel({
               onClick={onClearTags}
               className="text-[11px] text-muted-foreground hover:text-foreground underline"
             >
-              clear tags
+              {t('missions.browser.filters.clearTags')}
             </button>
           )}
         </div>
@@ -267,8 +271,25 @@ export function MissionBrowserFilterPanel({
       {/* Active filter summary */}
       {recommendationsTotal > 0 && (
         <div className="text-[11px] text-muted-foreground">
-          Showing {filteredRecommendationsCount} of {recommendationsTotal} missions
-          {activeFilterCount > 0 && ' (filtered)'}
+          {t('missions.browser.filters.summary', {
+            shown: filteredRecommendationsCount,
+            total: recommendationsTotal,
+          })}
+          {activeFilterCount > 0 && ` ${t('missions.browser.filters.filteredSuffix')}`}
+        </div>
+      )}
+
+      {showNoMatches && (
+        <div className="rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm">
+          <p className="font-medium text-foreground">{t('missions.browser.filters.noMatchesTitle')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('missions.browser.filters.noMatchesHint')}</p>
+          <button
+            onClick={onClearAllFilters}
+            className="mt-3 inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+          >
+            <X className="h-3 w-3" />
+            {t('missions.browser.filters.clearFilters')}
+          </button>
         </div>
       )}
     </div>

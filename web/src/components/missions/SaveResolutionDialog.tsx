@@ -26,6 +26,8 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
+import { useToast } from '../ui/Toast'
 
 interface AISummary {
   title: string
@@ -384,7 +386,9 @@ export function SaveResolutionDialog({
   onClose,
   onSaved }: SaveResolutionDialogProps) {
   const { t } = useTranslation(['common', 'cards'])
+  const { showToast } = useToast()
   const { saveResolution } = useResolutions()
+  const { showToast } = useToast()
 
   // Auto-detect issue signature from mission content.
   // Memoized: avoids producing a new object reference on every render, which
@@ -406,10 +410,16 @@ export function SaveResolutionDialog({
   // lets the init useEffect depend only on isOpen + mission.id.
   const missionRef = useRef(mission)
   const signatureRef = useRef(autoDetectedSignature)
+  const translationRef = useRef(t)
+  const showToastRef = useRef(showToast)
   useEffect(() => {
     missionRef.current = mission
     signatureRef.current = autoDetectedSignature
   }, [mission, autoDetectedSignature])
+  useEffect(() => {
+    translationRef.current = t
+    showToastRef.current = showToast
+  }, [t, showToast])
 
   // Form state
   const [title, setTitle] = useState('')
@@ -443,7 +453,12 @@ export function SaveResolutionDialog({
       setSteps(aiSummary.steps.length > 0 ? aiSummary.steps : [''])
       setYaml(aiSummary.yaml || '')
     } catch (err: unknown) {
-      setAiError(err instanceof Error ? err.message : 'Failed to generate summary')
+      const translate = translationRef.current
+      const aiFailureMessage = err instanceof Error
+        ? err.message
+        : translate('dashboard.missions.aiSummaryFailed')
+      setAiError(translate('dashboard.missions.aiSummaryFallbackDetail', { error: aiFailureMessage }))
+      showToastRef.current(translate('dashboard.missions.aiSummaryFallbackNotice'), 'warning')
       // Fall back to basic extraction
       setTitle(currentMission.title)
       setIssueType(signatureRef.current.type || '')

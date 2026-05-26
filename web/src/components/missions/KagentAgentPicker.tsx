@@ -1,4 +1,4 @@
-import { Bot, ChevronDown } from 'lucide-react'
+import { Bot, ChevronDown, ExternalLink } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { KagentAgent } from '../../lib/kagentBackend'
@@ -25,9 +25,23 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
 
   if (agents.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-        <Bot className="w-3.5 h-3.5" />
-        <span>{t('kagentAgentPicker.noAgentsAvailable')}</span>
+      <div className="rounded-md border border-border bg-card px-3 py-2.5 text-xs text-muted-foreground">
+        <div className="flex items-start gap-2">
+          <Bot className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-400" />
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">{t('kagentAgentPicker.noAgentsAvailable')}</p>
+            <p>{t('kagentAgentPicker.noAgentsHint')}</p>
+            <a
+              href="https://kagent.dev/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-purple-400 transition-colors hover:text-purple-300"
+            >
+              {t('kagentAgentPicker.readDocs')}
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
       </div>
     )
   }
@@ -40,7 +54,7 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
       >
         <Bot className="w-3.5 h-3.5 text-purple-400" />
         <span className="truncate max-w-[180px]">
-          {selectedAgent ? `${selectedAgent.namespace}/${selectedAgent.name}` : 'Select agent...'}
+          {selectedAgent ? `${selectedAgent.namespace}/${selectedAgent.name}` : t('kagentAgentPicker.selectAgent')}
         </span>
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>

@@ -5,7 +5,7 @@
  * Displayed in the fullscreen mission view sidebar.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import {
   BookMarked,
   BookUp,
@@ -27,7 +27,7 @@ import { cn } from '../../lib/cn'
 import { ShareMissionDialog } from './ShareMissionDialog'
 import { SubmitToKBDialog } from './SubmitToKBDialog'
 import { useTranslation } from 'react-i18next'
-import { DELETE_CONFIRM_TIMEOUT_MS } from '../../lib/constants/network'
+import { ConfirmDialog } from '../../lib/modals'
 import { Button } from '../ui/Button'
 
 interface ResolutionHistoryPanelProps {
@@ -40,16 +40,11 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showPersonal, setShowPersonal] = useState(true)
   const [showShared, setShowShared] = useState(true)
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [pendingDeleteResolution, setPendingDeleteResolution] = useState<Resolution | null>(null)
   const [exportResolution, setExportResolution] = useState<Resolution | null>(null)
   const [submitKBResolution, setSubmitKBResolution] = useState<Resolution | null>(null)
   const [viewingResolution, setViewingResolution] = useState<Resolution | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  useEffect(() => {
-    return () => clearTimeout(deleteConfirmTimerRef.current)
-  }, [])
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => prev === id ? null : id)
@@ -101,22 +96,16 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
     setExpandedId(null)
   }
 
-  const handleDelete = (id: string) => {
-    if (deleteConfirmId === id) {
-      deleteResolution(id)
-      setDeleteConfirmId(null)
-      setExpandedId(null)
-      setSelectedIds(prev => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-    } else {
-      setDeleteConfirmId(id)
-      // Auto-clear confirm after 3s
-      clearTimeout(deleteConfirmTimerRef.current)
-      deleteConfirmTimerRef.current = setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), DELETE_CONFIRM_TIMEOUT_MS)
-    }
+  const handleDelete = () => {
+    if (!pendingDeleteResolution) return
+    deleteResolution(pendingDeleteResolution.id)
+    setExpandedId(null)
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.delete(pendingDeleteResolution.id)
+      return next
+    })
+    setPendingDeleteResolution(null)
   }
 
   const handleShare = (id: string) => {
@@ -136,10 +125,10 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <AlertCircle className="w-8 h-8 text-muted-foreground/50 mb-2" />
             <p className="text-xs text-muted-foreground mb-1">
-              No saved resolutions yet
+              {t('common.noSavedResolutions')}
             </p>
             <p className="text-2xs text-muted-foreground/70">
-              Complete a mission and save the resolution to build your knowledge base
+              {t('common.noSavedResolutionsHint')}
             </p>
           </div>
         </div>
@@ -168,7 +157,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
               <BookMarked className="w-4 h-4 text-purple-400 shrink-0" />
               <span className="min-w-0 break-words">{t('navigation.history')}</span>
               <span className="text-xs text-muted-foreground font-normal shrink-0">
-                {totalResolutions} saved
+                {t('common.savedCount', { count: totalResolutions })}
               </span>
             </h4>
             <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
@@ -222,7 +211,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
               >
                 {showPersonal ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 <Star className="w-3.5 h-3.5 text-yellow-400" />
-                Your Resolutions ({resolutions.length})
+                {t('common.yourResolutions')} ({resolutions.length})
               </button>
               {showPersonal && (
                 <div className="space-y-2">
@@ -236,11 +225,10 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                       onToggleSelect={() => toggleSelect(resolution.id)}
                       onView={() => setViewingResolution(resolution)}
                       onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
-                      onDelete={() => handleDelete(resolution.id)}
+                      onDelete={() => setPendingDeleteResolution(resolution)}
                       onShare={() => handleShare(resolution.id)}
                       onExport={() => setExportResolution(resolution)}
                       onSubmitToKB={() => setSubmitKBResolution(resolution)}
-                      isDeleteConfirm={deleteConfirmId === resolution.id}
                       canShare
                     />
                   ))}
@@ -258,7 +246,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
               >
                 {showShared ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                Team Shared ({sharedResolutions.length})
+                {t('common.teamShared')} ({sharedResolutions.length})
               </button>
               {showShared && (
                 <div className="space-y-2">
@@ -272,10 +260,9 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                       onToggleSelect={() => toggleSelect(resolution.id)}
                       onView={() => setViewingResolution(resolution)}
                       onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
-                      onDelete={() => handleDelete(resolution.id)}
+                      onDelete={() => setPendingDeleteResolution(resolution)}
                       onExport={() => setExportResolution(resolution)}
                       onSubmitToKB={() => setSubmitKBResolution(resolution)}
-                      isDeleteConfirm={deleteConfirmId === resolution.id}
                       showSharedBy
                     />
                   ))}
@@ -285,6 +272,17 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={pendingDeleteResolution !== null}
+        onClose={() => setPendingDeleteResolution(null)}
+        onConfirm={handleDelete}
+        title={t('common.deleteResolutionTitle')}
+        message={t('common.deleteResolutionMessage', { title: pendingDeleteResolution?.title ?? '' })}
+        confirmLabel={t('actions.delete')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
 
       {/* Export dialog */}
       {exportResolution && (
@@ -319,7 +317,6 @@ interface ResolutionCardProps {
   onShare?: () => void
   onExport?: () => void
   onSubmitToKB?: () => void
-  isDeleteConfirm: boolean
   showSharedBy?: boolean
   canShare?: boolean
 }
@@ -336,7 +333,6 @@ function ResolutionCard({
   onShare,
   onExport,
   onSubmitToKB,
-  isDeleteConfirm,
   showSharedBy,
   canShare,
 }: ResolutionCardProps) {
@@ -498,16 +494,10 @@ function ResolutionCard({
                   e.stopPropagation()
                   onDelete()
                 }}
-                className={cn(
-                  "flex items-center justify-center gap-1 px-2 py-1.5 text-2xs rounded transition-colors",
-                  isDeleteConfirm
-                    ? "bg-red-500 text-white"
-                    : "bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-                )}
-                title={isDeleteConfirm ? t('common.confirm') : t('actions.delete')}
+                className="flex items-center justify-center gap-1 px-2 py-1.5 text-2xs rounded transition-colors bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+                title={t('actions.delete')}
               >
                 <Trash2 className="w-3 h-3" />
-                {isDeleteConfirm && <span>{t('common.confirm')}</span>}
               </button>
             </div>
           </div>

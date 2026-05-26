@@ -4072,7 +4072,10 @@
     "confirmLabel": "Confirm?"
   },
   "kagentAgentPicker": {
-    "noAgentsAvailable": "No kagent agents available"
+    "noAgentsAvailable": "No kagent agents available",
+    "noAgentsHint": "Install or register a kagent agent to start sending mission requests from the console.",
+    "readDocs": "Read kagent setup docs",
+    "selectAgent": "Select agent..."
   },
   "kagentSecurity": {
     "agentTypeCoverage": "Agent Type Coverage",

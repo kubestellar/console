@@ -8,15 +8,22 @@
  * Extracted from MissionBrowser.tsx (issue #8624).
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Upload, CheckCircle, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
+import { ConfirmDialog } from '../../lib/modals'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
 import { TreeNodeItem } from './browser'
 import type { TreeNode } from './browser'
 import { useToast } from '../ui/Toast'
 
 const REVEAL_HIGHLIGHT_TIMEOUT_MS = 2_000
+
+type PendingRemoval = {
+  kind: 'repo' | 'path'
+  path: string
+} | null
 
 interface MissionBrowserSidebarProps {
   treeNodes: TreeNode[]
@@ -82,9 +89,11 @@ export function MissionBrowserSidebar({
   setNewPathValue,
   onAddPath,
 }: MissionBrowserSidebarProps) {
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const treeNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const { showToast } = useToast()
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null)
 
   useEffect(() => {
     if (!revealPath) return
@@ -106,12 +115,40 @@ export function MissionBrowserSidebar({
     }
   }, [revealNonce, revealPath])
 
+  const handleConfirmRemoval = () => {
+    if (!pendingRemoval) return
+    if (pendingRemoval.kind === 'repo') {
+      onRemoveRepo(pendingRemoval.path)
+    } else {
+      onRemovePath(pendingRemoval.path)
+    }
+    setPendingRemoval(null)
+  }
+
+  const pendingRemovalTitle = pendingRemoval?.kind === 'repo'
+    ? t('missions.browser.sidebar.removeRepoTitle')
+    : t('missions.browser.sidebar.removePathTitle')
+  const pendingRemovalMessage = pendingRemoval?.kind === 'repo'
+    ? t('missions.browser.sidebar.removeRepoMessage', { path: pendingRemoval.path })
+    : t('missions.browser.sidebar.removePathMessage', { path: pendingRemoval?.path ?? '' })
+
   return (
-    <div
-      data-testid="mission-tree"
-      className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
-      style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
-    >
+    <>
+      <ConfirmDialog
+        isOpen={pendingRemoval !== null}
+        onClose={() => setPendingRemoval(null)}
+        onConfirm={handleConfirmRemoval}
+        title={pendingRemovalTitle}
+        message={pendingRemovalMessage}
+        confirmLabel={t('actions.remove')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
+      <div
+        data-testid="mission-tree"
+        className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
+        style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
+      >
       <div className="p-3 space-y-1">
         {treeNodes.map((node) => (
           <div key={node.id}>
@@ -126,9 +163,9 @@ export function MissionBrowserSidebar({
                 onSelect={onSelectNode}
                 onRemove={
                   node.id === 'github'
-                    ? (child) => onRemoveRepo(child.path)
+                    ? (child) => setPendingRemoval({ kind: 'repo', path: child.path })
                     : node.id === 'local'
-                      ? (child) => onRemovePath(child.path)
+                      ? (child) => setPendingRemoval({ kind: 'path', path: child.path })
                       : undefined
                 }
                 onRefresh={
@@ -280,5 +317,6 @@ export function MissionBrowserSidebar({
         />
       </div>
     </div>
+    </>
   )
 }

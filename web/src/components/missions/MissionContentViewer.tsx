@@ -385,12 +385,17 @@ export function useMissionContentViewer({
     }
   }, [applySelectedFileContent, showToast, t])
 
-  const handleCopyLink = useCallback((mission: MissionExport, event: React.MouseEvent) => {
+  const handleCopyLink = useCallback(async (mission: MissionExport, event: React.MouseEvent) => {
     event.stopPropagation()
     const url = getMissionShareUrl(mission)
-    void copyToClipboard(url)
+    const didCopy = await copyToClipboard(url)
+    if (!didCopy) {
+      showToast(t('missions.browser.copyLinkFailed'), 'error')
+      return false
+    }
     emitFixerLinkCopied(mission.title, mission.cncfProject)
-  }, [])
+    return true
+  }, [showToast, t])
 
   const resetContentView = useCallback(() => {
     clearSelectedMission()

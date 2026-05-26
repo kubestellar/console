@@ -44,7 +44,7 @@ interface MissionBrowserRecommendedTabProps {
   filteredRecommendations: MissionMatch[]
   onSelectMission: (mission: MissionExport) => void
   onImportMission: (mission: MissionExport) => void
-  onCopyLink: (mission: MissionExport, e: React.MouseEvent) => void
+  onCopyLink: (mission: MissionExport, e: React.MouseEvent) => Promise<boolean>
 
   // Directory listing (tree navigation)
   loading: boolean

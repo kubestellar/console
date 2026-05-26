@@ -1350,7 +1350,9 @@
       "titleRequired": "Title is required",
       "issueTypeRequired": "Issue type is required",
       "summaryRequired": "Summary is required",
-      "failedToSave": "Failed to save resolution"
+      "failedToSave": "Failed to save resolution",
+      "aiSummaryFailed": "Failed to generate AI summary",
+      "aiSummaryFailedToast": "AI summary failed — using the basic draft instead. {{message}}"
     },
     "recommendations": {
       "addCard": "Add \"{{title}}\" card to dashboard",
@@ -3553,6 +3555,12 @@
     "yourResolutions": "Your Resolutions",
     "teamShared": "Team Shared",
     "noSavedResolutions": "No saved resolutions yet",
+    "noSavedResolutionsHint": "Complete a mission and save the resolution to build your knowledge base",
+    "savedCount": "{{count}} saved",
+    "savedCount_one": "{{count}} saved",
+    "savedCount_other": "{{count}} saved",
+    "deleteResolutionTitle": "Delete resolution",
+    "deleteResolutionMessage": "Delete \"{{title}}\" from your saved resolutions? This action cannot be undone.",
     "issue": "Issue:",
     "steps": "Steps:",
     "beginner": "Beginner",
@@ -3567,6 +3575,9 @@
     "browseIssues": "Browse Issues",
     "contributorGuide": "Contributor Guide",
     "generatingAISummary": "Generating AI Summary...",
+    "aiSummaryFailed": "Failed to generate AI summary",
+    "aiSummaryFallbackNotice": "AI summary unavailable — using basic extraction.",
+    "aiSummaryFallbackDetail": "AI summary unavailable — using basic extraction. {{error}}",
     "searchPolicies": "Search policies...",
     "searchLayouts": "Search layouts...",
     "searchViolations": "Search violations...",
@@ -4617,6 +4628,8 @@
       "showFilters": "Show Filters",
       "hideFilters": "Hide Filters",
       "copyShareableLink": "Copy shareable link",
+      "copyFailed": "Copy failed",
+      "copyLinkFailed": "Could not copy the shareable link. Check clipboard permissions and try again.",
       "linkCopied": "Link copied",
       "copied": "Copied",
       "stepsCount": "{{count}} steps",
@@ -4645,7 +4658,25 @@
         "runOnClusters_one": "Run on {{count}} cluster",
         "runOnClusters_other": "Run on {{count}} clusters",
         "searchPlaceholder": "Search clusters...",
-        "selected": "{{count}} selected"
+        "selected": "{{count}} selected",
+        "invalidClusterData_one": "{{count}} cluster is missing a name or context and can't be searched. Refresh and try again.",
+        "invalidClusterData_other": "{{count}} clusters are missing a name or context and can't be searched. Refresh and try again.",
+        "searchNoResults": "No clusters match your search",
+        "searchNoResultsHint": "Try a different cluster name or context."
+      },
+      "sidebar": {
+        "removeRepoTitle": "Remove watched repository",
+        "removeRepoMessage": "Stop watching \"{{path}}\"? You can add it again later.",
+        "removePathTitle": "Remove watched path",
+        "removePathMessage": "Stop watching \"{{path}}\"? You can add it again later."
+      },
+      "filters": {
+        "summary": "Showing {{shown}} of {{total}} missions",
+        "filteredSuffix": "(filtered)",
+        "clearTags": "Clear tags",
+        "clearFilters": "Clear filters",
+        "noMatchesTitle": "No missions match your filters",
+        "noMatchesHint": "Clear filters or adjust your criteria to see more missions."
       }
     },
     "kagenti": {
