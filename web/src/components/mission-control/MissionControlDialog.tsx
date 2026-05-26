@@ -96,7 +96,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
 
   // Track the highest phase the user has reached so they can click back to any visited phase
   const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
-  const [highestReached, setHighestReached] = useState(currentStepIndex)
+  const [highestReached, setHighestReached] = useState(0)
   useEffect(() => {
     setHighestReached(prev => Math.max(prev, currentStepIndex))
   }, [currentStepIndex])
