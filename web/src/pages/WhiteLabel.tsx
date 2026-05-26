@@ -21,6 +21,7 @@ import {
 import { emitWhiteLabelViewed, emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
 import { ROUTES } from '../config/routes'
 import { copyToClipboard } from '../lib/clipboard'
+import { cn } from '@/lib/cn'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -461,10 +462,22 @@ export function WhiteLabel() {
             <span className="text-white font-medium">150+ cards, 30 dashboards, AI missions</span> — all rebranded to your project.
           </p>
 
-          <p className="text-base text-slate-400 max-w-2xl mx-auto mb-10">
-            No fork needed. Set <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded">CONSOLE_PROJECT=yourproject</code> and{' '}
-            <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded">APP_NAME=&quot;Your Console&quot;</code> — done.
+          <p className="text-base text-slate-400 max-w-2xl mx-auto mb-4">
+            No fork needed. Set these variables and you&apos;re done.
           </p>
+
+          <div className="max-w-2xl mx-auto mb-10">
+            <pre className="overflow-x-auto rounded-xl border border-slate-700/50 bg-slate-900/80 px-4 py-3">
+              <code
+                className={cn(
+                  'block min-w-max whitespace-nowrap text-left font-mono text-sm text-purple-300',
+                  'sm:text-center'
+                )}
+              >
+                CONSOLE_PROJECT=yourproject APP_NAME=&quot;Your Console&quot;
+              </code>
+            </pre>
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
