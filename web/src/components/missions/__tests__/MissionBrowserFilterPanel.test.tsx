@@ -85,7 +85,7 @@ describe('MissionBrowserFilterPanel', () => {
   it('renders summary and clear-all when filters are active', () => {
     renderPanel()
     expect(screen.getByRole('button', { name: /clear all/i })).toBeInTheDocument()
-    expect(screen.getByText(/Showing\s+4\s+of\s+10\s+missions/)).toBeInTheDocument()
+    expect(screen.getByText('Showing 4 of 10 missions (filtered)')).toBeInTheDocument()
   })
 
   it('calls callbacks for match/source/category controls', async () => {

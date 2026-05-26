@@ -37,6 +37,9 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'actions.clearAll': 'Clear All',
         'missionBrowser.clearAllFiltersAction': 'Clear all filters',
+        'missions.browser.showFilters': 'Show Filters',
+        'missions.browser.hideFilters': 'Hide Filters',
+        'missions.browser.importSuccess': 'Imported "{{title}}" successfully.',
       }
       let value = map[key] ?? key
       for (const [name, replacement] of Object.entries(options ?? {})) {
@@ -400,10 +403,10 @@ describe('MissionBrowser', () => {
 
     render(<MissionBrowser {...defaultProps} />)
 
-    expect(screen.getByRole('button', { name: 'missions.browser.showFilters' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show Filters' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /clear all/i })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'missions.browser.showFilters' }))
+    await user.click(screen.getByRole('button', { name: 'Show Filters' }))
 
     expect(screen.getByRole('button', { name: /clear all/i })).toBeInTheDocument()
   })
@@ -421,7 +424,7 @@ describe('MissionBrowser', () => {
     await waitFor(() => {
       expect(onImport).toHaveBeenCalledTimes(1)
       expect(onClose).not.toHaveBeenCalled()
-      expect(toastMockState.showToast).toHaveBeenCalledWith('missions.browser.importSuccess', 'success')
+      expect(toastMockState.showToast).toHaveBeenCalledWith('Imported "Recommended fix" successfully.', 'success')
       expect(screen.getByTestId('mission-browser')).toBeInTheDocument()
     })
   })
