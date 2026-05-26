@@ -263,7 +263,7 @@ describe('MissionSidebar visibility', () => {
       </MemoryRouter>
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'missionSidebar.toggleHistory' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle mission history' }))
     fireEvent.click(screen.getByRole('button', { name: 'Secure clusters' }))
 
     expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()

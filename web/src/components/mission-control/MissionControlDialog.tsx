@@ -89,6 +89,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const { showToast } = useToast()
   const { startMission, openSidebar } = useMissions()
   const { state } = mc
+  const showToastRef = useRef(showToast)
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewNotes, setReviewNotes] = useState<string | undefined>()
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
@@ -100,6 +101,10 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   useEffect(() => {
     setHighestReached(prev => Math.max(prev, currentStepIndex))
   }, [currentStepIndex])
+
+  useEffect(() => {
+    showToastRef.current = showToast
+  }, [showToast])
 
   // Initialize Mission Control before the dialog paints so a fresh open never
   // flashes stale state and historical opens land on the selected run.
@@ -118,7 +123,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     if (reviewPlanEncoded) {
       const plan = decodePlan(reviewPlanEncoded)
       if (!plan) {
-        showToast('Invalid plan link — could not decode the deployment plan', 'error')
+        showToastRef.current('Invalid plan link — could not decode the deployment plan', 'error')
         return
       }
       mc.hydrateFromPlan(planToState(plan))
@@ -134,7 +139,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
       setHighestReached(0)
       return
     }
-  }, [open, historicalMissionId, reviewPlanEncoded, freshSessionToken, showToast]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, historicalMissionId, reviewPlanEncoded, freshSessionToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = useCallback(() => {
     if (isReviewMode) {
