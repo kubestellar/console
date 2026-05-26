@@ -453,6 +453,7 @@ Labels:       app=${resourceName.split('-')[0]}
         <div className="flex border-b border-border">
           <button
             onClick={() => setActiveTab('ai')}
+            aria-label={t('remediation.aiAnalysis')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
               activeTab === 'ai'
@@ -468,6 +469,7 @@ Labels:       app=${resourceName.split('-')[0]}
               setActiveTab('shell')
               setTimeout(() => shellInputRef.current?.focus(), FOCUS_DELAY_MS)
             }}
+            aria-label={t('remediation.shell')}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
               activeTab === 'shell'

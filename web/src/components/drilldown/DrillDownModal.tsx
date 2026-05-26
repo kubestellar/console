@@ -340,6 +340,12 @@ export function DrillDownModal() {
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-modal p-2 md:p-4"
       onClick={close}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          close()
+        }
+      }}
       aria-hidden="true"
     >
       <div

@@ -89,21 +89,26 @@ const PREV_CLR_DIM = '#d1d5db'       // dim text
 const PREV_CLR_CPU = '#60a5fa'       // CPU metric color (blue-400)
 const PREV_CLR_MEM = '#c084fc'       // Memory metric color (purple-400)
 
+// Design token colors for macOS widget preview
+const PREV_BG_DARK_OPACITY = 'rgba(17, 24, 39, 0.9)'  // Dark gray-900 with 0.9 opacity
+const PREV_BORDER_LIGHT = 'rgba(255, 255, 255, 0.1)'  // Subtle white border
+const PREV_SHADOW = '0 4px 6px -1px rgba(0, 0, 0, 0.1)' // Shadow
+
 /** Shared preview styles matching macOS Übersicht widget appearance.
  *  These use hardcoded dark colors intentionally — they render a fixed preview
  *  of how the exported widget will look on a macOS desktop, regardless of
  *  the console's current theme. */
 const ps = {
   card: {
-    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+    backgroundColor: PREV_BG_DARK_OPACITY,
     borderRadius: '12px',
     padding: `${PREV_MD} ${PREV_LG}`,
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    border: `1px solid ${PREV_BORDER_LIGHT}`,
     color: PREV_CLR_TEXT,
     fontFamily: 'Inter, -apple-system, sans-serif',
     fontSize: PREV_FS_BODY,
     lineHeight: 1.4,
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' } as CSSProperties,
+    boxShadow: PREV_SHADOW } as CSSProperties,
   title: {
     fontSize: PREV_FS_BODY,
     fontWeight: 600,
@@ -120,9 +125,9 @@ const ps = {
     display: 'inline-block',
     flexShrink: 0 }) as CSSProperties,
   statBlock: {
-    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+    backgroundColor: PREV_BG_DARK_OPACITY,
     borderRadius: '6px',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    border: `1px solid ${PREV_BORDER_LIGHT}`,
     padding: PREV_CARD_PAD,
     display: 'flex',
     flexDirection: 'column' as const,
