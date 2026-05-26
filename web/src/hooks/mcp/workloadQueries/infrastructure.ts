@@ -16,19 +16,40 @@ import {
   type UseStatefulSetsResult,
 } from './shared'
 
+interface CollectionCache<T> {
+  data: T[]
+  key: string
+}
+
+function getCollectionCache<T>(cache: CollectionCache<T> | null, key: string): CollectionCache<T> | null {
+  return cache?.key === key ? cache : null
+}
+
+let jobsCache: CollectionCache<Job> | null = null
+let hpasCache: CollectionCache<HPA> | null = null
+let replicaSetsCache: CollectionCache<ReplicaSet> | null = null
+let statefulSetsCache: CollectionCache<StatefulSet> | null = null
+let daemonSetsCache: CollectionCache<DaemonSet> | null = null
+let cronJobsCache: CollectionCache<CronJob> | null = null
+
 // ---------------------------------------------------------------------------
 // useJobs
 // ---------------------------------------------------------------------------
 
 export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `jobs:${cluster || 'all'}:${namespace || 'all'}`
+  const cached = getCollectionCache(jobsCache, cacheKey)
+  const [jobs, setJobs] = useState<Job[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const sseAbortRef = useRef<AbortController | null>(null)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    const hasCachedData = jobsCache?.key === cacheKey
+    if (!hasCachedData) {
+      setIsLoading(true)
+    }
     if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
@@ -40,7 +61,9 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
         })
         if (response.ok) {
           const data = await response.json()
-          setJobs(data.jobs || [])
+          const nextJobs = data.jobs || []
+          jobsCache = { data: nextJobs, key: cacheKey }
+          setJobs(nextJobs)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -73,6 +96,7 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
           setIsLoading(false)
         },
       })
+      jobsCache = { data: result, key: cacheKey }
       setJobs(result)
       setError(null)
       setConsecutiveFailures(0)
@@ -82,11 +106,13 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
       console.warn('[useJobs] Fetch failed:', message)
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setJobs([])
+      if (!hasCachedData) {
+        setJobs([])
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cacheKey, cluster, namespace])
 
   const jobsInitRef = useRef(false)
   useEffect(() => {
@@ -104,13 +130,18 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
 // ---------------------------------------------------------------------------
 
 export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
-  const [hpas, setHPAs] = useState<HPA[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `hpas:${cluster || 'all'}:${namespace || 'all'}`
+  const cached = getCollectionCache(hpasCache, cacheKey)
+  const [hpas, setHPAs] = useState<HPA[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    const hasCachedData = hpasCache?.key === cacheKey
+    if (!hasCachedData) {
+      setIsLoading(true)
+    }
     if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
@@ -122,7 +153,9 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
         })
         if (response.ok) {
           const data = await response.json()
-          setHPAs(data.hpas || [])
+          const nextHPAs = data.hpas || []
+          hpasCache = { data: nextHPAs, key: cacheKey }
+          setHPAs(nextHPAs)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -140,6 +173,7 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
       if (namespace) params.append('namespace', namespace)
       const backendHPAs = await fetchInClusterCollection<HPA>('hpas', params, 'hpas')
       if (backendHPAs) {
+        hpasCache = { data: backendHPAs, key: cacheKey }
         setHPAs(backendHPAs)
         setError(null)
         setConsecutiveFailures(0)
@@ -158,7 +192,9 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/hpas?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
-      setHPAs(data.hpas || [])
+      const nextHPAs = data.hpas || []
+      hpasCache = { data: nextHPAs, key: cacheKey }
+      setHPAs(nextHPAs)
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -166,11 +202,13 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
       if (err instanceof Error && err.name === 'UnauthenticatedError') { console.debug('[useHPAs] Skipped — no auth token') } else { console.error('[useHPAs] Fetch failed:', message, err) }
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setHPAs([])
+      if (!hasCachedData) {
+        setHPAs([])
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cacheKey, cluster, namespace])
 
   const hpasInitRef = useRef(false)
   useEffect(() => {
@@ -187,13 +225,18 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
 // ---------------------------------------------------------------------------
 
 export function useReplicaSets(cluster?: string, namespace?: string): UseReplicaSetsResult {
-  const [replicaSets, setReplicaSets] = useState<ReplicaSet[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `replicasets:${cluster || 'all'}:${namespace || 'all'}`
+  const cached = getCollectionCache(replicaSetsCache, cacheKey)
+  const [replicaSets, setReplicaSets] = useState<ReplicaSet[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    const hasCachedData = replicaSetsCache?.key === cacheKey
+    if (!hasCachedData) {
+      setIsLoading(true)
+    }
     // Try local agent first
     if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
@@ -206,7 +249,9 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
         })
         if (response.ok) {
           const data = await response.json()
-          setReplicaSets(data.replicasets || [])
+          const nextReplicaSets = data.replicasets || []
+          replicaSetsCache = { data: nextReplicaSets, key: cacheKey }
+          setReplicaSets(nextReplicaSets)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -224,6 +269,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
       if (namespace) params.append('namespace', namespace)
       const backendReplicaSets = await fetchInClusterCollection<ReplicaSet>('replicasets', params, 'replicasets')
       if (backendReplicaSets) {
+        replicaSetsCache = { data: backendReplicaSets, key: cacheKey }
         setReplicaSets(backendReplicaSets)
         setError(null)
         setConsecutiveFailures(0)
@@ -242,7 +288,9 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/replicasets?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
-      setReplicaSets(data.replicasets || [])
+      const nextReplicaSets = data.replicasets || []
+      replicaSetsCache = { data: nextReplicaSets, key: cacheKey }
+      setReplicaSets(nextReplicaSets)
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -250,11 +298,13 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
       if (err instanceof Error && err.name === 'UnauthenticatedError') { console.debug('[useReplicaSets] Skipped — no auth token') } else { console.error('[useReplicaSets] Fetch failed:', message, err) }
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setReplicaSets([])
+      if (!hasCachedData) {
+        setReplicaSets([])
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cacheKey, cluster, namespace])
 
   const replicaSetsInitRef = useRef(false)
   useEffect(() => {
@@ -270,13 +320,18 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
 // ---------------------------------------------------------------------------
 
 export function useStatefulSets(cluster?: string, namespace?: string): UseStatefulSetsResult {
-  const [statefulSets, setStatefulSets] = useState<StatefulSet[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `statefulsets:${cluster || 'all'}:${namespace || 'all'}`
+  const cached = getCollectionCache(statefulSetsCache, cacheKey)
+  const [statefulSets, setStatefulSets] = useState<StatefulSet[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    const hasCachedData = statefulSetsCache?.key === cacheKey
+    if (!hasCachedData) {
+      setIsLoading(true)
+    }
     if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
@@ -288,7 +343,9 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
         })
         if (response.ok) {
           const data = await response.json()
-          setStatefulSets(data.statefulsets || [])
+          const nextStatefulSets = data.statefulsets || []
+          statefulSetsCache = { data: nextStatefulSets, key: cacheKey }
+          setStatefulSets(nextStatefulSets)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -306,6 +363,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
       if (namespace) params.append('namespace', namespace)
       const backendStatefulSets = await fetchInClusterCollection<StatefulSet>('statefulsets', params, 'statefulsets')
       if (backendStatefulSets) {
+        statefulSetsCache = { data: backendStatefulSets, key: cacheKey }
         setStatefulSets(backendStatefulSets)
         setError(null)
         setConsecutiveFailures(0)
@@ -324,7 +382,9 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/statefulsets?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
-      setStatefulSets(data.statefulsets || [])
+      const nextStatefulSets = data.statefulsets || []
+      statefulSetsCache = { data: nextStatefulSets, key: cacheKey }
+      setStatefulSets(nextStatefulSets)
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -332,11 +392,13 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
       if (err instanceof Error && err.name === 'UnauthenticatedError') { console.debug('[useStatefulSets] Skipped — no auth token') } else { console.error('[useStatefulSets] Fetch failed:', message, err) }
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setStatefulSets([])
+      if (!hasCachedData) {
+        setStatefulSets([])
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cacheKey, cluster, namespace])
 
   const statefulSetsInitRef = useRef(false)
   useEffect(() => {
@@ -352,13 +414,18 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
 // ---------------------------------------------------------------------------
 
 export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSetsResult {
-  const [daemonSets, setDaemonSets] = useState<DaemonSet[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `daemonsets:${cluster || 'all'}:${namespace || 'all'}`
+  const cached = getCollectionCache(daemonSetsCache, cacheKey)
+  const [daemonSets, setDaemonSets] = useState<DaemonSet[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    const hasCachedData = daemonSetsCache?.key === cacheKey
+    if (!hasCachedData) {
+      setIsLoading(true)
+    }
     if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
@@ -370,7 +437,9 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
         })
         if (response.ok) {
           const data = await response.json()
-          setDaemonSets(data.daemonsets || [])
+          const nextDaemonSets = data.daemonsets || []
+          daemonSetsCache = { data: nextDaemonSets, key: cacheKey }
+          setDaemonSets(nextDaemonSets)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -388,6 +457,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
       if (namespace) params.append('namespace', namespace)
       const backendDaemonSets = await fetchInClusterCollection<DaemonSet>('daemonsets', params, 'daemonsets')
       if (backendDaemonSets) {
+        daemonSetsCache = { data: backendDaemonSets, key: cacheKey }
         setDaemonSets(backendDaemonSets)
         setError(null)
         setConsecutiveFailures(0)
@@ -406,7 +476,9 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/daemonsets?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
-      setDaemonSets(data.daemonsets || [])
+      const nextDaemonSets = data.daemonsets || []
+      daemonSetsCache = { data: nextDaemonSets, key: cacheKey }
+      setDaemonSets(nextDaemonSets)
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -414,11 +486,13 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
       if (err instanceof Error && err.name === 'UnauthenticatedError') { console.debug('[useDaemonSets] Skipped — no auth token') } else { console.error('[useDaemonSets] Fetch failed:', message, err) }
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setDaemonSets([])
+      if (!hasCachedData) {
+        setDaemonSets([])
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cacheKey, cluster, namespace])
 
   const daemonSetsInitRef = useRef(false)
   useEffect(() => {
@@ -434,13 +508,18 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
 // ---------------------------------------------------------------------------
 
 export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsResult {
-  const [cronJobs, setCronJobs] = useState<CronJob[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const cacheKey = `cronjobs:${cluster || 'all'}:${namespace || 'all'}`
+  const cached = getCollectionCache(cronJobsCache, cacheKey)
+  const [cronJobs, setCronJobs] = useState<CronJob[]>(cached?.data || [])
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    const hasCachedData = cronJobsCache?.key === cacheKey
+    if (!hasCachedData) {
+      setIsLoading(true)
+    }
     if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
@@ -452,7 +531,9 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
         })
         if (response.ok) {
           const data = await response.json()
-          setCronJobs(data.cronjobs || [])
+          const nextCronJobs = data.cronjobs || []
+          cronJobsCache = { data: nextCronJobs, key: cacheKey }
+          setCronJobs(nextCronJobs)
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -470,6 +551,7 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
       if (namespace) params.append('namespace', namespace)
       const backendCronJobs = await fetchInClusterCollection<CronJob>('cronjobs', params, 'cronjobs')
       if (backendCronJobs) {
+        cronJobsCache = { data: backendCronJobs, key: cacheKey }
         setCronJobs(backendCronJobs)
         setError(null)
         setConsecutiveFailures(0)
@@ -488,7 +570,9 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/cronjobs?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
-      setCronJobs(data.cronjobs || [])
+      const nextCronJobs = data.cronjobs || []
+      cronJobsCache = { data: nextCronJobs, key: cacheKey }
+      setCronJobs(nextCronJobs)
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -496,11 +580,13 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
       if (err instanceof Error && err.name === 'UnauthenticatedError') { console.debug('[useCronJobs] Skipped — no auth token') } else { console.error('[useCronJobs] Fetch failed:', message, err) }
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setCronJobs([])
+      if (!hasCachedData) {
+        setCronJobs([])
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [cluster, namespace])
+  }, [cacheKey, cluster, namespace])
 
   const cronJobsInitRef = useRef(false)
   useEffect(() => {

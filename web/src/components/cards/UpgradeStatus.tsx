@@ -80,23 +80,6 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     consecutiveFailures,
   })
 
-  if (showSkeleton) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="spinner w-8 h-8" />
-      </div>
-    )
-  }
-
-  if (showEmptyState) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
-        <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch upgrade status')}</p>
-      </div>
-    )
-  }
-
   // #6309: show the prompt-confirmation dialog before starting the
   // upgrade mission. Previously, clicking "Start Upgrade" launched
   // the AI agent immediately with no chance for the user to review
@@ -259,6 +242,23 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   void totalItems
 
   const pendingUpgrades = (clusterVersionData || []).filter((cluster) => cluster.status === 'available').length
+
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="spinner w-8 h-8" />
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <AlertTriangle className="w-6 h-6 text-red-400" />
+        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch upgrade status')}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col min-h-card">

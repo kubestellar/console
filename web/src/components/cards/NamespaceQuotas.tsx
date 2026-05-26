@@ -79,32 +79,6 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     consecutiveFailures: clustersFailures,
   })
 
-  if (showSkeleton) {
-    return (
-      <div className="h-full flex flex-col min-h-card">
-        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
-          <Skeleton variant="text" width={140} height={20} />
-          <Skeleton variant="rounded" width={80} height={28} />
-        </div>
-        <Skeleton variant="rounded" height={32} className="mb-4" />
-        <div className="space-y-3">
-          <Skeleton variant="rounded" height={50} />
-          <Skeleton variant="rounded" height={50} />
-          <Skeleton variant="rounded" height={50} />
-        </div>
-      </div>
-    )
-  }
-
-  if (showEmptyState) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
-        <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch data')}</p>
-      </div>
-    )
-  }
-
   // Handle save quota
   const handleSaveQuota = async (spec: { cluster: string; namespace: string; name: string; hard: Record<string, string> }) => {
     setIsSaving(true)
@@ -259,7 +233,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     { key: 'limits' as const, label: 'Limits', count: totalLimits },
   ]
 
-  if (isInitialLoading) {
+  if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
@@ -272,6 +246,15 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
           <Skeleton variant="rounded" height={50} />
           <Skeleton variant="rounded" height={50} />
         </div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <AlertTriangle className="w-6 h-6 text-red-400" />
+        <p className="text-sm text-red-400">{t('common.fetchFailed', 'Failed to fetch data')}</p>
       </div>
     )
   }

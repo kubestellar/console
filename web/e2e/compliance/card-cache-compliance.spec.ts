@@ -118,8 +118,10 @@ const WARM_RETURN_WAIT_MS = process.env.CI ? 5_000 : 3_000
 /**
  * Extra recovery window for cards that briefly regress to demo/no-content on
  * warm return before IndexedDB hydration completes on slower CI runners.
+ * Keep the CI window below the mocked 30s API delay so we still validate cache,
+ * not delayed network responses.
  */
-const WARM_RECOVERY_WAIT_MS = process.env.CI ? 10_000 : 2_000
+const WARM_RECOVERY_WAIT_MS = process.env.CI ? 20_000 : 2_000
 /** Polling interval (ms) for the resilient warm-snapshot capture loop. */
 const WARM_POLL_INTERVAL_MS = 200
 /** Max retry attempts for page.evaluate calls that may race with navigation */
