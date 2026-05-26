@@ -395,7 +395,7 @@ describe('NamespaceQuotas Card Component', () => {
   })
 
   it('shows skeleton loading state when isLoading is true', () => {
-    setupMocks({ clustersLoading: true })
+    setupMocks({ clustersLoading: true, showSkeleton: true })
     render(<NamespaceQuotas />)
 
     // Verify 6 skeletons are rendered (1 title, 1 button, 1 filter row, 3 item skeletons)
