@@ -375,8 +375,9 @@ function BrandingReference() {
         Every field defaults to KubeStellar values. Override only what you need.
       </p>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-700/50">
-        <table className="w-full text-left">
+      <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
+        <div className="rounded-xl border border-slate-700/50">
+          <table className="w-max min-w-full text-left">
           <thead>
             <tr className="border-b border-slate-700/50 bg-slate-800/60">
               <th className="px-5 py-3.5 text-xs font-semibold text-slate-300 uppercase tracking-wider">Env Var</th>
@@ -385,24 +386,25 @@ function BrandingReference() {
               <th className="px-5 py-3.5 text-xs font-semibold text-slate-300 uppercase tracking-wider">Description</th>
             </tr>
           </thead>
-          <tbody>
-            {BRANDING_VARS.map((v, idx) => (
-              <tr
-                key={v.envVar}
-                className={`border-b border-slate-700/30 ${idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
-              >
-                <td className="px-5 py-3 text-sm">
-                  <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded text-xs">{v.envVar}</code>
-                </td>
-                <td className="px-5 py-3 text-sm">
-                  <code className="text-blue-300 bg-slate-800 px-1.5 py-0.5 rounded text-xs">{v.helmKey}</code>
-                </td>
-                <td className="px-5 py-3 text-xs text-slate-400 font-mono">{v.defaultValue}</td>
-                <td className="px-5 py-3 text-sm text-slate-400">{v.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <tbody>
+              {BRANDING_VARS.map((v, idx) => (
+                <tr
+                  key={v.envVar}
+                  className={`border-b border-slate-700/30 ${idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
+                >
+                  <td className="px-5 py-3 text-sm">
+                    <code className="text-purple-300 bg-slate-800 px-1.5 py-0.5 rounded text-xs">{v.envVar}</code>
+                  </td>
+                  <td className="px-5 py-3 text-sm">
+                    <code className="text-blue-300 bg-slate-800 px-1.5 py-0.5 rounded text-xs">{v.helmKey}</code>
+                  </td>
+                  <td className="px-5 py-3 text-xs text-slate-400 font-mono">{v.defaultValue}</td>
+                  <td className="px-5 py-3 text-sm text-slate-400">{v.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="mt-6 max-w-3xl mx-auto">
@@ -516,8 +518,9 @@ export function WhiteLabel() {
           When <code className="text-purple-300 bg-slate-800 px-2 py-0.5 rounded">CONSOLE_PROJECT</code> is set to your project, KubeStellar-specific cards are hidden automatically.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-700/50 max-w-3xl mx-auto">
-          <table className="w-full text-left">
+        <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0 max-w-3xl mx-auto">
+          <div className="rounded-xl border border-slate-700/50">
+            <table className="w-max min-w-full text-left">
             <thead>
               <tr className="border-b border-slate-700/50 bg-slate-800/60">
                 <th className="px-6 py-4 text-sm font-semibold text-slate-300">Feature</th>
@@ -525,23 +528,24 @@ export function WhiteLabel() {
                 <th className="px-6 py-4 text-sm font-semibold text-slate-400 text-center">KubeStellar Only</th>
               </tr>
             </thead>
-            <tbody>
-              {VISIBILITY_DATA.map((row, idx) => (
-                <tr
-                  key={row.feature}
-                  className={`border-b border-slate-700/30 ${idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
-                >
-                  <td className="px-6 py-3 text-sm font-medium text-slate-200">{row.feature}</td>
-                  <td className="px-6 py-3 text-center">
-                    <VisibilityIcon visible={row.universal} />
-                  </td>
-                  <td className="px-6 py-3 text-center">
-                    <VisibilityIcon visible={row.kubeStellarOnly} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <tbody>
+                {VISIBILITY_DATA.map((row, idx) => (
+                  <tr
+                    key={row.feature}
+                    className={`border-b border-slate-700/30 ${idx % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
+                  >
+                    <td className="px-6 py-3 text-sm font-medium text-slate-200">{row.feature}</td>
+                    <td className="px-6 py-3 text-center">
+                      <VisibilityIcon visible={row.universal} />
+                    </td>
+                    <td className="px-6 py-3 text-center">
+                      <VisibilityIcon visible={row.kubeStellarOnly} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

@@ -68,8 +68,9 @@ export function ComparisonTable({
         <h2 className="text-3xl font-bold text-center mb-12">
           {title}
         </h2>
-        <div className="overflow-x-auto rounded-xl border border-slate-700/50">
-          <table className="w-full text-sm">
+        <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
+          <div className="rounded-xl border border-slate-700/50">
+            <table className="w-max min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700/50 bg-slate-800/30">
                 <th className="text-left p-4 font-medium text-slate-400">Feature</th>
@@ -77,20 +78,21 @@ export function ComparisonTable({
                 <th className={`text-left p-4 font-medium ${accent.text}`}>KubeStellar Console</th>
               </tr>
             </thead>
-            <tbody>
-              {rows.map((row, index) => (
-                <tr key={row.feature} className={`border-b border-slate-800/50 ${index % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
-                  <td className="p-4 font-medium text-slate-200">{row.feature}</td>
-                  <td className="p-4">
-                    <ComparisonCell value={row.competitor} note={row.competitorNote} />
-                  </td>
-                  <td className="p-4">
-                    <ComparisonCell value={row.console} note={row.consoleNote} highlightStyle={consoleHighlightStyle} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={row.feature} className={`border-b border-slate-800/50 ${index % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
+                    <td className="p-4 font-medium text-slate-200">{row.feature}</td>
+                    <td className="p-4">
+                      <ComparisonCell value={row.competitor} note={row.competitorNote} />
+                    </td>
+                    <td className="p-4">
+                      <ComparisonCell value={row.console} note={row.consoleNote} highlightStyle={consoleHighlightStyle} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     )
@@ -105,8 +107,9 @@ export function ComparisonTable({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-700/50">
-        <table className="w-full text-left">
+      <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
+        <div className="rounded-xl border border-slate-700/50">
+          <table className="w-max min-w-full text-left">
           <thead>
             <tr className="border-b border-slate-700/50 bg-slate-800/60">
               <th className="px-6 py-4 text-sm font-semibold text-slate-300">Feature</th>
@@ -123,23 +126,24 @@ export function ComparisonTable({
               <th className={`px-6 py-4 text-sm font-semibold ${accent.text}`}>KubeStellar Console</th>
             </tr>
           </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr
-                key={row.feature}
-                className={`border-b border-slate-700/30 ${index % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
-              >
-                <td className="px-6 py-3.5 text-sm font-medium text-slate-200">{row.feature}</td>
-                <td className="px-6 py-3.5 text-sm">
-                  <ComparisonCell value={row.competitor} note={row.competitorNote} />
-                </td>
-                <td className="px-6 py-3.5 text-sm">
-                  <ComparisonCell value={row.console} note={row.consoleNote} highlightStyle={consoleHighlightStyle} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr
+                  key={row.feature}
+                  className={`border-b border-slate-700/30 ${index % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}`}
+                >
+                  <td className="px-6 py-3.5 text-sm font-medium text-slate-200">{row.feature}</td>
+                  <td className="px-6 py-3.5 text-sm">
+                    <ComparisonCell value={row.competitor} note={row.competitorNote} />
+                  </td>
+                  <td className="px-6 py-3.5 text-sm">
+                    <ComparisonCell value={row.console} note={row.consoleNote} highlightStyle={consoleHighlightStyle} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   )

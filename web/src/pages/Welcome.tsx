@@ -211,7 +211,7 @@ export function Welcome() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-12 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm">
+          <div className="inline-flex max-w-full items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 mb-8 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs sm:text-sm whitespace-nowrap">
             <Zap className="w-4 h-4" />
             Open Source &middot; AI-Powered &middot; Multi-Cluster
           </div>
