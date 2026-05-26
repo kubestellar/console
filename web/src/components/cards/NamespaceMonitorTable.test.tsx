@@ -8,8 +8,8 @@
  * Run from web/:
  *   npx vitest run src/components/cards/NamespaceMonitorTable.test.tsx
  */
-import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
-import { render, screen, act, fireEvent } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { NamespaceMonitorTable } from './NamespaceMonitorTable'
 import type { NamespaceData, ChangeType, ResourceType } from './NamespaceMonitor.types'
 import type { ClusterInfo } from '../../hooks/useMCP'
@@ -30,7 +30,7 @@ function makeCluster(overrides: Partial<ClusterInfo> = {}): ClusterInfo {
     healthy: true,
     nodeCount: 3,
     ...overrides,
-  } as ClusterInfo
+  }
 }
 
 function makeNamespaceData(overrides: Partial<NamespaceData> = {}): NamespaceData {
@@ -56,7 +56,7 @@ function buildProps(overrides: Partial<Parameters<typeof NamespaceMonitorTable>[
     expandedNamespaces: new Set<string>(),
     activeResourceTypes: new Set<ResourceType>(['pods', 'deployments', 'services', 'configmaps', 'secrets', 'pvcs', 'jobs']),
     getNamespaceData: vi.fn(() => new Map<string, NamespaceData>()),
-    getResourceChange: vi.fn(() => null as ChangeType),
+    getResourceChange: vi.fn<Parameters<typeof NamespaceMonitorTable>[0]['getResourceChange']>(() => null),
     clearChangeAfterTimeout: vi.fn(),
     onToggleCluster: vi.fn(),
     onToggleNamespace: vi.fn(),
@@ -218,8 +218,9 @@ describe('NamespaceMonitorTable', () => {
       render(<NamespaceMonitorTable {...props} />)
 
       // The namespace text is inside a span that has its own click handler (drilldown),
-      // but the parent div row handles onToggleNamespace. Click the chevron area.
-      const namespaceRow = screen.getByText('my-app').closest('[class*="cursor-pointer"]')
+      // but the parent div row handles onToggleNamespace.
+      const namespaceText = screen.getByText('my-app')
+      const namespaceRow = namespaceText.parentElement
       expect(namespaceRow).toBeTruthy()
       fireEvent.click(namespaceRow!)
 
@@ -374,10 +375,11 @@ describe('NamespaceMonitorTable', () => {
 
       render(<NamespaceMonitorTable {...props} />)
 
-      // The Eye action button — there's one per resource row
-      const actionButtons = screen.getAllByRole('button')
-      // The action button is the last interactive element in the resource row
-      const eyeButton = actionButtons.find(btn => btn.querySelector('svg'))
+      // Get the specific resource row div
+      const deployItem = screen.getByText('my-deploy')
+      const row = deployItem.closest('div')
+      expect(row).toBeTruthy()
+      const eyeButton = row!.querySelector('button')
       expect(eyeButton).toBeTruthy()
       fireEvent.click(eyeButton!)
 
