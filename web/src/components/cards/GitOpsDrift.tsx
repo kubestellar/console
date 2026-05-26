@@ -13,6 +13,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { GitOpsDriftDetailModal } from './deploy/GitOpsDriftDetailModal'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/cn'
 
 type SortByOption = 'severity' | 'type' | 'resource' | 'cluster'
 type SortTranslationKey = 'cards:gitOpsDrift.severity' | 'cards:gitOpsDrift.type' | 'cards:gitOpsDrift.resource' | 'common:common.cluster'
@@ -270,7 +271,12 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
       ) : (
         <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
           {displayDrifts.map((drift, index) => (
-            <DriftItem key={`${drift.cluster}-${drift.namespace}-${drift.resource}-${index}`} drift={drift} onOpenModal={setModalDrift} />
+            <DriftItem
+              key={`${drift.cluster}-${drift.namespace}-${drift.resource}-${index}`}
+              drift={drift}
+              isRefreshing={isRefreshing}
+              onOpenModal={setModalDrift}
+            />
           ))}
         </div>
       )}
@@ -298,7 +304,15 @@ export function GitOpsDrift({ config }: GitOpsDriftProps) {
   )
 }
 
-function DriftItem({ drift, onOpenModal }: { drift: GitOpsDriftType; onOpenModal?: (d: GitOpsDriftType) => void }) {
+function DriftItem({
+  drift,
+  isRefreshing,
+  onOpenModal,
+}: {
+  drift: GitOpsDriftType
+  isRefreshing: boolean
+  onOpenModal?: (d: GitOpsDriftType) => void
+}) {
   const { t } = useTranslation(['cards', 'common'])
   const typeConfig = driftTypeConfig[drift.driftType]
   const TypeIcon = typeConfig.icon
@@ -312,7 +326,7 @@ function DriftItem({ drift, onOpenModal }: { drift: GitOpsDriftType; onOpenModal
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className={`p-1 rounded ${typeConfig.bg}`}>
-            <TypeIcon className={`w-3 h-3 ${typeConfig.color}`} />
+            <TypeIcon className={cn('w-3 h-3', typeConfig.color, TypeIcon === RefreshCw && isRefreshing && 'animate-spin')} />
           </span>
           <div className="min-w-0 flex-1">
             <span className="text-sm font-medium text-foreground truncate block" title={drift.resource}>

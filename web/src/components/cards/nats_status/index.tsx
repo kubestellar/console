@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle, CircleDashed, RefreshCw, Radio, Database, Z
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MetricTile, CardSearchInput } from '../../../lib/cards/CardComponents'
+import { cn } from '@/lib/cn'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { useNatsStatus } from './useNatsStatus'
 import type { NatsServerState } from './demoData'
@@ -109,7 +110,7 @@ function NatsStatusInternal() {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           <span>
             {data.servers.total} server{data.servers.total !== 1 ? 's' : ''}
           </span>

@@ -35,6 +35,7 @@ import type {
 } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { formatDuration } from '../../../lib/stats/types'
+import { cn } from '@/lib/cn'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -190,7 +191,7 @@ export function SpiffeStatus() {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>

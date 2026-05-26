@@ -27,7 +27,7 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedSpire } from '../../../hooks/useCachedSpire'
 import { useCardLoadingState } from '../CardDataContext'
-import { cn } from '../../../lib/cn'
+import { cn } from '@/lib/cn'
 import type { SpirePodPhase, SpireServerPod } from '../../../lib/demo/spire'
 
 // ---------------------------------------------------------------------------

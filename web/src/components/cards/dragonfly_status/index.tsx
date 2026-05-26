@@ -31,7 +31,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { SkeletonCardWithRefresh } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
 import { MetricTile } from '../../../lib/cards/CardComponents'
-import { cn } from '../../../lib/cn'
+import { cn } from '@/lib/cn'
 import type {
   DragonflyComponent,
   DragonflyComponentRow,

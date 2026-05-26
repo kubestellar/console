@@ -15,6 +15,7 @@ import {
   ResourceColors,
   ResourceIcons,
 } from './NamespaceMonitor.utils'
+import { cn } from '@/lib/cn'
 
 // useCardLoadingState is handled by the parent NamespaceMonitor card.
 
@@ -173,6 +174,8 @@ function NamespaceMonitorTableComponent({
           const namespaceList = allNamespaces.slice(0, MAX_NAMESPACES_RENDERED_PER_CLUSTER)
           const truncatedCount = allNamespaces.length - namespaceList.length
 
+          const isClusterLoading = selectedCluster !== cluster.name
+
           return (
             <div key={cluster.name} className="mb-1">
               <div
@@ -191,9 +194,9 @@ function NamespaceMonitorTableComponent({
 
               {isExpanded && (
                 <div className="ml-6 border-l border-border/50">
-                  {selectedCluster !== cluster.name ? (
+                  {isClusterLoading ? (
                     <div className="flex items-center gap-2 py-2 px-4 text-xs text-muted-foreground">
-                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      <RefreshCw className={cn('w-3 h-3', isClusterLoading && 'animate-spin')} />
                       Loading...
                     </div>
                   ) : namespaceList.length === 0 ? (

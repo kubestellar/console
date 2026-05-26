@@ -14,6 +14,7 @@ import {
   CardAIActions,
 } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/cn'
 
 type SortByOption = 'status' | 'name' | 'restarts' | 'cluster'
 
@@ -24,12 +25,12 @@ const SORT_OPTIONS = [
   { value: 'cluster' as const, label: 'Cluster' },
 ]
 
-const getIssueIcon = (status: string | undefined): { icon: typeof MemoryStick; tooltip: string } => {
-  if (!status) return { icon: RefreshCw, tooltip: 'Unknown status' }
-  if (status.includes('OOM')) return { icon: MemoryStick, tooltip: 'Out of Memory - Pod exceeded memory limits' }
-  if (status.includes('Image')) return { icon: ImageOff, tooltip: 'Image Pull Error - Failed to pull container image' }
-  if (status.includes('Pending')) return { icon: Clock, tooltip: 'Pending - Pod is waiting to be scheduled' }
-  return { icon: RefreshCw, tooltip: 'Restart Loop - Pod is repeatedly crashing' }
+const getIssueIcon = (status: string | undefined): { icon: typeof MemoryStick; shouldSpin: boolean; tooltip: string } => {
+  if (!status) return { icon: RefreshCw, shouldSpin: true, tooltip: 'Unknown status' }
+  if (status.includes('OOM')) return { icon: MemoryStick, shouldSpin: false, tooltip: 'Out of Memory - Pod exceeded memory limits' }
+  if (status.includes('Image')) return { icon: ImageOff, shouldSpin: false, tooltip: 'Image Pull Error - Failed to pull container image' }
+  if (status.includes('Pending')) return { icon: Clock, shouldSpin: false, tooltip: 'Pending - Pod is waiting to be scheduled' }
+  return { icon: RefreshCw, shouldSpin: true, tooltip: 'Restart Loop - Pod is repeatedly crashing' }
 }
 
 export function PodIssues() {
@@ -199,7 +200,7 @@ export function PodIssues() {
       {/* Issues list */}
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
         {issues.map((issue: PodIssue, idx: number) => {
-          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.status)
+          const { icon: Icon, shouldSpin, tooltip: iconTooltip } = getIssueIcon(issue.status)
           const colors = getStatusColors(issue.status)
           return (
             <CardListItem
@@ -217,7 +218,7 @@ export function PodIssues() {
             >
               <div className="flex items-start gap-3 group">
                 <div className={`p-2 rounded-lg ${colors.iconBg} shrink-0`} title={iconTooltip}>
-                  <Icon className={`w-4 h-4 ${colors.text}`} />
+                  <Icon className={cn('w-4 h-4', colors.text, shouldSpin && isRefreshing && 'animate-spin')} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 min-w-0">

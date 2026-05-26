@@ -12,6 +12,7 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { safeGetJSON } from '../../lib/utils/localStorage'
+import { cn } from '@/lib/cn'
 
 interface KustomizationStatusProps {
   config?: {
@@ -382,7 +383,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
                     <div className="flex items-center gap-2">
-                      <StatusIcon className={`w-4 h-4 text-${color}-400 ${ks.status === 'Progressing' ? 'animate-spin' : ''}`} />
+                      <StatusIcon className={cn(`w-4 h-4 text-${color}-400`, (isRefreshing || ks.status === 'Progressing') && 'animate-spin')} />
                       <span className="text-sm text-foreground font-medium">{ks.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
