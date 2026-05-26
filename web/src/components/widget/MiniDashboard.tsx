@@ -31,34 +31,28 @@ interface NodeData {
   unschedulable?: boolean
 }
 
-// Stat card component
+// Stat card component - non-interactive status display
 function StatCard({
   label,
   value,
   color,
-  subValue,
-  onClick }: {
+  subValue }: {
   label: string
   value: string | number
   color: string
   subValue?: string
-  onClick?: () => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
+    <div
       className={cn(
         'flex flex-col items-center justify-center p-3 rounded-lg',
-        'bg-secondary/50 border border-border/50',
-        'transition-all duration-200',
-        onClick && 'hover:bg-secondary/70 hover:border-border cursor-pointer'
+        'bg-secondary/50 border border-border/50'
       )}
     >
       <span className={cn('text-2xl font-bold', color)}>{value}</span>
       <span className="text-xs text-muted-foreground mt-1">{label}</span>
       {subValue && <span className="text-2xs text-muted-foreground">{subValue}</span>}
-    </button>
+    </div>
   )
 }
 
@@ -261,7 +255,7 @@ export function MiniDashboard() {
 
   // Open full dashboard in new window
   const openFullDashboard = () => {
-    openInBrowser('/dashboard')
+    openInBrowser(ROUTES.HOME)
   }
 
   // Try to resize window to widget size when running as standalone PWA
@@ -311,42 +305,37 @@ export function MiniDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid - 3 columns for 6 stats - clickable to navigate to full console */}
+      {/* Stats Grid - 3 columns for 6 stats - status display only */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         <StatCard
           label="Clusters"
           value={totalClusters}
           color="text-purple-400"
           subValue={`${healthyClusters} healthy`}
-          onClick={() => openInBrowser(ROUTES.CLUSTERS)}
         />
         <StatCard
           label="GPUs"
           value={`${allocatedGPUs}/${totalGPUs}`}
           color="text-green-400"
           subValue="allocated/total"
-          onClick={() => openInBrowser('/compute?card=gpu_overview')}
         />
         <StatCard
           label="Nodes Offline"
           value={offlineCount}
           color={offlineCount > 0 ? 'text-red-400' : 'text-green-400'}
           subValue={offlineCount > 0 ? 'needs attention' : 'all online'}
-          onClick={() => openInBrowser('/nodes')}
         />
         <StatCard
           label="Pod Issues"
           value={totalIssues}
           color={totalIssues > 0 ? 'text-orange-400' : 'text-muted-foreground'}
           subValue={criticalIssues > 0 ? `${criticalIssues} critical` : undefined}
-          onClick={() => openInBrowser('/pods?card=pod_issues')}
         />
         <StatCard
           label="Nodes"
           value={allNodes.length}
           color="text-blue-400"
           subValue={`${allNodes.length - offlineCount} ready`}
-          onClick={() => openInBrowser('/nodes')}
         />
         <StatCard
           label="Status"
@@ -358,7 +347,6 @@ export function MiniDashboard() {
               ? 'text-yellow-400'
               : 'text-red-400'
           }
-          onClick={() => openInBrowser('/dashboard')}
         />
       </div>
 
