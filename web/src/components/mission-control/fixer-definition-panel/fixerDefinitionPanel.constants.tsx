@@ -10,6 +10,14 @@ export const PLACEHOLDER_EXAMPLES = [
   'Edge computing platform with lightweight clusters and workload distribution...',
 ]
 
+export const TITLE_PLACEHOLDER_EXAMPLES = [
+  'Production Security Compliance',
+  'Full Observability Stack',
+  'Service Mesh Setup',
+  'GitOps Continuous Delivery',
+  'Edge Computing Platform',
+]
+
 export interface ProjectAlternative {
   name: string
   displayName: string

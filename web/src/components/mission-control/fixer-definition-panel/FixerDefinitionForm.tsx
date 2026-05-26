@@ -15,6 +15,7 @@ interface FixerDefinitionFormProps {
   state: MissionControlState
   textareaRef: RefObject<HTMLTextAreaElement | null>
   placeholder: string
+  titlePlaceholder: string
   aiStreaming: boolean
   planningMission: Mission | null | undefined
   latestAIContent: string
@@ -44,6 +45,7 @@ export function FixerDefinitionForm({
   state,
   textareaRef,
   placeholder,
+  titlePlaceholder,
   aiStreaming,
   planningMission,
   latestAIContent,
@@ -88,7 +90,7 @@ export function FixerDefinitionForm({
           type="text"
           value={state.title}
           onChange={(event) => onTitleChange(event.target.value)}
-          placeholder="e.g., Production Security Compliance"
+          placeholder={titlePlaceholder}
           className="w-full mt-1 px-4 py-2 rounded-lg border border-border bg-secondary/30 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
         />
       </div>

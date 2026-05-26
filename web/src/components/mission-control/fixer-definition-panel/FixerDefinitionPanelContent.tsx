@@ -22,6 +22,7 @@ import {
   mergeManualWorkloadOptions,
   type ManualWorkloadOption,
   PLACEHOLDER_EXAMPLES,
+  TITLE_PLACEHOLDER_EXAMPLES,
 } from './fixerDefinitionPanel.constants'
 import { MissionSummarySidebar } from './MissionSummarySidebar'
 import { FixerDefinitionForm } from './FixerDefinitionForm'
@@ -210,6 +211,7 @@ export function FixerDefinitionPanel({
         state={state}
         textareaRef={textareaRef}
         placeholder={PLACEHOLDER_EXAMPLES[placeholderIdx]}
+        titlePlaceholder={TITLE_PLACEHOLDER_EXAMPLES[placeholderIdx]}
         aiStreaming={aiStreaming}
         planningMission={planningMission}
         latestAIContent={latestAIContent}
