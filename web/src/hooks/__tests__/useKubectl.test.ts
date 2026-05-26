@@ -123,12 +123,15 @@ describe('useKubectl', () => {
   it('execute returns a promise', async () => {
     const { result } = await renderKubectlHook()
     const promise = result.current.execute('my-cluster', ['get', 'pods'])
+    const handledRejection = promise.catch((error: Error) => error)
+
     expect(promise).toBeInstanceOf(Promise)
-    // Let it timeout silently rather than leaving pending
+
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30000)
     })
-    promise.catch(() => {})
+
+    await expect(handledRejection).resolves.toMatchObject({ message: 'Request timed out' })
   })
 
   it('execute resolves with output when WebSocket responds', async () => {
