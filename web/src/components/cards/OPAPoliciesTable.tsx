@@ -58,7 +58,7 @@ interface OPAPoliciesTableProps {
   onShowViolations: (clusterName: string) => void
   onInstallOPA: (clusterName: string) => void
   onPolicyClick: (policy: Policy) => void
-  onCreatePolicy: () => void
+  onCreatePolicy?: () => void
 }
 
 export const OPAPoliciesTable = memo(function OPAPoliciesTable({
@@ -114,13 +114,15 @@ export const OPAPoliciesTable = memo(function OPAPoliciesTable({
           }}
           extra={
             <>
-              <button
-                onClick={onCreatePolicy}
-                className="p-1 hover:bg-purple-500/10 rounded transition-colors text-muted-foreground hover:text-purple-400"
-                title={t('cards:opaPolicies.createOPAPolicy')}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+              {onCreatePolicy && (
+                <button
+                  onClick={onCreatePolicy}
+                  className="p-1 hover:bg-purple-500/10 rounded transition-colors text-muted-foreground hover:text-purple-400"
+                  title={t('cards:opaPolicies.createOPAPolicy')}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
               <a
                 href="https://open-policy-agent.github.io/gatekeeper/website/docs/"
                 target="_blank"
@@ -321,13 +323,17 @@ export const OPAPoliciesTable = memo(function OPAPoliciesTable({
 
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
-        <button
-          onClick={onCreatePolicy}
-          className="text-purple-400 hover:text-purple-300 transition-colors"
-        >
-          Create Policy
-        </button>
-        <span className="text-muted-foreground/30">•</span>
+        {onCreatePolicy && (
+          <>
+            <button
+              onClick={onCreatePolicy}
+              className="text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Create Policy
+            </button>
+            <span className="text-muted-foreground/30">•</span>
+          </>
+        )}
         <a
           href="https://open-policy-agent.github.io/gatekeeper/website/docs/install"
           target="_blank"
