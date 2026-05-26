@@ -9,16 +9,20 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Upload, CheckCircle, X } from 'lucide-react'
+import { ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
 import { TreeNodeItem } from './browser'
 import type { TreeNode } from './browser'
-import { useToast } from '../ui/Toast'
-import { ConfirmDialog } from '../../lib/modals'
-import { useTranslation } from 'react-i18next'
 
 const REVEAL_HIGHLIGHT_TIMEOUT_MS = 2_000
+
+type PendingRemoval = {
+  kind: 'repo' | 'path'
+  path: string
+} | null
 
 interface MissionBrowserSidebarProps {
   treeNodes: TreeNode[]
@@ -88,7 +92,7 @@ export function MissionBrowserSidebar({
   const treeNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const { showToast } = useToast()
   const { t } = useTranslation('common')
-  const [removeConfirm, setRemoveConfirm] = useState<{ type: 'repo' | 'path'; path: string } | null>(null)
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null)
 
   useEffect(() => {
     if (!revealPath) return
@@ -110,211 +114,203 @@ export function MissionBrowserSidebar({
     }
   }, [revealNonce, revealPath])
 
-  return (
-    <div
-      data-testid="mission-tree"
-      className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
-      style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
-    >
-      <div className="p-3 space-y-1">
-        {treeNodes.map((node) => (
-          <div key={node.id}>
-            <div>
-              <TreeNodeItem
-                node={node}
-                depth={0}
-                expandedNodes={expandedNodes}
-                selectedPath={selectedPath}
-                nodeRefs={treeNodeRefs}
-                onToggle={onToggleNode}
-                onSelect={onSelectNode}
-                onRemove={
-                  node.id === 'github'
-                    ? (child) => setRemoveConfirm({ type: 'repo', path: child.path })
-                    : node.id === 'local'
-                      ? (child) => setRemoveConfirm({ type: 'path', path: child.path })
-                      : undefined
-                }
-                onRefresh={
-                  node.id === 'github' || node.id === 'local'
-                    ? onRefreshNode
-                    : undefined
-                }
-                onAdd={
-                  node.id === 'github'
-                    ? () => setAddingRepo(!addingRepo)
-                    : node.id === 'local'
-                      ? () => setAddingPath(!addingPath)
-                      : undefined
-                }
-              />
-            </div>
+  const handleConfirmRemoval = () => {
+    if (!pendingRemoval) return
 
-            {/* Inline add-repo form */}
-            {node.id === 'github' && addingRepo && (
-              <div className="ml-6 mt-1 mb-2">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    const val = newRepoValue.trim()
-                    if (val && !watchedRepos.includes(val)) {
-                      onAddRepo(val)
-                      showToast(`Repository "${val}" added`, 'success')
-                    }
-                    setNewRepoValue('')
-                    setAddingRepo(false)
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <input
-                    type="text"
-                    value={newRepoValue}
-                    onChange={(e) => setNewRepoValue(e.target.value)}
-                    placeholder="owner/repo (e.g., kubara-io/kubara or your-org/runbooks)"
-                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
+    if (pendingRemoval.kind === 'repo') {
+      onRemoveRepo(pendingRemoval.path)
+    } else {
+      onRemovePath(pendingRemoval.path)
+    }
+
+    setPendingRemoval(null)
+  }
+
+  return (
+    <>
+      <div
+        data-testid="mission-tree"
+        className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
+        style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
+      >
+        <div className="p-3 space-y-1">
+          {(treeNodes || []).map((node) => (
+            <div key={node.id}>
+              <div>
+                <TreeNodeItem
+                  node={node}
+                  depth={0}
+                  expandedNodes={expandedNodes}
+                  selectedPath={selectedPath}
+                  nodeRefs={treeNodeRefs}
+                  onToggle={onToggleNode}
+                  onSelect={onSelectNode}
+                  onRemove={
+                    node.id === 'github'
+                      ? (child) => setPendingRemoval({ kind: 'repo', path: child.path })
+                      : node.id === 'local'
+                        ? (child) => setPendingRemoval({ kind: 'path', path: child.path })
+                        : undefined
+                  }
+                  onRefresh={
+                    node.id === 'github' || node.id === 'local'
+                      ? onRefreshNode
+                      : undefined
+                  }
+                  onAdd={
+                    node.id === 'github'
+                      ? () => setAddingRepo(!addingRepo)
+                      : node.id === 'local'
+                        ? () => setAddingPath(!addingPath)
+                        : undefined
+                  }
+                />
+              </div>
+
+              {node.id === 'github' && addingRepo && (
+                <div className="ml-6 mt-1 mb-2">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const val = newRepoValue.trim()
+                      if (val && !watchedRepos.includes(val)) {
+                        onAddRepo(val)
+                        showToast(t('missionBrowser.repoAddedToast', { value: val }), 'success')
+                      }
+                      setNewRepoValue('')
+                      setAddingRepo(false)
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <input
+                      type="text"
+                      value={newRepoValue}
+                      onChange={(e) => setNewRepoValue(e.target.value)}
+                      placeholder={t('missionBrowser.repoPlaceholder')}
+                      className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setAddingRepo(false)
+                          setNewRepoValue('')
+                        }
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setAddingRepo(false)
                         setNewRepoValue('')
-                      }
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingRepo(false)
-                      setNewRepoValue('')
-                    }}
-                    className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-            )}
+                      }}
+                      className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                </div>
+              )}
 
-            {/* Inline add-path form */}
-            {node.id === 'local' && addingPath && (
-              <div className="ml-6 mt-1 mb-2">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    const val = newPathValue.trim()
-                    if (val && !watchedPaths.includes(val)) {
-                      onAddPath(val)
-                      showToast(`Path "${val}" added`, 'success')
-                    }
-                    setNewPathValue('')
-                    setAddingPath(false)
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <input
-                    type="text"
-                    value={newPathValue}
-                    onChange={(e) => setNewPathValue(e.target.value)}
-                    placeholder="/path/to/missions"
-                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
+              {node.id === 'local' && addingPath && (
+                <div className="ml-6 mt-1 mb-2">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const val = newPathValue.trim()
+                      if (val && !watchedPaths.includes(val)) {
+                        onAddPath(val)
+                        showToast(t('missionBrowser.pathAddedToast', { value: val }), 'success')
+                      }
+                      setNewPathValue('')
+                      setAddingPath(false)
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <input
+                      type="text"
+                      value={newPathValue}
+                      onChange={(e) => setNewPathValue(e.target.value)}
+                      placeholder={t('missionBrowser.pathPlaceholder')}
+                      className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setAddingPath(false)
+                          setNewPathValue('')
+                        }
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setAddingPath(false)
                         setNewPathValue('')
-                      }
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingPath(false)
-                      setNewPathValue('')
-                    }}
-                    className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Drop zone for local files */}
-      <div className="mt-auto p-3 border-t border-border">
-        <div
-          onDragOver={(e) => {
-            e.preventDefault()
-            onDragOver()
-          }}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={cn(
-            'flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors',
-            isDragging
-              ? 'border-purple-400 bg-purple-500/10'
-              : 'border-border hover:border-muted-foreground',
-          )}
-        >
-          <Upload className="w-5 h-5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground text-center">
-            Drop mission file (JSON, YAML, MD) or click to browse
-          </span>
+                      }}
+                      className="p-1 text-xs text-muted-foreground hover:text-foreground min-h-11 min-w-11 flex items-center justify-center"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={MISSION_FILE_ACCEPT}
-          onChange={onFileSelect}
-          className="hidden"
-        />
+
+        <div className="mt-auto p-3 border-t border-border">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault()
+              onDragOver()
+            }}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors',
+              isDragging
+                ? 'border-purple-400 bg-purple-500/10'
+                : 'border-border hover:border-muted-foreground',
+            )}
+          >
+            <Upload className="w-5 h-5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground text-center">
+              {t('missionBrowser.dropZone')}
+            </span>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={MISSION_FILE_ACCEPT}
+            onChange={onFileSelect}
+            className="hidden"
+          />
+        </div>
       </div>
 
-      {/* Confirm removal dialog */}
       <ConfirmDialog
-        isOpen={removeConfirm !== null}
-        onClose={() => setRemoveConfirm(null)}
-        onConfirm={() => {
-          if (removeConfirm) {
-            if (removeConfirm.type === 'repo') {
-              onRemoveRepo(removeConfirm.path)
-            } else {
-              onRemovePath(removeConfirm.path)
-            }
-            setRemoveConfirm(null)
-          }
-        }}
-        title={removeConfirm?.type === 'repo' 
-          ? t('missions.browser.confirmRemoveRepo', { defaultValue: 'Remove Repository' })
-          : t('missions.browser.confirmRemovePath', { defaultValue: 'Remove Path' })
-        }
-        message={removeConfirm?.type === 'repo'
-          ? t('missions.browser.confirmRemoveRepoMessage', { 
-              defaultValue: 'Remove "{{path}}" from watched repositories?',
-              path: removeConfirm.path 
-            })
-          : t('missions.browser.confirmRemovePathMessage', { 
-              defaultValue: 'Remove "{{path}}" from watched paths?',
-              path: removeConfirm?.path || ''
-            })
-        }
-        confirmLabel={t('actions.remove', { defaultValue: 'Remove' })}
-        variant="warning"
+        isOpen={pendingRemoval !== null}
+        onClose={() => setPendingRemoval(null)}
+        onConfirm={handleConfirmRemoval}
+        title={pendingRemoval?.kind === 'repo' ? t('missionBrowser.removeWatchedRepoTitle') : t('missionBrowser.removeWatchedPathTitle')}
+        message={pendingRemoval?.kind === 'repo'
+          ? t('missionBrowser.removeWatchedRepoMessage', { path: pendingRemoval?.path })
+          : t('missionBrowser.removeWatchedPathMessage', { path: pendingRemoval?.path })}
+        confirmLabel={t('actions.remove')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
       />
-    </div>
+    </>
   )
 }

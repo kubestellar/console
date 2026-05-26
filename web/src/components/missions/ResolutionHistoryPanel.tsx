@@ -5,7 +5,7 @@
  * Displayed in the fullscreen mission view sidebar.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import {
   BookMarked,
   BookUp,
@@ -27,8 +27,8 @@ import { cn } from '../../lib/cn'
 import { ShareMissionDialog } from './ShareMissionDialog'
 import { SubmitToKBDialog } from './SubmitToKBDialog'
 import { useTranslation } from 'react-i18next'
-import { ConfirmDialog } from '../../lib/modals'
 import { Button } from '../ui/Button'
+import { ConfirmDialog } from '../../lib/modals'
 
 interface ResolutionHistoryPanelProps {
   onApplyResolution?: (resolution: Resolution) => void
@@ -40,7 +40,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showPersonal, setShowPersonal] = useState(true)
   const [showShared, setShowShared] = useState(true)
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [exportResolution, setExportResolution] = useState<Resolution | null>(null)
   const [submitKBResolution, setSubmitKBResolution] = useState<Resolution | null>(null)
   const [viewingResolution, setViewingResolution] = useState<Resolution | null>(null)
@@ -96,21 +96,21 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
     setExpandedId(null)
   }
 
-  const handleDelete = (id: string) => {
-    setDeleteConfirmId(id)
+  const handleDeleteClick = (id: string) => {
+    setDeleteTarget(id)
   }
 
-  const confirmDelete = () => {
-    if (deleteConfirmId) {
-      deleteResolution(deleteConfirmId)
-      setExpandedId(null)
-      setSelectedIds(prev => {
-        const next = new Set(prev)
-        next.delete(deleteConfirmId)
-        return next
-      })
-      setDeleteConfirmId(null)
-    }
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return
+
+    deleteResolution(deleteTarget)
+    setDeleteTarget(null)
+    setExpandedId(null)
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.delete(deleteTarget)
+      return next
+    })
   }
 
   const handleShare = (id: string) => {
@@ -125,15 +125,15 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookMarked className="w-4 h-4 text-purple-400" />
-            {t('common.resolutionHistory')}
+            {t('resolutionHistory')}
           </h4>
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <AlertCircle className="w-8 h-8 text-muted-foreground/50 mb-2" />
             <p className="text-xs text-muted-foreground mb-1">
-              No saved resolutions yet
+              {t('noSavedResolutions')}
             </p>
             <p className="text-2xs text-muted-foreground/70">
-              Complete a mission and save the resolution to build your knowledge base
+              {t('resolutionHistoryPanel.emptyStateHint')}
             </p>
           </div>
         </div>
@@ -162,7 +162,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
               <BookMarked className="w-4 h-4 text-purple-400 shrink-0" />
               <span className="min-w-0 break-words">{t('navigation.history')}</span>
               <span className="text-xs text-muted-foreground font-normal shrink-0">
-                {totalResolutions} saved
+                {t('resolutionHistoryPanel.savedCount', { count: totalResolutions })}
               </span>
             </h4>
             <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
@@ -216,7 +216,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
               >
                 {showPersonal ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 <Star className="w-3.5 h-3.5 text-yellow-400" />
-                Your Resolutions ({resolutions.length})
+                {t('yourResolutions')} ({resolutions.length})
               </button>
               {showPersonal && (
                 <div className="space-y-2">
@@ -230,7 +230,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                       onToggleSelect={() => toggleSelect(resolution.id)}
                       onView={() => setViewingResolution(resolution)}
                       onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
-                      onDelete={() => handleDelete(resolution.id)}
+                      onDelete={() => handleDeleteClick(resolution.id)}
                       onShare={() => handleShare(resolution.id)}
                       onExport={() => setExportResolution(resolution)}
                       onSubmitToKB={() => setSubmitKBResolution(resolution)}
@@ -251,7 +251,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
               >
                 {showShared ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                Team Shared ({sharedResolutions.length})
+                {t('teamShared')} ({sharedResolutions.length})
               </button>
               {showShared && (
                 <div className="space-y-2">
@@ -265,7 +265,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                       onToggleSelect={() => toggleSelect(resolution.id)}
                       onView={() => setViewingResolution(resolution)}
                       onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
-                      onDelete={() => handleDelete(resolution.id)}
+                      onDelete={() => handleDeleteClick(resolution.id)}
                       onExport={() => setExportResolution(resolution)}
                       onSubmitToKB={() => setSubmitKBResolution(resolution)}
                       showSharedBy
@@ -277,6 +277,17 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title={t('resolutionHistoryPanel.deleteTitle')}
+        message={t('resolutionHistoryPanel.deleteMessage')}
+        confirmLabel={t('resolutionHistoryPanel.deleteConfirmLabel')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
 
       {/* Export dialog */}
       {exportResolution && (

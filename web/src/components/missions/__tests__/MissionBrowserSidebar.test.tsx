@@ -8,14 +8,52 @@ vi.mock('../../ui/Toast', () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }))
 
-// TreeNodeItem has heavy icon/tooltip logic; mock it so sidebar tests
-// focus on MissionBrowserSidebar's own behaviour.
+vi.mock('../../../lib/modals', () => ({
+  ConfirmDialog: ({
+    isOpen,
+    title,
+    message,
+    confirmLabel,
+    cancelLabel,
+    onConfirm,
+    onClose,
+  }: {
+    isOpen: boolean
+    title: string
+    message: string
+    confirmLabel: string
+    cancelLabel: string
+    onConfirm: () => void
+    onClose: () => void
+  }) => isOpen ? (
+    <div>
+      <div>{title}</div>
+      <div>{message}</div>
+      <button onClick={onConfirm}>{confirmLabel}</button>
+      <button onClick={onClose}>{cancelLabel}</button>
+    </div>
+  ) : null,
+}))
+
 vi.mock('../browser', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../browser')>()
   return {
     ...actual,
-    TreeNodeItem: ({ node }: { node: { id: string; name: string } }) => (
-      <div data-testid={`tree-node-${node.id}`}>{node.name}</div>
+    TreeNodeItem: ({
+      node,
+      onRemove,
+    }: {
+      node: { id: string; name: string; children?: Array<{ id: string; name: string; path: string; type: string }> }
+      onRemove?: (node: { id: string; name: string; path: string; type: string }) => void
+    }) => (
+      <div data-testid={`tree-node-${node.id}`}>
+        <div>{node.name}</div>
+        {(node.children || []).map((child) => (
+          <button key={child.id} onClick={() => onRemove?.(child)}>
+            {`remove-${child.id}`}
+          </button>
+        ))}
+      </div>
     ),
   }
 })
@@ -23,12 +61,29 @@ vi.mock('../browser', async (importOriginal) => {
 import { MissionBrowserSidebar } from '../MissionBrowserSidebar'
 import type { TreeNode } from '../browser'
 
+const GITHUB_CHILD: TreeNode = {
+  id: 'gh-repo',
+  name: 'owner/repo',
+  path: 'owner/repo',
+  type: 'directory',
+  source: 'github',
+}
+
+const LOCAL_CHILD: TreeNode = {
+  id: 'local-path',
+  name: '/home/user/missions',
+  path: '/home/user/missions',
+  type: 'directory',
+  source: 'local',
+}
+
 const GITHUB_NODE: TreeNode = {
   id: 'github',
   name: 'GitHub Repos',
   path: 'github',
   type: 'directory',
   source: 'github',
+  children: [GITHUB_CHILD],
 }
 
 const LOCAL_NODE: TreeNode = {
@@ -37,6 +92,7 @@ const LOCAL_NODE: TreeNode = {
   path: 'local',
   type: 'directory',
   source: 'local',
+  children: [LOCAL_CHILD],
 }
 
 function renderSidebar(
@@ -98,8 +154,6 @@ describe('MissionBrowserSidebar', () => {
     ).toBeInTheDocument()
   })
 
-  // --- add-repo form ---
-
   it('shows add-repo form when addingRepo is true', () => {
     renderSidebar({ addingRepo: true, newRepoValue: '' })
     expect(
@@ -152,7 +206,6 @@ describe('MissionBrowserSidebar', () => {
     const user = userEvent.setup()
     const { props } = renderSidebar({ addingRepo: true, newRepoValue: '' })
     const cancelBtns = screen.getAllByRole('button')
-    // The cancel (X) button is the last button in the repo form
     const cancelBtn = cancelBtns.find(
       (b) => b.querySelector('svg') && b.getAttribute('type') === 'button',
     )
@@ -167,8 +220,6 @@ describe('MissionBrowserSidebar', () => {
     await user.type(input, '{Escape}')
     expect(props.setAddingRepo).toHaveBeenCalledWith(false)
   })
-
-  // --- add-path form ---
 
   it('shows add-path form when addingPath is true', () => {
     renderSidebar({ addingPath: true, newPathValue: '' })
@@ -215,7 +266,27 @@ describe('MissionBrowserSidebar', () => {
     expect(props.setAddingPath).toHaveBeenCalledWith(false)
   })
 
-  // --- drag-and-drop zone ---
+  it('confirms repo removal before invoking callback', async () => {
+    const user = userEvent.setup()
+    const { props } = renderSidebar()
+
+    await user.click(screen.getByRole('button', { name: /remove-gh-repo/i }))
+    expect(props.onRemoveRepo).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /^Remove$/i }))
+    expect(props.onRemoveRepo).toHaveBeenCalledWith('owner/repo')
+  })
+
+  it('confirms path removal before invoking callback', async () => {
+    const user = userEvent.setup()
+    const { props } = renderSidebar()
+
+    await user.click(screen.getByRole('button', { name: /remove-local-path/i }))
+    expect(props.onRemovePath).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /^Remove$/i }))
+    expect(props.onRemovePath).toHaveBeenCalledWith('/home/user/missions')
+  })
 
   it('calls onDragOver when dragging over the drop zone', () => {
     const { props } = renderSidebar()

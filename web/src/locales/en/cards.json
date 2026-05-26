@@ -4073,7 +4073,9 @@
   },
   "kagentAgentPicker": {
     "noAgentsAvailable": "No kagent agents available",
-    "learnMore": "Learn how to configure agents →"
+    "noAgentsGuidance": "Install kagent and create Agent resources to make agents appear here.",
+    "learnHowToAddAgents": "Learn how to add agents",
+    "selectAgent": "Select agent..."
   },
   "kagentSecurity": {
     "agentTypeCoverage": "Agent Type Coverage",

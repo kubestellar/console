@@ -9,6 +9,7 @@
  */
 
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { CATEGORY_FILTERS } from './missionBrowserConstants'
 
@@ -56,7 +57,6 @@ interface MissionBrowserFilterPanelProps {
   filteredRecommendationsCount: number
 }
 
-/** Match-percentage options shown as pill buttons in the filter bar. */
 const MATCH_PCT_OPTIONS = [0, 25, 50, 75] as const
 
 export function MissionBrowserFilterPanel({
@@ -83,9 +83,11 @@ export function MissionBrowserFilterPanel({
   recommendationsTotal,
   filteredRecommendationsCount,
 }: MissionBrowserFilterPanelProps) {
+  const { t } = useTranslation('common')
+  const showZeroResultsGuidance = recommendationsTotal > 0 && filteredRecommendationsCount === 0 && activeFilterCount > 0
+
   return (
     <div className="px-4 py-2.5 bg-card border-b border-border space-y-2 max-h-[40vh] md:max-h-[50vh] overflow-y-auto">
-      {/* Row 1: Clear all + Match % + Source + Category */}
       <div className="flex items-center gap-3 flex-wrap">
         {activeFilterCount > 0 && (
           <button
@@ -93,11 +95,11 @@ export function MissionBrowserFilterPanel({
             className="inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
           >
             <X className="w-3 h-3" />
-            Clear all
+            {t('actions.clearAll')}
           </button>
         )}
 
-        <span className="text-xs text-muted-foreground font-medium">Match:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.match')}</span>
         <div className="flex items-center gap-1">
           {MATCH_PCT_OPTIONS.map((pct) => (
             <button
@@ -110,20 +112,20 @@ export function MissionBrowserFilterPanel({
                   : 'bg-secondary text-muted-foreground hover:text-foreground border border-transparent',
               )}
             >
-              {pct === 0 ? 'Any' : `≥${pct}%`}
+              {pct === 0 ? t('missionBrowser.matchAny') : `≥${pct}%`}
             </button>
           ))}
         </div>
 
         <div className="w-px h-4 bg-border" />
 
-        <span className="text-xs text-muted-foreground font-medium">Source:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.source')}</span>
         <div className="flex items-center gap-1">
           {(
             [
-              ['all', 'All', null],
-              ['cluster', '🎯 Cluster', facetCounts.clusterMatched],
-              ['community', '🌐 Community', facetCounts.community],
+              ['all', t('missionBrowser.sourceAll'), null],
+              ['cluster', t('missionBrowser.sourceCluster'), facetCounts.clusterMatched],
+              ['community', t('missionBrowser.sourceCommunity'), facetCounts.community],
             ] as const
           ).map(([val, label, count]) => (
             <button
@@ -144,7 +146,7 @@ export function MissionBrowserFilterPanel({
 
         <div className="w-px h-4 bg-border" />
 
-        <span className="text-xs text-muted-foreground font-medium">Category:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.category')}</span>
         <div className="flex items-center gap-1">
           {CATEGORY_FILTERS.map((cat) => (
             <button
@@ -163,9 +165,8 @@ export function MissionBrowserFilterPanel({
         </div>
       </div>
 
-      {/* Row 2: Class + Maturity + Difficulty + CNCF Project */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-xs text-muted-foreground font-medium">Class:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.class')}</span>
         <div className="flex items-center gap-1">
           {['All', ...Array.from(facetCounts.missionClass.keys())].map((cls) => (
             <button
@@ -185,7 +186,7 @@ export function MissionBrowserFilterPanel({
 
         <div className="w-px h-4 bg-border" />
 
-        <span className="text-xs text-muted-foreground font-medium">Maturity:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.maturity')}</span>
         <div className="flex items-center gap-1">
           {['All', ...Array.from(facetCounts.maturity.keys())].map((mat) => (
             <button
@@ -205,7 +206,7 @@ export function MissionBrowserFilterPanel({
 
         <div className="w-px h-4 bg-border" />
 
-        <span className="text-xs text-muted-foreground font-medium">Difficulty:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.difficulty')}</span>
         <div className="flex items-center gap-1">
           {['All', ...Array.from(facetCounts.difficulty.keys())].map((diff) => (
             <button
@@ -225,20 +226,19 @@ export function MissionBrowserFilterPanel({
 
         <div className="w-px h-4 bg-border" />
 
-        <span className="text-xs text-muted-foreground font-medium">CNCF:</span>
+        <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.cncf')}</span>
         <input
           type="text"
           value={cncfFilter}
           onChange={(e) => onCncfFilterChange(e.target.value)}
-          placeholder="e.g. Istio, Envoy…"
+          placeholder={t('missionBrowser.cncfPlaceholder')}
           className="w-36 px-2 py-0.5 text-[11px] bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
         />
       </div>
 
-      {/* Row 3: Top tags */}
       {facetCounts.topTags.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground font-medium">Tags:</span>
+          <span className="text-xs text-muted-foreground font-medium">{t('missionBrowser.tags')}</span>
           {facetCounts.topTags.map(({ tag, count }: { tag: string; count: number }) => (
             <button
               key={tag}
@@ -258,27 +258,29 @@ export function MissionBrowserFilterPanel({
               onClick={onClearTags}
               className="text-[11px] text-muted-foreground hover:text-foreground underline"
             >
-              clear tags
+              {t('missionBrowser.clearTags')}
             </button>
           )}
         </div>
       )}
 
-      {/* Active filter summary */}
       {recommendationsTotal > 0 && (
-        <div className="text-[11px] text-muted-foreground">
-          Showing {filteredRecommendationsCount} of {recommendationsTotal} missions
-          {activeFilterCount > 0 && ' (filtered)'}
-          {filteredRecommendationsCount === 0 && activeFilterCount > 0 && (
-            <span className="ml-2 text-yellow-400">
-              — No matches. Try adjusting filters or{' '}
+        <div className="space-y-1">
+          <div className="text-[11px] text-muted-foreground">
+            {activeFilterCount > 0
+              ? t('missionBrowser.filteredSummary', { shown: filteredRecommendationsCount, total: recommendationsTotal })
+              : t('missionBrowser.summary', { shown: filteredRecommendationsCount, total: recommendationsTotal })}
+          </div>
+          {showZeroResultsGuidance && (
+            <div className="text-[11px] text-muted-foreground">
+              <div>{t('missionBrowser.noMissionsMatchFilters')}</div>
               <button
                 onClick={onClearAllFilters}
-                className="underline hover:text-yellow-300 transition-colors"
+                className="mt-1 underline text-purple-400 hover:text-purple-300"
               >
-                clear all
+                {t('missionBrowser.clearAllFiltersAction')}
               </button>
-            </span>
+            </div>
           )}
         </div>
       )}

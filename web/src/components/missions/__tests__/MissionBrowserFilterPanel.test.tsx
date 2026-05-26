@@ -78,6 +78,16 @@ describe('MissionBrowserFilterPanel', () => {
     expect(props.onClearTags).toHaveBeenCalled()
   })
 
+  it('offers a clear-filters action when filtering returns zero results', async () => {
+    const user = userEvent.setup()
+    const { props } = renderPanel({ filteredRecommendationsCount: 0 })
+
+    expect(screen.getByText('No missions match your filters.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /clear all filters/i }))
+
+    expect(props.onClearAllFilters).toHaveBeenCalled()
+  })
+
   it('hides clear-all button when no active filters', () => {
     renderPanel({ activeFilterCount: 0, recommendationsTotal: 0 })
     expect(screen.queryByRole('button', { name: /clear all/i })).not.toBeInTheDocument()
