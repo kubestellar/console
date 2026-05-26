@@ -354,7 +354,7 @@ export function MiniDashboard() {
       {totalIssues > 0 && (
         <div className="mb-4">
           <h2 className="text-xs font-medium text-muted-foreground mb-2">Recent Issues</h2>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="space-y-1 max-h-32 overflow-hidden">
             {podIssues?.slice(0, 5).map((issue, i) => {
               const isCritical = issue.status === 'CrashLoopBackOff' || issue.status === 'OOMKilled' || issue.status === 'Error'
               return (
