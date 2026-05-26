@@ -5,7 +5,7 @@
  * and opens GitHub's file creation UI to submit it as a PR to kubestellar/console-kb.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   BookUp,
@@ -203,43 +203,46 @@ function generateFilename(title: string, missionClass: MissionClass): string {
 export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDialogProps) {
   const { t } = useTranslation()
   const [missionClass, setMissionClass] = useState<MissionClass>('fixer')
-  const [cncfProject, setCncfProject] = useState('')
-  const [filename, setFilename] = useState('')
-  const [scanResult, setScanResult] = useState<FileScanResult | null>(null)
-  const [scanning, setScanning] = useState(false)
-  const scanRanRef = useRef(false)
+  const [cncfProjectInput, setCncfProjectInput] = useState<{ key: string; value: string }>({ key: '', value: '' })
+  const [filenameInput, setFilenameInput] = useState<{ key: string; value: string }>({ key: '', value: '' })
+  const [scanState, setScanState] = useState<{
+    key: string
+    result: FileScanResult | null
+    scanning: boolean
+  }>({ key: '', result: null, scanning: false })
+  const scanRanRef = useRef('')
 
-  useEffect(() => {
-    if (isOpen) {
-      setFilename(generateFilename(resolution.title, missionClass))
-      setCncfProject(detectCNCFProject(resolution))
-      setScanResult(null)
-      scanRanRef.current = false
-    }
-  }, [isOpen, resolution.title, missionClass, resolution])
+  const dialogKey = `${resolution.id}:${resolution.updatedAt}:${isOpen ? 'open' : 'closed'}`
+  const filenameKey = `${dialogKey}:${missionClass}`
+  const cncfProject = cncfProjectInput.key === dialogKey
+    ? cncfProjectInput.value
+    : detectCNCFProject(resolution)
+  const filename = filenameInput.key === filenameKey
+    ? filenameInput.value
+    : generateFilename(resolution.title, missionClass)
+  const scanResult = scanState.key === dialogKey ? scanState.result : null
+  const scanning = scanState.key === dialogKey ? scanState.scanning : false
 
   const kbContent = resolutionToKBFormat(resolution, missionClass, cncfProject)
   const jsonString = JSON.stringify(kbContent, null, 2)
   const targetDir = missionClass === 'install' ? 'fixes/cncf-install' : 'fixes/troubleshoot'
 
-  const runScan = useCallback(() => {
-    setScanning(true)
+  const runScan = () => {
+    setScanState({ key: dialogKey, result: scanResult, scanning: true })
     try {
       const result = fullScan(kbContent as unknown as MissionExport)
-      setScanResult(result)
+      setScanState({ key: dialogKey, result, scanning: false })
     } catch {
-      setScanResult(null)
-    } finally {
-      setScanning(false)
-      scanRanRef.current = true
+      setScanState({ key: dialogKey, result: null, scanning: false })
     }
-  }, [kbContent])
+  }
 
   useEffect(() => {
-    if (isOpen && !scanRanRef.current) {
+    if (isOpen && scanRanRef.current !== dialogKey) {
+      scanRanRef.current = dialogKey
       runScan()
     }
-  }, [isOpen, runScan])
+  }, [dialogKey, isOpen])
 
   const warningCount = scanResult?.findings.filter(f => f.severity !== 'info').length ?? 0
   const hasWarnings = warningCount > 0
@@ -291,23 +294,22 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
-      <BaseModal.Header title={t('dialogs.submitToKB.title')} icon={BookUp} onClose={onClose} />
+      <BaseModal.Header title={t('missions.submitToKB.title')} icon={BookUp} onClose={onClose} />
 
       <BaseModal.Content noPadding>
         <div className="p-4 space-y-4">
           <div className="p-3 rounded-lg bg-secondary/50 border border-border">
             <p className="text-xs font-medium text-foreground truncate">{resolution.title}</p>
             <p className="text-2xs text-muted-foreground mt-1">
-              {t('dialogs.submitToKB.preview', {
-                type: resolution.issueSignature.type,
-                count: resolution.resolution.steps.length,
-              })}
+              {resolution.issueSignature.type}
+              {resolution.issueSignature.resourceKind && ` · ${resolution.issueSignature.resourceKind}`}
+              {' · '}{t('missions.browser.stepsCount', { count: resolution.resolution.steps.length })}
             </p>
           </div>
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              {t('dialogs.submitToKB.missionType')}
+              {t('missions.submitToKB.missionType')}
             </label>
             <div className="flex gap-3">
               <button
@@ -321,8 +323,8 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               >
                 <Tag className="w-4 h-4" />
                 <div className="text-left">
-                  <span className="text-sm font-medium block">{t('dialogs.submitToKB.fixer')}</span>
-                  <span className="text-2xs opacity-70">{t('dialogs.submitToKB.fixerDescription')}</span>
+                  <span className="text-sm font-medium block">{t('missions.submitToKB.missionClass.fixer.label')}</span>
+                  <span className="text-2xs opacity-70">{t('missions.submitToKB.missionClass.fixer.description')}</span>
                 </div>
               </button>
               <button
@@ -336,8 +338,8 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               >
                 <BookUp className="w-4 h-4" />
                 <div className="text-left">
-                  <span className="text-sm font-medium block">{t('dialogs.submitToKB.installMission')}</span>
-                  <span className="text-2xs opacity-70">{t('dialogs.submitToKB.installMissionDescription')}</span>
+                  <span className="text-sm font-medium block">{t('missions.submitToKB.missionClass.install.label')}</span>
+                  <span className="text-2xs opacity-70">{t('missions.submitToKB.missionClass.install.description')}</span>
                 </div>
               </button>
             </div>
@@ -345,13 +347,13 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
 
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              {t('dialogs.submitToKB.cncfProject')} <span className="text-muted-foreground font-normal">{t('dialogs.submitToKB.optional')}</span>
+              {t('missions.submitToKB.cncfProject')}{' '}<span className="text-muted-foreground font-normal">({t('missions.submitToKB.optional')})</span>
             </label>
             <input
               type="text"
               value={cncfProject}
-              onChange={(e) => setCncfProject(e.target.value)}
-              placeholder={t('dialogs.submitToKB.cncfProjectPlaceholder')}
+              onChange={(e) => setCncfProjectInput({ key: dialogKey, value: e.target.value })}
+              placeholder={t('missions.submitToKB.cncfProjectPlaceholder')}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
@@ -359,14 +361,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <FileJson className="w-4 h-4 text-muted-foreground" />
-              {t('dialogs.submitToKB.filename')}
+              {t('missions.submitToKB.filename')}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">{targetDir}/</span>
               <input
                 type="text"
                 value={filename}
-                onChange={(e) => setFilename(e.target.value)}
+                onChange={(e) => setFilenameInput({ key: filenameKey, value: e.target.value })}
                 className="flex-1 px-3 py-2 text-sm font-mono bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               />
             </div>
@@ -376,14 +378,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             {scanning ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                {t('dialogs.submitToKB.scanning')}
+                {t('missions.submitToKB.scanning')}
               </div>
             ) : scanResult ? (
               <div className={cn('flex items-center gap-2 text-xs', hasWarnings ? 'text-yellow-400' : 'text-green-400')}>
                 {hasWarnings ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
                 {hasWarnings
-                  ? t('dialogs.submitToKB.findingsWarning', { count: warningCount })
-                  : t('dialogs.submitToKB.noSensitiveData')}
+                  ? t('missions.submitToKB.findings', { count: warningCount })
+                  : t('missions.submitToKB.noSensitiveData')}
               </div>
             ) : (
               <button
@@ -391,14 +393,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Shield className="w-3 h-3" />
-                {t('dialogs.submitToKB.runSecurityScan')}
+                {t('missions.submitToKB.runSecurityScan')}
               </button>
             )}
           </div>
 
           <details className="group">
             <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-              {t('dialogs.submitToKB.previewJson', { count: jsonString.length })}
+              {t('missions.submitToKB.previewJson', { count: jsonString.length })}
             </summary>
             <pre className="mt-2 p-3 rounded-lg bg-secondary/50 border border-border text-2xs font-mono text-foreground overflow-x-auto max-h-48 overflow-y-auto">
               {jsonString}
@@ -409,14 +411,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
 
       <BaseModal.Footer showKeyboardHints={false}>
         <p className="text-2xs text-muted-foreground">
-          {t('dialogs.submitToKB.opensPr', { repo: CONSOLE_KB_REPO })}
+          {t('missions.submitToKB.opensPr', { repo: CONSOLE_KB_REPO })}
         </p>
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
           >
-            {t('actions.cancel')}
+            {t('missions.submitToKB.cancel')}
           </button>
           <button
             onClick={handleSubmit}
@@ -424,7 +426,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-linear-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             <ExternalLink className="w-4 h-4" />
-            {t('dialogs.submitToKB.submit')}
+            {t('missions.submitToKB.submit')}
           </button>
         </div>
       </BaseModal.Footer>

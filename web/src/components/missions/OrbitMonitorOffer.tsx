@@ -40,19 +40,19 @@ export function OrbitMonitorOffer({ mission, onOpenOrbitDialog }: OrbitMonitorOf
     <div className="mx-4 my-2 rounded-lg border border-purple-500/25 bg-purple-500/5 px-3 py-2.5 flex items-center gap-3">
       <Satellite className="w-4 h-4 text-purple-400 shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-foreground">{t('dialogs.orbitMonitor.title')}</p>
-        <p className="text-[10px] text-muted-foreground">{t('dialogs.orbitMonitor.description')}</p>
+        <p className="text-xs text-foreground">{t('missions.orbit.title')}</p>
+        <p className="text-[10px] text-muted-foreground">{t('missions.orbit.description')}</p>
       </div>
       <button
         onClick={handleSetupMonitor}
         className="shrink-0 text-xs font-medium text-purple-400 hover:text-purple-300 border border-purple-500/30 rounded px-2 py-1 transition-colors hover:bg-purple-500/10"
       >
-        {t('dialogs.orbitMonitor.setupMonitor')}
+        {t('missions.orbit.setupMonitor')}
       </button>
       <button
         onClick={() => setDismissed(true)}
         className="shrink-0 p-0.5 text-muted-foreground/50 hover:text-muted-foreground rounded transition-colors"
-        aria-label={t('actions.dismiss')}
+        aria-label={t('missions.orbit.dismiss')}
       >
         <X className="w-3.5 h-3.5" />
       </button>

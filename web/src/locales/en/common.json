@@ -4843,6 +4843,115 @@
       "issuesFound": "Issues found",
       "dismiss": "Dismiss"
     },
+    "improve": {
+      "title": "Improve this AI Mission",
+      "quality": "Quality: {{score}}/100",
+      "sectionLabel": "Which section needs improvement?",
+      "sections": {
+        "general": "General",
+        "install": "Install",
+        "uninstall": "Uninstall",
+        "upgrade": "Upgrade",
+        "troubleshooting": "Troubleshooting"
+      },
+      "categoryLabel": "What kind of improvement?",
+      "categories": {
+        "wrongCommand": {
+          "label": "Wrong command",
+          "description": "A command is incorrect or does not work"
+        },
+        "missingStep": {
+          "label": "Missing step",
+          "description": "An important step is missing from the guide"
+        },
+        "betterApproach": {
+          "label": "Better approach",
+          "description": "There is a better way to do this"
+        },
+        "outdatedVersion": {
+          "label": "Outdated version",
+          "description": "The version or image tag is outdated"
+        },
+        "securityConcern": {
+          "label": "Security concern",
+          "description": "There is a security issue with the steps"
+        },
+        "other": {
+          "label": "Other",
+          "description": "Something else needs improvement"
+        }
+      },
+      "detailsLabel": "Details (optional)",
+      "detailsPlaceholder": "Describe the improvement needed. Include the correct command, better approach, or updated version...",
+      "footer": "Opens a GitHub issue in kubestellar/console-kb",
+      "cancel": "Cancel",
+      "openIssue": "Open Issue"
+    },
+    "orbit": {
+      "title": "Want to keep watching this?",
+      "description": "Set up an orbit to monitor it automatically.",
+      "setupMonitor": "Set up monitor",
+      "dismiss": "Dismiss"
+    },
+    "share": {
+      "title": "Export Mission",
+      "scanning": "Scanning for sensitive data...",
+      "findings_one": "{{count}} finding — review before sharing externally",
+      "findings_other": "{{count}} findings — review before sharing externally",
+      "noSensitiveData": "No sensitive data detected",
+      "runSecurityScan": "Run security scan before export",
+      "done": "Done!",
+      "export": {
+        "json": {
+          "label": "Download JSON",
+          "description": "Save as .json file"
+        },
+        "clipboard": {
+          "label": "Copy JSON",
+          "description": "Copy to clipboard"
+        },
+        "markdown": {
+          "label": "Copy Markdown",
+          "description": "Human-readable format"
+        },
+        "yaml": {
+          "label": "Download YAML",
+          "description": "Save as .yaml file"
+        }
+      },
+      "errors": {
+        "downloadJson": "Failed to export JSON: {{message}}",
+        "downloadYaml": "Failed to export YAML: {{message}}",
+        "unknown": "unknown error"
+      }
+    },
+    "submitToKB": {
+      "title": "Submit to Knowledge Base",
+      "missionType": "Mission Type",
+      "missionClass": {
+        "fixer": {
+          "label": "Fixer",
+          "description": "Troubleshooting fix"
+        },
+        "install": {
+          "label": "Install Mission",
+          "description": "Setup / deploy guide"
+        }
+      },
+      "cncfProject": "CNCF Project",
+      "optional": "optional",
+      "cncfProjectPlaceholder": "e.g., Istio, Argo CD, Prometheus...",
+      "filename": "Filename",
+      "scanning": "Scanning for sensitive data...",
+      "findings_one": "{{count}} finding — review before submitting",
+      "findings_other": "{{count}} findings — review before submitting",
+      "noSensitiveData": "No sensitive data detected",
+      "runSecurityScan": "Run security scan",
+      "previewJson": "Preview JSON ({{count}} chars)",
+      "opensPr": "Opens a PR on {{repo}}",
+      "cancel": "Cancel",
+      "submit": "Submit to KB"
+    },
     "recommended": {
       "tokenError": {
         "rateLimited": "GitHub API rate limit reached",

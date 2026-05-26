@@ -135,14 +135,14 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     }
 
     const json = JSON.stringify(mission, null, 2)
-    const unknownError = t('dialogs.shareMission.unknownError')
+    const unknownError = t('missions.share.errors.unknown')
     const slug = mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)
 
     switch (channel) {
       case 'json': {
         const result = downloadText(`${slug}.json`, json, 'application/json')
         if (!result.ok) {
-          showToast(t('dialogs.shareMission.exportJsonFailed', {
+          showToast(t('missions.share.errors.downloadJson', {
             message: result.error?.message || unknownError,
           }), 'error')
           return
@@ -159,7 +159,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         const yamlContent = missionToYaml(mission)
         const result = downloadText(`${slug}.yaml`, yamlContent, 'application/x-yaml')
         if (!result.ok) {
-          showToast(t('dialogs.shareMission.exportYamlFailed', {
+          showToast(t('missions.share.errors.downloadYaml', {
             message: result.error?.message || unknownError,
           }), 'error')
           return
@@ -178,16 +178,13 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
-      <BaseModal.Header title={t('dialogs.shareMission.title')} icon={Shield} onClose={onClose} />
+      <BaseModal.Header title={t('missions.share.title')} icon={Shield} onClose={onClose} />
 
       <BaseModal.Content noPadding>
         <div className="p-4 border-b border-border">
           <p className="text-xs font-medium text-foreground truncate">{resolution.title}</p>
           <p className="text-2xs text-muted-foreground mt-1">
-            {t('dialogs.shareMission.preview', {
-              type: resolution.issueSignature.type,
-              count: resolution.resolution.steps.length,
-            })}
+            {resolution.issueSignature.type} · {t('missions.browser.stepsCount', { count: resolution.resolution.steps.length })}
           </p>
         </div>
 
@@ -195,14 +192,14 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
           {scanning ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
-              {t('dialogs.shareMission.scanning')}
+              {t('missions.share.scanning')}
             </div>
           ) : scanResult ? (
             <div className={cn('flex items-center gap-2 text-xs', hasWarnings ? 'text-yellow-400' : 'text-green-400')}>
               {hasWarnings ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
               {hasWarnings
-                ? t('dialogs.shareMission.findingsWarning', { count: warningCount })
-                : t('dialogs.shareMission.noSensitiveData')}
+                ? t('missions.share.findings', { count: warningCount })
+                : t('missions.share.noSensitiveData')}
             </div>
           ) : (
             <button
@@ -210,7 +207,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <Shield className="w-3 h-3" />
-              {t('dialogs.shareMission.runSecurityScan')}
+              {t('missions.share.runSecurityScan')}
             </button>
           )}
         </div>
@@ -218,33 +215,33 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         <div className="p-4 space-y-2">
           <ExportButton
             icon={<Download className="w-4 h-4" />}
-            label={t('dialogs.shareMission.exports.downloadJson.label')}
-            description={t('dialogs.shareMission.exports.downloadJson.description')}
-            doneLabel={t('dialogs.shareMission.done')}
+            label={t('missions.share.export.json.label')}
+            description={t('missions.share.export.json.description')}
+            doneLabel={t('missions.share.done')}
             active={exported === 'json'}
             onClick={() => handleExport('json')}
           />
           <ExportButton
             icon={<Copy className="w-4 h-4" />}
-            label={t('dialogs.shareMission.exports.copyJson.label')}
-            description={t('dialogs.shareMission.exports.copyJson.description')}
-            doneLabel={t('dialogs.shareMission.done')}
+            label={t('missions.share.export.clipboard.label')}
+            description={t('missions.share.export.clipboard.description')}
+            doneLabel={t('missions.share.done')}
             active={exported === 'clipboard'}
             onClick={() => handleExport('clipboard')}
           />
           <ExportButton
             icon={<FileText className="w-4 h-4" />}
-            label={t('dialogs.shareMission.exports.copyMarkdown.label')}
-            description={t('dialogs.shareMission.exports.copyMarkdown.description')}
-            doneLabel={t('dialogs.shareMission.done')}
+            label={t('missions.share.export.markdown.label')}
+            description={t('missions.share.export.markdown.description')}
+            doneLabel={t('missions.share.done')}
             active={exported === 'markdown'}
             onClick={() => handleExport('markdown')}
           />
           <ExportButton
             icon={<Download className="w-4 h-4" />}
-            label={t('dialogs.shareMission.exports.downloadYaml.label')}
-            description={t('dialogs.shareMission.exports.downloadYaml.description')}
-            doneLabel={t('dialogs.shareMission.done')}
+            label={t('missions.share.export.yaml.label')}
+            description={t('missions.share.export.yaml.description')}
+            doneLabel={t('missions.share.done')}
             active={exported === 'yaml'}
             onClick={() => handleExport('yaml')}
           />
