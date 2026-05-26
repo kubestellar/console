@@ -20,9 +20,11 @@ const mockSearchParamsData = vi.hoisted(() => ({
 }))
 
 const mockSetSearchParams = vi.fn()
+const mockNavigate = vi.fn()
 vi.mock('react-router-dom', () => ({
   useSearchParams: () => [mockSearchParamsData.params, mockSetSearchParams],
   useLocation: () => ({ pathname: '/coverage-test' }),
+  useNavigate: () => mockNavigate,
 }))
 
 // dnd-kit — expose onDragEnd so we can call it

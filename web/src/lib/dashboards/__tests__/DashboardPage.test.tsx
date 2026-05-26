@@ -9,9 +9,11 @@ import type { DragEndEvent } from '@dnd-kit/core'
 // react-router-dom
 const mockSearchParams = new URLSearchParams()
 const mockSetSearchParams = vi.fn()
+const mockNavigate = vi.fn()
 vi.mock('react-router-dom', () => ({
   useSearchParams: () => [mockSearchParams, mockSetSearchParams],
   useLocation: () => ({ pathname: '/test-dashboard' }),
+  useNavigate: () => mockNavigate,
 }))
 
 // dnd-kit
