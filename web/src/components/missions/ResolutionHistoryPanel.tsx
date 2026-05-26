@@ -307,16 +307,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
         />
       )}
 
-      {/* Delete confirmation dialog */}
-      <ConfirmDialog
-        isOpen={deleteConfirmId !== null}
-        onClose={() => setDeleteConfirmId(null)}
-        onConfirm={confirmDelete}
-        title={t('actions.deleteResolution', { defaultValue: 'Delete Resolution' })}
-        message={t('missions.confirmDeleteResolution', { defaultValue: 'This will permanently delete this resolution. This action cannot be undone.' })}
-        confirmLabel={t('actions.delete')}
-        variant="danger"
-      />
+
     </div>
   )
 }
