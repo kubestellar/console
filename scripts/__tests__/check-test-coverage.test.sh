@@ -69,7 +69,7 @@ SUT="${SCRIPT_DIR}/check-test-coverage.sh"
 # ============================================================================
 # Helper: run a test case inside an isolated temp git repo
 #
-# Usage: run_in_sandbox <<'TESTBODY' ... TESTBODY
+# Usage: run_in_sandbox <<'BODY' ... BODY
 #
 # Inside the heredoc body you can use:
 #   - All standard git/bash commands
@@ -77,7 +77,7 @@ SUT="${SCRIPT_DIR}/check-test-coverage.sh"
 #   - web/src/hooks/ and web/src/components/ directories (pre-created)
 #   - "exit N" to signal test result: 0=pass, non-zero=fail
 #
-# The function captures stdout from the subshell as OUTPUT.
+# The function captures stdout and stderr from the subshell as OUTPUT.
 # ============================================================================
 
 run_in_sandbox() {
@@ -86,7 +86,10 @@ run_in_sandbox() {
   local body
   body=$(cat)  # read heredoc from stdin
 
-  # Run the test body in a subshell so cd never leaks
+  # Clean up potential existing report to prevent cross-test contamination in CI
+  rm -f /tmp/test-coverage-gaps.md
+
+  # Run the test body in a subshell so cd never leaks, capturing both stdout and stderr
   OUTPUT=$(
     cd "$tmpdir" || exit 99
     git init -q .
@@ -103,7 +106,7 @@ run_in_sandbox() {
 
     # Execute the test body
     eval "$body"
-  )
+  ) 2>&1
   SANDBOX_EXIT=$?
   rm -rf "$tmpdir"
 }
@@ -118,7 +121,7 @@ echo ""
 
 # ---------- Test 1: All files have tests → gap_count=0 ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function useFoo() {}" > web/src/hooks/useFoo.ts
 echo "test('useFoo')" > web/src/hooks/__tests__/useFoo.test.ts
 git add . && git commit -q -m "add hook with test"
@@ -132,7 +135,7 @@ fi
 
 # ---------- Test 2: Missing test file → gap reported ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function useBar() {}" > web/src/hooks/useBar.ts
 git add . && git commit -q -m "add hook without test"
 bash "$SUT" "HEAD~1" 2>&1
@@ -150,7 +153,7 @@ fi
 
 # ---------- Test 3: Component file without test → gap reported ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function MyCard() {}" > web/src/components/cards/MyCard.tsx
 git add . && git commit -q -m "add component without test"
 bash "$SUT" "HEAD~1" 2>&1
@@ -167,7 +170,7 @@ fi
 
 # ---------- Test 4: Co-located test file is also accepted ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function Widget() {}" > web/src/components/cards/Widget.tsx
 echo "test('Widget')" > web/src/components/cards/Widget.test.tsx
 git add . && git commit -q -m "add component with co-located test"
@@ -181,9 +184,9 @@ fi
 
 # ---------- Test 5: Generated/skipped files are excluded ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 for name in index types constants demoData demo mocks fixtures stories; do
-  echo "// auto" > "web/src/hooks/\${name}.ts"
+  echo "// auto" > "web/src/hooks/${name}.ts"
 done
 git add . && git commit -q -m "add skip-worthy files"
 bash "$SUT" "HEAD~1" 2>&1
@@ -196,7 +199,7 @@ fi
 
 # ---------- Test 6: Test/spec files not flagged ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "test('x')" > web/src/hooks/useSomething.test.ts
 echo "test('x')" > web/src/components/cards/MyCard.spec.tsx
 git add . && git commit -q -m "add test files only"
@@ -210,7 +213,7 @@ fi
 
 # ---------- Test 7: Script always exits 0 ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function useUntested() {}" > web/src/hooks/useUntested.ts
 git add . && git commit -q -m "add untested hook"
 bash "$SUT" "HEAD~1" > /dev/null 2>&1
@@ -223,7 +226,7 @@ fi
 
 # ---------- Test 8: Report has markdown structure ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function useMissing() {}" > web/src/hooks/useMissing.ts
 git add . && git commit -q -m "add missing hook"
 bash "$SUT" "HEAD~1" > /dev/null 2>&1
@@ -236,7 +239,7 @@ fi
 
 # ---------- Test 9: Clean report when all covered ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 echo "export function useGood() {}" > web/src/hooks/useGood.ts
 echo "test('useGood')" > web/src/hooks/__tests__/useGood.test.ts
 git add . && git commit -q -m "covered hook"

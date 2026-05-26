@@ -99,7 +99,7 @@ EOF
 # ============================================================================
 # Helper: run a test case inside an isolated temp directory sandbox
 #
-# Usage: run_in_sandbox <<'TESTBODY' ... TESTBODY
+# Usage: run_in_sandbox <<'BODY' ... BODY
 # ============================================================================
 
 run_in_sandbox() {
@@ -108,10 +108,11 @@ run_in_sandbox() {
   local body
   body=$(cat)
 
+  # Run the test body in a subshell, capturing both stdout and stderr
   OUTPUT=$(
     cd "$tmpdir" || exit 99
     eval "$body"
-  )
+  ) 2>&1
   SANDBOX_EXIT=$?
   rm -rf "$tmpdir"
 }
@@ -126,7 +127,7 @@ echo ""
 
 # ---------- Test 1: Coverage improved → upwards trend indicator ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 # Previous run: 90 passed
 write_results "results/2026-05-24.json" 100 90 10 0 "2026-05-24T00:00:00Z" \
@@ -147,7 +148,7 @@ fi
 
 # ---------- Test 2: Coverage decreased → regression, exits 1 ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 # Previous: suite was passing
 write_results "results/2026-05-24.json" 100 100 0 0 "2026-05-24T00:00:00Z" \
@@ -168,7 +169,7 @@ fi
 
 # ---------- Test 3: First run (no baseline) → exits 0, no crash ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 write_results "results/2026-05-25.json" 50 48 2 0 "2026-05-25T00:00:00Z" \
   '[{"suite":"hooks","status":"pass","duration":0.5}]'
@@ -184,7 +185,7 @@ fi
 
 # ---------- Test 4: Malformed JSON → exits 1 with error ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 echo '{ "summary": INVALID }' > "results/2026-05-25.json"
 
@@ -199,7 +200,7 @@ fi
 
 # ---------- Test 5: Zero-coverage → no divide-by-zero crash ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 write_results "results/2026-05-25.json" 0 0 0 0 "2026-05-25T00:00:00Z" '[]'
 
@@ -214,7 +215,7 @@ fi
 
 # ---------- Test 6: All tests passing → correct emoji ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 write_results "results/2026-05-25.json" 200 200 0 0 "2026-05-25T00:00:00Z" \
   '[{"suite":"all","status":"pass","duration":5.0}]'
@@ -230,7 +231,7 @@ fi
 
 # ---------- Test 7: Improvements detected ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 # Previous: suite failing
 write_results "results/2026-05-24.json" 50 40 10 0 "2026-05-24T00:00:00Z" \
@@ -251,7 +252,7 @@ fi
 
 # ---------- Test 8: Missing usage argument → exits with usage error ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 bash "$SUT" 2>&1
 BODY
 
@@ -263,7 +264,7 @@ fi
 
 # ---------- Test 9: Suite details table is always rendered ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 write_results "results/2026-05-25.json" 10 8 2 0 "2026-05-25T00:00:00Z" \
   '[{"suite":"hooks","status":"pass","duration":0.8},{"suite":"pages","status":"fail","duration":1.5}]'
@@ -279,7 +280,7 @@ fi
 
 # ---------- Test 10: Failing suites section shows failure reason ----------
 
-run_in_sandbox <<BODY
+run_in_sandbox <<'BODY'
 mkdir -p results
 write_results "results/2026-05-25.json" 10 5 5 0 "2026-05-25T00:00:00Z" \
   '[{"suite":"broken-suite","status":"fail","duration":0.5,"failure_reason":"ReferenceError"}]'
