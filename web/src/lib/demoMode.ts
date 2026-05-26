@@ -17,7 +17,14 @@
  */
 
 import { clearAllRegisteredCaches } from './modeTransition'
-import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE } from './constants'
+import {
+  STORAGE_KEY_TOKEN,
+  DEMO_TOKEN_VALUE,
+  STORAGE_KEY_DEMO_MODE,
+  STORAGE_KEY_ONBOARDED,
+  STORAGE_KEY_USER_CACHE,
+  STORAGE_KEY_HAS_SESSION,
+} from './constants'
 
 const DEMO_MODE_KEY = STORAGE_KEY_DEMO_MODE
 const DEMO_TOKEN = DEMO_TOKEN_VALUE
@@ -247,6 +254,24 @@ export function hasRealToken(): boolean {
  */
 export function setDemoToken(): void {
   localStorage.setItem(STORAGE_KEY_TOKEN, DEMO_TOKEN)
+}
+
+/**
+ * Enable demo mode from public entry points before routing into protected pages.
+ *
+ * For anonymous visitors we seed the demo token so auth guards admit the demo
+ * dashboard immediately. For authenticated users we preserve the real token and
+ * only force demo data mode.
+ */
+export function activatePublicDemoMode(): void {
+  localStorage.setItem(STORAGE_KEY_ONBOARDED, 'true')
+  setDemoMode(true, true)
+
+  if (hasRealToken()) return
+
+  localStorage.removeItem(STORAGE_KEY_USER_CACHE)
+  localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
+  setDemoToken()
 }
 
 // ============================================================================

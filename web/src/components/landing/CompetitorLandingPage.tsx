@@ -3,6 +3,7 @@ import { ArrowRight, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { ROUTES } from '../../config/routes'
+import { activatePublicDemoMode } from '../../lib/demoMode'
 import { ComparisonTable } from './ComparisonTable'
 import { HighlightGrid } from './HighlightGrid'
 import { ACCENT_CLASSES } from './styles'
@@ -81,7 +82,10 @@ export function CompetitorLandingPage({
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to={ROUTES.HOME}
-              onClick={() => onActioned('hero_try_demo')}
+              onClick={() => {
+                activatePublicDemoMode()
+                onActioned('hero_try_demo')
+              }}
               className={`inline-flex items-center gap-2 px-8 py-3 rounded-lg ${accent.bg} ${accent.bgHover} text-white font-semibold text-lg transition-colors`}
             >
               Try Demo Mode
@@ -157,7 +161,10 @@ export function CompetitorLandingPage({
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to={ROUTES.HOME}
-              onClick={() => onActioned('footer_try_demo')}
+              onClick={() => {
+                activatePublicDemoMode()
+                onActioned('footer_try_demo')
+              }}
               className={`inline-flex items-center gap-2 px-8 py-3 rounded-lg ${accent.bg} ${accent.bgHover} text-white font-semibold text-lg transition-colors`}
             >
               Try Demo

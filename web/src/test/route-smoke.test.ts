@@ -174,6 +174,21 @@ describe('Route configuration integrity', () => {
       ).toBe(true)
     }
   })
+
+  it('keeps public landing pages outside the protected dashboard shell', () => {
+    const publicRoutes = ['WELCOME', 'FROM_HEADLAMP', 'FROM_HOLMESGPT']
+    for (const key of publicRoutes) {
+      expect(appRouteRefs.includes(key), `ROUTES.${key} should be wired in AppRoutes.tsx`).toBe(true)
+    }
+    expect(appContent).toContain('<Route path={ROUTES.WELCOME} element={<LightweightShell><Welcome /></LightweightShell>} />')
+    expect(appContent).toContain('<Route path={ROUTES.FROM_HEADLAMP} element={<LightweightShell><FromHeadlamp /></LightweightShell>} />')
+    expect(appContent).toContain('<Route path={ROUTES.FROM_HOLMESGPT} element={<LightweightShell><FromHolmesGPT /></LightweightShell>} />')
+  })
+
+  it('uses a single top-level NotFound route instead of a protected catch-all redirect', () => {
+    const notFoundMatches = appContent.match(/<Route path="\*" element=\{<SuspenseRoute><NotFound \/><\/SuspenseRoute>} \/>/g) || []
+    expect(notFoundMatches).toHaveLength(1)
+  })
 })
 
 describe('Lazy import integrity', () => {

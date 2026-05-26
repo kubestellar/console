@@ -6,6 +6,7 @@ import { COPY_FEEDBACK_TIMEOUT_MS } from '../lib/constants'
 import { copyToClipboard } from '../lib/clipboard'
 import { emitInstallCommandCopied } from '../lib/analytics'
 import { ROUTES } from '../config/routes'
+import { activatePublicDemoMode } from '../lib/demoMode'
 import { ComparisonTable, type ComparisonRow } from '../components/landing/ComparisonTable'
 import { HighlightGrid, type HighlightFeature } from '../components/landing/HighlightGrid'
 import { InstallStepCard, type InstallStep } from '../components/landing/InstallStepCard'
@@ -146,6 +147,7 @@ export function FromHolmesGPT() {
           <div className="flex items-center justify-center gap-4">
             <Link
               to={ROUTES.HOME}
+              onClick={activatePublicDemoMode}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors"
             >
               Try the Dashboard
@@ -234,6 +236,7 @@ export function FromHolmesGPT() {
         </p>
         <Link
           to={ROUTES.HOME}
+          onClick={activatePublicDemoMode}
           className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-purple-500 text-white font-medium text-lg hover:bg-purple-600 transition-colors"
         >
           <Sparkles className="w-5 h-5" />

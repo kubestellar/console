@@ -13,6 +13,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Compass, Home, Rocket, MessageSquarePlus, ArrowLeft, Sparkles, LayoutDashboard, Shield, Server, Zap } from 'lucide-react'
 import { ROUTES } from '../config/routes'
+import { activatePublicDemoMode } from '../lib/demoMode'
 import type { CSSProperties } from 'react'
 
 // Inline style constants
@@ -26,7 +27,7 @@ const QUICK_LINKS = [
   { label: 'Deploy', path: ROUTES.DEPLOY, icon: Zap },
   { label: 'Marketplace', path: ROUTES.MARKETPLACE, icon: Rocket },
   { label: 'Cost', path: ROUTES.COST, icon: Sparkles },
-]
+] as const
 
 export default function NotFound() {
   const location = useLocation()
@@ -41,6 +42,11 @@ export default function NotFound() {
       `### What I was looking for\n\n_Describe the feature or page you expected to see._\n\n` +
       `### Why it would be useful\n\n_How would this help your workflow?_`
     )}`
+
+  const navigateToDemo = (to: typeof QUICK_LINKS[number]['path']) => {
+    activatePublicDemoMode()
+    navigate(to)
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
@@ -90,7 +96,7 @@ export default function NotFound() {
             {QUICK_LINKS.map(({ label, path: to, icon: Icon }) => (
               <button
                 key={to}
-                onClick={() => navigate(to)}
+                onClick={() => navigateToDemo(to)}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 hover:border-zinc-600 transition-colors group"
               >
                 <Icon className="w-4 h-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
@@ -110,7 +116,7 @@ export default function NotFound() {
             Go back
           </button>
           <button
-            onClick={() => navigate(ROUTES.HOME)}
+            onClick={() => navigateToDemo(ROUTES.HOME)}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
           >
             <Home className="w-3.5 h-3.5" />

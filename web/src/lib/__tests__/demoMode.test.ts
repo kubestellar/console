@@ -8,6 +8,7 @@ import {
   toggleDemoMode,
   subscribeDemoMode,
   setDemoToken,
+  activatePublicDemoMode,
   getDemoMode,
   setGlobalDemoMode,
   setQuantumWorkloadAvailable,
@@ -150,6 +151,38 @@ describe('setDemoToken', () => {
   it('sets demo-token in localStorage', () => {
     setDemoToken()
     expect(localStorage.getItem('token')).toBe('demo-token')
+  })
+})
+
+describe('activatePublicDemoMode', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setDemoMode(false, true)
+  })
+
+  it('seeds anonymous visitors with demo auth state', () => {
+    localStorage.setItem('kc-user-cache', JSON.stringify({ id: 'cached-user' }))
+    localStorage.setItem('kc-has-session', 'true')
+
+    activatePublicDemoMode()
+
+    expect(localStorage.getItem('kc-demo-mode')).toBe('true')
+    expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
+    expect(localStorage.getItem('token')).toBe('demo-token')
+    expect(localStorage.getItem('kc-user-cache')).toBeNull()
+    expect(localStorage.getItem('kc-has-session')).toBeNull()
+  })
+
+  it('preserves real auth tokens while enabling demo mode', () => {
+    localStorage.setItem('token', 'real-jwt-token')
+    localStorage.setItem('kc-user-cache', JSON.stringify({ id: 'real-user' }))
+
+    activatePublicDemoMode()
+
+    expect(localStorage.getItem('kc-demo-mode')).toBe('true')
+    expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
+    expect(localStorage.getItem('token')).toBe('real-jwt-token')
+    expect(localStorage.getItem('kc-user-cache')).toBe(JSON.stringify({ id: 'real-user' }))
   })
 })
 

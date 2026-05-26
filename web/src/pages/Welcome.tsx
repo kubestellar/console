@@ -13,6 +13,7 @@ import {
   Play,
 } from 'lucide-react'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
+import { activatePublicDemoMode } from '../lib/demoMode'
 import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
 import { ROUTES } from '../config/routes'
 
@@ -235,7 +236,10 @@ export function Welcome() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
               to={ROUTES.HOME}
-              onClick={() => emitWelcomeActioned('hero_explore_demo', ref)}
+              onClick={() => {
+                activatePublicDemoMode()
+                emitWelcomeActioned('hero_explore_demo', ref)
+              }}
               className="inline-flex items-center gap-2 px-8 py-4 sm:py-3.5 rounded-lg bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white font-semibold text-lg transition-colors w-full sm:w-auto justify-center"
             >
               <Play className="w-5 h-5" />
@@ -294,7 +298,10 @@ export function Welcome() {
             <Link
               key={scenario.title}
               to={scenario.link}
-              onClick={() => emitWelcomeActioned(`scenario_${scenario.link}`, ref)}
+              onClick={() => {
+                activatePublicDemoMode()
+                emitWelcomeActioned(`scenario_${scenario.link}`, ref)
+              }}
               className="group rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 hover:border-purple-500/30 hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors touch-manipulation"
             >
               <div className="mb-4">{scenario.icon}</div>
@@ -322,7 +329,10 @@ export function Welcome() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to={ROUTES.HOME}
-              onClick={() => emitWelcomeActioned('footer_explore_demo', ref)}
+              onClick={() => {
+                activatePublicDemoMode()
+                emitWelcomeActioned('footer_explore_demo', ref)
+              }}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >
               Explore the Demo
