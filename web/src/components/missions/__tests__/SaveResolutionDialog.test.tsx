@@ -57,7 +57,7 @@ vi.mock('../../../lib/modals/BaseModal', () => ({
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, options?: Record<string, string>) => {
       const translations: Record<string, string> = {
         'dashboard.missions.saveResolution': 'Save Resolution',
         'dashboard.missions.titleRequired': 'Title is required',
@@ -67,6 +67,8 @@ vi.mock('react-i18next', () => ({
         'dashboard.missions.generatingAISummary': 'Generating AI Summary',
         'dashboard.missions.creatingReusablePair': 'Creating a reusable problem/solution pair',
         'dashboard.missions.aiGeneratedReview': 'AI-generated summary - review and edit as needed',
+        'dashboard.missions.aiSummaryFallbackNotice': 'AI summary unavailable — using basic extraction.',
+        'dashboard.missions.aiSummaryFallbackDetail': 'AI summary unavailable — using basic extraction. {{error}}',
         'dashboard.missions.title': 'Title',
         'dashboard.missions.issueType': 'Issue Type',
         'dashboard.missions.resourceKind': 'Resource Kind',
@@ -89,7 +91,11 @@ vi.mock('react-i18next', () => ({
         'dashboard.missions.stepPlaceholder': 'Step description',
         'dashboard.missions.yamlPlaceholder': 'Paste YAML here (optional)',
       }
-      return translations[key] ?? key
+      const translation = translations[key] ?? key
+      return Object.entries(options ?? {}).reduce(
+        (text, [optionKey, value]) => text.replace(`{{${optionKey}}}`, String(value)),
+        translation,
+      )
     },
   }),
 }))
@@ -215,28 +221,32 @@ describe('SaveResolutionDialog', () => {
     // appendWsAuthToken takes time, so isGenerating=true during that time
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {})) // never resolves
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
-    expect(screen.getByText('Generating AI Summary')).toBeInTheDocument()
+    expect(await screen.findByText('Generating AI Summary')).toBeInTheDocument()
   })
 
   it('pre-fills title from mission while generating', async () => {
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
     const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service') as HTMLInputElement
-    expect(titleInput.value).toBe(BASE_MISSION.title)
+    await waitFor(() => {
+      expect(titleInput.value).toBe(BASE_MISSION.title)
+    })
   })
 
   it('disables form inputs while generating', async () => {
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
     const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service')
-    expect(titleInput).toBeDisabled()
+    await waitFor(() => {
+      expect(titleInput).toBeDisabled()
+    })
   })
 
   // ── AI error state ───────────────────────────────────────────────────
 
   it('shows AI error message after WebSocket failure', async () => {
     await renderDialogAndWaitForError()
-    expect(screen.getByText(/Could not reach the local agent/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Could not reach the local agent/i)).toBeInTheDocument()
   })
 
   it('shows retry button after AI error', async () => {

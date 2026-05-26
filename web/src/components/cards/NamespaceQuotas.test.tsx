@@ -348,7 +348,7 @@ describe('NamespaceQuotas Card Component', () => {
     render(<NamespaceQuotas />)
 
     // Click pencil icon (Edit quota)
-    const editBtn = screen.getAllByTitle('Edit quota')[0]
+    const editBtn = screen.getAllByTitle('editQuota')[0]
     await userEvent.click(editBtn)
 
     // Modal should open with edit state
@@ -381,7 +381,7 @@ describe('NamespaceQuotas Card Component', () => {
     render(<NamespaceQuotas />)
 
     // Click trash icon (Delete quota)
-    const deleteBtn = screen.getAllByTitle('Delete quota')[0]
+    const deleteBtn = screen.getAllByTitle('deleteQuota')[0]
     await userEvent.click(deleteBtn)
 
     // Confirm deletion dialog opens
