@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   MessageSquarePlus,
   ExternalLink,
@@ -16,12 +17,12 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import type { MissionExport } from '../../lib/missions/types'
 
 const IMPROVEMENT_CATEGORIES = [
-  { id: 'wrong-command', label: 'Wrong command', description: 'A command is incorrect or does not work' },
-  { id: 'missing-step', label: 'Missing step', description: 'An important step is missing from the guide' },
-  { id: 'better-approach', label: 'Better approach', description: 'There is a better way to do this' },
-  { id: 'outdated-version', label: 'Outdated version', description: 'The version or image tag is outdated' },
-  { id: 'security-concern', label: 'Security concern', description: 'There is a security issue with the steps' },
-  { id: 'other', label: 'Other', description: 'Something else needs improvement' },
+  { id: 'wrong-command', key: 'wrongCommand' },
+  { id: 'missing-step', key: 'missingStep' },
+  { id: 'better-approach', key: 'betterApproach' },
+  { id: 'outdated-version', key: 'outdatedVersion' },
+  { id: 'security-concern', key: 'securityConcern' },
+  { id: 'other', key: 'other' },
 ] as const
 
 type SectionName = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting' | 'general'
@@ -83,16 +84,17 @@ export function ImproveMissionDialog({
   isOpen,
   onClose,
 }: ImproveMissionDialogProps) {
+  const { t } = useTranslation()
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [details, setDetails] = useState('')
   const [activeSection, setActiveSection] = useState<SectionName>(section)
 
   const sections: { id: SectionName; label: string }[] = [
-    { id: 'general', label: 'General' },
-    { id: 'install', label: 'Install' },
-    { id: 'uninstall', label: 'Uninstall' },
-    { id: 'upgrade', label: 'Upgrade' },
-    { id: 'troubleshooting', label: 'Troubleshooting' },
+    { id: 'general', label: t('dialogs.improveMission.sections.general') },
+    { id: 'install', label: t('dialogs.improveMission.sections.install') },
+    { id: 'uninstall', label: t('dialogs.improveMission.sections.uninstall') },
+    { id: 'upgrade', label: t('dialogs.improveMission.sections.upgrade') },
+    { id: 'troubleshooting', label: t('dialogs.improveMission.sections.troubleshooting') },
   ]
 
   const handleSubmit = () => {
@@ -103,24 +105,22 @@ export function ImproveMissionDialog({
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
-      <BaseModal.Header title="Improve this AI Mission" icon={MessageSquarePlus} onClose={onClose} />
+      <BaseModal.Header title={t('dialogs.improveMission.title')} icon={MessageSquarePlus} onClose={onClose} />
 
       <BaseModal.Content noPadding>
         <div className="p-4 space-y-4">
-          {/* Mission info */}
           <div className="p-3 rounded-lg bg-secondary/50 border border-border">
             <p className="text-sm font-medium text-foreground">{mission.title}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {mission.cncfProject && `${mission.cncfProject} · `}
               {mission.metadata?.projectVersion && `${mission.metadata.projectVersion} · `}
-              Quality: {mission.metadata?.qualityScore ?? 'N/A'}/100
+              {t('dialogs.improveMission.quality', { score: mission.metadata?.qualityScore ?? 'N/A' })}
             </p>
           </div>
 
-          {/* Section selector */}
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              Which section needs improvement?
+              {t('dialogs.improveMission.sectionLabel')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {sections.map((s) => (
@@ -140,10 +140,9 @@ export function ImproveMissionDialog({
             </div>
           </div>
 
-          {/* Category */}
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              What kind of improvement?
+              {t('dialogs.improveMission.categoryLabel')}
             </label>
             <div className="space-y-1.5">
               {IMPROVEMENT_CATEGORIES.map((cat) => (
@@ -172,23 +171,26 @@ export function ImproveMissionDialog({
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">{cat.label}</p>
-                    <p className="text-xs text-muted-foreground">{cat.description}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {t(`dialogs.improveMission.categories.${cat.key}.label`)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(`dialogs.improveMission.categories.${cat.key}.description`)}
+                    </p>
                   </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Details */}
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              Details (optional)
+              {t('dialogs.improveMission.detailsLabel')}
             </label>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
-              placeholder="Describe the improvement needed. Include the correct command, better approach, or updated version..."
+              placeholder={t('dialogs.improveMission.detailsPlaceholder')}
               className="w-full h-24 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
@@ -197,21 +199,21 @@ export function ImproveMissionDialog({
 
       <BaseModal.Footer showKeyboardHints={false}>
         <p className="text-xs text-muted-foreground">
-          Opens a GitHub issue in kubestellar/console-kb
+          {t('dialogs.improveMission.footer')}
         </p>
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             onClick={handleSubmit}
             className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            Open Issue
+            {t('dialogs.improveMission.openIssue')}
           </button>
         </div>
       </BaseModal.Footer>

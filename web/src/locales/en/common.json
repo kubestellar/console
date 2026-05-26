@@ -2609,6 +2609,116 @@
     "thankYouDetail": "Your input helps us improve KubeStellar Console.",
     "submitError": "Couldn't send your feedback. Please try again."
   },
+  "dialogs": {
+    "improveMission": {
+      "title": "Improve this AI Mission",
+      "quality": "Quality: {{score}}/100",
+      "sectionLabel": "Which section needs improvement?",
+      "sections": {
+        "general": "General",
+        "install": "Install",
+        "uninstall": "Uninstall",
+        "upgrade": "Upgrade",
+        "troubleshooting": "Troubleshooting"
+      },
+      "categoryLabel": "What kind of improvement?",
+      "categories": {
+        "wrongCommand": {
+          "label": "Wrong command",
+          "description": "A command is incorrect or does not work"
+        },
+        "missingStep": {
+          "label": "Missing step",
+          "description": "An important step is missing from the guide"
+        },
+        "betterApproach": {
+          "label": "Better approach",
+          "description": "There is a better way to do this"
+        },
+        "outdatedVersion": {
+          "label": "Outdated version",
+          "description": "The version or image tag is outdated"
+        },
+        "securityConcern": {
+          "label": "Security concern",
+          "description": "There is a security issue with the steps"
+        },
+        "other": {
+          "label": "Other",
+          "description": "Something else needs improvement"
+        }
+      },
+      "detailsLabel": "Details (optional)",
+      "detailsPlaceholder": "Describe the improvement needed. Include the correct command, better approach, or updated version...",
+      "footer": "Opens a GitHub issue in kubestellar/console-kb",
+      "openIssue": "Open Issue"
+    },
+    "orbitMonitor": {
+      "title": "Want to keep watching this?",
+      "description": "Set up an orbit to monitor it automatically.",
+      "setupMonitor": "Set up monitor"
+    },
+    "shareMission": {
+      "title": "Export Mission",
+      "preview": "{{type}} · {{count}} steps",
+      "preview_one": "{{type}} · {{count}} step",
+      "preview_other": "{{type}} · {{count}} steps",
+      "scanning": "Scanning for sensitive data...",
+      "findingsWarning": "{{count}} findings — review before sharing externally",
+      "findingsWarning_one": "{{count}} finding — review before sharing externally",
+      "findingsWarning_other": "{{count}} findings — review before sharing externally",
+      "noSensitiveData": "No sensitive data detected",
+      "runSecurityScan": "Run security scan before export",
+      "exportJsonFailed": "Failed to export JSON: {{message}}",
+      "exportYamlFailed": "Failed to export YAML: {{message}}",
+      "unknownError": "unknown error",
+      "done": "Done!",
+      "exports": {
+        "downloadJson": {
+          "label": "Download JSON",
+          "description": "Save as .json file"
+        },
+        "copyJson": {
+          "label": "Copy JSON",
+          "description": "Copy to clipboard"
+        },
+        "copyMarkdown": {
+          "label": "Copy Markdown",
+          "description": "Human-readable format"
+        },
+        "downloadYaml": {
+          "label": "Download YAML",
+          "description": "Save as .yaml file"
+        }
+      }
+    },
+    "submitToKB": {
+      "title": "Submit to Knowledge Base",
+      "preview": "{{type}} · {{count}} steps",
+      "preview_one": "{{type}} · {{count}} step",
+      "preview_other": "{{type}} · {{count}} steps",
+      "missionType": "Mission Type",
+      "fixer": "Fixer",
+      "fixerDescription": "Troubleshooting fix",
+      "installMission": "Install Mission",
+      "installMissionDescription": "Setup / deploy guide",
+      "cncfProject": "CNCF Project",
+      "optional": "(optional)",
+      "cncfProjectPlaceholder": "e.g., Istio, Argo CD, Prometheus...",
+      "filename": "Filename",
+      "scanning": "Scanning for sensitive data...",
+      "findingsWarning": "{{count}} findings — review before submitting",
+      "findingsWarning_one": "{{count}} finding — review before submitting",
+      "findingsWarning_other": "{{count}} findings — review before submitting",
+      "noSensitiveData": "No sensitive data detected",
+      "runSecurityScan": "Run security scan",
+      "previewJson": "Preview JSON ({{count}} chars)",
+      "previewJson_one": "Preview JSON ({{count}} char)",
+      "previewJson_other": "Preview JSON ({{count}} chars)",
+      "opensPr": "Opens a PR on {{repo}}",
+      "submit": "Submit to KB"
+    }
+  },
   "orbit": {
     "title": "Orbital Maintenance",
     "keepInOrbit": "Keep it in orbit",

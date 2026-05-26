@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Download,
   Copy,
@@ -101,7 +102,7 @@ function missionToMarkdown(mission: MissionExport): string {
 }
 
 export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMissionDialogProps) {
-  // #6226: useToast for download error feedback.
+  const { t } = useTranslation()
   const { showToast } = useToast()
   const [scanResult, setScanResult] = useState<FileScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -129,21 +130,21 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
   }
 
   const handleExport = async (channel: ExportChannel) => {
-    // Run scan first if not done yet
     if (!scanResult && !scanning) {
       runScan()
     }
 
     const json = JSON.stringify(mission, null, 2)
-
+    const unknownError = t('dialogs.shareMission.unknownError')
     const slug = mission.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)
+
     switch (channel) {
       case 'json': {
-        // #6226: route through downloadText so storage-quota / blocker
-        // failures surface as a toast instead of an unhandled exception.
         const result = downloadText(`${slug}.json`, json, 'application/json')
         if (!result.ok) {
-          showToast(`Failed to export JSON: ${result.error?.message || 'unknown error'}`, 'error')
+          showToast(t('dialogs.shareMission.exportJsonFailed', {
+            message: result.error?.message || unknownError,
+          }), 'error')
           return
         }
         break
@@ -155,11 +156,12 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
         await copyToClipboard(missionToMarkdown(mission))
         break
       case 'yaml': {
-        // #6226: same downloadText wrapper for the YAML export path.
         const yamlContent = missionToYaml(mission)
         const result = downloadText(`${slug}.yaml`, yamlContent, 'application/x-yaml')
         if (!result.ok) {
-          showToast(`Failed to export YAML: ${result.error?.message || 'unknown error'}`, 'error')
+          showToast(t('dialogs.shareMission.exportYamlFailed', {
+            message: result.error?.message || unknownError,
+          }), 'error')
           return
         }
         break
@@ -171,34 +173,36 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
     exportedTimeoutRef.current = setTimeout(() => setExported(null), UI_FEEDBACK_TIMEOUT_MS)
   }
 
-  const hasWarnings = scanResult && scanResult.findings.some(f => f.severity === 'warning' || f.severity === 'error')
+  const warningCount = scanResult?.findings.filter(f => f.severity !== 'info').length ?? 0
+  const hasWarnings = warningCount > 0
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
-      <BaseModal.Header title="Export Mission" icon={Shield} onClose={onClose} />
+      <BaseModal.Header title={t('dialogs.shareMission.title')} icon={Shield} onClose={onClose} />
 
       <BaseModal.Content noPadding>
-        {/* Mission preview */}
         <div className="p-4 border-b border-border">
           <p className="text-xs font-medium text-foreground truncate">{resolution.title}</p>
           <p className="text-2xs text-muted-foreground mt-1">
-            {resolution.issueSignature.type} · {resolution.resolution.steps.length} steps
+            {t('dialogs.shareMission.preview', {
+              type: resolution.issueSignature.type,
+              count: resolution.resolution.steps.length,
+            })}
           </p>
         </div>
 
-        {/* Security scan status */}
         <div className="px-4 py-3 border-b border-border">
           {scanning ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Scanning for sensitive data...
+              {t('dialogs.shareMission.scanning')}
             </div>
           ) : scanResult ? (
             <div className={cn('flex items-center gap-2 text-xs', hasWarnings ? 'text-yellow-400' : 'text-green-400')}>
               {hasWarnings ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
               {hasWarnings
-                ? `${scanResult.findings.filter(f => f.severity !== 'info').length} finding(s) — review before sharing externally`
-                : 'No sensitive data detected'}
+                ? t('dialogs.shareMission.findingsWarning', { count: warningCount })
+                : t('dialogs.shareMission.noSensitiveData')}
             </div>
           ) : (
             <button
@@ -206,38 +210,41 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <Shield className="w-3 h-3" />
-              Run security scan before export
+              {t('dialogs.shareMission.runSecurityScan')}
             </button>
           )}
         </div>
 
-        {/* Export channels */}
         <div className="p-4 space-y-2">
           <ExportButton
             icon={<Download className="w-4 h-4" />}
-            label="Download JSON"
-            description="Save as .json file"
+            label={t('dialogs.shareMission.exports.downloadJson.label')}
+            description={t('dialogs.shareMission.exports.downloadJson.description')}
+            doneLabel={t('dialogs.shareMission.done')}
             active={exported === 'json'}
             onClick={() => handleExport('json')}
           />
           <ExportButton
             icon={<Copy className="w-4 h-4" />}
-            label="Copy JSON"
-            description="Copy to clipboard"
+            label={t('dialogs.shareMission.exports.copyJson.label')}
+            description={t('dialogs.shareMission.exports.copyJson.description')}
+            doneLabel={t('dialogs.shareMission.done')}
             active={exported === 'clipboard'}
             onClick={() => handleExport('clipboard')}
           />
           <ExportButton
             icon={<FileText className="w-4 h-4" />}
-            label="Copy Markdown"
-            description="Human-readable format"
+            label={t('dialogs.shareMission.exports.copyMarkdown.label')}
+            description={t('dialogs.shareMission.exports.copyMarkdown.description')}
+            doneLabel={t('dialogs.shareMission.done')}
             active={exported === 'markdown'}
             onClick={() => handleExport('markdown')}
           />
           <ExportButton
             icon={<Download className="w-4 h-4" />}
-            label="Download YAML"
-            description="Save as .yaml file"
+            label={t('dialogs.shareMission.exports.downloadYaml.label')}
+            description={t('dialogs.shareMission.exports.downloadYaml.description')}
+            doneLabel={t('dialogs.shareMission.done')}
             active={exported === 'yaml'}
             onClick={() => handleExport('yaml')}
           />
@@ -247,10 +254,11 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
   )
 }
 
-function ExportButton({ icon, label, description, active, onClick }: {
+function ExportButton({ icon, label, description, doneLabel, active, onClick }: {
   icon: React.ReactNode
   label: string
   description: string
+  doneLabel: string
   active: boolean
   onClick: () => void
 }) {
@@ -266,7 +274,7 @@ function ExportButton({ icon, label, description, active, onClick }: {
     >
       <div className="shrink-0">{active ? <CheckCircle className="w-4 h-4 text-green-400" /> : icon}</div>
       <div>
-        <p className="text-xs font-medium">{active ? 'Done!' : label}</p>
+        <p className="text-xs font-medium">{active ? doneLabel : label}</p>
         <p className="text-2xs text-muted-foreground">{description}</p>
       </div>
     </button>

@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   BookUp,
   ExternalLink,
@@ -95,7 +96,6 @@ const CNCF_PROJECT_KEYWORDS: Record<string, string> = {
 
 /** Try to detect the CNCF project from a resolution's context */
 function detectCNCFProject(resolution: Resolution): string {
-  // Collect all text to search through
   const searchTexts = [
     resolution.title,
     resolution.issueSignature.type,
@@ -107,7 +107,6 @@ function detectCNCFProject(resolution: Resolution): string {
     ...(resolution.context.operators || []),
   ].join(' ').toLowerCase()
 
-  // Check operators first (most reliable signal)
   for (const op of (resolution.context.operators || [])) {
     const opLower = op.toLowerCase()
     for (const [keyword, project] of Object.entries(CNCF_PROJECT_KEYWORDS)) {
@@ -115,7 +114,6 @@ function detectCNCFProject(resolution: Resolution): string {
     }
   }
 
-  // Check title and namespace (next most reliable)
   const titleAndNs = [
     resolution.title,
     resolution.issueSignature.namespace || '',
@@ -125,7 +123,6 @@ function detectCNCFProject(resolution: Resolution): string {
     if (titleAndNs.includes(keyword)) return project
   }
 
-  // Broader search across all text
   for (const [keyword, project] of Object.entries(CNCF_PROJECT_KEYWORDS)) {
     if (searchTexts.includes(keyword)) return project
   }
@@ -155,7 +152,6 @@ function resolutionToKBFormat(
   const mission: Record<string, unknown> = {
     steps }
 
-  // Add troubleshooting section for fixer-class missions
   if (missionClass === 'fixer' && resolution.resolution.summary) {
     mission.troubleshooting = [
       {
@@ -164,7 +160,6 @@ function resolutionToKBFormat(
     ]
   }
 
-  // Add resolution data
   if (resolution.resolution.summary || resolution.resolution.steps.length > 0) {
     mission.resolution = {
       summary: resolution.resolution.summary,
@@ -206,6 +201,7 @@ function generateFilename(title: string, missionClass: MissionClass): string {
 }
 
 export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDialogProps) {
+  const { t } = useTranslation()
   const [missionClass, setMissionClass] = useState<MissionClass>('fixer')
   const [cncfProject, setCncfProject] = useState('')
   const [filename, setFilename] = useState('')
@@ -213,7 +209,6 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   const [scanning, setScanning] = useState(false)
   const scanRanRef = useRef(false)
 
-  // Generate default filename and auto-detect CNCF project when dialog opens
   useEffect(() => {
     if (isOpen) {
       setFilename(generateFilename(resolution.title, missionClass))
@@ -223,15 +218,10 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
     }
   }, [isOpen, resolution.title, missionClass, resolution])
 
-  // Build the console-kb formatted JSON
   const kbContent = resolutionToKBFormat(resolution, missionClass, cncfProject)
-
   const jsonString = JSON.stringify(kbContent, null, 2)
-
-  // Determine the target directory based on mission class
   const targetDir = missionClass === 'install' ? 'fixes/cncf-install' : 'fixes/troubleshoot'
 
-  // Run security scan
   const runScan = useCallback(() => {
     setScanning(true)
     try {
@@ -245,14 +235,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
     }
   }, [kbContent])
 
-  // Auto-scan on first open
   useEffect(() => {
     if (isOpen && !scanRanRef.current) {
       runScan()
     }
   }, [isOpen, runScan])
 
-  const hasWarnings = scanResult?.findings.some(f => f.severity === 'warning' || f.severity === 'error')
+  const warningCount = scanResult?.findings.filter(f => f.severity !== 'info').length ?? 0
+  const hasWarnings = warningCount > 0
 
   const handleSubmit = () => {
     const description = resolution.resolution.summary || resolution.title
@@ -267,9 +257,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
       description: `Submitted from KubeStellar Console resolution history.\n\n${description}`,
     })
 
-    // Check URL length — GitHub has limits
     if (url.length > MAX_GITHUB_URL_LENGTH) {
-      // Fall back to opening an issue with the content instead
       const issueUrl = buildGitHubIssueUrl({
         owner: CONSOLE_KB_OWNER,
         repo: CONSOLE_KB_REPO,
@@ -303,24 +291,23 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
-      <BaseModal.Header title="Submit to Knowledge Base" icon={BookUp} onClose={onClose} />
+      <BaseModal.Header title={t('dialogs.submitToKB.title')} icon={BookUp} onClose={onClose} />
 
       <BaseModal.Content noPadding>
         <div className="p-4 space-y-4">
-          {/* Resolution preview */}
           <div className="p-3 rounded-lg bg-secondary/50 border border-border">
             <p className="text-xs font-medium text-foreground truncate">{resolution.title}</p>
             <p className="text-2xs text-muted-foreground mt-1">
-              {resolution.issueSignature.type}
-              {resolution.issueSignature.resourceKind && ` · ${resolution.issueSignature.resourceKind}`}
-              {' · '}{resolution.resolution.steps.length} steps
+              {t('dialogs.submitToKB.preview', {
+                type: resolution.issueSignature.type,
+                count: resolution.resolution.steps.length,
+              })}
             </p>
           </div>
 
-          {/* Mission Class */}
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              Mission Type
+              {t('dialogs.submitToKB.missionType')}
             </label>
             <div className="flex gap-3">
               <button
@@ -334,8 +321,8 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               >
                 <Tag className="w-4 h-4" />
                 <div className="text-left">
-                  <span className="text-sm font-medium block">Fixer</span>
-                  <span className="text-2xs opacity-70">Troubleshooting fix</span>
+                  <span className="text-sm font-medium block">{t('dialogs.submitToKB.fixer')}</span>
+                  <span className="text-2xs opacity-70">{t('dialogs.submitToKB.fixerDescription')}</span>
                 </div>
               </button>
               <button
@@ -349,32 +336,30 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               >
                 <BookUp className="w-4 h-4" />
                 <div className="text-left">
-                  <span className="text-sm font-medium block">Install Mission</span>
-                  <span className="text-2xs opacity-70">Setup / deploy guide</span>
+                  <span className="text-sm font-medium block">{t('dialogs.submitToKB.installMission')}</span>
+                  <span className="text-2xs opacity-70">{t('dialogs.submitToKB.installMissionDescription')}</span>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* CNCF Project (optional) */}
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">
-              CNCF Project <span className="text-muted-foreground font-normal">(optional)</span>
+              {t('dialogs.submitToKB.cncfProject')} <span className="text-muted-foreground font-normal">{t('dialogs.submitToKB.optional')}</span>
             </label>
             <input
               type="text"
               value={cncfProject}
               onChange={(e) => setCncfProject(e.target.value)}
-              placeholder="e.g., Istio, Argo CD, Prometheus..."
+              placeholder={t('dialogs.submitToKB.cncfProjectPlaceholder')}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
 
-          {/* Filename */}
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
               <FileJson className="w-4 h-4 text-muted-foreground" />
-              Filename
+              {t('dialogs.submitToKB.filename')}
             </label>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground whitespace-nowrap">{targetDir}/</span>
@@ -387,19 +372,18 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             </div>
           </div>
 
-          {/* Security scan */}
           <div className="px-3 py-2.5 rounded-lg border border-border bg-secondary/30">
             {scanning ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Scanning for sensitive data...
+                {t('dialogs.submitToKB.scanning')}
               </div>
             ) : scanResult ? (
               <div className={cn('flex items-center gap-2 text-xs', hasWarnings ? 'text-yellow-400' : 'text-green-400')}>
                 {hasWarnings ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
                 {hasWarnings
-                  ? `${scanResult.findings.filter(f => f.severity !== 'info').length} finding(s) — review before submitting`
-                  : 'No sensitive data detected'}
+                  ? t('dialogs.submitToKB.findingsWarning', { count: warningCount })
+                  : t('dialogs.submitToKB.noSensitiveData')}
               </div>
             ) : (
               <button
@@ -407,15 +391,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
                 className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Shield className="w-3 h-3" />
-                Run security scan
+                {t('dialogs.submitToKB.runSecurityScan')}
               </button>
             )}
           </div>
 
-          {/* JSON preview */}
           <details className="group">
             <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-              Preview JSON ({jsonString.length} chars)
+              {t('dialogs.submitToKB.previewJson', { count: jsonString.length })}
             </summary>
             <pre className="mt-2 p-3 rounded-lg bg-secondary/50 border border-border text-2xs font-mono text-foreground overflow-x-auto max-h-48 overflow-y-auto">
               {jsonString}
@@ -426,14 +409,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
 
       <BaseModal.Footer showKeyboardHints={false}>
         <p className="text-2xs text-muted-foreground">
-          Opens a PR on {CONSOLE_KB_REPO}
+          {t('dialogs.submitToKB.opensPr', { repo: CONSOLE_KB_REPO })}
         </p>
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             onClick={handleSubmit}
@@ -441,7 +424,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-linear-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             <ExternalLink className="w-4 h-4" />
-            Submit to KB
+            {t('dialogs.submitToKB.submit')}
           </button>
         </div>
       </BaseModal.Footer>
