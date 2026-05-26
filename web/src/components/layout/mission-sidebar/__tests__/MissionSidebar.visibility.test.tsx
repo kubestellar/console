@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import type { Mission } from '../../../../hooks/useMissions'
 import { MissionSidebar, MissionSidebarToggle } from '../MissionSidebar'
 
 interface MockMissionState {
@@ -27,6 +28,33 @@ interface MockMissionState {
 
 let mockMissionState: MockMissionState
 let mockIsMobile = false
+let lastMissionControlProps: Record<string, unknown> | null = null
+
+function createMissionControlRun(id: string): Mission {
+  return {
+    id,
+    title: 'Secure clusters',
+    description: 'Deploy Falco and Kyverno',
+    type: 'deploy',
+    status: 'completed',
+    progress: 100,
+    messages: [
+      {
+        id: `${id}-assistant`,
+        role: 'assistant',
+        content: 'Review the deployed tools and next steps.',
+        timestamp: new Date('2026-01-01T00:00:00Z'),
+      },
+    ],
+    createdAt: new Date('2026-01-01T00:00:00Z'),
+    updatedAt: new Date('2026-01-01T01:00:00Z'),
+    context: {
+      source: 'mission-control',
+      workloads: ['falco', 'kyverno'],
+      targetClusters: ['cluster-a', 'cluster-b'],
+    },
+  }
+}
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -85,7 +113,10 @@ vi.mock('../../../missions/MissionTypeExplainer', () => ({
 }))
 
 vi.mock('../../../mission-control/MissionControlDialog', () => ({
-  MissionControlDialog: ({ open }: { open: boolean }) => open ? <div data-testid="mission-control-dialog" /> : null,
+  MissionControlDialog: (props: { open: boolean; freshSessionToken?: number; historicalMissionId?: string }) => {
+    lastMissionControlProps = props
+    return props.open ? <div data-testid="mission-control-dialog" /> : null
+  },
 }))
 
 vi.mock('../../../missions/MissionDetailView', () => ({
@@ -114,6 +145,7 @@ vi.mock('../../../missions/SaveResolutionDialog', () => ({
 
 beforeEach(() => {
   mockIsMobile = false
+  lastMissionControlProps = null
   mockMissionState = {
     missions: [],
     activeMission: null,
@@ -214,6 +246,32 @@ describe('MissionSidebar visibility', () => {
 
     expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('missionSidebar.newMissionPlaceholder')).not.toBeInTheDocument()
+    expect(lastMissionControlProps).toMatchObject({
+      open: true,
+      historicalMissionId: undefined,
+      freshSessionToken: 1,
+    })
+  })
+
+  it('opens the selected Mission Control history run instead of a fresh session', () => {
+    mockMissionState.isSidebarOpen = true
+    mockMissionState.missions = [createMissionControlRun('mc-history')]
+
+    render(
+      <MemoryRouter>
+        <MissionSidebar />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'missionSidebar.toggleHistory' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Secure clusters' }))
+
+    expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
+    expect(lastMissionControlProps).toMatchObject({
+      open: true,
+      historicalMissionId: 'mc-history',
+      freshSessionToken: undefined,
+    })
   })
 
   it('starts a custom mission with the full prompt as the title', () => {

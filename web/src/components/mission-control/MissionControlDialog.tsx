@@ -10,7 +10,7 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useCallback, useRef, useState, Suspense } from 'react'
+import { useEffect, useLayoutEffect, useCallback, useRef, useState, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -94,36 +94,40 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
   const launchSubmittingRef = useRef(false)
 
-  // Load historical session when historicalMissionId changes (#15173)
-  useEffect(() => {
-    if (!open || !historicalMissionId) return
-    const loaded = mc.loadHistoricalSession(historicalMissionId)
-    if (loaded) {
-      setIsReviewMode(true)
-      setReviewNotes(undefined)
-    }
-  }, [open, historicalMissionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Initialize Mission Control before the dialog paints so a fresh open never
+  // flashes stale state and historical opens land on the selected run.
+  useLayoutEffect(() => {
+    if (!open) return
 
-  useEffect(() => {
-    if (!open || freshSessionToken === undefined) return
-    if (reviewPlanEncoded || initialKubaraChart) return
-    setIsReviewMode(false)
-    setReviewNotes(undefined)
-    mc.reset()
-    setHighestReached(0)
-  }, [open, freshSessionToken, reviewPlanEncoded, initialKubaraChart]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!open || !reviewPlanEncoded) return
-    const plan = decodePlan(reviewPlanEncoded)
-    if (!plan) {
-      showToast('Invalid plan link — could not decode the deployment plan', 'error')
+    if (historicalMissionId) {
+      const loaded = mc.loadHistoricalSession(historicalMissionId)
+      if (loaded) {
+        setIsReviewMode(true)
+        setReviewNotes(undefined)
+      }
       return
     }
-    mc.hydrateFromPlan(planToState(plan))
-    setIsReviewMode(true)
-    setReviewNotes(plan.notes)
-  }, [open, reviewPlanEncoded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (reviewPlanEncoded) {
+      const plan = decodePlan(reviewPlanEncoded)
+      if (!plan) {
+        showToast('Invalid plan link — could not decode the deployment plan', 'error')
+        return
+      }
+      mc.hydrateFromPlan(planToState(plan))
+      setIsReviewMode(true)
+      setReviewNotes(plan.notes)
+      return
+    }
+
+    if (freshSessionToken !== undefined) {
+      setIsReviewMode(false)
+      setReviewNotes(undefined)
+      mc.reset()
+      setHighestReached(0)
+      return
+    }
+  }, [open, historicalMissionId, reviewPlanEncoded, freshSessionToken, showToast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = useCallback(() => {
     if (isReviewMode) {
@@ -165,7 +169,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   // #12216 — Clear the guard when the dialog closes so every new "Use in Mission
   // Control" click (same or different chart) starts a fresh session.
   const initialChartAdded = useRef<string | null>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) {
       initialChartAdded.current = null
       return

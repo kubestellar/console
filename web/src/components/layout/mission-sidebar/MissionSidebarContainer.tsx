@@ -160,12 +160,16 @@ export function MissionSidebar() {
   ])
 
   const openExistingMissionControl = useCallback((missionId?: string) => {
+    setActiveMission(null)
+    setShowNewMission(false)
+    setNewMissionPrompt('')
     setPendingKubaraChart(undefined)
     setPendingReviewPlan(undefined)
     setMissionControlFreshSessionToken(undefined)
     setHistoricalMissionId(missionId)
     setShowMissionControl(true)
-  }, [setHistoricalMissionId, setMissionControlFreshSessionToken, setPendingKubaraChart, setPendingReviewPlan, setShowMissionControl])
+    openSidebar()
+  }, [openSidebar, setActiveMission, setHistoricalMissionId, setMissionControlFreshSessionToken, setNewMissionPrompt, setPendingKubaraChart, setPendingReviewPlan, setShowMissionControl, setShowNewMission])
 
   const { openMissionBrowser, closeMissionBrowser, deepLinkMission } = useMissionBrowserDeepLink(
     showBrowser,
