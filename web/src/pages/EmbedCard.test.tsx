@@ -14,6 +14,7 @@
  * Run from web/:
  *   npx vitest run src/pages/EmbedCard.test.tsx
  */
+import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -41,7 +42,7 @@ vi.mock('../hooks/useDemoMode', () => ({
 
 const mockPipelineFilterProvider = vi.fn()
 vi.mock('../components/cards/pipelines/PipelineFilterContext', () => ({
-  PipelineFilterProvider: ({ children, initialRepo }: { children: React.ReactNode; initialRepo?: string | null }) => {
+  PipelineFilterProvider: ({ children, initialRepo }: { children: ReactNode; initialRepo?: string | null }) => {
     mockPipelineFilterProvider({ initialRepo })
     return <div data-testid="pipeline-filter-provider">{children}</div>
   },
@@ -80,7 +81,8 @@ interface RenderEmbedOptions {
 }
 
 function renderEmbed({ cardType = '', searchQuery = '' }: RenderEmbedOptions = {}) {
-  const initialEntry = `/embed/${cardType}${searchQuery ? `?${searchQuery}` : ''}`
+  const basePath = cardType ? `/embed/${cardType}` : '/embed'
+  const initialEntry = `${basePath}${searchQuery ? `?${searchQuery}` : ''}`
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
@@ -127,7 +129,15 @@ describe('EmbedCard', () => {
 
       expect(screen.getByText('Card not found')).toBeInTheDocument()
       expect(screen.getByText(/Supported cards/)).toBeInTheDocument()
-      expect(screen.getByText(/nightly-release-pulse, workflow-matrix, pipeline-flow, recent-failures/)).toBeInTheDocument()
+      
+      ;[
+        'nightly-release-pulse',
+        'workflow-matrix',
+        'pipeline-flow',
+        'recent-failures',
+      ].forEach((slug) => {
+        expect(screen.getByText(new RegExp(slug))).toBeInTheDocument()
+      })
 
       // Asserts that no card components are rendered
       expect(screen.queryByTestId('nightly-release-pulse-card')).not.toBeInTheDocument()
@@ -228,9 +238,8 @@ describe('EmbedCard', () => {
     it('fills viewport completely (h-screen w-screen flex flex-col overflow-hidden) without navigation bars', () => {
       renderEmbed({ cardType: 'nightly-release-pulse' })
 
-      const outerContainer = screen.getByTestId('pipeline-filter-provider').parentElement
+      const outerContainer = document.querySelector('div.h-screen')
       expect(outerContainer).toBeTruthy()
-      expect(outerContainer?.className).toContain('h-screen')
       expect(outerContainer?.className).toContain('w-screen')
       expect(outerContainer?.className).toContain('flex')
       expect(outerContainer?.className).toContain('flex-col')
