@@ -99,6 +99,10 @@ const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
   other: 0 }
 
 function reconcileUsageBreakdown(totalUsed: number, byCategory: TokenUsageByCategory): TokenUsageByCategory {
+  // If no tokens used, reset all categories to 0 (prevents stale demo/cached data from showing)
+  if (totalUsed === 0) {
+    return { ...DEFAULT_BY_CATEGORY }
+  }
   const knownCategories = byCategory.missions + byCategory.diagnose + byCategory.insights + byCategory.predictions
   const other = Math.max(totalUsed - knownCategories, 0)
   return other === byCategory.other ? byCategory : { ...byCategory, other }
