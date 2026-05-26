@@ -64,9 +64,9 @@ vi.mock('react-i18next', () => ({
         'dashboard.missions.issueTypeRequired': 'Issue type is required',
         'dashboard.missions.summaryRequired': 'Summary is required',
         'dashboard.missions.failedToSave': 'Failed to save',
-        'dashboard.missions.generatingAISummary': 'Generating AI Summary...',
+        'dashboard.missions.generatingAISummary': 'Generating AI Summary',
         'dashboard.missions.creatingReusablePair': 'Creating a reusable problem/solution pair',
-        'dashboard.missions.aiGeneratedReview': 'AI-generated — please review',
+        'dashboard.missions.aiGeneratedReview': 'AI-generated summary - review and edit as needed',
         'dashboard.missions.title': 'Title',
         'dashboard.missions.issueType': 'Issue Type',
         'dashboard.missions.resourceKind': 'Resource Kind',
@@ -82,7 +82,7 @@ vi.mock('react-i18next', () => ({
         'actions.cancel': 'Cancel',
         'common.saving': 'Saving...',
         'common.retry': 'Retry',
-        'dashboard.missions.titlePlaceholder': 'Brief title',
+        'dashboard.missions.titlePlaceholder': 'e.g., Fix OOM in payment service',
         'dashboard.missions.issueTypePlaceholder': 'e.g. CrashLoopBackOff',
         'dashboard.missions.resourceKindPlaceholder': 'e.g. Pod',
         'dashboard.missions.problemSolutionPlaceholder': 'Describe the problem and solution',
@@ -215,20 +215,20 @@ describe('SaveResolutionDialog', () => {
     // appendWsAuthToken takes time, so isGenerating=true during that time
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {})) // never resolves
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
-    expect(screen.getByText('Generating AI Summary...')).toBeInTheDocument()
+    expect(screen.getByText('Generating AI Summary')).toBeInTheDocument()
   })
 
   it('pre-fills title from mission while generating', async () => {
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
-    const titleInput = screen.getByPlaceholderText('Brief title') as HTMLInputElement
+    const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service') as HTMLInputElement
     expect(titleInput.value).toBe(BASE_MISSION.title)
   })
 
   it('disables form inputs while generating', async () => {
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
-    const titleInput = screen.getByPlaceholderText('Brief title')
+    const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service')
     expect(titleInput).toBeDisabled()
   })
 
@@ -255,7 +255,7 @@ describe('SaveResolutionDialog', () => {
 
   it('enables form fields after AI error', async () => {
     await renderDialogAndWaitForError()
-    const titleInput = screen.getByPlaceholderText('Brief title')
+    const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service')
     expect(titleInput).not.toBeDisabled()
   })
 
@@ -263,7 +263,7 @@ describe('SaveResolutionDialog', () => {
 
   it('allows editing the title field', async () => {
     await renderDialogAndWaitForError()
-    const input = screen.getByPlaceholderText('Brief title') as HTMLInputElement
+    const input = screen.getByPlaceholderText('e.g., Fix OOM in payment service') as HTMLInputElement
     fireEvent.change(input, { target: { value: 'My custom fix' } })
     expect(input.value).toBe('My custom fix')
   })
@@ -331,7 +331,7 @@ describe('SaveResolutionDialog', () => {
 
   it('shows error when saving with empty title', async () => {
     await renderDialogAndWaitForError()
-    const titleInput = screen.getByPlaceholderText('Brief title') as HTMLInputElement
+    const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service') as HTMLInputElement
     fireEvent.change(titleInput, { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: /Save Resolution/i }))
     await waitFor(() => {
@@ -342,7 +342,7 @@ describe('SaveResolutionDialog', () => {
   it('shows error when saving with empty issue type', async () => {
     await renderDialogAndWaitForError()
     // Set title but clear issue type
-    const titleInput = screen.getByPlaceholderText('Brief title')
+    const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service')
     fireEvent.change(titleInput, { target: { value: 'My Title' } })
     const issueInput = screen.getByPlaceholderText('e.g. CrashLoopBackOff') as HTMLInputElement
     fireEvent.change(issueInput, { target: { value: '' } })
@@ -354,7 +354,7 @@ describe('SaveResolutionDialog', () => {
 
   it('shows error when saving with empty summary', async () => {
     await renderDialogAndWaitForError()
-    const titleInput = screen.getByPlaceholderText('Brief title')
+    const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service')
     fireEvent.change(titleInput, { target: { value: 'My Title' } })
     const issueInput = screen.getByPlaceholderText('e.g. CrashLoopBackOff')
     fireEvent.change(issueInput, { target: { value: 'CrashLoopBackOff' } })
@@ -373,7 +373,7 @@ describe('SaveResolutionDialog', () => {
     await renderDialogAndWaitForError({ ...DEFAULT_PROPS, onClose, onSaved })
 
     // Fill required fields
-    fireEvent.change(screen.getByPlaceholderText('Brief title'), { target: { value: 'Nginx OOM fix' } })
+    fireEvent.change(screen.getByPlaceholderText('e.g., Fix OOM in payment service'), { target: { value: 'Nginx OOM fix' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. CrashLoopBackOff'), { target: { value: 'OOMKilled' } })
     fireEvent.change(screen.getByPlaceholderText('Describe the problem and solution'), { target: { value: 'Increased memory limit' } })
 
