@@ -122,6 +122,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
     investigateNotification,
     resolveNotification,
     dismissNotification,
+    startSolve,
   } = useStellar()
   const { showToast } = useToast()
 
@@ -278,11 +279,11 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   const handleResolve = async () => {
     setIsSubmitting(true)
     try {
-      await resolveNotification(liveNotification.id, resolutionNote.trim() || undefined)
-      showToast('Event resolved successfully', 'success')
+      await startSolve(liveNotification.id)
+      showToast('Attempt started in AI mission', 'success')
       onClose()
     } catch (error) {
-      showToast(getErrorMessage(error, 'Failed to resolve event'), 'error')
+      showToast(getErrorMessage(error, 'Failed to start AI mission'), 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -392,14 +393,14 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
         <div className="border-t border-[var(--s-border)] px-5 py-4">
           {confirmAction === 'resolve' && (
             <ConfirmationPanel
-              title="Confirm resolution"
-              description="Mark this event as resolved?"
-              value={resolutionNote}
-              onChange={setResolutionNote}
-              placeholder="Resolution note (optional)"
+              title="Start AI mission"
+              description="This will trigger an AI mission to autonomously fix this event."
+              value=""
+              onChange={() => {}}
+              placeholder=""
               onCancel={() => setConfirmAction(null)}
               onConfirm={() => { void handleResolve() }}
-              confirmLabel="Confirm"
+              confirmLabel="Start Mission"
               isSubmitting={isSubmitting}
             />
           )}
