@@ -1,10 +1,11 @@
-import { memo, type RefObject } from 'react'
+import { memo, useEffect, type RefObject } from 'react'
 
 // Split helper component; parent card owns useCardLoadingState.
 import { AlertCircle, AlertTriangle, BellOff, Clock, List, MoreVertical, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardControlsRow, CardSearchInput } from '../../lib/cards/CardComponents'
 import { SNOOZE_DURATIONS, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
+import { useKeyboardNav, useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import { CARD_UI_STRINGS } from './strings'
@@ -92,6 +93,13 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
   isDemoData,
 }: HardwareHealthCardHeaderProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const snoozeMenuNav = useKeyboardNav({ selector: '[role="menuitem"]:not([disabled])', orientation: 'vertical', onEscape: onToggleSnoozeAllMenu })
+  const { tabListProps, getTabProps } = useTabKeyboardNav<ViewMode>({ tabs: ['inventory', 'alerts'], activeTab: viewMode, onChange: onViewModeChange })
+
+  useEffect(() => {
+    if (!snoozeAllMenuOpen) return
+    snoozeMenuNav.focusMatchingItem({ fallbackSelector: '[role="menuitem"]:not([disabled])' })
+  }, [snoozeAllMenuOpen, snoozeMenuNav])
 
   return (
     <>
@@ -139,12 +147,11 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <div className="flex flex-1 min-w-0 bg-muted/30 rounded-lg p-0.5">
+        <div {...tabListProps} className="flex flex-1 min-w-0 bg-muted/30 rounded-lg p-0.5">
           <button
-            onClick={() => onViewModeChange('inventory')}
+            {...getTabProps('inventory')}
             className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors', viewMode === 'inventory' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground')}
             aria-label={t('cards:hardwareHealth.switchToInventoryAria')}
-            aria-pressed={viewMode === 'inventory'}
           >
             <List className="w-3.5 h-3.5" />
             {t('cards:hardwareHealth.inventory', 'Inventory')}
@@ -153,10 +160,9 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
             )}
           </button>
           <button
-            onClick={() => onViewModeChange('alerts')}
+            {...getTabProps('alerts')}
             className={cn('flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors', viewMode === 'alerts' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground')}
             aria-label={t('cards:hardwareHealth.switchToAlertsAria')}
-            aria-pressed={viewMode === 'alerts'}
           >
             <AlertCircle className="w-3.5 h-3.5" />
             {t('cards:hardwareHealth.alerts', 'Alerts')}
@@ -194,11 +200,19 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
                   <MoreVertical className="w-4 h-4" />
                 </button>
                 {snoozeAllMenuOpen && (
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                  <div
+                    ref={(node) => {
+                      snoozeMenuNav.containerRef.current = node
+                    }}
+                    role="menu"
+                    className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px]"
+                    onKeyDown={snoozeMenuNav.handleKeyDown}
+                  >
                     <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground border-b border-border mb-1">{t('cards:hardwareHealth.snoozeAllVisibleCount', 'Snooze All ({{count}})', { count: visibleAlertIds.length })}</div>
                     {(Object.keys(SNOOZE_DURATIONS) as SnoozeDuration[]).map(duration => (
                       <button
                         key={duration}
+                        role="menuitem"
                         onClick={() => onSnoozeAll(duration)}
                         className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors flex items-center gap-2"
                         aria-label={t('cards:hardwareHealth.snoozeAllForAria', { duration })}
@@ -211,6 +225,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
                       <>
                         <div className="border-t border-border my-1" />
                         <button
+                          role="menuitem"
                           onClick={onClearAllSnoozed}
                           className="w-full px-3 py-1.5 text-xs text-left text-yellow-400 hover:bg-muted/50 transition-colors"
                           aria-label={t('cards:hardwareHealth.clearAllSnoozesAria')}
