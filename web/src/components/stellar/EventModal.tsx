@@ -120,7 +120,6 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
     notifications,
     activity,
     investigateNotification,
-    resolveNotification,
     dismissNotification,
     startSolve,
   } = useStellar()
@@ -133,7 +132,6 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   const [view, setView] = useState<ModalView>('overview')
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
   const [investigationSummary, setInvestigationSummary] = useState(liveNotification.investigationSummary || '')
-  const [resolutionNote, setResolutionNote] = useState(liveNotification.resolutionNote || '')
   const [dismissalReason, setDismissalReason] = useState(liveNotification.dismissalReason || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -141,9 +139,8 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
     setView('overview')
     setConfirmAction(null)
     setInvestigationSummary(liveNotification.investigationSummary || '')
-    setResolutionNote(liveNotification.resolutionNote || '')
     setDismissalReason(liveNotification.dismissalReason || '')
-  }, [liveNotification.id, liveNotification.dismissalReason, liveNotification.investigationSummary, liveNotification.resolutionNote])
+  }, [liveNotification.id, liveNotification.dismissalReason, liveNotification.investigationSummary])
 
   const allKnownNotifications = useMemo(() => {
     const merged = [...(notifications || []), ...(allNotifications || [])]
