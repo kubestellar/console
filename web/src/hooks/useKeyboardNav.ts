@@ -95,11 +95,12 @@ interface UseTabKeyboardNavOptions<T extends string> {
 
 export function useTabKeyboardNav<T extends string>({ tabs, activeTab, onChange }: UseTabKeyboardNavOptions<T>) {
   const baseId = useId()
-  const { containerRef, handleKeyDown } = useKeyboardNav({ selector: '[role="tab"]:not([disabled])', orientation: 'horizontal' })
 
   const handleTabKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
     const pressedKey = event.key
-    handleKeyDown(event)
+
+    // Handle arrow key focus movement via rovingFocus
+    moveFocusByKey(event, { selector: '[role="tab"]:not([disabled])', orientation: 'horizontal' })
 
     if (pressedKey === 'ArrowLeft' || pressedKey === 'ArrowRight' || pressedKey === 'Home' || pressedKey === 'End') {
       if (!event.defaultPrevented) return
@@ -123,7 +124,7 @@ export function useTabKeyboardNav<T extends string>({ tabs, activeTab, onChange 
     if (currentTab && tabs.includes(currentTab)) {
       onChange(currentTab)
     }
-  }, [handleKeyDown, onChange, tabs])
+  }, [onChange, tabs])
 
   const getTabProps = useCallback((tab: T) => ({
     id: `${baseId}-tab-${tab}`,
@@ -144,7 +145,6 @@ export function useTabKeyboardNav<T extends string>({ tabs, activeTab, onChange 
 
   return {
     tabListProps: {
-      ref: containerRef,
       role: 'tablist' as const,
       'aria-orientation': 'horizontal' as const,
       onKeyDown: handleTabKeyDown,
