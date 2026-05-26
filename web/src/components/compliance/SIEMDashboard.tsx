@@ -49,7 +49,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   high: 'text-orange-400',
   medium: 'text-yellow-400',
   low: 'text-blue-400',
-  info: 'text-gray-400',
+  info: 'text-muted-foreground',
 }
 
 const SEVERITY_BG: Record<string, string> = {
@@ -57,7 +57,7 @@ const SEVERITY_BG: Record<string, string> = {
   high: 'bg-orange-500/20 border-orange-500/30',
   medium: 'bg-yellow-500/20 border-yellow-500/30',
   low: 'bg-blue-500/20 border-blue-500/30',
-  info: 'bg-gray-500/20 border-gray-500/30',
+  info: 'bg-muted/50 border-border',
 }
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
@@ -108,7 +108,7 @@ const SIEMDashboard = memo(function SIEMDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading SIEM data…</span>
+      <span className="ml-3 text-foreground">Loading SIEM data…</span>
     </div>
   )
 
@@ -134,33 +134,33 @@ const SIEMDashboard = memo(function SIEMDashboard() {
       {/* Summary cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-400">Events (24h)</p>
-            <p className="text-2xl font-bold text-white">{summary.events_last_24h.toLocaleString()}</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-border">
+            <p className="text-sm text-muted-foreground">Events (24h)</p>
+            <p className="text-2xl font-bold text-foreground">{summary.events_last_24h.toLocaleString()}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-red-500/30">
-            <p className="text-sm text-gray-400">Critical Alerts</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-red-500/30">
+            <p className="text-sm text-muted-foreground">Critical Alerts</p>
             <p className="text-2xl font-bold text-red-400">{summary.critical_alerts}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-yellow-500/30">
-            <p className="text-sm text-gray-400">Active Alerts</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-yellow-500/30">
+            <p className="text-sm text-muted-foreground">Active Alerts</p>
             <p className="text-2xl font-bold text-yellow-400">{summary.active_alerts}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-blue-500/30">
-            <p className="text-sm text-gray-400">Ingestion Rate</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-blue-500/30">
+            <p className="text-sm text-muted-foreground">Ingestion Rate</p>
             <p className="text-2xl font-bold text-blue-400">{summary.ingestion_rate}/s</p>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-700 pb-2">
+      <div className="flex gap-2 border-b border-border pb-2">
         {(['overview', 'events', 'alerts'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+              activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
             }`}
           >
             {tab === 'overview' ? 'Overview' : tab === 'events' ? 'Event Timeline' : 'Alert Correlation'}
@@ -173,8 +173,8 @@ const SIEMDashboard = memo(function SIEMDashboard() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Severity distribution */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Severity Distribution</h3>
+            <div className="bg-card/50 rounded-lg border border-border p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Severity Distribution</h3>
               <div className="space-y-3">
                 {[
                   { label: 'Critical', count: summary.critical_alerts, color: 'bg-red-500' },
@@ -186,11 +186,11 @@ const SIEMDashboard = memo(function SIEMDashboard() {
                   const pct = Math.round((s.count / total) * 100)
                   return (
                     <div key={s.label} className="flex items-center gap-3">
-                      <span className="w-16 text-sm text-gray-300">{s.label}</span>
-                      <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <span className="w-16 text-sm text-foreground">{s.label}</span>
+                      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                         <div className={`h-full ${s.color} rounded-full`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-sm text-white w-8 text-right">{s.count}</span>
+                      <span className="text-sm text-foreground w-8 text-right">{s.count}</span>
                     </div>
                   )
                 })}
@@ -198,17 +198,17 @@ const SIEMDashboard = memo(function SIEMDashboard() {
             </div>
 
             {/* Top sources */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Top Event Sources</h3>
+            <div className="bg-card/50 rounded-lg border border-border p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Top Event Sources</h3>
               <div className="space-y-3">
                 {(summary.top_sources || []).map(src => (
                   <div key={src.source} className="flex items-center gap-3">
-                    <span className="w-32 text-sm text-gray-300 truncate">{src.source}</span>
-                    <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <span className="w-32 text-sm text-foreground truncate">{src.source}</span>
+                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.round((src.count / summary.events_last_24h) * 100)}%` }} />
                     </div>
-                    <span className="text-sm text-white w-16 text-right">{src.count.toLocaleString()}</span>
-                    <ArrowRight className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm text-foreground w-16 text-right">{src.count.toLocaleString()}</span>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
                   </div>
                 ))}
               </div>
@@ -219,10 +219,10 @@ const SIEMDashboard = memo(function SIEMDashboard() {
 
       {/* Events tab */}
       {activeTab === 'events' && (
-        <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="bg-card/50 rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-400 border-b border-gray-700">
+              <tr className="text-muted-foreground border-b border-border">
                 <th className="text-left p-3">Time</th>
                 <th className="text-left p-3">Severity</th>
                 <th className="text-left p-3">Source</th>
@@ -233,17 +233,17 @@ const SIEMDashboard = memo(function SIEMDashboard() {
             </thead>
             <tbody>
               {events.map(evt => (
-                <tr key={evt.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                  <td className="p-3 text-gray-300 text-xs">{new Date(evt.timestamp).toLocaleTimeString()}</td>
+                <tr key={evt.id} className="border-b border-border/50 hover:bg-secondary/50">
+                  <td className="p-3 text-foreground text-xs">{new Date(evt.timestamp).toLocaleTimeString()}</td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[evt.severity]} ${SEVERITY_COLORS[evt.severity]}`}>
                       {evt.severity}
                     </span>
                   </td>
                   <td className="p-3 font-mono text-blue-300">{evt.source}</td>
-                  <td className="p-3 text-gray-300">{evt.category}</td>
-                  <td className="p-3 text-white truncate max-w-xs">{evt.message}</td>
-                  <td className="p-3 text-gray-300">{evt.cluster}</td>
+                  <td className="p-3 text-foreground">{evt.category}</td>
+                  <td className="p-3 text-foreground truncate max-w-xs">{evt.message}</td>
+                  <td className="p-3 text-foreground">{evt.cluster}</td>
                 </tr>
               ))}
             </tbody>
@@ -254,10 +254,10 @@ const SIEMDashboard = memo(function SIEMDashboard() {
       {/* Alerts tab */}
       {activeTab === 'alerts' && (
         <div className="space-y-4">
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="bg-card/50 rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-gray-400 border-b border-gray-700">
+                <tr className="text-muted-foreground border-b border-border">
                   <th className="text-left p-3">Alert</th>
                   <th className="text-left p-3">Severity</th>
                   <th className="text-left p-3">Status</th>
@@ -268,8 +268,8 @@ const SIEMDashboard = memo(function SIEMDashboard() {
               </thead>
               <tbody>
                 {alerts.map(alert => (
-                  <tr key={alert.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                    <td className="p-3 text-white font-medium">{alert.name}</td>
+                  <tr key={alert.id} className="border-b border-border/50 hover:bg-secondary/50">
+                    <td className="p-3 text-foreground font-medium">{alert.name}</td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[alert.severity]} ${SEVERITY_COLORS[alert.severity]}`}>
                         {alert.severity}
@@ -278,12 +278,12 @@ const SIEMDashboard = memo(function SIEMDashboard() {
                     <td className="p-3">
                       <span className="flex items-center gap-1.5">
                         {STATUS_ICON[alert.status]}
-                        <span className="text-gray-300 capitalize">{alert.status}</span>
+                        <span className="text-foreground capitalize">{alert.status}</span>
                       </span>
                     </td>
                     <td className="p-3 font-mono text-blue-300">{alert.source}</td>
-                    <td className="p-3 text-gray-300 text-xs">{new Date(alert.triggered_at).toLocaleString()}</td>
-                    <td className="p-3 text-white">{alert.correlated_events}</td>
+                    <td className="p-3 text-foreground text-xs">{new Date(alert.triggered_at).toLocaleString()}</td>
+                    <td className="p-3 text-foreground">{alert.correlated_events}</td>
                   </tr>
                 ))}
               </tbody>

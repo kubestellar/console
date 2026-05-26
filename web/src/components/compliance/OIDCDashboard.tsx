@@ -100,7 +100,7 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-400">Loading OIDC federation data…</span>
+      <span className="ml-3 text-muted-foreground">Loading OIDC federation data…</span>
     </div>
   )
 
@@ -128,38 +128,38 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Providers</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Providers</div>
             <div className="text-3xl font-bold text-blue-400">{summary.active_providers}/{summary.total_providers}</div>
-            <div className="text-xs text-gray-500 mt-1">active / total</div>
+            <div className="text-xs text-muted-foreground mt-1">active / total</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Users Synced</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Users Synced</div>
             <div className="text-3xl font-bold text-purple-400">{summary.total_users}</div>
-            <div className="text-xs text-gray-500 mt-1">across all providers</div>
+            <div className="text-xs text-muted-foreground mt-1">across all providers</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Active Sessions</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Active Sessions</div>
             <div className="text-3xl font-bold text-emerald-400">{summary.active_sessions}</div>
-            <div className="text-xs text-gray-500 mt-1">currently active</div>
+            <div className="text-xs text-muted-foreground mt-1">currently active</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">MFA Adoption</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">MFA Adoption</div>
             <div className="text-3xl font-bold text-cyan-400">{summary.mfa_adoption}%</div>
-            <div className="text-xs text-gray-500 mt-1">of all users</div>
+            <div className="text-xs text-muted-foreground mt-1">of all users</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Failed Logins (24h)</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Failed Logins (24h)</div>
             <div className={`text-3xl font-bold ${summary.failed_logins_24h > 10 ? 'text-red-400' : 'text-amber-400'}`}>
               {summary.failed_logins_24h}
             </div>
-            <div className="text-xs text-gray-500 mt-1">last 24 hours</div>
+            <div className="text-xs text-muted-foreground mt-1">last 24 hours</div>
           </div>
         </div>
       )}
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 bg-gray-800/30 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-secondary/30 p-1 rounded-lg w-fit">
         {(['providers', 'sessions'] as const).map(tab => (
           <button
             key={tab}
@@ -175,10 +175,10 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
 
       {/* Providers Tab */}
       {activeTab === 'providers' && (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+        <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-700 text-gray-400 text-left">
+              <tr className="border-b border-border text-muted-foreground text-left">
                 <th className="p-3">Provider</th>
                 <th className="p-3">Issuer URL</th>
                 <th className="p-3">Protocol</th>
@@ -190,22 +190,22 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
             </thead>
             <tbody>
               {providers.map(p => (
-                <tr key={p.id} className="border-b border-gray-700/50 hover:bg-white/5">
+                <tr key={p.id} className="border-b border-border/50 hover:bg-secondary/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <Fingerprint className="w-4 h-4 text-blue-400" />
-                      <span className="text-white font-medium">{p.name}</span>
+                      <span className="text-foreground font-medium">{p.name}</span>
                     </div>
                   </td>
-                  <td className="p-3 text-gray-300 font-mono text-xs truncate max-w-[200px]">{p.issuer_url}</td>
+                  <td className="p-3 text-foreground font-mono text-xs truncate max-w-[200px]">{p.issuer_url}</td>
                   <td className="p-3">
-                    <span className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300">{p.protocol}</span>
+                    <span className="px-2 py-1 bg-secondary/50 rounded text-xs text-foreground">{p.protocol}</span>
                   </td>
-                  <td className="p-3 text-gray-300">{p.users_synced}</td>
-                  <td className="p-3 text-gray-300">{p.groups_mapped}</td>
-                  <td className="p-3 text-gray-400 text-xs">{new Date(p.last_sync).toLocaleString()}</td>
+                  <td className="p-3 text-foreground">{p.users_synced}</td>
+                  <td className="p-3 text-foreground">{p.groups_mapped}</td>
+                  <td className="p-3 text-muted-foreground text-xs">{new Date(p.last_sync).toLocaleString()}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[p.status] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[p.status] || 'bg-muted/50 text-muted-foreground border-border'}`}>
                       {p.status === 'connected' ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> :
                        p.status === 'degraded' ? <AlertTriangle className="w-3 h-3 inline mr-1" /> :
                        <XCircle className="w-3 h-3 inline mr-1" />}
@@ -221,10 +221,10 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
 
       {/* Sessions Tab */}
       {activeTab === 'sessions' && (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+        <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-700 text-gray-400 text-left">
+              <tr className="border-b border-border text-muted-foreground text-left">
                 <th className="p-3">User</th>
                 <th className="p-3">Provider</th>
                 <th className="p-3">Login Time</th>
@@ -235,24 +235,24 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
             </thead>
             <tbody>
               {sessions.map(s => (
-                <tr key={s.id} className="border-b border-gray-700/50 hover:bg-white/5">
+                <tr key={s.id} className="border-b border-border/50 hover:bg-secondary/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-purple-400" />
-                      <span className="text-white font-medium">{s.user}</span>
+                      <span className="text-foreground font-medium">{s.user}</span>
                     </div>
                   </td>
-                  <td className="p-3 text-gray-300">{s.provider_name}</td>
-                  <td className="p-3 text-gray-400 text-xs">{new Date(s.login_time).toLocaleString()}</td>
-                  <td className="p-3 text-gray-400 text-xs">{new Date(s.expires_at).toLocaleString()}</td>
-                  <td className="p-3 text-gray-300 font-mono text-xs">{s.ip_address}</td>
+                  <td className="p-3 text-foreground">{s.provider_name}</td>
+                  <td className="p-3 text-muted-foreground text-xs">{new Date(s.login_time).toLocaleString()}</td>
+                  <td className="p-3 text-muted-foreground text-xs">{new Date(s.expires_at).toLocaleString()}</td>
+                  <td className="p-3 text-foreground font-mono text-xs">{s.ip_address}</td>
                   <td className="p-3">
                     {s.active ? (
                       <span className="px-2 py-1 rounded-full text-xs font-medium border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
                         <ShieldCheck className="w-3 h-3 inline mr-1" />active
                       </span>
                     ) : (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium border bg-gray-500/20 text-gray-300 border-gray-500/30">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium border bg-muted/50 text-muted-foreground border-border">
                         <Clock className="w-3 h-3 inline mr-1" />expired
                       </span>
                     )}
@@ -266,7 +266,7 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
 
       {/* Evaluated At */}
       {summary && (
-        <div className="text-xs text-gray-500 text-right">
+        <div className="text-xs text-muted-foreground text-right">
           Last evaluated: {new Date(summary.evaluated_at).toLocaleString()}
         </div>
       )}

@@ -35,7 +35,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   high: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
   medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   low: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  info: 'bg-gray-500/20 text-muted-foreground border-gray-500/30',
+  info: 'bg-muted/50 text-muted-foreground border-border',
 }
 
 const RISK_STYLES: Record<string, string> = {
@@ -95,7 +95,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
   }, [findings, severityFilter])
 
   const scoreColor = useMemo(() => {
-    if (!summary) return 'text-gray-400'
+    if (!summary) return 'text-muted-foreground'
     if (summary.compliance_score >= 80) return 'text-emerald-400'
     if (summary.compliance_score >= 60) return 'text-amber-400'
     return 'text-red-400'
@@ -104,7 +104,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-400">Loading RBAC audit data…</span>
+      <span className="ml-3 text-muted-foreground">Loading RBAC audit data…</span>
     </div>
   )
 
@@ -132,38 +132,38 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Total Bindings</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Total Bindings</div>
             <div className="text-3xl font-bold text-blue-400">{summary.total_bindings}</div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {summary.cluster_role_bindings} cluster / {summary.role_bindings} namespace
             </div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Over-Privileged</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Over-Privileged</div>
             <div className={`text-3xl font-bold ${summary.over_privileged > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
               {summary.over_privileged}
             </div>
-            <div className="text-xs text-gray-500 mt-1">bindings with excess permissions</div>
+            <div className="text-xs text-muted-foreground mt-1">bindings with excess permissions</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Unused (30d)</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Unused (30d)</div>
             <div className={`text-3xl font-bold ${summary.unused_bindings > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
               {summary.unused_bindings}
             </div>
-            <div className="text-xs text-gray-500 mt-1">no activity in 30 days</div>
+            <div className="text-xs text-muted-foreground mt-1">no activity in 30 days</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Compliance Score</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Compliance Score</div>
             <div className={`text-3xl font-bold ${scoreColor}`}>{summary.compliance_score}%</div>
-            <div className="text-xs text-gray-500 mt-1">least-privilege adherence</div>
+            <div className="text-xs text-muted-foreground mt-1">least-privilege adherence</div>
           </div>
         </div>
       )}
 
       {/* Tab Navigation */}
       <div className="flex items-center gap-4">
-        <div className="flex gap-1 bg-gray-800/30 p-1 rounded-lg">
+        <div className="flex gap-1 bg-secondary/30 p-1 rounded-lg">
           {(['findings', 'bindings'] as const).map(tab => (
             <button
               key={tab}
@@ -196,19 +196,19 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
       {activeTab === 'findings' && (
         <div className="space-y-3">
           {filteredFindings.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-400" />
               No findings match the selected filter
             </div>
           ) : (
             filteredFindings.map(f => (
-              <div key={f.id} className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+              <div key={f.id} className="bg-card/50 border border-border rounded-xl p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <ShieldAlert className="w-5 h-5 text-amber-400" />
                     <div>
-                      <div className="text-white font-medium">{(f.finding_type ?? '').replace(/_/g, ' ')}</div>
-                      <div className="text-sm text-gray-400">{f.subject} — {f.cluster}/{f.namespace}</div>
+                      <div className="text-foreground font-medium">{(f.finding_type ?? '').replace(/_/g, ' ')}</div>
+                      <div className="text-sm text-muted-foreground">{f.subject} — {f.cluster}/{f.namespace}</div>
                     </div>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium border ${SEVERITY_STYLES[f.severity] || ''}`}>
@@ -227,10 +227,10 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
 
       {/* Bindings Tab */}
       {activeTab === 'bindings' && (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+        <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-700 text-gray-400 text-left">
+              <tr className="border-b border-border text-muted-foreground text-left">
                 <th className="p-3">Name</th>
                 <th className="p-3">Kind</th>
                 <th className="p-3">Subject</th>
@@ -243,15 +243,15 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
             </thead>
             <tbody>
               {bindings.map(b => (
-                <tr key={b.id} className="border-b border-gray-700/50 hover:bg-white/5">
+                <tr key={b.id} className="border-b border-border/50 hover:bg-secondary/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-gray-500" />
-                      <span className="text-white font-medium">{b.name}</span>
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-foreground font-medium">{b.name}</span>
                     </div>
                   </td>
                   <td className="p-3">
-                    <span className="px-2 py-1 bg-gray-700/50 rounded text-xs text-muted-foreground">{b.kind}</span>
+                    <span className="px-2 py-1 bg-secondary/50 rounded text-xs text-muted-foreground">{b.kind}</span>
                   </td>
                   <td className="p-3 text-foreground">
                     <div className="flex items-center gap-1">
@@ -260,18 +260,18 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
                        <Server className="w-3 h-3" />}
                       <span>{b.subject_name}</span>
                     </div>
-                    <span className="text-xs text-gray-500">{b.subject_kind}</span>
+                    <span className="text-xs text-muted-foreground">{b.subject_kind}</span>
                   </td>
                   <td className="p-3 text-foreground font-mono text-xs">{b.role_name}</td>
                   <td className="p-3 text-foreground">{b.cluster}</td>
                   <td className="p-3 text-foreground">{b.namespace || '—'}</td>
                   <td className="p-3">
-                    <span className={`font-medium text-xs ${RISK_STYLES[b.risk_level] || 'text-gray-400'}`}>
+                    <span className={`font-medium text-xs ${RISK_STYLES[b.risk_level] || 'text-muted-foreground'}`}>
                       {b.risk_level === 'critical' ? <AlertTriangle className="w-3 h-3 inline mr-1" /> : null}
                       {b.risk_level}
                     </span>
                   </td>
-                  <td className="p-3 text-gray-400 text-xs">{new Date(b.last_used).toLocaleDateString()}</td>
+                  <td className="p-3 text-muted-foreground text-xs">{new Date(b.last_used).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -281,7 +281,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
 
       {/* Evaluated At */}
       {summary && (
-        <div className="text-xs text-gray-500 text-right">
+        <div className="text-xs text-muted-foreground text-right">
           Last evaluated: {new Date(summary.evaluated_at).toLocaleString()}
         </div>
       )}

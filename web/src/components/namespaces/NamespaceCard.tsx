@@ -21,13 +21,13 @@ export function NamespaceCard({ namespace, isSelected, onSelect, onDelete, isSys
           : 'bg-secondary/30 hover:bg-secondary/50 border border-transparent'
         }`}
     >
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSystem ? 'bg-gray-500/20' : 'bg-blue-500/20'
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSystem ? 'bg-muted/50' : 'bg-blue-500/20'
         }`}>
         <Folder className={`w-5 h-5 ${isSystem ? 'text-muted-foreground' : 'text-blue-400'}`} />
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-white">{namespace.name}</span>
+          <span className="font-medium text-foreground">{namespace.name}</span>
           <span
             data-status={namespace.status}
             className={`text-xs px-1.5 py-0.5 rounded ${namespace.status === 'Active'

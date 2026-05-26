@@ -66,7 +66,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   investigating: <Clock className="w-4 h-4 text-yellow-400" />,
   mitigating: <Shield className="w-4 h-4 text-orange-400" />,
   resolved: <CheckCircle2 className="w-4 h-4 text-green-400" />,
-  closed: <CheckCircle2 className="w-4 h-4 text-gray-400" />,
+  closed: <CheckCircle2 className="w-4 h-4 text-muted-foreground" />,
 }
 
 const TREND_COLORS: Record<string, string> = {
@@ -120,7 +120,7 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading incident data…</span>
+      <span className="ml-3 text-foreground">Loading incident data…</span>
     </div>
   )
 
@@ -146,34 +146,34 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
       {/* Summary cards */}
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-red-500/30">
-            <p className="text-sm text-gray-400">Active Incidents</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-red-500/30">
+            <p className="text-sm text-muted-foreground">Active Incidents</p>
             <p className="text-2xl font-bold text-red-400">{metrics.active_incidents}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-400"><TechnicalAcronym term="MTTR">MTTR</TechnicalAcronym></p>
-            <p className="text-2xl font-bold text-white">{metrics.mttr_hours}h</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-border">
+            <p className="text-sm text-muted-foreground"><TechnicalAcronym term="MTTR">MTTR</TechnicalAcronym></p>
+            <p className="text-2xl font-bold text-foreground">{metrics.mttr_hours}h</p>
             <p className={`text-xs ${TREND_COLORS[metrics.mttr_trend]}`}>{metrics.mttr_trend}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-green-500/30">
-            <p className="text-sm text-gray-400">Resolved (30d)</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-green-500/30">
+            <p className="text-sm text-muted-foreground">Resolved (30d)</p>
             <p className="text-2xl font-bold text-green-400">{metrics.resolved_last_30d}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-yellow-500/30">
-            <p className="text-sm text-gray-400">Escalation Rate</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-yellow-500/30">
+            <p className="text-sm text-muted-foreground">Escalation Rate</p>
             <p className="text-2xl font-bold text-yellow-400">{metrics.escalation_rate}%</p>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-700 pb-2">
+      <div className="flex gap-2 border-b border-border pb-2">
         {(['incidents', 'playbooks', 'metrics'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+              activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
             }`}
           >
             {tab === 'incidents' ? 'Active Incidents' : tab === 'playbooks' ? 'Playbooks' : 'MTTR Metrics'}
@@ -183,10 +183,10 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
 
       {/* Incidents tab */}
       {activeTab === 'incidents' && (
-        <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="bg-card/50 rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-400 border-b border-gray-700">
+              <tr className="text-muted-foreground border-b border-border">
                 <th className="text-left p-3">ID</th>
                 <th className="text-left p-3">Title</th>
                 <th className="text-left p-3">Severity</th>
@@ -199,9 +199,9 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
             </thead>
             <tbody>
               {incidents.map(inc => (
-                <tr key={inc.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                <tr key={inc.id} className="border-b border-border/50 hover:bg-secondary/30">
                   <td className="p-3 font-mono text-blue-300">{inc.id}</td>
-                  <td className="p-3 text-white font-medium">{inc.title}</td>
+                  <td className="p-3 text-foreground font-medium">{inc.title}</td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[inc.severity]} ${SEVERITY_COLORS[inc.severity]}`}>
                       {inc.severity}
@@ -210,13 +210,13 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
                   <td className="p-3">
                     <span className="flex items-center gap-1.5">
                       {STATUS_ICON[inc.status]}
-                      <span className="text-gray-300 capitalize">{inc.status}</span>
+                      <span className="text-foreground capitalize">{inc.status}</span>
                     </span>
                   </td>
-                  <td className="p-3 text-gray-300">{inc.assignee}</td>
-                  <td className="p-3 text-white">L{inc.escalation_level}</td>
-                  <td className="p-3 text-gray-300">{inc.cluster}</td>
-                  <td className="p-3 text-gray-300 text-xs">{new Date(inc.updated_at).toLocaleString()}</td>
+                  <td className="p-3 text-foreground">{inc.assignee}</td>
+                  <td className="p-3 text-foreground">L{inc.escalation_level}</td>
+                  <td className="p-3 text-foreground">{inc.cluster}</td>
+                  <td className="p-3 text-foreground text-xs">{new Date(inc.updated_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -228,31 +228,31 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
       {activeTab === 'playbooks' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {playbooks.map(pb => (
-            <div key={pb.id} className="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <div key={pb.id} className="bg-card/50 rounded-lg border border-border p-4">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-white font-semibold flex items-center gap-2">
+                <h3 className="text-foreground font-semibold flex items-center gap-2">
                   <Play className="w-4 h-4 text-green-400" />
                   {pb.name}
                 </h3>
                 <span className={`px-2 py-0.5 rounded text-xs ${
                   pb.status === 'active' ? 'bg-green-500/20 text-green-400' :
                   pb.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
-                  'bg-gray-500/20 text-gray-400'
+                  'bg-muted/50 text-muted-foreground'
                 }`}>{pb.status}</span>
               </div>
-              <p className="text-sm text-gray-400 mb-3">{pb.description}</p>
+              <p className="text-sm text-muted-foreground mb-3">{pb.description}</p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-xs text-gray-500">Runs</p>
-                  <p className="text-sm font-bold text-white">{pb.execution_count}</p>
+                  <p className="text-xs text-muted-foreground">Runs</p>
+                  <p className="text-sm font-bold text-foreground">{pb.execution_count}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Steps</p>
-                  <p className="text-sm font-bold text-white">{pb.steps}</p>
+                  <p className="text-xs text-muted-foreground">Steps</p>
+                  <p className="text-sm font-bold text-foreground">{pb.steps}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Avg Resolve</p>
-                  <p className="text-sm font-bold text-white">{pb.avg_resolution_min}m</p>
+                  <p className="text-xs text-muted-foreground">Avg Resolve</p>
+                  <p className="text-sm font-bold text-foreground">{pb.avg_resolution_min}m</p>
                 </div>
               </div>
             </div>
@@ -265,19 +265,19 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* By severity */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Incidents by Severity</h3>
+            <div className="bg-card/50 rounded-lg border border-border p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Incidents by Severity</h3>
               <div className="space-y-3">
                 {Object.entries(metrics.by_severity).map(([sev, count]) => {
                   const total = metrics.total_incidents || 1
                   const pct = Math.round((count / total) * 100)
                   return (
                     <div key={sev} className="flex items-center gap-3">
-                      <span className={`w-16 text-sm capitalize ${SEVERITY_COLORS[sev] || 'text-gray-300'}`}>{sev}</span>
-                      <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <span className={`w-16 text-sm capitalize ${SEVERITY_COLORS[sev] || 'text-foreground'}`}>{sev}</span>
+                      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-sm text-white w-8 text-right">{count}</span>
+                      <span className="text-sm text-foreground w-8 text-right">{count}</span>
                     </div>
                   )
                 })}
@@ -285,17 +285,17 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
             </div>
 
             {/* By status */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Incidents by Status</h3>
+            <div className="bg-card/50 rounded-lg border border-border p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Incidents by Status</h3>
               <div className="space-y-3">
                 {Object.entries(metrics.by_status).map(([st, count]) => (
                   <div key={st} className="flex items-center gap-3">
-                    {STATUS_ICON[st] || <ArrowRight className="w-4 h-4 text-gray-500" />}
-                    <span className="w-24 text-sm text-gray-300 capitalize">{st}</span>
-                    <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    {STATUS_ICON[st] || <ArrowRight className="w-4 h-4 text-muted-foreground" />}
+                    <span className="w-24 text-sm text-foreground capitalize">{st}</span>
+                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                       <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.round((count / (metrics.total_incidents || 1)) * 100)}%` }} />
                     </div>
-                    <span className="text-sm text-white w-8 text-right">{count}</span>
+                    <span className="text-sm text-foreground w-8 text-right">{count}</span>
                   </div>
                 ))}
               </div>
@@ -303,24 +303,24 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
           </div>
 
           {/* MTTR trend */}
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Mean Time to Resolution</h3>
+          <div className="bg-card/50 rounded-lg border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Mean Time to Resolution</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-gray-400">Current MTTR</p>
-                <p className="text-2xl font-bold text-white">{metrics.mttr_hours}h</p>
+                <p className="text-sm text-muted-foreground">Current MTTR</p>
+                <p className="text-2xl font-bold text-foreground">{metrics.mttr_hours}h</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Trend</p>
+                <p className="text-sm text-muted-foreground">Trend</p>
                 <p className={`text-2xl font-bold capitalize ${TREND_COLORS[metrics.mttr_trend]}`}>{metrics.mttr_trend}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Escalation Rate</p>
+                <p className="text-sm text-muted-foreground">Escalation Rate</p>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
                     <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${metrics.escalation_rate}%` }} />
                   </div>
-                  <span className="text-white font-bold">{metrics.escalation_rate}%</span>
+                  <span className="text-foreground font-bold">{metrics.escalation_rate}%</span>
                 </div>
               </div>
             </div>

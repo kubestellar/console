@@ -192,7 +192,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-blue-600 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
             }`}
           >
             {tab === 'overview' ? 'Configuration' : tab === 'audit' ? 'Audit Trail' : 'Signatures'}
@@ -216,7 +216,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
               { label: 'Require Signature', value: summary.config?.require_signature ? 'Yes' : 'No' },
               { label: 'Hash Algorithm', value: summary.config?.hash_algorithm ?? '—' },
             ].map(({ label, value }) => (
-              <div key={label} className="p-3 bg-muted rounded-lg">
+              <div key={label} className="p-3 bg-secondary/50 rounded-lg">
                 <div className="text-xs text-muted-foreground">{label}</div>
                 <div className="text-sm text-foreground font-medium mt-1">{value}</div>
               </div>
@@ -235,14 +235,14 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="flex flex-col items-center">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground font-mono">
+                      <div className="w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center text-xs text-muted-foreground font-mono">
                         {i + 1}
                       </div>
                       {i < records.length - 1 && <div className="w-0.5 h-6 bg-muted mt-1" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${ACTION_STYLES[r.action] || 'bg-gray-500/20 text-muted-foreground'}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${ACTION_STYLES[r.action] || 'bg-muted/50 text-muted-foreground'}`}>
                           {r.action}
                         </span>
                         <span className="text-foreground font-medium">{r.resource}</span>

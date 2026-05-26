@@ -111,7 +111,7 @@ export default function LicenseComplianceDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-      <span className="ml-3 text-gray-400">{t('compliance.licenseScanningInventory')}</span>
+      <span className="ml-3 text-muted-foreground">{t('compliance.licenseScanningInventory')}</span>
     </div>
   )
 
@@ -146,35 +146,35 @@ export default function LicenseComplianceDashboard() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseDeniedLicenses')}</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseDeniedLicenses')}</div>
             <div className={`text-3xl font-bold ${summary.denied_packages > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
               {summary.denied_packages}
             </div>
-            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseMustRemediate')}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseMustRemediate')}</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseWarnings')}</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseWarnings')}</div>
             <div className={`text-3xl font-bold ${summary.warned_packages > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
               {summary.warned_packages}
             </div>
-            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseRequireLegalReview')}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseRequireLegalReview')}</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseAllowed')}</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseAllowed')}</div>
             <div className="text-3xl font-bold text-emerald-400">{summary.allowed_packages}</div>
-            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseOfTotal', { total: summary.total_packages })}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseOfTotal', { total: summary.total_packages })}</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">{t('compliance.licenseUniqueLicenses')}</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseUniqueLicenses')}</div>
             <div className="text-3xl font-bold text-indigo-400">{summary.unique_licenses}</div>
-            <div className="text-xs text-gray-500 mt-1">{t('compliance.licenseWorkloadsScanned', { count: summary.workloads_scanned })}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseWorkloadsScanned', { count: summary.workloads_scanned })}</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-800/30 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-secondary/30 p-1 rounded-lg w-fit">
         {(['violations', 'inventory', 'categories'] as const).map((tab) => (
           <button
             key={tab}
@@ -209,7 +209,7 @@ export default function LicenseComplianceDashboard() {
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
                       filterRisk === risk
                         ? RISK_STYLES[risk]
-                        : 'border-gray-700 bg-gray-900/50 text-gray-400 hover:bg-gray-700/50'
+                        : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/50'
                     }`}
                   >
                     <RiskIcon className="w-3.5 h-3.5" />
@@ -221,16 +221,16 @@ export default function LicenseComplianceDashboard() {
             </div>
           )}
 
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+          <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
             {displayPackages.length === 0 ? (
               <div className="p-8 text-center">
                 <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-                <p className="text-gray-300">{t('compliance.licenseNoViolations')}</p>
+                <p className="text-foreground">{t('compliance.licenseNoViolations')}</p>
               </div>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-700 text-gray-400 text-left">
+                  <tr className="border-b border-border text-muted-foreground text-left">
                     <th className="p-3">{t('compliance.licensePackageHeader')}</th>
                     <th className="p-3">{t('compliance.licenseLicenseHeader')}</th>
                     <th className="p-3">{t('compliance.licenseWorkloadHeader')}</th>
@@ -242,23 +242,23 @@ export default function LicenseComplianceDashboard() {
                   {displayPackages.map((pkg, i) => {
                     const RiskIcon = RISK_ICONS[pkg.risk]
                     return (
-                      <tr key={i} className="border-b border-gray-700/50 hover:bg-white/5">
+                      <tr key={i} className="border-b border-border/50 hover:bg-secondary/50">
                         <td className="p-3">
-                          <div className="text-white font-mono text-xs">{pkg.name}</div>
-                          <div className="text-gray-500 text-[10px]">v{pkg.version}</div>
+                          <div className="text-foreground font-mono text-xs">{pkg.name}</div>
+                          <div className="text-muted-foreground text-[10px]">v{pkg.version}</div>
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1.5">
-                            <BookOpen className="w-3.5 h-3.5 text-gray-500" />
-                            <span className="text-gray-300 text-xs">{pkg.license}</span>
+                            <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-foreground text-xs">{pkg.license}</span>
                           </div>
-                          <div className="text-[10px] text-gray-500">{pkg.spdx_id}</div>
+                          <div className="text-[10px] text-muted-foreground">{pkg.spdx_id}</div>
                         </td>
                         <td className="p-3">
-                          <div className="text-gray-300">{pkg.workload}</div>
-                          <div className="text-xs text-gray-500">{pkg.namespace}</div>
+                          <div className="text-foreground">{pkg.workload}</div>
+                          <div className="text-xs text-muted-foreground">{pkg.namespace}</div>
                         </td>
-                        <td className="p-3 text-gray-400">{pkg.cluster}</td>
+                        <td className="p-3 text-muted-foreground">{pkg.cluster}</td>
                         <td className="p-3">
                           <span className={`flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-xs border ${RISK_STYLES[pkg.risk]}`}>
                             <RiskIcon className="w-3 h-3" />
@@ -286,7 +286,7 @@ export default function LicenseComplianceDashboard() {
                   <div className="flex items-center gap-2">
                     <CatIcon className="w-5 h-5" />
                     <div>
-                      <div className="font-medium text-white">{cat.name}</div>
+                      <div className="font-medium text-foreground">{cat.name}</div>
                       <div className="text-xs opacity-70">{t('compliance.licensePackageCount', { count: cat.count })}</div>
                     </div>
                   </div>
@@ -296,7 +296,7 @@ export default function LicenseComplianceDashboard() {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {cat.examples.map((ex, j) => (
-                    <span key={j} className="px-1.5 py-0.5 bg-black/20 rounded text-[10px] font-mono">
+                    <span key={j} className="px-1.5 py-0.5 bg-secondary/50 rounded text-[10px] font-mono">
                       {ex}
                     </span>
                   ))}
@@ -308,7 +308,7 @@ export default function LicenseComplianceDashboard() {
       )}
 
       {summary && (
-        <div className="text-xs text-gray-500 text-right">
+        <div className="text-xs text-muted-foreground text-right">
           {t('compliance.licenseLastScanned', { date: new Date(summary.evaluated_at).toLocaleString() })}
         </div>
       )}

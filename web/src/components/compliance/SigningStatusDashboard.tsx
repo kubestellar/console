@@ -109,7 +109,7 @@ export default function SigningStatusDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
-      <span className="ml-3 text-gray-400">Loading signing status…</span>
+      <span className="ml-3 text-muted-foreground">Loading signing status…</span>
     </div>
   )
 
@@ -142,39 +142,39 @@ export default function SigningStatusDashboard() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Signature Coverage</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Signature Coverage</div>
             <div className={`text-3xl font-bold ${coveragePercent >= 90 ? 'text-emerald-400' : coveragePercent >= 70 ? 'text-amber-400' : 'text-red-400'}`}>
               {coveragePercent}%
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {summary.signed_images} of {summary.total_images} signed
             </div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Verified Images</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Verified Images</div>
             <div className="text-3xl font-bold text-emerald-400">{summary.verified_images}</div>
-            <div className="text-xs text-gray-500 mt-1">signature + chain verified</div>
+            <div className="text-xs text-muted-foreground mt-1">signature + chain verified</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Unsigned Images</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Unsigned Images</div>
             <div className={`text-3xl font-bold ${summary.unsigned_images > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
               {summary.unsigned_images}
             </div>
-            <div className="text-xs text-gray-500 mt-1">require immediate attention</div>
+            <div className="text-xs text-muted-foreground mt-1">require immediate attention</div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-sm text-gray-400 mb-1">Policy Violations</div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">Policy Violations</div>
             <div className={`text-3xl font-bold ${summary.policy_violations > 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
               {summary.policy_violations}
             </div>
-            <div className="text-xs text-gray-500 mt-1">across {summary.clusters_covered} clusters</div>
+            <div className="text-xs text-muted-foreground mt-1">across {summary.clusters_covered} clusters</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-800/30 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 bg-secondary/30 p-1 rounded-lg w-fit">
         {(['images', 'policies'] as const).map((tab) => (
           <button
             key={tab}
@@ -192,7 +192,7 @@ export default function SigningStatusDashboard() {
       {activeTab === 'images' && (
         <>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
               <input
                 type="checkbox"
                 checked={filterUnsigned}
@@ -201,12 +201,12 @@ export default function SigningStatusDashboard() {
               />
               Show unsigned / unverified only
             </label>
-            <span className="text-xs text-gray-500">({displayImages.length} results)</span>
+            <span className="text-xs text-muted-foreground">({displayImages.length} results)</span>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+          <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-700 text-gray-400 text-left">
+                <tr className="border-b border-border text-muted-foreground text-left">
                   <th className="p-3">Image</th>
                   <th className="p-3">Workload</th>
                   <th className="p-3">Cluster</th>
@@ -218,19 +218,19 @@ export default function SigningStatusDashboard() {
               </thead>
               <tbody>
                 {displayImages.map((img, i) => (
-                  <tr key={i} className="border-b border-gray-700/50 hover:bg-white/5">
+                  <tr key={i} className="border-b border-border/50 hover:bg-secondary/50">
                     <td className="p-3">
-                      <div className="text-white font-mono text-xs truncate max-w-[200px]">{img.image}</div>
-                      <div className="text-gray-500 text-[10px] font-mono">{img.digest.substring(0, 20)}…</div>
+                      <div className="text-foreground font-mono text-xs truncate max-w-[200px]">{img.image}</div>
+                      <div className="text-muted-foreground text-[10px] font-mono">{img.digest.substring(0, 20)}…</div>
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-1.5">
-                        <Server className="w-3.5 h-3.5 text-gray-500" />
-                        <span className="text-gray-300">{img.workload}</span>
+                        <Server className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-foreground">{img.workload}</span>
                       </div>
-                      <div className="text-xs text-gray-500">{img.namespace}</div>
+                      <div className="text-xs text-muted-foreground">{img.namespace}</div>
                     </td>
-                    <td className="p-3 text-gray-400">{img.cluster}</td>
+                    <td className="p-3 text-muted-foreground">{img.cluster}</td>
                     <td className="p-3">
                       {img.signed
                         ? <BadgeCheck className="w-4 h-4 text-emerald-400" />
@@ -247,12 +247,12 @@ export default function SigningStatusDashboard() {
                     <td className="p-3">
                       {img.keyless
                         ? <span className="text-emerald-400 text-xs">Yes</span>
-                        : <span className="text-gray-500 text-xs">No</span>}
+                        : <span className="text-muted-foreground text-xs">No</span>}
                     </td>
                     <td className="p-3">
                       {img.transparency_log
                         ? <span className="text-emerald-400 text-xs">Logged</span>
-                        : <span className="text-gray-500 text-xs">—</span>}
+                        : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
                   </tr>
                 ))}
@@ -266,13 +266,13 @@ export default function SigningStatusDashboard() {
       {activeTab === 'policies' && (
         <div className="space-y-3">
           {policies.map((policy, i) => (
-            <div key={i} className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+            <div key={i} className="bg-card/50 border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <Shield className="w-5 h-5 text-purple-400" />
                   <div>
-                    <div className="text-white font-medium">{policy.name}</div>
-                    <div className="text-sm text-gray-400">{policy.cluster} · {policy.scope}</div>
+                    <div className="text-foreground font-medium">{policy.name}</div>
+                    <div className="text-sm text-muted-foreground">{policy.cluster} · {policy.scope}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -292,14 +292,14 @@ export default function SigningStatusDashboard() {
                   )}
                 </div>
               </div>
-              <div className="text-xs text-gray-500">{policy.rules} signing rules configured</div>
+              <div className="text-xs text-muted-foreground">{policy.rules} signing rules configured</div>
             </div>
           ))}
         </div>
       )}
 
       {summary && (
-        <div className="text-xs text-gray-500 text-right">
+        <div className="text-xs text-muted-foreground text-right">
           Last evaluated: {new Date(summary.evaluated_at).toLocaleString()}
         </div>
       )}

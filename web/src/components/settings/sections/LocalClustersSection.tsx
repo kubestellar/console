@@ -365,7 +365,7 @@ After installation, ask:
               <button
                 onClick={handleCreate}
                 disabled={!selectedTool || !clusterName.trim() || isCreating}
-                className="shrink-0 whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreating ? (
                   <>
@@ -420,7 +420,7 @@ After installation, ask:
                             <div className="flex items-center gap-1.5">
                               <div className={`w-1.5 h-1.5 rounded-full ${
                                 isRunning ? 'bg-green-500' :
-                                isStopped ? 'bg-gray-500 dark:bg-gray-400' :
+                                isStopped ? 'bg-muted-foreground' :
                                 'bg-orange-500'
                               }`} />
                               <span className={
@@ -474,7 +474,7 @@ After installation, ask:
               </ul>
               <button
                 onClick={handleInstallVClusterCLI}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90"
               >
                 <Bot className="w-4 h-4" />
                 {t('settings.localClusters.vclusterInstallWithAgent')}
@@ -577,7 +577,7 @@ After installation, ask:
                     <button
                       onClick={handleCreateVCluster}
                       disabled={!vclusterName.trim() || !vclusterHostCluster || isCreating}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isCreating ? (
                         <>
@@ -750,7 +750,7 @@ After installation, ask:
                               </>
                             )}
                             <div className="flex items-center gap-1.5">
-                              <div className={`w-1.5 h-1.5 rounded-full ${hasKubevirt ? 'bg-green-500' : 'bg-gray-500'}`} />
+                              <div className={`w-1.5 h-1.5 rounded-full ${hasKubevirt ? 'bg-green-500' : 'bg-muted-foreground'}`} />
                               <span className={hasKubevirt ? 'text-green-400' : 'text-muted-foreground'}>
                                 {hasKubevirt
                                   ? t('settings.localClusters.kubevirtInstalled')
