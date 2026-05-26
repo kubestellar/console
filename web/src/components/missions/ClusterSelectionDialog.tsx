@@ -36,13 +36,19 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
   const filteredOnline = (() => {
     if (!search.trim()) return onlineClusters
     const q = search.toLowerCase()
-    return onlineClusters.filter(c => c.name.toLowerCase().includes(q) || (c.context && c.context.toLowerCase().includes(q)))
+    return onlineClusters.filter(c => 
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.context || '').toLowerCase().includes(q)
+    )
   })()
 
   const filteredOffline = (() => {
     if (!search.trim()) return offlineClusters
     const q = search.toLowerCase()
-    return offlineClusters.filter(c => c.name.toLowerCase().includes(q) || (c.context && c.context.toLowerCase().includes(q)))
+    return offlineClusters.filter(c => 
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.context || '').toLowerCase().includes(q)
+    )
   })()
 
   // Auto-select if only one online cluster

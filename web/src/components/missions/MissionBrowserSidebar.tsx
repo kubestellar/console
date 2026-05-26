@@ -8,13 +8,15 @@
  * Extracted from MissionBrowser.tsx (issue #8624).
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Upload, CheckCircle, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
 import { TreeNodeItem } from './browser'
 import type { TreeNode } from './browser'
 import { useToast } from '../ui/Toast'
+import { ConfirmDialog } from '../../lib/modals'
+import { useTranslation } from 'react-i18next'
 
 const REVEAL_HIGHLIGHT_TIMEOUT_MS = 2_000
 
@@ -85,6 +87,8 @@ export function MissionBrowserSidebar({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const treeNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const { showToast } = useToast()
+  const { t } = useTranslation('common')
+  const [removeConfirm, setRemoveConfirm] = useState<{ type: 'repo' | 'path'; path: string } | null>(null)
 
   useEffect(() => {
     if (!revealPath) return
@@ -126,9 +130,9 @@ export function MissionBrowserSidebar({
                 onSelect={onSelectNode}
                 onRemove={
                   node.id === 'github'
-                    ? (child) => onRemoveRepo(child.path)
+                    ? (child) => setRemoveConfirm({ type: 'repo', path: child.path })
                     : node.id === 'local'
-                      ? (child) => onRemovePath(child.path)
+                      ? (child) => setRemoveConfirm({ type: 'path', path: child.path })
                       : undefined
                 }
                 onRefresh={
@@ -279,6 +283,38 @@ export function MissionBrowserSidebar({
           className="hidden"
         />
       </div>
+
+      {/* Confirm removal dialog */}
+      <ConfirmDialog
+        isOpen={removeConfirm !== null}
+        onClose={() => setRemoveConfirm(null)}
+        onConfirm={() => {
+          if (removeConfirm) {
+            if (removeConfirm.type === 'repo') {
+              onRemoveRepo(removeConfirm.path)
+            } else {
+              onRemovePath(removeConfirm.path)
+            }
+            setRemoveConfirm(null)
+          }
+        }}
+        title={removeConfirm?.type === 'repo' 
+          ? t('missions.browser.confirmRemoveRepo', { defaultValue: 'Remove Repository' })
+          : t('missions.browser.confirmRemovePath', { defaultValue: 'Remove Path' })
+        }
+        message={removeConfirm?.type === 'repo'
+          ? t('missions.browser.confirmRemoveRepoMessage', { 
+              defaultValue: 'Remove "{{path}}" from watched repositories?',
+              path: removeConfirm.path 
+            })
+          : t('missions.browser.confirmRemovePathMessage', { 
+              defaultValue: 'Remove "{{path}}" from watched paths?',
+              path: removeConfirm?.path || ''
+            })
+        }
+        confirmLabel={t('actions.remove', { defaultValue: 'Remove' })}
+        variant="warning"
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
+import { useToast } from '../ui/Toast'
 import type { MissionExport } from '../../lib/missions/types'
 
 const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -30,6 +31,7 @@ interface FixerCardProps {
 
 export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: FixerCardProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [linkCopied, setLinkCopied] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -85,9 +87,14 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
               onClick={(e) => {
                 e.stopPropagation()
                 onCopyLink(e)
-                setLinkCopied(true)
-                if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
-                linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                  .then(() => {
+                    setLinkCopied(true)
+                    if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+                    linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                  })
+                  .catch(() => {
+                    showToast('Failed to copy link', 'error')
+                  })
               }}
               className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
               title={t('missions.browser.copyShareableLink')}
@@ -150,9 +157,14 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
               onClick={(e) => {
                 e.stopPropagation()
                 onCopyLink(e)
-                setLinkCopied(true)
-                if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
-                linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                  .then(() => {
+                    setLinkCopied(true)
+                    if (linkCopiedTimeoutRef.current !== null) clearTimeout(linkCopiedTimeoutRef.current)
+                    linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+                  })
+                  .catch(() => {
+                    showToast('Failed to copy link', 'error')
+                  })
               }}
               className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
               title={t('missions.browser.copyShareableLink')}

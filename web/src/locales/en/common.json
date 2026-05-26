@@ -36,6 +36,7 @@
     "configure": "Configure",
     "replace": "Replace",
     "delete": "Delete",
+    "deleteResolution": "Delete Resolution",
     "copy": "Copy",
     "import": "Import",
     "apply": "Apply",
@@ -1350,7 +1351,8 @@
       "titleRequired": "Title is required",
       "issueTypeRequired": "Issue type is required",
       "summaryRequired": "Summary is required",
-      "failedToSave": "Failed to save resolution"
+      "failedToSave": "Failed to save resolution",
+      "confirmDeleteResolution": "This will permanently delete this resolution. This action cannot be undone."
     },
     "recommendations": {
       "addCard": "Add \"{{title}}\" card to dashboard",
@@ -4756,7 +4758,11 @@
         "runOnClusters_other": "Run on {{count}} clusters",
         "searchPlaceholder": "Search clusters...",
         "selected": "{{count}} selected"
-      }
+      },
+      "confirmRemoveRepo": "Remove Repository",
+      "confirmRemoveRepoMessage": "Remove \"{{path}}\" from watched repositories?",
+      "confirmRemovePath": "Remove Path",
+      "confirmRemovePathMessage": "Remove \"{{path}}\" from watched paths?"
     },
     "kagenti": {
       "providerUnavailableTitle": "Kagenti provider unavailable",

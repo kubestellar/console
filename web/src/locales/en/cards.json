@@ -4072,7 +4072,8 @@
     "confirmLabel": "Confirm?"
   },
   "kagentAgentPicker": {
-    "noAgentsAvailable": "No kagent agents available"
+    "noAgentsAvailable": "No kagent agents available",
+    "learnMore": "Learn how to configure agents →"
   },
   "kagentSecurity": {
     "agentTypeCoverage": "Agent Type Coverage",

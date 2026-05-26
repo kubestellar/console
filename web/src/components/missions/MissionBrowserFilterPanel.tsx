@@ -269,6 +269,17 @@ export function MissionBrowserFilterPanel({
         <div className="text-[11px] text-muted-foreground">
           Showing {filteredRecommendationsCount} of {recommendationsTotal} missions
           {activeFilterCount > 0 && ' (filtered)'}
+          {filteredRecommendationsCount === 0 && activeFilterCount > 0 && (
+            <span className="ml-2 text-yellow-400">
+              — No matches. Try adjusting filters or{' '}
+              <button
+                onClick={onClearAllFilters}
+                className="underline hover:text-yellow-300 transition-colors"
+              >
+                clear all
+              </button>
+            </span>
+          )}
         </div>
       )}
     </div>

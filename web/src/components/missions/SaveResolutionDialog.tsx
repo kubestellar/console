@@ -26,6 +26,7 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
 
 interface AISummary {
   title: string
@@ -385,6 +386,7 @@ export function SaveResolutionDialog({
   onSaved }: SaveResolutionDialogProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { saveResolution } = useResolutions()
+  const { showToast } = useToast()
 
   // Auto-detect issue signature from mission content.
   // Memoized: avoids producing a new object reference on every render, which
@@ -443,7 +445,9 @@ export function SaveResolutionDialog({
       setSteps(aiSummary.steps.length > 0 ? aiSummary.steps : [''])
       setYaml(aiSummary.yaml || '')
     } catch (err: unknown) {
-      setAiError(err instanceof Error ? err.message : 'Failed to generate summary')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate summary'
+      setAiError(errorMessage)
+      showToast(errorMessage, 'error')
       // Fall back to basic extraction
       setTitle(currentMission.title)
       setIssueType(signatureRef.current.type || '')
@@ -451,7 +455,7 @@ export function SaveResolutionDialog({
     } finally {
       setIsGenerating(false)
     }
-  }, [])
+  }, [showToast])
 
   // Initialize form when dialog opens - auto-generate AI summary.
   // Depends only on isOpen + mission.id so streaming message updates on the

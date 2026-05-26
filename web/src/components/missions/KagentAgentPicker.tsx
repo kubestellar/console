@@ -25,9 +25,19 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
 
   if (agents.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-        <Bot className="w-3.5 h-3.5" />
-        <span>{t('kagentAgentPicker.noAgentsAvailable')}</span>
+      <div className="flex flex-col gap-2 px-3 py-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Bot className="w-3.5 h-3.5" />
+          <span>{t('kagentAgentPicker.noAgentsAvailable')}</span>
+        </div>
+        <a
+          href="https://docs.kubestellar.io/docs/agents/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-2xs text-purple-400 hover:text-purple-300 underline transition-colors"
+        >
+          {t('kagentAgentPicker.learnMore', { defaultValue: 'Learn how to configure agents →' })}
+        </a>
       </div>
     )
   }

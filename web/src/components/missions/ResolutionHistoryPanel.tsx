@@ -27,7 +27,7 @@ import { cn } from '../../lib/cn'
 import { ShareMissionDialog } from './ShareMissionDialog'
 import { SubmitToKBDialog } from './SubmitToKBDialog'
 import { useTranslation } from 'react-i18next'
-import { DELETE_CONFIRM_TIMEOUT_MS } from '../../lib/constants/network'
+import { ConfirmDialog } from '../../lib/modals'
 import { Button } from '../ui/Button'
 
 interface ResolutionHistoryPanelProps {
@@ -45,11 +45,6 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [submitKBResolution, setSubmitKBResolution] = useState<Resolution | null>(null)
   const [viewingResolution, setViewingResolution] = useState<Resolution | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  useEffect(() => {
-    return () => clearTimeout(deleteConfirmTimerRef.current)
-  }, [])
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => prev === id ? null : id)
@@ -102,20 +97,19 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   const handleDelete = (id: string) => {
-    if (deleteConfirmId === id) {
-      deleteResolution(id)
-      setDeleteConfirmId(null)
+    setDeleteConfirmId(id)
+  }
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteResolution(deleteConfirmId)
       setExpandedId(null)
       setSelectedIds(prev => {
         const next = new Set(prev)
-        next.delete(id)
+        next.delete(deleteConfirmId)
         return next
       })
-    } else {
-      setDeleteConfirmId(id)
-      // Auto-clear confirm after 3s
-      clearTimeout(deleteConfirmTimerRef.current)
-      deleteConfirmTimerRef.current = setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), DELETE_CONFIRM_TIMEOUT_MS)
+      setDeleteConfirmId(null)
     }
   }
 
@@ -240,7 +234,6 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                       onShare={() => handleShare(resolution.id)}
                       onExport={() => setExportResolution(resolution)}
                       onSubmitToKB={() => setSubmitKBResolution(resolution)}
-                      isDeleteConfirm={deleteConfirmId === resolution.id}
                       canShare
                     />
                   ))}
@@ -275,7 +268,6 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                       onDelete={() => handleDelete(resolution.id)}
                       onExport={() => setExportResolution(resolution)}
                       onSubmitToKB={() => setSubmitKBResolution(resolution)}
-                      isDeleteConfirm={deleteConfirmId === resolution.id}
                       showSharedBy
                     />
                   ))}
@@ -303,6 +295,17 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
           onClose={() => setSubmitKBResolution(null)}
         />
       )}
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={confirmDelete}
+        title={t('actions.deleteResolution', { defaultValue: 'Delete Resolution' })}
+        message={t('missions.confirmDeleteResolution', { defaultValue: 'This will permanently delete this resolution. This action cannot be undone.' })}
+        confirmLabel={t('actions.delete')}
+        variant="danger"
+      />
     </div>
   )
 }
@@ -319,7 +322,6 @@ interface ResolutionCardProps {
   onShare?: () => void
   onExport?: () => void
   onSubmitToKB?: () => void
-  isDeleteConfirm: boolean
   showSharedBy?: boolean
   canShare?: boolean
 }
@@ -336,7 +338,6 @@ function ResolutionCard({
   onShare,
   onExport,
   onSubmitToKB,
-  isDeleteConfirm,
   showSharedBy,
   canShare,
 }: ResolutionCardProps) {
@@ -498,16 +499,10 @@ function ResolutionCard({
                   e.stopPropagation()
                   onDelete()
                 }}
-                className={cn(
-                  "flex items-center justify-center gap-1 px-2 py-1.5 text-2xs rounded transition-colors",
-                  isDeleteConfirm
-                    ? "bg-red-500 text-white"
-                    : "bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-                )}
-                title={isDeleteConfirm ? t('common.confirm') : t('actions.delete')}
+                className="flex items-center justify-center gap-1 px-2 py-1.5 text-2xs rounded transition-colors bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+                title={t('actions.delete')}
               >
                 <Trash2 className="w-3 h-3" />
-                {isDeleteConfirm && <span>{t('common.confirm')}</span>}
               </button>
             </div>
           </div>
