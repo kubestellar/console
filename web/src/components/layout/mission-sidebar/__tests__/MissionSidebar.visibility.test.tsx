@@ -266,7 +266,7 @@ describe('MissionSidebar visibility', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle mission history' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Secure clusters' }))
+    fireEvent.click(screen.getByRole('button', { name: /Secure clusters/ }))
 
     expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
     expect(lastMissionControlProps).toMatchObject({
