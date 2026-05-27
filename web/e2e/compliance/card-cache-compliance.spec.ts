@@ -150,7 +150,13 @@ const CI_TIMEOUT_MULTIPLIER = 2
  * infrastructure can occasionally push warm median TTC beyond previous thresholds.
  */
 const WARM_TTC_THRESHOLD_MS = process.env.CI ? 45_000 : 500
-const MAX_REAL_CACHE_FAILURES = process.env.CI ? 1 : 0
+/**
+ * With 150+ cards, CI shared runners under CPU contention can cause 2 cards to
+ * miss cache on warm return, especially when soft navigation falls back to
+ * page.goto (destroying React Query in-memory cache). Bumped from 1→2 per
+ * nightly trend analysis (#15850).
+ */
+const MAX_REAL_CACHE_FAILURES = process.env.CI ? 2 : 0
 const CACHE_DB_NAME = 'kc_cache'
 
 
