@@ -152,7 +152,19 @@ const CI_TIMEOUT_MULTIPLIER = 2
 const WARM_TTC_THRESHOLD_MS = process.env.CI ? 45_000 : 500
 const MAX_REAL_CACHE_FAILURES = process.env.CI ? 1 : 0
 const CACHE_DB_NAME = 'kc_cache'
-
+const STORAGE_CLEANUP_TIMEOUT_MS = 5_000
+const STORAGE_CLEANUP_POLL_INTERVAL_MS = 100
+const STORAGE_CLEANUP_POLL_ATTEMPTS = 20
+const COLD_BATCH_RESET_WINDOW_NAME = '__kc-cache-test-cold-reset__'
+const COLD_BATCH_KEEP_LOCAL_STORAGE_KEYS = [
+  'token',
+  'kc-demo-mode',
+  'demo-user-onboarded',
+  'kubestellar-console-tour-completed',
+  'kc-user-cache',
+  'kc-backend-status',
+  'kc-sqlite-migrated',
+] as const
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
 // waitForCardsToLoad imported from ../mocks/liveMocks
@@ -439,29 +451,95 @@ async function softNavigateToBatch(
 // Cache inspection helpers
 // ---------------------------------------------------------------------------
 
-async function clearColdBatchStorage(page: Page): Promise<void> {
-  await page.evaluate(async (cacheDbName: string) => {
-    const KEEP_KEYS = new Set([
-      'token', 'kc-demo-mode', 'demo-user-onboarded',
-      'kubestellar-console-tour-completed', 'kc-user-cache',
-      'kc-backend-status', 'kc-sqlite-migrated',
-    ])
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i)
-      if (!key || KEEP_KEYS.has(key)) continue
-      localStorage.removeItem(key)
-    }
-    localStorage.setItem('kc-demo-mode', 'false')
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+// Delete kc_cache on the next navigation, after the previous page has unloaded
+// and released any live IndexedDB handles.
+async function registerColdBatchStorageReset(page: Page): Promise<void> {
+  await page.addInitScript(
+    async ({
+      cacheDbName,
+      keepLocalStorageKeys,
+      resetWindowName,
+      timeoutMs,
+      pollIntervalMs,
+      pollAttempts,
+    }: {
+      cacheDbName: string
+      keepLocalStorageKeys: string[]
+      resetWindowName: string
+      timeoutMs: number
+      pollIntervalMs: number
+      pollAttempts: number
+    }) => {
+      if (window.name !== resetWindowName) return
+      window.name = ''
 
-    await new Promise<void>((resolve) => {
-      const req = indexedDB.deleteDatabase(cacheDbName)
-      req.onsuccess = () => resolve()
-      req.onerror = () => resolve()
-      req.onblocked = () => resolve()
-    })
-  }, CACHE_DB_NAME)
+      sessionStorage.clear()
+
+      const keepKeys = new Set(keepLocalStorageKeys)
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (!key || keepKeys.has(key)) continue
+        localStorage.removeItem(key)
+      }
+      localStorage.setItem('kc-demo-mode', 'false')
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
+
+      const deleteDatabaseOnce = async (): Promise<void> => {
+        await new Promise<void>((resolve, reject) => {
+          const request = indexedDB.deleteDatabase(cacheDbName)
+          const timer = window.setTimeout(() => {
+            reject(new Error(`IndexedDB delete timeout for ${cacheDbName}`))
+          }, timeoutMs)
+
+          request.onsuccess = () => {
+            window.clearTimeout(timer)
+            resolve()
+          }
+          request.onerror = () => {
+            window.clearTimeout(timer)
+            resolve()
+          }
+          request.onblocked = () => {
+            window.clearTimeout(timer)
+            resolve()
+          }
+        }).catch(() => {
+          // Best-effort in init script; follow-up polling handles eventual cleanup.
+        })
+      }
+
+      await deleteDatabaseOnce()
+
+      if (typeof indexedDB.databases === 'function') {
+        for (let attempt = 0; attempt < pollAttempts; attempt++) {
+          const databases = await indexedDB.databases().catch(() => [])
+          const cacheDb = databases.find((database) => database.name === cacheDbName)
+          if (!cacheDb) {
+            break
+          }
+          await deleteDatabaseOnce()
+          await new Promise((resolve) => window.setTimeout(resolve, pollIntervalMs))
+        }
+      }
+    },
+    {
+      cacheDbName: CACHE_DB_NAME,
+      keepLocalStorageKeys: [...COLD_BATCH_KEEP_LOCAL_STORAGE_KEYS],
+      resetWindowName: COLD_BATCH_RESET_WINDOW_NAME,
+      timeoutMs: STORAGE_CLEANUP_TIMEOUT_MS,
+      pollIntervalMs: STORAGE_CLEANUP_POLL_INTERVAL_MS,
+      pollAttempts: STORAGE_CLEANUP_POLL_ATTEMPTS,
+    }
+  )
+}
+
+async function clearColdBatchStorage(page: Page): Promise<void> {
+  // window.name survives full navigations and gives the init script a one-shot
+  // signal without stacking per-batch addInitScript handlers.
+  await page.evaluate((resetWindowName: string) => {
+    window.name = resetWindowName
+  }, COLD_BATCH_RESET_WINDOW_NAME)
 }
 
 async function snapshotCacheState(page: Page): Promise<{
@@ -632,6 +710,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   // ── Phase 1: Setup ────────────────────────────────────────────────────
   console.log('[CacheTest] Phase 1: Setup — mocks + cold mode')
   await setupAuth(page)
+  await registerColdBatchStorageReset(page)
   mockControl = await setupLiveMocks(page, { delayDataAPIs: false })
 
   // Mock all skipPattern routes that would otherwise fall through to the real
@@ -652,6 +731,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
 
   // ── Phase 2: Warmup — prime Vite module cache ──────────────────────────
   console.log('[CacheTest] Phase 2: Warmup — priming module cache')
+  await clearColdBatchStorage(page)
   const warmupManifest = await navigateToBatch(page, 0, 180_000)
   const totalCards = warmupManifest.totalCards
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
