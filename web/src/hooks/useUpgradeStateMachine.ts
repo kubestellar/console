@@ -77,7 +77,7 @@ export function useUpgradeStateMachine({
   // Populate demo versions when in demo mode
   const demoVersionsSetRef = useRef(false)
   useEffect(() => {
-    if (!isDemoMode || allClusters.length === 0) return
+    if (!isDemoMode || (allClusters || []).length === 0) return
     if (demoVersionsSetRef.current) return
     demoVersionsSetRef.current = true
 
@@ -97,7 +97,7 @@ export function useUpgradeStateMachine({
   useEffect(() => {
     if (isDemoMode) return // Demo versions handled above
 
-    if (!agentConnected || allClusters.length === 0) {
+    if (!agentConnected || (allClusters || []).length === 0) {
       // If not connected, mark fetch as completed so we show '-' instead of 'loading...'
       // But preserve any cached versions we already have
       setVersionState((prev) => ({ ...prev, fetchCompleted: true }))
