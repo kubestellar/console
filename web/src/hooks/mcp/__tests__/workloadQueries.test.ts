@@ -136,6 +136,7 @@ import {
   useCronJobs,
   usePodLogs,
   __workloadsTestables,
+  __resetInfrastructureCaches,
 } from '../workloadQueries'
 
 const {
@@ -156,6 +157,7 @@ const {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  __resetInfrastructureCaches()
   mockIsDemoMode.mockReturnValue(false)
   mockIsBackendUnavailable.mockReturnValue(false)
   mockIsAgentUnavailable.mockReturnValue(true)

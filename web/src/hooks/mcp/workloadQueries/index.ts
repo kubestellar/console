@@ -1,6 +1,7 @@
 import { registerCacheReset } from '../../../lib/modeTransition'
 import { notifyWorkloadsSubscribers, setWorkloadsSharedState } from '../workloadSubscriptions'
 import { getDemoDeploymentIssues, getDemoDeployments, resetDeploymentsCache } from './deployments'
+import { __resetInfrastructureCaches } from './infrastructure'
 import {
   getDemoAllPods,
   getDemoPodIssues,
@@ -26,6 +27,7 @@ if (typeof window !== 'undefined') {
 
     resetPodsCache()
     resetDeploymentsCache()
+    __resetInfrastructureCaches()
 
     setTimeout(() => {
       setWorkloadsSharedState({ isResetting: false })

@@ -32,6 +32,19 @@ let statefulSetsCache: CollectionCache<StatefulSet> | null = null
 let daemonSetsCache: CollectionCache<DaemonSet> | null = null
 let cronJobsCache: CollectionCache<CronJob> | null = null
 
+/**
+ * Test utility to reset all module-level caches.
+ * Should be called in test beforeEach() to ensure test isolation.
+ */
+export function __resetInfrastructureCaches(): void {
+  jobsCache = null
+  hpasCache = null
+  replicaSetsCache = null
+  statefulSetsCache = null
+  daemonSetsCache = null
+  cronJobsCache = null
+}
+
 // ---------------------------------------------------------------------------
 // useJobs
 // ---------------------------------------------------------------------------
