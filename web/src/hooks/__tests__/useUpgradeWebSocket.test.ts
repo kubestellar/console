@@ -7,21 +7,17 @@ import {
   clearCachedVersions,
   createVersionWsHandle,
   VERSION_CACHE_TTL,
+  WS_CONNECTION_TIMEOUT_MS,
+  VERSION_REQUEST_TIMEOUT_MS,
   VersionWsMessage,
 } from '../useUpgradeWebSocket'
-
-// ---------------------------------------------------------------------------
-// Named local constants for private hook configurations (avoiding magic numbers)
-// ---------------------------------------------------------------------------
-const WS_CONNECTION_TIMEOUT_MS = 5000
-const VERSION_REQUEST_TIMEOUT_MS = 10000
 
 // ---------------------------------------------------------------------------
 // Mock safeLocalStorage
 // ---------------------------------------------------------------------------
 const { mockSafeLocalStorage } = vi.hoisted(() => ({
   mockSafeLocalStorage: {
-    safeGetJSON: vi.fn((key, fallback) => fallback),
+    safeGetJSON: vi.fn((_key: string, fallback: unknown) => fallback),
     safeSetJSON: vi.fn(),
   },
 }))
@@ -87,10 +83,24 @@ class MockWebSocket {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Flush the microtask queue (pending Promises) without advancing fake timers.
+ * Named `tick` to make the intent clear at each call-site.
+ */
+async function tick() {
+  await act(async () => {
+    await Promise.resolve()
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Setup & Teardown
 // ---------------------------------------------------------------------------
 const openTrackedWs = vi.fn()
-const parseWsMessage = (event: MessageEvent) => {
+const parseWsMessage = (event: MessageEvent): VersionWsMessage | null => {
   try {
     return JSON.parse(event.data) as VersionWsMessage
   } catch {
@@ -181,9 +191,7 @@ describe('useUpgradeWebSocket — createVersionWsHandle WebSocket lifecycle', ()
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const ensurePromise = handle.ensureWs()
 
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     mockWs.triggerOpen()
 
@@ -197,49 +205,49 @@ describe('useUpgradeWebSocket — createVersionWsHandle WebSocket lifecycle', ()
     openTrackedWs.mockResolvedValueOnce(mockWs)
 
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
-    
-    let rejectError: any = null
-    const ensurePromise = handle.ensureWs().catch((e) => {
-      rejectError = e
-    })
+    const ensurePromise = handle.ensureWs()
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerError()
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
-    expect(rejectError).toBeTruthy()
-    expect(rejectError.message).toBe('WebSocket error')
+    await expect(ensurePromise).rejects.toThrow('WebSocket error')
   })
 
-  it('ensureWs rejects with "WebSocket connection timeout" after VERSION_REQUEST_TIMEOUT_MS without onopen', async () => {
-    vi.useFakeTimers()
-    const mockWs = new MockWebSocket('ws://test')
-    openTrackedWs.mockResolvedValueOnce(mockWs)
+  it(
+    'ensureWs rejects with "WebSocket connection timeout" after VERSION_REQUEST_TIMEOUT_MS without onopen',
+    async () => {
+      vi.useFakeTimers()
+      const mockWs = new MockWebSocket('ws://test')
+      openTrackedWs.mockResolvedValueOnce(mockWs)
 
-    const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
-    
-    let rejectError: any = null
-    const ensurePromise = handle.ensureWs().catch((e) => {
-      rejectError = e
-    })
+      const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
 
-    await act(async () => {
-      await Promise.resolve()
-    })
+      // Capture the rejection into a variable to avoid any unhandled-rejection window.
+      // The primary ensureWs() path uses VERSION_REQUEST_TIMEOUT_MS (10 s) for the connection
+      // timeout — not WS_CONNECTION_TIMEOUT_MS (5 s), which is only used in the concurrent
+      // second-caller interval-check path.
+      let caughtError: Error | null = null
+      handle.ensureWs().catch((e: Error) => {
+        caughtError = e
+      })
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(VERSION_REQUEST_TIMEOUT_MS)
-    })
+      await tick()
 
-    expect(rejectError).toBeTruthy()
-    expect(rejectError.message).toBe('WebSocket connection timeout')
-  })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(VERSION_REQUEST_TIMEOUT_MS)
+      })
+
+      // Drain microtasks so the .catch handler above runs
+      await tick()
+
+      expect(caughtError).toBeTruthy()
+      expect(caughtError!.message).toBe('WebSocket connection timeout')
+
+      // Cancel any leftover timers so they don't leak into subsequent tests
+      handle.destroy()
+    },
+    VERSION_REQUEST_TIMEOUT_MS + 2000 // give the test enough wall-clock time
+  )
 
   it('ensureWs returns existing open WebSocket on second call without creating a new one', async () => {
     const mockWs = new MockWebSocket('ws://test')
@@ -248,9 +256,7 @@ describe('useUpgradeWebSocket — createVersionWsHandle WebSocket lifecycle', ()
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
 
     const p1 = handle.ensureWs()
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
     mockWs.triggerOpen()
     await p1
 
@@ -265,45 +271,62 @@ describe('useUpgradeWebSocket — createVersionWsHandle WebSocket lifecycle', ()
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     handle.destroy()
 
-    let rejectError: any = null
-    await handle.ensureWs().catch((e) => {
-      rejectError = e
-    })
-
-    expect(rejectError).toBeTruthy()
-    expect(rejectError.message).toBe('Handle destroyed')
+    await expect(handle.ensureWs()).rejects.toThrow('Handle destroyed')
   })
 
-  it('destroy cancels all pending ensure timers so they do not fire after unmount', async () => {
-    vi.useFakeTimers()
-    const mockWs = new MockWebSocket('ws://test')
-    openTrackedWs.mockResolvedValue(mockWs)
+  it(
+    'destroy cancels pending ensure timers — p2 rejects immediately, p1 rejects on connectionTimeout',
+    async () => {
+      // Scenario: two concurrent ensureWs() calls while the socket is still connecting.
+      // After destroy():
+      //   - p2 (2nd caller): the pendingEnsureTimers timeout is cancelled; the setInterval
+      //     check detects `destroyed` and rejects with 'Handle destroyed'.
+      //   - p1 (1st caller): closeWs() is called but the outer promise is only settled by
+      //     the connectionTimeout (VERSION_REQUEST_TIMEOUT_MS). Destroying prevents the
+      //     socket from staying open, so no stale state mutation happens after unmount (#6206).
+      vi.useFakeTimers()
+      const mockWs = new MockWebSocket('ws://test')
+      openTrackedWs.mockResolvedValue(mockWs)
 
-    const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
+      const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
 
-    let p1Error: any = null
-    const p1 = handle.ensureWs().catch((e) => {
-      p1Error = e
-    })
-    
-    await act(async () => {
-      await Promise.resolve()
-    })
+      // Track rejections via .catch so we never have unhandled promise rejections
+      const p1Errors: Error[] = []
+      const p2Errors: Error[] = []
 
-    let p2Error: any = null
-    const p2 = handle.ensureWs().catch((e) => {
-      p2Error = e
-    })
+      const p1 = handle.ensureWs().catch((e: Error) => p1Errors.push(e))
 
-    handle.destroy()
+      // Allow the openTrackedWs promise to resolve so the socket is assigned
+      await tick()
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(WS_CONNECTION_TIMEOUT_MS)
-    })
+      // Second caller enters the `if (connecting)` branch — creates a setInterval check
+      // and a timeout stored in pendingEnsureTimers
+      const p2 = handle.ensureWs().catch((e: Error) => p2Errors.push(e))
 
-    expect(p2Error).toBeTruthy()
-    expect(p2Error.message).toBe('Handle destroyed')
-  })
+      // destroy() cancels pendingEnsureTimers (kills the 5s timeout for p2) and calls
+      // closeWs() which nulls out ws and sets connecting=false
+      handle.destroy()
+
+      // Advance past WS_CONNECTION_TIMEOUT_MS so p2's interval check fires and detects
+      // destroyed=true, then advance to VERSION_REQUEST_TIMEOUT_MS so p1's connectionTimeout
+      // also fires — ensuring no stale timer holds open closure references
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(VERSION_REQUEST_TIMEOUT_MS)
+      })
+
+      // Drain remaining microtasks
+      await p1
+      await p2
+
+      // p2 must reject as 'Handle destroyed' (the interval check detects destroyed=true)
+      expect(p2Errors).toHaveLength(1)
+      expect(p2Errors[0].message).toBe('Handle destroyed')
+
+      // p1 rejects via the connectionTimeout — verify it was rejected (not silently dropped)
+      expect(p1Errors).toHaveLength(1)
+    },
+    VERSION_REQUEST_TIMEOUT_MS + 2000 // give the test enough wall-clock headroom
+  )
 })
 
 describe('useUpgradeWebSocket — fetchClusterVersion', () => {
@@ -324,15 +347,9 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-1', true)
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     await act(async () => {
       const sentMsg = JSON.parse(mockWs.send.mock.calls[0][0])
@@ -354,27 +371,19 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     openTrackedWs.mockResolvedValueOnce(mockWs)
 
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
-    const fetchPromise = handle.fetchClusterVersion('cluster-1')
+    handle.fetchClusterVersion('cluster-1')
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
+    await tick()
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
-    await act(async () => {
-      expect(mockWs.send).toHaveBeenCalledTimes(1)
-      const payload = JSON.parse(mockWs.send.mock.calls[0][0])
-      expect(payload.id).toContain('version-cluster-1')
-      expect(payload.type).toBe('kubectl')
-      expect(payload.payload).toEqual({
-        context: 'cluster-1',
-        args: ['version', '-o', 'json'],
-      })
+    expect(mockWs.send).toHaveBeenCalledTimes(1)
+    const payload = JSON.parse(mockWs.send.mock.calls[0][0])
+    expect(payload.id).toContain('version-cluster-1')
+    expect(payload.type).toBe('kubectl')
+    expect(payload.payload).toEqual({
+      context: 'cluster-1',
+      args: ['version', '-o', 'json'],
     })
   })
 
@@ -385,15 +394,9 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-1')
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     await act(async () => {
       const sentMsg = JSON.parse(mockWs.send.mock.calls[0][0])
@@ -416,22 +419,13 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-1')
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     await act(async () => {
       const sentMsg = JSON.parse(mockWs.send.mock.calls[0][0])
-      mockWs.triggerMessage({
-        id: sentMsg.id,
-        payload: {},
-      })
+      mockWs.triggerMessage({ id: sentMsg.id, payload: {} })
     })
 
     const version = await fetchPromise
@@ -445,23 +439,15 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-1')
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     await act(async () => {
       const sentMsg = JSON.parse(mockWs.send.mock.calls[0][0])
       mockWs.triggerMessage({
         id: sentMsg.id,
-        payload: {
-          output: 'NOT_JSON_BODY',
-        },
+        payload: { output: 'NOT_JSON_BODY' },
       })
     })
 
@@ -478,16 +464,11 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-1', true)
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
+    await tick()
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    // Advance by the request-response timeout to trigger the fallback
     await act(async () => {
       await vi.advanceTimersByTimeAsync(VERSION_REQUEST_TIMEOUT_MS)
     })
@@ -503,15 +484,9 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-1')
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     handle.destroy()
 
@@ -526,15 +501,9 @@ describe('useUpgradeWebSocket — fetchClusterVersion', () => {
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
     const fetchPromise = handle.fetchClusterVersion('cluster-3')
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
+    await tick()
     mockWs.triggerOpen()
-
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     await act(async () => {
       const sentMsg = JSON.parse(mockWs.send.mock.calls[0][0])
@@ -558,19 +527,14 @@ describe('useUpgradeWebSocket — destroy', () => {
     openTrackedWs.mockResolvedValueOnce(mockWs)
 
     const handle = createVersionWsHandle(openTrackedWs, parseWsMessage)
-    
+
     const pEnsure = handle.ensureWs()
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
     mockWs.triggerOpen()
     await pEnsure
 
     const fetchPromise = handle.fetchClusterVersion('cluster-1')
-    
-    await act(async () => {
-      await Promise.resolve()
-    })
+    await tick()
 
     handle.destroy()
 

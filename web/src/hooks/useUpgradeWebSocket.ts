@@ -1,9 +1,9 @@
 import { MS_PER_MINUTE } from '../lib/constants/time'
 import { safeGetJSON, safeSetJSON } from '../lib/safeLocalStorage'
 
-const WS_CONNECTION_TIMEOUT_MS = 5000
+export const WS_CONNECTION_TIMEOUT_MS = 5000
 const WS_READY_CHECK_INTERVAL_MS = 100
-const VERSION_REQUEST_TIMEOUT_MS = 10_000
+export const VERSION_REQUEST_TIMEOUT_MS = 10_000
 
 // Module-level cache for cluster versions (persists across component remounts + page refreshes)
 const STORAGE_KEY = 'kc-cluster-versions'
