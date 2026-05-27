@@ -15,6 +15,7 @@
  */
 
 import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { getStore } from "@netlify/blobs";
 
 // ── Constants ─────────────────────────────────────────────────────────
 
@@ -213,9 +214,10 @@ async function runReport(
 
 // ── Core logic ────────────────────────────────────────────────────────
 
-let cachedResult: { data: Record<string, AffiliateData>; fetchedAt: number } | null = null;
-
-async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
+async function fetchAffiliateClicks(
+  startDateParam?: string | null,
+  endDateParam?: string | null
+): Promise<Record<string, AffiliateData>> {
   const serviceAccountB64 = process.env.GA4_SERVICE_ACCOUNT_JSON;
   const propertyId = process.env.GA4_PROPERTY_ID;
 
@@ -236,8 +238,10 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
 
   const accessToken = await getAccessToken(credentials);
 
-  const endDate = new Date();
-  const startDate = new Date(endDate.getTime() - LOOKBACK_DAYS * 86400000);
+  const endDate = endDateParam ? new Date(endDateParam) : new Date();
+  const startDate = startDateParam
+    ? new Date(startDateParam)
+    : new Date(endDate.getTime() - LOOKBACK_DAYS * 86400000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const dateRange = { startDate: fmt(startDate), endDate: fmt(endDate) };
 
@@ -271,13 +275,16 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
 
   const result: Record<string, AffiliateData> = {};
 
+  const MAX_DAILY_CLICKS = parseInt(process.env.MAX_DAILY_CLICKS || "100000", 10);
+
   function mergeEntry(login: string, utmTerm: string, sessions: number, users: number): void {
     const key = login.toLowerCase();
+    const cappedSessions = Math.min(sessions, MAX_DAILY_CLICKS);
     if (result[key]) {
-      result[key].clicks += sessions;
+      result[key].clicks += cappedSessions;
       result[key].unique_users += users;
     } else {
-      result[key] = { clicks: sessions, unique_users: users, utm_term: utmTerm };
+      result[key] = { clicks: cappedSessions, unique_users: users, utm_term: utmTerm };
     }
   }
 
@@ -329,26 +336,91 @@ export default async (req: Request) => {
     return handlePreflight(req, { methods: "GET, OPTIONS" });
   }
 
-  try {
-    if (cachedResult && Date.now() - cachedResult.fetchedAt < CACHE_TTL_MS) {
-      return new Response(JSON.stringify(cachedResult.data), {
-        status: 200,
-        headers,
-      });
-    }
+  const url = new URL(req.url);
+  const affiliate = url.searchParams.get("affiliate");
+  const startDateParam = url.searchParams.get("startDate");
+  const endDateParam = url.searchParams.get("endDate");
 
-    const data = await fetchAffiliateClicks();
-    cachedResult = { data, fetchedAt: Date.now() };
+  // Validate only when affiliate query parameter is explicitly provided,
+  // or custom dates are supplied. Keeps standard leaderboard backward compatible.
+  const isCustomQuery = url.searchParams.has("affiliate") || url.searchParams.has("startDate") || url.searchParams.has("endDate");
+
+  if (isCustomQuery) {
+    if (!affiliate) {
+      return new Response(
+        JSON.stringify({ error: "Missing required affiliate parameter" }),
+        { status: 400, headers }
+      );
+    }
+    if (startDateParam && isNaN(Date.parse(startDateParam))) {
+      return new Response(
+        JSON.stringify({ error: "Invalid startDate parameter" }),
+        { status: 400, headers }
+      );
+    }
+    if (endDateParam && isNaN(Date.parse(endDateParam))) {
+      return new Response(
+        JSON.stringify({ error: "Invalid endDate parameter" }),
+        { status: 400, headers }
+      );
+    }
+  }
+
+  // 1. Demo Mode Fallback
+  if (process.env.DEMO_MODE === "true") {
+    const demoData = {
+      "rishi-jat": { clicks: 42, unique_users: 12, utm_term: "intern-01" },
+      "ghanshyam2005singh": { clicks: 15, unique_users: 5, utm_term: "intern-02" },
+    };
+    return new Response(JSON.stringify(demoData), {
+      status: 200,
+      headers,
+    });
+  }
+
+  const store = getStore("affiliate-clicks");
+  const cacheKey = `clicks:${affiliate || "all"}:${startDateParam || "default"}:${endDateParam || "default"}`;
+
+  // 2. Try KV cache read
+  let cachedEntry: { data: Record<string, AffiliateData>; fetchedAt: number } | null = null;
+  try {
+    const cached = await store.get(cacheKey, { type: "text" });
+    if (cached) {
+      cachedEntry = JSON.parse(cached);
+    }
+  } catch (err) {
+    // Ignore KV read failures
+  }
+
+  if (cachedEntry && Date.now() - cachedEntry.fetchedAt < CACHE_TTL_MS) {
+    return new Response(JSON.stringify(cachedEntry.data), {
+      status: 200,
+      headers,
+    });
+  }
+
+  // 3. Query GA4 live and update KV store
+  try {
+    const data = await fetchAffiliateClicks(startDateParam, endDateParam);
+    const newEntry = { data, fetchedAt: Date.now() };
+
+    // Async write to store (best-effort)
+    store.set(cacheKey, JSON.stringify(newEntry)).catch((err) => {
+      console.warn("Failed to write to KV store:", err);
+    });
 
     return new Response(JSON.stringify(data), { status: 200, headers });
   } catch (err) {
     console.error("Failed to fetch affiliate clicks:", err);
-    if (cachedResult) {
-      return new Response(JSON.stringify(cachedResult.data), {
+    
+    // Serve stale cache if available
+    if (cachedEntry) {
+      return new Response(JSON.stringify(cachedEntry.data), {
         status: 200,
         headers,
       });
     }
+
     return new Response(
       JSON.stringify({ error: "Failed to fetch affiliate data" }),
       { status: 502, headers }
@@ -358,4 +430,10 @@ export default async (req: Request) => {
 
 export const config = {
   path: "/api/affiliate/clicks",
+};
+
+export const _testOnly = {
+  resetCache: () => {
+    cachedToken = null;
+  },
 };
