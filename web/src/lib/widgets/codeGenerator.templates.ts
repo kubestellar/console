@@ -1169,7 +1169,7 @@ export const render = ({ output }) => {
   const getData = (path, src) => {
     try {
       const tokens = String(path)
-        .replace(/\[(\w+)\]/g, '.$1')
+        .replace(/\\[(\\w+)\\]/g, '.$1')
         .split('.')
         .filter(Boolean);
       let cur = src;
