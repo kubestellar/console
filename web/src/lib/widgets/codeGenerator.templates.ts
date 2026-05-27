@@ -61,6 +61,7 @@ export function generateCardRenderFunction(cardType: string, displayName?: strin
   const issueButton = `
         <div style={{marginTop: '8px'}}><button style={styles.issueBtn} onClick={() => openIssue(error)}>Report Issue</button></div>`
 
+  switch (cardType) {
     case 'cluster_health':
       return `
 export const render = ({ output }) => {${parseBlock}
