@@ -102,6 +102,12 @@ resources:
     cpu: 100m
     memory: 256Mi
 
+# Deployment controller deadline. Kubernetes defaults this to 600s, which can
+# undercut Helm's longer --wait/--timeout window on slower clusters and cause
+# an early "Progress deadline exceeded" rollback before Helm times out.
+deployment:
+  progressDeadlineSeconds: 900
+
 # GitHub OAuth configuration
 github:
   url: ""  # GitHub Enterprise URL (e.g., "https://github.ibm.com"). Leave empty for github.com

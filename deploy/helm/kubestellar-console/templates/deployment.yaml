@@ -6,6 +6,7 @@ metadata:
     {{- include "kubestellar-console.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  progressDeadlineSeconds: {{ .Values.deployment.progressDeadlineSeconds }}
   selector:
     matchLabels:
       {{- include "kubestellar-console.selectorLabels" . | nindent 6 }}
