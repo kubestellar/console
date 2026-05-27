@@ -258,7 +258,7 @@ export function ActiveAlerts() {
            responds to card width, not viewport width */}
       <div className="mb-3 flex flex-col gap-2 shrink-0 @lg:flex-row @lg:items-center @lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          {stats.firing > 0 && (
+          {stats && stats.firing > 0 && (
             <StatusBadge color="red" variant="outline" rounded="full">
               {t('activeAlerts.firingCount', { count: stats.firing })}
             </StatusBadge>
@@ -380,7 +380,7 @@ export function ActiveAlerts() {
       </div>
 
       {/* Stats Row */}
-      <AlertStatsRow critical={stats.critical} warning={stats.warning} acknowledged={stats.acknowledged} />
+      <AlertStatsRow critical={stats?.critical ?? 0} warning={stats?.warning ?? 0} acknowledged={stats?.acknowledged ?? 0} />
 
       {/* Alerts List */}
       {displayedAlerts.length === 0 ? (

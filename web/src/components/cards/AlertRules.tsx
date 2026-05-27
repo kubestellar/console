@@ -89,7 +89,7 @@ export function AlertRulesCard() {
   const sortOptions = SORT_OPTIONS_KEYS.map(o => ({ value: o.value, label: t(o.labelKey) as string }))
 
   // Count enabled rules
-  const enabledCount = rules.filter(r => r.enabled).length
+  const enabledCount = (rules || []).filter(r => r.enabled).length
 
   // Severity indicator
   const SeverityIndicator = ({ severity }: { severity: AlertSeverity }) => {
@@ -258,7 +258,7 @@ export function AlertRulesCard() {
 
                   {/* Channels */}
                   <div className="flex items-center gap-2 mt-1.5">
-                    {rule.channels.map((channel, idx) => (
+                    {(rule.channels || []).map((channel, idx) => (
                       <span
                         key={idx}
                         className={`px-1.5 py-0.5 text-2xs rounded ${
