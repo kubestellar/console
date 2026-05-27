@@ -1211,11 +1211,29 @@ export function generateTemplateWidget(
     throw new Error(`Unknown template ID: ${templateId}`)
   }
 
+  // Collect all API endpoints from cards and stats
+  const allEndpoints: string[] = []
+  template.cards.forEach((cardType) => {
+    const card = WIDGET_CARDS[cardType]
+    if (card) {
+      card.apiEndpoints.forEach((ep) => {
+        if (!allEndpoints.includes(ep)) allEndpoints.push(ep)
+      })
+    }
+  })
+  template.stats?.forEach((statId) => {
+    const stat = WIDGET_STATS[statId]
+    if (stat && !allEndpoints.includes(stat.apiEndpoint)) allEndpoints.push(stat.apiEndpoint)
+  })
+  const validEndpoints = allEndpoints.filter((ep): ep is string => typeof ep === 'string' && ep.length > 0)
+  const firstEndpoint = validEndpoints[0]
+  if (!firstEndpoint) {
+    throw new Error(`Template "${templateId}" has no resolvable data endpoint (no cards and no stat.apiEndpoint)`)
+  }
   const base = apiEndpoint || 'http://localhost:8081'
-  const endpoint = `${base}${template.apiEndpoint}`
-  const curlUrl = endpoint + (endpoint.includes('?') ? '&' : '?') + 'source=ubersicht-widget'
+  const curlUrl = `${base}${firstEndpoint}`
 
-  const statComponents = (template.statIds || []).map((id) => generateMiniStatComponent(id)).join('\n\n')
+  const statComponents = (template.stats || []).map((id: string) => generateMiniStatComponent(id)).join('\n\n')
 
   return `/**
  * ${template.displayName} Template Widget
@@ -1273,9 +1291,9 @@ export const render = ({ output }) => {
     <div style={styles.column}>
       <h3 style={{margin: '0 0 12px 0', fontSize: '16px'}}>${template.displayName}</h3>
       ${
-        template.statIds && template.statIds.length > 0
+        template.stats && template.stats.length > 0
           ? `<div style={styles.row}>
-        ${template.statIds.map((id) => `<${id.replace(/_/g, '')}Stat data={data} />`).join('\n        ')}
+        ${template.stats.map((id: string) => `<${id.replace(/_/g, '')}Stat data={data} />`).join('\n        ')}
       </div>`
           : ''
       }
