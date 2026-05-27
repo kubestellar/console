@@ -251,8 +251,8 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
   const gpuCost = config?.gpuCostPerHour ?? pricing.gpu
 
   const gpuByCluster = useMemo(() => {
-    const map: Record<string, number> = {};
-    (gpuNodes || []).forEach(node => {
+    const map: Record<string, number> = {}
+    ;(gpuNodes || []).forEach(node => {
       const clusterKey = (node.cluster ?? '').split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
