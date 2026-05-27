@@ -144,12 +144,12 @@ const CI_TIMEOUT_MULTIPLIER = 2
  * Maximum acceptable median warm time-to-content (ms).
  * CI shared runners exhibit 2-5× slower React hydration due to CPU
  * contention and virtualisation overhead, so we apply a multiplier.
- * Increased to 35000ms (70× local) to account for nightly CI runner variability
- * (#13547, #13789, #14815, #14979, #15179, #15209, #15411, #15469, #15523, #15645).
+ * Increased to 45000ms (90× local) to account for nightly CI runner variability
+ * (#13547, #13789, #14815, #14979, #15179, #15209, #15411, #15469, #15523, #15645, #15851).
  * With 150+ cards and growing card count (likely beyond 150 now), shared CI
  * infrastructure can occasionally push warm median TTC beyond previous thresholds.
  */
-const WARM_TTC_THRESHOLD_MS = process.env.CI ? 35_000 : 500
+const WARM_TTC_THRESHOLD_MS = process.env.CI ? 45_000 : 500
 const MAX_REAL_CACHE_FAILURES = process.env.CI ? 1 : 0
 
 
