@@ -272,7 +272,40 @@ func TestServer_SmartRouting(t *testing.T) {
 	}
 }
 
-// TestServer_ProviderFallback tests that we fall back to a default provider
+// TestServer_NoAIProviderConfiguredResponse verifies the clear no-provider message.
+func TestServer_NoAIProviderConfiguredResponse(t *testing.T) {
+	s := &Server{registry: &Registry{providers: make(map[string]AIProvider)}}
+
+	if s.hasConfiguredAIProvider() {
+		t.Fatal("expected no configured AI providers")
+	}
+
+	resp := s.noAIProviderConfiguredResponse("diagnose-1")
+	if resp.Type != protocol.TypeError {
+		t.Fatalf("expected error response, got %s", resp.Type)
+	}
+
+	payload, ok := resp.Payload.(protocol.ErrorPayload)
+	if !ok {
+		t.Fatalf("expected protocol.ErrorPayload, got %T", resp.Payload)
+	}
+	if payload.Code != "no_provider_configured" {
+		t.Fatalf("expected no_provider_configured code, got %q", payload.Code)
+	}
+	if payload.Message != noAIProviderConfiguredMessage {
+		t.Fatalf("expected %q, got %q", noAIProviderConfiguredMessage, payload.Message)
+	}
+
+	registry := &Registry{providers: make(map[string]AIProvider)}
+	if err := registry.Register(&ServerMockProvider{name: "mock"}); err != nil {
+		t.Fatalf("register provider: %v", err)
+	}
+	s.registry = registry
+	if !s.hasConfiguredAIProvider() {
+		t.Fatal("expected configured AI provider after registration")
+	}
+}
+
 func TestServer_ProviderFallback(t *testing.T) {
 	registry := &Registry{
 		providers: make(map[string]AIProvider),

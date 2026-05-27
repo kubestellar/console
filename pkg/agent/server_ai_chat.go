@@ -219,6 +219,10 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		req.SessionID = uuid.New().String()
 	}
 
+	if !s.hasConfiguredAIProvider() {
+		return s.noAIProviderConfiguredResponse(msg.ID)
+	}
+
 	// Determine which agent to use
 	agentName := req.Agent
 	if forceAgent != "" {
@@ -411,6 +415,16 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 			Message: message,
 		},
 	}
+}
+
+const noAIProviderConfiguredMessage = "No AI provider configured. Please configure an AI provider in Settings."
+
+func (s *Server) hasConfiguredAIProvider() bool {
+	return s != nil && s.registry != nil && len(s.registry.ListAvailable()) > 0
+}
+
+func (s *Server) noAIProviderConfiguredResponse(id string) protocol.Message {
+	return s.errorResponse(id, "no_provider_configured", noAIProviderConfiguredMessage)
 }
 
 // classifyProviderError inspects an AI provider error and returns a

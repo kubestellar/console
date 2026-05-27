@@ -86,6 +86,11 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		req.SessionID = uuid.New().String()
 	}
 
+	if !s.hasConfiguredAIProvider() {
+		safeWrite(connCtx, s.noAIProviderConfiguredResponse(msg.ID))
+		return
+	}
+
 	// Create a context with both cancel and timeout so that:
 	//   1. cancel_chat messages can stop this session immediately,
 	//   2. a hard deadline prevents missions from running forever when the

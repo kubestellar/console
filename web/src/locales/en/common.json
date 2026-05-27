@@ -2864,6 +2864,7 @@
     },
     "errors": {
       "invalidPodResponse": "Failed to load pod details due to an invalid agent response.",
+      "aiAnalysisFailed": "AI analysis failed.",
       "failedToParseResponse": "Failed to parse response from agent",
       "failedToDeletePod": "Failed to delete pod",
       "failedToSaveLabels": "Failed to save labels",

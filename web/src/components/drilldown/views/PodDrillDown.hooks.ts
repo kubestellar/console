@@ -90,6 +90,10 @@ export function usePodData({
     'drilldown.errors.invalidPodResponse',
     'Failed to load pod details due to an invalid agent response.',
   )
+  const aiAnalysisFailedError = t(
+    'drilldown.errors.aiAnalysisFailed',
+    'AI analysis failed.',
+  )
 
   // Fetchers
   const describeFetcher = useCallback(async (): Promise<string> => {
@@ -335,17 +339,34 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
           return
         }
 
-        const response = msg.payload?.response
-        if (msg.id === requestId && typeof response === 'string') {
+        if (msg.id !== requestId) {
+          return
+        }
+
+        const errorMessage = typeof msg.payload?.message === 'string'
+          ? msg.payload.message
+          : typeof msg.payload?.error === 'string'
+            ? msg.payload.error
+            : aiAnalysisFailedError
+        if (msg.type === 'error') {
+          reject(new Error(errorMessage))
+          ws.close()
+          return
+        }
+
+        const response = typeof msg.payload?.response === 'string'
+          ? msg.payload.response
+          : typeof msg.payload?.content === 'string'
+            ? msg.payload.content
+            : null
+        if (typeof response === 'string') {
           resolve(response)
           ws.close()
           return
         }
-        if (msg.id === requestId) {
-          reject(new Error(getInvalidWsResponseError('AI analysis')))
-          ws.close()
-          return
-        }
+
+        reject(new Error(getInvalidWsResponseError('AI analysis')))
+        ws.close()
       }
 
       ws.onerror = () => {
@@ -353,7 +374,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
         reject(new Error(getInvalidWsResponseError('AI analysis')))
       }
     })
-  }, [openTrackedWs, runKubectl, parseWsMessage, getInvalidWsResponseError, cluster, podName, namespace, status, backendActionUnavailable, backendUnavailableMessage, showToast])
+  }, [openTrackedWs, runKubectl, parseWsMessage, getInvalidWsResponseError, cluster, podName, namespace, status, backendActionUnavailable, backendUnavailableMessage, showToast, aiAnalysisFailedError])
 
   // UseAsyncData hooks
   const {

@@ -533,11 +533,11 @@ metadata:
   it('handles AI analysis error states', () => {
     mockAgentConnected = true
     mockAiAnalysisLoading = false
-    mockAiAnalysisError = 'Claude API limit exceeded'
+    mockAiAnalysisError = 'No AI provider configured. Please configure an AI provider in Settings.'
 
     render(<PodDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1', status: 'Failed' }} />)
 
-    expect(screen.getByText('Claude API limit exceeded')).toBeInTheDocument()
+    expect(screen.getByText('No AI provider configured. Please configure an AI provider in Settings.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'common.retry' })).toBeInTheDocument()
   })
 
