@@ -17,6 +17,43 @@ const CIRCUIT_ZOOM_PERCENT_DIVISOR = 100
 const CIRCUIT_POPOUT_URL = '/api/quantum/qasm/circuit/ascii'
 const CIRCUIT_ZOOM_LEVELS_PCT = [15, 20, 25, 35, 50, 65, 85, 100, 125, 150]
 
+const isBrowser = typeof window !== 'undefined'
+
+function snapToNearestZoom(pct: number): number {
+  let nearest = CIRCUIT_ZOOM_LEVELS_PCT[0]
+  let nearestDelta = Math.abs(pct - nearest)
+  for (const level of CIRCUIT_ZOOM_LEVELS_PCT) {
+    const delta = Math.abs(pct - level)
+    if (delta < nearestDelta) {
+      nearest = level
+      nearestDelta = delta
+    }
+  }
+  return nearest
+}
+
+function readPersistedZoom(): number {
+  if (!isBrowser) return CIRCUIT_ZOOM_DEFAULT_PCT
+  try {
+    const stored = window.localStorage.getItem(CIRCUIT_ZOOM_STORAGE_KEY)
+    if (!stored) return CIRCUIT_ZOOM_DEFAULT_PCT
+    const parsed = parseInt(stored, 10)
+    if (!Number.isFinite(parsed) || parsed <= 0) return CIRCUIT_ZOOM_DEFAULT_PCT
+    return snapToNearestZoom(parsed)
+  } catch {
+    return CIRCUIT_ZOOM_DEFAULT_PCT
+  }
+}
+
+function writePersistedZoom(pct: number): void {
+  if (!isBrowser) return
+  try {
+    window.localStorage.setItem(CIRCUIT_ZOOM_STORAGE_KEY, pct.toString())
+  } catch {
+    // localStorage may be blocked (privacy mode, quota); ignore.
+  }
+}
+
 interface QuantumCircuitViewerProps {
   isDemoData?: boolean
 }
@@ -38,16 +75,13 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
     pollInterval: CIRCUIT_ASCII_POLLING_INTERVAL_MS,
   })
 
-  const [zoomLevel, setZoomLevel] = React.useState<number>(() => {
-    const stored = localStorage.getItem(CIRCUIT_ZOOM_STORAGE_KEY)
-    if (!stored) return CIRCUIT_ZOOM_DEFAULT_PCT
-    const parsed = parseInt(stored, 10)
-    return Number.isFinite(parsed) ? parsed : CIRCUIT_ZOOM_DEFAULT_PCT
-  })
+  const [zoomLevel, setZoomLevel] = React.useState<number>(readPersistedZoom)
+  const preRef = React.useRef<HTMLPreElement | null>(null)
+  const [naturalSize, setNaturalSize] = React.useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
   const handleZoomChange = (pct: number) => {
     setZoomLevel(pct)
-    localStorage.setItem(CIRCUIT_ZOOM_STORAGE_KEY, pct.toString())
+    writePersistedZoom(pct)
   }
 
   const handlePopout = () => {
@@ -65,6 +99,18 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
     isRefreshing,
   })
 
+  // Measure the unscaled <pre> so the wrapper can reserve the right scrollable
+  // area at any zoom level. Re-measures whenever the circuit text changes;
+  // CSS transforms do not affect offset dimensions, so the measurement remains
+  // valid across zoom changes.
+  React.useLayoutEffect(() => {
+    if (!preRef.current || !circuitAscii) return
+    setNaturalSize({
+      width: preRef.current.offsetWidth,
+      height: preRef.current.offsetHeight,
+    })
+  }, [circuitAscii])
+
   if (authIsLoading) {
     return (
       <div className="p-4">
@@ -78,6 +124,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
       <div className="flex flex-col items-center justify-center p-8 gap-4 text-center">
         <p className="text-gray-500">Please log in to view quantum data</p>
         <button
+          type="button"
           onClick={login}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
@@ -96,6 +143,8 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
   }
 
   const zoomFactor = zoomLevel / CIRCUIT_ZOOM_PERCENT_DIVISOR
+  const scaledWidth = naturalSize.width * zoomFactor
+  const scaledHeight = naturalSize.height * zoomFactor
 
   return (
     <div className="p-4 h-full flex flex-col">
@@ -108,6 +157,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
                 {CIRCUIT_ZOOM_LEVELS_PCT.map((pct) => (
                   <button
                     key={pct}
+                    type="button"
                     onClick={() => handleZoomChange(pct)}
                     className={`px-2 py-1 text-xs rounded border transition-colors ${
                       zoomLevel === pct
@@ -121,6 +171,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
               </div>
             </div>
             <button
+              type="button"
               onClick={handlePopout}
               className="p-1 hover:bg-secondary rounded transition-colors"
               title="Open circuit in new window"
@@ -130,16 +181,28 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
             </button>
           </div>
           <div className="bg-card rounded border border-border overflow-auto flex-1">
-            <pre
-              className="p-4 m-0 whitespace-pre text-foreground quantum-circuit-display"
+            <div
               style={{
-                display: 'inline-block',
-                transform: `scale(${zoomFactor})`,
-                transformOrigin: 'top left',
+                position: 'relative',
+                width: naturalSize.width > 0 ? `${scaledWidth}px` : undefined,
+                height: naturalSize.height > 0 ? `${scaledHeight}px` : undefined,
               }}
             >
-              {circuitAscii}
-            </pre>
+              <pre
+                ref={preRef}
+                className="p-4 m-0 whitespace-pre text-foreground quantum-circuit-display"
+                style={{
+                  display: 'inline-block',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  transform: `scale(${zoomFactor})`,
+                  transformOrigin: 'top left',
+                }}
+              >
+                {circuitAscii}
+              </pre>
+            </div>
           </div>
         </>
       ) : (
