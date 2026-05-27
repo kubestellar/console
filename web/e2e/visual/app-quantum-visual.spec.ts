@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { setupDemoMode } from '../helpers/setup'
+import { CIRCUIT_ZOOM_STORAGE_KEY } from '../../src/components/cards/quantum/QuantumCircuitViewer'
 
 const PAGE_VISIBLE_TIMEOUT_MS = 15_000
 const CARD_VISIBLE_TIMEOUT_MS = 15_000
@@ -39,13 +40,13 @@ test.describe('Quantum dashboard cards', () => {
   test('circuit viewer renders zoom controls and small zoom levels visibly shrink the diagram', async ({ page }) => {
     // Clear persisted zoom so the 100% baseline is deterministic regardless of
     // any prior test run or shared storage state.
-    await page.addInitScript(() => {
+    await page.addInitScript((key: string) => {
       try {
-        window.localStorage.removeItem('quantum-circuit-zoom')
+        window.localStorage.removeItem(key)
       } catch {
         // localStorage unavailable; baseline still works since component falls back to 100%.
       }
-    })
+    }, CIRCUIT_ZOOM_STORAGE_KEY)
 
     await setupQuantumPage(page)
 

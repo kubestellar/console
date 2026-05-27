@@ -11,7 +11,7 @@ import {
 
 const CIRCUIT_ASCII_POLLING_INTERVAL_MS = QUANTUM_CIRCUIT_DEFAULT_POLL_MS
 
-const CIRCUIT_ZOOM_STORAGE_KEY = 'quantum-circuit-zoom'
+export const CIRCUIT_ZOOM_STORAGE_KEY = 'quantum-circuit-zoom'
 const CIRCUIT_ZOOM_DEFAULT_PCT = 100
 const CIRCUIT_ZOOM_PERCENT_DIVISOR = 100
 const CIRCUIT_POPOUT_URL = '/api/quantum/qasm/circuit/ascii'
@@ -186,6 +186,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
                 position: 'relative',
                 width: naturalSize.width > 0 ? `${scaledWidth}px` : undefined,
                 height: naturalSize.height > 0 ? `${scaledHeight}px` : undefined,
+                visibility: naturalSize.width > 0 ? 'visible' : 'hidden',
               }}
             >
               <pre
