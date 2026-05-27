@@ -15,8 +15,14 @@ vi.mock('../../../lib/utils/localStorage', () => ({
   safeRemoveItem: (key: string) => mockSafeRemoveItem(key),
 }))
 
+const mockDispatchStaleCacheCleanupEvent = vi.fn()
+vi.mock('../../../lib/staleCacheEvents', () => ({
+  dispatchStaleCacheCleanupEvent: (detail: unknown) => mockDispatchStaleCacheCleanupEvent(detail),
+}))
+
 import { MS_PER_DAY } from '../../../lib/constants/time'
-import { getStaleCacheMetaKeys, useStaleCacheCleanup } from '../useStaleCacheCleanup'
+import { getStaleCacheMetaKeys, getStaleCacheMetaKeysWithAge, useStaleCacheCleanup } from '../useStaleCacheCleanup'
+import type { StaleCacheCleanupEventDetail } from '../../../lib/staleCacheEvents'
 
 const originalLocalStorage = globalThis.localStorage
 
@@ -35,6 +41,7 @@ beforeEach(() => {
   originalLocalStorage.clear()
   mockSafeGetItem.mockReset()
   mockSafeRemoveItem.mockReset()
+  mockDispatchStaleCacheCleanupEvent.mockReset()
   mockSafeGetItem.mockImplementation((key) => localStorage.getItem(key))
   mockSafeRemoveItem.mockImplementation((key) => {
     localStorage.removeItem(key)
@@ -210,5 +217,143 @@ describe('useStaleCacheCleanup', () => {
 
     expect(getRemovedKeys()).toEqual(['kc_meta:stale-once'])
     expect(mockSafeRemoveItem).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('getStaleCacheMetaKeysWithAge', () => {
+  it('returns key names with their age in milliseconds', () => {
+    const staleAge = MS_PER_DAY + 5000
+    setCacheMeta('kc_meta:aged', {
+      lastSuccessfulRefresh: NOW_MS - staleAge,
+    })
+
+    const result = getStaleCacheMetaKeysWithAge(NOW_MS)
+
+    expect(result).toEqual([{ key: 'kc_meta:aged', ageMs: staleAge }])
+  })
+
+  it('reports Infinity age for keys with no valid timestamp', () => {
+    setCacheMeta('kc_meta:no-ts', { consecutiveFailures: 3 })
+
+    const result = getStaleCacheMetaKeysWithAge(NOW_MS)
+
+    expect(result).toEqual([{ key: 'kc_meta:no-ts', ageMs: Infinity }])
+  })
+
+  it('reports Infinity age for null/empty values', () => {
+    localStorage.setItem('kc_meta:empty', 'x')
+    mockSafeGetItem.mockImplementation((key) => {
+      if (key === 'kc_meta:empty') return null
+      return localStorage.getItem(key)
+    })
+
+    const result = getStaleCacheMetaKeysWithAge(NOW_MS)
+
+    expect(result).toEqual([{ key: 'kc_meta:empty', ageMs: Infinity }])
+  })
+})
+
+describe('useStaleCacheCleanup observability', () => {
+  it('emits event with correct staleKeysFound count', () => {
+    setCacheMeta('kc_meta:stale-1', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1000,
+    })
+    setCacheMeta('kc_meta:stale-2', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 2000,
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    expect(mockDispatchStaleCacheCleanupEvent).toHaveBeenCalledTimes(1)
+    const detail: StaleCacheCleanupEventDetail = mockDispatchStaleCacheCleanupEvent.mock.calls[0][0]
+    expect(detail.staleKeysFound).toBe(2)
+  })
+
+  it('emits event with correct oldestStaleAgeMs value', () => {
+    setCacheMeta('kc_meta:old', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 5000,
+    })
+    setCacheMeta('kc_meta:older', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 99000,
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    const detail: StaleCacheCleanupEventDetail = mockDispatchStaleCacheCleanupEvent.mock.calls[0][0]
+    expect(detail.oldestStaleAgeMs).toBe(MS_PER_DAY + 99000)
+  })
+
+  it('does not emit event when zero stale keys found', () => {
+    setCacheMeta('kc_meta:fresh', {
+      lastSuccessfulRefresh: NOW_MS - 1000,
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    expect(mockDispatchStaleCacheCleanupEvent).not.toHaveBeenCalled()
+  })
+
+  it('emits event even if some safeRemoveItem calls fail', () => {
+    setCacheMeta('kc_meta:fail-remove', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1000,
+    })
+    setCacheMeta('kc_meta:ok-remove', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 2000,
+    })
+
+    mockSafeRemoveItem.mockImplementation((key) => {
+      if (key === 'kc_meta:fail-remove') return false
+      localStorage.removeItem(key)
+      return true
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    expect(mockDispatchStaleCacheCleanupEvent).toHaveBeenCalledTimes(1)
+    const detail: StaleCacheCleanupEventDetail = mockDispatchStaleCacheCleanupEvent.mock.calls[0][0]
+    expect(detail.staleKeysFound).toBe(2)
+    expect(detail.staleKeysRemoved).toBe(1)
+  })
+
+  it('emits event with staleKeysRemoved matching successful removals', () => {
+    setCacheMeta('kc_meta:a', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1,
+    })
+    setCacheMeta('kc_meta:b', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1,
+    })
+    setCacheMeta('kc_meta:c', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1,
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    const detail: StaleCacheCleanupEventDetail = mockDispatchStaleCacheCleanupEvent.mock.calls[0][0]
+    expect(detail.staleKeysRemoved).toBe(3)
+  })
+
+  it('emits event with a valid timestamp and non-negative cleanupDurationMs', () => {
+    setCacheMeta('kc_meta:stale', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1,
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    const detail: StaleCacheCleanupEventDetail = mockDispatchStaleCacheCleanupEvent.mock.calls[0][0]
+    expect(detail.timestamp).toBe(NOW_MS)
+    expect(detail.cleanupDurationMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it('does not include key names in emitted event', () => {
+    setCacheMeta('kc_meta:secret-key-name', {
+      lastSuccessfulRefresh: NOW_MS - MS_PER_DAY - 1,
+    })
+
+    renderHook(() => useStaleCacheCleanup())
+
+    const detail = mockDispatchStaleCacheCleanupEvent.mock.calls[0][0]
+    const detailStr = JSON.stringify(detail)
+    expect(detailStr).not.toContain('kc_meta:')
+    expect(detailStr).not.toContain('secret-key-name')
   })
 })
