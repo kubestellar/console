@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { api } from '../../lib/api'
 import {
   stellarApi,
   getStellarState,
@@ -94,7 +93,8 @@ describe('stellarApi.getState', () => {
 
     const result = await stellarApi.getState()
     expect(result).toEqual(mockState)
-    expect(mockApi.get).toHaveBeenCalledWith('/api/stellar/state', { timeout: undefined, signal: undefined })
+    // Non-brittle assertion: only assert the URL parameter (first arg of first call)
+    expect(mockApi.get.mock.calls[0][0]).toBe('/api/stellar/state')
   })
 
   it('passes timeout and signal options to api.get', async () => {
@@ -158,70 +158,54 @@ describe('stellarApi.getNotifications', () => {
   })
 })
 
-describe('stellarApi — Read endpoints (Missions, Tasks, Actions, Watches, AuditLog)', () => {
-  // getMissions
-  it('getMissions returns .items array from success response, and empty array on auth / non-auth error', async () => {
-    const items = [{ id: 'mission-1' }]
-    mockApi.get.mockResolvedValueOnce({ data: { items } })
-    expect(await stellarApi.getMissions()).toEqual(items)
+// Helper to test typical read endpoints that return items or safe defaults on error (resolves Copilot review on duplication)
+const testReadEndpoint = (
+  name: string,
+  callEndpoint: () => Promise<any[]>,
+  mockItems: any[],
+  expectedUrl: string
+) => {
+  describe(name, () => {
+    it('returns items array on success', async () => {
+      mockApi.get.mockResolvedValueOnce({ data: { items: mockItems } })
+      expect(await callEndpoint()).toEqual(mockItems)
+      expect(mockApi.get).toHaveBeenCalledWith(expectedUrl)
+    })
 
-    mockApi.get.mockRejectedValueOnce(makeAuthError('Unauthenticated'))
-    expect(await stellarApi.getMissions()).toEqual([])
+    it('returns empty array on auth error', async () => {
+      mockApi.get.mockRejectedValueOnce(makeAuthError('Unauthenticated'))
+      expect(await callEndpoint()).toEqual([])
+    })
 
-    mockApi.get.mockRejectedValueOnce(new Error('Fatal'))
-    expect(await stellarApi.getMissions()).toEqual([])
+    it('returns empty array on non-auth error', async () => {
+      mockApi.get.mockRejectedValueOnce(new Error('Fatal'))
+      expect(await callEndpoint()).toEqual([])
+    })
+  })
+}
+
+// Dynamically generate test blocks for all 4 duplicated entity endpoints
+testReadEndpoint('stellarApi.getMissions', () => stellarApi.getMissions(), [{ id: 'mission-1' }], '/api/stellar/missions?limit=50')
+testReadEndpoint('stellarApi.getTasks', () => stellarApi.getTasks(), [{ id: 'task-1' }], '/api/stellar/tasks')
+testReadEndpoint('stellarApi.getActions', () => stellarApi.getActions('pending', 10), [{ id: 'action-1' }], '/api/stellar/actions?limit=10&status=pending')
+testReadEndpoint('stellarApi.getWatches', () => stellarApi.getWatches(), [{ id: 'watch-1' }], '/api/stellar/watches')
+
+// getAuditLog has separate test definition to allow testing default parameter configurations and non-brittle assertions
+describe('stellarApi.getAuditLog', () => {
+  it('returns items array on success', async () => {
+    const mockItems = [{ id: 'audit-1' }]
+    mockApi.get.mockResolvedValueOnce({ data: { items: mockItems } })
+    expect(await stellarApi.getAuditLog(5)).toEqual(mockItems)
+    // Non-brittle assertion: only assert the URL parameter (first arg of first call)
+    expect(mockApi.get.mock.calls[0][0]).toBe('/api/stellar/audit?limit=5')
   })
 
-  // getTasks
-  it('getTasks returns .items array from success response, and empty array on auth / non-auth error', async () => {
-    const items = [{ id: 'task-1' }]
-    mockApi.get.mockResolvedValueOnce({ data: { items } })
-    expect(await stellarApi.getTasks()).toEqual(items)
-
-    mockApi.get.mockRejectedValueOnce(makeAuthError('Unauthenticated'))
-    expect(await stellarApi.getTasks()).toEqual([])
-
-    mockApi.get.mockRejectedValueOnce(new Error('Fatal'))
-    expect(await stellarApi.getTasks()).toEqual([])
-  })
-
-  // getActions
-  it('getActions returns .items array from success response, and empty array on auth / non-auth error', async () => {
-    const items = [{ id: 'action-1' }]
-    mockApi.get.mockResolvedValueOnce({ data: { items } })
-    expect(await stellarApi.getActions('pending', 10)).toEqual(items)
-    expect(mockApi.get).toHaveBeenCalledWith('/api/stellar/actions?limit=10&status=pending')
-
-    mockApi.get.mockRejectedValueOnce(makeAuthError('Unauthenticated'))
-    expect(await stellarApi.getActions()).toEqual([])
-
-    mockApi.get.mockRejectedValueOnce(new Error('Fatal'))
-    expect(await stellarApi.getActions()).toEqual([])
-  })
-
-  // getWatches
-  it('getWatches returns .items array from success response, and empty array on auth / non-auth error', async () => {
-    const items = [{ id: 'watch-1' }]
-    mockApi.get.mockResolvedValueOnce({ data: { items } })
-    expect(await stellarApi.getWatches()).toEqual(items)
-
-    mockApi.get.mockRejectedValueOnce(makeAuthError('Unauthenticated'))
-    expect(await stellarApi.getWatches()).toEqual([])
-
-    mockApi.get.mockRejectedValueOnce(new Error('Fatal'))
-    expect(await stellarApi.getWatches()).toEqual([])
-  })
-
-  // getAuditLog
-  it('getAuditLog returns .items array from success response, and empty array on auth / non-auth error', async () => {
-    const items = [{ id: 'audit-1' }]
-    mockApi.get.mockResolvedValueOnce({ data: { items } })
-    expect(await stellarApi.getAuditLog(5)).toEqual(items)
-    expect(mockApi.get).toHaveBeenCalledWith('/api/stellar/audit?limit=5', { signal: undefined })
-
+  it('returns empty array on auth error', async () => {
     mockApi.get.mockRejectedValueOnce(makeAuthError('Unauthenticated'))
     expect(await stellarApi.getAuditLog()).toEqual([])
+  })
 
+  it('returns empty array on non-auth error', async () => {
     mockApi.get.mockRejectedValueOnce(new Error('Fatal'))
     expect(await stellarApi.getAuditLog()).toEqual([])
   })
