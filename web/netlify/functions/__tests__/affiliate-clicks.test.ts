@@ -47,7 +47,7 @@ describe("affiliate-clicks Netlify Function", () => {
     mockGet.mockResolvedValue(null);
     mockSet.mockResolvedValue(undefined);
 
-    _testOnly.resetCache();
+    _testOnly.resetTokenCache();
 
     vi.stubGlobal("fetch", mockFetch);
     vi.stubGlobal("crypto", {
@@ -58,7 +58,7 @@ describe("affiliate-clicks Netlify Function", () => {
     });
 
     process.env.GA4_SERVICE_ACCOUNT_JSON = serviceAccountB64;
-    process.env.GA4_PROPERTY_ID = "properties/12345";
+    process.env.GA4_PROPERTY_ID = "12345";
   });
 
   afterEach(() => {
@@ -93,7 +93,7 @@ describe("affiliate-clicks Netlify Function", () => {
       expect(body.error).toBe("Missing required affiliate parameter");
     });
 
-    it("returns 400 when date range params are invalid", async () => {
+    it("returns 400 when date range params are invalid formats", async () => {
       const req1 = makeEvent("affiliate=rishi-jat&startDate=invalid-date");
       const res1 = await handler(req1);
       expect(res1.status).toBe(400);
@@ -105,6 +105,22 @@ describe("affiliate-clicks Netlify Function", () => {
       expect(res2.status).toBe(400);
       const body2 = await res2.json();
       expect(body2.error).toBe("Invalid endDate parameter");
+    });
+
+    it("returns 400 when startDate is after endDate", async () => {
+      const req = makeEvent("affiliate=rishi-jat&startDate=2026-02-01&endDate=2026-01-01");
+      const res = await handler(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("startDate must be before or equal to endDate");
+    });
+
+    it("returns 400 when date range span exceeds LOOKBACK_DAYS", async () => {
+      const req = makeEvent("affiliate=rishi-jat&startDate=2026-01-01&endDate=2026-05-01");
+      const res = await handler(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Date range cannot exceed 90 days");
     });
   });
 
@@ -123,16 +139,16 @@ describe("affiliate-clicks Netlify Function", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it("sets correct cache TTL headers in response", async () => {
+    it("sets correct cache TTL headers in response matching 3 minutes", async () => {
       mockGet.mockResolvedValue(JSON.stringify({ data: {}, fetchedAt: Date.now() }));
       const req = makeEvent();
       const res = await handler(req);
-      expect(res.headers.get("cache-control")).toBe("public, max-age=900");
+      expect(res.headers.get("cache-control")).toBe("public, max-age=180");
     });
   });
 
   describe("Cache Miss → GA4 Query Scenario Tests", () => {
-    it("calls GA4 API with correct property ID and date range on cache miss", async () => {
+    it("calls GA4 API with correct property ID (no duplicate prefix) and date range on cache miss", async () => {
       mockGet.mockResolvedValue(null);
       mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "token123" }), { status: 200 }));
       mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ rows: [] }), { status: 200 }));
@@ -142,9 +158,10 @@ describe("affiliate-clicks Netlify Function", () => {
       await handler(req);
 
       const ga4Call = mockFetch.mock.calls.find((call) =>
-        call[0].includes("properties/properties/12345:runReport")
+        typeof call[0] === "string" && call[0].includes("properties/12345:runReport")
       );
       expect(ga4Call).toBeDefined();
+      expect(ga4Call?.[0]).not.toContain("properties/properties/");
     });
 
     it("writes GA4 response to KV cache after successful query", async () => {
@@ -188,11 +205,8 @@ describe("affiliate-clicks Netlify Function", () => {
       const body = await res.json();
       expect(body["rishi-jat"]).toEqual({ clicks: 50, unique_users: 10, utm_term: "intern-01" });
     });
-  });
 
-  describe("Click Capping Scenario Tests", () => {
-    it("caps daily click count at the configured maximum", async () => {
-      process.env.MAX_DAILY_CLICKS = "10";
+    it("filters result by affiliate query parameter before caching and returning", async () => {
       mockGet.mockResolvedValue(null);
       mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "token123" }), { status: 200 }));
       mockFetch.mockResolvedValueOnce(
@@ -203,6 +217,10 @@ describe("affiliate-clicks Netlify Function", () => {
                 dimensionValues: [{ value: "intern-01" }],
                 metricValues: [{ value: "50" }, { value: "10" }],
               },
+              {
+                dimensionValues: [{ value: "intern-02" }],
+                metricValues: [{ value: "15" }, { value: "5" }],
+              },
             ],
           }),
           { status: 200 }
@@ -210,15 +228,73 @@ describe("affiliate-clicks Netlify Function", () => {
       );
       mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ rows: [] }), { status: 200 }));
 
+      const req = makeEvent("affiliate=rishi-jat");
+      const res = await handler(req);
+      const body = await res.json();
+
+      // Body contains only the filtered affiliate
+      expect(body).toEqual({
+        "rishi-jat": { clicks: 50, unique_users: 10, utm_term: "intern-01" },
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mockSet).toHaveBeenCalled();
+      const [key, val] = mockSet.mock.calls[0];
+      expect(key).toBe("clicks:rishi-jat:default:default");
+      const entry = JSON.parse(val);
+      expect(entry.data).toEqual({
+        "rishi-jat": { clicks: 50, unique_users: 10, utm_term: "intern-01" },
+      });
+    });
+  });
+
+  describe("Click Capping Scenario Tests", () => {
+    it("caps accumulated click count at the configured maximum once across multiple campaigns", async () => {
+      process.env.MAX_CLICKS_PER_AFFILIATE = "10";
+      mockGet.mockResolvedValue(null);
+      mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "token123" }), { status: 200 }));
+      
+      // intern_outreach campaign query returns 8 clicks for rishi-jat
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            rows: [
+              {
+                dimensionValues: [{ value: "intern-01" }],
+                metricValues: [{ value: "8" }, { value: "5" }],
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+
+      // contributor_affiliate campaign query returns 6 clicks for rishi-jat
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            rows: [
+              {
+                dimensionValues: [{ value: "rishi-jat" }],
+                metricValues: [{ value: "6" }, { value: "3" }],
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+
       const req = makeEvent();
       const res = await handler(req);
       const body = await res.json();
+
+      // Total sum is 8 + 6 = 14, but capped once at 10
       expect(body["rishi-jat"].clicks).toBe(10);
-      delete process.env.MAX_DAILY_CLICKS;
+      delete process.env.MAX_CLICKS_PER_AFFILIATE;
     });
 
     it("does not cap counts below the maximum", async () => {
-      process.env.MAX_DAILY_CLICKS = "100";
+      process.env.MAX_CLICKS_PER_AFFILIATE = "100";
       mockGet.mockResolvedValue(null);
       mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "token123" }), { status: 200 }));
       mockFetch.mockResolvedValueOnce(
@@ -240,7 +316,7 @@ describe("affiliate-clicks Netlify Function", () => {
       const res = await handler(req);
       const body = await res.json();
       expect(body["rishi-jat"].clicks).toBe(50);
-      delete process.env.MAX_DAILY_CLICKS;
+      delete process.env.MAX_CLICKS_PER_AFFILIATE;
     });
   });
 
@@ -304,10 +380,20 @@ describe("affiliate-clicks Netlify Function", () => {
       expect(body["rishi-jat"].clicks).not.toBeNull();
       delete process.env.DEMO_MODE;
     });
+
+    it("returns demo data unconditionally even if date parameters are invalid", async () => {
+      process.env.DEMO_MODE = "true";
+      const req = makeEvent("affiliate=rishi-jat&startDate=invalid-date-format");
+      const res = await handler(req);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body["rishi-jat"]).toBeDefined();
+      delete process.env.DEMO_MODE;
+    });
   });
 
   describe("Error Handling Scenario Tests", () => {
-    it("returns 500 with error message when GA4 API throws", async () => {
+    it("returns 500/502 with error message when GA4 API throws", async () => {
       mockGet.mockResolvedValue(null);
       mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "token" }), { status: 200 }));
       mockFetch.mockRejectedValueOnce(new Error("GA4 offline"));

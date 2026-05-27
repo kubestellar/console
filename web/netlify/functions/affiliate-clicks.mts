@@ -275,16 +275,13 @@ async function fetchAffiliateClicks(
 
   const result: Record<string, AffiliateData> = {};
 
-  const MAX_DAILY_CLICKS = parseInt(process.env.MAX_DAILY_CLICKS || "100000", 10);
-
   function mergeEntry(login: string, utmTerm: string, sessions: number, users: number): void {
     const key = login.toLowerCase();
-    const cappedSessions = Math.min(sessions, MAX_DAILY_CLICKS);
     if (result[key]) {
-      result[key].clicks += cappedSessions;
+      result[key].clicks += sessions;
       result[key].unique_users += users;
     } else {
-      result[key] = { clicks: cappedSessions, unique_users: users, utm_term: utmTerm };
+      result[key] = { clicks: sessions, unique_users: users, utm_term: utmTerm };
     }
   }
 
@@ -320,6 +317,15 @@ async function fetchAffiliateClicks(
     }
   }
 
+  // Apply capping once to the accumulated results
+  const MAX_CLICKS_PER_AFFILIATE = parseInt(
+    process.env.MAX_CLICKS_PER_AFFILIATE || process.env.MAX_DAILY_CLICKS || "100000",
+    10
+  );
+  for (const key of Object.keys(result)) {
+    result[key].clicks = Math.min(result[key].clicks, MAX_CLICKS_PER_AFFILIATE);
+  }
+
   return result;
 }
 
@@ -329,11 +335,23 @@ export default async (req: Request) => {
   const headers: Record<string, string> = {
     ...buildCorsHeaders(req, { methods: "GET, OPTIONS" }),
     "Content-Type": "application/json",
-    "Cache-Control": "public, max-age=900",
+    "Cache-Control": `public, max-age=${CACHE_TTL_MS / 1000}`,
   };
 
   if (req.method === "OPTIONS") {
     return handlePreflight(req, { methods: "GET, OPTIONS" });
+  }
+
+  // 1. Demo Mode Fallback (Short-circuit before validation for unconditional demo mock)
+  if (process.env.DEMO_MODE === "true") {
+    const demoData = {
+      "rishi-jat": { clicks: 42, unique_users: 12, utm_term: "intern-01" },
+      "ghanshyam2005singh": { clicks: 15, unique_users: 5, utm_term: "intern-02" },
+    };
+    return new Response(JSON.stringify(demoData), {
+      status: 200,
+      headers,
+    });
   }
 
   const url = new URL(req.url);
@@ -364,18 +382,23 @@ export default async (req: Request) => {
         { status: 400, headers }
       );
     }
-  }
-
-  // 1. Demo Mode Fallback
-  if (process.env.DEMO_MODE === "true") {
-    const demoData = {
-      "rishi-jat": { clicks: 42, unique_users: 12, utm_term: "intern-01" },
-      "ghanshyam2005singh": { clicks: 15, unique_users: 5, utm_term: "intern-02" },
-    };
-    return new Response(JSON.stringify(demoData), {
-      status: 200,
-      headers,
-    });
+    if (startDateParam && endDateParam) {
+      const startMs = Date.parse(startDateParam);
+      const endMs = Date.parse(endDateParam);
+      if (startMs > endMs) {
+        return new Response(
+          JSON.stringify({ error: "startDate must be before or equal to endDate" }),
+          { status: 400, headers }
+        );
+      }
+      const maxSpanMs = LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+      if (endMs - startMs > maxSpanMs) {
+        return new Response(
+          JSON.stringify({ error: `Date range cannot exceed ${LOOKBACK_DAYS} days` }),
+          { status: 400, headers }
+        );
+      }
+    }
   }
 
   const store = getStore("affiliate-clicks");
@@ -401,7 +424,19 @@ export default async (req: Request) => {
 
   // 3. Query GA4 live and update KV store
   try {
-    const data = await fetchAffiliateClicks(startDateParam, endDateParam);
+    let data = await fetchAffiliateClicks(startDateParam, endDateParam);
+
+    // Apply affiliate filtering before caching and responding
+    if (affiliate) {
+      const key = affiliate.toLowerCase();
+      const singleData = data[key];
+      if (singleData) {
+        data = { [key]: singleData };
+      } else {
+        data = { [key]: { clicks: 0, unique_users: 0, utm_term: "" } };
+      }
+    }
+
     const newEntry = { data, fetchedAt: Date.now() };
 
     // Async write to store (best-effort)
@@ -433,7 +468,7 @@ export const config = {
 };
 
 export const _testOnly = {
-  resetCache: () => {
+  resetTokenCache: () => {
     cachedToken = null;
   },
 };
