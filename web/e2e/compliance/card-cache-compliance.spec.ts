@@ -455,10 +455,10 @@ async function clearColdBatchStorage(page: Page): Promise<void> {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve) => {
       const req = indexedDB.deleteDatabase(cacheDbName)
       req.onsuccess = () => resolve()
-      req.onerror = () => reject(req.error ?? new Error(`Failed to delete IndexedDB ${cacheDbName}`))
+      req.onerror = () => resolve()
       req.onblocked = () => resolve()
     })
   }, CACHE_DB_NAME)
