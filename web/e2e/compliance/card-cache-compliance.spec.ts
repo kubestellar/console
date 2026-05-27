@@ -151,6 +151,7 @@ const CI_TIMEOUT_MULTIPLIER = 2
  */
 const WARM_TTC_THRESHOLD_MS = process.env.CI ? 45_000 : 500
 const MAX_REAL_CACHE_FAILURES = process.env.CI ? 1 : 0
+const CACHE_DB_NAME = 'kc_cache'
 
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
@@ -438,11 +439,36 @@ async function softNavigateToBatch(
 // Cache inspection helpers
 // ---------------------------------------------------------------------------
 
+async function clearColdBatchStorage(page: Page): Promise<void> {
+  await page.evaluate(async (cacheDbName: string) => {
+    const KEEP_KEYS = new Set([
+      'token', 'kc-demo-mode', 'demo-user-onboarded',
+      'kubestellar-console-tour-completed', 'kc-user-cache',
+      'kc-backend-status', 'kc-sqlite-migrated',
+    ])
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (!key || KEEP_KEYS.has(key)) continue
+      localStorage.removeItem(key)
+    }
+    localStorage.setItem('kc-demo-mode', 'false')
+    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(cacheDbName)
+      req.onsuccess = () => resolve()
+      req.onerror = () => reject(req.error ?? new Error(`Failed to delete IndexedDB ${cacheDbName}`))
+      req.onblocked = () => resolve()
+    })
+  }, CACHE_DB_NAME)
+}
+
 async function snapshotCacheState(page: Page): Promise<{
   indexedDBEntries: CacheEntry[]
   localStorageKeys: string[]
 }> {
-  return await page.evaluate(async () => {
+  return await page.evaluate(async (cacheDbName: string) => {
     // Read localStorage cache-related keys
     const lsKeys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
@@ -462,7 +488,7 @@ async function snapshotCacheState(page: Page): Promise<{
       dataSize: number; dataType: string; isArray: boolean; arrayLength: number | null;
     }>>((resolve) => {
       try {
-        const req = indexedDB.open('kc_cache', 1)
+        const req = indexedDB.open(cacheDbName, 1)
         req.onupgradeneeded = () => {
           const db = req.result
           if (!db.objectStoreNames.contains('cache')) {
@@ -508,7 +534,7 @@ async function snapshotCacheState(page: Page): Promise<{
     })
 
     return { indexedDBEntries: idbEntries, localStorageKeys: lsKeys }
-  })
+  }, CACHE_DB_NAME)
 }
 
 // Data delay is controlled via mockControl.setDelayMode(true) from shared mocks.
@@ -638,22 +664,9 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
 
   for (let batch = 0; batch < totalBatches; batch++) {
     // Clear caches before each batch — allowlist keeps only essential settings
-    // so card-specific localStorage backup keys (e.g. nightly-e2e-cache) are cleared too
-    await page.evaluate(() => {
-      const KEEP_KEYS = new Set([
-        'token', 'kc-demo-mode', 'demo-user-onboarded',
-        'kubestellar-console-tour-completed', 'kc-user-cache',
-        'kc-backend-status', 'kc-sqlite-migrated',
-      ])
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const key = localStorage.key(i)
-        if (!key || KEEP_KEYS.has(key)) continue
-        localStorage.removeItem(key)
-      }
-      localStorage.setItem('kc-demo-mode', 'false')
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('kc-agent-setup-dismissed', 'true')
-    })
+    // so card-specific localStorage backup keys (e.g. nightly-e2e-cache) and
+    // IndexedDB cache state from previous retries are cleared too.
+    await clearColdBatchStorage(page)
 
     const manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
     const selected = manifest.selected || []
