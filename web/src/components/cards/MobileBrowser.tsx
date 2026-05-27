@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ChevronLeft, ChevronRight, Grid3X3,
   Plus, X, Lock, Bookmark, Star,
@@ -49,6 +50,7 @@ const QUICK_LINKS = [
 
 export function MobileBrowser() {
   const { isExpanded } = useCardExpanded()
+  const { t } = useTranslation('cards')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -195,7 +197,7 @@ export function MobileBrowser() {
 
   const newTab = () => {
     const id = Date.now().toString()
-    setTabs(prev => [...prev, { id, url: '', title: 'New Tab' }])
+    setTabs(prev => [...prev, { id, url: '', title: t('mobileBrowser.newTab') }])
     setActiveTabId(id)
     setShowTabs(false)
     setHistory([])
@@ -206,7 +208,7 @@ export function MobileBrowser() {
     e.stopPropagation()
     if (tabs.length === 1) {
       // Don't close last tab, just clear it
-      setTabs([{ id: '1', url: '', title: 'New Tab' }])
+      setTabs([{ id: '1', url: '', title: t('mobileBrowser.newTab') }])
       setActiveTabId('1')
     } else {
       setTabs(prev => prev.filter(t => t.id !== tabId))
@@ -281,7 +283,7 @@ export function MobileBrowser() {
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search or enter website name"
+                  placeholder={t('mobileBrowser.searchPlaceholder')}
                   className="flex-1 bg-transparent text-xs text-center text-gray-700 dark:text-foreground focus:outline-hidden min-w-0"
                 />
                 {urlInput && (
@@ -307,7 +309,7 @@ export function MobileBrowser() {
                   <iframe
                     ref={iframeRef}
                     src={activeTab.url}
-                    title="Mobile Browser"
+                    title={t('mobileBrowser.title')}
                     className="w-full h-full border-none"
                     style={MOBILE_BROWSER_IFRAME_STYLE_1}
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
@@ -321,7 +323,7 @@ export function MobileBrowser() {
                   {/* Bookmarks */}
                   {bookmarks.length > 0 && (
                     <div className="mb-4">
-                      <h3 className="text-xs font-semibold text-muted-foreground mb-2">Favorites</h3>
+                      <h3 className="text-xs font-semibold text-muted-foreground mb-2">{t('mobileBrowser.favorites')}</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {bookmarks.slice(0, 8).map((bookmark, i) => (
                           <button
@@ -343,7 +345,7 @@ export function MobileBrowser() {
 
                   {/* Quick Links */}
                   <div>
-                    <h3 className="text-xs font-semibold text-muted-foreground mb-2">Quick Links</h3>
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2">{t('mobileBrowser.quickLinks')}</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {QUICK_LINKS.map((link) => (
                         <button
@@ -370,13 +372,13 @@ export function MobileBrowser() {
               <div className="absolute inset-0 bg-gray-100 dark:bg-background z-30 p-4 overflow-auto">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm font-semibold text-gray-700 dark:text-foreground">
-                    {tabs.length} Tab{tabs.length !== 1 ? 's' : ''}
+                    {t('mobileBrowser.tabsLabel', { count: tabs.length })}
                   </span>
                   <button
                     onClick={() => setShowTabs(false)}
                     className="text-blue-500 text-sm font-medium"
                   >
-                    Done
+                    {t('mobileBrowser.done')}
                   </button>
                 </div>
                 <div className="grid gap-3">
@@ -396,7 +398,7 @@ export function MobileBrowser() {
                       <div className="bg-white dark:bg-secondary p-3">
                         <div className="flex flex-wrap items-center justify-between gap-y-2">
                           <span className="text-xs font-medium text-gray-700 dark:text-foreground truncate">
-                            {tab.title || 'New Tab'}
+                            {tab.title || t('mobileBrowser.newTab')}
                           </span>
                           <button
                             onClick={(e) => closeTab(tab.id, e)}
@@ -419,7 +421,7 @@ export function MobileBrowser() {
                   className="mt-4 w-full py-2 bg-gray-200 dark:bg-secondary rounded-lg text-sm text-gray-700 dark:text-foreground flex items-center justify-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  New Tab
+                  {t('mobileBrowser.newTab')}
                 </button>
               </div>
             )}
@@ -429,18 +431,18 @@ export function MobileBrowser() {
               <div className="absolute inset-0 bg-gray-100 dark:bg-background z-30 p-4 overflow-auto">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm font-semibold text-gray-700 dark:text-foreground">
-                    Bookmarks
+                    {t('mobileBrowser.bookmarks')}
                   </span>
                   <button
                     onClick={() => setShowSettings(false)}
                     className="text-blue-500 text-sm font-medium"
                   >
-                    Done
+                    {t('mobileBrowser.done')}
                   </button>
                 </div>
                 {bookmarks.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-8">
-                    No bookmarks yet. Tap the star icon to add one.
+                    {t('mobileBrowser.noBookmarks')}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -486,6 +488,8 @@ export function MobileBrowser() {
               <button
                 onClick={goBack}
                 disabled={historyIndex <= 0}
+                title={t('mobileBrowser.back')}
+                aria-label={t('mobileBrowser.back')}
                 className={`p-2 ${historyIndex <= 0 ? 'text-gray-300 dark:text-gray-700' : 'text-blue-500'}`}
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -493,12 +497,16 @@ export function MobileBrowser() {
               <button
                 onClick={goForward}
                 disabled={historyIndex >= history.length - 1}
+                title={t('mobileBrowser.forward')}
+                aria-label={t('mobileBrowser.forward')}
                 className={`p-2 ${historyIndex >= history.length - 1 ? 'text-gray-300 dark:text-gray-700' : 'text-blue-500'}`}
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setShowSettings(true)}
+                title={t('mobileBrowser.bookmarks')}
+                aria-label={t('mobileBrowser.bookmarks')}
                 className="p-2 text-blue-500"
               >
                 <Bookmark className="w-5 h-5" />
@@ -506,12 +514,16 @@ export function MobileBrowser() {
               <button
                 onClick={addBookmark}
                 disabled={!activeTab.url}
+                title={t(isBookmarked ? 'mobileBrowser.bookmarked' : 'mobileBrowser.addBookmark')}
+                aria-label={t(isBookmarked ? 'mobileBrowser.bookmarked' : 'mobileBrowser.addBookmark')}
                 className={`p-2 ${!activeTab.url ? 'text-gray-300 dark:text-gray-700' : isBookmarked ? 'text-yellow-500' : 'text-blue-500'}`}
               >
                 <Star className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
               </button>
               <button
                 onClick={() => setShowTabs(true)}
+                title={t('mobileBrowser.tabs')}
+                aria-label={t('mobileBrowser.tabs')}
                 className="p-2 text-blue-500 relative"
               >
                 <Grid3X3 className="w-5 h-5" />

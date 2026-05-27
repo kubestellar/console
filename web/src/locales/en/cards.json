@@ -4855,5 +4855,22 @@
     "paths_flagged": "unsafe paths flagged for triage",
     "sweep_scheduled": "Weekly bug sweep scheduled (scripts/ai-bug-sweep.js)",
     "version_poc": "Quality Dashboard v1.0 • LFX Mentorship POC"
+  },
+  "mobileBrowser": {
+    "title": "Mobile Browser",
+    "searchPlaceholder": "Search or enter website name",
+    "favorites": "Favorites",
+    "quickLinks": "Quick Links",
+    "tabsLabel_one": "{{count}} Tab",
+    "tabsLabel_other": "{{count}} Tabs",
+    "done": "Done",
+    "newTab": "New Tab",
+    "bookmarks": "Bookmarks",
+    "noBookmarks": "No bookmarks yet. Tap the star icon to add one.",
+    "back": "Back",
+    "forward": "Forward",
+    "addBookmark": "Add bookmark",
+    "bookmarked": "Bookmarked",
+    "tabs": "Tabs"
   }
 }
