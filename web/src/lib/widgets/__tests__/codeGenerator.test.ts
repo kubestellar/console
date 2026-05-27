@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest'
+import { generateWidget, getWidgetFilename } from '../codeGenerator'
 import {
   generateCardWidget,
   generateStatWidget,
   generateTemplateWidget,
-  generateWidget,
-  getWidgetFilename,
-} from '../codeGenerator'
-import type { WidgetConfig } from '../codeGenerator'
+} from '../codeGenerator.templates'
+import type { WidgetConfig } from '../codeGenerator.types'
 
 describe('generateCardWidget', () => {
   it('generates valid widget code for cluster_health', () => {
@@ -112,19 +111,19 @@ describe('generateStatWidget', () => {
 describe('generateTemplateWidget', () => {
   it('generates widget code for cluster_overview template', () => {
     const code = generateTemplateWidget('cluster_overview', 'http://localhost:8080')
-    expect(code).toContain('Cluster Overview Widget')
+    expect(code).toContain('Cluster Overview Template Widget')
     expect(code).toContain('export const command')
     expect(code).toContain('export const render')
   })
 
   it('generates widget code for stat_bar template', () => {
     const code = generateTemplateWidget('stat_bar', 'http://localhost:8080')
-    expect(code).toContain('Stats Bar Widget')
+    expect(code).toContain('Stats Bar Template Widget')
   })
 
   it('throws for unknown template', () => {
     expect(() => generateTemplateWidget('nonexistent_template', 'http://localhost:8080'))
-      .toThrow('Unknown template: nonexistent_template')
+      .toThrow('Unknown template ID: nonexistent_template')
   })
 })
 
@@ -162,7 +161,7 @@ describe('generateWidget', () => {
       theme: 'dark',
     }
     const code = generateWidget(config)
-    expect(code).toContain('Cluster Overview Widget')
+    expect(code).toContain('Cluster Overview Template Widget')
   })
 
   it('throws for missing cardType on card widget', () => {
@@ -436,16 +435,19 @@ describe('generator hardening', () => {
       // that would produce src['items[0]'] and always return 0.
       expect(code).not.toMatch(/path\.split\('\.'\)\.reduce\(/)
       // It should include the bracket-normalization we introduced.
-      expect(code).toMatch(/replace\(\/\\\[/)
+      expect(code).toContain("replace(/\\[(\\w+)\\]/g, '.$1')")
       // The dataPath must still be passed through literally.
       expect(code).toContain("getData('items[0].foo.bar', data)")
 
       // And functionally: evaluate the generated helper to confirm it
-      // walks bracket notation correctly. We extract the helper by name
-      // and eval it in isolation.
-      const helperMatch = code.match(/const getData = \(path, src\) => \{[\s\S]*?\n {2}\};/)
-      expect(helperMatch).toBeTruthy()
-      const getData = new Function(`${helperMatch![0]}; return getData;`)() as (
+      // walks bracket notation correctly. Extract it using stable anchors
+      // instead of whitespace-sensitive regexes.
+      const helperStart = code.indexOf('const getData = (path, src) => {')
+      const helperEnd = code.indexOf('\n\n  return (', helperStart)
+      expect(helperStart).toBeGreaterThanOrEqual(0)
+      expect(helperEnd).toBeGreaterThan(helperStart)
+      const helperSource = code.slice(helperStart, helperEnd).trim()
+      const getData = new Function(`${helperSource}; return getData;`)() as (
         path: string,
         src: unknown,
       ) => unknown
