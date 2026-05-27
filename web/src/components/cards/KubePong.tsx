@@ -5,6 +5,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
+import { isDemoMode } from '@/lib/demoMode'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -40,7 +41,7 @@ interface Paddle {
 }
 
 export function KubePong() {
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: isDemoMode() })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)

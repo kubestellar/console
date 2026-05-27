@@ -8,6 +8,7 @@ import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 import { Button } from '../ui/Button'
+import { isDemoMode } from '@/lib/demoMode'
 
 /** localStorage key for Kube Galaga high score persistence */
 const HIGH_SCORE_KEY = 'kubeGalagaHighScore'
@@ -66,7 +67,7 @@ interface Star {
 }
 
 export function KubeGalaga() {
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: isDemoMode() })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)

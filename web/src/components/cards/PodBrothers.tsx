@@ -8,6 +8,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import { isDemoMode } from '@/lib/demoMode'
 
 // Game constants
 const CANVAS_WIDTH = 480
@@ -85,7 +86,7 @@ const POD_BROTHERS_HIGHSCORE_KEY = 'podBrothersHighScore'
 
 export function PodBrothers() {
   const { t } = useTranslation('cards')
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: isDemoMode() })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
