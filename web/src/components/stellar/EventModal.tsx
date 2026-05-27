@@ -303,7 +303,7 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
   const solveAttemptCount = matchingSolves.length
 
   return (
-    <BaseModal isOpen onClose={onClose} size="lg" testId="stellar-event-modal">
+    <BaseModal isOpen onClose={onClose} size="lg" closeOnBackdrop={false} testId="stellar-event-modal">
       <div className="flex min-h-0 flex-col bg-[var(--s-bg)] text-[var(--s-text)]">
         <BaseModal.Header
           title={liveNotification.title}

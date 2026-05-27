@@ -136,6 +136,7 @@ export function YAMLDrillDown({ data }: Props) {
           <div
             role="button"
             tabIndex={0}
+            aria-label={`${t('drilldown.fields.namespace')}: ${namespace}`}
             onClick={() => drillToNamespace(cluster, namespace)}
             onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToNamespace(cluster, namespace))}
             className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
@@ -149,6 +150,7 @@ export function YAMLDrillDown({ data }: Props) {
           <div
             role="button"
             tabIndex={0}
+            aria-label={`${t('drilldown.fields.cluster')}: ${clusterShort}`}
             onClick={() => drillToCluster(cluster)}
             onKeyDown={(event) => handleButtonLikeKeyDown(event, () => drillToCluster(cluster))}
             className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"

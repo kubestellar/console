@@ -653,6 +653,7 @@ export function WorkloadImportDialog({
       size="md"
       enableBackspace={false}
       closeOnBackdrop={false}
+      closeOnEscape={true}
     >
       <BaseModal.Header
         title={t('workloadImport.title')}

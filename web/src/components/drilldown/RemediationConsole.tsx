@@ -669,6 +669,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 role="button"
                 tabIndex={isExecuting || !shellCommand.trim() ? -1 : 0}
                 aria-disabled={isExecuting || !shellCommand.trim()}
+                aria-label={t('remediation.sendCommand')}
                 onClick={() => {
                   if (!isExecuting && shellCommand.trim()) {
                     executeCommand(shellCommand)
@@ -695,6 +696,7 @@ Labels:       app=${resourceName.split('-')[0]}
                   <div
                     role="button"
                     tabIndex={0}
+                    aria-label={t('remediation.startRemediation')}
                     onClick={startRemediation}
                     onKeyDown={(event) => handleButtonLikeKeyDown(event, startRemediation)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-foreground transition-colors cursor-pointer"
@@ -708,6 +710,7 @@ Labels:       app=${resourceName.split('-')[0]}
                     <div
                       role="button"
                       tabIndex={0}
+                      aria-label={isPaused ? t('remediation.resume') : t('remediation.pause')}
                       onClick={() => setIsPaused(!isPaused)}
                       onKeyDown={(event) => handleButtonLikeKeyDown(event, () => setIsPaused(!isPaused))}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-foreground transition-colors cursor-pointer"
@@ -744,6 +747,7 @@ Labels:       app=${resourceName.split('-')[0]}
               role="button"
               tabIndex={logs.length === 0 ? -1 : 0}
               aria-disabled={logs.length === 0}
+              aria-label={t('remediation.copyLogs')}
               onClick={() => {
                 if (logs.length > 0) {
                   copyLogs()
