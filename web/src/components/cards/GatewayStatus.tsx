@@ -128,7 +128,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         <p className="text-sm text-muted-foreground mb-4">{t('gatewayStatus.loadFailed')}</p>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm"
+          className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm"
         >
           {t('common:common.retry')}
         </button>

@@ -5,6 +5,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
+import { isDemoMode } from '@/lib/demoMode'
 
 // Game constants
 const CANVAS_WIDTH = 400
@@ -18,13 +19,37 @@ const MAX_BALL_SPEED = 12
 const WINNING_SCORE = 7
 
 // Colors (Kubernetes theme)
-const COLORS = {
+const FALLBACK_COLORS = {
   background: '#0a1628',
-  paddle: '#326ce5', // K8s blue
-  ball: '#00d4aa',   // Teal accent
+  paddle: '#326ce5',
+  ball: '#00d4aa',
   net: '#1e3a5f',
   text: '#fff',
   score: '#326ce5' }
+
+type ThemeColors = typeof FALLBACK_COLORS
+
+function getCssVariableColor(style: CSSStyleDeclaration, variableName: string, fallback: string): string {
+  const value = style.getPropertyValue(variableName).trim()
+  if (!value) return fallback
+  return value.startsWith('#') || value.startsWith('rgb') || value.startsWith('hsl')
+    ? value
+    : `hsl(${value})`
+}
+
+function getThemeColors(): ThemeColors {
+  if (typeof document === 'undefined') return FALLBACK_COLORS
+
+  const style = getComputedStyle(document.documentElement)
+  return {
+    background: getCssVariableColor(style, '--background', FALLBACK_COLORS.background),
+    paddle: getCssVariableColor(style, '--primary', FALLBACK_COLORS.paddle),
+    ball: getCssVariableColor(style, '--accent', FALLBACK_COLORS.ball),
+    net: getCssVariableColor(style, '--border', FALLBACK_COLORS.net),
+    text: getCssVariableColor(style, '--foreground', FALLBACK_COLORS.text),
+    score: getCssVariableColor(style, '--primary', FALLBACK_COLORS.score),
+  }
+}
 
 interface Ball {
   x: number
@@ -40,7 +65,7 @@ interface Paddle {
 }
 
 export function KubePong() {
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: isDemoMode() })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -218,12 +243,14 @@ export function KubePong() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const colors = getThemeColors()
+
     // Clear
-    ctx.fillStyle = COLORS.background
+    ctx.fillStyle = colors.background
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
 
     // Draw net
-    ctx.strokeStyle = COLORS.net
+    ctx.strokeStyle = colors.net
     ctx.lineWidth = 2
     ctx.setLineDash([10, 10])
     ctx.beginPath()
@@ -233,14 +260,14 @@ export function KubePong() {
     ctx.setLineDash([])
 
     // Draw paddles
-    ctx.fillStyle = COLORS.paddle
+    ctx.fillStyle = colors.paddle
     // Player paddle (left)
     ctx.fillRect(20, playerPaddleRef.current.y, PADDLE_WIDTH, PADDLE_HEIGHT)
     // AI paddle (right)
     ctx.fillRect(CANVAS_WIDTH - 20 - PADDLE_WIDTH, aiPaddleRef.current.y, PADDLE_WIDTH, PADDLE_HEIGHT)
 
     // Draw ball
-    ctx.fillStyle = COLORS.ball
+    ctx.fillStyle = colors.ball
     ctx.beginPath()
     ctx.arc(
       ballRef.current.x + BALL_SIZE / 2,
@@ -252,7 +279,7 @@ export function KubePong() {
     ctx.fill()
 
     // Draw scores
-    ctx.fillStyle = COLORS.score
+    ctx.fillStyle = colors.score
     ctx.font = 'bold 48px monospace'
     ctx.textAlign = 'center'
     ctx.globalAlpha = 0.3
@@ -345,7 +372,7 @@ export function KubePong() {
                     onClick={() => setDifficulty(d)}
                     className={`px-3 py-1 text-sm rounded capitalize ${
                       difficulty === d
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                         : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
                     }`}
                   >
@@ -356,7 +383,7 @@ export function KubePong() {
 
               <button
                 onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 rounded text-primary-foreground"
               >
                 <Play className="w-4 h-4" />
                 Start Game
@@ -369,7 +396,7 @@ export function KubePong() {
               <div className="text-xl font-bold text-white mb-4">Paused</div>
               <button
                 onClick={togglePause}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 rounded text-primary-foreground"
               >
                 <Play className="w-4 h-4" />
                 Resume
@@ -393,7 +420,7 @@ export function KubePong() {
               <p className="text-lg text-white mb-4">{playerScore} - {aiScore}</p>
               <button
                 onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 rounded text-primary-foreground"
               >
                 <RotateCcw className="w-4 h-4" />
                 Play Again

@@ -310,8 +310,8 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
           'w-full py-1.5 text-xs font-medium rounded-md transition-colors',
           canSave
             ? kind === 'dynamic'
-              ? 'bg-purple-500 text-white hover:bg-purple-600'
-              : 'bg-blue-500 text-white hover:bg-blue-600'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             : 'bg-secondary text-muted-foreground cursor-not-allowed'
         )}
       >
