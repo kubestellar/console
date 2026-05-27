@@ -8,10 +8,9 @@ import {
   useQuantumCircuitAscii,
   QUANTUM_CIRCUIT_DEFAULT_POLL_MS,
 } from '../../../hooks/useCachedQuantum'
+import { CIRCUIT_ZOOM_STORAGE_KEY } from './QuantumCircuitViewer.constants'
 
 const CIRCUIT_ASCII_POLLING_INTERVAL_MS = QUANTUM_CIRCUIT_DEFAULT_POLL_MS
-
-export const CIRCUIT_ZOOM_STORAGE_KEY = 'quantum-circuit-zoom'
 const CIRCUIT_ZOOM_DEFAULT_PCT = 100
 const CIRCUIT_ZOOM_PERCENT_DIVISOR = 100
 const CIRCUIT_POPOUT_URL = '/api/quantum/qasm/circuit/ascii'

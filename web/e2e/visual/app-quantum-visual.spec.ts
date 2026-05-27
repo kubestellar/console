@@ -1,6 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { setupDemoMode } from '../helpers/setup'
-import { CIRCUIT_ZOOM_STORAGE_KEY } from '../../src/components/cards/quantum/QuantumCircuitViewer'
+import { CIRCUIT_ZOOM_STORAGE_KEY } from '../../src/components/cards/quantum/QuantumCircuitViewer.constants'
 
 const PAGE_VISIBLE_TIMEOUT_MS = 15_000
 const CARD_VISIBLE_TIMEOUT_MS = 15_000
