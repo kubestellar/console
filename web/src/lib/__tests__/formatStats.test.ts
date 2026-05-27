@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatStat, formatMemoryStat, formatStorageStat } from '../formatStats'
+import { formatStat, formatMemoryPromptStat, formatMemoryStat, formatStorageStat } from '../formatStats'
 
 describe('formatStat', () => {
   it('returns dash for undefined', () => {
@@ -87,6 +87,20 @@ describe('formatMemoryStat', () => {
 
   it('clamps negative to 0 GB', () => {
     expect(formatMemoryStat(-10)).toBe('0 GB')
+  })
+})
+
+describe('formatMemoryPromptStat', () => {
+  it('formats GB values with up to two decimal places', () => {
+    expect(formatMemoryPromptStat(7.577236175537109)).toBe('7.58 GB')
+  })
+
+  it('trims trailing zeroes for whole numbers', () => {
+    expect(formatMemoryPromptStat(8)).toBe('8 GB')
+  })
+
+  it('formats null values as 0 GB', () => {
+    expect(formatMemoryPromptStat(null)).toBe('0 GB')
   })
 })
 

@@ -18,6 +18,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterStatusDetails } from './ClusterStatusDetails'
+import { formatMemoryPromptStat } from '../../lib/formatStats'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -142,6 +143,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
            n.cluster.includes(primaryClusterName.split('/')[0])
   })
   const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
+  const promptMemorySummary = formatMemoryPromptStat(health?.memoryGB)
 
   // AI diagnose/repair handlers
   const handleDiagnose = () => {
@@ -163,7 +165,7 @@ Current cluster state:
 - Nodes: ${health?.nodeCount || 0} total, ${health?.readyNodes || 0} ready
 - Pods: ${health?.podCount || 0} total
 - CPU: ${health?.cpuCores || 0} cores
-- Memory: ${health?.memoryGB || 0} GB
+- Memory: ${promptMemorySummary}
 - GPUs: ${clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0)} total
 
 Known issues (${podIssues.length + clusterDeploymentIssues.length} total):
@@ -438,7 +440,7 @@ After I approve, help me execute the repairs step by step.`,
                   description: 'Custom question about the cluster',
                   type: 'custom',
                   cluster: clusterName,
-                  initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${health?.memoryGB || 0} GB memory. How can I help you?`,
+                  initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${promptMemorySummary} memory. How can I help you?`,
                   context: { clusterName, health }
                 })
               }}

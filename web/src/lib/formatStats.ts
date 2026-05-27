@@ -4,6 +4,10 @@
  * - Shows '-' when data is unavailable (undefined, null, or explicitly marked unavailable)
  */
 
+const GIGABYTES_PER_TERABYTE = 1024
+const TERABYTES_PER_PETABYTE = 1024
+const MEMORY_PROMPT_DECIMAL_PLACES = 2
+
 /**
  * Format a numeric stat for display
  * @param value - The numeric value to display
@@ -62,18 +66,50 @@ export function formatMemoryStat(gb: number | undefined | null, hasData = true):
   }
 
   const safeValue = Math.max(0, gb)
+  const gigabytesPerPetabyte = GIGABYTES_PER_TERABYTE * TERABYTES_PER_PETABYTE
 
-  if (safeValue >= 1024 * 1024) {
-    return `${(safeValue / (1024 * 1024)).toFixed(1)} PB`
+  if (safeValue >= gigabytesPerPetabyte) {
+    return `${(safeValue / gigabytesPerPetabyte).toFixed(1)} PB`
   }
-  if (safeValue >= 1024) {
-    return `${(safeValue / 1024).toFixed(1)} TB`
+  if (safeValue >= GIGABYTES_PER_TERABYTE) {
+    return `${(safeValue / GIGABYTES_PER_TERABYTE).toFixed(1)} TB`
   }
   if (safeValue >= 1) {
     return `${Math.round(safeValue)} GB`
   }
   if (safeValue >= 0.001) {
-    return `${Math.round(safeValue * 1024)} MB`
+    return `${Math.round(safeValue * GIGABYTES_PER_TERABYTE)} MB`
+  }
+  return '0 GB'
+}
+
+function trimTrailingZeroes(value: string): string {
+  return value.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1')
+}
+
+/**
+ * Format memory size for prompts with readable precision.
+ * @param gb - Size in gigabytes
+ */
+export function formatMemoryPromptStat(gb: number | undefined | null): string {
+  if (gb === undefined || gb === null) {
+    return '0 GB'
+  }
+
+  const safeValue = Math.max(0, gb)
+  const gigabytesPerPetabyte = GIGABYTES_PER_TERABYTE * TERABYTES_PER_PETABYTE
+
+  if (safeValue >= gigabytesPerPetabyte) {
+    return `${(safeValue / gigabytesPerPetabyte).toFixed(1)} PB`
+  }
+  if (safeValue >= GIGABYTES_PER_TERABYTE) {
+    return `${(safeValue / GIGABYTES_PER_TERABYTE).toFixed(1)} TB`
+  }
+  if (safeValue >= 1) {
+    return `${trimTrailingZeroes(safeValue.toFixed(MEMORY_PROMPT_DECIMAL_PLACES))} GB`
+  }
+  if (safeValue >= 0.001) {
+    return `${Math.round(safeValue * GIGABYTES_PER_TERABYTE)} MB`
   }
   return '0 GB'
 }

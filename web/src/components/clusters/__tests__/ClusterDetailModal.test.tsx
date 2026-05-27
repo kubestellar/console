@@ -1,8 +1,8 @@
 /**
  * ClusterDetailModal Component Tests
  */
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { ClusterHealth, ClusterInfo } from '../../../hooks/mcp/types'
 
@@ -31,7 +31,11 @@ const health: ClusterHealth = {
   nodeCount: 3,
   readyNodes: 3,
   podCount: 12,
+  cpuCores: 4,
+  memoryGB: 7.577236175537109,
 }
+
+const mockStartMission = vi.fn()
 
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({ deduplicatedClusters: [clusterInfo], clusters: [clusterInfo] }),
@@ -54,7 +58,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 }))
 
 vi.mock('../../../hooks/useMissions', () => ({
-  useMissions: () => ({ startMission: vi.fn() }),
+  useMissions: () => ({ startMission: mockStartMission }),
 }))
 
 vi.mock('../../../lib/analytics', () => ({
@@ -110,6 +114,10 @@ vi.mock('../ClusterStatusDetails', () => ({
 import { ClusterDetailModal } from '../ClusterDetailModal'
 
 describe('ClusterDetailModal', () => {
+  beforeEach(() => {
+    mockStartMission.mockClear()
+  })
+
   it('exports ClusterDetailModal component', () => {
     expect(ClusterDetailModal).toBeDefined()
     expect(typeof ClusterDetailModal).toBe('function')
@@ -120,5 +128,19 @@ describe('ClusterDetailModal', () => {
 
     expect(screen.getByTestId('cluster-detail-server-address')).toHaveTextContent('https://prod.example.com:6443')
     expect(screen.getByText(/clusterDetail\.akaLabel/)).toBeInTheDocument()
+  })
+
+  it('formats memory values in AI prompts with readable precision', () => {
+    render(<ClusterDetailModal clusterName="prod-cluster" onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('clusterDetail.diagnose'))
+    fireEvent.click(screen.getByText('clusterDetail.ask'))
+
+    expect(mockStartMission).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      initialPrompt: expect.stringContaining('- Memory: 7.58 GB'),
+    }))
+    expect(mockStartMission).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      initialPrompt: expect.stringContaining('and 7.58 GB memory.'),
+    }))
   })
 })
