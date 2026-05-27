@@ -42,7 +42,7 @@ function DeploymentsContent() {
   }
 
   // Filter deployments based on global selection
-  const filteredDeployments = deployments.filter(d =>
+  const filteredDeployments = (deployments || []).filter(d =>
     isAllClustersSelected || (d.cluster && globalSelectedClusters.includes(d.cluster))
   )
 
@@ -50,10 +50,10 @@ function DeploymentsContent() {
   // selection so that per-cluster stats are consistent. Previously only
   // `filteredDeployments` was filtered while issue counts remained global,
   // producing misleading dashboards when a single cluster was selected.
-  const filteredDeploymentIssues = deploymentIssues.filter(i =>
+  const filteredDeploymentIssues = (deploymentIssues || []).filter(i =>
     isAllClustersSelected || (i.cluster && globalSelectedClusters.includes(i.cluster))
   )
-  const filteredPodIssues = podIssues.filter(i =>
+  const filteredPodIssues = (podIssues || []).filter(i =>
     isAllClustersSelected || (i.cluster && globalSelectedClusters.includes(i.cluster))
   )
 

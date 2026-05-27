@@ -32,7 +32,7 @@ export function Nodes() {
   const filterRef = useRef<HTMLDivElement>(null)
 
   // Filter clusters based on global selection
-  const filteredClusters = clusters.filter(c =>
+  const filteredClusters = (clusters || []).filter(c =>
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
   )
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)

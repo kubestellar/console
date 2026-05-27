@@ -65,7 +65,7 @@ export function Pods() {
   const isRefreshing = podIssuesRefreshing
   const isModeSwitching = useIsModeSwitching()
   // Show skeleton during mode switching for smooth transitions
-  const showSkeletons = (podIssues.length === 0 && isLoading) || isModeSwitching
+  const showSkeletons = ((podIssues || []).length === 0 && isLoading) || isModeSwitching
 
   // Handler for keyboard navigation on pod issue cards
   const handlePodIssueKeyDown = (
@@ -145,7 +145,7 @@ export function Pods() {
   // Filter pod issues by global cluster selection
   const filteredPodIssues = useMemo(() => {
     // Apply cluster filtering using the built-in helper
-    let filtered = filterByCluster(podIssues)
+    let filtered = filterByCluster(podIssues || [])
 
     // Apply custom text filtering
     if (customFilter.trim()) {
@@ -164,7 +164,7 @@ export function Pods() {
   // Calculate stats
   const stats = useMemo(() => {
     // Use filtered clusters matching the global selection for pod/cluster counts (#7349)
-    const visibleClusters = clusters.filter(c =>
+    const visibleClusters = (clusters || []).filter(c =>
       isAllClustersSelected || globalSelectedClusters.includes(c.name)
     )
     const totalPods = visibleClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
@@ -375,7 +375,7 @@ export function Pods() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {clusters
+          {(clusters || [])
             .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
             .map((cluster) => {
               const clusterStatus = cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'

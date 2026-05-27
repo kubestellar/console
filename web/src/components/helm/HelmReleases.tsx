@@ -18,7 +18,7 @@ export function HelmReleases() {
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters based on global selection
-  const filteredClusters = clusters.filter(c =>
+  const filteredClusters = (clusters || []).filter(c =>
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
   )
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)

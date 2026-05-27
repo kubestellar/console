@@ -39,7 +39,7 @@ export function Services() {
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters based on global selection
-  const filteredClusters = useMemo(() => clusters.filter(c =>
+  const filteredClusters = useMemo(() => (clusters || []).filter(c =>
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
   ), [clusters, globalSelectedClusters, isAllClustersSelected])
   const reachableClusters = useMemo(
@@ -48,7 +48,7 @@ export function Services() {
   )
 
   // Filter services by selected clusters
-  const filteredServices = useMemo(() => services.filter(s =>
+  const filteredServices = useMemo(() => (services || []).filter(s =>
     isAllClustersSelected || globalSelectedClusters.includes(s.cluster || '')
   ), [globalSelectedClusters, isAllClustersSelected, services])
   const filteredIngresses = useMemo(() => (ingresses || []).filter(ingress =>
