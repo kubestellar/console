@@ -5,10 +5,10 @@ import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { stellarApi } from '../services/stellar'
 import type { ProviderSession, StellarAction, StellarActivity, StellarNotification, StellarObservation, StellarOperationalState, StellarSolve, StellarSolveProgress, StellarTask, StellarWatch } from '../types/stellar'
 
-const STELLAR_ACTIVITY_LIMIT = 200
-const STELLAR_DEFAULT_FETCH_LIMIT = 50
-const STELLAR_RECONNECT_BASE_MS = 1000
-const STELLAR_RECONNECT_MAX_MS = 30000
+export const STELLAR_ACTIVITY_LIMIT = 200
+export const STELLAR_DEFAULT_FETCH_LIMIT = 50
+export const STELLAR_RECONNECT_BASE_MS = 1000
+export const STELLAR_RECONNECT_MAX_MS = 30000
 export const STELLAR_TOKEN_POLL_INTERVAL_MS = 100
 export const STELLAR_TOKEN_POLL_MAX_ATTEMPTS = 30
 export const STELLAR_MISSION_TRIGGER_EVENT = 'stellar:mission_trigger'
@@ -301,6 +301,9 @@ export function useStellarSource() {
     })
     const initialize = async () => {
       await waitForToken()
+      if (!hasStellarAuthCredentials()) {
+        return
+      }
       try {
         await refreshState()
       } catch (err) {
