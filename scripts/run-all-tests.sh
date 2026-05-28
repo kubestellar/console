@@ -315,6 +315,10 @@ if [ -z "$FAST_MODE" ]; then
         #   #8984 ui-compliance-test: renders every registered card type; total
         #     card count keeps growing as we add cards.
         #   #8985 cache-test: renders all cards via the same compliance harness.
+        #   #15933 cache-test: nightly now exercises 347 cards across 15 batches;
+        #     600s was enough to generate the report but not enough to let the
+        #     suite exit cleanly, so the harness killed it after success metrics
+        #     had already been logged. Raise the wall-clock cap to 900s.
         #   #8986 benchmark-test: 12 tests × up to 60s each ≈ 720s worst case.
         #   #8987 ai-ml-test: 15 tests × up to 300s each in pathological cases.
         #   #9098 nav-test: 6 serial scenarios (warmup/cold/warm/from-main/
@@ -334,7 +338,7 @@ if [ -z "$FAST_MODE" ]; then
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
-          ["cache-test"]=600
+          ["cache-test"]=900
           ["benchmark-test"]=600
           # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests
           #   running serially with 6-minute per-test timeout. Default 300s cap kills

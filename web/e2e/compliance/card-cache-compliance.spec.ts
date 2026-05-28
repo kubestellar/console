@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page, type Route } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
@@ -135,10 +135,13 @@ const EVALUATE_RETRY_DELAY_MS = 500
  */
 const BATCH_NAV_TIMEOUT_MS = process.env.CI ? 90_000 : 45_000
 /**
- * Overall test timeout (ms). 300s base × 2 CI multiplier = 600s, matching
- * the suite wall-clock cap in run-all-tests.sh (#9101).
+ * Overall test timeout (ms). The cache suite now covers 347 cards across 15
+ * batches, so the previous 600s CI cap was too tight: the report finished
+ * writing, then run-all-tests.sh killed the suite at the wall-clock limit.
+ * 450s base × 2 CI multiplier = 900s to leave headroom for nightly runner
+ * jitter without relaxing the cache assertions themselves (#15933).
  */
-const CACHE_TEST_TIMEOUT_MS = 300_000
+const CACHE_TEST_TIMEOUT_MS = 450_000
 const CI_TIMEOUT_MULTIPLIER = 2
 /**
  * Maximum acceptable median warm time-to-content (ms).
@@ -162,6 +165,7 @@ const STORAGE_CLEANUP_TIMEOUT_MS = 5_000
 const STORAGE_CLEANUP_POLL_INTERVAL_MS = 100
 const STORAGE_CLEANUP_POLL_ATTEMPTS = 20
 const COLD_BATCH_RESET_WINDOW_NAME = '__kc-cache-test-cold-reset__'
+const EMPTY_SSE_BODY = ': keep-alive\n\n'
 const COLD_BATCH_KEEP_LOCAL_STORAGE_KEYS = [
   'token',
   'kc-demo-mode',
@@ -696,13 +700,24 @@ function writeReport(report: CacheComplianceReport, outDir: string) {
 // Main test
 // ---------------------------------------------------------------------------
 
+function fulfillSkippedRoute(route: Route) {
+  const acceptHeader = route.request().headers().accept || ''
+  const isStreamRequest = route.request().url().includes('/stream') || acceptHeader.includes('text/event-stream')
+
+  return route.fulfill({
+    status: 200,
+    contentType: isStreamRequest ? 'text/event-stream' : 'application/json',
+    body: isStreamRequest ? EMPTY_SSE_BODY : '{}',
+  })
+}
+
 test.describe.configure({ mode: 'serial' })
 
 test('card cache compliance — storage and retrieval', async ({ page }, testInfo) => {
-  // 300s base × 2 CI multiplier = 600s, matching the suite wall-clock cap in
-  // run-all-tests.sh. No testInfo.setTimeout was set before (#9101), so the
-  // test ran against the global config timeout (1200s) which meant timeout
-  // errors only surfaced as wall-clock kills.
+  // 450s base × 2 CI multiplier = 900s, aligned with run-all-tests.sh. The
+  // suite now renders 347 cards across 15 batches, so the old 600s ceiling
+  // could kill the run after report generation even when cache assertions
+  // already passed (#15933).
   testInfo.setTimeout(process.env.CI ? CACHE_TEST_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : CACHE_TEST_TIMEOUT_MS)
 
   const allBatchResults: Array<{ batchIndex: number; cards: CardCacheResult[] }> = []
@@ -730,7 +745,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
     '**/api/self-upgrade/**', '**/api/admin/**', '**/api/acmm/**',
   ]
   for (const pattern of skipRoutePatterns) {
-    await page.route(pattern, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
+    await page.route(pattern, fulfillSkippedRoute)
   }
 
   await setLiveColdMode(page)
