@@ -5,10 +5,11 @@ import { renderHook } from '@testing-library/react'
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockUseCache, mockClusterCacheRef, mockAuthFetch } = vi.hoisted(() => ({
+const { mockUseCache, mockClusterCacheRef, mockAuthFetch, mockIsDemoMode } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
   mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> },
   mockAuthFetch: vi.fn(),
+  mockIsDemoMode: vi.fn(() => false),
 }))
 
 vi.mock('../../lib/cache', () => ({
@@ -26,6 +27,10 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
 
 vi.mock('../../lib/api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+}))
+
+vi.mock('../../lib/demoMode', () => ({
+  isDemoMode: () => mockIsDemoMode(),
 }))
 
 vi.mock('../../lib/constants/network', async (importOriginal) => ({
@@ -93,6 +98,7 @@ function defaultCache(overrides = {}) {
 beforeEach(() => {
   vi.clearAllMocks()
   mockClusterCacheRef.clusters = []
+  mockIsDemoMode.mockReturnValue(false)
   mockUseCache.mockReturnValue(defaultCache())
 })
 
@@ -144,6 +150,23 @@ describe('useCachedNamespaces', () => {
       '/api/namespaces?cluster=real-context',
       expect.objectContaining({ headers: { Accept: 'application/json' } }),
     )
+  })
+
+  it('does not merge cached namespaces into successful live responses', async () => {
+    mockClusterCacheRef.clusters = [{
+      name: 'friendly-cluster',
+      context: 'real-context',
+      namespaces: ['production', 'staging'],
+    }]
+    mockAuthFetch.mockResolvedValue({
+      ok: true,
+      json: async () => [{ name: 'kube-system' }, { name: 'team-a' }],
+    })
+
+    renderHook(() => useCachedNamespaces('friendly-cluster'))
+    const config = mockUseCache.mock.calls[0]?.[0] as { fetcher: () => Promise<string[]> }
+
+    await expect(config.fetcher()).resolves.toEqual(['kube-system', 'team-a'])
   })
 })
 

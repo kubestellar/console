@@ -9,6 +9,7 @@
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { authFetch } from '../lib/api'
+import { isDemoMode } from '../lib/demoMode'
 import { MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getDemoPVCs,
@@ -243,8 +244,8 @@ function getCachedNamespaceNames(cluster: string): string[] {
     : []
 }
 
-function mergeNamespaceNames(namespaces: string[], cluster: string): string[] {
-  return Array.from(new Set([...(namespaces || []), ...getCachedNamespaceNames(cluster)])).sort()
+function sortNamespaceNames(namespaces: string[]): string[] {
+  return Array.from(new Set((namespaces || []).filter(Boolean))).sort()
 }
 
 async function fetchNamespaceNames(cluster: string, endpoint: string): Promise<string[]> {
@@ -254,7 +255,7 @@ async function fetchNamespaceNames(cluster: string, endpoint: string): Promise<s
   })
   if (!response.ok) throw new Error(`API error: ${response.status}`)
   const data = await response.json().catch(() => null) as NamespaceListResponse
-  return mergeNamespaceNames(normalizeNamespaceNames(data), cluster)
+  return sortNamespaceNames(normalizeNamespaceNames(data))
 }
 
 export function useCachedNamespaces(
@@ -263,6 +264,7 @@ export function useCachedNamespaces(
 ): CachedHookResult<string[]> & { namespaces: string[] } {
   const { category = 'namespaces' } = options || {}
   const key = `namespaces:${cluster || 'all'}`
+  const demoMode = isDemoMode()
   const isClusterOffline = !!(cluster && getNamespaceClusterEntry(cluster)?.reachable === false)
   const offlineError = 'Cluster is offline'
 
@@ -270,15 +272,15 @@ export function useCachedNamespaces(
     key,
     category,
     initialData: [] as string[],
-    demoData: getDemoNamespaces(),
+    demoData: demoMode ? getDemoNamespaces() : undefined,
     fetcher: async () => {
-      if (!cluster) return getDemoNamespaces()
+      if (!cluster) return demoMode ? getDemoNamespaces() : []
       if (isClusterOffline) return []
 
       try {
         return await fetchNamespaceNames(cluster, NAMESPACES_API_ENDPOINT)
       } catch (primaryError) {
-        const cachedNamespaces = getCachedNamespaceNames(cluster)
+        const cachedNamespaces = sortNamespaceNames(getCachedNamespaceNames(cluster))
         if (cachedNamespaces.length > 0) return cachedNamespaces
 
         try {
