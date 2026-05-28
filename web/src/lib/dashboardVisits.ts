@@ -11,8 +11,8 @@ import { DASHBOARD_CHUNKS } from './dashboardChunks'
 import { RETRY_DELAY_MS } from './constants/network'
 
 const VISIT_COUNTS_KEY = 'kubestellar-dashboard-visits'
-const DEFAULT_TOP_N = 5
-const PREFETCH_IDLE_TIMEOUT_MS = 3_000
+export const DEFAULT_TOP_N = 5
+export const PREFETCH_IDLE_TIMEOUT_MS = 3_000
 
 interface VisitCounts {
   [path: string]: number

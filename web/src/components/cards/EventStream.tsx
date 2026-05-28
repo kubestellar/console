@@ -24,21 +24,21 @@ const SORT_OPTIONS = [
 /** Default API fetch ceiling — large enough to give pagination headroom but
  * not so large that the JSON payload becomes wasteful. Used when the user
  * has not configured a `limit` for this card. */
-const DEFAULT_API_FETCH_LIMIT = 100
+export const DEFAULT_API_FETCH_LIMIT = 100
 
 /** Default page size for the in-card "show N" dropdown when the user has
  * not configured a `limit` for this card. */
-const DEFAULT_DISPLAY_LIMIT = 5
+export const DEFAULT_DISPLAY_LIMIT = 5
 
 /** Fallback items-per-page when the prop is not a number (unbounded mode) */
-const UNBOUNDED_ITEMS_PER_PAGE = 1000
+export const UNBOUNDED_ITEMS_PER_PAGE = 1000
 
 /** Footer badges (Warning / Critical counts) and the "Show more" button
  * conditionally render, so without a reserved slot the card grows/shrinks
  * each time those toggle on refresh — causing layout shift on neighboring
  * cards (#8384). A fixed min-height for the footer region absorbs the
  * variance so the card body stays a consistent size across refreshes. */
-const EVENT_STREAM_FOOTER_MIN_HEIGHT_PX = 48
+export const EVENT_STREAM_FOOTER_MIN_HEIGHT_PX = 48
 
 interface EventStreamConfig {
   /** User-configurable max events from the Configure Card modal. Drives BOTH

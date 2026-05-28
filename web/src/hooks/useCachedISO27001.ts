@@ -13,12 +13,12 @@ import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 
-const MAX_WILDCARD_ROLES = 2
-const MAX_NAMESPACE_PREVIEW = 3
-const RUN_AS_NON_ROOT_WARNING_THRESHOLD = 3
-const READ_ONLY_ROOT_WARNING_THRESHOLD = 5
-const LATEST_TAG_WARNING_THRESHOLD = 2
-const MIN_SECRET_VALUE_LENGTH = 20
+export const MAX_WILDCARD_ROLES = 2
+export const MAX_NAMESPACE_PREVIEW = 3
+export const RUN_AS_NON_ROOT_WARNING_THRESHOLD = 3
+export const READ_ONLY_ROOT_WARNING_THRESHOLD = 5
+export const LATEST_TAG_WARNING_THRESHOLD = 2
+export const MIN_SECRET_VALUE_LENGTH = 20
 
 // ============================================================================
 // ISO 27001 Audit Types

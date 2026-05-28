@@ -12,7 +12,7 @@ import { copyToClipboard } from '../../../lib/clipboard'
 import { AgentBackendSettings } from './AgentBackendSettings'
 
 /** Divisor to convert raw token counts to "k" (thousands) for display */
-const TOKENS_PER_K = 1000
+export const TOKENS_PER_K = 1000
 
 interface AgentSectionProps {
   isConnected: boolean

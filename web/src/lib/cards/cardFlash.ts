@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { FLASH_ANIMATION_MS } from '../constants/network'
 
-const DEFAULT_FLASH_THRESHOLD_RATIO = 0.1
-const DEFAULT_FLASH_COOLDOWN_MS = 5_000
+export const DEFAULT_FLASH_THRESHOLD_RATIO = 0.1
+export const DEFAULT_FLASH_COOLDOWN_MS = 5_000
 
 // ============================================================================
 // useCardFlash - Track significant data changes for card flash animation

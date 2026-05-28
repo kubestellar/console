@@ -35,8 +35,8 @@ export type RecentCommit = {
 }
 
 export const GITHUB_RATE_LIMIT_UNTIL_KEY = 'kc-github-rate-limit-until'
-const GITHUB_MAIN_SHA_TIMEOUT_MS = 5_000
-const RECENT_COMMITS_LIMIT = 20
+export const GITHUB_MAIN_SHA_TIMEOUT_MS = 5_000
+export const RECENT_COMMITS_LIMIT = 20
 
 function getCachedDevSHA(): string | null {
   return localStorage.getItem(DEV_SHA_CACHE_KEY)
