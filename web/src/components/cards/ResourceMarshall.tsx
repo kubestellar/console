@@ -10,7 +10,11 @@ import {
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces } from '../../hooks/useCachedData'
 import { useWorkloads } from '../../hooks/useWorkloads'
-import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
+import {
+  getDependencyResolutionErrorMessage,
+  useResolveDependencies,
+  type ResolvedDependency,
+} from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
 import { DEP_CATEGORIES, KIND_ICONS, KNOWN_DEPENDENCY_KINDS } from '../../lib/resourceCategories'
 import { useCardLoadingState } from './CardDataContext'
@@ -256,7 +260,7 @@ export function ResourceMarshall() {
       {depLoading && (
         <div className="flex items-center justify-center py-6 gap-2">
           <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-          <span className="text-sm text-muted-foreground">Resolving dependencies...</span>
+          <span className="text-sm text-muted-foreground">{t('deploy.resolvingDependencies')}</span>
         </div>
       )}
 
@@ -265,8 +269,8 @@ export function ResourceMarshall() {
         <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm text-yellow-400 font-medium">Could not resolve dependencies</p>
-            <p className="text-xs text-yellow-400/70 mt-0.5">{depError.message}</p>
+            <p className="text-sm text-yellow-400 font-medium">{t('deploy.couldNotResolve')}</p>
+            <p className="text-xs text-yellow-400/70 mt-0.5">{getDependencyResolutionErrorMessage(depError, t)}</p>
           </div>
         </div>
       )}

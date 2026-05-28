@@ -19,7 +19,11 @@ import {
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { ClusterBadge } from '../ui/ClusterBadge'
-import { useResolveDependencies, type ResolvedDependency } from '../../hooks/useDependencies'
+import {
+  getDependencyResolutionErrorMessage,
+  useResolveDependencies,
+  type ResolvedDependency,
+} from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 
@@ -102,11 +106,17 @@ export function DeployConfirmDialog({
 
   // Resolve dependencies when dialog opens
   useEffect(() => {
-    if (isOpen && sourceCluster && namespace && workloadName) {
-      resolve(sourceCluster, namespace, workloadName)
+    if (!isOpen) {
+      reset()
+      return
+    }
+
+    if (sourceCluster && namespace && workloadName) {
+      void resolve(sourceCluster, namespace, workloadName)
       setExpandedGroups(new Set())
     }
-    if (!isOpen) {
+
+    return () => {
       reset()
     }
   }, [isOpen, sourceCluster, namespace, workloadName, resolve, reset])
@@ -192,7 +202,7 @@ export function DeployConfirmDialog({
               <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm text-yellow-400 font-medium">{t('deploy.couldNotResolve')}</p>
-                <p className="text-xs text-yellow-400/70 mt-0.5">{error.message}</p>
+                <p className="text-xs text-yellow-400/70 mt-0.5">{getDependencyResolutionErrorMessage(error, t)}</p>
                 <p className="text-xs text-muted-foreground mt-1">{t('deploy.canStillDeploy')}</p>
               </div>
             </div>

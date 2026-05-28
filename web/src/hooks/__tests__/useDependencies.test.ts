@@ -60,11 +60,14 @@ import type { DependencyResolution } from '../useDependencies'
 // Helpers
 // ---------------------------------------------------------------------------
 
-function jsonResponse(data: unknown, status = 200) {
+function jsonResponse(data: unknown, status = 200, headers?: Record<string, string>) {
   return Promise.resolve({
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 200 ? 'OK' : 'Internal Server Error',
+    headers: {
+      get: (name: string) => headers?.[name] ?? headers?.[name.toLowerCase()] ?? null,
+    },
     json: () => Promise.resolve(data),
   })
 }
@@ -99,6 +102,7 @@ describe('useResolveDependencies', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -445,5 +449,58 @@ describe('useResolveDependencies', () => {
     expect(url).toContain('cluster%2Fspecial')
     expect(url).toContain('my%20namespace')
     expect(url).toContain('app%26name')
+  })
+
+  it('retries 429 responses with Retry-After and stops after the max retry count', async () => {
+    vi.useFakeTimers()
+    mockFetch.mockImplementation(() => jsonResponse(null, 429, { 'Retry-After': '1' }))
+
+    const { result } = renderHook(() => useResolveDependencies())
+
+    let resolvePromise: Promise<DependencyResolution | null>
+    act(() => {
+      resolvePromise = result.current.resolve('cluster-a', 'default', 'nginx')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+      await resolvePromise!
+    })
+
+    expect(mockFetch).toHaveBeenCalledTimes(4)
+    expect(await resolvePromise!).toBeNull()
+    expect(result.current.error).not.toBeNull()
+    expect(result.current.error?.name).toBe('DependencyResolutionRateLimitError')
+    expect((result.current.error as Error & { retryAfterMs?: number }).retryAfterMs).toBe(1_000)
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it('aborts an in-flight dependency request when reset is called', async () => {
+    mockFetch.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => new Promise((_resolve, reject) => {
+      const signal = init?.signal
+      if (!signal) return
+      signal.addEventListener('abort', () => {
+        reject(new DOMException('The operation was aborted.', 'AbortError'))
+      }, { once: true })
+    }))
+
+    const { result } = renderHook(() => useResolveDependencies())
+
+    let resolvePromise: Promise<DependencyResolution | null>
+    act(() => {
+      resolvePromise = result.current.resolve('cluster-a', 'default', 'nginx')
+    })
+
+    expect(result.current.isLoading).toBe(true)
+
+    await act(async () => {
+      result.current.reset()
+      await resolvePromise!
+    })
+
+    expect(await resolvePromise!).toBeNull()
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.error).toBeNull()
+    expect(result.current.data).toBeNull()
   })
 })
