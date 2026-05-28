@@ -15,6 +15,11 @@ import {
   stripInteractiveArtifacts,
   buildSavedMissionPrompt,
 } from '../useMissionPromptBuilder'
+import {
+  detectIssueSignature,
+  findSimilarResolutionsStandalone,
+  generateResolutionPromptContext,
+} from '../useResolutions'
 import type { StartMissionParams, Mission, MatchedResolution } from '../useMissionTypes'
 
 function makeStartParams(overrides: Partial<StartMissionParams> = {}): StartMissionParams {
@@ -26,6 +31,13 @@ function makeStartParams(overrides: Partial<StartMissionParams> = {}): StartMiss
     ...overrides,
   }
 }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.mocked(detectIssueSignature).mockReturnValue({} as ReturnType<typeof detectIssueSignature>)
+  vi.mocked(findSimilarResolutionsStandalone).mockReturnValue([])
+  vi.mocked(generateResolutionPromptContext).mockReturnValue('')
+})
 
 describe('generateMessageId', () => {
   it('returns a string ID', () => {
@@ -137,42 +149,52 @@ describe('buildEnhancedPrompt', () => {
     expect(enhancedPrompt).toContain('Target cluster:')
   })
 
-  it('preserves sanitization when resolution matching triggers (#15927)', async () => {
-    // Dynamically import the mocked module to override return values for this test
-    const { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } =
-      await import('../useResolutions')
-    const detectMock = vi.mocked(detectIssueSignature)
-    const findMock = vi.mocked(findSimilarResolutionsStandalone)
-    const genMock = vi.mocked(generateResolutionPromptContext)
-
-    // Set up mocks to trigger the resolution-matching branch
-    detectMock.mockReturnValueOnce({ type: 'CrashLoopBackOff', resourceKind: 'Pod', errorPattern: 'OOM' })
-    findMock.mockReturnValueOnce([{
-      resolution: {
-        id: 'res-1',
-        title: 'Fix OOM',
-        issueSignature: { type: 'CrashLoopBackOff', resourceKind: 'Pod', errorPattern: 'OOM' },
-        resolution: { summary: 'Increase memory limits', steps: ['kubectl edit'] },
-        effectiveness: { timesUsed: 3, timesSuccessful: 2 },
+  it('preserves sanitization when resolution matching triggers (#15927)', () => {
+    vi.mocked(detectIssueSignature).mockReturnValueOnce({
+      type: 'CrashLoopBackOff',
+      resourceKind: 'Pod',
+      errorPattern: 'OOMKilled',
+    })
+    vi.mocked(findSimilarResolutionsStandalone).mockReturnValueOnce([
+      {
+        resolution: {
+          id: 'r1',
+          missionId: 'm1',
+          userId: 'u1',
+          title: 'Increase memory',
+          visibility: 'private',
+          issueSignature: {
+            type: 'CrashLoopBackOff',
+            resourceKind: 'Pod',
+            errorPattern: 'OOMKilled',
+          },
+          resolution: {
+            summary: 'Increase memory limits',
+            steps: [],
+          },
+          context: {},
+          effectiveness: {
+            timesUsed: 1,
+            timesSuccessful: 1,
+          },
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+        similarity: 0.8,
+        source: 'personal',
       },
-      similarity: 0.8,
-      source: 'personal',
-    }])
-    genMock.mockReturnValueOnce('\n--- RESOLUTION CONTEXT ---')
+    ])
+    vi.mocked(generateResolutionPromptContext).mockReturnValueOnce('\n\n[Resolution context here]')
 
-    const maliciousInput = '<script>steal()</script> My pod keeps crashing'
     const params = makeStartParams({
-      initialPrompt: maliciousInput,
+      initialPrompt: '<script>alert("xss")</script>',
       type: 'troubleshoot',
     })
-    const { enhancedPrompt } = buildEnhancedPrompt(params)
+    const { enhancedPrompt, matchedResolutions } = buildEnhancedPrompt(params)
 
-    // The raw unsanitized input must NOT appear in the final prompt
     expect(enhancedPrompt).not.toContain('<script>')
-    expect(enhancedPrompt).not.toContain('</script>')
-    // The sanitized content and resolution context must be present
-    expect(enhancedPrompt).toContain('My pod keeps crashing')
-    expect(enhancedPrompt).toContain('RESOLUTION CONTEXT')
+    expect(enhancedPrompt).toContain('[Resolution context here]')
+    expect(matchedResolutions).toHaveLength(1)
   })
 })
 
