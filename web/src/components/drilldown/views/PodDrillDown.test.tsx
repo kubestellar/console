@@ -177,7 +177,8 @@ describe('PodDrillDown', () => {
   it('renders the pod overview without crashing', () => {
     render(<PodDrillDown data={{ cluster: 'cluster-a', namespace: 'default', pod: 'api-pod' }} />)
 
-    expect(screen.getByText('api-pod')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toBeInTheDocument()
     expect(screen.getByText('Pod status section')).toBeInTheDocument()
   })
 })
