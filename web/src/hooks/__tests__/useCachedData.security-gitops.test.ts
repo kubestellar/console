@@ -11,6 +11,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
+const { mockClusterCacheRef, mockIsDemoMode } = vi.hoisted(() => ({
+  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> },
+  mockIsDemoMode: vi.fn(() => false),
+}))
+
 const mockUseCache = vi.fn()
 const mockIsBackendUnavailable = vi.fn(() => false)
 const mockAuthFetch = vi.fn()
@@ -25,12 +30,6 @@ const mockSettledWithConcurrency = vi.fn()
 const mockFetchProwJobs = vi.fn()
 const mockFetchLLMdServers = vi.fn()
 const mockFetchLLMdModels = vi.fn()
-
-// Shared mutable cluster-cache ref — the hoisted `vi.mock('../mcp/shared', ...)`
-// below returns this same object reference, so tests can mutate `.clusters`
-// directly instead of calling `vi.doMock` (which is unreliable on the first
-// test-after-resetModules in CI — see kubestellar/console#9305).
-const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> }))
 
 vi.mock('../../lib/cache', () => ({
     createCachedHook: vi.fn(),
@@ -49,6 +48,10 @@ vi.mock('../../lib/api', () => ({
     createCachedHook: vi.fn(),
   isBackendUnavailable: () => mockIsBackendUnavailable(),
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+}))
+
+vi.mock('../../lib/demoMode', () => ({
+  isDemoMode: () => mockIsDemoMode(),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
@@ -161,6 +164,7 @@ describe('useCachedData', () => {
     localStorage.setItem('kc_token', 'test-jwt-token')
     // Reset the shared cluster cache so tests start with a clean slate
     mockClusterCacheRef.clusters = []
+    mockIsDemoMode.mockReturnValue(false)
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
@@ -555,12 +559,13 @@ describe('useCachedData', () => {
   // Namespaces fetcher (custom endpoint)
   // ========================================================================
   describe('namespaces fetcher', () => {
-    it('useCachedNamespaces: returns demo data when no cluster', async () => {
+    it('useCachedNamespaces: returns demo data when no cluster in demo mode', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
+      mockIsDemoMode.mockReturnValue(true)
 
       const { useCachedNamespaces } = await loadModule()
       useCachedNamespaces() // no cluster

@@ -12,7 +12,10 @@ import { renderHook } from '@testing-library/react'
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
-const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> }))
+const { mockClusterCacheRef, mockIsDemoMode } = vi.hoisted(() => ({
+  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> },
+  mockIsDemoMode: vi.fn(() => false),
+}))
 
 const mockUseCache = vi.fn()
 const mockIsBackendUnavailable = vi.fn(() => false)
@@ -49,6 +52,10 @@ vi.mock('../../lib/api', () => ({
     createCachedHook: vi.fn(),
   isBackendUnavailable: () => mockIsBackendUnavailable(),
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+}))
+
+vi.mock('../../lib/demoMode', () => ({
+  isDemoMode: () => mockIsDemoMode(),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
@@ -167,6 +174,7 @@ describe('useCachedData', () => {
     // Set a valid token so fetchAPI doesn't throw
     localStorage.setItem('kc_token', 'test-jwt-token')
     mockClusterCacheRef.clusters = []
+    mockIsDemoMode.mockReturnValue(false)
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
@@ -676,12 +684,13 @@ describe('useCachedData', () => {
       expect(mockAuthFetch).toHaveBeenCalledTimes(1)
     })
 
-    it('fetcher returns demo data when no cluster provided', async () => {
+    it('fetcher returns demo data when no cluster provided in demo mode', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
+      mockIsDemoMode.mockReturnValue(true)
 
       const { useCachedNamespaces } = await loadModule()
       useCachedNamespaces()

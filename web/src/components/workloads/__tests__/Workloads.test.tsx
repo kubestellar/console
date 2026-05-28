@@ -50,9 +50,9 @@ let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
 let mockIsDemoMode = true
 
 vi.mock('../../../hooks/useMCP', () => ({
-    usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
-    useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
-    useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, refetch: vi.fn() }),
+    usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+    useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+    useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
     useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
 }))
 
@@ -99,7 +99,42 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 
 vi.mock('react-i18next', () => ({
     initReactI18next: { type: '3rdParty', init: () => {} },
-    useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+    useTranslation: () => ({ t: (key: string, fallback?: string) => fallback || key, i18n: { language: 'en' } }),
+}))
+
+vi.mock('../../ui/RotatingTip', () => ({
+    RotatingTip: () => null,
+}))
+
+vi.mock('../../cards/llmd/shared/PortalTooltip', () => ({
+    PortalTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('../../../lib/modals', () => ({
+    ConfirmDialog: ({
+        isOpen,
+        onClose,
+        onConfirm,
+        title,
+        message,
+        confirmLabel = 'Confirm',
+        cancelLabel = 'Cancel',
+    }: {
+        isOpen: boolean
+        onClose: () => void
+        onConfirm: () => void
+        title: string
+        message: string
+        confirmLabel?: string
+        cancelLabel?: string
+    }) => isOpen ? (
+        <div role="dialog">
+            <span>{title}</span>
+            <span>{message}</span>
+            <button onClick={onClose}>{cancelLabel}</button>
+            <button onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+    ) : null,
 }))
 
 vi.mock('../../ui/Toast', () => ({
@@ -179,7 +214,7 @@ describe('Workloads Component', () => {
             const restartBtn = screen.getByLabelText('Restart deployment')
             fireEvent.click(restartBtn)
             
-            expect(showToastSpy).toHaveBeenCalledWith('workloads.restarting', 'info')
+            expect(showToastSpy).toHaveBeenCalledWith('Restarting deployment...', 'info')
             expect(kubectlExecSpy).toHaveBeenCalledWith(
                 ['rollout', 'restart', 'deployment', 'my-deploy', '-n', 'default'],
                 { context: 'ctx/prod' }
@@ -191,8 +226,8 @@ describe('Workloads Component', () => {
             const deleteBtn = screen.getByLabelText('Delete deployment')
             fireEvent.click(deleteBtn)
             
-            expect(screen.getByText('workloads.deleteDeployment')).toBeTruthy()
-            expect(screen.getByText(/workloads.confirmDelete/)).toBeTruthy()
+            expect(screen.getByText('Delete Deployment')).toBeTruthy()
+            expect(screen.getByText(/my-deploy/)).toBeTruthy()
         })
 
         it('calls kubectlProxy with delete args when delete is confirmed', async () => {
@@ -201,10 +236,10 @@ describe('Workloads Component', () => {
             fireEvent.click(deleteBtn)
             
             // Find and click the confirm button in the dialog
-            const confirmBtn = screen.getByText('common:actions.delete')
+            const confirmBtn = screen.getByText('Delete')
             fireEvent.click(confirmBtn)
             
-            expect(showToastSpy).toHaveBeenCalledWith('workloads.deleting', 'info')
+            expect(showToastSpy).toHaveBeenCalledWith('Deleting deployment...', 'info')
             expect(kubectlExecSpy).toHaveBeenCalledWith(
                 ['delete', 'deployment', 'my-deploy', '-n', 'default'],
                 { context: 'ctx/prod' }

@@ -12,6 +12,11 @@ import { renderHook } from '@testing-library/react'
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
+const { mockClusterCacheRef, mockIsDemoMode } = vi.hoisted(() => ({
+  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> },
+  mockIsDemoMode: vi.fn(() => false),
+}))
+
 const mockUseCache = vi.fn()
 const mockIsBackendUnavailable = vi.fn(() => false)
 const mockAuthFetch = vi.fn()
@@ -26,12 +31,6 @@ const mockSettledWithConcurrency = vi.fn()
 const mockFetchProwJobs = vi.fn()
 const mockFetchLLMdServers = vi.fn()
 const mockFetchLLMdModels = vi.fn()
-
-// Shared mutable cluster-cache ref — the hoisted `vi.mock('../mcp/shared', ...)`
-// below returns this same object reference, so tests can mutate `.clusters`
-// directly instead of calling `vi.doMock` (which is unreliable on the first
-// test-after-resetModules in CI — see kubestellar/console#9305).
-const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
 
 vi.mock('../../lib/cache', () => ({
     createCachedHook: vi.fn(),
@@ -50,6 +49,10 @@ vi.mock('../../lib/api', () => ({
     createCachedHook: vi.fn(),
   isBackendUnavailable: () => mockIsBackendUnavailable(),
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+}))
+
+vi.mock('../../lib/demoMode', () => ({
+  isDemoMode: () => mockIsDemoMode(),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
@@ -169,6 +172,7 @@ describe('useCachedData', () => {
     localStorage.setItem('kc_token', 'test-jwt-token')
     // Reset the shared cluster cache so tests start with a clean slate
     mockClusterCacheRef.clusters = []
+    mockIsDemoMode.mockReturnValue(false)
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
@@ -445,12 +449,13 @@ describe('useCachedData', () => {
   // Demo data arrays are populated
   // ========================================================================
   describe('demo data arrays are populated', () => {
-    it('all hooks pass non-empty demoData (regression guard)', async () => {
+    it('all hooks pass non-empty demoData in demo mode (regression guard)', async () => {
       const capturedDemos: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: { key: string; demoData: unknown }) => {
         capturedDemos[opts.key] = opts.demoData
         return makeCacheResult(opts.demoData || [])
       })
+      mockIsDemoMode.mockReturnValue(true)
 
       const m = await loadModule()
 
