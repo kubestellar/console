@@ -57,7 +57,7 @@ describe('sanitizeForPrompt', () => {
 
   it('encodes prompt metacharacters and caps length', () => {
     const sanitized = sanitizeForPrompt(`pods & services ${'x'.repeat(600)}`)
-    expect(sanitized).toStartWith('pods &amp; services ')
+    expect(sanitized.startsWith('pods &amp; services ')).toBe(true)
     expect(sanitized.length).toBe(500)
   })
 })
