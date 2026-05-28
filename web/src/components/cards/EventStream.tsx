@@ -33,6 +33,7 @@ const DEFAULT_DISPLAY_LIMIT = 5
 /** Fallback items-per-page when the prop is not a number (unbounded mode) */
 const UNBOUNDED_ITEMS_PER_PAGE = 1000
 
+/** Footer badges (Warning / Critical counts) and the "Show more" button
  * conditionally render, so without a reserved slot the card grows/shrinks
  * each time those toggle on refresh — causing layout shift on neighboring
  * cards (#8384). A fixed min-height for the footer region absorbs the
