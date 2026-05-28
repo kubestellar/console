@@ -50,6 +50,14 @@ let NamespaceManager: React.ComponentType
 
 const renderWithRouter = (component: React.ReactElement) => render(<BrowserRouter>{component}</BrowserRouter>)
 
+const getFetchUrl = (input: RequestInfo | URL): string => {
+  if (typeof input === 'string') return input
+  if (input instanceof URL) return input.toString()
+  return input.url
+}
+
+const findFetchCall = (urlFragment: string) => mockFetch.mock.calls.find(([input]) => getFetchUrl(input as RequestInfo | URL).includes(urlFragment))
+
 beforeEach(async () => {
   vi.resetModules()
   vi.clearAllMocks()
@@ -84,6 +92,7 @@ describe('NamespaceManager auth and offline handling', () => {
   it('falls back to the backend when the local agent rejects the first namespace request', async () => {
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'dev-user' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([
         {
           name: 'team-a',
@@ -100,21 +109,22 @@ describe('NamespaceManager auth and offline handling', () => {
     })
 
     expect(screen.queryByText(/Authorization failed for namespace access/i)).not.toBeInTheDocument()
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      1,
-      expect.stringContaining(':8585/namespaces?cluster=cluster-1'),
-      expect.objectContaining({
-        headers: expect.any(Headers),
-      })
-    )
-    const firstCallHeaders = mockFetch.mock.calls[0]?.[1]?.headers
-    expect(firstCallHeaders).toBeInstanceOf(Headers)
-    expect((firstCallHeaders as Headers).get('Authorization')).toBe('Bearer jwt-token')
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
-      '/api/namespaces?cluster=cluster-1',
-      expect.any(Object)
-    )
+
+    const agentCall = findFetchCall(':8585/namespaces?cluster=cluster-1')
+    expect(agentCall).toBeDefined()
+    expect(agentCall?.[1]).toEqual(expect.objectContaining({
+      headers: expect.any(Headers),
+    }))
+
+    const agentCallHeaders = agentCall?.[1]?.headers
+    expect(agentCallHeaders).toBeInstanceOf(Headers)
+    expect((agentCallHeaders as Headers).get('Authorization')).toBe('Bearer jwt-token')
+
+    const authProbeCall = findFetchCall('/api/me')
+    expect(authProbeCall?.[1]).toEqual(expect.objectContaining({ credentials: 'include' }))
+
+    const backendCall = findFetchCall('/api/namespaces?cluster=cluster-1')
+    expect(backendCall).toBeDefined()
   })
 
   it('uses the cluster context when fetching namespaces for a selected cluster', async () => {
@@ -129,6 +139,7 @@ describe('NamespaceManager auth and offline handling', () => {
     })
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'dev-user' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([
         {
           name: 'team-a',
@@ -144,16 +155,9 @@ describe('NamespaceManager auth and offline handling', () => {
       expect(screen.getByText('team-a')).toBeInTheDocument()
     })
 
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      1,
-      expect.stringContaining(':8585/namespaces?cluster=cluster-1-context'),
-      expect.any(Object),
-    )
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
-      '/api/namespaces?cluster=cluster-1-context',
-      expect.any(Object),
-    )
+    expect(findFetchCall(':8585/namespaces?cluster=cluster-1-context')).toBeDefined()
+    expect(findFetchCall('/api/me')).toBeDefined()
+    expect(findFetchCall('/api/namespaces?cluster=cluster-1-context')).toBeDefined()
   })
 
   it('shows offline clusters without reporting an authorization error', async () => {
