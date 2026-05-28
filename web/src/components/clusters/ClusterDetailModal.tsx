@@ -150,7 +150,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     emitClusterAction('diagnose', clusterName)
     const issuesSummary = [
       ...podIssues.map(p => `Pod ${p.name} in ${p.namespace}: ${p.status}`),
-      ...clusterDeploymentIssues.map(d => `Deployment ${d.name} in ${d.namespace}: ${d.readyReplicas}/${d.replicas} ready`)
+      ...clusterDeploymentIssues.map(d => `Deployment ${d.name} in ${d.namespace}: ${d.readyReplicas ?? 0}/${d.replicas ?? 0} ready`)
     ].slice(0, 10).join('\n')
 
     onClose() // Close modal so mission sidebar is visible
@@ -188,7 +188,7 @@ Please analyze this cluster and provide:
     emitClusterAction('repair', clusterName)
     const issuesList = [
       ...podIssues.slice(0, 5).map(p => `- Pod "${p.name}" in namespace "${p.namespace}": ${p.status} (${p.restarts} restarts)`),
-      ...clusterDeploymentIssues.slice(0, 5).map(d => `- Deployment "${d.name}" in namespace "${d.namespace}": ${d.readyReplicas}/${d.replicas} ready - ${d.reason || 'Unknown reason'}`)
+      ...clusterDeploymentIssues.slice(0, 5).map(d => `- Deployment "${d.name}" in namespace "${d.namespace}": ${d.readyReplicas ?? 0}/${d.replicas ?? 0} ready - ${d.reason || 'Unknown reason'}`)
     ].join('\n')
 
     onClose() // Close modal so mission sidebar is visible
