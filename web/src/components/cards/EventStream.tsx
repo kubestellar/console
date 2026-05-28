@@ -30,7 +30,9 @@ const DEFAULT_API_FETCH_LIMIT = 100
  * not configured a `limit` for this card. */
 const DEFAULT_DISPLAY_LIMIT = 5
 
-/** Reserved footer height (px). The pagination bar and LimitedAccessWarning
+/** Fallback items-per-page when the prop is not a number (unbounded mode) */
+const UNBOUNDED_ITEMS_PER_PAGE = 1000
+
  * conditionally render, so without a reserved slot the card grows/shrinks
  * each time those toggle on refresh — causing layout shift on neighboring
  * cards (#8384). A fixed min-height for the footer region absorbs the
@@ -312,7 +314,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
-          itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 1000}
+          itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : UNBOUNDED_ITEMS_PER_PAGE}
           onPageChange={goToPage}
           needsPagination={needsPagination}
         />

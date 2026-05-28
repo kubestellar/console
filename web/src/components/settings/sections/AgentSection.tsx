@@ -11,6 +11,9 @@ import {
 import { copyToClipboard } from '../../../lib/clipboard'
 import { AgentBackendSettings } from './AgentBackendSettings'
 
+/** Divisor to convert raw token counts to "k" (thousands) for display */
+const TOKENS_PER_K = 1000
+
 interface AgentSectionProps {
   isConnected: boolean
   isInClusterMode?: boolean
@@ -206,7 +209,7 @@ export function AgentSection({
                   {(
                     (health.claude.tokenUsage.session.input +
                       health.claude.tokenUsage.session.output) /
-                    1000
+                    TOKENS_PER_K
                   ).toFixed(1)}
                   k
                 </p>
@@ -222,7 +225,7 @@ export function AgentSection({
                   {(
                     (health.claude.tokenUsage.today.input +
                       health.claude.tokenUsage.today.output) /
-                    1000
+                    TOKENS_PER_K
                   ).toFixed(1)}
                   k
                 </p>

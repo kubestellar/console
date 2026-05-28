@@ -7,6 +7,7 @@ import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { Button } from '../ui/Button'
+import { MS_PER_SECOND } from '../../lib/constants/time'
 
 type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -217,9 +218,9 @@ function PodSweeperInternal(_props: CardComponentProps) {
 
     const timer = setInterval(() => {
       if (startTime) {
-        dispatch({ type: 'TICK', elapsed: Math.floor((Date.now() - startTime) / 1000) })
+        dispatch({ type: 'TICK', elapsed: Math.floor((Date.now() - startTime) / MS_PER_SECOND) })
       }
-    }, 1000)
+    }, MS_PER_SECOND)
 
     return () => clearInterval(timer)
   }, [gameStarted, gameOver, startTime])
