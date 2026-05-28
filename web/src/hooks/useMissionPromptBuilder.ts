@@ -139,7 +139,7 @@ export function buildEnhancedPrompt(params: StartMissionParams): {
 
         // Inject resolution context into the prompt
         const resolutionContext = generateResolutionPromptContext(similarResolutions)
-        enhancedPrompt = params.initialPrompt + resolutionContext
+        enhancedPrompt = enhancedPrompt + resolutionContext
       }
     }
   }
