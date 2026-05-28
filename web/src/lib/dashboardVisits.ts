@@ -12,6 +12,7 @@ import { RETRY_DELAY_MS } from './constants/network'
 
 const VISIT_COUNTS_KEY = 'kubestellar-dashboard-visits'
 const DEFAULT_TOP_N = 5
+const PREFETCH_IDLE_TIMEOUT_MS = 3_000
 
 interface VisitCounts {
   [path: string]: number
@@ -86,7 +87,7 @@ export function prefetchTopDashboards(currentPath?: string, n: number = DEFAULT_
 
   // Use requestIdleCallback to avoid competing with initial render
   if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(prefetch, { timeout: 3000 })
+    requestIdleCallback(prefetch, { timeout: PREFETCH_IDLE_TIMEOUT_MS })
   } else {
     setTimeout(prefetch, RETRY_DELAY_MS)
   }

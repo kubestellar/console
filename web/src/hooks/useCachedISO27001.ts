@@ -13,6 +13,13 @@ import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 
+const MAX_WILDCARD_ROLES = 2
+const MAX_NAMESPACE_PREVIEW = 3
+const RUN_AS_NON_ROOT_WARNING_THRESHOLD = 3
+const READ_ONLY_ROOT_WARNING_THRESHOLD = 5
+const LATEST_TAG_WARNING_THRESHOLD = 2
+const MIN_SECRET_VALUE_LENGTH = 20
+
 // ============================================================================
 // ISO 27001 Audit Types
 // ============================================================================
@@ -94,7 +101,7 @@ async function runISO27001ChecksForCluster(
       findings.push({
         checkId: 'rbac-3', category: 'RBAC & Access Control',
         label: 'No wildcard permissions (*) in production',
-        status: wildcardRoles.length <= 2 ? 'pass' : 'fail',
+        status: wildcardRoles.length <= MAX_WILDCARD_ROLES ? 'pass' : 'fail',
         cluster: clusterName, severity: 'critical',
         details: `${wildcardRoles.length} ClusterRole(s) with wildcard permissions`,
       })
@@ -117,7 +124,7 @@ async function runISO27001ChecksForCluster(
       label: 'Default-deny ingress in all namespaces',
       status: nsMissing.length === 0 ? 'pass' : 'fail',
       cluster: clusterName, severity: 'high',
-      details: nsMissing.length === 0 ? 'All namespaces have NetworkPolicies' : `${nsMissing.length} namespace(s) missing NetworkPolicies: ${nsMissing.slice(0, 3).join(', ')}`,
+      details: nsMissing.length === 0 ? 'All namespaces have NetworkPolicies' : `${nsMissing.length} namespace(s) missing NetworkPolicies: ${nsMissing.slice(0, MAX_NAMESPACE_PREVIEW).join(', ')}`,
     })
   }
 
@@ -166,7 +173,7 @@ async function runISO27001ChecksForCluster(
     findings.push({
       checkId: 'pod-3', category: 'Pod Security',
       label: 'runAsNonRoot enforced',
-      status: noRunAsNonRoot.length === 0 ? 'pass' : noRunAsNonRoot.length <= 3 ? 'warning' : 'fail',
+      status: noRunAsNonRoot.length === 0 ? 'pass' : noRunAsNonRoot.length <= RUN_AS_NON_ROOT_WARNING_THRESHOLD ? 'warning' : 'fail',
       cluster: clusterName, severity: 'high',
       details: noRunAsNonRoot.length === 0 ? 'All pods enforce runAsNonRoot' : `${noRunAsNonRoot.length} pod(s) missing runAsNonRoot`,
     })
@@ -177,7 +184,7 @@ async function runISO27001ChecksForCluster(
     findings.push({
       checkId: 'pod-4', category: 'Pod Security',
       label: 'Read-only root filesystem',
-      status: noReadOnly.length === 0 ? 'pass' : noReadOnly.length <= 5 ? 'warning' : 'fail',
+      status: noReadOnly.length === 0 ? 'pass' : noReadOnly.length <= READ_ONLY_ROOT_WARNING_THRESHOLD ? 'warning' : 'fail',
       cluster: clusterName, severity: 'medium',
       details: noReadOnly.length === 0 ? 'All containers use readOnlyRootFilesystem' : `${noReadOnly.length} pod(s) without read-only root filesystem`,
     })
@@ -202,7 +209,7 @@ async function runISO27001ChecksForCluster(
     findings.push({
       checkId: 'img-4', category: 'Image Security',
       label: 'No latest tag in production',
-      status: latestTag.length === 0 ? 'pass' : latestTag.length <= 2 ? 'warning' : 'fail',
+      status: latestTag.length === 0 ? 'pass' : latestTag.length <= LATEST_TAG_WARNING_THRESHOLD ? 'warning' : 'fail',
       cluster: clusterName, severity: 'medium',
       details: latestTag.length === 0 ? 'All images use specific tags' : `${latestTag.length} pod(s) using :latest or untagged images`,
     })
@@ -224,7 +231,7 @@ async function runISO27001ChecksForCluster(
       (cm: { data?: Record<string, string> }) => {
         const data = cm.data || {}
         return Object.values(data).some((v: string) =>
-          /password|secret|token|key|credential/i.test(v) && v.length > 20
+          /password|secret|token|key|credential/i.test(v) && v.length > MIN_SECRET_VALUE_LENGTH
         )
       }
     )

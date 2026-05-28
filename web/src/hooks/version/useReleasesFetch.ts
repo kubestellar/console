@@ -35,6 +35,8 @@ export type RecentCommit = {
 }
 
 export const GITHUB_RATE_LIMIT_UNTIL_KEY = 'kc-github-rate-limit-until'
+const GITHUB_MAIN_SHA_TIMEOUT_MS = 5_000
+const RECENT_COMMITS_LIMIT = 20
 
 function getCachedDevSHA(): string | null {
   return localStorage.getItem(DEV_SHA_CACHE_KEY)
@@ -130,7 +132,7 @@ export async function fetchLatestMainSHA(): Promise<LatestMainSHAResult> {
   try {
     const response = await authFetch(GITHUB_MAIN_SHA_URL, {
       headers: { Accept: 'application/vnd.github.v3+json' },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(GITHUB_MAIN_SHA_TIMEOUT_MS),
     })
 
     if (response.ok) {
@@ -215,7 +217,7 @@ export async function fetchRecentCommits(
       }>(response, 'GitHub compare')
 
       return (data.commits || [])
-        .slice(-20)
+        .slice(-RECENT_COMMITS_LIMIT)
         .reverse()
         .map((commit) => ({
           sha: commit.sha,

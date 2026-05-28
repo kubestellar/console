@@ -1,6 +1,7 @@
 import { createCachedHook } from '../lib/cache'
-import { agentFetch } from './mcp/shared'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { METRICS_SERVER_TIMEOUT_MS } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 
 /**
@@ -45,7 +46,7 @@ export const useCachedQuality = createCachedHook<QualityStats>({
     try {
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/predictions/stats`, {
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(METRICS_SERVER_TIMEOUT_MS)
       })
 
       if (!response.ok) {
