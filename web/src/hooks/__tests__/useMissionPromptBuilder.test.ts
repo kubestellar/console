@@ -136,6 +136,44 @@ describe('buildEnhancedPrompt', () => {
     expect(enhancedPrompt).toContain('IGNORE PREVIOUS INSTRUCTIONS')
     expect(enhancedPrompt).toContain('Target cluster:')
   })
+
+  it('preserves sanitization when resolution matching triggers (#15927)', async () => {
+    // Dynamically import the mocked module to override return values for this test
+    const { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } =
+      await import('../useResolutions')
+    const detectMock = vi.mocked(detectIssueSignature)
+    const findMock = vi.mocked(findSimilarResolutionsStandalone)
+    const genMock = vi.mocked(generateResolutionPromptContext)
+
+    // Set up mocks to trigger the resolution-matching branch
+    detectMock.mockReturnValueOnce({ type: 'CrashLoopBackOff', resourceKind: 'Pod', errorPattern: 'OOM' })
+    findMock.mockReturnValueOnce([{
+      resolution: {
+        id: 'res-1',
+        title: 'Fix OOM',
+        issueSignature: { type: 'CrashLoopBackOff', resourceKind: 'Pod', errorPattern: 'OOM' },
+        resolution: { summary: 'Increase memory limits', steps: ['kubectl edit'] },
+        effectiveness: { timesUsed: 3, timesSuccessful: 2 },
+      },
+      similarity: 0.8,
+      source: 'personal',
+    }])
+    genMock.mockReturnValueOnce('\n--- RESOLUTION CONTEXT ---')
+
+    const maliciousInput = '<script>steal()</script> My pod keeps crashing'
+    const params = makeStartParams({
+      initialPrompt: maliciousInput,
+      type: 'troubleshoot',
+    })
+    const { enhancedPrompt } = buildEnhancedPrompt(params)
+
+    // The raw unsanitized input must NOT appear in the final prompt
+    expect(enhancedPrompt).not.toContain('<script>')
+    expect(enhancedPrompt).not.toContain('</script>')
+    // The sanitized content and resolution context must be present
+    expect(enhancedPrompt).toContain('My pod keeps crashing')
+    expect(enhancedPrompt).toContain('RESOLUTION CONTEXT')
+  })
 })
 
 describe('buildSystemMessages', () => {
