@@ -38,6 +38,10 @@ const SAMPLE_LOGIN = "contributor-one";
 const INVALID_LOGIN_SCRIPT = "<script>alert(1)</script>";
 const INVALID_LOGIN_AMPERSAND = "user&amp;quotes";
 
+/** Fixed clock so GitHub Search `created:>=YYYY-01-01` assertions stay deterministic. */
+const FIXED_SEARCH_DATE = new Date("2026-06-15T12:00:00Z");
+const FIXED_SEARCH_YEAR = 2026;
+
 interface SearchItem {
   labels: Array<{ name: string }>;
   pull_request?: { merged_at?: string | null };
@@ -114,7 +118,7 @@ function mockGitHubSearch(issues: SearchItem[], prs: SearchItem[]): void {
 }
 
 function expectedSearchQuery(login: string, itemType: "issue" | "pr"): string {
-  const yearStart = `${new Date().getFullYear()}-01-01`;
+  const yearStart = `${FIXED_SEARCH_YEAR}-01-01`;
   return `author:${login} repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs type:${itemType} created:>=${yearStart}`;
 }
 
@@ -125,17 +129,25 @@ function getFetchCalls(): Array<{ url: string; init?: RequestInit }> {
   }));
 }
 
+function getSearchQueriesFromFetchCalls(): string[] {
+  return getFetchCalls()
+    .map((call) => new URL(call.url).searchParams.get("q"))
+    .filter((query): query is string => query !== null);
+}
+
 describe("rewards-badge", () => {
   const originalGithubToken = process.env.GITHUB_TOKEN;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_SEARCH_DATE);
     mockFetch.mockReset();
     vi.stubGlobal("fetch", mockFetch);
     delete process.env.GITHUB_TOKEN;
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     if (originalGithubToken !== undefined) {
       process.env.GITHUB_TOKEN = originalGithubToken;
@@ -173,15 +185,10 @@ describe("rewards-badge", () => {
       await handler(makeBadgeRequest(SAMPLE_LOGIN));
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      const calls = getFetchCalls();
-      const urls = calls.map((c) => c.url);
+      const queries = getSearchQueriesFromFetchCalls();
 
-      expect(urls.some((u) => u.includes(encodeURIComponent(expectedSearchQuery(SAMPLE_LOGIN, "issue"))))).toBe(
-        true,
-      );
-      expect(urls.some((u) => u.includes(encodeURIComponent(expectedSearchQuery(SAMPLE_LOGIN, "pr"))))).toBe(
-        true,
-      );
+      expect(queries).toContain(expectedSearchQuery(SAMPLE_LOGIN, "issue"));
+      expect(queries).toContain(expectedSearchQuery(SAMPLE_LOGIN, "pr"));
     });
 
     it("includes Authorization header when GITHUB_TOKEN env var is set", async () => {
