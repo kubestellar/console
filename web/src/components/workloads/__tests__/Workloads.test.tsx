@@ -32,9 +32,10 @@ vi.mock('../../../lib/analytics', () => ({
 }))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
-    DashboardPage: ({ title, children }: { title: string; children?: React.ReactNode }) => (
+    DashboardPage: ({ title, rightExtra, children }: { title: string; rightExtra?: React.ReactNode; children?: React.ReactNode }) => (
         <div data-testid="dashboard-page">
             <h1>{title}</h1>
+            {rightExtra}
             {children}
         </div>
     ),
@@ -112,6 +113,12 @@ vi.mock('../../../lib/kubectlProxy', () => ({
     kubectlProxy: {
         exec: kubectlExecSpy,
     },
+}))
+
+vi.mock('../../cards/WorkloadImportDialog', () => ({
+    WorkloadImportDialog: ({ isOpen }: { isOpen: boolean }) => (
+        isOpen ? <div data-testid="workload-import-dialog">workload-import-dialog</div> : null
+    ),
 }))
 
 import { Workloads } from '../Workloads'
@@ -214,6 +221,24 @@ describe('Workloads Component', () => {
             fireEvent.click(cancelBtn)
             
             expect(kubectlExecSpy).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('add workload actions', () => {
+        it('opens the import dialog from the header add button', () => {
+            renderWorkloads()
+
+            fireEvent.click(screen.getByTestId('add-workload-btn'))
+
+            expect(screen.getByTestId('workload-import-dialog')).toBeTruthy()
+        })
+
+        it('opens the import dialog from the empty state button', () => {
+            renderWorkloads()
+
+            fireEvent.click(screen.getByTestId('empty-state-deploy-workload-btn'))
+
+            expect(screen.getByTestId('workload-import-dialog')).toBeTruthy()
         })
     })
 

@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronRight, Plus, Rocket, RefreshCw, Trash2, Terminal } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { ChevronRight, Plus, RefreshCw, Trash2, Terminal } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -16,14 +15,16 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
-import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
+import { WorkloadImportDialog } from '../cards/WorkloadImportDialog'
 import { ConfirmDialog } from '../../lib/modals'
+import type { Workload } from '../cards/WorkloadDeployment'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
+const IMPORTED_WORKLOAD_CLUSTER = 'Imported'
 
 // Default cards for the workloads dashboard
 const DEFAULT_WORKLOAD_CARDS = getDefaultCards('workloads')
@@ -57,9 +58,21 @@ interface DeploymentSummary {
 
 type WorkloadItem = AppSummary | DeploymentSummary
 
+function mapImportedWorkload(workload: Workload): DeploymentSummary {
+  return {
+    name: workload.name,
+    namespace: workload.namespace,
+    cluster: workload.targetClusters[0] || IMPORTED_WORKLOAD_CLUSTER,
+    status: 'deploying',
+    replicas: workload.replicas,
+    readyReplicas: workload.readyReplicas,
+    type: 'deployment',
+    image: workload.image,
+  }
+}
+
 export function Workloads() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   // Data fetching
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated: podLastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, lastUpdated: deploymentLastUpdated, refetch: refetchDeploymentIssues } = useDeploymentIssues()
@@ -81,6 +94,18 @@ export function Workloads() {
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods, drillToDeployment } = useDrillDownActions()
   const { showToast } = useToast()
   const [pendingDelete, setPendingDelete] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importedWorkloads, setImportedWorkloads] = useState<Workload[]>([])
+
+  const handleImportWorkloads = useCallback((newWorkloads: Workload[]) => {
+    setImportedWorkloads(prev => [...prev, ...newWorkloads])
+    showToast(t('workloads.importSuccess', 'Workload added to the list'), 'success')
+  }, [showToast, t])
+
+  const deployments = useMemo(
+    () => [...allDeployments, ...importedWorkloads.map(mapImportedWorkload)],
+    [allDeployments, importedWorkloads],
+  )
 
   // Combined states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
@@ -88,7 +113,7 @@ export function Workloads() {
   // Show skeletons when loading with no data OR when agent is offline and demo mode is OFF OR mode switching
   const isAgentOffline = agentStatus === 'disconnected'
   const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
-  const showSkeletons = ((allDeployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
+  const showSkeletons = ((deployments.length === 0 && podIssues.length === 0 && deploymentIssues.length === 0) && isLoading) || forceSkeletonForOffline || isModeSwitching
 
   // Combined refresh
   const handleRefresh = () => {
@@ -143,7 +168,7 @@ export function Workloads() {
 
   // Group applications by namespace with global filter applied
   const apps = useMemo(() => {
-    let filteredDeployments = allDeployments
+    let filteredDeployments = deployments
     let filteredPodIssues = podIssues
     let filteredDeploymentIssues = deploymentIssues
 
@@ -259,7 +284,7 @@ export function Workloads() {
       }
       return bStats.deploymentCount - aStats.deploymentCount
     })
-  }, [allDeployments, podIssues, deploymentIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [deployments, podIssues, deploymentIssues, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   const stats = useMemo(() => {
     const namespaceApps = apps.filter(a => a.type === 'namespace') as AppSummary[]
@@ -268,11 +293,11 @@ export function Workloads() {
       healthy: namespaceApps.filter(a => a.status === 'healthy').length,
       warning: namespaceApps.filter(a => a.status === 'warning').length,
       critical: namespaceApps.filter(a => a.status === 'error').length,
-      totalDeployments: allDeployments.length,
+      totalDeployments: deployments.length,
       totalPodIssues: podIssues.length,
       totalDeploymentIssues: deploymentIssues.length
     }
-  }, [apps, allDeployments, podIssues, deploymentIssues])
+  }, [apps, deployments, podIssues, deploymentIssues])
 
   // Dashboard-specific stats value getter
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
@@ -305,9 +330,9 @@ export function Workloads() {
         <div className="flex items-center gap-2">
           <button
             data-testid="add-workload-btn"
-            onClick={() => navigate(ROUTES.DEPLOY)}
+            onClick={() => setShowImportDialog(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-            title={t('workloads.addWorkload', 'Deploy a new workload')}
+            title={t('workloads.addWorkload', 'Add a new workload')}
           >
             <Plus className="w-3.5 h-3.5" />
             {t('workloads.addWorkload', 'Add Workload')}
@@ -354,11 +379,11 @@ export function Workloads() {
           <p className="text-sm text-muted-foreground mb-6">{t('workloads.noWorkloadsDesc', 'No deployments detected across your clusters')}</p>
           <button
             data-testid="empty-state-deploy-workload-btn"
-            onClick={() => navigate(ROUTES.DEPLOY)}
+            onClick={() => setShowImportDialog(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
           >
-            <Rocket className="w-4 h-4" />
-            {t('workloads.deployWorkload', 'Deploy a Workload')}
+            <Plus className="w-4 h-4" />
+            {t('workloads.deployWorkload', 'Create a Workload')}
           </button>
         </div>
       ) : (
@@ -506,6 +531,11 @@ export function Workloads() {
         </div>
       </div>
 
+      <WorkloadImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={handleImportWorkloads}
+      />
       <ConfirmDialog
         isOpen={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
