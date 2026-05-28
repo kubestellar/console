@@ -41,7 +41,7 @@ function loadCachedData(): NightlyE2EData {
       const parsed = JSON.parse(raw) as NightlyE2EData
       if (parsed.guides?.length > 0 && !parsed.isDemo) return parsed
     }
-  } catch (e: unknown) { console.warn('[useNightlyE2EData] failed to read cached nightly data:', e) }
+  } catch (e: unknown) { console.error('[useNightlyE2EData] failed to read cached nightly data:', e) }
   return { guides: [], isDemo: false }
 }
 

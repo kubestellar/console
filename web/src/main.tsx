@@ -166,7 +166,7 @@ enableMocking()
         initPreloadedMeta(meta)
       } catch (e: unknown) {
         logOpfsFallback('[Cache] SQLite worker init: using IndexedDB fallback:', e)
-        try { await migrateFromLocalStorage() } catch (migrateErr: unknown) { console.warn('[Cache] failed to migrate from localStorage:', migrateErr) }
+        try { await migrateFromLocalStorage() } catch (migrateErr: unknown) { console.error('[Cache] failed to migrate from localStorage:', migrateErr) }
       }
     })()
 
