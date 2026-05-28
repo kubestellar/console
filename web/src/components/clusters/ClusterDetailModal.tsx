@@ -19,6 +19,7 @@ import { Button } from '../ui/Button'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterStatusDetails } from './ClusterStatusDetails'
 import { formatMemoryPromptStat } from '../../lib/formatStats'
+import { buildDiagnosePrompt, buildRepairPrompt } from './diagnosePrompt'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
@@ -144,14 +145,11 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
   })
   const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
   const promptMemorySummary = formatMemoryPromptStat(health?.memoryGB)
+  const totalClusterGpus = clusterGPUs.reduce((sum, node) => sum + node.gpuCount, 0)
 
   // AI diagnose/repair handlers
   const handleDiagnose = () => {
     emitClusterAction('diagnose', clusterName)
-    const issuesSummary = [
-      ...podIssues.map(p => `Pod ${p.name} in ${p.namespace}: ${p.status}`),
-      ...clusterDeploymentIssues.map(d => `Deployment ${d.name} in ${d.namespace}: ${d.readyReplicas ?? 0}/${d.replicas ?? 0} ready`)
-    ].slice(0, 10).join('\n')
 
     onClose() // Close modal so mission sidebar is visible
     startMission({
@@ -159,23 +157,14 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
       description: t('cluster.diagnoseMissionDescription'),
       type: 'troubleshoot',
       cluster: clusterName,
-      initialPrompt: `Analyze the health of Kubernetes cluster "${clusterName}" and identify any issues that need attention.
-
-Current cluster state:
-- Nodes: ${health?.nodeCount || 0} total, ${health?.readyNodes || 0} ready
-- Pods: ${health?.podCount || 0} total
-- CPU: ${health?.cpuCores || 0} cores
-- Memory: ${promptMemorySummary}
-- GPUs: ${clusterGPUs.reduce((sum, n) => sum + n.gpuCount, 0)} total
-
-Known issues (${podIssues.length + clusterDeploymentIssues.length} total):
-${issuesSummary || 'No known issues'}
-
-Please analyze this cluster and provide:
-1. Health assessment summary
-2. Identified issues and their severity
-3. Recommended actions to resolve issues
-4. Preventive measures to avoid future problems`,
+      initialPrompt: buildDiagnosePrompt({
+        clusterName,
+        health,
+        promptMemorySummary,
+        totalGpuCount: totalClusterGpus,
+        podIssues,
+        deploymentIssues: clusterDeploymentIssues,
+      }),
       context: {
         clusterName,
         health,
@@ -186,10 +175,6 @@ Please analyze this cluster and provide:
 
   const handleRepair = () => {
     emitClusterAction('repair', clusterName)
-    const issuesList = [
-      ...podIssues.slice(0, 5).map(p => `- Pod "${p.name}" in namespace "${p.namespace}": ${p.status} (${p.restarts} restarts)`),
-      ...clusterDeploymentIssues.slice(0, 5).map(d => `- Deployment "${d.name}" in namespace "${d.namespace}": ${d.readyReplicas ?? 0}/${d.replicas ?? 0} ready - ${d.reason || 'Unknown reason'}`)
-    ].join('\n')
 
     onClose() // Close modal so mission sidebar is visible
     startMission({
@@ -197,18 +182,11 @@ Please analyze this cluster and provide:
       description: t('cluster.repairMissionDescription'),
       type: 'repair',
       cluster: clusterName,
-      initialPrompt: `I need help repairing issues in Kubernetes cluster "${clusterName}".
-
-Current issues that need to be fixed:
-${issuesList}
-
-For each issue, please:
-1. Diagnose the root cause
-2. Suggest a fix with the exact kubectl commands needed
-3. Explain what each command does
-4. Warn about any potential side effects
-
-After I approve, help me execute the repairs step by step.`,
+      initialPrompt: buildRepairPrompt({
+        clusterName,
+        podIssues,
+        deploymentIssues: clusterDeploymentIssues,
+      }),
       context: {
         clusterName,
         podIssues: podIssues.slice(0, 10),
