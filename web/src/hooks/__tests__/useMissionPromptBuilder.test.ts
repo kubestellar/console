@@ -9,6 +9,7 @@ vi.mock('../useResolutions', () => ({
 
 import {
   generateMessageId,
+  sanitizeForPrompt,
   buildEnhancedPrompt,
   buildSystemMessages,
   stripInteractiveArtifacts,
@@ -42,6 +43,22 @@ describe('generateMessageId', () => {
 
   it('includes the suffix when provided', () => {
     expect(generateMessageId('nointeractive')).toContain('nointeractive')
+  })
+})
+
+describe('sanitizeForPrompt', () => {
+  it('removes literal angle brackets before prompt interpolation', () => {
+    expect(sanitizeForPrompt('<script>alert(1)</script>')).toBe('scriptalert(1)/script')
+  })
+
+  it('normalizes unicode-escaped angle brackets before stripping them', () => {
+    expect(sanitizeForPrompt('\\u003cscript\\u003ealert(1)\\u003c/script\\u003e')).toBe('scriptalert(1)/script')
+  })
+
+  it('encodes prompt metacharacters and caps length', () => {
+    const sanitized = sanitizeForPrompt(`pods & services ${'x'.repeat(600)}`)
+    expect(sanitized).toStartWith('pods &amp; services ')
+    expect(sanitized.length).toBe(500)
   })
 })
 

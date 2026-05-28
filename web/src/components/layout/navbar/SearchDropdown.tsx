@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useSearchIndex, CATEGORY_ORDER, type SearchCategory, type SearchItem } from '../../../hooks/useSearchIndex'
 import { useMissions } from '../../../hooks/useMissions'
+import { sanitizeForPrompt } from '../../../hooks/useMissionPromptBuilder'
 import { useSidebarConfig, DISCOVERABLE_DASHBOARDS } from '../../../hooks/useSidebarConfig'
 import { scrollToCard } from '../../../lib/scrollToCard'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
@@ -30,6 +31,8 @@ const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
 
 /** Result type chip styling — higher contrast and enough padding to read quickly. */
 const RESULT_TYPE_CHIP_CLASS = 'inline-flex shrink-0 items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-foreground'
+const AI_MISSION_TITLE_MAX_LENGTH = 50
+const AI_MISSION_TITLE_TRUNCATED_LENGTH = 47
 
 const CATEGORY_CONFIG: Record<SearchCategory, { label: string; icon: typeof Server }> = {
   page: { label: 'Dashboards', icon: LayoutDashboard },
@@ -250,12 +253,17 @@ export function SearchDropdown({ autoFocusOnMount = false }: SearchDropdownProps
     if (!searchQuery.trim()) return
 
     const query = searchQuery.trim()
+    const sanitizedQuery = sanitizeForPrompt(query)
+    if (!sanitizedQuery) return
+
     emitGlobalSearchAskAI(query.length)
     startMission({
-      title: query.length > 50 ? query.substring(0, 47) + '...' : query,
+      title: sanitizedQuery.length > AI_MISSION_TITLE_MAX_LENGTH
+        ? sanitizedQuery.substring(0, AI_MISSION_TITLE_TRUNCATED_LENGTH) + '...'
+        : sanitizedQuery,
       description: 'Custom AI mission from search',
       type: 'custom',
-      initialPrompt: query })
+      initialPrompt: sanitizedQuery })
 
     setSearchQuery('')
     closeSearch()

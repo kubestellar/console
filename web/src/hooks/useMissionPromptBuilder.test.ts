@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   generateMessageId,
+  sanitizeForPrompt,
   buildEnhancedPrompt,
   buildSystemMessages,
   stripInteractiveArtifacts,
@@ -69,6 +70,23 @@ describe('generateMessageId', () => {
 })
 
 // ── buildEnhancedPrompt ─────────────────────────────────────────────────────
+
+describe('sanitizeForPrompt', () => {
+  it('removes literal angle brackets before prompt interpolation', () => {
+    expect(sanitizeForPrompt('<script>alert(1)</script>')).toBe('scriptalert(1)/script')
+  })
+
+  it('normalizes unicode-escaped angle brackets before stripping them', () => {
+    expect(sanitizeForPrompt('\\u003cscript\\u003ealert(1)\\u003c/script\\u003e')).toBe('scriptalert(1)/script')
+  })
+
+  it('encodes prompt metacharacters and limits length', () => {
+    const longInput = `pods & services ${'x'.repeat(600)}`
+    const sanitized = sanitizeForPrompt(longInput)
+    expect(sanitized).toStartWith('pods &amp; services ')
+    expect(sanitized.length).toBe(500)
+  })
+})
 
 describe('buildEnhancedPrompt', () => {
   it('returns original prompt when no cluster or dryRun', () => {

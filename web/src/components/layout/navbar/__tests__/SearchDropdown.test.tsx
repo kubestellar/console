@@ -5,6 +5,7 @@ import type { SearchItem } from '../../../../hooks/useSearchIndex'
 const navigateMock = vi.fn()
 const locationState = { pathname: '/' }
 const mockUseSearchIndex = vi.fn()
+const startMissionMock = vi.fn()
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -32,7 +33,7 @@ vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => ({
     openSidebar: vi.fn(),
     setActiveMission: vi.fn(),
-    startMission: vi.fn(),
+    startMission: startMissionMock,
   }),
 }))
 
@@ -69,6 +70,7 @@ vi.mock('../../../../lib/analytics', () => ({
 describe('SearchDropdown', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    startMissionMock.mockReset()
     locationState.pathname = '/'
     mockUseSearchIndex.mockReturnValue({ results: new Map(), totalCount: 0 })
   })
@@ -106,5 +108,23 @@ describe('SearchDropdown', () => {
     expect(chip).toHaveClass('px-2')
     expect(chip).toHaveClass('py-0.5')
     expect(chip).toHaveClass('text-foreground')
+  })
+
+  it('sanitizes search input before starting an AI mission', async () => {
+    mockUseSearchIndex.mockReturnValue({ results: new Map(), totalCount: 0 })
+
+    const { SearchDropdown } = await import('../SearchDropdown')
+    render(<SearchDropdown />)
+
+    fireEvent.change(screen.getByTestId('global-search-input'), {
+      target: { value: '\\u003cscript\\u003ealert(1)\\u003c/script\\u003e & pods' },
+    })
+    fireEvent.click(screen.getByText('layout.navbar.askAIInstead'))
+
+    expect(startMissionMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'scriptalert(1)/script &amp; pods',
+      initialPrompt: 'scriptalert(1)/script &amp; pods',
+      type: 'custom',
+    }))
   })
 })
