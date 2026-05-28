@@ -2,6 +2,7 @@ import { useEffect, useReducer, type ReactNode } from 'react'
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../lib/cn'
+import { STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { isDemoMode } from '../lib/demoMode'
 import { fetchKagentStatus } from '../lib/kagentBackend'
 import { getUserSafeErrorMessage } from '../lib/errors/handleError'
@@ -14,6 +15,8 @@ const INITIAL_HANDSHAKE_TIMEOUT_SECONDS = INITIAL_HANDSHAKE_TIMEOUT_MS / 1000
 const STELLAR_STATE_ENDPOINT = '/api/stellar/state'
 const KAGENT_STATUS_ENDPOINT = '/api/kagent/status'
 const AUTH_REQUIRED_PANEL_CLASSNAME = 'w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm'
+const LEGACY_STORAGE_KEY_KC_TOKEN = 'kc_token'
+const LOGIN_PATH = '/login'
 
 type HandshakeState = 'loading' | 'ready' | 'error' | 'auth-required'
 
@@ -68,6 +71,17 @@ const gateReducer = (state: GateState, action: GateAction): GateState => {
     default:
       return state
   }
+}
+
+const clearStaleSessionAndRedirectToLogin = (): void => {
+  try {
+    localStorage.removeItem(LEGACY_STORAGE_KEY_KC_TOKEN)
+    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
+  } catch {
+    // ignore localStorage access failures and continue to login
+  }
+  window.location.href = LOGIN_PATH
 }
 
 export function InitialInfrastructureGate({ children }: InitialInfrastructureGateProps) {
@@ -233,8 +247,8 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
             </h3>
             <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
               <li>{t('startupHandshake.authRecoveryStep1', 'Click "Reload page" to refresh your session')}</li>
-              <li>{t('startupHandshake.authRecoveryStep2', 'If the issue persists, log out and log in again')}</li>
-              <li>{t('startupHandshake.authRecoveryStep3', 'Verify you have the necessary access permissions')}</li>
+              <li>{t('startupHandshake.authRecoveryStep2', 'If the issue persists, click "Sign In" below to start a new session')}</li>
+              <li>{t('startupHandshake.authRecoveryStep3', 'Clicking "Sign In" clears the stale session before redirecting you to login')}</li>
             </ul>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -252,6 +266,13 @@ export function InitialInfrastructureGate({ children }: InitialInfrastructureGat
               size="md"
             >
               {t('actions.retry', 'Retry')}
+            </Button>
+            <Button
+              onClick={clearStaleSessionAndRedirectToLogin}
+              variant="ghost"
+              size="md"
+            >
+              {t('actions.signIn', 'Sign In')}
             </Button>
           </div>
         </div>

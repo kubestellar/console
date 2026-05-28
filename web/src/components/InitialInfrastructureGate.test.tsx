@@ -1,19 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { InitialInfrastructureGate } from './InitialInfrastructureGate'
 
 const mockGetState = vi.fn()
 const mockFetchKagentStatus = vi.fn()
 const mockIsDemoMode = vi.fn(() => false)
+const mockTranslate = vi.fn((_key: string, fallback: string, options?: Record<string, unknown>) => {
+  if (options?.timeoutSeconds && fallback.includes('{{timeoutSeconds}}')) {
+    return fallback.replace('{{timeoutSeconds}}', String(options.timeoutSeconds))
+  }
+  return fallback
+})
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, options?: Record<string, unknown>) => {
-      if (options?.timeoutSeconds && fallback.includes('{{timeoutSeconds}}')) {
-        return fallback.replace('{{timeoutSeconds}}', String(options.timeoutSeconds))
-      }
-      return fallback
-    },
+    t: mockTranslate,
   }),
 }))
 
@@ -32,9 +34,20 @@ vi.mock('../lib/demoMode', () => ({
 }))
 
 describe('InitialInfrastructureGate', () => {
+  let originalLocation: Location
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsDemoMode.mockReturnValue(false)
+    localStorage.clear()
+    originalLocation = window.location
+  })
+
+  afterEach(() => {
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
   })
 
   it('renders children after the initial handshake succeeds', async () => {
@@ -82,12 +95,21 @@ describe('InitialInfrastructureGate', () => {
     expect(screen.getByText(/session has expired or authentication credentials are missing/)).toBeInTheDocument()
     expect(screen.getByText('Recovery Steps')).toBeInTheDocument()
     expect(screen.getByText(/Click "Reload page" to refresh your session/)).toBeInTheDocument()
+    expect(screen.getByText(/click "Sign In" below to start a new session/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument()
   })
 
-  it('shows a demo-aware auth screen in demo mode', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-    mockGetState.mockRejectedValue(new Error('No authentication token available'))
+  it('clears stale auth state and redirects to login when Sign In is clicked', async () => {
+    mockGetState.mockRejectedValue(new Error('Token is invalid or expired'))
     mockFetchKagentStatus.mockResolvedValue({ available: true, url: 'http://kagent:8080' })
+    localStorage.setItem('kc_token', 'stale-legacy-token')
+    localStorage.setItem(STORAGE_KEY_TOKEN, 'stale-token')
+    localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
+
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, href: '/', reload: vi.fn() },
+      writable: true,
+    })
 
     render(
       <InitialInfrastructureGate>
@@ -95,11 +117,27 @@ describe('InitialInfrastructureGate', () => {
       </InitialInfrastructureGate>
     )
 
-    await waitFor(() => expect(screen.getByText('Demo Session')).toBeInTheDocument())
-    expect(screen.getByText(/does not indicate a real authentication failure/)).toBeInTheDocument()
-    expect(screen.getByText(/reset the demo session and continue exploring/)).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Demo environment' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Reload Demo Session' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }))
+
+    expect(localStorage.getItem('kc_token')).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBeNull()
+    expect(localStorage.getItem(STORAGE_KEY_HAS_SESSION)).toBeNull()
+    expect(window.location.href).toBe('/login')
+  })
+
+  it('renders children immediately in demo mode', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+
+    render(
+      <InitialInfrastructureGate>
+        <div>Ready</div>
+      </InitialInfrastructureGate>
+    )
+
+    await waitFor(() => expect(screen.getByText('Ready')).toBeInTheDocument())
+    expect(mockGetState).not.toHaveBeenCalled()
+    expect(mockFetchKagentStatus).not.toHaveBeenCalled()
     expect(screen.queryByText('Recovery Steps')).not.toBeInTheDocument()
   })
 

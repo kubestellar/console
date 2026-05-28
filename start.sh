@@ -521,13 +521,23 @@ if [ -n "$MCP_MISSING" ]; then
     echo ""
 fi
 
-# Generate JWT_SECRET if not set (required in production mode)
+# Persist JWT_SECRET across restarts so browser tokens remain valid (#15947)
+JWT_SECRET_FILE="$INSTALL_DIR/data/.jwt_secret"
 if [ -z "$JWT_SECRET" ]; then
-    if command -v openssl &>/dev/null; then
-        export JWT_SECRET=$(openssl rand -hex 32)
-    else
-        export JWT_SECRET=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+    if [ -f "$JWT_SECRET_FILE" ]; then
+        JWT_SECRET=$(cat "$JWT_SECRET_FILE")
     fi
+    if [ -z "$JWT_SECRET" ]; then
+        if command -v openssl &>/dev/null; then
+            JWT_SECRET=$(openssl rand -hex 32)
+        else
+            JWT_SECRET=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+        fi
+        mkdir -p "$(dirname "$JWT_SECRET_FILE")"
+        echo "$JWT_SECRET" > "$JWT_SECRET_FILE"
+        chmod 600 "$JWT_SECRET_FILE"
+    fi
+    export JWT_SECRET
 fi
 
 # Start console (serves frontend from web/dist at the specified port)

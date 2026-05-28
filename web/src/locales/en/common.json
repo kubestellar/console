@@ -53,6 +53,7 @@
     "viewDetails": "View Details",
     "copied": "Copied!",
     "dismiss": "Dismiss",
+    "signIn": "Sign In",
     "viewNamespaceCostAria": "View cost details for namespace {{namespace}}",
     "viewOperatorAria": "View operator {{name}}",
     "toggleGPUNodeAria": "Toggle details for GPU node {{node}}",
@@ -4378,7 +4379,14 @@
     "demoAuthTitle": "Demo Session",
     "demoAuthDescription": "You are viewing the Console in demo mode. This message does not indicate a real authentication failure.",
     "demoAuthHint": "Reload the page to reset the demo session and continue exploring the demo experience.",
-    "demoAuthRefresh": "Reload Demo Session"
+    "demoAuthRefresh": "Reload Demo Session",
+    "authRequiredTitle": "Authentication Required",
+    "authRequiredDescription": "Your session has expired or authentication credentials are missing. Please sign in again to continue using the console.",
+    "authRecoveryTitle": "Recovery Steps",
+    "authRecoveryStep1": "Click \"Reload page\" to refresh your session",
+    "authRecoveryStep2": "If the issue persists, click \"Sign In\" below to start a new session",
+    "authRecoveryStep3": "Clicking \"Sign In\" clears the stale session before redirecting you to login",
+    "authErrorAbstracted": "Authentication or session issue detected"
   },
   "agentSetup": {
     "welcomeTitle": "Welcome to KubeStellar Console",
