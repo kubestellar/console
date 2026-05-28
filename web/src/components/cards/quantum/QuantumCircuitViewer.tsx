@@ -12,6 +12,8 @@ import { CIRCUIT_ZOOM_STORAGE_KEY } from './QuantumCircuitViewer.constants'
 
 const CIRCUIT_ASCII_POLLING_INTERVAL_MS = QUANTUM_CIRCUIT_DEFAULT_POLL_MS
 const CIRCUIT_ZOOM_DEFAULT_PCT = 100
+const CIRCUIT_ZOOM_MIN_PCT = 15
+const CIRCUIT_ZOOM_MAX_PCT = 150
 const CIRCUIT_ZOOM_PERCENT_DIVISOR = 100
 const CIRCUIT_POPOUT_URL = '/api/quantum/qasm/circuit/ascii'
 const CIRCUIT_ZOOM_LEVELS_PCT = [15, 20, 25, 35, 50, 65, 85, 100, 125, 150]
@@ -37,7 +39,9 @@ function readPersistedZoom(): number {
     const stored = window.localStorage.getItem(CIRCUIT_ZOOM_STORAGE_KEY)
     if (!stored) return CIRCUIT_ZOOM_DEFAULT_PCT
     const parsed = parseInt(stored, 10)
-    if (!Number.isFinite(parsed) || parsed <= 0) return CIRCUIT_ZOOM_DEFAULT_PCT
+    if (!Number.isFinite(parsed) || parsed < CIRCUIT_ZOOM_MIN_PCT || parsed > CIRCUIT_ZOOM_MAX_PCT) {
+      return CIRCUIT_ZOOM_DEFAULT_PCT
+    }
     return snapToNearestZoom(parsed)
   } catch {
     return CIRCUIT_ZOOM_DEFAULT_PCT
