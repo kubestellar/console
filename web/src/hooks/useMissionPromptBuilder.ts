@@ -62,10 +62,14 @@ export function buildEnhancedPrompt(params: StartMissionParams): {
   matchedResolutions: MatchedResolution[]
   isInstallMission: boolean
 } {
-  // Inject cluster targeting into the prompt sent to the agent
-  let enhancedPrompt = params.initialPrompt
+  // #15921 — Centralize prompt sanitization so ALL entry points (SearchDropdown,
+  // InlineAIAssist, ConfirmMissionPromptDialog, drill-down views) are protected
+  // against prompt injection regardless of whether the caller remembered to sanitize.
+  let enhancedPrompt = sanitizeForPrompt(params.initialPrompt)
+  // Sanitize cluster names — they come from kubeconfig contexts which could be
+  // attacker-controlled in shared environments.
   if (params.cluster) {
-    const clusterList = params.cluster.split(',').map(c => c.trim()).filter(Boolean)
+    const clusterList = params.cluster.split(',').map(c => sanitizeForPrompt(c.trim())).filter(Boolean)
     if (clusterList.length === 1) {
       enhancedPrompt = `Target cluster: ${clusterList[0]}\nIMPORTANT: All kubectl commands MUST use --context=${clusterList[0]}\n\n${enhancedPrompt}`
     } else {
@@ -114,8 +118,8 @@ export function buildEnhancedPrompt(params: StartMissionParams): {
 
   // Match resolutions for troubleshooting-related missions (not deploy/upgrade)
   if (params.type !== 'deploy' && params.type !== 'upgrade') {
-    // Detect issue signature from mission content
-    const content = `${params.title} ${params.description} ${params.initialPrompt}`
+    // Detect issue signature from mission content (use sanitized prompt)
+    const content = `${sanitizeForPrompt(params.title)} ${sanitizeForPrompt(params.description)} ${enhancedPrompt}`
     const signature = detectIssueSignature(content)
 
     if (signature.type && signature.type !== 'Unknown') {
