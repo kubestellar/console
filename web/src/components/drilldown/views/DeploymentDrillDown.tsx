@@ -14,6 +14,7 @@ import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { PageErrorBoundary } from '../../PageErrorBoundary'
+import { Button } from '../../ui/Button'
 
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
@@ -536,8 +537,9 @@ function DeploymentDrillDownContent({ data }: Props) {
           {TABS.map((tab) => {
             const Icon = tab.icon
             return (
-              <button
+              <Button
                 key={tab.id}
+                variant="ghost"
                 id={`deployment-tab-${tab.id}`}
                 data-tab-id={tab.id}
                 role="tab"
@@ -546,15 +548,15 @@ function DeploymentDrillDownContent({ data }: Props) {
                 aria-controls={`deployment-panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors',
+                  'rounded-none border-b-2 px-4 py-2 text-sm',
                   activeTab === tab.id
                     ? 'text-primary border-primary'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
                 )}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-              </button>
+              </Button>
             )
           })}
         </div>
