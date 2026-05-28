@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedDeployments, useCachedDeploymentIssues, useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -102,11 +102,41 @@ function DeploymentsContent() {
 
   const getStatValue = getDashboardStatValue
 
+  // #15906 — Build a deployment-specific health badge from the same issueCount
+  // used by the stats cards. Previously the default DashboardHealthIndicator
+  // counted pod issues via usePodIssues (global, unfiltered), causing the badge
+  // to show "2 critical issues" while the stats cards correctly showed 0.
+  const deploymentHealthBadge = useMemo(() => {
+    if (issueCount > 0) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 rounded border font-medium px-1.5 py-0.5 text-2xs bg-red-500/10 text-red-400 border-red-500/30"
+          title={`${issueCount} deployment${issueCount > 1 ? 's' : ''} with issues`}
+          aria-label={`Deployment health: ${issueCount} critical issue${issueCount > 1 ? 's' : ''}`}
+        >
+          <AlertCircle className="w-3 h-3" />
+          <span>{issueCount} critical issue{issueCount > 1 ? 's' : ''}</span>
+        </span>
+      )
+    }
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded border font-medium px-1.5 py-0.5 text-2xs bg-green-500/10 text-green-400 border-green-500/30"
+        title="All deployments healthy"
+        aria-label="Deployment health: all healthy"
+      >
+        <CheckCircle className="w-3 h-3" />
+        <span>All healthy</span>
+      </span>
+    )
+  }, [issueCount])
+
   return (
     <DashboardPage
       title="Deployments"
       subtitle="Monitor deployment health and rollout status"
       icon="Layers"
+      afterTitle={deploymentHealthBadge}
       rightExtra={<RotatingTip page="deployments" />}
       storageKey={DEPLOYMENTS_CARDS_KEY}
       defaultCards={DEFAULT_DEPLOYMENTS_CARDS}
