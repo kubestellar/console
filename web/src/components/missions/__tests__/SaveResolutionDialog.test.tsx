@@ -6,6 +6,7 @@
  */
 
 import type React from 'react'
+import * as ReactModule from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 
@@ -165,6 +166,25 @@ const DEFAULT_PROPS = {
   isOpen: true,
   onClose: vi.fn(),
   onSaved: vi.fn(),
+}
+
+const SAVE_DIALOG_STATE_CALLS_PER_RENDER = 11
+
+function mockUseStateAtCall(callIndex: number, forcedValue: unknown) {
+  const actualUseState = ReactModule.useState
+  let callCount = 0
+
+  return vi.spyOn(ReactModule, 'useState').mockImplementation(((initial: unknown) => {
+    callCount += 1
+    if (
+      callCount >= callIndex
+      && (callCount - callIndex) % SAVE_DIALOG_STATE_CALLS_PER_RENDER === 0
+    ) {
+      return [forcedValue, vi.fn()] as never
+    }
+
+    return actualUseState(initial as never)
+  }) as typeof ReactModule.useState)
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -376,6 +396,17 @@ describe('SaveResolutionDialog', () => {
   })
 
   // ── Save success ─────────────────────────────────────────────────────
+
+  it('shows a spinner while saving', () => {
+    mockUseStateAtCall(8, true)
+    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
+
+    render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
+
+    const saveButton = screen.getByRole('button', { name: /Saving/i })
+    expect(saveButton).toBeDisabled()
+    expect(saveButton.querySelector('svg.animate-spin')).toBeInTheDocument()
+  })
 
   it('calls saveResolution and closes on valid save', async () => {
     const onClose = vi.fn()

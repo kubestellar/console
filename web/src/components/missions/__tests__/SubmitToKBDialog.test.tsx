@@ -7,7 +7,8 @@
  */
 
 import type React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import * as ReactModule from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { MockedFunction } from 'vitest'
 
@@ -48,6 +49,7 @@ vi.mock('react-i18next', () => ({
         'missions.submitToKB.opensPr': 'Opens a PR on {{repo}}',
         'missions.submitToKB.cancel': 'Cancel',
         'missions.submitToKB.submit': 'Submit to KB',
+        'missions.submitToKB.submitting': 'Submitting...',
       }
       let value = pluralized[key] ?? map[key] ?? key
       for (const [name, replacement] of Object.entries(options ?? {})) {
@@ -136,6 +138,25 @@ const DEFAULT_PROPS = {
   onClose: vi.fn(),
 }
 
+const SUBMIT_DIALOG_STATE_CALLS_PER_RENDER = 5
+
+function mockUseStateAtCall(callIndex: number, forcedValue: unknown) {
+  const actualUseState = ReactModule.useState
+  let callCount = 0
+
+  return vi.spyOn(ReactModule, 'useState').mockImplementation(((initial: unknown) => {
+    callCount += 1
+    if (
+      callCount >= callIndex
+      && (callCount - callIndex) % SUBMIT_DIALOG_STATE_CALLS_PER_RENDER === 0
+    ) {
+      return [forcedValue, vi.fn()] as never
+    }
+
+    return actualUseState(initial as never)
+  }) as typeof ReactModule.useState)
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function renderDialog(props = DEFAULT_PROPS) {
@@ -154,6 +175,10 @@ describe('SubmitToKBDialog', () => {
     ;(fullScan as MockedFunction<typeof fullScan>).mockReturnValue({ valid: true, findings: [] })
     mockBuildGitHubNewFileUrl.mockReturnValue('https://github.com/kubestellar/console-kb/new/master')
     mockBuildGitHubIssueUrl.mockReturnValue('https://github.com/kubestellar/console-kb/issues/new')
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   // ── Closed / open rendering ──────────────────────────────────────────
@@ -294,6 +319,27 @@ describe('SubmitToKBDialog', () => {
     renderDialog()
     const submitBtn = screen.getByRole('button', { name: /Submit to KB/i })
     expect(submitBtn).not.toBeDisabled()
+  })
+
+  it('shows a spinner and disables the submit button while submitting', () => {
+    mockUseStateAtCall(5, true)
+
+    renderDialog()
+
+    const submitBtn = screen.getByRole('button', { name: /Submitting/i })
+    expect(submitBtn).toBeDisabled()
+    expect(submitBtn.querySelector('svg.animate-spin')).toBeInTheDocument()
+  })
+
+  it('re-enables the submit button after submission completes', async () => {
+    renderDialog()
+
+    const submitBtn = screen.getByRole('button', { name: /Submit to KB/i })
+    await act(async () => {
+      fireEvent.click(submitBtn)
+    })
+
+    expect(screen.getByRole('button', { name: /Submit to KB/i })).not.toBeDisabled()
   })
 
   it('calls window.open and onClose when Submit to KB is clicked', () => {
