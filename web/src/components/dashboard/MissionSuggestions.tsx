@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, startTransition } from 'react'
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Lightbulb, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield, Server, Scale, Activity, Timer } from 'lucide-react'
@@ -62,11 +62,15 @@ export function MissionSuggestions() {
   // Force dependency on snoozedMissions for reactivity
   void snoozedMissions
 
+  // Stable callback for auto-collapse — avoids resetting the countdown
+  // timer on every parent re-render (#16000)
+  const handleAutoCollapse = useCallback(() => setMinimized(true), [])
+
   // Timer hook for auto-collapse countdown
   const { countdown, handleMouseEnter, handleMouseLeave } = useMissionSuggestionsTimer({
     minimized,
     hasSuggestions,
-    onAutoCollapse: () => setMinimized(true),
+    onAutoCollapse: handleAutoCollapse,
   })
 
   // Cleanup on unmount
