@@ -166,27 +166,6 @@ export function createMissionStartActions(
           ))
         }
 
-        const missingToolError = toolResult.error
-        if (allowMissingToolWarning && missingToolError) {
-          state.setMissions(prev => prev.map(candidate =>
-            candidate.id === missionId
-              ? {
-                  ...candidate,
-                  currentStep: 'Continuing with AI-assisted flow',
-                  messages: [
-                    ...getMissionMessages(candidate.messages),
-                    {
-                      id: generateMessageId('tool-preflight-warning-retry'),
-                      role: 'system' as const,
-                      content: buildMissingToolWarning(missingToolError),
-                      timestamp: new Date(),
-                    },
-                  ],
-                }
-              : candidate,
-          ))
-        }
-
         const clusterContexts = (mission.cluster || '')
           .split(',')
           .map(cluster => cluster.trim())
