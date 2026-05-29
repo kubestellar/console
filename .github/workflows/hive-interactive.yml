@@ -30,12 +30,13 @@ jobs:
               : context.payload.pull_request;
 
             const body = [
-              `🐝 Hi @${item.user.login}! I'm \`kubestellar-hive[bot]\`, an AI assistant for this repo.`,
+              `🐝 Hi @${item.user.login}! I'm \`kubestellar-hive[bot]\`, an automation bot for this repo.`,
               '',
-              'Trusted users can mention `@kubestellar-hive` in a comment to interact with me.',
-              'I can help with code reviews, bug fixes, CI/CD help, and questions about the codebase.',
+              'Trusted users — org members and contributors with write access — can mention `@kubestellar-hive` in a comment to trigger repo automation.',
+              'On issues, that mention queues an automated fix attempt. On pull requests, it records extra context for existing automation.',
+              'This is not an interactive Q&A bot, so mentions should be treated as requests for automation rather than a conversation.',
               '',
-              '_I’m AI-powered, so replies may take a moment._',
+              '_Automation may take a moment to start, and follow-up happens through workflow activity rather than chat replies._',
             ].join('\n');
 
             await github.rest.issues.createComment({
@@ -171,20 +172,20 @@ jobs:
 
           if [ "$IS_PULL_REQUEST" = 'true' ]; then
             if [ "$ACTIVE_RUN" = 'true' ]; then
-              STATUS_LINE='I saved your instruction on this PR thread. There is already AI automation active for this PR, so I did not start anything new.'
-              NEXT_STEP='The active automation can use this new context on its next pass.'
+              STATUS_LINE='I recorded your comment on this PR. There is already hive automation active here, so I did not start anything new.'
+              NEXT_STEP='This bot does not do interactive Q&A in the thread; the active automation can use your comment as extra context on its next pass.'
             else
-              STATUS_LINE='I saved your instruction on this PR thread.'
-              NEXT_STEP='Mention `@kubestellar-hive` again any time with more details, follow-up questions, or review requests.'
+              STATUS_LINE='I recorded your comment on this PR as automation context.'
+              NEXT_STEP='This bot does not do interactive Q&A in the thread. On PRs, mentions add context for automation rather than starting a conversation.'
             fi
           elif [ "$ACTIVE_RUN" = 'true' ]; then
-            STATUS_LINE='I saved your instruction on the issue thread. This issue already has an active hive run, so I did not start a duplicate workflow.'
-            NEXT_STEP='The existing automation can use this new context on its next pass.'
+            STATUS_LINE='I recorded your comment on this issue. There is already an automated hive fix attempt in progress, so I did not queue a duplicate run.'
+            NEXT_STEP='This bot does not do interactive Q&A in the thread; the existing automation can use your comment as extra context on its next pass.'
           else
-            STATUS_LINE='I saved your instruction and queued the hive fix workflow for this issue.'
-            NEXT_STEP='The queued run will use the issue thread, including your mention comment, as additional context.'
+            STATUS_LINE='I recorded your comment and queued an automated hive fix attempt for this issue.'
+            NEXT_STEP='This bot does not do interactive Q&A in the thread. The queued workflow will use the issue thread, including your comment, as additional context.'
           fi
 
-          BODY=$(printf '## 🐝 Hive mention received\n\nThanks @%s — I captured the instruction from [your comment](%s).\n\n%s\n\n%s\n\n### Instruction captured\n%s\n' "$COMMENT_AUTHOR" "$COMMENT_URL" "$STATUS_LINE" "$NEXT_STEP" "$QUOTED_BODY")
+          BODY=$(printf '## 🐝 Hive automation update\n\nThanks @%s — I recorded [your comment](%s) for hive automation.\n\n%s\n\n%s\n\n### Comment recorded\n%s\n' "$COMMENT_AUTHOR" "$COMMENT_URL" "$STATUS_LINE" "$NEXT_STEP" "$QUOTED_BODY")
 
           gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
