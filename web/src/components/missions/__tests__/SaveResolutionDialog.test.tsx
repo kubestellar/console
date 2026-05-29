@@ -417,11 +417,11 @@ describe('SaveResolutionDialog', () => {
     expect(saveButton.querySelector('svg.animate-spin')).toBeInTheDocument()
   })
 
-  it('disables cancel controls while saving', () => {
-    mockUseStateAtCall(8, true)
+  it('disables cancel controls while saving', async () => {
+    const SaveResolutionDialogWithSavingState = await importSaveResolutionDialogWithForcedState(8, true)
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
 
-    render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
+    render(<SaveResolutionDialogWithSavingState {...DEFAULT_PROPS} />)
 
     expect(screen.getByRole('button', { name: /Cancel/i })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /close dialog/i })).not.toBeInTheDocument()

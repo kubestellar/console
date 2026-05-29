@@ -8,7 +8,7 @@
 
 import type React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import type { MockedFunction } from 'vitest'
 
 // ── Hoisted mock refs ────────────────────────────────────────────────────
@@ -340,10 +340,10 @@ describe('SubmitToKBDialog', () => {
     expect(submitBtn.querySelector('svg.animate-spin')).toBeInTheDocument()
   })
 
-  it('disables cancel controls while submitting', () => {
-    mockUseStateAtCall(5, true)
+  it('disables cancel controls while submitting', async () => {
+    const SubmitToKBDialogWithSubmittingState = await importSubmitToKBDialogWithForcedState(5, true)
 
-    renderDialog()
+    render(<SubmitToKBDialogWithSubmittingState {...DEFAULT_PROPS} />)
 
     expect(screen.getByRole('button', { name: /Cancel/i })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /close dialog/i })).not.toBeInTheDocument()
@@ -360,25 +360,37 @@ describe('SubmitToKBDialog', () => {
     expect(screen.getByRole('button', { name: /Submit to KB/i })).not.toBeDisabled()
   })
 
-  it('calls window.open and onClose when Submit to KB is clicked', () => {
+  it('calls window.open and onClose when Submit to KB is clicked', async () => {
     const onClose = vi.fn()
     render(<SubmitToKBDialog resolution={BASE_RESOLUTION} isOpen onClose={onClose} />)
-    fireEvent.click(screen.getByRole('button', { name: /Submit to KB/i }))
-    expect(mockWindowOpen).toHaveBeenCalledTimes(1)
-    expect(onClose).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Submit to KB/i }))
+    })
+
+    await waitFor(() => {
+      expect(mockWindowOpen).toHaveBeenCalledTimes(1)
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
-  it('falls back to GitHub issue URL when new-file URL exceeds 7500 chars', () => {
+  it('falls back to GitHub issue URL when new-file URL exceeds 7500 chars', async () => {
     mockBuildGitHubNewFileUrl.mockReturnValue('x'.repeat(7501))
     const onClose = vi.fn()
     render(<SubmitToKBDialog resolution={BASE_RESOLUTION} isOpen onClose={onClose} />)
-    fireEvent.click(screen.getByRole('button', { name: /Submit to KB/i }))
-    expect(mockBuildGitHubIssueUrl).toHaveBeenCalledTimes(1)
-    expect(mockWindowOpen).toHaveBeenCalledWith(
-      mockBuildGitHubIssueUrl.mock.results[0].value,
-      '_blank',
-      'noopener,noreferrer',
-    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Submit to KB/i }))
+    })
+
+    await waitFor(() => {
+      expect(mockBuildGitHubIssueUrl).toHaveBeenCalledTimes(1)
+      expect(mockWindowOpen).toHaveBeenCalledWith(
+        mockBuildGitHubIssueUrl.mock.results[0].value,
+        '_blank',
+        'noopener,noreferrer',
+      )
+    })
   })
 
   it('calls onClose when Cancel button is clicked', () => {

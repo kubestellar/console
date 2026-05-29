@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { QuantumAuthStatus, QuantumSystemStatus } from '../../../../hooks/useCachedQuantum'
 
 const mockUseQuantumSystemStatus = vi.fn()
@@ -362,10 +362,11 @@ describe('QuantumControlPanel — feedback', () => {
     render(<QuantumControlPanel />)
     fireEvent.click(screen.getByTitle('quantumControlPanel.clearCredentials'))
 
-    expect(screen.getByText('quantumControlPanel.clearCredentialsTitle')).toBeInTheDocument()
-    expect(screen.getByText('quantumControlPanel.clearCredentialsMessage')).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('quantumControlPanel.clearCredentialsTitle')).toBeInTheDocument()
+    expect(within(dialog).getByText('quantumControlPanel.clearCredentialsMessage')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'quantumControlPanel.clearCredentials' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'quantumControlPanel.clearCredentials' }))
 
     await waitFor(() => {
       expect(refetchAuthStatus).toHaveBeenCalled()
