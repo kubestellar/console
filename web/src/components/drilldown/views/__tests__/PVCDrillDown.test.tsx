@@ -68,6 +68,11 @@ const PENDING_PVC_JSON = {
 describe('PVCDrillDown interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(useDrillDown).mockReturnValue({
+      state: { stack: [] },
+      pop: vi.fn(),
+      close: vi.fn(),
+    } as unknown as ReturnType<typeof useDrillDown>)
   })
 
   it('renders bound PVC capacity and access modes with green status styling', async () => {
@@ -121,14 +126,19 @@ describe('PVCDrillDown interactions', () => {
 
   it('shows back button when drill-down stack has entries', () => {
     const mockPop = vi.fn()
-    vi.mocked(useDrillDown).mockReturnValueOnce({
-      state: { stack: [{}, {}] },
+    vi.mocked(useDrillDown).mockReturnValue({
+      state: {
+        stack: [
+          { type: 'namespace', title: 'default', data: {} },
+          { type: 'pvc', title: 'data-vol', data: BOUND_DATA },
+        ],
+      },
       pop: mockPop,
       close: vi.fn(),
     } as unknown as ReturnType<typeof useDrillDown>)
 
-    const { container } = renderWithDrillDown(<PVCDrillDown data={BOUND_DATA} />)
-    const backButton = container.querySelector('button[aria-label="drilldown.goBack"]')
-    expect(backButton).toBeTruthy()
+    renderWithDrillDown(<PVCDrillDown data={BOUND_DATA} />)
+
+    expect(screen.getByRole('button', { name: 'drilldown.goBack' })).toBeInTheDocument()
   })
 })
