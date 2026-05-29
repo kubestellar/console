@@ -241,6 +241,29 @@ describe('CardWrapper', () => {
 
       expect(onRefresh).toHaveBeenCalledTimes(1)
     })
+
+    it('keeps card content scrollable when failure banner is present', () => {
+      renderCardWrapper({
+        isFailed: true,
+        consecutiveFailures: 1,
+      }, {
+        reportState: {
+          isLoading: false,
+          hasData: true,
+          isDemoData: false,
+          isFailed: true,
+          consecutiveFailures: 1,
+        },
+      })
+
+      const banner = screen.getByTestId('card-failure-banner')
+      const contentContainer = banner.nextElementSibling as HTMLElement | null
+
+      expect(contentContainer).not.toBeNull()
+      expect(contentContainer).toHaveClass('overflow-y-auto')
+      expect(contentContainer).toHaveClass('min-h-0')
+      expect(contentContainer).not.toHaveClass('overflow-hidden')
+    })
   })
 
   describe('collapse persistence', () => {
