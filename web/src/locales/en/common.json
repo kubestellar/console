@@ -4955,7 +4955,8 @@
       "previewJson": "Preview JSON ({{count}} chars)",
       "opensPr": "Opens a PR on {{repo}}",
       "cancel": "Cancel",
-      "submit": "Submit to KB"
+      "submit": "Submit to KB",
+      "submitting": "Submitting..."
     },
     "recommended": {
       "tokenError": {

@@ -210,6 +210,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
     result: FileScanResult | null
     scanning: boolean
   }>({ key: '', result: null, scanning: false })
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const scanRanRef = useRef('')
 
   const dialogKey = `${resolution.id}:${resolution.updatedAt}:${isOpen ? 'open' : 'closed'}`
@@ -248,48 +249,53 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   const hasWarnings = warningCount > 0
 
   const handleSubmit = () => {
-    const description = resolution.resolution.summary || resolution.title
-    const url = buildGitHubNewFileUrl({
-      owner: CONSOLE_KB_OWNER,
-      repo: CONSOLE_KB_REPO,
-      branch: CONSOLE_KB_BRANCH,
-      path: targetDir,
-      filename,
-      content: jsonString,
-      message: `Add ${filename}: ${description}`,
-      description: `Submitted from KubeStellar Console resolution history.\n\n${description}`,
-    })
-
-    if (url.length > MAX_GITHUB_URL_LENGTH) {
-      const issueUrl = buildGitHubIssueUrl({
+    setIsSubmitting(true)
+    try {
+      const description = resolution.resolution.summary || resolution.title
+      const url = buildGitHubNewFileUrl({
         owner: CONSOLE_KB_OWNER,
         repo: CONSOLE_KB_REPO,
-        title: `New ${missionClass}: ${resolution.title}`,
-        body: [
-          `## New ${missionClass === 'install' ? 'Install Mission' : 'Solution'}`,
-          '',
-          `**Title:** ${resolution.title}`,
-          `**Issue Type:** ${resolution.issueSignature.type}`,
-          cncfProject ? `**CNCF Project:** ${cncfProject}` : '',
-          '',
-          '## Mission JSON',
-          '',
-          '```json',
-          jsonString,
-          '```',
-          '',
-          '---',
-          '_Submitted from KubeStellar Console resolution history._',
-        ].filter(Boolean).join('\n'),
-        labels: ['new-mission', missionClass],
+        branch: CONSOLE_KB_BRANCH,
+        path: targetDir,
+        filename,
+        content: jsonString,
+        message: `Add ${filename}: ${description}`,
+        description: `Submitted from KubeStellar Console resolution history.\n\n${description}`,
       })
 
-      window.open(issueUrl, '_blank', 'noopener,noreferrer')
-    } else {
-      window.open(url, '_blank', 'noopener,noreferrer')
-    }
+      if (url.length > MAX_GITHUB_URL_LENGTH) {
+        const issueUrl = buildGitHubIssueUrl({
+          owner: CONSOLE_KB_OWNER,
+          repo: CONSOLE_KB_REPO,
+          title: `New ${missionClass}: ${resolution.title}`,
+          body: [
+            `## New ${missionClass === 'install' ? 'Install Mission' : 'Solution'}`,
+            '',
+            `**Title:** ${resolution.title}`,
+            `**Issue Type:** ${resolution.issueSignature.type}`,
+            cncfProject ? `**CNCF Project:** ${cncfProject}` : '',
+            '',
+            '## Mission JSON',
+            '',
+            '```json',
+            jsonString,
+            '```',
+            '',
+            '---',
+            '_Submitted from KubeStellar Console resolution history._',
+          ].filter(Boolean).join('\n'),
+          labels: ['new-mission', missionClass],
+        })
 
-    onClose()
+        window.open(issueUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+
+      onClose()
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -422,11 +428,20 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!filename.trim()}
+            disabled={!filename.trim() || isSubmitting}
             className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-linear-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
-            <ExternalLink className="w-4 h-4" />
-            {t('missions.submitToKB.submit')}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t('missions.submitToKB.submitting')}
+              </>
+            ) : (
+              <>
+                <ExternalLink className="w-4 h-4" />
+                {t('missions.submitToKB.submit')}
+              </>
+            )}
           </button>
         </div>
       </BaseModal.Footer>
