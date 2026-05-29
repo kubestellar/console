@@ -1,5 +1,5 @@
 import { AlertTriangle, Info, XCircle, ChevronRight, Radio } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo } from 'react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import type { ClusterEvent } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -39,6 +39,79 @@ export const UNBOUNDED_ITEMS_PER_PAGE = 1000
  * cards (#8384). A fixed min-height for the footer region absorbs the
  * variance so the card body stays a consistent size across refreshes. */
 export const EVENT_STREAM_FOOTER_MIN_HEIGHT_PX = 48
+
+const EVENT_STREAM_FOOTER_STYLE = {
+  minHeight: `${EVENT_STREAM_FOOTER_MIN_HEIGHT_PX}px`,
+} as const
+
+const WARNING_EVENT_STYLE = {
+  icon: AlertTriangle,
+  color: 'text-yellow-400',
+  bg: 'bg-yellow-500/10',
+  tooltip: 'Warning event - Potential issue detected',
+} as const
+
+const ERROR_EVENT_STYLE = {
+  icon: XCircle,
+  color: 'text-red-400',
+  bg: 'bg-red-500/10',
+  tooltip: 'Error event - Action required',
+} as const
+
+const INFO_EVENT_STYLE = {
+  icon: Info,
+  color: 'text-blue-400',
+  bg: 'bg-blue-500/10',
+  tooltip: 'Informational event',
+} as const
+
+function getEventStyle(type: string) {
+  if (type === 'Warning') return WARNING_EVENT_STYLE
+  if (type === 'Error') return ERROR_EVENT_STYLE
+  return INFO_EVENT_STYLE
+}
+
+interface EventStreamItemProps {
+  event: ClusterEvent
+  index: number
+  onActivate: (event: ClusterEvent) => void
+}
+
+const EventStreamItem = memo(function EventStreamItem({ event, index, onActivate }: EventStreamItemProps) {
+  const style = getEventStyle(event.type)
+  const EventIcon = style.icon
+  const handleClick = useCallback(() => onActivate(event), [event, onActivate])
+
+  return (
+    <div
+      className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer group ${index % 2 === 0 ? 'bg-secondary/10' : 'bg-secondary/25'}`}
+      onClick={handleClick}
+      title={`Click to view details for ${event.object}`}
+    >
+      <div className={`p-1.5 rounded ${style.bg} shrink-0`} title={style.tooltip}>
+        <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5 min-w-0">
+          <ClusterBadge cluster={event.cluster || 'unknown'} />
+          <span className="text-xs text-muted-foreground truncate min-w-0" title={`Namespace: ${event.namespace}`}>{event.namespace}</span>
+        </div>
+        <p className="text-sm text-foreground truncate" title={event.message}>{event.message}</p>
+        <p className="text-xs text-muted-foreground truncate" title={`Resource: ${event.object}`}>
+          {event.object}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        {event.count > 1 && (
+          <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground" title={`Event occurred ${event.count} times`}>
+            x{event.count}
+          </span>
+        )}
+        <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></span>
+      </div>
+    </div>
+  )
+})
 
 interface EventStreamConfig {
   /** User-configurable max events from the Configure Card modal. Drives BOTH
@@ -163,7 +236,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
 
   const { drillToEvents, drillToPod, drillToDeployment, drillToReplicaSet } = useDrillDownActions()
 
-  const handleEventClick = (event: ClusterEvent) => {
+  const handleEventClick = useCallback((event: ClusterEvent) => {
     // Parse object to get resource type and name
     const [resourceType, resourceName] = event.object.split('/')
     const cluster = event.cluster
@@ -183,17 +256,11 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
       // Generic events view for other resources
       drillToEvents(cluster, event.namespace, event.object)
     }
-  }
+  }, [drillToDeployment, drillToEvents, drillToPod, drillToReplicaSet])
 
-  const getEventStyle = (type: string) => {
-    if (type === 'Warning') {
-      return { icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10', tooltip: 'Warning event - Potential issue detected' }
-    }
-    if (type === 'Error') {
-      return { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', tooltip: 'Error event - Action required' }
-    }
-    return { icon: Info, color: 'text-blue-400', bg: 'bg-blue-500/10', tooltip: 'Informational event' }
-  }
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value as SortByOption)
+  }, [setSortBy])
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader rowHeight={60} />
@@ -242,7 +309,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
             onLimitChange: setItemsPerPage,
             sortBy,
             sortOptions: SORT_OPTIONS,
-            onSortChange: (v) => setSortBy(v as SortByOption),
+            onSortChange: handleSortChange,
             sortDirection,
             onSortDirectionChange: setSortDirection,
           }}
@@ -264,41 +331,14 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
             {t('cards:eventStream.noMatchingEvents')}
           </div>
         ) : (
-          events.map((event, idx) => {
-            const style = getEventStyle(event.type)
-            const EventIcon = style.icon
-
-            return (
-              <div
-                key={`${event.cluster || 'unknown'}-${event.object}-${event.lastSeen || event.firstSeen || ''}-${event.reason}-${idx}`}
-                className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/10' : 'bg-secondary/25'}`}
-                onClick={() => handleEventClick(event)}
-                title={`Click to view details for ${event.object}`}
-              >
-                <div className={`p-1.5 rounded ${style.bg} shrink-0`} title={style.tooltip}>
-                  <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5 min-w-0">
-                    <ClusterBadge cluster={event.cluster || 'unknown'} />
-                    <span className="text-xs text-muted-foreground truncate min-w-0" title={`Namespace: ${event.namespace}`}>{event.namespace}</span>
-                  </div>
-                  <p className="text-sm text-foreground truncate" title={event.message}>{event.message}</p>
-                  <p className="text-xs text-muted-foreground truncate" title={`Resource: ${event.object}`}>
-                    {event.object}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {event.count > 1 && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground" title={`Event occurred ${event.count} times`}>
-                      x{event.count}
-                    </span>
-                  )}
-                  <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" /></span>
-                </div>
-              </div>
-            )
-          })
+          events.map((event, idx) => (
+            <EventStreamItem
+              key={`${event.cluster || 'unknown'}-${event.object}-${event.lastSeen || event.firstSeen || ''}-${event.reason}-${idx}`}
+              event={event}
+              index={idx}
+              onActivate={handleEventClick}
+            />
+          ))
         )}
       </div>
 
@@ -309,7 +349,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
        */}
       <div
         className="shrink-0"
-        style={{ minHeight: `${EVENT_STREAM_FOOTER_MIN_HEIGHT_PX}px` }}
+        style={EVENT_STREAM_FOOTER_STYLE}
       >
         <CardPaginationFooter
           currentPage={currentPage}

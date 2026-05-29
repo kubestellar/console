@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { AlertTriangle, CheckCircle2, Activity, Server, ChevronDown, AlertCircle } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -22,6 +22,30 @@ function getBarWidth(count: number, total: number) {
   const width = total > 0 ? Math.min(MAX_BAR_WIDTH_PERCENT, (count / total) * MAX_BAR_WIDTH_PERCENT) : 0
   return `${width}%`
 }
+
+
+interface SummaryMetricBarProps {
+  label: string
+  count: number
+  total: number
+  colorClassName: string
+}
+
+const SummaryMetricBar = memo(function SummaryMetricBar({ label, count, total, colorClassName }: SummaryMetricBarProps) {
+  const widthStyle = useMemo(() => ({ width: getBarWidth(count, total) }), [count, total])
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
+      <span className="text-foreground truncate mr-2">{label}</span>
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
+          <div className={`h-full rounded-full ${colorClassName}`} style={widthStyle} />
+        </div>
+        <span className="text-muted-foreground w-6 text-right">{count}</span>
+      </div>
+    </div>
+  )
+})
 
 export function EventSummary() {
   const { t } = useTranslation(['cards', 'common'])
@@ -96,6 +120,11 @@ export function EventSummary() {
     return { warnings, normal, total, topReasons, otherReasonsCount, topClusters }
   }, [filteredEvents])
 
+  const total = summary.total
+  const handleToggleClusterFilter = useCallback(() => {
+    setShowClusterFilter(current => !current)
+  }, [setShowClusterFilter])
+
   if (showSkeleton) {
     return <CardSkeleton type="status" rows={3} showHeader={false} />
   }
@@ -109,8 +138,6 @@ export function EventSummary() {
     )
   }
 
-  const total = summary.total
-
   return (
     <div className="space-y-4">
       {/* Header controls */}
@@ -123,7 +150,7 @@ export function EventSummary() {
           {availableClusters.length > 1 && (
             <div className="relative" ref={clusterFilterRef}>
               <button
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
+                onClick={handleToggleClusterFilter}
                 className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 transition-colors"
               >
                 <Server className="w-3 h-3" />
@@ -193,32 +220,21 @@ export function EventSummary() {
           <div className="text-xs font-medium text-muted-foreground mb-2">{t('eventSummary.topReasons')}</div>
           <div className="space-y-1">
             {summary.topReasons.map(([reason, count]) => (
-              <div key={reason} className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
-                <span className="text-foreground truncate mr-2">{reason}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-purple-500"
-                      style={{ width: getBarWidth(count, total) }}
-                    />
-                  </div>
-                  <span className="text-muted-foreground w-6 text-right">{count}</span>
-                </div>
-              </div>
+              <SummaryMetricBar
+                key={reason}
+                label={reason}
+                count={count}
+                total={total}
+                colorClassName="bg-purple-500"
+              />
             ))}
             {summary.otherReasonsCount > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
-                <span className="text-foreground truncate mr-2">{t('eventSummary.others')}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-purple-500"
-                      style={{ width: getBarWidth(summary.otherReasonsCount, total) }}
-                    />
-                  </div>
-                  <span className="text-muted-foreground w-6 text-right">{summary.otherReasonsCount}</span>
-                </div>
-              </div>
+              <SummaryMetricBar
+                label={t('eventSummary.others')}
+                count={summary.otherReasonsCount}
+                total={total}
+                colorClassName="bg-purple-500"
+              />
             )}
           </div>
         </div>
@@ -230,18 +246,13 @@ export function EventSummary() {
           <div className="text-xs font-medium text-muted-foreground mb-2">{t('eventSummary.byCluster')}</div>
           <div className="space-y-1">
             {summary.topClusters.map(([cluster, count]) => (
-              <div key={cluster} className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
-                <span className="text-foreground truncate mr-2">{cluster}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-blue-500"
-                      style={{ width: getBarWidth(count, total) }}
-                    />
-                  </div>
-                  <span className="text-muted-foreground w-6 text-right">{count}</span>
-                </div>
-              </div>
+              <SummaryMetricBar
+                key={cluster}
+                label={cluster}
+                count={count}
+                total={total}
+                colorClassName="bg-blue-500"
+              />
             ))}
           </div>
         </div>

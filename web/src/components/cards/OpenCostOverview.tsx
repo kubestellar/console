@@ -59,6 +59,9 @@ const NamespaceCostRow = memo(function NamespaceCostRow({
   onActivate,
   label,
 }: NamespaceCostRowProps) {
+  const progressStyle = useMemo(() => ({
+    width: `${(ns.totalCost / maxCost) * 100}%`,
+  }), [maxCost, ns.totalCost])
   const handleClick = useCallback(() => onActivate(ns), [onActivate, ns])
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const list = e.currentTarget.parentElement
@@ -107,7 +110,7 @@ const NamespaceCostRow = memo(function NamespaceCostRow({
       <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
         <div
           className="h-full bg-linear-to-r from-blue-500 to-cyan-500 rounded-full"
-          style={{ width: `${(ns.totalCost / maxCost) * 100}%` }}
+          style={progressStyle}
         />
       </div>
       <div className="flex gap-3 text-2xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react'
+import { useCallback, useMemo, memo } from 'react'
 import { Gauge } from '../charts'
 import { Cpu, MemoryStick, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -88,9 +88,16 @@ function ResourceUsageInternal() {
   }, [clusters, gpuNodes])
 
   // Open resources drill down showing all clusters
-  const handleDrillDown = () => {
+  const handleDrillDown = useCallback(() => {
     drillToResources()
-  }
+  }, [drillToResources])
+
+  const handleDrillDownKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleDrillDown()
+    }
+  }, [handleDrillDown])
 
   // Report state to CardWrapper for refresh animation
   const hasData = clusters.length > 0
@@ -101,6 +108,37 @@ function ResourceUsageInternal() {
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
     consecutiveFailures })
+
+  const cpuPercent = totals.cpu.total > 0 ? Math.round((totals.cpu.used / totals.cpu.total) * 100) : 0
+  const memoryPercent = totals.memory.total > 0 ? Math.round((totals.memory.used / totals.memory.total) * 100) : 0
+  const gpuPercent = totals.gpu.total > 0 ? Math.round((totals.gpu.used / totals.gpu.total) * 100) : 0
+  const tpuPercent = totals.tpu.total > 0 ? Math.round((totals.tpu.used / totals.tpu.total) * 100) : 0
+  const aiuPercent = totals.aiu.total > 0 ? Math.round((totals.aiu.used / totals.aiu.total) * 100) : 0
+  const xpuPercent = totals.xpu.total > 0 ? Math.round((totals.xpu.used / totals.xpu.total) * 100) : 0
+
+  // Collect active accelerator types for dynamic layout
+  const accelerators = [
+    totals.gpu.total > 0 ? { key: 'gpu', label: 'GPU', percent: gpuPercent, color: 'text-purple-400', data: totals.gpu } : null,
+    totals.tpu.total > 0 ? { key: 'tpu', label: 'TPU', percent: tpuPercent, color: 'text-green-400', data: totals.tpu } : null,
+    totals.aiu.total > 0 ? { key: 'aiu', label: 'AIU', percent: aiuPercent, color: 'text-cyan-400', data: totals.aiu } : null,
+    totals.xpu.total > 0 ? { key: 'xpu', label: 'XPU', percent: xpuPercent, color: 'text-orange-400', data: totals.xpu } : null,
+  ].filter(Boolean) as { key: string; label: string; percent: number; color: string; data: { total: number; used: number } }[]
+
+  // Grid columns for footer: CPU + Memory + each accelerator
+  const footerCols = 2 + accelerators.length
+  const footerGridStyle = useMemo(() => ({
+    gridTemplateColumns: `repeat(${footerCols}, minmax(0, 1fr))`,
+  }), [footerCols])
+
+  const lastUpdated = useMemo(() => {
+    if (isDemoMode || isDemoFallback) return null
+    const cl = typeof clustersLastRefresh === 'number' ? clustersLastRefresh : null
+    const gp = typeof gpuLastRefresh === 'number' ? gpuLastRefresh : null
+    if (cl !== null && gp !== null) return new Date(Math.min(cl, gp))
+    if (cl !== null) return new Date(cl)
+    if (gp !== null) return new Date(gp)
+    return null
+  }, [clustersLastRefresh, gpuLastRefresh, isDemoFallback, isDemoMode])
 
   if (showSkeleton) {
     return (
@@ -136,24 +174,6 @@ function ResourceUsageInternal() {
     )
   }
 
-  const cpuPercent = totals.cpu.total > 0 ? Math.round((totals.cpu.used / totals.cpu.total) * 100) : 0
-  const memoryPercent = totals.memory.total > 0 ? Math.round((totals.memory.used / totals.memory.total) * 100) : 0
-  const gpuPercent = totals.gpu.total > 0 ? Math.round((totals.gpu.used / totals.gpu.total) * 100) : 0
-  const tpuPercent = totals.tpu.total > 0 ? Math.round((totals.tpu.used / totals.tpu.total) * 100) : 0
-  const aiuPercent = totals.aiu.total > 0 ? Math.round((totals.aiu.used / totals.aiu.total) * 100) : 0
-  const xpuPercent = totals.xpu.total > 0 ? Math.round((totals.xpu.used / totals.xpu.total) * 100) : 0
-
-  // Collect active accelerator types for dynamic layout
-  const accelerators = [
-    totals.gpu.total > 0 ? { key: 'gpu', label: 'GPU', percent: gpuPercent, color: 'text-purple-400', data: totals.gpu } : null,
-    totals.tpu.total > 0 ? { key: 'tpu', label: 'TPU', percent: tpuPercent, color: 'text-green-400', data: totals.tpu } : null,
-    totals.aiu.total > 0 ? { key: 'aiu', label: 'AIU', percent: aiuPercent, color: 'text-cyan-400', data: totals.aiu } : null,
-    totals.xpu.total > 0 ? { key: 'xpu', label: 'XPU', percent: xpuPercent, color: 'text-orange-400', data: totals.xpu } : null,
-  ].filter(Boolean) as { key: string; label: string; percent: number; color: string; data: { total: number; used: number } }[]
-
-  // Grid columns for footer: CPU + Memory + each accelerator
-  const footerCols = 2 + accelerators.length
-
   return (
     <div className="h-full flex flex-col">
       {/* Controls - single row: Cluster count → Cluster Filter → Refresh */}
@@ -177,15 +197,7 @@ function ResourceUsageInternal() {
               "Updated X ago" against demo data. */}
           <RefreshIndicator
             isRefreshing={clustersRefreshing || gpuRefreshing}
-            lastUpdated={(() => {
-              if (isDemoMode || isDemoFallback) return null
-              const cl = typeof clustersLastRefresh === 'number' ? clustersLastRefresh : null
-              const gp = typeof gpuLastRefresh === 'number' ? gpuLastRefresh : null
-              if (cl !== null && gp !== null) return new Date(Math.min(cl, gp))
-              if (cl !== null) return new Date(cl)
-              if (gp !== null) return new Date(gp)
-              return null
-            })()}
+            lastUpdated={lastUpdated}
             size="sm"
             showLabel={true}
             staleThresholdMinutes={5}
@@ -214,12 +226,7 @@ function ResourceUsageInternal() {
         className="flex-1 flex items-center justify-around cursor-pointer hover:opacity-80 transition-opacity flex-wrap gap-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-400"
         aria-label={t('cards:resourceUsage.viewDetailsAria')}
         onClick={handleDrillDown}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            handleDrillDown()
-          }
-        }}
+        onKeyDown={handleDrillDownKeyDown}
       >
         <div className="flex flex-col items-center">
           <Gauge
@@ -270,7 +277,7 @@ function ResourceUsageInternal() {
         ))}
       </div>
 
-      <div className={`mt-4 pt-3 border-t border-border/50 grid gap-2 text-center`} style={{ gridTemplateColumns: `repeat(${footerCols}, minmax(0, 1fr))` }}>
+      <div className="mt-4 pt-3 border-t border-border/50 grid gap-2 text-center" style={footerGridStyle}>
         <div>
           <p className="text-xs text-muted-foreground">{t('resourceUsage.totalCPU')}</p>
           <p className="text-sm font-medium text-foreground">{totals.cpu.total} {t('resourceUsage.cores')}</p>
