@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Stethoscope, Wrench, Wand2 } from 'lucide-react'
 import { useMissions } from '../../../hooks/useMissions'
 import type { ResourceContext, AIAction, MissionType } from '../types/modal.types'
@@ -58,7 +58,7 @@ export function useModalAI({
   const isAgentConnected = agents.length > 0
 
   // Generate prompt templates based on resource
-  const generateDiagnosePrompt = () => {
+  const generateDiagnosePrompt = useCallback(() => {
     const { kind, name, namespace, cluster, status, labels } = resource
 
     const issuesList = issues.length > 0
@@ -80,9 +80,9 @@ Please provide:
 3. Root cause analysis
 4. Recommended actions to resolve issues
 5. Preventive measures`
-  }
+  }, [resource, issues])
 
-  const generateRepairPrompt = () => {
+  const generateRepairPrompt = useCallback(() => {
     const { kind, name, namespace, cluster } = resource
 
     const issuesList = issues.length > 0
@@ -101,13 +101,13 @@ For each issue, please:
 4. Warn about any potential side effects
 
 After I approve, help me execute the repairs step by step.`
-  }
+  }, [resource, issues])
 
-  const generateAskPrompt = () => {
+  const generateAskPrompt = useCallback(() => {
     const { kind, name, namespace, cluster } = resource
 
     return `I have a question about ${kind} "${name}"${namespace ? ` in namespace "${namespace}"` : ''} on cluster "${cluster}".`
-  }
+  }, [resource])
 
   // Default AI actions
   const defaultAIActions: AIAction[] = useMemo(() => {
