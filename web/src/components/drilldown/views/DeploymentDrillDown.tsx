@@ -2,10 +2,10 @@
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box, Minus, Plus, RefreshCw } from 'lucide-react'
+import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, ChevronLeft, Layers, Server, Box, Minus, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -137,6 +137,7 @@ function DeploymentDrillDownContent({ data }: Props) {
   const deploymentName = (data.deployment as string) || ''
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToReplicaSet } = useDrillDownActions()
+  const { state, pop } = useDrillDown()
 
   const [activeTab, setActiveTab] = useState<TabType>((data.tab as TabType) || 'overview')
   // data.replicas can be a number OR an object {ready, desired} from DeploymentProgress drill-down.
@@ -476,6 +477,18 @@ function DeploymentDrillDownContent({ data }: Props) {
       {/* Header */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-6 text-sm">
+          {state.stack.length > 1 && (
+            <button
+              type="button"
+              onClick={pop}
+              className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+              aria-label={t('drilldown.goBack')}
+              title={t('drilldown.goBack')}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>{t('common.back')}</span>
+            </button>
+          )}
           <div
             role="button"
             tabIndex={0}

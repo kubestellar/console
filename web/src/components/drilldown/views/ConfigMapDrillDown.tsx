@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Layers, Server, Database, Eye, EyeOff, Lock } from 'lucide-react'
+import { FileText, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, ChevronLeft, Layers, Server, Database, Eye, EyeOff, Lock } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useTabKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -27,6 +27,7 @@ export function ConfigMapDrillDown({ data }: Props) {
   const configmapName = typeof data.configmap === 'string' ? data.configmap : ''
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster } = useDrillDownActions()
+  const { state, pop } = useDrillDown()
   const { runKubectl } = useDrillDownWebSocket(cluster)
   const clusterShort = cluster.split('/').pop() || cluster
   const hasRequiredContext = Boolean(cluster && namespace && configmapName)
@@ -161,8 +162,21 @@ export function ConfigMapDrillDown({ data }: Props) {
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center gap-6 text-sm">
+          {state.stack.length > 1 && (
+            <button
+              type="button"
+              onClick={pop}
+              className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
+              aria-label={t('drilldown.goBack')}
+              title={t('drilldown.goBack')}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>{t('common.back')}</span>
+            </button>
+          )}
           {namespace && cluster && (
             <button
+              type="button"
               onClick={() => drillToNamespace(cluster, namespace)}
               className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
@@ -176,6 +190,7 @@ export function ConfigMapDrillDown({ data }: Props) {
           )}
           {cluster && (
             <button
+              type="button"
               onClick={() => drillToCluster(cluster)}
               className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
