@@ -151,11 +151,14 @@ export const QuantumControlPanel: React.FC = () => {
   //      images, network-level failures before the body parses).
   const fatalError = mutationError ?? statusError
   const classifiedFromMessage = authStatusError ? classifyApiError(authStatusError) : null
+  // Guard with `!= null` (covers `undefined` from stale pre-v0.4 cache hydration)
+  // rather than `!== null`. The fetcher coerces fresh responses to `null`, but
+  // cached payloads written before the field existed surface as `undefined`.
   const isAuthErrorTransient =
-    lastIbmError !== null
+    lastIbmError != null
       ? lastIbmError.retryable === true
       : classifiedFromMessage?.retryable === true
-  const hasAuthError = lastIbmError !== null || classifiedFromMessage !== null
+  const hasAuthError = lastIbmError != null || classifiedFromMessage !== null
   const authErrorForBanner =
     hasAuthError && !isAuthErrorTransient && requiresIBM
       ? (lastIbmError?.message ?? authStatusError)

@@ -298,6 +298,43 @@ describe('QuantumControlPanel — error classification', () => {
     expect(fatal).toBeInTheDocument()
     expect(fatal).toHaveTextContent('invalid api key')
   })
+
+  it('REGRESSION: renders without crashing when stale cache hydrates lastIbmError as undefined', () => {
+    // Stale `authStatus` cached before #15960 deployed predates the
+    // `lastIbmError` field, so `useCache` hydrates the panel with
+    // `lastIbmError: undefined` (not `null`). The fetcher coerces fresh
+    // responses to `null`, but cached entries bypass the fetcher.
+    //
+    // The strict equality guard `lastIbmError !== null` was true for
+    // `undefined`, then `lastIbmError.retryable` threw
+    // `TypeError: Cannot read properties of undefined (reading 'retryable')`
+    // and tripped the card's error boundary. The fix is the looser
+    // `lastIbmError != null` guard, which covers both.
+    mockUseQuantumAuthStatus.mockReturnValue(
+      authHookReturn({
+        data: {
+          authenticated: false,
+          tokenStored: false,
+          // Cast: TypeScript types this `null`, but runtime hydration of a
+          // stale cache entry produces `undefined`. We deliberately bypass
+          // the type to model the real-world payload that crashed the panel.
+          lastIbmError: undefined as unknown as null,
+        },
+      }),
+    )
+    const { container } = render(<QuantumControlPanel />)
+    selectIbmBackend(container)
+
+    // Panel must render — no error boundary, no crash.
+    expect(container.querySelector('select')).toBeInTheDocument()
+    // Without an error signal of any kind, neither banner should render.
+    expect(
+      screen.queryByTestId('quantum-control-panel-transient-banner'),
+    ).toBeNull()
+    expect(
+      screen.queryByTestId('quantum-control-panel-fatal-banner'),
+    ).toBeNull()
+  })
 })
 
 describe('QuantumControlPanel — feedback', () => {
