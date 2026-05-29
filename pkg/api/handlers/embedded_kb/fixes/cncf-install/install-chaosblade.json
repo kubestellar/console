@@ -1,0 +1,125 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-chaosblade",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure ChaosBlade on Kubernetes",
+    "description": "ChaosBlade is an Alibaba open source chaos engineering tool that follows chaos engineering principles to help enterprises improve the fault tolerance of distributed systems. The chaosblade-operator enables Kubernetes-native chaos experiments defined as CRDs.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Download the ChaosBlade CLI",
+        "description": "Download the ChaosBlade CLI toolkit from the official releases.\n```bash\ncurl -fsSL https://github.com/chaosblade-io/chaosblade/releases/download/v1.8.0/chaosblade-1.8.0-linux_amd64.tar.gz -o chaosblade.tar.gz\ntar -xzf chaosblade.tar.gz\nsudo mv chaosblade-1.8.0 /opt/chaosblade\nexport PATH=$PATH:/opt/chaosblade\n```"
+      },
+      {
+        "title": "Install the ChaosBlade Operator using Helm",
+        "description": "Clone the operator repo and install it via Helm to enable Kubernetes-native chaos experiments.\n```bash\nkubectl create ns chaosblade\ngit clone https://github.com/chaosblade-io/chaosblade-operator.git\ncd chaosblade-operator/deploy/helm\nhelm package ./chaosblade-operator\nhelm install chaosblade chaosblade-operator-*.tgz --namespace chaosblade\n```"
+      },
+      {
+        "title": "Verify the operator installation",
+        "description": "Check that the ChaosBlade operator pods are running in the chaosblade namespace.\n```bash\nkubectl get pods --namespace chaosblade\nkubectl get crd | grep chaosblade\n```"
+      },
+      {
+        "title": "Run a sample chaos experiment",
+        "description": "Create a sample ChaosBlade experiment to verify everything works.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: chaosblade.io/v1alpha1\nkind: ChaosBlade\nmetadata:\n  name: cpu-load-test\nspec:\n  experiments:\n  - scope: pod\n    target: cpu\n    action: fullload\n    desc: \"CPU full load test\"\n    matchers:\n    - name: names\n      value:\n      - \"your-pod-name\"\n    - name: namespace\n      value:\n      - \"default\"\n    - name: cpu-percent\n      value:\n      - \"50\"\nEOF\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show the ChaosBlade operator running in the chaosblade namespace with the ChaosBlade CRDs registered. You can then define chaos experiments as Kubernetes resources.",
+      "codeSnippets": [
+        "kubectl create ns chaosblade",
+        "helm install chaosblade chaosblade-operator-*.tgz --namespace chaosblade",
+        "kubectl get pods --namespace chaosblade",
+        "kubectl get crd | grep chaosblade"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove all chaos experiments",
+        "description": "Delete all ChaosBlade experiment resources before uninstalling the operator."
+      },
+      {
+        "title": "Uninstall the Helm release",
+        "description": "Remove the chaosblade-operator Helm release from the chaosblade namespace."
+      },
+      {
+        "title": "Clean up CRDs and namespace",
+        "description": "Delete the ChaosBlade CRDs and the chaosblade namespace."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Download the latest CLI",
+        "description": "Download the latest ChaosBlade CLI release from GitHub."
+      },
+      {
+        "title": "Upgrade the operator",
+        "description": "Rebuild the Helm chart from the latest operator source and run helm upgrade."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Operator pods not starting",
+        "description": "Check the operator logs for errors.\n```bash\nkubectl logs -l app=chaosblade-operator --namespace chaosblade\n```"
+      },
+      {
+        "title": "Chaos experiment stuck in pending",
+        "description": "Verify the target pod exists and the namespace matches the experiment spec.\n```bash\nkubectl describe chaosblade cpu-load-test\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "chaos-engineering",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "chaosblade"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Namespace",
+      "Pod",
+      "CustomResourceDefinition"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.8.0",
+    "containerImages": [
+      "chaosbladeio/chaosblade-operator:v1.8.0"
+    ],
+    "sourceUrls": {
+      "docs": "https://chaosblade-io.gitbook.io/chaosblade-help-zh-cn/",
+      "repo": "https://github.com/chaosblade-io/chaosblade"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl",
+      "git"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher, along with Helm, kubectl, and git installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

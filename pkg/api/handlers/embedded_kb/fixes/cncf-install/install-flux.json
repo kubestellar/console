@@ -1,0 +1,138 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-flux",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Flux on Kubernetes",
+    "description": "Flux is an open and extensible continuous delivery solution for Kubernetes, leveraging GitOps principles to keep clusters in sync with configuration sources. Installing Flux allows you to automate updates and manage your Kubernetes applications effectively.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Add the FluxCD Helm repository",
+        "description": "Add the official FluxCD community Helm repository to your local Helm configuration.\n```bash\nhelm repo add fluxcd-community https://fluxcd-community.github.io/helm-charts\nhelm repo update\n```"
+      },
+      {
+        "title": "Install Flux using Helm",
+        "description": "Install Flux in the 'flux-system' namespace using the official flux2 Helm chart.\n```bash\nhelm install flux fluxcd-community/flux2 --namespace flux-system --create-namespace\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check if the Flux pods are running successfully.\n```bash\nkubectl get pods --namespace flux-system\n```"
+      },
+      {
+        "title": "Post-install configuration",
+        "description": "Verify that all Flux components are healthy and ready.\n```bash\nkubectl get deployments --namespace flux-system\n```"
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Remove the Helm release",
+        "description": "Uninstall the Flux release from the cluster.\n```bash\nhelm uninstall flux --namespace flux-system\n```"
+      },
+      {
+        "title": "Clean up CRDs and resources",
+        "description": "Delete any remaining custom resource definitions related to Flux.\n```bash\nkubectl delete crd $(kubectl get crd | grep fluxcd.io | awk '{print $1}')\nkubectl delete crd $(kubectl get crd | grep toolkit.fluxcd.io | awk '{print $1}')\n```"
+      },
+      {
+        "title": "Remove the namespace",
+        "description": "Delete the 'flux-system' namespace to clean up all resources.\n```bash\nkubectl delete namespace flux-system\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Backup current state",
+        "description": "Export the current Flux configuration to a YAML file for backup.\n```bash\nkubectl get all -n flux-system -o yaml > flux-backup.yaml\n```"
+      },
+      {
+        "title": "Update the Helm repository",
+        "description": "Update the Helm repository to get the latest charts.\n```bash\nhelm repo update\n```"
+      },
+      {
+        "title": "Upgrade Flux",
+        "description": "Upgrade the Flux installation to the latest version.\n```bash\nhelm upgrade flux fluxcd-community/flux2 --namespace flux-system\n```"
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Check if the Flux pods are running the new version successfully.\n```bash\nkubectl get pods --namespace flux-system\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pods stuck in CrashLoopBackOff",
+        "description": "This can happen due to misconfigurations or resource limits. Check the logs for the pod to diagnose the issue.\n```bash\nkubectl logs <pod-name> -n flux-system\n```"
+      },
+      {
+        "title": "Flux not syncing with Git repository",
+        "description": "Ensure that the Git repository URL and credentials are correctly configured. Check the Flux source-controller logs for errors.\n```bash\nkubectl logs -l app=source-controller -n flux-system\n```"
+      },
+      {
+        "title": "Helm release failed",
+        "description": "If the Helm release fails, check the events in the namespace for more details.\n```bash\nkubectl get events -n flux-system\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation of Flux will have all pods in the 'flux-system' namespace running without errors. You should be able to see the Flux controllers (source-controller, kustomize-controller, helm-controller, notification-controller) managing your Kubernetes resources as per your Git configurations.",
+      "codeSnippets": [
+        "helm repo add fluxcd-community https://fluxcd-community.github.io/helm-charts\nhelm repo update",
+        "helm install flux fluxcd-community/flux2 --namespace flux-system --create-namespace",
+        "kubectl get pods --namespace flux-system",
+        "kubectl get deployments --namespace flux-system"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "app-definition",
+      "graduated"
+    ],
+    "cncfProjects": [
+      "flux"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "graduated",
+    "projectVersion": "v2.4.0",
+    "containerImages": [
+      "ghcr.io/fluxcd/source-controller:v1.4.1",
+      "ghcr.io/fluxcd/kustomize-controller:v1.4.0",
+      "ghcr.io/fluxcd/helm-controller:v1.1.0",
+      "ghcr.io/fluxcd/notification-controller:v1.4.0"
+    ],
+    "sourceUrls": {
+      "docs": "https://fluxcd.io",
+      "repo": "https://github.com/fluxcd/flux2",
+      "helm": "https://fluxcd-community.github.io/helm-charts"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running and both Helm and kubectl installed on your local machine."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T06:23:09.859Z",
+    "scannerVersion": "cncf-install-gen-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

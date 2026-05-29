@@ -1,0 +1,62 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kube-ovn",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": ["kube-ovn"],
+  "mission": {
+    "title": "Install and Configure Kube-OVN",
+    "description": "Kube-OVN is an advanced Kubernetes network fabric that bridges SDN and Cloud Native, providing enterprise-level networking features including subnet management, static IPs, ACLs, QoS, and multi-cluster connectivity built on OVN/OVS. It is a CNCF Sandbox project with 2,300+ stars.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Label control-plane nodes for OVN DB placement",
+        "description": "Kube-OVN requires at least one node labeled for OVN database placement. Label your control-plane node(s).\n\n```bash\nkubectl label node -lnode-role.kubernetes.io/control-plane kube-ovn/role=master --overwrite\n```\n\n> This tells Kube-OVN where to schedule the OVN central components.",
+        "commands": [
+          "kubectl label node -lnode-role.kubernetes.io/control-plane kube-ovn/role=master --overwrite"
+        ]
+      },
+      {
+        "title": "Add the Kube-OVN Helm repository",
+        "description": "Add the official Kube-OVN Helm chart repository.\n\n```bash\nhelm repo add kubeovn https://kubeovn.github.io/kube-ovn/\nhelm repo update\n```",
+        "commands": [
+          "helm repo add kubeovn https://kubeovn.github.io/kube-ovn/",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install Kube-OVN using Helm",
+        "description": "Install Kube-OVN into kube-system namespace. The default configuration uses geneve tunnels with 10.16.0.0/16 pod CIDR.\n\n```bash\nhelm install kube-ovn kubeovn/kube-ovn --wait -n kube-system --version v1.16.0\n```\n\n> Adjust --version to match your desired release. See https://github.com/kubeovn/kube-ovn/releases for available versions.",
+        "commands": [
+          "helm install kube-ovn kubeovn/kube-ovn --wait -n kube-system --version v1.16.0"
+        ]
+      },
+      {
+        "title": "Verify Kube-OVN pods are running",
+        "description": "Check that all Kube-OVN components are running in kube-system.\n\n```bash\nkubectl get pods -n kube-system -l app=kube-ovn\n```\n\n> You should see kube-ovn-controller, kube-ovn-cni, kube-ovn-pinger, ovn-central, and ovs-ovn pods in Running state.",
+        "commands": [
+          "kubectl get pods -n kube-system -l app=kube-ovn"
+        ]
+      },
+      {
+        "title": "Verify default subnet",
+        "description": "Confirm the default subnet was created and is available.\n\n```bash\nkubectl get subnets\n```\n\n> You should see an 'ovn-default' subnet with CIDR 10.16.0.0/16 in the Available state.",
+        "commands": [
+          "kubectl get subnets"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Kube-OVN",
+        "description": "Remove Kube-OVN from your cluster.\n\n```bash\nhelm uninstall kube-ovn -n kube-system\n```",
+        "commands": [
+          "helm uninstall kube-ovn -n kube-system"
+        ]
+      }
+    ]
+  }
+}

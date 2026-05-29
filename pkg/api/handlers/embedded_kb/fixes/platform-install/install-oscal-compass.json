@@ -1,0 +1,63 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-oscal-compass",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": ["oscal-compass"],
+  "mission": {
+    "title": "Install and Configure OSCAL Compass (Compliance Trestle)",
+    "description": "OSCAL Compass Compliance Trestle is an opinionated tooling platform for managing compliance as code using NIST's OSCAL standard. It provides CI/CD-friendly tools to create, validate, and manage OSCAL documents for compliance automation. Requires Python 3.10+.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Create a Python virtual environment",
+        "description": "Create and activate an isolated Python environment for compliance-trestle.\n\n```bash\npython3 -m venv trestle-env\nsource trestle-env/bin/activate\n```\n\n> Requires Python 3.10 or later.",
+        "commands": [
+          "python3 -m venv trestle-env",
+          "source trestle-env/bin/activate"
+        ]
+      },
+      {
+        "title": "Install compliance-trestle via pip",
+        "description": "Install the compliance-trestle package from PyPI.\n\n```bash\npip install compliance-trestle\n```\n\n> This installs the trestle CLI and all dependencies.",
+        "commands": [
+          "pip install compliance-trestle"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Confirm trestle is installed and check its version.\n\n```bash\ntrestle version\n```\n\n> Should display version 4.0.2 or later.",
+        "commands": [
+          "trestle version"
+        ]
+      },
+      {
+        "title": "Initialize a trestle workspace",
+        "description": "Create a new trestle project workspace for managing OSCAL documents.\n\n```bash\nmkdir my-compliance && cd my-compliance\ntrestle init\n```\n\n> This creates the directory structure for catalogs, profiles, component-definitions, and other OSCAL model types.",
+        "commands": [
+          "mkdir my-compliance && cd my-compliance",
+          "trestle init"
+        ]
+      },
+      {
+        "title": "Import an OSCAL catalog",
+        "description": "Import the NIST SP 800-53 catalog to get started with a standard set of security controls.\n\n```bash\ntrestle import -f https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json -o nist-800-53-rev5\n```\n\n> This imports the catalog into your workspace under the catalogs directory.",
+        "commands": [
+          "trestle import -f https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json -o nist-800-53-rev5"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall compliance-trestle",
+        "description": "Remove compliance-trestle from your environment.\n\n```bash\npip uninstall compliance-trestle -y\n```",
+        "commands": [
+          "pip uninstall compliance-trestle -y"
+        ]
+      }
+    ]
+  }
+}

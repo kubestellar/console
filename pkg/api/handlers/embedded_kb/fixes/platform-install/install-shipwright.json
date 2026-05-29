@@ -1,0 +1,63 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-shipwright",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "shipwright"
+  ],
+  "mission": {
+    "title": "Install and Configure Shipwright",
+    "description": "Shipwright is a CNCF extensible framework for building container images on Kubernetes. It supports multiple build strategies (Kaniko, Buildpacks, BuildKit, Buildah) and integrates with Tekton Pipelines.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Install Tekton Pipelines (prerequisite)",
+        "description": "Shipwright requires Tekton Pipelines. Install it first.\n\n```bash\nkubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.65.2/release.yaml\n```\n\n> Wait for Tekton pods to be ready before proceeding.",
+        "commands": [
+          "kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/previous/v0.65.2/release.yaml"
+        ]
+      },
+      {
+        "title": "Wait for Tekton to be ready",
+        "description": "Verify Tekton Pipelines pods are running.\n\n```bash\nkubectl get pods -n tekton-pipelines --watch\n```\n\n> Wait until all pods show Running status.",
+        "commands": [
+          "kubectl get pods -n tekton-pipelines"
+        ]
+      },
+      {
+        "title": "Install Shipwright Build",
+        "description": "Install the Shipwright build controller.\n\n```bash\nkubectl apply --filename https://github.com/shipwright-io/build/releases/download/v0.19.2/release.yaml --server-side\n```",
+        "commands": [
+          "kubectl apply --filename https://github.com/shipwright-io/build/releases/download/v0.19.2/release.yaml --server-side"
+        ]
+      },
+      {
+        "title": "Install build strategies",
+        "description": "Install the sample build strategies (Kaniko, Buildpacks, etc.).\n\n```bash\nkubectl apply --filename https://github.com/shipwright-io/build/releases/download/v0.19.2/sample-strategies.yaml --server-side\n```",
+        "commands": [
+          "kubectl apply --filename https://github.com/shipwright-io/build/releases/download/v0.19.2/sample-strategies.yaml --server-side"
+        ]
+      },
+      {
+        "title": "Verify Shipwright is running",
+        "description": "Check the Shipwright build controller is running.\n\n```bash\nkubectl get pods -n shipwright-build\n```\n\n> You should see the shipwright-build-controller pod in Running state.",
+        "commands": [
+          "kubectl get pods -n shipwright-build"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Shipwright",
+        "description": "Remove Shipwright from your cluster.\n\n```bash\nkubectl delete --filename https://github.com/shipwright-io/build/releases/download/v0.19.2/release.yaml\n```",
+        "commands": [
+          "kubectl delete --filename https://github.com/shipwright-io/build/releases/download/v0.19.2/release.yaml"
+        ]
+      }
+    ]
+  }
+}

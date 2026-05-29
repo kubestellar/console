@@ -1,0 +1,136 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-etcd",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Etcd on Kubernetes",
+    "description": "etcd is a distributed reliable key-value store designed for critical data in distributed systems. It is widely used for its simplicity, security, speed, and reliability, making it an essential component for many applications, including Kubernetes.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Add the Helm repository",
+        "description": "Add the Bitnami Helm repository to your local Helm configuration to access the etcd chart.\n```bash\nhelm repo add bitnami https://charts.bitnami.com/bitnami\nhelm repo update\n```"
+      },
+      {
+        "title": "Install etcd using Helm",
+        "description": "Install etcd with the specified version in a new namespace called 'etcd'.\n```bash\nhelm install etcd bitnami/etcd --version 12.0.18 --namespace etcd --create-namespace\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check the status of the etcd pods to ensure they are running.\n```bash\nkubectl get pods --namespace etcd\n```"
+      },
+      {
+        "title": "Configure resource limits",
+        "description": "Set resource limits for the etcd deployment to ensure it runs efficiently.\n```bash\nkubectl patch deployment etcd --namespace etcd --type='json' -p='[{\"op\": \"add\", \"path\": \"/spec/template/spec/containers/0/resources\", \"value\": {\"limits\": {\"cpu\": \"500m\", \"memory\": \"512Mi\"}, \"requests\": {\"cpu\": \"250m\", \"memory\": \"256Mi\"}}}]'\n```"
+      },
+      {
+        "title": "Set up port forwarding for etcdctl",
+        "description": "Forward the etcd port to access it locally for testing and management.\n```bash\nkubectl port-forward svc/etcd --namespace etcd 2379:2379\n```"
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Remove the Helm release",
+        "description": "Uninstall the etcd Helm release from the cluster.\n```bash\nhelm uninstall etcd --namespace etcd\n```"
+      },
+      {
+        "title": "Clean up CRDs and resources",
+        "description": "Delete any custom resource definitions and remaining resources related to etcd.\n```bash\nkubectl delete crd etcds.etcd.database.coreos.com\nkubectl delete namespace etcd\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Backup current state",
+        "description": "Backup the current etcd data before upgrading.\n```bash\nETCDCTL_API=3 etcdctl snapshot save snapshot.db --endpoints=http://localhost:2379\n```"
+      },
+      {
+        "title": "Update the Helm repository",
+        "description": "Ensure the Helm repository is up to date before upgrading.\n```bash\nhelm repo update\n```"
+      },
+      {
+        "title": "Upgrade etcd",
+        "description": "Upgrade the etcd release to the latest version.\n```bash\nhelm upgrade etcd bitnami/etcd --version 12.0.18 --namespace etcd\n```"
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Check the status of the etcd pods to ensure they are running the new version.\n```bash\nkubectl get pods --namespace etcd\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pods stuck in Pending state",
+        "description": "If the etcd pods are stuck in the Pending state, check for insufficient resources in the cluster.\n```bash\nkubectl describe pod <pod-name> --namespace etcd\n```"
+      },
+      {
+        "title": "etcdctl unable to connect",
+        "description": "If etcdctl cannot connect, ensure that the port forwarding is set up correctly and that the service is running.\n```bash\nkubectl get svc --namespace etcd\n```"
+      },
+      {
+        "title": "High latency in etcd operations",
+        "description": "If you experience high latency, check the resource usage of the etcd pods and consider scaling up resources.\n```bash\nkubectl top pods --namespace etcd\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation of etcd will have the etcd pods running in the 'etcd' namespace, and you will be able to connect to it using etcdctl. Resource limits will be configured to ensure optimal performance.",
+      "codeSnippets": [
+        "helm repo add bitnami https://charts.bitnami.com/bitnami\nhelm repo update",
+        "helm install etcd bitnami/etcd --version 12.0.18 --namespace etcd --create-namespace",
+        "kubectl get pods --namespace etcd",
+        "kubectl patch deployment etcd --namespace etcd --type='json' -p='[{\"op\": \"add\", \"path\": \"/spec/template/spec/containers/0/resources\", \"value\": {\"limits\": {\"cpu\": \"500m\", \"memory\": \"512Mi\"}, \"requests\": {\"cpu\": \"250m\", \"memory\": \"256Mi\"}}}]'",
+        "kubectl port-forward svc/etcd --namespace etcd 2379:2379"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "orchestration",
+      "graduated"
+    ],
+    "cncfProjects": [
+      "etcd"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "graduated",
+    "projectVersion": "v3.6.8",
+    "containerImages": [
+      "bitnami/etcd:3.5.17"
+    ],
+    "sourceUrls": {
+      "docs": "https://etcd.io",
+      "repo": "https://github.com/etcd-io/etcd",
+      "helm": "https://charts.bitnami.com/bitnami"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl"
+    ],
+    "description": "You need a Kubernetes cluster and the Helm package manager installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T06:23:58.288Z",
+    "scannerVersion": "cncf-install-gen-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

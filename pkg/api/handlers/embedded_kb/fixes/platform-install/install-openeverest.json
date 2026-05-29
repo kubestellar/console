@@ -1,0 +1,58 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-openeverest",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "openeverest"
+  ],
+  "mission": {
+    "title": "Install and Configure OpenEverest",
+    "description": "OpenEverest (formerly Percona Everest) is a CNCF open-source cloud-native database platform for deploying, scaling, and managing PostgreSQL, MySQL, and MongoDB on Kubernetes with a web UI and CLI.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Download the everestctl CLI",
+        "description": "Download the OpenEverest CLI for your platform.\n\n```bash\ncurl -sSL -o everestctl https://github.com/openeverest/openeverest/releases/latest/download/everestctl-linux-amd64\nchmod +x everestctl\nsudo mv everestctl /usr/local/bin/\n```",
+        "commands": [
+          "curl -sSL -o everestctl https://github.com/openeverest/openeverest/releases/latest/download/everestctl-linux-amd64",
+          "chmod +x everestctl",
+          "sudo mv everestctl /usr/local/bin/"
+        ]
+      },
+      {
+        "title": "Install OpenEverest on your cluster",
+        "description": "Use everestctl to install all components.\n\n```bash\neverestctl install\n```\n\n> This installs the Everest operator, database operators, and web UI into the everest-system namespace.",
+        "commands": [
+          "everestctl install"
+        ]
+      },
+      {
+        "title": "Retrieve admin credentials",
+        "description": "Get the initial admin password.\n\n```bash\nkubectl get secret everest-accounts -n everest-system -o jsonpath='{.data.users\\.yaml}' | base64 --decode\n```",
+        "commands": [
+          "kubectl get secret everest-accounts -n everest-system -o jsonpath='{.data.users\\.yaml}' | base64 --decode"
+        ]
+      },
+      {
+        "title": "Access the web UI",
+        "description": "Port-forward to access the Everest dashboard.\n\n```bash\nkubectl port-forward svc/everest -n everest-system 8080:8080\n```\n\n> Open http://localhost:8080 and log in with the admin credentials.",
+        "commands": [
+          "kubectl port-forward svc/everest -n everest-system 8080:8080"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall OpenEverest",
+        "description": "Remove OpenEverest from your cluster.\n\n```bash\neverestctl uninstall\n```",
+        "commands": [
+          "everestctl uninstall"
+        ]
+      }
+    ]
+  }
+}

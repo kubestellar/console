@@ -1,0 +1,57 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-openchoreo",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "openchoreo"
+  ],
+  "mission": {
+    "title": "Install and Configure OpenChoreo",
+    "description": "OpenChoreo is a CNCF open-source internal developer platform for Kubernetes providing higher-level abstractions, a Backstage-powered developer portal, integrated CI/CD, GitOps workflows, and observability.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Add the OpenChoreo Helm repository",
+        "description": "Add the official OpenChoreo Helm chart repository.\n\n```bash\nhelm repo add openchoreo https://charts.openchoreo.dev\nhelm repo update\n```",
+        "commands": [
+          "helm repo add openchoreo https://charts.openchoreo.dev",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install OpenChoreo using Helm",
+        "description": "Install OpenChoreo into a dedicated namespace.\n\n```bash\nhelm install openchoreo openchoreo/openchoreo --namespace openchoreo-system --create-namespace\n```",
+        "commands": [
+          "helm install openchoreo openchoreo/openchoreo --namespace openchoreo-system --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify OpenChoreo pods are running",
+        "description": "Check that all OpenChoreo components are running.\n\n```bash\nkubectl get pods -n openchoreo-system\n```\n\n> You should see the control plane, data plane, and portal pods in Running state.",
+        "commands": [
+          "kubectl get pods -n openchoreo-system"
+        ]
+      },
+      {
+        "title": "Access the developer portal",
+        "description": "Port-forward to access the Backstage-powered developer portal.\n\n```bash\nkubectl port-forward svc/openchoreo-portal -n openchoreo-system 3000:3000\n```\n\n> Open http://localhost:3000 to access the developer portal.",
+        "commands": [
+          "kubectl port-forward svc/openchoreo-portal -n openchoreo-system 3000:3000"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall OpenChoreo",
+        "description": "Remove OpenChoreo from your cluster.\n\n```bash\nhelm uninstall openchoreo -n openchoreo-system\n```",
+        "commands": [
+          "helm uninstall openchoreo -n openchoreo-system"
+        ]
+      }
+    ]
+  }
+}

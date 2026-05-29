@@ -1,0 +1,123 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-metal3-io",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Metal3 Bare Metal Operator on Kubernetes",
+    "description": "Metal3 (Metal Kubed) provides a Kubernetes-native API for managing bare metal infrastructure. The Bare Metal Operator maintains an inventory of available hosts as BareMetalHost custom resources and can inspect hardware, provision hosts with images, and clean disk contents.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install cert-manager (prerequisite)",
+        "description": "The Bare Metal Operator requires cert-manager for webhook TLS certificates.\n```bash\nkubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml\nkubectl wait --for=condition=Available --timeout=300s deployment/cert-manager -n cert-manager\n```"
+      },
+      {
+        "title": "Deploy the Bare Metal Operator using kustomize",
+        "description": "Apply the rendered manifests from the official repository to deploy the Bare Metal Operator.\n```bash\nkubectl apply -f https://raw.githubusercontent.com/metal3-io/baremetal-operator/main/config/render/capm3.yaml\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that the Bare Metal Operator pods are running and the BareMetalHost CRD is registered.\n```bash\nkubectl get pods -n baremetal-operator-system\nkubectl get crd baremetalhosts.metal3.io\n```"
+      },
+      {
+        "title": "Create a sample BareMetalHost resource",
+        "description": "Register a bare metal host with the operator by creating a BareMetalHost resource.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: metal3.io/v1alpha1\nkind: BareMetalHost\nmetadata:\n  name: example-host\n  namespace: baremetal-operator-system\nspec:\n  online: true\n  bmc:\n    address: ipmi://192.168.1.100\n    credentialsName: example-host-bmc-secret\n  bootMACAddress: \"00:11:22:33:44:55\"\nEOF\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show the Bare Metal Operator running in the baremetal-operator-system namespace with the BareMetalHost CRD available. You can then register and manage bare metal hosts through the Kubernetes API.",
+      "codeSnippets": [
+        "kubectl apply -f https://raw.githubusercontent.com/metal3-io/baremetal-operator/main/config/render/capm3.yaml",
+        "kubectl get pods -n baremetal-operator-system",
+        "kubectl get crd baremetalhosts.metal3.io"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove BareMetalHost resources",
+        "description": "Delete all BareMetalHost resources before removing the operator."
+      },
+      {
+        "title": "Remove the operator",
+        "description": "Delete the operator manifests and CRDs."
+      },
+      {
+        "title": "Clean up namespace",
+        "description": "Delete the baremetal-operator-system namespace."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Backup BareMetalHost resources",
+        "description": "Export all BareMetalHost resources before upgrading the operator."
+      },
+      {
+        "title": "Apply latest manifests",
+        "description": "Re-apply the latest rendered manifests from the repository."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Operator pods not starting",
+        "description": "Ensure cert-manager is running and webhook certificates are generated.\n```bash\nkubectl get pods -n cert-manager\nkubectl logs -n baremetal-operator-system -l control-plane=controller-manager\n```"
+      },
+      {
+        "title": "BareMetalHost stuck in registering state",
+        "description": "Verify the BMC credentials secret exists and the BMC address is reachable from the cluster.\n```bash\nkubectl describe baremetalhost example-host -n baremetal-operator-system\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "bare-metal",
+      "infrastructure",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "metal3-io"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Namespace",
+      "CustomResourceDefinition",
+      "Secret"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v0.12.2",
+    "containerImages": [
+      "quay.io/metal3-io/baremetal-operator:v0.12.2"
+    ],
+    "sourceUrls": {
+      "docs": "https://book.metal3.io/",
+      "repo": "https://github.com/metal3-io/baremetal-operator"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher with cert-manager installed. Bare metal hosts with IPMI/Redfish BMC access are needed for full functionality."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

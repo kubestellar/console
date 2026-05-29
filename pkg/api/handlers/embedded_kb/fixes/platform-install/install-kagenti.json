@@ -1,0 +1,152 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kagenti",
+  "missionClass": "install",
+  "author": "Andy Anderson",
+  "authorGithub": "clubanderson",
+  "mission": {
+    "title": "Install and Configure Kagenti on Kubernetes",
+    "description": "Kagenti is a Kubernetes-based control plane for AI agents. It provides a framework-neutral, scalable, and secure platform for deploying and orchestrating AI agents through standardized agent communication protocols (A2A, MCP). Kagenti works with any agent framework (LangGraph, CrewAI, AutoGen, etc.) and offers modular components that can be deployed independently or as a complete platform.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Verify prerequisites",
+        "description": "Ensure you have the required tools installed before proceeding:\n- **Python >= 3.9** with the `uv` package manager\n- **Docker Desktop**, Rancher Desktop, or Podman (16 GB RAM, 4 cores minimum)\n- **Kind** for local Kubernetes clusters\n- **kubectl** for cluster interaction\n- **Helm** for chart management\n- **Ollama** (optional) for local LLM inference\n\nVerify your setup:\n```bash\npython3 --version\ndocker info\nkind version\nkubectl version --client\nhelm version\n```"
+      },
+      {
+        "title": "Clone the Kagenti repository",
+        "description": "Clone the Kagenti repository and navigate into the project directory:\n```bash\ngit clone https://github.com/kagenti/kagenti.git\ncd kagenti\n```"
+      },
+      {
+        "title": "Configure secrets",
+        "description": "Copy the example secrets file and configure it with your LLM provider API keys and other settings:\n```bash\ncp deployments/envs/secret_values.yaml.example deployments/envs/.secret_values.yaml\n```\nEdit `deployments/envs/.secret_values.yaml` with your API keys for OpenAI, Anthropic, or other LLM providers you plan to use."
+      },
+      {
+        "title": "Run the installer",
+        "description": "Use the Ansible-based installer to deploy Kagenti to a local Kind cluster:\n```bash\ndeployments/ansible/run-install.sh --env dev\n```\nFor OpenShift deployments, consult the Kagenti documentation for environment-specific flags. Use `--help` for additional options:\n```bash\ndeployments/ansible/run-install.sh --help\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that all Kagenti components are running:\n```bash\nkubectl get pods -A | grep kagenti\nkubectl get pods -n kagenti-system\n```\nYou should see pods for the Kagenti UI, MCP Gateway, Agent Lifecycle Operator, and other core components."
+      },
+      {
+        "title": "Access the Kagenti dashboard",
+        "description": "Open the Kagenti UI to manage agents, tools, and observe traffic:\n```bash\nkubectl port-forward svc/kagenti-ui -n kagenti-system 8082:80\n```\nThen open http://localhost:8082 in your browser."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show all Kagenti pods running in the kagenti-system namespace. The Kagenti UI will be accessible via port-forward on port 8082, where you can deploy agents, configure MCP tools, and monitor agent-to-agent communication.",
+      "codeSnippets": [
+        "git clone https://github.com/kagenti/kagenti.git\ncd kagenti",
+        "cp deployments/envs/secret_values.yaml.example deployments/envs/.secret_values.yaml",
+        "deployments/ansible/run-install.sh --env dev",
+        "kubectl get pods -n kagenti-system",
+        "kubectl port-forward svc/kagenti-ui -n kagenti-system 8082:80"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Run the Kagenti uninstaller",
+        "description": "Use the Ansible-based uninstaller to remove all Kagenti components:\n```bash\ndeployments/ansible/run-install.sh --env dev --uninstall\n```\nIf the uninstaller is not available, remove the Helm releases manually:\n```bash\nhelm list -A | grep kagenti | awk '{print $1, $2}' | xargs -n2 helm uninstall -n\n```"
+      },
+      {
+        "title": "Clean up CRDs and namespace",
+        "description": "Remove Kagenti Custom Resource Definitions and the namespace:\n```bash\nkubectl delete crd --selector=app.kubernetes.io/part-of=kagenti\nkubectl delete namespace kagenti-system\n```"
+      },
+      {
+        "title": "Delete the Kind cluster (optional)",
+        "description": "If you created a dedicated Kind cluster for Kagenti:\n```bash\nkind delete cluster --name kagenti\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Pull latest Kagenti code",
+        "description": "Update your local clone to the latest version:\n```bash\ncd kagenti\ngit pull origin main\n```"
+      },
+      {
+        "title": "Re-run the installer",
+        "description": "The installer is idempotent and will upgrade existing components:\n```bash\ndeployments/ansible/run-install.sh --env dev\n```"
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Check that all pods are running the updated versions:\n```bash\nkubectl get pods -n kagenti-system\nkubectl describe deployment kagenti-ui -n kagenti-system | grep Image\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Installer fails with Docker errors",
+        "description": "Ensure Docker Desktop (or Podman) is running and has at least 16 GB RAM and 4 CPU cores allocated. Check with:\n```bash\ndocker info | grep -E 'Memory|CPUs'\n```"
+      },
+      {
+        "title": "Kind cluster creation fails",
+        "description": "If the Kind cluster fails to create, delete any existing cluster and retry:\n```bash\nkind delete cluster --name kagenti\ndeployments/ansible/run-install.sh --env dev\n```"
+      },
+      {
+        "title": "MCP Gateway not routing requests",
+        "description": "Verify the MCP Gateway pod is running and check its logs:\n```bash\nkubectl get pods -n kagenti-system -l app=mcp-gateway\nkubectl logs -n kagenti-system -l app=mcp-gateway --tail=50\n```"
+      },
+      {
+        "title": "Agent pods stuck in Pending",
+        "description": "Check for resource constraints on the cluster nodes:\n```bash\nkubectl describe pod <pod-name> -n kagenti-system\nkubectl top nodes\n```\nConsider increasing Docker Desktop resource allocation."
+      },
+      {
+        "title": "LLM API key errors",
+        "description": "Verify your API keys are correctly configured in the secrets file:\n```bash\ncat deployments/envs/.secret_values.yaml\n```\nEnsure the keys are valid and have sufficient quota with your LLM provider."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "ai-agents",
+      "mcp",
+      "a2a",
+      "agentic-ai",
+      "platform"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Deployment",
+      "Service",
+      "Namespace",
+      "CustomResourceDefinition"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "ansible",
+      "helm"
+    ],
+    "maturity": "incubation",
+    "projectVersion": "latest",
+    "containerImages": [],
+    "sourceUrls": {
+      "docs": "https://kagenti.github.io/.github/",
+      "repo": "https://github.com/kagenti/kagenti"
+    },
+    "qualityScore": 95
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.26",
+    "tools": [
+      "docker",
+      "kind",
+      "kubectl",
+      "helm",
+      "python3",
+      "uv"
+    ],
+    "description": "Requires Python >= 3.9 with uv, Docker Desktop (16 GB RAM, 4 cores), Kind, kubectl, and Helm. Ollama is optional for local LLM inference."
+  },
+  "security": {
+    "scannedAt": "2026-03-05T19:00:00.000Z",
+    "scannerVersion": "manual-v1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

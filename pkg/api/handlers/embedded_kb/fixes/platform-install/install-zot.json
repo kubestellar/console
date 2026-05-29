@@ -1,0 +1,58 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-zot",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "zot"
+  ],
+  "mission": {
+    "title": "Install and Configure zot",
+    "description": "zot is a CNCF production-ready, vendor-neutral OCI-native container image registry. It provides a minimal, performant registry that supports OCI image and artifact specs with built-in search, deduplication, and signing.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Deploy zot to Kubernetes",
+        "description": "Deploy a minimal zot registry using kubectl.\n\n```bash\nkubectl create namespace zot\nkubectl apply -n zot -f https://raw.githubusercontent.com/project-zot/zot/main/examples/k8s/deployment.yaml\n```",
+        "commands": [
+          "kubectl create namespace zot",
+          "kubectl apply -n zot -f https://raw.githubusercontent.com/project-zot/zot/main/examples/k8s/deployment.yaml"
+        ]
+      },
+      {
+        "title": "Expose zot service",
+        "description": "Create a service to expose the zot registry.\n\n```bash\nkubectl expose deployment zot -n zot --port=5000 --target-port=5000 --type=ClusterIP\n```",
+        "commands": [
+          "kubectl expose deployment zot -n zot --port=5000 --target-port=5000 --type=ClusterIP"
+        ]
+      },
+      {
+        "title": "Verify zot is running",
+        "description": "Check the zot pod is running.\n\n```bash\nkubectl get pods -n zot\n```\n\n> You should see the zot pod in Running state.",
+        "commands": [
+          "kubectl get pods -n zot"
+        ]
+      },
+      {
+        "title": "Test the registry",
+        "description": "Port-forward and test the zot registry API.\n\n```bash\nkubectl port-forward svc/zot -n zot 5000:5000 &\ncurl http://localhost:5000/v2/_catalog\n```",
+        "commands": [
+          "kubectl port-forward svc/zot -n zot 5000:5000",
+          "curl http://localhost:5000/v2/_catalog"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall zot",
+        "description": "Remove zot from your cluster.\n\n```bash\nkubectl delete namespace zot\n```",
+        "commands": [
+          "kubectl delete namespace zot"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-hexa",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "hexa"
+  ],
+  "mission": {
+    "title": "Install and Configure Hexa Policy Orchestrator",
+    "description": "Hexa is a CNCF policy orchestrator that provides unified access control across platforms by converting between IDQL (a universal policy format) and platform-specific policy formats including OPA, Azure RBAC, and Google IAP.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Clone the Hexa repository",
+        "description": "Clone the Hexa Policy Orchestrator repo.\n\n```bash\ngit clone https://github.com/hexa-org/policy-orchestrator.git\ncd policy-orchestrator\n```",
+        "commands": [
+          "git clone https://github.com/hexa-org/policy-orchestrator.git",
+          "cd policy-orchestrator"
+        ]
+      },
+      {
+        "title": "Start infrastructure services",
+        "description": "Start the required Keycloak and PostgreSQL services.\n\n```bash\ndocker compose -f demo/docker-compose.shared.yml up -d\n```",
+        "commands": [
+          "docker compose -f demo/docker-compose.shared.yml up -d"
+        ]
+      },
+      {
+        "title": "Start Hexa services",
+        "description": "Start the Hexa orchestrator and admin UI.\n\n```bash\ncd demo && docker compose up -d\n```",
+        "commands": [
+          "cd demo && docker compose up -d"
+        ]
+      },
+      {
+        "title": "Verify services are running",
+        "description": "Check all containers are healthy.\n\n```bash\ndocker compose ps\n```\n\n> You should see the orchestrator, admin UI, Keycloak, and PostgreSQL containers running.",
+        "commands": [
+          "docker compose ps"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Hexa",
+        "description": "Stop and remove all Hexa containers.\n\n```bash\ncd demo && docker compose down\ndocker compose -f docker-compose.shared.yml down\n```",
+        "commands": [
+          "cd demo && docker compose down"
+        ]
+      }
+    ]
+  }
+}

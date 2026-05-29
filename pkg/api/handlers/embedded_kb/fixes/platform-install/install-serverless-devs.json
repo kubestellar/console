@@ -1,0 +1,49 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-serverless-devs",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "serverless-devs"
+  ],
+  "mission": {
+    "title": "Install and Configure Serverless Devs",
+    "description": "Serverless Devs is a CNCF open-source serverless developer platform providing a unified CLI for building, deploying, and operating serverless applications across multiple cloud platforms.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install Serverless Devs via npm",
+        "description": "Install the Serverless Devs CLI globally.\n\n```bash\nnpm install -g @serverless-devs/s\n```\n\n> Requires Node.js 14+.",
+        "commands": [
+          "npm install -g @serverless-devs/s"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Check the CLI is available.\n\n```bash\ns --version\n```",
+        "commands": [
+          "s --version"
+        ]
+      },
+      {
+        "title": "Initialize a project",
+        "description": "Create a new serverless project from a template.\n\n```bash\ns init\n```\n\n> Follow the interactive prompts to select a template and configure your project.",
+        "commands": [
+          "s init"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Serverless Devs",
+        "description": "Remove Serverless Devs.\n\n```bash\nnpm uninstall -g @serverless-devs/s\n```",
+        "commands": [
+          "npm uninstall -g @serverless-devs/s"
+        ]
+      }
+    ]
+  }
+}

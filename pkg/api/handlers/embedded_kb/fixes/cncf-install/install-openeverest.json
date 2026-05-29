@@ -1,0 +1,126 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-openeverest",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure OpenEverest on Kubernetes",
+    "description": "OpenEverest is an open-source platform for automated database provisioning and management. It supports multiple database technologies (PostgreSQL, MongoDB, MySQL) and can be hosted on any Kubernetes infrastructure, in the cloud or on-premises. OpenEverest is installed via Helm and provides a web UI for managing database clusters.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Verify prerequisites",
+        "description": "Ensure you have the required tools installed and a running Kubernetes cluster:\n\n```bash\nkubectl get nodes\nhelm version\n```\n\nYou need:\n- Kubernetes cluster (EKS, GKE, or any conformant cluster)\n- Helm v3\n- kubectl configured with cluster access\n- yq (https://github.com/mikefarah/yq)"
+      },
+      {
+        "title": "Add the Percona Helm repository",
+        "description": "Add the Percona Helm repository which hosts the OpenEverest charts:\n\n```bash\nhelm repo add percona https://percona.github.io/percona-helm-charts/\nhelm repo update\n```"
+      },
+      {
+        "title": "Install OpenEverest using Helm",
+        "description": "Install the OpenEverest core components into the everest-system namespace:\n\n```bash\nhelm install everest-core percona/everest \\\n  --namespace everest-system \\\n  --create-namespace\n```\n\nOptionally set a custom admin password:\n\n```bash\nhelm install everest-core percona/everest \\\n  --namespace everest-system \\\n  --create-namespace \\\n  --set server.initialAdminPassword=<your-password>\n```"
+      },
+      {
+        "title": "Wait for components to be ready",
+        "description": "Wait for the OpenEverest API and operator deployments to become ready:\n\n```bash\nkubectl wait --for=condition=available deployment/everest-server -n everest-system --timeout=300s\nkubectl get pods -n everest-system\n```"
+      },
+      {
+        "title": "Access the OpenEverest UI",
+        "description": "Access the OpenEverest web UI using port-forward:\n\n```bash\nkubectl port-forward svc/everest 8080:8080 -n everest-system\n```\n\nThen open http://127.0.0.1:8080 in your browser.\n\nAlternatively, expose via LoadBalancer:\n\n```bash\nhelm upgrade everest-core percona/everest \\\n  --namespace everest-system \\\n  --set service.type=LoadBalancer\nkubectl get svc/everest -n everest-system\n```"
+      },
+      {
+        "title": "Retrieve the admin password",
+        "description": "If you did not set a custom password during installation, retrieve the generated admin password:\n\n```bash\nkubectl get secret everest-accounts -n everest-system \\\n  -o jsonpath='{.data.users\\.yaml}' | base64 --decode | yq '.admin.passwordHash'\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Confirm all OpenEverest components are running:\n\n```bash\nkubectl get pods -n everest-system\nkubectl get crd | grep everest\nhelm list -n everest-system\n```"
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Remove the Helm release",
+        "description": "Uninstall the OpenEverest release from the everest-system namespace:\n\n```bash\nhelm uninstall everest-core --namespace everest-system\n```\n\nNote: If uninstallation hangs due to ImagePullBackOff on the bitnami/kubectl pre-delete hook job, manually delete the stuck job:\n\n```bash\nkubectl delete job -l app.kubernetes.io/component=pre-delete-hook -n everest-system\n```"
+      },
+      {
+        "title": "Clean up CRDs and namespace",
+        "description": "Delete the Custom Resource Definitions and namespace:\n\n```bash\nkubectl delete crd -l app.kubernetes.io/part-of=everest\nkubectl delete namespace everest-system\nkubectl get namespaces | grep everest\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update Helm repo and upgrade",
+        "description": "Update the Helm repository and upgrade OpenEverest:\n\n```bash\nhelm repo update\nhelm upgrade everest-core percona/everest \\\n  --namespace everest-system\n```\n\nNote: If upgrading from older versions, check the release notes for breaking changes. Some versions (e.g., 1.7.0, 1.8.0) had known upgrade issues with empty namespace references."
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Check the status of OpenEverest pods after upgrade:\n\n```bash\nkubectl get pods -n everest-system\nhelm list -n everest-system\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Installation stuck at provisioning namespace",
+        "description": "If installation hangs at 'Provisioning database namespace', check for ImagePullBackOff on the everest-operators-installer job:\n\n```bash\nkubectl get pods -n everest-system -l job-name=everest-operators-installer\nkubectl describe pod -n everest-system -l job-name=everest-operators-installer\n```\n\nThis is often caused by Docker Hub rate limits on the bitnami/kubectl image. Use a pull secret or mirror the image."
+      },
+      {
+        "title": "Pods stuck in CrashLoopBackOff",
+        "description": "Check the logs of the affected pod for errors:\n\n```bash\nkubectl logs -l app.kubernetes.io/name=everest -n everest-system --tail=100\nkubectl describe pod -l app.kubernetes.io/name=everest -n everest-system\n```"
+      },
+      {
+        "title": "OIDC authentication not working",
+        "description": "If using OIDC (e.g., Azure AD), verify the configuration:\n\n```bash\nkubectl get configmap everest-settings -n everest-system -o yaml\n```\n\nEnsure the issuer URL, client ID, and scopes are correct. For Azure, the issuer URL should be https://login.microsoftonline.com/<tenant-id>/v2.0."
+      },
+      {
+        "title": "Cannot create database cluster with ClusterIP",
+        "description": "If creating a database cluster fails with 'Unsupported value: ClusterIP', use 'internal' or 'external' for the proxy expose type instead:\n\n```bash\nkubectl get databasecluster -A\n```\n\nThe spec.proxy.expose.type field accepts 'internal' or 'external', not 'ClusterIP'."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation of OpenEverest will have the everest-server and everest-operator pods running in the everest-system namespace. The web UI is accessible via port-forward at http://127.0.0.1:8080 or via a LoadBalancer/NodePort service. You can then provision PostgreSQL, MongoDB, and MySQL database clusters through the UI.",
+      "codeSnippets": [
+        "helm repo add percona https://percona.github.io/percona-helm-charts/\nhelm repo update",
+        "helm install everest-core percona/everest --namespace everest-system --create-namespace",
+        "kubectl port-forward svc/everest 8080:8080 -n everest-system",
+        "kubectl get pods -n everest-system"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "database",
+      "postgresql",
+      "mongodb",
+      "mysql",
+      "helm",
+      "openeverest"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Pod",
+      "Deployment",
+      "Service",
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation"
+    ],
+    "sourceUrls": {
+      "docs": "https://openeverest.io/documentation/1.12.0/quick-install.html",
+      "repo": "https://github.com/openeverest/openeverest"
+    }
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.27",
+    "tools": [
+      "kubectl",
+      "helm",
+      "yq"
+    ],
+    "description": "A running Kubernetes cluster with Helm v3 and kubectl configured."
+  }
+}

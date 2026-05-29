@@ -1,0 +1,135 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-crossplane",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Crossplane on Kubernetes",
+    "description": "Crossplane is a framework for building cloud native control planes without needing to write code. It allows you to orchestrate applications and infrastructure across various environments, making it a powerful tool for managing cloud resources.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Add the Helm repository",
+        "description": "Add the Crossplane Helm repository to your local Helm configuration.\n```bash\nhelm repo add crossplane-stable https://charts.crossplane.io/stable\nhelm repo update\n```"
+      },
+      {
+        "title": "Install Crossplane",
+        "description": "Install Crossplane using Helm, creating a namespace for it.\n```bash\nhelm install crossplane crossplane-stable/crossplane --namespace crossplane-system --create-namespace --version 1.17.1\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check if the Crossplane pods are running successfully.\n```bash\nkubectl get pods -n crossplane-system\n```"
+      },
+      {
+        "title": "Port-forward to access Crossplane API",
+        "description": "Forward a local port to the Crossplane API service for easy access.\n```bash\nkubectl port-forward svc/crossplane --namespace crossplane-system 8080:443\n```"
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Remove the Helm release",
+        "description": "Uninstall Crossplane from your cluster.\n```bash\nhelm uninstall crossplane --namespace crossplane-system\n```"
+      },
+      {
+        "title": "Clean up Crossplane resources",
+        "description": "Delete any remaining Custom Resource Definitions (CRDs) related to Crossplane.\n```bash\nkubectl delete crd `kubectl get crd | grep crossplane.io | awk '{print $1}'`\n```"
+      },
+      {
+        "title": "Remove the Crossplane namespace",
+        "description": "Delete the Crossplane namespace to clean up all resources.\n```bash\nkubectl delete namespace crossplane-system\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Backup current state",
+        "description": "Export the current state of Crossplane resources before upgrading.\n```bash\nkubectl get all -n crossplane-system -o yaml > crossplane-backup.yaml\n```"
+      },
+      {
+        "title": "Update the Helm repository",
+        "description": "Update the Helm repository to fetch the latest charts.\n```bash\nhelm repo update\n```"
+      },
+      {
+        "title": "Upgrade Crossplane",
+        "description": "Upgrade Crossplane to the latest version.\n```bash\nhelm upgrade crossplane crossplane-stable/crossplane --namespace crossplane-system --version 1.17.1\n```"
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Check if the Crossplane pods are running the new version successfully.\n```bash\nkubectl get pods -n crossplane-system\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pods stuck in CrashLoopBackOff",
+        "description": "If you see pods in a CrashLoopBackOff state, check the logs for more information.\n```bash\nkubectl logs <pod-name> -n crossplane-system\n``` \nEnsure that the configuration is correct and that all dependencies are met."
+      },
+      {
+        "title": "Helm install fails with 'chart not found'",
+        "description": "If the Helm install fails with a 'chart not found' error, verify that the correct Helm repository is added and updated.\n```bash\nhelm repo list\nhelm repo update\n```"
+      },
+      {
+        "title": "Crossplane API not reachable",
+        "description": "If you cannot access the Crossplane API, ensure that the port-forward command is running and that the service is correctly configured.\n```bash\nkubectl get svc -n crossplane-system\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation of Crossplane will have all pods running in the 'crossplane-system' namespace without errors. You should be able to access the Crossplane API via the configured port-forward.",
+      "codeSnippets": [
+        "helm repo add crossplane-stable https://charts.crossplane.io/stable\nhelm repo update",
+        "helm install crossplane crossplane-stable/crossplane --namespace crossplane-system --create-namespace --version 1.17.1",
+        "kubectl get pods -n crossplane-system",
+        "kubectl port-forward svc/crossplane --namespace crossplane-system 8080:443"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "app-definition",
+      "graduated"
+    ],
+    "cncfProjects": [
+      "crossplane"
+    ],
+    "targetResourceKinds": [
+      "Service",
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "graduated",
+    "projectVersion": "v2.2.0",
+    "containerImages": [
+      "crossplane/crossplane:v1.17.1"
+    ],
+    "sourceUrls": {
+      "docs": "https://crossplane.io",
+      "repo": "https://github.com/crossplane/crossplane",
+      "helm": "https://charts.crossplane.io/stable"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running and have installed Helm and kubectl on your local machine."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T06:23:43.911Z",
+    "scannerVersion": "cncf-install-gen-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

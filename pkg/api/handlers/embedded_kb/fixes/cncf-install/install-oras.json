@@ -1,0 +1,113 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-oras",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure ORAS on Kubernetes",
+    "description": "ORAS (OCI Registry As Storage) is a CLI tool and Go library for pushing and pulling OCI artifacts to and from OCI-compliant registries. It enables using container registries to store any type of artifact, extending beyond container images.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the ORAS CLI",
+        "description": "Download and install the ORAS CLI binary. Multiple installation methods are available.\n```bash\n# Using Homebrew (macOS/Linux)\nbrew install oras\n\n# Or download binary directly (Linux amd64)\ncurl -fsSL https://github.com/oras-project/oras/releases/download/v1.3.1/oras_1.3.1_linux_amd64.tar.gz -o oras.tar.gz\ntar -xzf oras.tar.gz\nsudo mv oras /usr/local/bin/\n\n# Verify installation\noras version\n```"
+      },
+      {
+        "title": "Push an artifact to a registry",
+        "description": "Use ORAS to push a file as an OCI artifact to a container registry.\n```bash\n# Create a sample artifact\necho \"Hello ORAS\" > artifact.txt\n\n# Push to a registry (replace with your registry)\noras push localhost:5000/myartifact:v1 artifact.txt\n```"
+      },
+      {
+        "title": "Pull an artifact from a registry",
+        "description": "Use ORAS to pull an OCI artifact back from the registry.\n```bash\nmkdir output && cd output\noras pull localhost:5000/myartifact:v1\ncat artifact.txt\n```"
+      },
+      {
+        "title": "Use ORAS in a Kubernetes Job",
+        "description": "Create a Kubernetes Job that uses ORAS to pull artifacts as part of a workflow.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: batch/v1\nkind: Job\nmetadata:\n  name: oras-pull-job\nspec:\n  template:\n    spec:\n      containers:\n      - name: oras\n        image: ghcr.io/oras-project/oras:v1.3.1\n        command: [\"oras\"]\n        args: [\"pull\", \"registry.example.com/myartifact:v1\", \"-o\", \"/output\"]\n        volumeMounts:\n        - name: output\n          mountPath: /output\n      volumes:\n      - name: output\n        emptyDir: {}\n      restartPolicy: Never\nEOF\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will have the ORAS CLI available for pushing and pulling OCI artifacts. ORAS can also be used within Kubernetes Jobs to manage artifact distribution as part of CI/CD pipelines.",
+      "codeSnippets": [
+        "brew install oras",
+        "curl -fsSL https://github.com/oras-project/oras/releases/download/v1.3.1/oras_1.3.1_linux_amd64.tar.gz -o oras.tar.gz\ntar -xzf oras.tar.gz\nsudo mv oras /usr/local/bin/",
+        "oras push localhost:5000/myartifact:v1 artifact.txt",
+        "oras pull localhost:5000/myartifact:v1"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove the ORAS binary",
+        "description": "Delete the ORAS binary from /usr/local/bin/ or uninstall via Homebrew."
+      },
+      {
+        "title": "Clean up artifacts",
+        "description": "Delete any OCI artifacts pushed to registries if no longer needed."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Download the latest ORAS release",
+        "description": "Download the latest binary from the GitHub releases page or run brew upgrade oras."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Push fails with authentication error",
+        "description": "Login to the registry before pushing.\n```bash\noras login registry.example.com\n```"
+      },
+      {
+        "title": "Pull fails with not found error",
+        "description": "Verify the artifact reference (registry/repository:tag) is correct and exists in the registry.\n```bash\noras discover registry.example.com/myartifact:v1\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "registry",
+      "oci",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "oras"
+    ],
+    "targetResourceKinds": [
+      "Job"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.3.1",
+    "containerImages": [
+      "ghcr.io/oras-project/oras:v1.3.1"
+    ],
+    "sourceUrls": {
+      "docs": "https://oras.land/",
+      "repo": "https://github.com/oras-project/oras"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have kubectl installed. An OCI-compliant container registry is needed for pushing and pulling artifacts."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

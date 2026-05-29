@@ -1,0 +1,134 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-submariner",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Submariner on Kubernetes",
+    "description": "Submariner connects overlay networks of different Kubernetes clusters, enabling direct networking and service discovery across clusters. It is CNI-agnostic and supports both encrypted and non-encrypted tunnels between connected clusters.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the subctl CLI",
+        "description": "Download and install the subctl CLI, which simplifies deployment and maintenance of Submariner.\n```bash\ncurl -Ls https://get.submariner.io | VERSION=v0.23.1 bash\nsudo mv ~/.local/bin/subctl /usr/local/bin/\nsubctl version\n```"
+      },
+      {
+        "title": "Deploy the Submariner Broker",
+        "description": "Deploy the Broker on one of your clusters. The Broker facilitates the exchange of metadata between connected clusters.\n```bash\nsubctl deploy-broker --kubeconfig /path/to/broker-cluster/kubeconfig\n```"
+      },
+      {
+        "title": "Join clusters to the Broker",
+        "description": "Join each participating cluster to the Broker. This installs the Submariner components on the cluster.\n```bash\nsubctl join broker-info.subm --kubeconfig /path/to/cluster-a/kubeconfig --clusterid cluster-a\nsubctl join broker-info.subm --kubeconfig /path/to/cluster-b/kubeconfig --clusterid cluster-b\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Use subctl to verify the Submariner deployment is healthy.\n```bash\nsubctl show all --kubeconfig /path/to/cluster-a/kubeconfig\nsubctl verify --kubeconfig /path/to/cluster-a/kubeconfig --toconfig /path/to/cluster-b/kubeconfig\n```"
+      },
+      {
+        "title": "Test cross-cluster connectivity",
+        "description": "Deploy a test service on one cluster and access it from another cluster.\n```bash\n# On cluster-a\nkubectl create deployment nginx --image=nginx\nkubectl expose deployment nginx --port=80\nsubctl export service nginx --namespace default\n\n# On cluster-b\nkubectl run test --image=busybox --command -- wget -qO- nginx.default.svc.clusterset.local\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will have Submariner components running on all joined clusters with secure tunnels established between gateway nodes. Services can be exported and accessed across clusters using the .clusterset.local DNS domain.",
+      "codeSnippets": [
+        "curl -Ls https://get.submariner.io | VERSION=v0.23.1 bash",
+        "subctl deploy-broker --kubeconfig /path/to/broker-cluster/kubeconfig",
+        "subctl join broker-info.subm --kubeconfig /path/to/cluster-a/kubeconfig --clusterid cluster-a",
+        "subctl show all --kubeconfig /path/to/cluster-a/kubeconfig"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Disconnect clusters",
+        "description": "Use subctl to remove Submariner from each cluster."
+      },
+      {
+        "title": "Remove the Broker",
+        "description": "Delete the Submariner Broker resources from the broker cluster."
+      },
+      {
+        "title": "Remove the subctl CLI",
+        "description": "Delete the subctl binary from /usr/local/bin/."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade subctl",
+        "description": "Download the latest version of subctl using the install script."
+      },
+      {
+        "title": "Upgrade Submariner on clusters",
+        "description": "Use the upgraded subctl to upgrade Submariner components on each cluster."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Gateway node not elected",
+        "description": "Ensure at least one node has the gateway.submariner.io/public-ip label and UDP ports 4500 and 4490 are open.\n```bash\nkubectl get nodes -l submariner.io/gateway=true\n```"
+      },
+      {
+        "title": "Cross-cluster connectivity fails",
+        "description": "Run the subctl diagnose commands to identify issues.\n```bash\nsubctl diagnose all\n```"
+      },
+      {
+        "title": "Service discovery not working",
+        "description": "Verify the Lighthouse components are running and services are exported.\n```bash\nkubectl get serviceexport\nsubctl show connections\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "multi-cluster",
+      "networking",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "submariner"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "DaemonSet",
+      "Service",
+      "Namespace",
+      "CustomResourceDefinition"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v0.23.1",
+    "containerImages": [
+      "quay.io/submariner/submariner-gateway:v0.23.1",
+      "quay.io/submariner/submariner-route-agent:v0.23.1"
+    ],
+    "sourceUrls": {
+      "docs": "https://submariner.io/",
+      "repo": "https://github.com/submariner-io/submariner"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have at least two Kubernetes clusters running version 1.24 or higher with non-overlapping Pod and Service CIDRs. Gateway nodes need UDP ports 4500 and 4490 open."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

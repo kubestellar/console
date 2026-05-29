@@ -1,0 +1,57 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-athenz",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "athenz"
+  ],
+  "mission": {
+    "title": "Install and Configure Athenz",
+    "description": "Athenz is a CNCF platform for X.509 certificate-based service authentication and fine-grained role-based access control (RBAC) in dynamic infrastructures, with mTLS and OAuth2 token support.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Clone the Athenz repository",
+        "description": "Clone the Athenz project.\n\n```bash\ngit clone https://github.com/AthenZ/athenz.git\ncd athenz\n```",
+        "commands": [
+          "git clone https://github.com/AthenZ/athenz.git",
+          "cd athenz"
+        ]
+      },
+      {
+        "title": "Start Athenz with Docker",
+        "description": "Run Athenz using Docker containers.\n\n```bash\ndocker compose up -d\n```\n\n> This starts ZMS (management), ZTS (token), and the UI components.",
+        "commands": [
+          "docker compose up -d"
+        ]
+      },
+      {
+        "title": "Verify services are running",
+        "description": "Check that the Athenz services are healthy.\n\n```bash\ndocker compose ps\n```\n\n> You should see ZMS, ZTS, and UI containers in running state.",
+        "commands": [
+          "docker compose ps"
+        ]
+      },
+      {
+        "title": "Access the Athenz UI",
+        "description": "Open the Athenz management console.\n\n```bash\ncurl -k https://localhost:9443/athenz\n```\n\n> The Athenz UI is available at https://localhost:9443.",
+        "commands": [
+          "curl -k https://localhost:9443/athenz"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Athenz",
+        "description": "Stop and remove Athenz containers.\n\n```bash\ndocker compose down\n```",
+        "commands": [
+          "docker compose down"
+        ]
+      }
+    ]
+  }
+}

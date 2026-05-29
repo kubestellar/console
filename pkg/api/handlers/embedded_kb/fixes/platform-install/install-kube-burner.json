@@ -1,0 +1,49 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kube-burner",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "kube-burner"
+  ],
+  "mission": {
+    "title": "Install and Configure Kube-burner",
+    "description": "Kube-burner is a CNCF Kubernetes performance and scale testing tool that creates, deletes, and patches resources at scale, collects Prometheus metrics, and alerts on performance regressions.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install kube-burner",
+        "description": "Download and install the kube-burner binary.\n\n```bash\ncurl -sLS https://raw.githubusercontent.com/kube-burner/kube-burner/refs/heads/main/hack/install.sh | sh\n```\n\n> Installs to ~/.local/bin/kube-burner by default. Set INSTALL_DIR for custom path.",
+        "commands": [
+          "curl -sLS https://raw.githubusercontent.com/kube-burner/kube-burner/refs/heads/main/hack/install.sh | sh"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Check kube-burner is installed.\n\n```bash\nkube-burner version\n```",
+        "commands": [
+          "kube-burner version"
+        ]
+      },
+      {
+        "title": "Run a sample workload",
+        "description": "Run a basic cluster-density test against your cluster.\n\n```bash\nkube-burner init -c https://raw.githubusercontent.com/kube-burner/kube-burner/main/examples/workloads/cfg_cluster-density_pod_serving.yml\n```\n\n> Ensure your kubeconfig is configured for the target cluster.",
+        "commands": [
+          "kube-burner init -c https://raw.githubusercontent.com/kube-burner/kube-burner/main/examples/workloads/cfg_cluster-density_pod_serving.yml"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall kube-burner",
+        "description": "Remove kube-burner.\n\n```bash\nrm ~/.local/bin/kube-burner\n```",
+        "commands": [
+          "rm ~/.local/bin/kube-burner"
+        ]
+      }
+    ]
+  }
+}

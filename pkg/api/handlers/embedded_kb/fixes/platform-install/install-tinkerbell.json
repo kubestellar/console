@@ -1,0 +1,57 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-tinkerbell",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "tinkerbell"
+  ],
+  "mission": {
+    "title": "Install and Configure Tinkerbell",
+    "description": "Tinkerbell is a CNCF bare metal provisioning engine with workflow capabilities, supporting BMC interactions, DHCP, and hardware auto-discovery. Deploy it to Kubernetes via Helm to automate bare metal server provisioning.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Add the Tinkerbell Helm repository",
+        "description": "Add the official Tinkerbell Helm chart repository.\n\n```bash\nhelm repo add tinkerbell https://tinkerbell.github.io/charts\nhelm repo update\n```",
+        "commands": [
+          "helm repo add tinkerbell https://tinkerbell.github.io/charts",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install Tinkerbell using Helm",
+        "description": "Install Tinkerbell into a dedicated namespace.\n\n```bash\nhelm install tinkerbell tinkerbell/tinkerbell --namespace tinkerbell --create-namespace --version 0.23.0\n```\n\n> Adjust --version to match your desired release.",
+        "commands": [
+          "helm install tinkerbell tinkerbell/tinkerbell --namespace tinkerbell --create-namespace --version 0.23.0"
+        ]
+      },
+      {
+        "title": "Verify Tinkerbell pods are running",
+        "description": "Check that all Tinkerbell components are running.\n\n```bash\nkubectl get pods -n tinkerbell\n```\n\n> You should see tink-server, tink-controller, boots (DHCP), and hegel pods.",
+        "commands": [
+          "kubectl get pods -n tinkerbell"
+        ]
+      },
+      {
+        "title": "Verify Tinkerbell CRDs",
+        "description": "Confirm the Tinkerbell custom resource definitions were installed.\n\n```bash\nkubectl get crds | grep tinkerbell\n```\n\n> You should see Hardware, Template, and Workflow CRDs.",
+        "commands": [
+          "kubectl get crds | grep tinkerbell"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Tinkerbell",
+        "description": "Remove Tinkerbell from your cluster.\n\n```bash\nhelm uninstall tinkerbell -n tinkerbell\n```",
+        "commands": [
+          "helm uninstall tinkerbell -n tinkerbell"
+        ]
+      }
+    ]
+  }
+}

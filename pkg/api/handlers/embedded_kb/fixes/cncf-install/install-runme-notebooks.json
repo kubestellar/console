@@ -1,0 +1,116 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-runme-notebooks",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Runme on Kubernetes",
+    "description": "Runme makes runbooks actually runnable by executing code snippets directly from markdown files. It supports Shell/Bash, Python, Ruby, JavaScript, and many other runtimes. Runme can be used as a CLI, VS Code extension, or integrated into Kubernetes workflows for operational documentation.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the Runme CLI",
+        "description": "Install the Runme CLI using Homebrew, NPM, or by downloading a binary.\n```bash\n# Option 1: Homebrew (macOS/Linux)\nbrew install runme\n\n# Option 2: NPM\nnpm install -g runme\n\n# Option 3: Go install\ngo install github.com/runmedev/runme/v3@main\n\n# Verify installation\nrunme --version\n```"
+      },
+      {
+        "title": "List available runbook tasks",
+        "description": "Use runme to discover runnable code blocks in your markdown documentation.\n```bash\nrunme list\n```"
+      },
+      {
+        "title": "Run a task from a markdown file",
+        "description": "Execute a named code block from a README or runbook.\n```bash\nrunme run <task-name>\n```"
+      },
+      {
+        "title": "Create a Kubernetes runbook",
+        "description": "Create a markdown runbook with Kubernetes operations that Runme can execute.\n```bash\ncat <<'EOF' > k8s-runbook.md\n# Kubernetes Operations Runbook\n\n## Check cluster health\n\n\\`\\`\\`bash {name=check-health}\nkubectl get nodes\nkubectl get pods --all-namespaces | grep -v Running\n\\`\\`\\`\n\n## Deploy application\n\n\\`\\`\\`bash {name=deploy-app}\nkubectl apply -f deployment.yaml\nkubectl rollout status deployment/my-app\n\\`\\`\\`\nEOF\n```"
+      },
+      {
+        "title": "Run the Kubernetes runbook",
+        "description": "Execute specific tasks from the runbook.\n```bash\nrunme run check-health --filename k8s-runbook.md\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will have the Runme CLI available for running code blocks from markdown files. Runme transforms operational documentation into executable runbooks, reducing errors from copy-paste and ensuring documentation stays current.",
+      "codeSnippets": [
+        "brew install runme",
+        "runme list",
+        "runme run <task-name>",
+        "runme run check-health --filename k8s-runbook.md"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove the Runme CLI",
+        "description": "Uninstall via Homebrew (brew uninstall runme), NPM (npm uninstall -g runme), or delete the binary."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update Runme",
+        "description": "Upgrade via your package manager: brew upgrade runme or npm update -g runme."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Code blocks not detected",
+        "description": "Ensure code blocks use fenced syntax (triple backticks) with a language identifier and name attribute.\n```bash\nrunme list --filename your-file.md\n```"
+      },
+      {
+        "title": "Environment variables not persisting",
+        "description": "Runme preserves environment variables across cell executions within the same session. Ensure you're running tasks in the same session."
+      },
+      {
+        "title": "Permission denied errors",
+        "description": "Check that the scripts in your markdown have appropriate permissions and the runme binary is in your PATH."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "developer-tools",
+      "documentation",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "runme-notebooks"
+    ],
+    "targetResourceKinds": [
+      "Pod",
+      "Deployment"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v3.16.5",
+    "containerImages": [],
+    "sourceUrls": {
+      "docs": "https://docs.runme.dev",
+      "repo": "https://github.com/runmedev/runme"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have kubectl installed. Runme can be installed via Homebrew, NPM, or as a Go binary. A VS Code extension is also available for an interactive notebook experience."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

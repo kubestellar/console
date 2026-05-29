@@ -1,0 +1,64 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-agones",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "agones"
+  ],
+  "mission": {
+    "title": "Install and Configure Agones",
+    "description": "Agones is a CNCF platform for hosting, running, and scaling dedicated multiplayer game servers on Kubernetes. It provides GameServer and Fleet custom resources for managing the full lifecycle of game server instances.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Add the Agones Helm repository",
+        "description": "Add the official Agones Helm chart repository.\n\n```bash\nhelm repo add agones https://agones.dev/chart/stable\nhelm repo update\n```",
+        "commands": [
+          "helm repo add agones https://agones.dev/chart/stable",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install Agones using Helm",
+        "description": "Install Agones into a dedicated namespace.\n\n```bash\nhelm install agones agones/agones --namespace agones-system --create-namespace\n```",
+        "commands": [
+          "helm install agones agones/agones --namespace agones-system --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify Agones pods are running",
+        "description": "Check that the Agones controller and related pods are running.\n\n```bash\nkubectl get pods -n agones-system\n```\n\n> You should see agones-controller, agones-allocator, and agones-ping pods in Running state.",
+        "commands": [
+          "kubectl get pods -n agones-system"
+        ]
+      },
+      {
+        "title": "Create a test GameServer",
+        "description": "Deploy a simple UDP game server to verify Agones is working.\n\n```bash\nkubectl apply -f https://raw.githubusercontent.com/agones-dev/agones/release-1.57.0/examples/simple-game-server/gameserver.yaml\n```",
+        "commands": [
+          "kubectl apply -f https://raw.githubusercontent.com/agones-dev/agones/release-1.57.0/examples/simple-game-server/gameserver.yaml"
+        ]
+      },
+      {
+        "title": "Verify GameServer is ready",
+        "description": "Check the GameServer reached Ready state.\n\n```bash\nkubectl get gameservers\n```\n\n> The STATUS should show Ready with an assigned port.",
+        "commands": [
+          "kubectl get gameservers"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Agones",
+        "description": "Remove Agones from your cluster.\n\n```bash\nhelm uninstall agones -n agones-system\n```",
+        "commands": [
+          "helm uninstall agones -n agones-system"
+        ]
+      }
+    ]
+  }
+}

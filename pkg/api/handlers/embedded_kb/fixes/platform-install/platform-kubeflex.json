@@ -1,0 +1,164 @@
+{
+  "version": "kc-mission-v1",
+  "name": "platform-kubeflex",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure KubeFlex (Multi-Tenant Control Planes)",
+    "description": "KubeFlex is a KubeStellar project that provides dedicated Kubernetes control planes per tenant. It enables scalable multi-tenant control plane management where each tenant gets their own API server, scheduler, and controller manager — giving a 'vanilla K8s experience' without cluster sprawl.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install KubeFlex using Helm",
+        "description": "Add the KubeStellar Helm repository and install KubeFlex:\n```bash\nhelm repo add kubestellar https://kubestellar.github.io/helm\nhelm repo update\nhelm install kubeflex kubestellar/kubeflex --namespace kubeflex-system --create-namespace\n```\n> This installs the KubeFlex controller and CRDs.",
+        "commands": [
+          "helm repo add kubestellar https://kubestellar.github.io/helm",
+          "helm repo update",
+          "helm install kubeflex kubestellar/kubeflex --namespace kubeflex-system --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify KubeFlex controller is running",
+        "description": "Check that the KubeFlex controller pod is running:\n```bash\nkubectl get pods -n kubeflex-system\nkubectl get crds | grep kubeflex\n```\n> You should see the kubeflex-controller pod in Running state and ControlPlane CRD registered.",
+        "commands": [
+          "kubectl get pods -n kubeflex-system",
+          "kubectl get crds | grep kubeflex"
+        ]
+      },
+      {
+        "title": "Create a tenant control plane",
+        "description": "Create a dedicated control plane for a tenant:\n```bash\nkubectl apply -f - <<EOF\napiVersion: tenancy.kubeflex.io/v1alpha1\nkind: ControlPlane\nmetadata:\n  name: tenant-1\nspec:\n  type: k8s\n  backend: shared\nEOF\n```\n> This creates a virtual control plane named 'tenant-1'.",
+        "commands": [
+          "kubectl apply -f - <<EOF\napiVersion: tenancy.kubeflex.io/v1alpha1\nkind: ControlPlane\nmetadata:\n  name: tenant-1\nspec:\n  type: k8s\n  backend: shared\nEOF"
+        ]
+      },
+      {
+        "title": "Verify the control plane",
+        "description": "Check that the control plane is provisioned and ready:\n```bash\nkubectl get controlplanes\nkubectl get pods -l kubeflex.io/control-plane=tenant-1\n```\n> The control plane should show as 'Ready' and its pods should be running.",
+        "commands": [
+          "kubectl get controlplanes",
+          "kubectl get pods -l kubeflex.io/control-plane=tenant-1"
+        ]
+      },
+      {
+        "title": "Access the tenant control plane",
+        "description": "Get the kubeconfig for the tenant control plane:\n```bash\nkubectl get secret tenant-1-admin-kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 -d > tenant-1-kubeconfig.yaml\nKUBECONFIG=tenant-1-kubeconfig.yaml kubectl get nodes\n```\n> This extracts the kubeconfig for direct access to the tenant's API server.",
+        "commands": [
+          "kubectl get secret tenant-1-admin-kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 -d > tenant-1-kubeconfig.yaml",
+          "KUBECONFIG=tenant-1-kubeconfig.yaml kubectl get nodes"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Delete all control planes",
+        "description": "Remove all tenant control planes first:\n```bash\nkubectl delete controlplanes --all\n```\n> Wait for all control plane pods to terminate.",
+        "commands": [
+          "kubectl delete controlplanes --all"
+        ]
+      },
+      {
+        "title": "Uninstall KubeFlex",
+        "description": "Remove the KubeFlex Helm release:\n```bash\nhelm uninstall kubeflex -n kubeflex-system\nkubectl delete namespace kubeflex-system\nkubectl delete crd controlplanes.tenancy.kubeflex.io\n```",
+        "commands": [
+          "helm uninstall kubeflex -n kubeflex-system",
+          "kubectl delete namespace kubeflex-system",
+          "kubectl delete crd controlplanes.tenancy.kubeflex.io"
+        ]
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade KubeFlex",
+        "description": "Update the Helm chart and upgrade:\n```bash\nhelm repo update\nhelm upgrade kubeflex kubestellar/kubeflex -n kubeflex-system\nkubectl get pods -n kubeflex-system\n```\n> Existing control planes will continue running during the upgrade.",
+        "commands": [
+          "helm repo update",
+          "helm upgrade kubeflex kubestellar/kubeflex -n kubeflex-system",
+          "kubectl get pods -n kubeflex-system"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Control plane stuck in Provisioning",
+        "description": "**Cause:** Insufficient resources or RBAC issues preventing API server creation.\n\n**Fix:** Check the KubeFlex controller logs:\n```bash\nkubectl logs -l app.kubernetes.io/name=kubeflex -n kubeflex-system\n```"
+      },
+      {
+        "title": "Cannot access tenant API server",
+        "description": "**Cause:** The control plane service may not be exposed or the kubeconfig secret is not yet created.\n\n**Fix:** Wait for the control plane to reach Ready state, then retry:\n```bash\nkubectl get controlplanes -w\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "You should see the KubeFlex controller running in kubeflex-system namespace and be able to create ControlPlane resources that provision dedicated API servers per tenant.",
+      "codeSnippets": [
+        "helm install kubeflex kubestellar/kubeflex --namespace kubeflex-system --create-namespace",
+        "kubectl get controlplanes",
+        "kubectl get pods -l kubeflex.io/control-plane=tenant-1"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "multi-tenancy",
+      "control-plane",
+      "kubestellar",
+      "isolation"
+    ],
+    "platform": "kubeflex",
+    "platformType": "multi-tenancy",
+    "platformProvider": "KubeStellar",
+    "platformVersions": [
+      "v0.7",
+      "v0.8"
+    ],
+    "supportedK8sVersions": [
+      "1.28",
+      "1.29",
+      "1.30",
+      "1.31"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "ControlPlane",
+      "Namespace",
+      "Deployment",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "containerImages": [
+      "ghcr.io/kubestellar/kubeflex/controller:latest"
+    ],
+    "sourceUrls": {
+      "docs": "https://kubestellar.io/docs/kubeflex/",
+      "repo": "https://github.com/kubestellar/kubeflex"
+    },
+    "qualityScore": 95
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.28",
+    "tools": [
+      "kubectl",
+      "helm"
+    ],
+    "cloudCLI": "none",
+    "resources": "Minimum 2 vCPU, 2GB RAM for the controller + 1 vCPU, 1GB per control plane",
+    "description": "A running Kubernetes cluster with Helm 3 installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-16T22:00:00.000Z",
+    "scannerVersion": "platform-install-gen-2.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

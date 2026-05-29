@@ -220,6 +220,12 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(browse)", "path", path)
 	if err != nil {
+		if embeddedRes, ok := h.embeddedBrowse(path); ok {
+			slog.Warn("[missions] upstream unavailable, serving embedded snapshot (browse)", "path", path, "error", err)
+			c.Set("Content-Type", embeddedRes.ContentType)
+			c.Set("X-Cache", string(embeddedRes.CacheStatus))
+			return c.Status(embeddedRes.StatusCode).Send(embeddedRes.Body)
+		}
 		if res == nil {
 			slog.Error("[missions] upstream fetch failed (browse)", "path", path, "error", err)
 			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "upstream request failed"})
@@ -399,6 +405,12 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(file)", "ref", ref, "path", path)
 	if err != nil {
+		if embeddedRes, ok := h.embeddedMissionFile(path); ok {
+			slog.Warn("[missions] upstream unavailable, serving embedded snapshot (file)", "ref", ref, "path", path, "error", err)
+			c.Set("Content-Type", embeddedRes.ContentType)
+			c.Set("X-Cache", string(embeddedRes.CacheStatus))
+			return c.Status(embeddedRes.StatusCode).Send(embeddedRes.Body)
+		}
 		if res == nil {
 			slog.Error("[missions] upstream fetch failed (file)", "ref", ref, "path", path, "error", err)
 			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "upstream request failed"})

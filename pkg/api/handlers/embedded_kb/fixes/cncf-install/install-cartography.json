@@ -1,0 +1,124 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-cartography",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Cartography on Kubernetes",
+    "description": "Cartography is a Python tool that consolidates infrastructure assets and the relationships between them in an intuitive graph view powered by a Neo4j database. It helps security teams understand risk exposure by mapping dependencies across cloud providers, SaaS platforms, and Kubernetes clusters.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Deploy Neo4j as a prerequisite",
+        "description": "Cartography requires a Neo4j database. Deploy Neo4j using its official Helm chart.\n```bash\nhelm repo add neo4j https://helm.neo4j.com/neo4j\nhelm repo update\nhelm install neo4j neo4j/neo4j --namespace cartography --create-namespace --set neo4j.password=changeme\n```"
+      },
+      {
+        "title": "Install Cartography via pip",
+        "description": "Install the Cartography CLI tool using pip. This is the official installation method.\n```bash\npip install cartography\n```"
+      },
+      {
+        "title": "Run Cartography as a Kubernetes Job",
+        "description": "Create a Kubernetes Job that runs Cartography to sync infrastructure data into Neo4j.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: batch/v1\nkind: Job\nmetadata:\n  name: cartography-sync\n  namespace: cartography\nspec:\n  template:\n    spec:\n      containers:\n      - name: cartography\n        image: ghcr.io/cartography-cncf/cartography:latest\n        command: [\"cartography\"]\n        args:\n        - \"--neo4j-uri\"\n        - \"bolt://neo4j.cartography.svc.cluster.local:7687\"\n        - \"--neo4j-password-env-var\"\n        - \"NEO4J_PASSWORD\"\n        env:\n        - name: NEO4J_PASSWORD\n          value: \"changeme\"\n      restartPolicy: Never\n  backoffLimit: 3\nEOF\n```"
+      },
+      {
+        "title": "Verify the deployment",
+        "description": "Check that Neo4j is running and the Cartography job completed successfully.\n```bash\nkubectl get pods --namespace cartography\nkubectl get jobs --namespace cartography\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will have Neo4j running in the cartography namespace and the Cartography sync job completed. You can then query Neo4j to explore your infrastructure graph.",
+      "codeSnippets": [
+        "helm repo add neo4j https://helm.neo4j.com/neo4j\nhelm repo update\nhelm install neo4j neo4j/neo4j --namespace cartography --create-namespace --set neo4j.password=changeme",
+        "pip install cartography",
+        "kubectl get pods --namespace cartography"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove the Cartography Job",
+        "description": "Delete the Cartography sync job from the cartography namespace."
+      },
+      {
+        "title": "Uninstall Neo4j",
+        "description": "Remove the Neo4j Helm release and clean up persistent volumes."
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Remove the cartography namespace and verify all resources are cleaned up."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade Cartography",
+        "description": "Update the pip package to the latest version and re-run the sync job with the new container image."
+      },
+      {
+        "title": "Upgrade Neo4j",
+        "description": "Update the Neo4j Helm release to a newer chart version."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Cartography job fails to connect to Neo4j",
+        "description": "Ensure the Neo4j service is running and the bolt URI is correct.\n```bash\nkubectl get svc --namespace cartography\nkubectl logs job/cartography-sync --namespace cartography\n```"
+      },
+      {
+        "title": "Authentication errors",
+        "description": "Verify the Neo4j password matches between the Helm chart values and the Cartography job environment variable."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "security",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "cartography"
+    ],
+    "targetResourceKinds": [
+      "Job",
+      "Namespace",
+      "Secret"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm",
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "0.133.0",
+    "containerImages": [
+      "ghcr.io/cartography-cncf/cartography:latest"
+    ],
+    "sourceUrls": {
+      "docs": "https://cartography-cncf.github.io/cartography/install.html",
+      "repo": "https://github.com/cartography-cncf/cartography"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl",
+      "pip"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher, along with Helm, kubectl, and pip installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

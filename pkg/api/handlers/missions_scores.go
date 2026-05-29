@@ -20,7 +20,12 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(index json)")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch index: %w", err)
+		if embeddedRes, ok := h.embeddedMissionFile("fixes/index.json"); ok {
+			slog.Warn("[missions] upstream unavailable, serving embedded snapshot (index json)", "error", err)
+			res = embeddedRes
+		} else {
+			return nil, fmt.Errorf("failed to fetch index: %w", err)
+		}
 	}
 
 	var body = res.Body

@@ -1,0 +1,64 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-cloudnativepg",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "cloudnativepg"
+  ],
+  "mission": {
+    "title": "Install and Configure CloudNativePG",
+    "description": "CloudNativePG is a CNCF Kubernetes operator for managing PostgreSQL databases with automated deployment, high-availability failover, scaling, and backup management directly through Kubernetes APIs.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Add the CloudNativePG Helm repository",
+        "description": "Add the official CloudNativePG Helm chart repository.\n\n```bash\nhelm repo add cnpg https://cloudnative-pg.github.io/charts\nhelm repo update\n```",
+        "commands": [
+          "helm repo add cnpg https://cloudnative-pg.github.io/charts",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install CloudNativePG operator",
+        "description": "Install the CloudNativePG operator into a dedicated namespace.\n\n```bash\nhelm install cnpg cnpg/cloudnative-pg --namespace cnpg-system --create-namespace\n```",
+        "commands": [
+          "helm install cnpg cnpg/cloudnative-pg --namespace cnpg-system --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify operator is running",
+        "description": "Check that the CloudNativePG operator pod is running.\n\n```bash\nkubectl get pods -n cnpg-system\n```\n\n> You should see the cloudnative-pg controller manager pod in Running state.",
+        "commands": [
+          "kubectl get pods -n cnpg-system"
+        ]
+      },
+      {
+        "title": "Create a PostgreSQL cluster",
+        "description": "Deploy a 3-instance PostgreSQL cluster to verify the operator works.\n\n```bash\nkubectl apply -f - <<EOF\napiVersion: postgresql.cnpg.io/v1\nkind: Cluster\nmetadata:\n  name: my-postgresql\nspec:\n  instances: 3\n  storage:\n    size: 1Gi\nEOF\n```",
+        "commands": [
+          "kubectl apply -f - <<EOF\napiVersion: postgresql.cnpg.io/v1\nkind: Cluster\nmetadata:\n  name: my-postgresql\nspec:\n  instances: 3\n  storage:\n    size: 1Gi\nEOF"
+        ]
+      },
+      {
+        "title": "Verify PostgreSQL cluster is ready",
+        "description": "Check the cluster status.\n\n```bash\nkubectl get clusters\n```\n\n> The cluster should show 3 ready instances.",
+        "commands": [
+          "kubectl get clusters"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall CloudNativePG",
+        "description": "Remove the operator from your cluster.\n\n```bash\nhelm uninstall cnpg -n cnpg-system\n```",
+        "commands": [
+          "helm uninstall cnpg -n cnpg-system"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "version": "kc-mission-v1",
+  "name": "platform-kuberay",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure KubeRay",
+    "description": "KubeRay is an open-source Kubernetes operator designed to simplify the deployment and management of Ray applications on Kubernetes. It provides custom resource definitions for managing Ray clusters, jobs, and services, making it ideal for machine learning workloads. Key trade-offs include the need for Kubernetes expertise and potential complexity in managing resources.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 20,
+    "steps": [
+      {
+        "title": "Add KubeRay Helm Repository",
+        "description": "This step adds the KubeRay Helm chart repository to your local Helm configuration, allowing you to install KubeRay easily.\n\n```bash\n\nhelm repo add kuberay https://ray-project.github.io/kuberay\n\nhelm repo update\n\n```\n\n> This command sets up the KubeRay repository.\n> Updates your local Helm chart repository cache.",
+        "commands": [
+          "helm repo add kuberay https://ray-project.github.io/kuberay",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install KubeRay Operator",
+        "description": "This step installs the KubeRay operator using Helm, which manages the lifecycle of Ray applications on Kubernetes.\n\n```bash\n\nhelm install kuberay kuberay/kuberay --version 1.5.1 --namespace kuberay --create-namespace\n\n```\n\n> Installs KubeRay in a dedicated namespace.",
+        "commands": [
+          "helm install kuberay kuberay/kuberay --version 1.5.1 --namespace kuberay --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify KubeRay Installation",
+        "description": "This step checks if the KubeRay operator is running correctly in your Kubernetes cluster.\n\n```bash\n\nkubectl get pods -n kuberay\n\n```\n\n> You should see the KubeRay operator pod running.",
+        "commands": [
+          "kubectl get pods -n kuberay"
+        ]
+      },
+      {
+        "title": "Create a RayCluster",
+        "description": "This step creates a RayCluster custom resource, which is necessary to run Ray applications.\n\n```bash\n\nkubectl apply -f - <<EOF\napiVersion: ray.io/v1alpha1\nkind: RayCluster\nmetadata:\n  name: my-ray-cluster\n  namespace: kuberay\nspec:\n  head:\n    replicas: 1\n  worker:\n    replicas: 2\nEOF\n\n```\n\n> This YAML defines a RayCluster with 1 head and 2 worker nodes.",
+        "commands": [
+          "kubectl apply -f - <<EOF\napiVersion: ray.io/v1alpha1\nkind: RayCluster\nmetadata:\n  name: my-ray-cluster\n  namespace: kuberay\nspec:\n  head:\n    replicas: 1\n  worker:\n    replicas: 2\nEOF"
+        ]
+      },
+      {
+        "title": "Verify RayCluster Status",
+        "description": "This step checks the status of the RayCluster to ensure it is running as expected.\n\n```bash\n\nkubectl get rayclusters -n kuberay\n\n```\n\n> You should see your RayCluster listed with a status of 'Running'.",
+        "commands": [
+          "kubectl get rayclusters -n kuberay"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall KubeRay Operator",
+        "description": "This step removes the KubeRay operator and all associated resources. Be aware that this will delete all RayClusters and their data.\n\n```bash\n\nhelm uninstall kuberay --namespace kuberay\n\nkubectl delete namespace kuberay\n\n```\n\n> This command removes the KubeRay operator from the specified namespace.\n> This command deletes the namespace and all resources within it.",
+        "commands": [
+          "helm uninstall kuberay --namespace kuberay",
+          "kubectl delete namespace kuberay"
+        ]
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade KubeRay Operator",
+        "description": "Before upgrading, ensure you back up any important data. This step upgrades the KubeRay operator to the latest version.\n\n```bash\n\nkubectl get rayclusters -n kuberay -o yaml > rayclusters-backup.yaml\n\nhelm upgrade kuberay kuberay/kuberay --version 1.5.1 --namespace kuberay\n\nkubectl get pods -n kuberay\n\n```\n\n> Backup existing RayCluster configurations.\n> Upgrades the KubeRay operator.\n> Verify that the new pods are running.",
+        "commands": [
+          "kubectl get rayclusters -n kuberay -o yaml > rayclusters-backup.yaml",
+          "helm upgrade kuberay kuberay/kuberay --version 1.5.1 --namespace kuberay",
+          "kubectl get pods -n kuberay"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Error: 'Failed to create RayCluster'",
+        "description": "**Cause:** This may occur due to insufficient resources in the cluster.\n\n**Fix:**\nEnsure your Kubernetes cluster has enough resources allocated for the RayCluster."
+      },
+      {
+        "title": "Error: 'KubeRay operator not found'",
+        "description": "**Cause:** The KubeRay operator may not be installed or is not running.\n\n**Fix:**\nRun 'kubectl get pods -n kuberay' to check the status of the operator."
+      },
+      {
+        "title": "RayCluster status shows 'Pending'",
+        "description": "**Cause:** This may indicate that the required nodes are not available.\n\n**Fix:**\nCheck the node status with 'kubectl get nodes' and ensure they are ready."
+      },
+      {
+        "title": "Error: 'Job failed with exit code 1'",
+        "description": "**Cause:** This can happen if the job configuration is incorrect or resources are insufficient.\n\n**Fix:**\nReview the job configuration and logs for errors using 'kubectl logs <pod-name>'."
+      }
+    ],
+    "versionNotes": [
+      {
+        "version": "v1.5.1",
+        "changes": "Added support for new Ray features and improved resource management.",
+        "deprecations": "No deprecations in this version.",
+        "migrationSteps": "No specific migration steps required for this version."
+      }
+    ],
+    "resolution": {
+      "summary": "You should see the RayCluster listed with a status of 'Running' when executing 'kubectl get rayclusters -n kuberay'.",
+      "codeSnippets": [
+        "helm repo add kuberay https://ray-project.github.io/kuberay",
+        "helm repo update",
+        "helm install kuberay kuberay/kuberay --version 1.5.1 --namespace kuberay --create-namespace",
+        "kubectl get pods -n kuberay",
+        "kubectl apply -f - <<EOF\napiVersion: ray.io/v1alpha1\nkind: RayCluster\nmetadata:\n  name: my-ray-cluster\n  namespace: kuberay\nspec:\n  head:\n    replicas: 1\n  worker:\n    replicas: 2\nEOF",
+        "kubectl get rayclusters -n kuberay"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "ai-platform",
+      "ml-platform",
+      "ray-project"
+    ],
+    "platform": "kuberay",
+    "platformType": "ai-platform",
+    "platformProvider": "Ray Project",
+    "platformVersions": [
+      "v1.5.1"
+    ],
+    "supportedK8sVersions": [
+      "1.26",
+      "1.27",
+      "1.28",
+      "1.29",
+      "1.30"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "containerImages": [
+      "ghcr.io/ray-project/kuberay:v1.5.1"
+    ],
+    "sourceUrls": {
+      "docs": "https://docs.ray.io/en/latest/cluster/kubernetes/",
+      "repo": "https://github.com/ray-project/kuberay"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.26",
+    "tools": [
+      "kubectl",
+      "helm 3.x"
+    ],
+    "cloudCLI": "none",
+    "resources": "Minimum 2 vCPU, 4GB RAM per node",
+    "description": "Ensure you have a Kubernetes cluster running with the necessary resources."
+  },
+  "security": {
+    "scannedAt": "2026-03-09T12:06:58.681Z",
+    "scannerVersion": "platform-install-gen-2.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

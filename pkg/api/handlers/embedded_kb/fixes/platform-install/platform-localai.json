@@ -1,0 +1,175 @@
+{
+  "version": "kc-mission-v1",
+  "name": "platform-localai",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure LocalAI",
+    "description": "LocalAI is an open-source alternative to proprietary AI models, designed for self-hosting on consumer-grade hardware. It supports various AI tasks including text generation, audio, and image processing without requiring a GPU. Ideal for users seeking a local-first AI solution with decentralized inference capabilities.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Install the LocalAI CLI",
+        "description": "This step installs the LocalAI command-line interface, which is necessary for managing the LocalAI deployment.\n\n```bash\n\ncurl -Lo localai https://github.com/go-skynet/LocalAI/releases/download/v3.12.1/localai-linux-amd64\n\nchmod +x localai\n\nsudo mv localai /usr/local/bin/\n\n```\n\n> Download the LocalAI binary for Linux.\n> Make the LocalAI binary executable.\n> Move the binary to a directory in your PATH.",
+        "commands": [
+          "curl -Lo localai https://github.com/go-skynet/LocalAI/releases/download/v3.12.1/localai-linux-amd64",
+          "chmod +x localai",
+          "sudo mv localai /usr/local/bin/"
+        ]
+      },
+      {
+        "title": "Create a Kubernetes Cluster",
+        "description": "This step creates a Kubernetes cluster using Minikube, which is suitable for local development and testing.\n\n```bash\n\nminikube start --kubernetes-version=v1.30 --cpus=2 --memory=4096\n\n```\n\n> Start Minikube with 2 CPUs and 4GB of RAM.",
+        "commands": [
+          "minikube start --kubernetes-version=v1.30 --cpus=2 --memory=4096"
+        ]
+      },
+      {
+        "title": "Set Up Kubeconfig",
+        "description": "This step configures your kubeconfig to interact with the newly created Minikube cluster.\n\n```bash\n\nkubectl config use-context minikube\n\n```\n\n> Set the current context to Minikube.",
+        "commands": [
+          "kubectl config use-context minikube"
+        ]
+      },
+      {
+        "title": "Deploy LocalAI on Kubernetes",
+        "description": "This step deploys LocalAI using a Helm chart, ensuring all necessary resources are created.\n\n```bash\n\nhelm repo add localai https://charts.localai.io\n\nhelm install localai localai/localai --version 3.12.1 --namespace localai --create-namespace\n\n```\n\n> Add the LocalAI Helm repository.\n> Install LocalAI in its own namespace.",
+        "commands": [
+          "helm repo add localai https://charts.localai.io",
+          "helm install localai localai/localai --version 3.12.1 --namespace localai --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify the Deployment",
+        "description": "This step checks that the LocalAI pods are running correctly in the Kubernetes cluster.\n\n```bash\n\nkubectl get pods -n localai\n\n```\n\n> List all pods in the LocalAI namespace to verify they are running.",
+        "commands": [
+          "kubectl get pods -n localai"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall LocalAI",
+        "description": "This step removes LocalAI from your Kubernetes cluster. Be aware that this will delete all associated resources, which may lead to data loss.\n\n```bash\n\nhelm uninstall localai --namespace localai\n\nkubectl delete namespace localai\n\n```\n\n> Uninstall the LocalAI Helm release.\n> Delete the LocalAI namespace and all its resources.",
+        "commands": [
+          "helm uninstall localai --namespace localai",
+          "kubectl delete namespace localai"
+        ]
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade LocalAI",
+        "description": "Before upgrading, ensure you back up any important data. This step will upgrade LocalAI to the latest version.\n\n```bash\n\nkubectl get pods -n localai -o jsonpath='{.items[*].metadata.name}' | xargs kubectl drain --ignore-daemonsets --delete-local-data\n\nhelm upgrade localai localai/localai --version 3.12.1 --namespace localai\n\nkubectl uncordon <pod-name>\n\n```\n\n> Drain the LocalAI pods before upgrading.\n> Upgrade LocalAI to the specified version.\n> Uncordon the pods after the upgrade.",
+        "commands": [
+          "kubectl get pods -n localai -o jsonpath='{.items[*].metadata.name}' | xargs kubectl drain --ignore-daemonsets --delete-local-data",
+          "helm upgrade localai localai/localai --version 3.12.1 --namespace localai",
+          "kubectl uncordon <pod-name>"
+        ]
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Error: 'Failed to pull image'",
+        "description": "**Cause:** The specified image may not exist or there may be network issues.\n\n**Fix:**\nCheck the image name and ensure you have internet access."
+      },
+      {
+        "title": "Pod is in 'CrashLoopBackOff' state",
+        "description": "**Cause:** The application may be failing to start due to misconfiguration.\n\n**Fix:**\nCheck the pod logs using 'kubectl logs <pod-name> -n localai' for more details."
+      },
+      {
+        "title": "Error: 'context deadline exceeded'",
+        "description": "**Cause:** The Kubernetes API server may be overloaded or unresponsive.\n\n**Fix:**\nCheck the status of the Kubernetes cluster and ensure it is healthy."
+      },
+      {
+        "title": "Service not reachable",
+        "description": "**Cause:** The service may not be exposed correctly or the ingress may not be configured.\n\n**Fix:**\nVerify the service configuration and check ingress rules if applicable."
+      }
+    ],
+    "versionNotes": [
+      {
+        "version": "3.12.1",
+        "changes": "Added support for new model types and improved API endpoints.",
+        "deprecations": "Deprecated older model formats.",
+        "migrationSteps": "If upgrading from 3.11.x, ensure to update your model configurations to match the new formats."
+      }
+    ],
+    "resolution": {
+      "summary": "You should see the LocalAI pods running with a status of 'Running' when executing 'kubectl get pods -n localai'.",
+      "codeSnippets": [
+        "curl -Lo localai https://github.com/go-skynet/LocalAI/releases/download/v3.12.1/localai-linux-amd64",
+        "chmod +x localai",
+        "sudo mv localai /usr/local/bin/",
+        "minikube start --kubernetes-version=v1.30 --cpus=2 --memory=4096",
+        "kubectl config use-context minikube",
+        "helm repo add localai https://charts.localai.io",
+        "helm install localai localai/localai --version 3.12.1 --namespace localai --create-namespace",
+        "kubectl get pods -n localai"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "ai-platform",
+      "llm-serving",
+      "localai"
+    ],
+    "platform": "localai",
+    "platformType": "ai-platform",
+    "platformProvider": "LocalAI",
+    "platformVersions": [
+      "3.12.1"
+    ],
+    "supportedK8sVersions": [
+      "1.26",
+      "1.27",
+      "1.28",
+      "1.29",
+      "1.30"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "cli",
+      "helm"
+    ],
+    "containerImages": [
+      "localai/localai:v3.12.1"
+    ],
+    "sourceUrls": {
+      "docs": "https://localai.io/",
+      "repo": "https://github.com/mudler/LocalAI"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.26",
+    "tools": [
+      "kubectl",
+      "helm 3.x"
+    ],
+    "cloudCLI": "none",
+    "resources": "Minimum 2 vCPU, 4GB RAM per node",
+    "description": "Ensure you have a Kubernetes cluster running with the specified resources."
+  },
+  "security": {
+    "scannedAt": "2026-03-09T12:05:57.899Z",
+    "scannerVersion": "platform-install-gen-2.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

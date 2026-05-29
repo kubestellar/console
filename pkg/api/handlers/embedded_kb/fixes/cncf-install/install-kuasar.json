@@ -1,0 +1,127 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kuasar",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Kuasar on Kubernetes",
+    "description": "Kuasar is an efficient container runtime that provides cloud-native, all-scenario container solutions by supporting multiple sandbox techniques including MicroVM, App Kernel, and Wasm. Written in Rust, it integrates with containerd via the Sandbox API.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install prerequisites",
+        "description": "Kuasar requires containerd 2.0+ with Sandbox API support. Ensure your nodes have the necessary dependencies.\n```bash\n# Verify containerd version (2.0+ required)\ncontainerd --version\n```"
+      },
+      {
+        "title": "Download Kuasar binaries",
+        "description": "Download the Kuasar release binaries for your platform.\n```bash\ncurl -fsSL https://github.com/kuasar-io/kuasar/releases/download/v1.0.1-alpha1/kuasar-v1.0.1-alpha1-linux-amd64.tar.gz -o kuasar.tar.gz\ntar -xzf kuasar.tar.gz\n```"
+      },
+      {
+        "title": "Install the Kuasar sandboxer",
+        "description": "Install the appropriate sandboxer binary for your use case. Kuasar supports MicroVM (Cloud Hypervisor, QEMU, StratoVirt), Wasm (WasmEdge, Wasmtime), and App Kernel (Quark) sandboxers.\n```bash\n# Install the vmm-sandboxer for MicroVM support\nsudo cp vmm-sandboxer /usr/local/bin/\nsudo chmod +x /usr/local/bin/vmm-sandboxer\n\n# Or install the wasm-sandboxer for Wasm support\nsudo cp wasm-sandboxer /usr/local/bin/\nsudo chmod +x /usr/local/bin/wasm-sandboxer\n```"
+      },
+      {
+        "title": "Configure containerd to use Kuasar",
+        "description": "Update the containerd configuration to register the Kuasar sandboxer plugin.\n```bash\ncat <<EOF | sudo tee -a /etc/containerd/config.toml\n[proxy_plugins.vmm]\n  type = \"sandbox\"\n  address = \"/run/vmm-sandboxer.sock\"\nEOF\n\nsudo systemctl restart containerd\n```"
+      },
+      {
+        "title": "Start the Kuasar sandboxer",
+        "description": "Start the sandboxer process as a systemd service or run it directly.\n```bash\nsudo vmm-sandboxer --listen /run/vmm-sandboxer.sock --dir /var/lib/kuasar/vmm &\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Use crictl to create a test sandbox and container to verify the setup.\n```bash\ncrictl runp --runtime vmm pod-config.json\ncrictl pods\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will have the Kuasar sandboxer running alongside containerd, enabling multi-sandbox container workloads on Kubernetes nodes. Pods can be scheduled to use different sandbox types based on RuntimeClass configuration.",
+      "codeSnippets": [
+        "curl -fsSL https://github.com/kuasar-io/kuasar/releases/download/v1.0.1-alpha1/kuasar-v1.0.1-alpha1-linux-amd64.tar.gz -o kuasar.tar.gz",
+        "sudo vmm-sandboxer --listen /run/vmm-sandboxer.sock --dir /var/lib/kuasar/vmm &",
+        "crictl pods"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Stop the sandboxer process",
+        "description": "Stop the Kuasar sandboxer service or kill the process."
+      },
+      {
+        "title": "Remove containerd configuration",
+        "description": "Remove the Kuasar proxy plugin entry from the containerd config and restart containerd."
+      },
+      {
+        "title": "Remove Kuasar binaries",
+        "description": "Delete the sandboxer binaries from /usr/local/bin/."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Download the latest release",
+        "description": "Download the latest Kuasar release binaries from GitHub."
+      },
+      {
+        "title": "Replace binaries and restart",
+        "description": "Stop the sandboxer, replace binaries, and restart the service."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Sandboxer fails to start",
+        "description": "Ensure the listen socket path is writable and containerd 2.0+ is installed. Check if virtualization is enabled on the node for MicroVM sandboxer."
+      },
+      {
+        "title": "Pods fail to schedule with Kuasar RuntimeClass",
+        "description": "Verify the RuntimeClass is registered and the sandboxer is running.\n```bash\nkubectl get runtimeclass\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "runtime",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "kuasar"
+    ],
+    "targetResourceKinds": [
+      "RuntimeClass",
+      "Pod"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.0.1-alpha1",
+    "containerImages": [],
+    "sourceUrls": {
+      "docs": "https://github.com/kuasar-io/kuasar",
+      "repo": "https://github.com/kuasar-io/kuasar"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl",
+      "crictl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster with containerd 2.0+ and virtualization-enabled nodes (for MicroVM sandboxer)."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

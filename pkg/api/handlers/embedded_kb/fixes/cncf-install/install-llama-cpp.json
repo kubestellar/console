@@ -1,0 +1,164 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-llama-cpp",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install llama.cpp Server on Kubernetes",
+    "description": "llama.cpp is the lightweight, dependency-minimal GGUF inference runtime from ggml-org. It ships a small HTTP server (`llama-server`) that speaks the OpenAI chat-completions API at `/v1/chat/completions`, so it drops in wherever an OpenAI-compatible endpoint is expected. This mission deploys `llama-server` as a Kubernetes Deployment using the official `ghcr.io/ggml-org/llama.cpp:server` image, mounts a PersistentVolumeClaim for the GGUF model cache, and exposes it through a ClusterIP Service. Both CPU and GPU variants of the image are covered. Upstream docs: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md .",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Decide CPU vs GPU image",
+        "description": "llama.cpp publishes two server image flavors on GHCR:\n\n- CPU only: `ghcr.io/ggml-org/llama.cpp:server` — runs anywhere, uses AVX/AVX2 when available.\n- CUDA: `ghcr.io/ggml-org/llama.cpp:server-cuda` — requires the NVIDIA device plugin on the node and `nvidia.com/gpu` resource requests.\n\nFor a first install on a laptop kind cluster, stay on the CPU image. Pick the CUDA image only if you already have a working GPU node with the device plugin installed. Verify with:\n```bash\nkubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.status.capacity.nvidia\\.com/gpu}{\"\\n\"}{end}'\n```"
+      },
+      {
+        "title": "Create the namespace",
+        "description": "Keep llama.cpp in its own namespace so the workload, PVC, and Service are easy to clean up later:\n```bash\nkubectl create namespace llamacpp\n```"
+      },
+      {
+        "title": "Create a PVC for the GGUF model cache",
+        "description": "GGUF model files range from ~2 GB (Phi-3 mini q4) to 40+ GB (Llama 3 70B). Mount a PersistentVolume so the model survives pod restarts and you do not re-download on every rollout. This manifest requests 20 GiB, which holds a typical 7B-class quantized model with room to spare — raise the size for larger models:\n```bash\nkubectl apply -f - <<'EOF'\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: llamacpp-models\n  namespace: llamacpp\nspec:\n  accessModes:\n    - ReadWriteOnce\n  resources:\n    requests:\n      storage: 20Gi\nEOF\n```"
+      },
+      {
+        "title": "Deploy llama-server",
+        "description": "This Deployment runs the server image with `--host 0.0.0.0 --port 8080` so the Service can reach it, mounts the PVC at `/models`, and uses an initContainer to pull the model from Hugging Face on first start. Replace `HF_REPO` and `HF_FILE` with the model you want — the example pulls Phi-3 mini 4K Instruct Q4:\n```bash\nkubectl apply -f - <<'EOF'\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: llama-server\n  namespace: llamacpp\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: llama-server\n  template:\n    metadata:\n      labels:\n        app: llama-server\n    spec:\n      initContainers:\n        - name: fetch-model\n          image: curlimages/curl:8.8.0\n          command:\n            - sh\n            - -c\n            - curl -fL -z /models/model.gguf -o /models/model.gguf https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf\n          volumeMounts:\n            - name: models\n              mountPath: /models\n      containers:\n        - name: server\n          image: ghcr.io/ggml-org/llama.cpp:server\n          args:\n            - --host\n            - 0.0.0.0\n            - --port\n            - \"8080\"\n            - --model\n            - /models/model.gguf\n            - --ctx-size\n            - \"4096\"\n          ports:\n            - containerPort: 8080\n              name: http\n          resources:\n            requests:\n              cpu: \"2\"\n              memory: 6Gi\n            limits:\n              cpu: \"4\"\n              memory: 8Gi\n          volumeMounts:\n            - name: models\n              mountPath: /models\n          readinessProbe:\n            httpGet:\n              path: /health\n              port: 8080\n            initialDelaySeconds: 30\n            periodSeconds: 10\n      volumes:\n        - name: models\n          persistentVolumeClaim:\n            claimName: llamacpp-models\nEOF\n```\nWait for the Deployment to roll out — the first start takes a few minutes because the initContainer has to download the model file:\n```bash\nkubectl -n llamacpp rollout status deploy/llama-server --timeout=10m\n```"
+      },
+      {
+        "title": "Expose llama-server as a Service",
+        "description": "A ClusterIP Service keeps the endpoint inside the cluster. Clients on the same cluster reach it at `http://llama-server.llamacpp.svc.cluster.local:8080`:\n```bash\nkubectl apply -f - <<'EOF'\napiVersion: v1\nkind: Service\nmetadata:\n  name: llama-server\n  namespace: llamacpp\nspec:\n  type: ClusterIP\n  selector:\n    app: llama-server\n  ports:\n    - name: http\n      port: 8080\n      targetPort: 8080\nEOF\n```"
+      },
+      {
+        "title": "Verify the OpenAI-compatible endpoint",
+        "description": "Port-forward to your workstation and hit the chat-completions endpoint to confirm inference works end to end:\n```bash\nkubectl -n llamacpp port-forward svc/llama-server 8080:8080\n```\nIn a second terminal:\n```bash\ncurl -s http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"Say hi in one word.\"}]}'\n```\nA successful response returns a JSON body with a `choices[0].message.content` field."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful llama.cpp install has the `llama-server` Deployment in the `llamacpp` namespace reporting one Ready replica, the PVC bound with the downloaded GGUF file present at `/models/model.gguf`, and `curl http://127.0.0.1:8080/v1/chat/completions` returning a valid OpenAI-compatible response. The Service resolves at `llama-server.llamacpp.svc.cluster.local:8080` for in-cluster clients.",
+      "codeSnippets": [
+        "kubectl create namespace llamacpp",
+        "kubectl -n llamacpp rollout status deploy/llama-server --timeout=10m",
+        "kubectl -n llamacpp port-forward svc/llama-server 8080:8080",
+        "curl -s http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"Say hi.\"}]}'"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Delete the Deployment and Service",
+        "description": "Remove the workload first so nothing is reading from the PVC when it is deleted:\n```bash\nkubectl -n llamacpp delete deploy/llama-server svc/llama-server --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the model PVC",
+        "description": "The PVC holds the downloaded GGUF file — deleting it releases the underlying PersistentVolume (depending on your StorageClass reclaim policy, the PV may be retained or recycled):\n```bash\nkubectl -n llamacpp delete pvc/llamacpp-models --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Finally remove the namespace:\n```bash\nkubectl delete namespace llamacpp --ignore-not-found\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Bump the server image tag",
+        "description": "llama.cpp publishes GHCR images on every master merge, tagged with the commit short SHA and with rolling tags like `server` and `server-cuda`. For a predictable upgrade path, pin to a specific commit SHA rather than the rolling `server` tag — check https://github.com/ggml-org/llama.cpp/pkgs/container/llama.cpp for available tags. Edit the Deployment to the new tag:\n```bash\nkubectl -n llamacpp set image deploy/llama-server server=ghcr.io/ggml-org/llama.cpp:server-<sha>\nkubectl -n llamacpp rollout status deploy/llama-server --timeout=5m\n```"
+      },
+      {
+        "title": "Swap the model file",
+        "description": "To switch to a different model, either edit the initContainer args to pull a different GGUF and delete the existing file, or exec into the pod and `curl` the new file into `/models`. After the new file is in place, restart the Deployment so llama-server loads it:\n```bash\nkubectl -n llamacpp rollout restart deploy/llama-server\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "initContainer fails to download the model",
+        "description": "If the initContainer errors out, the most common causes are a bad Hugging Face path, a gated model (some HF repos require accepting a license or passing a token), or cluster egress blocking huggingface.co. Check the init logs:\n```bash\nkubectl -n llamacpp logs -l app=llama-server -c fetch-model --tail=100\n```\nIf the cluster cannot reach huggingface.co, download the GGUF file to your workstation, then `kubectl cp` it into the pod's `/models` directory and remove the initContainer from the Deployment."
+      },
+      {
+        "title": "llama-server crashloops with OOM",
+        "description": "Large models or long context windows can exhaust the container memory limit. Check the last termination reason:\n```bash\nkubectl -n llamacpp describe pod -l app=llama-server\n```\nRaise the memory limit and request in the Deployment, or switch to a smaller quantization (q3_K_M is ~30% smaller than q4_K_M with a modest quality hit), or reduce `--ctx-size`."
+      },
+      {
+        "title": "Readiness probe failing but server is up",
+        "description": "If the pod is running but `kubectl rollout status` times out, the readiness probe may be hitting the server before the model is fully loaded. Inspect the server logs for the `model loaded` line and raise `initialDelaySeconds` on the probe. On a laptop CPU, Phi-3 mini takes 20–40 seconds to load. Models in the 7B class can take a minute or more."
+      },
+      {
+        "title": "GPU image fails to start on CPU nodes",
+        "description": "The `server-cuda` image requires the NVIDIA device plugin and a node with `nvidia.com/gpu` resources. On a CPU-only cluster you will see the pod pending with an insufficient-resources event. Switch the image to `ghcr.io/ggml-org/llama.cpp:server` and remove any `nvidia.com/gpu` resource requests."
+      }
+    ],
+    "security": [
+      {
+        "title": "No privileged access required",
+        "description": "The `llama-server` container runs as an unprivileged process. It does not need hostPath mounts, hostNetwork, or CAP_SYS_ADMIN. The Deployment in this mission should pass the Kubernetes Pod Security Admission `baseline` profile with no changes. For `restricted` enforcement, add a securityContext with `runAsNonRoot: true`, `allowPrivilegeEscalation: false`, a `seccompProfile` of `RuntimeDefault`, and drop all Linux capabilities."
+      },
+      {
+        "title": "Model provenance",
+        "description": "GGUF files are arbitrary binary blobs loaded into the inference engine. Only download models from sources you trust. Hugging Face repos under well-known publishers (`microsoft/`, `meta-llama/`, `mistralai/`, `TheBloke/`) are the common path. Pin to a specific commit SHA in the HF URL if the upstream repo could rewrite history. For air-gapped installs, mirror the GGUF file to an internal object store and rewrite the initContainer to pull from there instead of huggingface.co."
+      },
+      {
+        "title": "Egress surface",
+        "description": "On first start, the initContainer reaches huggingface.co over HTTPS to fetch the GGUF model. After that the workload runs fully offline — `llama-server` makes no outbound calls of its own. If your cluster has a NetworkPolicy-enforced egress deny-by-default posture, open egress to `huggingface.co` only for the initial sync, or pre-populate the PVC out-of-band and remove the initContainer entirely."
+      },
+      {
+        "title": "No built-in authentication",
+        "description": "`llama-server` does not authenticate callers out of the box. Keep the Service as ClusterIP and never expose it via Ingress without a gateway in front. For multi-tenant clusters, add an authenticating reverse proxy (oauth2-proxy, kube-rbac-proxy, or an Istio/Envoy AuthorizationPolicy) between the Service and any client namespace. Alternatively, use the `--api-key` flag on `llama-server` to require a shared bearer token (set via an env var sourced from a Kubernetes Secret, not baked into the manifest)."
+      },
+      {
+        "title": "Relationship to the KubeStellar Console SECURITY-MODEL",
+        "description": "The Console's AI-agent code path is architected so user chat content and command output reach the LLM provider, but kubeconfig files and cluster credentials never do — see docs/security/SECURITY-MODEL.md in the kubestellar/console repo. Pointing a CLI agent (codex, claude, gemini-cli) at a llama.cpp Service keeps inference inside the cluster, which is the strongest local-LLM posture the Console supports today. Chat content still leaves the agent pod, but it no longer leaves the cluster."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "llm",
+      "inference",
+      "gguf",
+      "openai-compatible",
+      "local-llm"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service",
+      "PersistentVolumeClaim"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "manifest"
+    ],
+    "maturity": "stable",
+    "projectVersion": "server",
+    "containerImages": [
+      "ghcr.io/ggml-org/llama.cpp:server",
+      "ghcr.io/ggml-org/llama.cpp:server-cuda"
+    ],
+    "sourceUrls": {
+      "docs": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+      "installDocs": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+      "repo": "https://github.com/ggml-org/llama.cpp",
+      "releases": "https://github.com/ggml-org/llama.cpp/releases"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl",
+      "curl"
+    ],
+    "description": "Any Kubernetes cluster with a default StorageClass that supports ReadWriteOnce volumes. For the CUDA image variant, the cluster must have at least one node exposing `nvidia.com/gpu` via the NVIDIA device plugin. Internet egress to huggingface.co is required on first start so the initContainer can fetch the GGUF model file — in air-gapped clusters, pre-populate the PVC instead."
+  },
+  "security": {
+    "scannedAt": "2026-04-15T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

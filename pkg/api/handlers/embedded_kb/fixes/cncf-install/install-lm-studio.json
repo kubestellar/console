@@ -1,0 +1,143 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-lm-studio",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install LM Studio as a Workstation Local LLM Runner",
+    "description": "LM Studio is a closed-source but free GUI-first local LLM runner from lmstudio.ai. Unlike the other local-LLM missions in this series, LM Studio is NOT a Kubernetes workload — it runs directly on a workstation (macOS, Windows, Linux) and exposes an OpenAI-compatible HTTP server on `http://127.0.0.1:1234/v1` from a laptop. This mission documents the workstation install and the minimum configuration needed to point the KubeStellar Console's chat path at an LM Studio instance running on the same laptop. Upstream: https://lmstudio.ai .",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Confirm hardware",
+        "description": "LM Studio runs models on Apple Silicon (M1+), x86_64 CPUs with AVX2, and workstation GPUs (NVIDIA CUDA, AMD ROCm via the Vulkan backend). Check your CPU features and available RAM:\n```bash\nsysctl -a 2>/dev/null | grep -E 'machdep.cpu.brand_string|hw.memsize'\n```\nA 7B-class quantized model needs about 6 GB of RAM. A 13B-class model needs about 12 GB. 70B-class models need a Mac Studio or workstation GPU. Do not try to run larger models than your hardware supports — LM Studio will silently thrash on disk and become unusable."
+      },
+      {
+        "title": "Download the LM Studio installer",
+        "description": "Downloads for macOS, Windows, and Linux live at https://lmstudio.ai/download . Pick the installer for your platform and run it. On macOS this is a standard `.dmg` that copies `LM Studio.app` into `/Applications`. On Linux it is an AppImage. On Windows it is a standard installer. None of these need elevated privileges for personal use. After installing on macOS, confirm the app bundle is present:\n```bash\nls -ld '/Applications/LM Studio.app'\n```"
+      },
+      {
+        "title": "Download a model from inside LM Studio",
+        "description": "Launch LM Studio, click the search icon on the left rail, and pick a model from the built-in gallery. For a first run, `microsoft/Phi-3-mini-4k-instruct-gguf` is a good starter — it is under 3 GB and runs comfortably on a laptop CPU. LM Studio downloads the GGUF file into `~/.cache/lm-studio/models/` . You can also point LM Studio at a folder of GGUF files you already have by editing the Models path in Settings. Confirm the model landed on disk after the download finishes:\n```bash\nls -lh ~/.cache/lm-studio/models/\n```"
+      },
+      {
+        "title": "Start the local OpenAI-compatible server",
+        "description": "Click the `<->` (Developer) icon on the left rail. In the server tab, pick the model you downloaded, leave the port as `1234`, and click Start Server. LM Studio logs every request to the same panel, which is useful for debugging. The server exposes these OpenAI-compatible routes:\n\n- `GET http://127.0.0.1:1234/v1/models`\n- `POST http://127.0.0.1:1234/v1/chat/completions`\n- `POST http://127.0.0.1:1234/v1/completions`\n- `POST http://127.0.0.1:1234/v1/embeddings`\n\nTest it from a shell:\n```bash\ncurl -s http://127.0.0.1:1234/v1/models\ncurl -s http://127.0.0.1:1234/v1/chat/completions -H 'Content-Type: application/json' -d '{\"model\":\"phi-3-mini-4k-instruct\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hi in one word.\"}]}'\n```"
+      },
+      {
+        "title": "Wire the KubeStellar Console at your LM Studio instance",
+        "description": "The KubeStellar Console's chat path speaks OpenAI-compatible HTTP. Set these env vars before starting the Console backend so the `lm-studio` provider becomes available in the agent selector dropdown:\n```bash\nexport LM_STUDIO_URL=http://127.0.0.1:1234\nexport LM_STUDIO_MODEL=phi-3-mini-4k-instruct\n```\nRestart `kc-agent` (or the Console backend) after setting the env vars. The agent selector should now list `LM Studio (Local)` alongside the CLI agents — pick it from the dropdown. If the Console backend is running on a different host than LM Studio, replace `127.0.0.1` with the LAN IP of the workstation running LM Studio and make sure the LM Studio server is set to bind to all interfaces (Developer tab → Server → `0.0.0.0`)."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful LM Studio setup has the LM Studio desktop app running with a downloaded GGUF model, the Developer-tab server listening on port 1234, `curl http://127.0.0.1:1234/v1/models` returning the loaded model, and the KubeStellar Console agent selector listing `LM Studio (Local)` with the `LM_STUDIO_URL` env var set.",
+      "codeSnippets": [
+        "curl -s http://127.0.0.1:1234/v1/models",
+        "export LM_STUDIO_URL=http://127.0.0.1:1234",
+        "export LM_STUDIO_MODEL=phi-3-mini-4k-instruct"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Stop the LM Studio server",
+        "description": "In the Developer tab, click Stop Server. Then quit the LM Studio app."
+      },
+      {
+        "title": "Delete the LM Studio app and model cache",
+        "description": "On macOS, drag `LM Studio.app` from `/Applications` to the Trash in Finder. Then, also in Finder, open the Go menu → Go to Folder (`Cmd+Shift+G`) and drag these two directories to the Trash one at a time:\n\n- `~/.cache/lm-studio`\n- `~/Library/Application Support/LM Studio`\n\nOn Linux, delete the AppImage with your file manager and drag `~/.cache/lm-studio` to Trash. On Windows, use Add/Remove Programs for the app uninstall, then delete `%APPDATA%\\LM Studio` from File Explorer. Before deleting, confirm the directories exist with a read-only `ls`:\n```bash\nls -ld ~/.cache/lm-studio ~/Library/Application\\ Support/LM\\ Studio 2>/dev/null\n```"
+      },
+      {
+        "title": "Unset the Console env vars",
+        "description": "Remove `LM_STUDIO_URL` and `LM_STUDIO_MODEL` from your shell profile and restart the Console backend so the provider is no longer advertised:\n```bash\nunset LM_STUDIO_URL LM_STUDIO_MODEL\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "In-app upgrade",
+        "description": "LM Studio checks for updates on launch. Accept the update when prompted — the upgrade replaces the app bundle in place and preserves your downloaded models. If you disabled the in-app updater, download the latest installer from https://lmstudio.ai/download and run it."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Console does not see LM Studio in the agent selector",
+        "description": "The LM Studio provider only appears if `LM_STUDIO_URL` is set at Console-backend startup. Check the backend logs for a provider-registration warning, confirm the env var is set in the same shell that launches the backend, and confirm LM Studio is actually listening by running `curl http://127.0.0.1:1234/v1/models` from the backend host."
+      },
+      {
+        "title": "Another machine cannot reach LM Studio",
+        "description": "LM Studio's server defaults to `127.0.0.1` (loopback). To reach it from another machine on the LAN, open the Developer tab, change the bind address to `0.0.0.0`, and restart the server. Be aware that LM Studio has no authentication — if you open the bind address, any host that can reach port 1234 can use your GPU."
+      },
+      {
+        "title": "Model runs but is painfully slow",
+        "description": "If inference is slow on Apple Silicon, check that LM Studio is using the Metal backend (Settings → Hardware). On NVIDIA workstations, verify CUDA is enabled in Settings and that the CUDA runtime matches your GPU. On CPU-only hardware, drop to a smaller model — Phi-3 mini q4 is the smallest mainstream chat model that produces usable output."
+      }
+    ],
+    "security": [
+      {
+        "title": "Closed-source runtime",
+        "description": "LM Studio is a closed-source binary distributed by lmstudio.ai. It is free for personal use and for commercial use at companies under a certain size (see the LM Studio terms for current limits). You are trusting the LM Studio publisher to ship a runtime that does not exfiltrate your prompts. For high-assurance environments, prefer the open-source alternatives in this series (llama.cpp, LocalAI, Ollama, vLLM, RHAIIS)."
+      },
+      {
+        "title": "No authentication",
+        "description": "The LM Studio local server accepts any caller. While it defaults to loopback only, anyone who opens the bind address to `0.0.0.0` (intentionally or accidentally) is exposing the GPU to anyone on the LAN. Keep the bind address on 127.0.0.1 unless you need LAN access, and when you do, enforce network isolation at the OS firewall level."
+      },
+      {
+        "title": "Model provenance",
+        "description": "LM Studio's model gallery pulls from Hugging Face. Only enable models from publishers you trust (microsoft, meta-llama, mistralai, TheBloke). The GGUF format is arbitrary binary data loaded into the inference engine — a malicious file could exploit an unpatched llama.cpp vulnerability. Keep LM Studio updated."
+      },
+      {
+        "title": "Data locality",
+        "description": "All prompts, responses, and model weights stay on the workstation. Nothing leaves the machine unless you also enable one of LM Studio's telemetry options. Disable telemetry in Settings for full offline operation."
+      },
+      {
+        "title": "Relationship to the KubeStellar Console SECURITY-MODEL",
+        "description": "Using LM Studio as the Console's LLM backend is a reasonable laptop-only posture: your prompts never leave your machine, but (a) you are trusting a closed-source runtime, (b) there is no cluster-level isolation, and (c) the workstation GPU becomes the shared resource. For a production or multi-user path, prefer an in-cluster open-source runner (llama.cpp / LocalAI / vLLM / RHAIIS). See docs/security/SECURITY-MODEL.md in the kubestellar/console repo."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "llm",
+      "inference",
+      "workstation",
+      "local-llm",
+      "openai-compatible",
+      "gui"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "workstation"
+    ],
+    "maturity": "stable",
+    "projectVersion": "latest",
+    "containerImages": [],
+    "sourceUrls": {
+      "docs": "https://lmstudio.ai/docs/",
+      "installDocs": "https://lmstudio.ai/download",
+      "repo": "https://lmstudio.ai",
+      "releases": "https://lmstudio.ai/download"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": "not-required",
+    "tools": [
+      "curl"
+    ],
+    "description": "A workstation with macOS (Apple Silicon or Intel), Windows 10+, or a recent Linux distribution with AVX2 support. At least 8 GB RAM for a 7B-class quantized model, 16+ GB recommended. NVIDIA CUDA or Apple Metal acceleration is optional but greatly improves throughput. No Kubernetes cluster is required — LM Studio runs directly on the workstation and exposes an OpenAI-compatible HTTP server on `127.0.0.1:1234`."
+  },
+  "security": {
+    "scannedAt": "2026-04-15T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

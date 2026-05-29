@@ -1,0 +1,50 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-in-toto",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "in-toto"
+  ],
+  "mission": {
+    "title": "Install and Configure in-toto",
+    "description": "in-toto is a CNCF graduated framework that protects software supply chain integrity by verifying that each step was performed by authorized personnel, collecting evidence as link metadata, and validating the complete chain.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install in-toto via pip",
+        "description": "Install the in-toto Python package.\n\n```bash\npip install in-toto\n```\n\n> Requires Python 3.8+.",
+        "commands": [
+          "pip install in-toto"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Confirm the in-toto CLI tools are available.\n\n```bash\nin-toto-run --version\nin-toto-verify --version\n```",
+        "commands": [
+          "in-toto-run --version",
+          "in-toto-verify --version"
+        ]
+      },
+      {
+        "title": "Generate signing keys",
+        "description": "Create a key pair for signing supply chain steps.\n\n```bash\npython3 -c \"from securesystemslib.interface import generate_ed25519_keypair; generate_ed25519_keypair('my-key')\"\n```\n\n> This creates my-key (private) and my-key.pub (public) files.",
+        "commands": [
+          "python3 -c \"from securesystemslib.interface import generate_ed25519_keypair; generate_ed25519_keypair('my-key')\""
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall in-toto",
+        "description": "Remove in-toto.\n\n```bash\npip uninstall in-toto -y\n```",
+        "commands": [
+          "pip uninstall in-toto -y"
+        ]
+      }
+    ]
+  }
+}

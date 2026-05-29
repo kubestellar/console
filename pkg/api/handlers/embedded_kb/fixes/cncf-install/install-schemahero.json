@@ -1,0 +1,127 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-schemahero",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure SchemaHero on Kubernetes",
+    "description": "SchemaHero is a Kubernetes Operator for declarative database schema management. It allows database table schemas to be expressed as Kubernetes resources, automatically calculating and applying schema migrations (ALTER TABLE statements) when changes are made.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the SchemaHero kubectl plugin",
+        "description": "Install the SchemaHero kubectl plugin using krew or by downloading the binary directly.\n```bash\n# Option 1: Install via krew\nkubectl krew install schemahero\n\n# Option 2: Download binary directly (Linux amd64)\ncurl -fsSL https://github.com/schemahero/schemahero/releases/download/v0.23.3/schemahero_linux_amd64.tar.gz -o schemahero.tar.gz\ntar -xzf schemahero.tar.gz\nsudo mv kubectl-schemahero /usr/local/bin/\n```"
+      },
+      {
+        "title": "Install the SchemaHero operator",
+        "description": "Deploy the SchemaHero operator to your Kubernetes cluster using the kubectl plugin.\n```bash\nkubectl schemahero install\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that the SchemaHero operator is running.\n```bash\nkubectl get pods -n schemahero-system\nkubectl get crd | grep schemahero\n```"
+      },
+      {
+        "title": "Create a database connection",
+        "description": "Define a database connection resource that SchemaHero will manage.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: databases.schemahero.io/v1alpha4\nkind: Database\nmetadata:\n  name: my-database\nspec:\n  connection:\n    postgres:\n      uri:\n        valueFrom:\n          secretKeyRef:\n            name: my-database-credentials\n            key: uri\nEOF\n```"
+      },
+      {
+        "title": "Define a table schema",
+        "description": "Create a Table resource to declare the desired schema.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: schemas.schemahero.io/v1alpha4\nkind: Table\nmetadata:\n  name: users\nspec:\n  database: my-database\n  name: users\n  schema:\n    postgres:\n      primaryKey:\n      - id\n      columns:\n      - name: id\n        type: integer\n        constraints:\n          notNull: true\n      - name: email\n        type: varchar(255)\n        constraints:\n          notNull: true\nEOF\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show the SchemaHero operator running in the schemahero-system namespace. Database schemas can then be managed declaratively through Kubernetes Table and Database CRDs.",
+      "codeSnippets": [
+        "kubectl schemahero install",
+        "kubectl get pods -n schemahero-system",
+        "kubectl get crd | grep schemahero"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove Table and Database resources",
+        "description": "Delete all SchemaHero Table and Database resources."
+      },
+      {
+        "title": "Uninstall the operator",
+        "description": "Remove the SchemaHero operator using the kubectl plugin: kubectl schemahero uninstall."
+      },
+      {
+        "title": "Remove the kubectl plugin",
+        "description": "Uninstall via krew or delete the binary."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update the kubectl plugin",
+        "description": "Upgrade via krew: kubectl krew upgrade schemahero, or download the latest binary."
+      },
+      {
+        "title": "Upgrade the operator",
+        "description": "Re-run kubectl schemahero install to upgrade the operator in-place."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Migration not applied",
+        "description": "Check the migration resources for pending approvals.\n```bash\nkubectl get migrations\nkubectl schemahero approve migration-name\n```"
+      },
+      {
+        "title": "Database connection fails",
+        "description": "Verify the database credentials secret exists and the connection URI is correct.\n```bash\nkubectl describe database my-database\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "database",
+      "schema-management",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "schemahero"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Namespace",
+      "CustomResourceDefinition",
+      "Secret"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v0.23.3",
+    "containerImages": [
+      "schemahero/schemahero:v0.23.3"
+    ],
+    "sourceUrls": {
+      "docs": "https://schemahero.io/",
+      "repo": "https://github.com/schemahero/schemahero"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher with kubectl installed. A supported database (PostgreSQL, MySQL, CockroachDB, SQLite, or Cassandra) is needed for schema management."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

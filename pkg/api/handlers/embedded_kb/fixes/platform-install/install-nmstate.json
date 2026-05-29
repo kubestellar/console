@@ -1,0 +1,49 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-nmstate",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "nmstate"
+  ],
+  "mission": {
+    "title": "Install and Configure NMstate",
+    "description": "NMstate is a CNCF declarative network management API for Linux hosts. It provides a Python library (libnmstate), Rust crate, and CLI tools (nmstatectl) for managing network configurations declaratively.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install NMstate via package manager",
+        "description": "Install NMstate using your system package manager.\n\n```bash\n# Fedora/RHEL\nsudo dnf install nmstate\n\n# Or via pip\npip install libnmstate\n```",
+        "commands": [
+          "sudo dnf install nmstate"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Check the NMstate CLI is available.\n\n```bash\nnmstatectl version\n```",
+        "commands": [
+          "nmstatectl version"
+        ]
+      },
+      {
+        "title": "Show current network state",
+        "description": "Display the current declarative network state.\n\n```bash\nnmstatectl show\n```\n\n> This outputs the full network configuration in YAML format.",
+        "commands": [
+          "nmstatectl show"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall NMstate",
+        "description": "Remove NMstate.\n\n```bash\nsudo dnf remove nmstate\n# Or: pip uninstall libnmstate -y\n```",
+        "commands": [
+          "sudo dnf remove nmstate"
+        ]
+      }
+    ]
+  }
+}

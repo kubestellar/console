@@ -1,0 +1,121 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-ovn-kubernetes",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure OVN-Kubernetes on Kubernetes",
+    "description": "OVN-Kubernetes is an open-source project that provides a robust networking solution for Kubernetes clusters using OVN (Open Virtual Networking) and Open vSwitch at its core. It is a CNI-conformant plugin offering advanced networking features.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Clone the OVN-Kubernetes repository",
+        "description": "Clone the OVN-Kubernetes repository to access the Helm charts.\n```bash\ngit clone https://github.com/ovn-kubernetes/ovn-kubernetes.git\ncd ovn-kubernetes\n```"
+      },
+      {
+        "title": "Install OVN-Kubernetes using Helm",
+        "description": "Deploy OVN-Kubernetes as the CNI plugin using the included Helm chart.\n```bash\nhelm install ovn-kubernetes helm/ovn-kubernetes \\\n  --namespace ovn-kubernetes \\\n  --create-namespace \\\n  --set global.image.repository=ghcr.io/ovn-kubernetes/ovn-kubernetes \\\n  --set global.image.tag=v1.2.0\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that the OVN-Kubernetes pods are running across the cluster.\n```bash\nkubectl get pods --namespace ovn-kubernetes\nkubectl get nodes -o wide\n```"
+      },
+      {
+        "title": "Validate CNI connectivity",
+        "description": "Create test pods to verify networking is working correctly.\n```bash\nkubectl run test-pod-1 --image=busybox --command -- sleep 3600\nkubectl run test-pod-2 --image=busybox --command -- sleep 3600\nkubectl exec test-pod-1 -- ping -c 3 $(kubectl get pod test-pod-2 -o jsonpath='{.status.podIP}')\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show OVN-Kubernetes pods running on all nodes in the cluster. Pod-to-pod networking should be functional across nodes, and Kubernetes Services should route traffic correctly.",
+      "codeSnippets": [
+        "git clone https://github.com/ovn-kubernetes/ovn-kubernetes.git",
+        "helm install ovn-kubernetes helm/ovn-kubernetes --namespace ovn-kubernetes --create-namespace",
+        "kubectl get pods --namespace ovn-kubernetes"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Uninstall the Helm release",
+        "description": "Remove the OVN-Kubernetes Helm release. Note: removing the CNI will disrupt cluster networking."
+      },
+      {
+        "title": "Clean up CRDs and namespace",
+        "description": "Delete OVN-Kubernetes CRDs and the ovn-kubernetes namespace."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update the repository",
+        "description": "Pull the latest OVN-Kubernetes source to get updated Helm charts."
+      },
+      {
+        "title": "Run helm upgrade",
+        "description": "Upgrade the deployment with the new chart version."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "OVN-Kubernetes pods stuck in CrashLoopBackOff",
+        "description": "Check pod logs and ensure OVS (Open vSwitch) is installed on all nodes.\n```bash\nkubectl logs -l app=ovnkube-node --namespace ovn-kubernetes\n```"
+      },
+      {
+        "title": "Pod-to-pod connectivity fails",
+        "description": "Verify OVN northbound and southbound databases are running and connected.\n```bash\nkubectl logs -l app=ovnkube-db --namespace ovn-kubernetes\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "networking",
+      "cni",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "ovn-kubernetes"
+    ],
+    "targetResourceKinds": [
+      "DaemonSet",
+      "Deployment",
+      "Namespace",
+      "ConfigMap"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.2.0",
+    "containerImages": [
+      "ghcr.io/ovn-kubernetes/ovn-kubernetes:v1.2.0"
+    ],
+    "sourceUrls": {
+      "docs": "https://ovn-kubernetes.io/",
+      "repo": "https://github.com/ovn-kubernetes/ovn-kubernetes"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl",
+      "git"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher without a CNI installed (or replacing the existing CNI). Helm, kubectl, and git are required."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

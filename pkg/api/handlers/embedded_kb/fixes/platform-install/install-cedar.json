@@ -1,0 +1,49 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-cedar",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "cedar"
+  ],
+  "mission": {
+    "title": "Install and Configure Cedar",
+    "description": "Cedar is a CNCF policy language and evaluation engine for writing and enforcing authorization policies. It provides a Rust library and CLI for defining fine-grained, analyzable access control rules.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install Cedar CLI via Cargo",
+        "description": "Install the Cedar policy CLI tool.\n\n```bash\ncargo install cedar-policy-cli\n```\n\n> Requires Rust/Cargo installed.",
+        "commands": [
+          "cargo install cedar-policy-cli"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Check the Cedar CLI is available.\n\n```bash\ncedar --version\n```",
+        "commands": [
+          "cedar --version"
+        ]
+      },
+      {
+        "title": "Test with a sample policy",
+        "description": "Create and evaluate a simple Cedar policy.\n\n```bash\necho 'permit(principal, action, resource)\nwhen { principal == User::\"alice\" };' > policy.cedar\ncedar validate --policies policy.cedar --schema schema.cedarschema\n```\n\n> Cedar policies use a human-readable syntax for authorization rules.",
+        "commands": [
+          "echo 'permit(principal, action, resource) when { principal == User::\"alice\" };' > policy.cedar"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Cedar",
+        "description": "Remove Cedar CLI.\n\n```bash\ncargo uninstall cedar-policy-cli\n```",
+        "commands": [
+          "cargo uninstall cedar-policy-cli"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-tuf",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "tuf"
+  ],
+  "mission": {
+    "title": "Install and Configure The Update Framework (TUF)",
+    "description": "TUF (The Update Framework) is a CNCF graduated specification and Python reference implementation for securing software update systems against key compromise and other attacks.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install python-tuf via pip",
+        "description": "Install the TUF Python reference implementation.\n\n```bash\npip install tuf\n```\n\n> Requires Python 3.9+.",
+        "commands": [
+          "pip install tuf"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Confirm TUF is installed.\n\n```bash\npython3 -c \"import tuf; print(tuf.__version__)\"\n```",
+        "commands": [
+          "python3 -c \"import tuf; print(tuf.__version__)\""
+        ]
+      },
+      {
+        "title": "Initialize a TUF repository",
+        "description": "Create a basic TUF repository structure for testing.\n\n```bash\npython3 -c \"\nfrom tuf.api.metadata import Root, Timestamp, Snapshot, Targets\nprint('TUF metadata classes loaded successfully')\n\"\n```\n\n> TUF provides Python APIs for creating and managing update metadata.",
+        "commands": [
+          "python3 -c \"from tuf.api.metadata import Root, Timestamp, Snapshot, Targets; print('TUF metadata classes loaded successfully')\""
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall TUF",
+        "description": "Remove python-tuf.\n\n```bash\npip uninstall tuf -y\n```",
+        "commands": [
+          "pip uninstall tuf -y"
+        ]
+      }
+    ]
+  }
+}

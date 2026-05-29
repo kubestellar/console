@@ -624,6 +624,58 @@ func TestMissions_GetMissionFile_RateLimitServesStaleCache(t *testing.T) {
 	assert.Equal(t, `{"title":"cached mission"}`, string(body))
 }
 
+func TestMissions_BrowseConsoleKB_EmbeddedFallback(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`unavailable`))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubAPIURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/browse?path=fixes/cncf-install", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "EMBEDDED", resp.Header.Get("X-Cache"))
+
+	body, _ := io.ReadAll(resp.Body)
+	var items []map[string]interface{}
+	require.NoError(t, json.Unmarshal(body, &items))
+	assert.NotEmpty(t, items)
+
+	names := make([]string, 0, len(items))
+	for _, item := range items {
+		name, _ := item["name"].(string)
+		names = append(names, name)
+	}
+	assert.Contains(t, names, "install-cert-manager.json")
+	assert.NotContains(t, names, "index.json")
+}
+
+func TestMissions_GetMissionFile_EmbeddedFallback(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`unavailable`))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/file?path=fixes/cncf-install/install-cert-manager.json", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "EMBEDDED", resp.Header.Get("X-Cache"))
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Contains(t, string(body), `"name": "install-cert-manager"`)
+}
+
 func TestMissions_CacheEviction(t *testing.T) {
 	cache := &missionsResponseCache{entries: make(map[string]*missionsCacheEntry)}
 
@@ -923,6 +975,27 @@ func TestGetKBScores_StaleCache(t *testing.T) {
 	resp2, err := app.Test(req2, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp2.StatusCode, "should serve stale cache on rate-limit")
+}
+
+func TestGetKBScores_EmbeddedFallback(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`unavailable`))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	req, err := http.NewRequest("GET", "/api/missions/scores", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Greater(t, int(body["count"].(float64)), 0)
 }
 
 // ---------- GetMissionScore ----------

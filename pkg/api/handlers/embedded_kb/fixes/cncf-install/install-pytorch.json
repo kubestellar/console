@@ -1,0 +1,75 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-pytorch",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install Kubeflow Trainer for PyTorch on Kubernetes",
+    "description": "Kubeflow Trainer (formerly PyTorch Operator) is the Kubernetes-native way to run distributed PyTorch training jobs. It provides the TrainJob CRD and pre-built runtimes for PyTorch, enabling multi-node, multi-GPU training across a cluster.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Prerequisites",
+        "description": "You need:\n- A Kubernetes cluster v1.28+ (GPU nodes recommended for training workloads)\n- `kubectl` configured to reach your cluster\n- `helm` v3.8+ for OCI chart support\n\nVerify your cluster:\n```bash\nkubectl version --short\nkubectl get nodes\n```"
+      },
+      {
+        "title": "Install Kubeflow Trainer with Helm",
+        "description": "Kubeflow Trainer v2.2.0 ships as a single Helm chart that installs both the control plane and the built-in runtimes (PyTorch, XGBoost, JAX, MPI):\n\n```bash\nhelm install kubeflow-trainer oci://ghcr.io/kubeflow/charts/kubeflow-trainer \\\n    --namespace kubeflow-system \\\n    --create-namespace \\\n    --version 2.2.0 \\\n    --set runtimes.defaultEnabled=true\n```\n\nThis deploys:\n- The Trainer controller manager\n- TrainJob and Runtime CRDs\n- Built-in training runtimes for PyTorch, XGBoost, JAX, and MPI/Flux"
+      },
+      {
+        "title": "Wait for the controller to be ready",
+        "description": "```bash\nkubectl rollout status deployment/kubeflow-trainer-controller-manager \\\n    -n kubeflow-system\n\nkubectl get pods -n kubeflow-system\n```\n\nYou should see the controller manager pod in `Running` state."
+      },
+      {
+        "title": "Verify the CRDs are installed",
+        "description": "```bash\nkubectl get crds | grep trainer.kubeflow.org\n```\n\nExpected output includes:\n```\nclustertrainingruntimes.trainer.kubeflow.org\ntrainingruntimes.trainer.kubeflow.org\ntrainjobs.trainer.kubeflow.org\n```"
+      },
+      {
+        "title": "Install the Kubeflow Python SDK",
+        "description": "The Kubeflow SDK lets you create and manage TrainJobs from Python:\n\n```bash\npip install kubeflow\n```\n\nVerify the install succeeded:\n```bash\npip show kubeflow\n```"
+      },
+      {
+        "title": "Run a distributed PyTorch training job",
+        "description": "Create a TrainJob that runs a simple distributed PyTorch training script across two workers:\n\n```yaml\napiVersion: trainer.kubeflow.org/v1alpha1\nkind: TrainJob\nmetadata:\n  name: pytorch-distributed-example\n  namespace: default\nspec:\n  runtimeRef:\n    name: torch-distributed\n  trainer:\n    image: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime\n    command:\n      - torchrun\n      - --nproc_per_node=1\n      - -c\n      - |\n        import torch.distributed as dist\n        dist.init_process_group(backend='gloo')\n        rank = dist.get_rank()\n        world_size = dist.get_world_size()\n        print(f'Hello from rank {rank} of {world_size}')\n        dist.destroy_process_group()\n    numNodes: 2\n```\n\nApply it:\n```bash\nkubectl apply -f pytorch-job.yaml\n```"
+      },
+      {
+        "title": "Monitor the training job",
+        "description": "```bash\n# Check job status\nkubectl get trainjob pytorch-distributed-example\n\n# Watch pods\nkubectl get pods -l trainer.kubeflow.org/trainjob-name=pytorch-distributed-example\n\n# View logs from the coordinator node\nkubectl logs -l trainer.kubeflow.org/trainjob-name=pytorch-distributed-example \\\n    -c trainer --tail=50\n```\n\nThe job completes when all worker pods finish successfully and `STATUS` shows `Succeeded`."
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Delete running TrainJobs",
+        "description": "Delete any TrainJobs you created before uninstalling:\n```bash\nkubectl delete trainjobs --all -n <your-namespace>\n```"
+      },
+      {
+        "title": "Uninstall Kubeflow Trainer",
+        "description": "```bash\nhelm uninstall kubeflow-trainer -n kubeflow-system\n```"
+      },
+      {
+        "title": "Remove the CRDs",
+        "description": "```bash\nkubectl delete crds \\\n    clustertrainingruntimes.trainer.kubeflow.org \\\n    trainingruntimes.trainer.kubeflow.org \\\n    trainjobs.trainer.kubeflow.org\n```"
+      }
+    ],
+    "references": [
+      {
+        "title": "Kubeflow Trainer Documentation",
+        "url": "https://www.kubeflow.org/docs/components/trainer/overview/"
+      },
+      {
+        "title": "Kubeflow Trainer GitHub",
+        "url": "https://github.com/kubeflow/trainer"
+      },
+      {
+        "title": "PyTorch Distributed Training Guide",
+        "url": "https://pytorch.org/tutorials/intermediate/ddp_tutorial.html"
+      },
+      {
+        "title": "Kubeflow Python SDK",
+        "url": "https://github.com/kubeflow/sdk"
+      }
+    ]
+  }
+}

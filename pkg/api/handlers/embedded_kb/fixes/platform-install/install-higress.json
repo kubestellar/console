@@ -1,0 +1,57 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-higress",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "higress"
+  ],
+  "mission": {
+    "title": "Install and Configure Higress",
+    "description": "Higress is a CNCF cloud-native API gateway built on Istio and Envoy, supporting AI gateway capabilities, multiple protocols, and WebAssembly plugin extensibility. It functions as a Kubernetes ingress controller and Gateway API implementation.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Add the Higress Helm repository",
+        "description": "Add the official Higress Helm chart repository.\n\n```bash\nhelm repo add higress https://higress.io/helm-charts\nhelm repo update\n```",
+        "commands": [
+          "helm repo add higress https://higress.io/helm-charts",
+          "helm repo update"
+        ]
+      },
+      {
+        "title": "Install Higress using Helm",
+        "description": "Install Higress into a dedicated namespace.\n\n```bash\nhelm install higress higress/higress --namespace higress-system --create-namespace\n```",
+        "commands": [
+          "helm install higress higress/higress --namespace higress-system --create-namespace"
+        ]
+      },
+      {
+        "title": "Verify Higress pods are running",
+        "description": "Check that the Higress gateway and controller pods are running.\n\n```bash\nkubectl get pods -n higress-system\n```\n\n> You should see higress-gateway and higress-controller pods in Running state.",
+        "commands": [
+          "kubectl get pods -n higress-system"
+        ]
+      },
+      {
+        "title": "Verify Higress ingress class",
+        "description": "Confirm the Higress IngressClass was created.\n\n```bash\nkubectl get ingressclass\n```\n\n> You should see a 'higress' ingress class.",
+        "commands": [
+          "kubectl get ingressclass"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall Higress",
+        "description": "Remove Higress from your cluster.\n\n```bash\nhelm uninstall higress -n higress-system\n```",
+        "commands": [
+          "helm uninstall higress -n higress-system"
+        ]
+      }
+    ]
+  }
+}

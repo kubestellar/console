@@ -1,0 +1,167 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-localai",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install LocalAI on Kubernetes",
+    "description": "LocalAI is the open-source OpenAI-compatible inference runtime from mudler. It is a single Go binary that speaks `/v1/chat/completions`, `/v1/completions`, `/v1/embeddings`, `/v1/audio`, and `/v1/images` against a local model backend — GGUF via llama.cpp, safetensors via transformers, GGML via the original ggml backends. This mission installs LocalAI via the official Helm chart published at https://go-skynet.github.io/helm-charts/ , uses a PersistentVolumeClaim for the model gallery cache, and exposes the chat API through a ClusterIP Service.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Check prerequisites",
+        "description": "LocalAI needs a Kubernetes cluster with a default StorageClass that supports ReadWriteOnce volumes. It runs on CPU out of the box. For the GPU image variants (NVIDIA CUDA, AMD ROCm, Intel SYCL), the corresponding device plugin and drivers must already be installed on the target node. Helm 3 is required to drive the chart. Verify:\n```bash\nkubectl version --short\nhelm version --short\nkubectl get sc\n```"
+      },
+      {
+        "title": "Add the LocalAI Helm repository",
+        "description": "LocalAI publishes its charts at https://go-skynet.github.io/helm-charts/ and the chart is named `local-ai`:\n```bash\nhelm repo add go-skynet https://go-skynet.github.io/helm-charts/ \nhelm repo update\n```"
+      },
+      {
+        "title": "Create the namespace",
+        "description": "Keep LocalAI isolated for easy uninstall:\n```bash\nkubectl create namespace localai\n```"
+      },
+      {
+        "title": "Prepare a values file",
+        "description": "Write a small values override selecting the CPU image, a model from the LocalAI gallery, and a ReadWriteOnce PVC. The example below pulls the pre-configured `llama-3.2-1b-instruct:q4_k_m` gallery model on first start:\n```bash\ncat > localai-values.yaml <<'EOF'\nreplicaCount: 1\ndeployment:\n  image: quay.io/go-skynet/local-ai:latest\n  env:\n    threads: 4\n    context_size: 4096\n    DEBUG: \"false\"\nmodels:\n  forceConfig: true\n  list:\n    - url: github:mudler/LocalAI/gallery/llama3.2-1b-instruct.yaml@master\n      name: llama-3.2-1b-instruct\nservice:\n  type: ClusterIP\n  port: 8080\npersistence:\n  models:\n    enabled: true\n    size: 20Gi\n    accessModes:\n      - ReadWriteOnce\n  output:\n    enabled: true\n    size: 5Gi\nresources:\n  requests:\n    cpu: \"2\"\n    memory: 4Gi\n  limits:\n    cpu: \"4\"\n    memory: 8Gi\nEOF\n```\nFor GPU, change the image to `quay.io/go-skynet/local-ai:latest-gpu-nvidia-cuda-12` and add `nvidia.com/gpu: 1` to resources.limits. See https://localai.io/basics/container/ for the full image tag matrix."
+      },
+      {
+        "title": "Install the chart",
+        "description": "Install the chart into the `localai` namespace using the values file. LocalAI pulls the model from the gallery on first pod start, so the initial boot takes a few minutes — a 1B-class model is ~800 MB:\n```bash\nhelm install local-ai go-skynet/local-ai -n localai -f localai-values.yaml\nkubectl -n localai rollout status deploy/local-ai --timeout=10m\n```"
+      },
+      {
+        "title": "Verify the chat endpoint",
+        "description": "Port-forward the Service to your workstation and hit `/v1/chat/completions` to confirm LocalAI responds with an OpenAI-shaped JSON body:\n```bash\nkubectl -n localai port-forward svc/local-ai 8080:8080\n```\nIn a second terminal:\n```bash\ncurl -s http://127.0.0.1:8080/v1/models\ncurl -s http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' -d '{\"model\":\"llama-3.2-1b-instruct\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hi in one word.\"}]}'\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful LocalAI install has the `local-ai` Deployment rolled out in the `localai` namespace, the models PVC bound, `/v1/models` returning a JSON list containing at least one loaded model, and `/v1/chat/completions` returning an OpenAI-compatible response. For in-cluster clients the Service resolves at `local-ai.localai.svc.cluster.local:8080`.",
+      "codeSnippets": [
+        "helm repo add go-skynet https://go-skynet.github.io/helm-charts/ ",
+        "helm install local-ai go-skynet/local-ai -n localai -f localai-values.yaml",
+        "kubectl -n localai rollout status deploy/local-ai --timeout=10m",
+        "kubectl -n localai port-forward svc/local-ai 8080:8080",
+        "curl -s http://127.0.0.1:8080/v1/models"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Delete the Helm release",
+        "description": "Removing the release tears down the Deployment, Service, and ConfigMaps that the chart owns. PVCs are kept by Helm by default so model downloads survive a reinstall:\n```bash\nhelm uninstall local-ai -n localai\n```"
+      },
+      {
+        "title": "Delete the model PVCs",
+        "description": "If you want to reclaim the model gallery storage, explicitly delete the PVCs. Double check the claim names first:\n```bash\nkubectl -n localai get pvc\nkubectl -n localai delete pvc -l app.kubernetes.io/name=local-ai --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Finally remove the namespace:\n```bash\nkubectl delete namespace localai --ignore-not-found\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update the Helm repo",
+        "description": "LocalAI publishes chart updates alongside every release. Refresh your local Helm cache before upgrading:\n```bash\nhelm repo update go-skynet\nhelm search repo go-skynet/local-ai --versions\n```"
+      },
+      {
+        "title": "Roll out the upgrade",
+        "description": "Use `helm upgrade` with the same values file. The chart restarts the Deployment with the new image tag and keeps the PVCs (so model caches are preserved across upgrades):\n```bash\nhelm upgrade local-ai go-skynet/local-ai -n localai -f localai-values.yaml\nkubectl -n localai rollout status deploy/local-ai --timeout=10m\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pod stuck pulling the image",
+        "description": "The CPU and GPU image variants are large (2-6 GB). If the first pull takes a long time or times out, check the pod events:\n```bash\nkubectl -n localai describe pod -l app.kubernetes.io/name=local-ai\n```\nOn slow links, raise the terminationGracePeriodSeconds and image pull timeout on the node's kubelet config, or pre-pull the image with a DaemonSet before installing the chart."
+      },
+      {
+        "title": "Model download fails",
+        "description": "LocalAI pulls gallery models from GitHub on first start. If the pod is reporting Ready but `/v1/models` returns an empty list, check the main container logs for a download error:\n```bash\nkubectl -n localai logs deploy/local-ai | grep -i download\n```\nCommon causes are cluster egress blocking github.com, or a rate-limited anonymous GitHub API. Configure outbound access or pre-populate the models PVC out-of-band from a workstation using `kubectl cp`."
+      },
+      {
+        "title": "OOM on CPU image",
+        "description": "Running a >3B-parameter model on the CPU image requires 8+ GB RAM. If the pod is being OOMKilled, raise `resources.limits.memory` in the values file, switch to a smaller quantization (q3_K_M is ~30% smaller than q4_K_M), or move to the GPU image on a node with `nvidia.com/gpu` resources."
+      },
+      {
+        "title": "GPU image not scheduling",
+        "description": "The GPU image requires a node with `nvidia.com/gpu` resources exposed via the NVIDIA device plugin. If the pod is stuck Pending with an insufficient-resources event, verify the device plugin is installed:\n```bash\nkubectl get ds -n kube-system -l name=nvidia-device-plugin-ds\nkubectl describe nodes | grep -i nvidia.com\n```\nInstall the plugin per https://github.com/NVIDIA/k8s-device-plugin before enabling the GPU image."
+      }
+    ],
+    "security": [
+      {
+        "title": "No privileged access required",
+        "description": "LocalAI runs as an unprivileged container. The Helm chart does not request hostNetwork, hostPID, or hostPath mounts, and does not need CAP_SYS_ADMIN. The default deployment should pass the Kubernetes Pod Security Admission `baseline` profile with no changes. For `restricted` enforcement, set `securityContext.runAsNonRoot: true`, `allowPrivilegeEscalation: false`, `seccompProfile.type: RuntimeDefault`, and drop all Linux capabilities in your values file override."
+      },
+      {
+        "title": "Model provenance",
+        "description": "LocalAI's gallery manifests live in https://github.com/mudler/LocalAI/tree/master/gallery . They reference GGUF and safetensors blobs on Hugging Face. Only enable gallery entries from model publishers you trust. For air-gapped clusters, mirror the model files to an internal object store and point `models.list[].url` at your mirror rather than a `github:` URL."
+      },
+      {
+        "title": "Egress surface",
+        "description": "On first start LocalAI reaches out to github.com to fetch gallery manifests and to huggingface.co (or the URL in the manifest) for the actual model blobs. Steady-state inference is fully offline. If your cluster enforces NetworkPolicy with default-deny egress, allow egress to github.com and huggingface.co only for the sync window, or pre-populate the PVC so the runtime never needs to reach the public internet."
+      },
+      {
+        "title": "No built-in authentication",
+        "description": "LocalAI's HTTP API accepts any caller by default. Keep the Service as ClusterIP and never expose it through an Ingress without an auth layer in front. For multi-tenant clusters, set the `API_KEY` environment variable in the Deployment (sourced from a Kubernetes Secret, not baked into values.yaml) and require clients to pass the matching `Authorization: Bearer` header. Alternatively, front the Service with oauth2-proxy or an Istio/Envoy AuthorizationPolicy."
+      },
+      {
+        "title": "Relationship to the KubeStellar Console SECURITY-MODEL",
+        "description": "The Console's AI-agent code path is architected so user chat content and command output reach the LLM provider, but kubeconfig files and cluster credentials never do — see docs/security/SECURITY-MODEL.md in the kubestellar/console repo. Pointing a CLI agent or the Console's chat path at an in-cluster LocalAI Service keeps inference in the cluster and makes the chat-content surface the only thing that leaves the caller's pod."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "llm",
+      "inference",
+      "openai-compatible",
+      "local-llm",
+      "helm"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service",
+      "PersistentVolumeClaim",
+      "ConfigMap"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "stable",
+    "projectVersion": "latest",
+    "containerImages": [
+      "quay.io/go-skynet/local-ai:latest",
+      "quay.io/go-skynet/local-ai:latest-gpu-nvidia-cuda-12"
+    ],
+    "sourceUrls": {
+      "docs": "https://localai.io/",
+      "installDocs": "https://localai.io/basics/getting_started/",
+      "repo": "https://github.com/mudler/LocalAI",
+      "releases": "https://github.com/mudler/LocalAI/releases",
+      "chart": "https://github.com/go-skynet/helm-charts"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl",
+      "helm"
+    ],
+    "description": "Kubernetes 1.24+ with a default StorageClass supporting ReadWriteOnce volumes, Helm 3, and at least 8 GB RAM available for the LocalAI pod when running a >3B-parameter model. For the GPU image variants, the corresponding NVIDIA, AMD ROCm, or Intel SYCL device plugin must be installed on the target node. Outbound egress to github.com and huggingface.co is required on first start for gallery model downloads."
+  },
+  "security": {
+    "scannedAt": "2026-04-15T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

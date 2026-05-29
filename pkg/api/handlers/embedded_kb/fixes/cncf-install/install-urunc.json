@@ -1,0 +1,191 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-urunc",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure urunc on Kubernetes",
+    "description": "urunc is a CNCF Sandbox container runtime that runs unikernels under Kubernetes via the containerd CRI integration — it is to unikernels what runc is to Linux containers. This mission follows the upstream user guide at https://urunc.io/tutorials/How-to-urunc-on-k8s/ to install urunc on each node, register it with containerd, apply the urunc RuntimeClass, and verify by scheduling a small unikernel test pod. The preferred path is the official `urunc-deploy` DaemonSet installer, which handles per-node binary placement and containerd config patching in one step. A manual path is also documented for operators who need tighter control over node configuration.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Confirm cluster and runtime prerequisites",
+        "description": "urunc integrates with `containerd` via a shim (`io.containerd.urunc.v2`), so the container runtime on every node must be containerd. Kata/CRI-O are not supported by this mission. Check your cluster's runtime and containerd version:\n```bash\nkubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.status.nodeInfo.containerRuntimeVersion}{\"\\n\"}{end}'\n```\nSSH to one node and confirm containerd is reachable and its version is in the supported range (v1.7+ recommended, v2.x also supported with the updated config syntax in step 3):\n```bash\ncontainerd --version\nsudo ctr version\n```\nYou also need cluster-admin kubectl access to create RuntimeClass, ClusterRole, ClusterRoleBinding, and a DaemonSet in `kube-system`. Confirm:\n```bash\nkubectl auth can-i create runtimeclass\nkubectl auth can-i create clusterrolebinding\nkubectl auth can-i create daemonset -n kube-system\n```"
+      },
+      {
+        "title": "Install urunc using urunc-deploy (recommended path)",
+        "description": "The `urunc-deploy` DaemonSet drops the urunc binaries onto each node, patches `/etc/containerd/config.toml`, and restarts containerd. This is the same installer the upstream project uses in CI.\n\nFirst apply the RBAC the installer needs:\n```bash\nkubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-rbac/urunc-rbac.yaml\n```\n\nFor **standard Kubernetes with containerd**:\n```bash\nkubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-deploy/base/urunc-deploy.yaml\n```\n\nFor **k3s** (uses a kustomize overlay because k3s bundles its own containerd config path):\n```bash\nkubectl apply -k https://github.com/urunc-dev/urunc//deployment/urunc-deploy/urunc-deploy/overlays/k3s?ref=main\n```\n\nWatch the DaemonSet roll out — when every node shows Ready on the installer pod, binaries are in place and containerd has been reloaded:\n```bash\nkubectl -n kube-system rollout status ds/urunc-deploy --timeout=5m\nkubectl -n kube-system get pods -l name=urunc-deploy -o wide\n```"
+      },
+      {
+        "title": "Manual install (alternative — skip if step 2 succeeded)",
+        "description": "If you cannot run a privileged DaemonSet on your cluster, install urunc by hand on each node. Download the latest release binary (check https://github.com/urunc-dev/urunc/releases for the current tag. v0.7.0 was the latest at the time of writing):\n```bash\nexport URUNC_VERSION=v0.7.0\ncurl -Lo urunc https://github.com/urunc-dev/urunc/releases/download/${URUNC_VERSION}/urunc_static_amd64\ncurl -Lo containerd-shim-urunc-v2 https://github.com/urunc-dev/urunc/releases/download/${URUNC_VERSION}/containerd-shim-urunc-v2_static_amd64\nchmod +x urunc containerd-shim-urunc-v2\nsudo mv urunc /usr/local/bin/\nsudo mv containerd-shim-urunc-v2 /usr/local/bin/\n```\n\nRegister urunc with containerd. For **containerd v1.x**, append to `/etc/containerd/config.toml`:\n```toml\n[plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.urunc]\n    runtime_type = \"io.containerd.urunc.v2\"\n    container_annotations = [\"com.urunc.unikernel.*\"]\n    pod_annotations = [\"com.urunc.unikernel.*\"]\n    snapshotter = \"devmapper\"\n```\n\nFor **containerd v2.x**, the plugin path differs:\n```toml\n[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.urunc]\n    runtime_type = \"io.containerd.urunc.v2\"\n    container_annotations = [\"com.urunc.unikernel.*\"]\n    pod_annotations = [\"com.urunc.unikernel.*\"]\n    snapshotter = \"devmapper\"\n```\n\nRestart containerd to pick up the new runtime:\n```bash\nsudo systemctl restart containerd\nsudo systemctl status containerd --no-pager | head -20\n```\nRepeat on every node that should host unikernel workloads."
+      },
+      {
+        "title": "Apply the urunc RuntimeClass",
+        "description": "The RuntimeClass is how pods opt in to urunc. Apply the upstream manifest:\n```bash\nkubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/refs/heads/main/deployment/urunc-deploy/runtimeclasses/runtimeclass.yaml\n```\n\nThe applied object looks like this (safe to review before applying — it is namespace-free and only adds one handler):\n```yaml\nkind: RuntimeClass\napiVersion: node.k8s.io/v1\nmetadata:\n  name: urunc\nhandler: urunc\n```\n\nConfirm the RuntimeClass is present:\n```bash\nkubectl get runtimeclass urunc\n```"
+      },
+      {
+        "title": "Verify with a unikernel test pod",
+        "description": "Schedule the upstream nginx-firecracker-unikraft test Deployment. Pods with `runtimeClassName: urunc` will be dispatched to the urunc shim instead of runc:\n```bash\nkubectl apply -f - <<'EOF'\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: nginx-urunc\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      run: nginx-urunc\n  template:\n    metadata:\n      labels:\n        run: nginx-urunc\n    spec:\n      runtimeClassName: urunc\n      containers:\n      - image: harbor.nbfc.io/nubificus/urunc/nginx-firecracker-unikraft-initrd:latest\n        name: nginx-urunc\n        ports:\n        - containerPort: 80\nEOF\n```\n\nWait for the pod to run and sanity-check the response:\n```bash\nkubectl rollout status deployment/nginx-urunc --timeout=3m\nkubectl get pods -l run=nginx-urunc -o wide\nkubectl port-forward deploy/nginx-urunc 8080:80 &\ncurl -sS localhost:8080 | head -5\n```\nYou should see the nginx welcome HTML — served by a Unikraft unikernel running under Firecracker, scheduled by urunc."
+      }
+    ],
+    "resolution": {
+      "summary": "urunc is installed on every target node via `urunc-deploy` (or manually), containerd is configured with the `urunc` runtime, the `urunc` RuntimeClass is applied cluster-wide, and a test Deployment using `runtimeClassName: urunc` reaches Running and serves HTTP.",
+      "codeSnippets": [
+        "kubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-rbac/urunc-rbac.yaml",
+        "kubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-deploy/base/urunc-deploy.yaml",
+        "kubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/refs/heads/main/deployment/urunc-deploy/runtimeclasses/runtimeclass.yaml",
+        "kubectl -n kube-system rollout status ds/urunc-deploy --timeout=5m",
+        "kubectl get runtimeclass urunc"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove any workloads that use the urunc RuntimeClass",
+        "description": "Deleting the RuntimeClass while pods still reference it leaves those pods un-schedulable. Inventory first, then delete scoped to the namespace you installed test workloads in (do not blanket-delete across namespaces):\n```bash\nkubectl get pods -A -o json | jq -r '.items[] | select(.spec.runtimeClassName==\"urunc\") | .metadata.namespace+\"/\"+.metadata.name'\nkubectl delete deployment nginx-urunc --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the RuntimeClass",
+        "description": "```bash\nkubectl delete -f https://raw.githubusercontent.com/urunc-dev/urunc/refs/heads/main/deployment/urunc-deploy/runtimeclasses/runtimeclass.yaml --ignore-not-found\n```"
+      },
+      {
+        "title": "Run urunc-cleanup to unwind containerd config on every node",
+        "description": "`urunc-cleanup` is the mirror of `urunc-deploy` — it removes the urunc binary from each node and strips the runtime block from `/etc/containerd/config.toml`, then restarts containerd. Run it before deleting the deploy DaemonSet so the cleanup pods actually land on the nodes.\n\nFor **standard Kubernetes with containerd**, first remove the deploy DaemonSet and apply the cleanup DaemonSet:\n```bash\nkubectl delete -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-deploy/base/urunc-deploy.yaml\nkubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-cleanup/base/urunc-cleanup.yaml\n```\n\nFor **k3s**, use the kustomize overlays:\n```bash\nkubectl delete -k https://github.com/urunc-dev/urunc//deployment/urunc-deploy/urunc-deploy/overlays/k3s?ref=main\nkubectl apply -k https://github.com/urunc-dev/urunc//deployment/urunc-deploy/urunc-cleanup/overlays/k3s?ref=main\n```"
+      },
+      {
+        "title": "Wait for the cleanup DaemonSet to finish on every node",
+        "description": "The cleanup DaemonSet unwinds containerd configuration on each node. Watch it roll out:\n```bash\nkubectl -n kube-system rollout status ds/urunc-cleanup --timeout=5m\n```"
+      },
+      {
+        "title": "Remove the cleanup DaemonSet",
+        "description": "Once cleanup has run on every node, remove the installer.\n\nFor **standard Kubernetes**:\n```bash\nkubectl delete -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-cleanup/base/urunc-cleanup.yaml\n```\n\nFor **k3s**:\n```bash\nkubectl delete -k https://github.com/urunc-dev/urunc//deployment/urunc-deploy/urunc-cleanup/overlays/k3s?ref=main\n```"
+      },
+      {
+        "title": "Remove the installer RBAC",
+        "description": "```bash\nkubectl delete -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-rbac/urunc-rbac.yaml --ignore-not-found\n```"
+      },
+      {
+        "title": "Manual uninstall (if you installed manually in step 3)",
+        "description": "On each node you configured by hand, remove the runtime block you added to `/etc/containerd/config.toml`, then delete the binaries and restart containerd:\n```bash\nsudo $EDITOR /etc/containerd/config.toml  # remove the [...runtimes.urunc] block\nsudo rm -f /usr/local/bin/urunc /usr/local/bin/containerd-shim-urunc-v2\nsudo systemctl restart containerd\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Re-apply the deploy DaemonSet from the newer branch or tag",
+        "description": "`urunc-deploy` is versioned along with the main urunc release. To upgrade, re-apply the manifest from the desired ref — the DaemonSet performs a rolling replacement of the binaries on each node and re-patches `/etc/containerd/config.toml`:\n```bash\nkubectl apply -f https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-deploy/base/urunc-deploy.yaml\nkubectl -n kube-system rollout status ds/urunc-deploy --timeout=5m\n```"
+      },
+      {
+        "title": "Verify the new shim is live",
+        "description": "```bash\nkubectl -n kube-system logs -l name=urunc-deploy --tail=50\nkubectl get runtimeclass urunc\n```\nOn a node, confirm the shim binary timestamp advanced:\n```bash\nls -la /usr/local/bin/containerd-shim-urunc-v2\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pod stuck in ContainerCreating with RuntimeClass not found",
+        "description": "If a pod using `runtimeClassName: urunc` never starts, the RuntimeClass or the containerd-side handler is missing:\n```bash\nkubectl get runtimeclass urunc\nkubectl describe pod <pod-name>\n```\nOn a node, confirm containerd sees the urunc runtime:\n```bash\nsudo grep -A4 'runtimes.urunc' /etc/containerd/config.toml\nsudo systemctl status containerd --no-pager | head\n```"
+      },
+      {
+        "title": "urunc-deploy pod CrashLoopBackOff",
+        "description": "The installer pod needs privileged host access to write binaries into `/usr/local/bin` and patch containerd config. If your cluster enforces the Pod Security Admission `restricted` profile on `kube-system`, the installer will fail to schedule. Label the namespace to allow privileged pods, or move the installer to a dedicated namespace with privileged enforcement:\n```bash\nkubectl label namespace kube-system pod-security.kubernetes.io/enforce=privileged --overwrite\nkubectl -n kube-system logs -l name=urunc-deploy --tail=100\n```"
+      },
+      {
+        "title": "Snapshotter error — devmapper not available",
+        "description": "urunc defaults to the `devmapper` snapshotter, which requires containerd to be built with the devmapper plugin and a device-mapper thin pool configured on the node. If your containerd does not have devmapper, switch the runtime block to `snapshotter = \"blockfile\"` (or another supported snapshotter) in `/etc/containerd/config.toml` and restart containerd. See https://urunc.io/installation/ for the full snapshotter matrix."
+      },
+      {
+        "title": "containerd v2.x — wrong plugin path",
+        "description": "containerd v2.x renamed the CRI plugin path from `io.containerd.grpc.v1.cri` to `io.containerd.cri.v1.runtime`. If `urunc-deploy` was written for v1.x and your node runs v2.x, the runtime block will be ignored. Install the matching deploy overlay, or hand-edit `/etc/containerd/config.toml` to use the v2 path shown in step 3 and restart containerd."
+      },
+      {
+        "title": "Test image pull fails",
+        "description": "The upstream test image lives on the nubificus Harbor registry (`harbor.nbfc.io`). In air-gapped or egress-restricted clusters, mirror the image to an internal registry first, or substitute your own urunc-compatible unikernel image built with `urunc-builder`."
+      }
+    ],
+    "security": [
+      {
+        "title": "Cluster-scoped resources the install creates",
+        "description": "`urunc-deploy` creates a RuntimeClass (cluster-scoped), a ClusterRole and ClusterRoleBinding for the installer ServiceAccount, and a privileged DaemonSet in `kube-system`. Review the manifests before applying: `curl -sL https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-deploy/base/urunc-deploy.yaml | less` and `curl -sL https://raw.githubusercontent.com/urunc-dev/urunc/main/deployment/urunc-deploy/urunc-rbac/urunc-rbac.yaml | less`."
+      },
+      {
+        "title": "Privileged DaemonSet and host access",
+        "description": "`urunc-deploy` runs as privileged on every node because it writes to `/usr/local/bin`, edits `/etc/containerd/config.toml`, and signals containerd to reload. This is intrinsic to any per-node runtime installer (it is the same pattern Kata, gVisor, and the Confidential Containers operator use). On clusters with Pod Security Admission `restricted` enforcement, label the installer namespace to allow privileged pods explicitly."
+      },
+      {
+        "title": "RuntimeClass is cluster-wide — RBAC scope the usage",
+        "description": "Once the `urunc` RuntimeClass exists, any user with `create pods` can reference it. If you want to restrict unikernel workloads to specific namespaces or ServiceAccounts, pair the RuntimeClass with a ValidatingAdmissionPolicy or a namespace-scoped policy engine rule that allows `runtimeClassName: urunc` only where you intend."
+      },
+      {
+        "title": "Isolation model — MicroVM-backed, not pure containers",
+        "description": "urunc dispatches workloads through a MicroVM monitor (Firecracker or solo5-hvt) running a unikernel, so pod workloads are isolated in a dedicated guest kernel rather than sharing the host kernel. This is a stronger isolation boundary than runc by default, but it shifts the attack surface to the VMM and to the unikernel build chain — treat unikernel image provenance the same way you treat kernel modules."
+      },
+      {
+        "title": "Supply chain — pin the install ref",
+        "description": "The install commands in this mission reference `main` on `github.com/urunc-dev/urunc`. For production, pin to a known release tag (for example `refs/tags/v0.7.0`) by replacing `main` in each URL. This avoids surprise changes to the installer DaemonSet or RuntimeClass between rollouts."
+      },
+      {
+        "title": "Upstream security policy",
+        "description": "urunc is a CNCF Sandbox project hosted at https://github.com/urunc-dev/urunc. Security issues should follow the upstream SECURITY.md and be reported via the project's GitHub security advisories workflow. Subscribe to repo releases to catch runtime or shim CVEs. Project docs: https://urunc.io/."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "runtime",
+      "unikernel",
+      "containerd",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "urunc"
+    ],
+    "targetResourceKinds": [
+      "RuntimeClass",
+      "DaemonSet",
+      "ClusterRole",
+      "ClusterRoleBinding",
+      "ServiceAccount",
+      "Deployment"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "manifest",
+      "kustomize",
+      "binary"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v0.7.0",
+    "containerImages": [
+      "harbor.nbfc.io/nubificus/urunc/nginx-firecracker-unikraft-initrd:latest"
+    ],
+    "sourceUrls": {
+      "docs": "https://urunc.io/",
+      "installDocs": "https://urunc.io/tutorials/How-to-urunc-on-k8s/",
+      "repo": "https://github.com/urunc-dev/urunc",
+      "releases": "https://github.com/urunc-dev/urunc/releases"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.26",
+    "tools": [
+      "kubectl",
+      "curl"
+    ],
+    "description": "A Kubernetes cluster whose nodes use containerd as the container runtime (v1.7 or later recommended, v2.x supported with the updated CRI plugin path documented in step 3). cluster-admin kubectl access is required to create a RuntimeClass, ClusterRole/Binding, and a privileged DaemonSet in kube-system. The recommended urunc-deploy installer needs privileged pods permission on the installer namespace. On clusters enforcing Pod Security Admission 'restricted' on kube-system, relabel to 'privileged' first. For the manual path, SSH plus root on every target node is required. Nodes should have enough spare capacity to run a MicroVM (Firecracker or solo5-hvt) per unikernel workload."
+  },
+  "security": {
+    "scannedAt": "2026-04-20T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kestra",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Kestra on Kubernetes",
+    "description": "Kestra is an event-driven, language-agnostic orchestration and scheduling platform for managing workflows declaratively in code. This mission installs Kestra in standalone mode via the official Helm chart (kestra-io/helm-charts), which is suitable for evaluation and single-node use. Standalone mode bundles Kestra's webserver, scheduler, executor and worker in one pod and uses an in-memory H2 database. For production, deploy Kestra in distributed mode with an external Postgres database (see https://kestra.io/docs/installation/kubernetes).",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Add the Kestra Helm repository",
+        "description": "Add the official Kestra Helm chart repository maintained at kestra-io/helm-charts. `helm repo add` fetches the chart index on first add, so no separate `helm repo update` is needed for a fresh install:\n```bash\nhelm repo add kestra https://helm.kestra.io/ \n```"
+      },
+      {
+        "title": "Create the kestra namespace",
+        "description": "Create a dedicated namespace for the Kestra deployment:\n```bash\nkubectl create namespace kestra\n```\nThe chart's default dind (Docker-in-Docker) sidecar runs as a privileged container for script tasks. If your cluster enforces the Kubernetes Pod Security Admission 'restricted' profile, label the namespace to allow privileged pods or disable dind via `--set dind.enabled=false`:\n```bash\nkubectl label namespace kestra pod-security.kubernetes.io/enforce=privileged\n```"
+      },
+      {
+        "title": "Install Kestra using Helm",
+        "description": "Install Kestra (standalone mode, chart version 1.0.47, appVersion v1.3.9) into the kestra namespace:\n```bash\nhelm install my-kestra kestra/kestra --version 1.0.47 --namespace kestra\n```\nStandalone mode is enabled by default. This deploys a single pod with Kestra's webserver, scheduler, executor and worker plus a dind sidecar, backed by an in-memory H2 database. Data in H2 is ephemeral and is lost when the pod restarts — use an external Postgres for any non-evaluation use."
+      },
+      {
+        "title": "Wait for the pod to become ready",
+        "description": "Kestra's startup probe allows up to 120 seconds for the application to initialize. Wait for the pod to report Ready:\n```bash\nkubectl get pods -n kestra -w\nkubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kestra -n kestra --timeout=300s\n```"
+      },
+      {
+        "title": "Access the Kestra UI",
+        "description": "Port-forward the Kestra service to reach the webserver on http://localhost:8080. The chart exposes HTTP on port 8080 and a management (health/metrics) port on 8081:\n```bash\nkubectl port-forward svc/my-kestra 8080:8080 -n kestra\n```\nThen open http://localhost:8080 in a browser. Basic authentication is disabled by default. Enable it via the configurations.application values before exposing Kestra outside the cluster."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful Kestra install shows the my-kestra pod in the kestra namespace reporting Ready with both the kestra and dind containers running. After port-forwarding port 8080, the Kestra UI is reachable at http://localhost:8080 and the management health endpoint responds on port 8081 at /health.",
+      "codeSnippets": [
+        "helm repo add kestra https://helm.kestra.io/ ",
+        "kubectl create namespace kestra",
+        "helm install my-kestra kestra/kestra --version 1.0.47 --namespace kestra",
+        "kubectl get pods -n kestra",
+        "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kestra -n kestra --timeout=300s",
+        "kubectl port-forward svc/my-kestra 8080:8080 -n kestra"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove the Helm release",
+        "description": "Uninstall the Kestra release and all chart-managed resources:\n```bash\nhelm uninstall my-kestra --namespace kestra\n```"
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Kestra does not install any cluster-scoped CRDs, so removing the namespace is sufficient to clean up remaining resources:\n```bash\nkubectl delete namespace kestra\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Review the upgrade notes",
+        "description": "Check the chart's CHANGELOG and README for breaking changes before upgrading, especially when crossing major versions. The 0.x → 1.0 upgrade removed bundled Postgres/minio/kafka/elasticsearch and restructured values.yaml (see https://github.com/kestra-io/helm-charts/tree/master/charts/kestra)."
+      },
+      {
+        "title": "Update the Helm repository and upgrade",
+        "description": "Fetch the latest chart metadata and run the upgrade:\n```bash\nhelm repo update\nhelm upgrade my-kestra kestra/kestra --namespace kestra\n```\nTo pin a specific version, add `--version <x.y.z>`."
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Confirm the new pod rolls out cleanly:\n```bash\nkubectl rollout status deployment/my-kestra -n kestra\nkubectl get pods -n kestra\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pod stuck in Pending or ContainerCreating",
+        "description": "The default chart enables a dind (Docker-in-Docker) sidecar that runs as privileged. On clusters enforcing restricted Pod Security Standards, the pod will be rejected. Either label the namespace for privileged pods or disable dind:\n```bash\nkubectl label namespace kestra pod-security.kubernetes.io/enforce=privileged --overwrite\n# or\nhelm upgrade my-kestra kestra/kestra -n kestra --set dind.enabled=false\n```"
+      },
+      {
+        "title": "Webserver not responding on port 8080",
+        "description": "Kestra's startup probe targets /health on management port 8081 with a 120s grace period. If the pod is still starting, wait and retry. Check startup logs:\n```bash\nkubectl logs deploy/my-kestra -n kestra -c kestra --tail=200\n```"
+      },
+      {
+        "title": "Data lost after pod restart",
+        "description": "Standalone mode uses an in-memory H2 database by default, which is expected to be ephemeral. For persistent state, configure an external Postgres datasource via values.yaml and switch to distributed mode. See https://kestra.io/docs/installation/kubernetes for the production topology."
+      },
+      {
+        "title": "Helm install fails with chart not found",
+        "description": "Confirm the repo was added and refresh the local index:\n```bash\nhelm repo list\nhelm repo update\nhelm search repo kestra/kestra --versions | head\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "orchestration",
+      "workflow",
+      "app-definition"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Deployment",
+      "Service",
+      "Namespace",
+      "ServiceAccount",
+      "ConfigMap"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "external",
+    "projectVersion": "v1.3.9",
+    "chartVersion": "1.0.47",
+    "containerImages": [
+      "kestra/kestra:v1.3.9"
+    ],
+    "sourceUrls": {
+      "docs": "https://kestra.io/docs/",
+      "installDocs": "https://kestra.io/docs/installation/kubernetes",
+      "chart": "https://github.com/kestra-io/helm-charts/tree/master/charts/kestra",
+      "repo": "https://github.com/kestra-io/kestra"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl"
+    ],
+    "description": "A Kubernetes cluster (>=1.24), Helm 3.8+, and kubectl configured against the target cluster. The default standalone install enables a privileged dind sidecar — clusters that enforce the restricted Pod Security Standard must either allow privileged pods in the kestra namespace or disable dind via `--set dind.enabled=false`. For production use, provision an external Postgres database and switch to distributed mode (webserver/scheduler/executor/worker) per the Kestra docs."
+  },
+  "security": {
+    "scannedAt": "2026-04-10T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

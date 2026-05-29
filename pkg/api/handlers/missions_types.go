@@ -134,9 +134,10 @@ type MissionsHandler struct {
 type cacheStatus string
 
 const (
-	cacheStatusHit   cacheStatus = "HIT"
-	cacheStatusMiss  cacheStatus = "MISS"
-	cacheStatusStale cacheStatus = "STALE"
+	cacheStatusHit      cacheStatus = "HIT"
+	cacheStatusMiss     cacheStatus = "MISS"
+	cacheStatusStale    cacheStatus = "STALE"
+	cacheStatusEmbedded cacheStatus = "EMBEDDED"
 )
 
 // fetchWithCache encapsulates the common fetch-with-cache pattern used by GitHub wrappers.

@@ -1,0 +1,119 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-devfile",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Devfile Registry on Kubernetes",
+    "description": "Devfile provides a Kube-native API for cloud development workspaces. The Devfile Registry hosts reusable devfile stacks that define development environments. This mission deploys a self-hosted Devfile Registry on Kubernetes using the official Helm chart.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Clone the registry-support repository",
+        "description": "Clone the devfile registry-support repository which contains the Helm chart for deploying a Devfile Registry.\n```bash\ngit clone https://github.com/devfile/registry-support.git\ncd registry-support\n```"
+      },
+      {
+        "title": "Install the Devfile Registry using Helm",
+        "description": "Deploy the Devfile Registry using the included Helm chart.\n```bash\nhelm install devfile-registry deploy/chart/devfile-registry --namespace devfile --create-namespace\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that the Devfile Registry pods are running.\n```bash\nkubectl get pods --namespace devfile\nkubectl get svc --namespace devfile\n```"
+      },
+      {
+        "title": "Test the registry API",
+        "description": "Verify the registry is serving devfile stacks by querying its API.\n```bash\nkubectl port-forward svc/devfile-registry 8080:8080 --namespace devfile &\ncurl http://localhost:8080/v2index\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show the Devfile Registry pods running in the devfile namespace. The registry serves devfile stacks via its REST API, allowing developers to discover and use pre-built development environment configurations.",
+      "codeSnippets": [
+        "git clone https://github.com/devfile/registry-support.git",
+        "helm install devfile-registry deploy/chart/devfile-registry --namespace devfile --create-namespace",
+        "kubectl get pods --namespace devfile"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Uninstall the Helm release",
+        "description": "Remove the devfile-registry Helm release from the devfile namespace."
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Remove the devfile namespace and all associated resources."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Pull latest registry-support",
+        "description": "Update the registry-support repository to get the latest Helm chart."
+      },
+      {
+        "title": "Run helm upgrade",
+        "description": "Upgrade the Devfile Registry deployment with the updated chart."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Registry pods not starting",
+        "description": "Check pod logs for errors and ensure container images can be pulled.\n```bash\nkubectl logs -l app=devfile-registry --namespace devfile\n```"
+      },
+      {
+        "title": "Registry returns empty index",
+        "description": "Verify the registry was built with devfile stacks included. Check the registry-support build documentation for how to include custom stacks."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "developer-tools",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "devfile"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Service",
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.2.1",
+    "containerImages": [
+      "quay.io/devfile/devfile-index:next"
+    ],
+    "sourceUrls": {
+      "docs": "https://devfile.io/",
+      "repo": "https://github.com/devfile/api"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl",
+      "git"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher, along with Helm, kubectl, and git installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

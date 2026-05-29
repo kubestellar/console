@@ -1,0 +1,133 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-vitess",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Vitess on Kubernetes",
+    "description": "Vitess is a cloud-native horizontally-scalable distributed database system built around MySQL. It can achieve unlimited scaling through generalized sharding while keeping application code and queries agnostic to data distribution. The Vitess Operator simplifies deployment on Kubernetes.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the Vitess Operator CRDs",
+        "description": "Apply the Vitess Operator manifests which include the CRDs and operator deployment.\n```bash\nkubectl apply -f https://raw.githubusercontent.com/planetscale/vitess-operator/main/deploy/operator.yaml\n```"
+      },
+      {
+        "title": "Verify the operator is running",
+        "description": "Check that the Vitess Operator pods are running.\n```bash\nkubectl get pods -l app=vitess-operator\n```"
+      },
+      {
+        "title": "Deploy a VitessCluster",
+        "description": "Create a VitessCluster resource to deploy a Vitess cluster. This example deploys a minimal single-shard setup.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: planetscale.com/v2\nkind: VitessCluster\nmetadata:\n  name: example\nspec:\n  images:\n    vtgate: vitess/lite:v23.0.3\n    vttablet: vitess/lite:v23.0.3\n    vtbackup: vitess/lite:v23.0.3\n    vtctld: vitess/lite:v23.0.3\n    mysqld:\n      mysql80Compatible: vitess/lite:v23.0.3\n  cells:\n  - name: zone1\n    gateway:\n      replicas: 1\n      resources:\n        requests:\n          cpu: 100m\n          memory: 256Mi\n  keyspaces:\n  - name: commerce\n    turndownPolicy: Immediate\n    partitionings:\n    - equal:\n        parts: 1\n        shardTemplate:\n          databaseInitScriptSecret:\n            name: example-cluster-config\n            key: init_db.sql\n          tabletPools:\n          - cell: zone1\n            type: replica\n            replicas: 2\n            mysqld:\n              resources:\n                requests:\n                  cpu: 100m\n                  memory: 256Mi\n            dataVolumeClaimTemplate:\n              accessModes: [\"ReadWriteOnce\"]\n              resources:\n                requests:\n                  storage: 10Gi\nEOF\n```"
+      },
+      {
+        "title": "Verify the Vitess cluster",
+        "description": "Check that all Vitess components are running.\n```bash\nkubectl get vitessclusters\nkubectl get pods -l planetscale.com/cluster=example\n```"
+      },
+      {
+        "title": "Connect to the Vitess cluster",
+        "description": "Port-forward the VTGate service to connect with a MySQL client.\n```bash\nkubectl port-forward svc/example-vtgate-zone1 3306:3306 &\nmysql -h 127.0.0.1 -P 3306 -u user\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show the Vitess Operator running and managing VitessCluster resources. VTGate provides MySQL-compatible access to the distributed database, while VTTablet manages the underlying MySQL instances.",
+      "codeSnippets": [
+        "kubectl apply -f https://raw.githubusercontent.com/planetscale/vitess-operator/main/deploy/operator.yaml",
+        "kubectl get pods -l app=vitess-operator",
+        "kubectl get vitessclusters"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Delete the VitessCluster",
+        "description": "Delete the VitessCluster resource to remove all Vitess components."
+      },
+      {
+        "title": "Remove the operator",
+        "description": "Delete the Vitess Operator deployment and CRDs."
+      },
+      {
+        "title": "Clean up persistent volumes",
+        "description": "Delete any PVCs created by the Vitess tablets."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade the operator",
+        "description": "Apply the latest operator manifests from the vitess-operator repository."
+      },
+      {
+        "title": "Update Vitess images",
+        "description": "Update the VitessCluster resource with new image versions and apply."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Tablets stuck in NotServing state",
+        "description": "Check tablet logs and ensure the init script ran successfully.\n```bash\nkubectl logs -l planetscale.com/component=vttablet\n```"
+      },
+      {
+        "title": "VTGate returns connection errors",
+        "description": "Verify that tablets are healthy and the topology is correct.\n```bash\nkubectl port-forward svc/example-vtctld 15000:15000\n# Access the Vitess dashboard at http://localhost:15000\n```"
+      },
+      {
+        "title": "PVC binding issues",
+        "description": "Ensure a StorageClass is configured and PVs can be dynamically provisioned.\n```bash\nkubectl get sc\nkubectl get pvc\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "database",
+      "mysql",
+      "graduated"
+    ],
+    "cncfProjects": [
+      "vitess"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "StatefulSet",
+      "Service",
+      "PersistentVolumeClaim",
+      "CustomResourceDefinition"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "graduated",
+    "projectVersion": "v23.0.3",
+    "containerImages": [
+      "vitess/lite:v23.0.3",
+      "planetscale/vitess-operator:v2.16.0"
+    ],
+    "sourceUrls": {
+      "docs": "https://vitess.io/",
+      "repo": "https://github.com/vitessio/vitess"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher with dynamic PV provisioning and sufficient resources for running MySQL instances."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

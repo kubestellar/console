@@ -1,0 +1,123 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-virtual-kubelet",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Virtual Kubelet on Kubernetes",
+    "description": "Virtual Kubelet is an open source Kubernetes kubelet implementation that masquerades as a kubelet to connect Kubernetes to other APIs such as serverless container platforms (ACI, Fargate), IoT Edge, and more. It provides a pluggable provider architecture.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the Virtual Kubelet binary",
+        "description": "Build or install the Virtual Kubelet binary with your chosen provider. Virtual Kubelet is a library, so you typically install a provider-specific build.\n```bash\n# Install from source with a provider\ngo install github.com/virtual-kubelet/virtual-kubelet@v1.12.0\n```"
+      },
+      {
+        "title": "Configure the provider",
+        "description": "Create a configuration file for your chosen provider. Each provider has its own config format. Example for a mock provider:\n```bash\ncat <<EOF > vk-config.json\n{\n  \"provider\": \"mock\",\n  \"nodeName\": \"virtual-node\",\n  \"operatingSystem\": \"Linux\"\n}\nEOF\n```"
+      },
+      {
+        "title": "Deploy Virtual Kubelet as a Deployment",
+        "description": "Deploy Virtual Kubelet as a Kubernetes Deployment that registers a virtual node.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: virtual-kubelet\n  namespace: kube-system\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: virtual-kubelet\n  template:\n    metadata:\n      labels:\n        app: virtual-kubelet\n    spec:\n      serviceAccountName: virtual-kubelet\n      containers:\n      - name: virtual-kubelet\n        image: virtual-kubelet/virtual-kubelet:v1.12.0\n        args:\n        - --provider\n        - mock\n        - --nodename\n        - virtual-node\nEOF\n```"
+      },
+      {
+        "title": "Create RBAC for Virtual Kubelet",
+        "description": "Create the necessary ServiceAccount and RBAC permissions.\n```bash\nkubectl create serviceaccount virtual-kubelet -n kube-system\ncat <<EOF | kubectl apply -f -\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nmetadata:\n  name: virtual-kubelet\nsubjects:\n- kind: ServiceAccount\n  name: virtual-kubelet\n  namespace: kube-system\nroleRef:\n  kind: ClusterRole\n  name: cluster-admin\n  apiGroup: rbac.authorization.k8s.io\nEOF\n```"
+      },
+      {
+        "title": "Verify the virtual node",
+        "description": "Check that the virtual node appears in the node list.\n```bash\nkubectl get nodes\nkubectl describe node virtual-node\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show a new virtual node registered in the cluster. Pods can be scheduled to this virtual node using taints, tolerations, and node selectors, and will be handled by the configured provider backend.",
+      "codeSnippets": [
+        "go install github.com/virtual-kubelet/virtual-kubelet@v1.12.0",
+        "kubectl get nodes",
+        "kubectl describe node virtual-node"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove the Virtual Kubelet deployment",
+        "description": "Delete the Virtual Kubelet Deployment and associated RBAC resources."
+      },
+      {
+        "title": "Drain and remove the virtual node",
+        "description": "Drain pods from the virtual node and delete the node resource."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update the container image",
+        "description": "Update the Virtual Kubelet Deployment to use the latest image version."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Virtual node not appearing",
+        "description": "Check the Virtual Kubelet pod logs for registration errors.\n```bash\nkubectl logs -l app=virtual-kubelet -n kube-system\n```"
+      },
+      {
+        "title": "Pods stuck in pending on virtual node",
+        "description": "Verify the provider is correctly configured and the backend service is reachable."
+      },
+      {
+        "title": "RBAC permission errors",
+        "description": "Ensure the ServiceAccount has sufficient permissions to register nodes and manage pods.\n```bash\nkubectl auth can-i create nodes --as=system:serviceaccount:kube-system:virtual-kubelet\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "serverless",
+      "virtual-node",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "virtual-kubelet"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Node",
+      "ServiceAccount",
+      "ClusterRoleBinding"
+    ],
+    "difficulty": "advanced",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.12.0",
+    "containerImages": [
+      "virtual-kubelet/virtual-kubelet:v1.12.0"
+    ],
+    "sourceUrls": {
+      "docs": "https://github.com/virtual-kubelet/virtual-kubelet",
+      "repo": "https://github.com/virtual-kubelet/virtual-kubelet"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher with kubectl installed. A provider backend (e.g., Azure ACI, AWS Fargate) is needed for production use."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

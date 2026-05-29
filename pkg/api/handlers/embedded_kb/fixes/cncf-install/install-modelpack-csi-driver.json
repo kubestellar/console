@@ -1,0 +1,141 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-modelpack-csi-driver",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install ModelPack Model CSI Driver on Kubernetes",
+    "description": "ModelPack is an open standard (hosted under LF Projects) for packaging, distributing and running AI/ML models as OCI artifacts. This mission installs the Model CSI Driver — a Kubernetes CSI driver from the ModelPack project that mounts ModelPack-format OCI model artifacts as volumes directly into pods. It is compatible with older Kubernetes versions and natively supports P2P-accelerated distribution. After install, pods can reference models by OCI reference via inline CSI volumes with driver `model.csi.modelpack.org`.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Create a values file for registry auth and storage",
+        "description": "Create `values-custom.yaml` with the CSI driver's working directory and any private registry credentials it needs to pull model artifacts. `rootDir` must be writable on each node and have enough disk for the models you intend to mount:\n```yaml\nconfig:\n  rootDir: /var/lib/model-csi\n  registryAuths:\n    registry.example.com:\n      # base64(username:password)\n      auth: dXNlcm5hbWU6cGFzc3dvcmQ=\n      serverscheme: https\nimage:\n  repository: ghcr.io/modelpack/model-csi-driver\n  pullPolicy: IfNotPresent\n  tag: v0.1.2\n```\nIf you only pull from public registries, omit the `registryAuths` block."
+      },
+      {
+        "title": "Install the Model CSI Driver via Helm",
+        "description": "The chart is published as an OCI artifact at `ghcr.io/modelpack/charts/model-csi-driver`. Install it into the `model-csi` namespace:\n```bash\nhelm upgrade --install model-csi-driver \\\n    oci://ghcr.io/modelpack/charts/model-csi-driver \\\n    --version 0.1.2 \\\n    --namespace model-csi \\\n    --create-namespace \\\n    -f values-custom.yaml\n```\nThe driver runs as a DaemonSet, so one pod is scheduled per node that matches the chart's node selector."
+      },
+      {
+        "title": "Verify the DaemonSet pods are running",
+        "description": "Confirm a driver pod is Ready on every eligible node:\n```bash\nkubectl get pods -n model-csi -o wide\nkubectl get daemonset -n model-csi\n```\nAlso confirm the CSI driver is registered with the cluster:\n```bash\nkubectl get csidriver model.csi.modelpack.org\n```"
+      },
+      {
+        "title": "Mount a model artifact into a test pod",
+        "description": "The driver uses inline CSI volumes referenced directly in the pod spec — no PV/PVC needed. Replace the `reference` with an OCI URL to a ModelPack-format artifact you have access to:\n```yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: model-inference-pod\nspec:\n  containers:\n  - name: inference-server\n    image: ubuntu:24.04\n    command: [\"sleep\", \"infinity\"]\n    volumeMounts:\n    - name: model-volume\n      mountPath: /model\n      readOnly: true\n  volumes:\n  - name: model-volume\n    csi:\n      driver: model.csi.modelpack.org\n      volumeAttributes:\n        model.csi.modelpack.org/reference: \"registry.example.com/models/qwen3-0.6b:latest\"\n```\nApply it and verify the model files appear under `/model` inside the container:\n```bash\nkubectl apply -f model-inference-pod.yaml\nkubectl exec model-inference-pod -- ls /model\n```\nUse [modctl](https://github.com/modelpack/modctl) to build and push ModelPack artifacts if you need a test model."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful install shows one model-csi-driver DaemonSet pod per eligible node in the `model-csi` namespace, all reporting Ready. The `model.csi.modelpack.org` CSIDriver object exists, and a test pod can mount an OCI model artifact via an inline CSI volume and read the model files under its mount path.",
+      "codeSnippets": [
+        "helm upgrade --install model-csi-driver oci://ghcr.io/modelpack/charts/model-csi-driver --version 0.1.2 --namespace model-csi --create-namespace -f values-custom.yaml",
+        "kubectl get pods -n model-csi -o wide",
+        "kubectl get daemonset -n model-csi",
+        "kubectl get csidriver model.csi.modelpack.org",
+        "kubectl apply -f model-inference-pod.yaml",
+        "kubectl exec model-inference-pod -- ls /model"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Delete pods that reference the CSI volume",
+        "description": "Inline CSI volumes are tied to pod lifecycle. Delete any pods that still mount `model.csi.modelpack.org` volumes before removing the driver so volume unpublish runs cleanly:\n```bash\nkubectl delete pod model-inference-pod\n```"
+      },
+      {
+        "title": "Remove the Helm release",
+        "description": "Uninstall the chart, which removes the DaemonSet and the CSIDriver object it registered:\n```bash\nhelm uninstall model-csi-driver --namespace model-csi\n```"
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Remove the dedicated namespace to clean up remaining resources:\n```bash\nkubectl delete namespace model-csi\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update the chart reference and image tag",
+        "description": "Bump the version in your upgrade command and, if pinning the image, update the `image.tag` in `values-custom.yaml` to match. Check the releases page at https://github.com/modelpack/model-csi-driver/releases for the latest tag."
+      },
+      {
+        "title": "Run the Helm upgrade",
+        "description": "Re-run the same install command with the new version:\n```bash\nhelm upgrade --install model-csi-driver \\\n    oci://ghcr.io/modelpack/charts/model-csi-driver \\\n    --version <new-version> \\\n    --namespace model-csi \\\n    -f values-custom.yaml\n```"
+      },
+      {
+        "title": "Verify the rollout",
+        "description": "Confirm the DaemonSet rolls out cleanly to all nodes:\n```bash\nkubectl rollout status daemonset/model-csi-driver -n model-csi\nkubectl get pods -n model-csi\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pod stuck in Pending or ContainerCreating",
+        "description": "Describe the workload pod to see why CSI volume attachment is failing, then check the driver logs on the same node:\n```bash\nkubectl describe pod <pod-name>\nkubectl logs -n model-csi -l app.kubernetes.io/name=model-csi-driver -c model-csi-driver --tail=200\n```\nCommon causes: registry auth missing from `values-custom.yaml`, model reference typo, or `rootDir` not writable on the node."
+      },
+      {
+        "title": "CSIDriver object not found",
+        "description": "If `kubectl get csidriver model.csi.modelpack.org` returns NotFound, the chart install did not complete. Check the Helm release status and the DaemonSet events:\n```bash\nhelm status model-csi-driver -n model-csi\nkubectl get events -n model-csi --sort-by=.lastTimestamp\n```"
+      },
+      {
+        "title": "Pull failures from private registries",
+        "description": "Auth errors when mounting a model volume usually mean the registry host in `values-custom.yaml` doesn't exactly match the host in the OCI reference, or the base64 auth string is malformed. Regenerate it with:\n```bash\nprintf '%s' 'username:password' | base64\n```\nand re-run `helm upgrade` with the updated values file."
+      },
+      {
+        "title": "Disk pressure on nodes",
+        "description": "The driver caches pulled model layers under `config.rootDir` (default `/var/lib/model-csi`). Large models can fill the node disk. Point `rootDir` at a dedicated volume with sufficient capacity, or clean unused artifacts from that directory on affected nodes."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "ai",
+      "ml",
+      "csi",
+      "oci",
+      "model-serving"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "DaemonSet",
+      "CSIDriver",
+      "Namespace",
+      "ServiceAccount",
+      "ConfigMap"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "external",
+    "projectVersion": "v0.1.2",
+    "chartVersion": "0.1.2",
+    "containerImages": [
+      "ghcr.io/modelpack/model-csi-driver:v0.1.2"
+    ],
+    "sourceUrls": {
+      "docs": "https://github.com/modelpack/model-csi-driver/blob/main/docs/getting-started.md",
+      "spec": "https://github.com/modelpack/model-spec",
+      "modctl": "https://github.com/modelpack/modctl",
+      "repo": "https://github.com/modelpack/model-csi-driver"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.20",
+    "tools": [
+      "helm",
+      "kubectl"
+    ],
+    "description": "A Kubernetes cluster (ModelPack's Model CSI Driver supports older versions; >=1.20 is a safe baseline), Helm 3.8+ (required for OCI chart pulls), and kubectl configured against the target cluster. Nodes must have writable storage at `config.rootDir` (default `/var/lib/model-csi`) with enough disk space to cache pulled model artifacts. Private model registries require credentials to be supplied via the values file."
+  },
+  "security": {
+    "scannedAt": "2026-04-10T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-metallb",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure Metallb on Kubernetes",
+    "description": "MetalLB is a network load-balancer implementation for Kubernetes using standard routing protocols, ideal for bare metal clusters. Installing MetalLB allows you to expose services externally with load balancing capabilities.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Add the MetalLB Helm repository",
+        "description": "Add the official MetalLB Helm repository to your Helm configuration with the following command:\n```bash\nhelm repo add metallb https://metallb.github.io/metallb\n```"
+      },
+      {
+        "title": "Update Helm repositories",
+        "description": "Ensure you have the latest charts by updating your Helm repositories:\n```bash\nhelm repo update\n```"
+      },
+      {
+        "title": "Install MetalLB using Helm",
+        "description": "Install MetalLB in the `metallb-system` namespace with the following command:\n```bash\nhelm install metallb metallb/metallb --version 0.15.3 --namespace metallb-system --create-namespace\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that the MetalLB pods are running successfully:\n```bash\nkubectl get pods -n metallb-system\n```"
+      },
+      {
+        "title": "Configure MetalLB for Layer 2 mode",
+        "description": "Create an IPAddressPool and L2Advertisement to configure MetalLB. Replace `192.168.1.240-192.168.1.250` with your desired IP range:\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: metallb.io/v1beta1\nkind: IPAddressPool\nmetadata:\n  name: default-pool\n  namespace: metallb-system\nspec:\n  addresses:\n  - 192.168.1.240-192.168.1.250\n---\napiVersion: metallb.io/v1beta1\nkind: L2Advertisement\nmetadata:\n  name: default-l2\n  namespace: metallb-system\nspec:\n  ipAddressPools:\n  - default-pool\nEOF\n```"
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Remove the MetalLB Helm release",
+        "description": "Uninstall MetalLB with the following command:\n```bash\nhelm uninstall metallb --namespace metallb-system\n```"
+      },
+      {
+        "title": "Delete the MetalLB namespace",
+        "description": "Remove the `metallb-system` namespace to clean up any remaining resources:\n```bash\nkubectl delete namespace metallb-system\n```"
+      },
+      {
+        "title": "Clean up Custom Resource Definitions (CRDs)",
+        "description": "Remove the MetalLB CRDs:\n```bash\nkubectl delete crd bgppeers.metallb.io ipaddresspools.metallb.io\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Backup current configuration",
+        "description": "Before upgrading, back up your current MetalLB configuration:\n```bash\nkubectl get ipaddresspool,l2advertisement -n metallb-system -o yaml > metallb-config-backup.yaml\n```"
+      },
+      {
+        "title": "Update the Helm repository",
+        "description": "Ensure you have the latest charts by updating your Helm repositories:\n```bash\nhelm repo update\n```"
+      },
+      {
+        "title": "Upgrade MetalLB",
+        "description": "Upgrade MetalLB to the latest version with the following command:\n```bash\nhelm upgrade metallb metallb/metallb --version 0.15.3 --namespace metallb-system\n```"
+      },
+      {
+        "title": "Verify the upgrade",
+        "description": "Check that the MetalLB pods are running successfully after the upgrade:\n```bash\nkubectl get pods -n metallb-system\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Pods stuck in CrashLoopBackOff",
+        "description": "If you see MetalLB pods in a CrashLoopBackOff state, check the logs for errors:\n```bash\nkubectl logs <pod-name> -n metallb-system\n```\nCommon issues may include misconfiguration in the ConfigMap or network issues."
+      },
+      {
+        "title": "MetalLB not assigning IPs",
+        "description": "If MetalLB is not assigning IPs, ensure that the IPAddressPool is correctly configured and the IP range is valid and not overlapping with existing services:\n```bash\nkubectl get ipaddresspool -n metallb-system -o yaml\nkubectl get l2advertisement -n metallb-system -o yaml\n```"
+      },
+      {
+        "title": "Service not reachable",
+        "description": "If services are not reachable, check the service type and ensure it is set to `LoadBalancer`:\n```bash\nkubectl get svc -n <your-namespace>\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation of MetalLB will have all pods running in the `metallb-system` namespace and the ability to expose services with load balancing. You can verify the configuration by checking the assigned IPs and service accessibility.",
+      "codeSnippets": [
+        "helm repo add metallb https://metallb.github.io/metallb",
+        "helm repo update",
+        "helm install metallb metallb/metallb --version 0.15.3 --namespace metallb-system --create-namespace",
+        "kubectl get pods -n metallb-system",
+        "cat <<EOF | kubectl apply -f -\napiVersion: metallb.io/v1beta1\nkind: IPAddressPool\nmetadata:\n  name: default-pool\n  namespace: metallb-system\nspec:\n  addresses:\n  - 192.168.1.240-192.168.1.250\n---\napiVersion: metallb.io/v1beta1\nkind: L2Advertisement\nmetadata:\n  name: default-l2\n  namespace: metallb-system\nspec:\n  ipAddressPools:\n  - default-pool\nEOF"
+      ]
+    }
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "app-definition",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "metallb"
+    ],
+    "targetResourceKinds": [
+      "IPAddressPool",
+      "L2Advertisement",
+      "Namespace"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v0.15.3",
+    "containerImages": [
+      "metallb/metallb:v0.15.3"
+    ],
+    "sourceUrls": {
+      "docs": "https://metallb.io",
+      "repo": "https://github.com/metallb/metallb",
+      "helm": "https://metallb.github.io/metallb"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher and have Helm and kubectl installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T06:25:32.849Z",
+    "scannerVersion": "cncf-install-gen-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-youki",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "youki"
+  ],
+  "mission": {
+    "title": "Install and Configure youki",
+    "description": "youki is a CNCF container runtime implementation in Rust, providing a low-memory-footprint alternative to runc. It implements the OCI Runtime Spec and can be used as a drop-in replacement for runc with Docker or containerd.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 15,
+    "steps": [
+      {
+        "title": "Download youki binary",
+        "description": "Download the pre-built youki binary for Linux.\n\n```bash\ncurl -sSL -o youki https://github.com/youki-dev/youki/releases/download/v0.6.0/youki_v0_6_0_linux_amd64\nchmod +x youki\nsudo mv youki /usr/local/bin/\n```\n\n> Requires Linux with kernel 5.3+.",
+        "commands": [
+          "curl -sSL -o youki https://github.com/youki-dev/youki/releases/download/v0.6.0/youki_v0_6_0_linux_amd64",
+          "chmod +x youki",
+          "sudo mv youki /usr/local/bin/"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Check youki version.\n\n```bash\nyouki --version\n```",
+        "commands": [
+          "youki --version"
+        ]
+      },
+      {
+        "title": "Configure Docker to use youki",
+        "description": "Register youki as a Docker runtime.\n\n```bash\nsudo dockerd --experimental --add-runtime=\"youki=/usr/local/bin/youki\" &\ndocker run --runtime=youki hello-world\n```\n\n> youki can also be configured in /etc/docker/daemon.json.",
+        "commands": [
+          "docker run --runtime=youki hello-world"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall youki",
+        "description": "Remove youki binary.\n\n```bash\nsudo rm /usr/local/bin/youki\n```",
+        "commands": [
+          "sudo rm /usr/local/bin/youki"
+        ]
+      }
+    ]
+  }
+}

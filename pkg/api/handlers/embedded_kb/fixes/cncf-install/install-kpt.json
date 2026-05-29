@@ -1,0 +1,121 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kpt",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure kpt on Kubernetes",
+    "description": "kpt is a package-centric toolchain that enables a WYSIWYG configuration authoring, automation, and delivery experience for Kubernetes. It simplifies managing Kubernetes platforms and KRM-driven infrastructure at scale by treating configuration as data.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install the kpt CLI",
+        "description": "Download and install the kpt CLI binary for your platform.\n```bash\n# Linux amd64\ncurl -fsSL https://github.com/kptdev/kpt/releases/download/v1.0.0-beta.61.1/kpt_linux_amd64 -o kpt\nchmod +x kpt\nsudo mv kpt /usr/local/bin/\n\n# Verify installation\nkpt version\n```"
+      },
+      {
+        "title": "Initialize a kpt package",
+        "description": "Create a new kpt package or fetch an existing one from a Git repository.\n```bash\nmkdir my-package && cd my-package\nkpt pkg init\n```"
+      },
+      {
+        "title": "Fetch a sample kpt package",
+        "description": "Fetch a sample package from the kpt repository to explore configuration management.\n```bash\nkpt pkg get https://github.com/kptdev/kpt.git/package-examples/helloworld-set@main\ncat helloworld-set/Kptfile\n```"
+      },
+      {
+        "title": "Deploy a kpt package to Kubernetes",
+        "description": "Use kpt live to deploy the package to your Kubernetes cluster with resource inventory tracking.\n```bash\nkpt live init helloworld-set\nkpt live apply helloworld-set\n```"
+      },
+      {
+        "title": "Verify the deployment",
+        "description": "Check the status of the deployed resources.\n```bash\nkpt live status helloworld-set\nkubectl get all\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will have the kpt CLI available and able to fetch, render, and deploy packages to Kubernetes. The live apply feature provides resource inventory tracking and pruning capabilities.",
+      "codeSnippets": [
+        "curl -fsSL https://github.com/kptdev/kpt/releases/download/v1.0.0-beta.61.1/kpt_linux_amd64 -o kpt\nchmod +x kpt\nsudo mv kpt /usr/local/bin/",
+        "kpt pkg get https://github.com/kptdev/kpt.git/package-examples/helloworld-set@main",
+        "kpt live init helloworld-set\nkpt live apply helloworld-set"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove deployed packages",
+        "description": "Use kpt live destroy to remove resources deployed by kpt."
+      },
+      {
+        "title": "Remove the kpt CLI",
+        "description": "Delete the kpt binary from /usr/local/bin/."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Download the latest kpt binary",
+        "description": "Download the latest release binary from the kpt GitHub releases page."
+      },
+      {
+        "title": "Update deployed packages",
+        "description": "Use kpt pkg update to pull the latest version of packages and re-apply."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "kpt live apply fails with inventory error",
+        "description": "Ensure you ran kpt live init before apply. Check the ResourceGroup inventory.\n```bash\nkpt live init my-package --force\n```"
+      },
+      {
+        "title": "Package fetch fails",
+        "description": "Verify the Git URL and branch/tag reference. Ensure git is installed and the repository is accessible."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "developer-tools",
+      "configuration-management",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "kpt"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Service",
+      "ConfigMap"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "kubectl"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v1.0.0-beta.61.1",
+    "containerImages": [],
+    "sourceUrls": {
+      "docs": "https://kpt.dev/installation/kpt-cli/",
+      "repo": "https://github.com/kptdev/kpt"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl",
+      "git"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher, along with kubectl and git installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}

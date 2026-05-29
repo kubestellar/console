@@ -1,0 +1,60 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-opa",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "cncfProjects": [
+    "opa"
+  ],
+  "mission": {
+    "title": "Install and Configure Open Policy Agent (OPA)",
+    "description": "OPA is a CNCF graduated general-purpose policy engine that enables unified, context-aware policy enforcement across the cloud-native stack. It uses the Rego policy language for writing and evaluating policies.",
+    "type": "deploy",
+    "status": "completed",
+    "estimatedMinutes": 10,
+    "steps": [
+      {
+        "title": "Install OPA binary",
+        "description": "Download and install the OPA binary.\n\n```bash\n# macOS\nbrew install opa\n\n# Linux\ncurl -L -o opa https://openpolicyagent.org/downloads/v1.15.2/opa_linux_amd64_static\nchmod 755 opa\nsudo mv opa /usr/local/bin/\n```",
+        "commands": [
+          "curl -L -o opa https://openpolicyagent.org/downloads/v1.15.2/opa_linux_amd64_static",
+          "chmod 755 opa",
+          "sudo mv opa /usr/local/bin/"
+        ]
+      },
+      {
+        "title": "Verify installation",
+        "description": "Check OPA is installed correctly.\n\n```bash\nopa version\n```",
+        "commands": [
+          "opa version"
+        ]
+      },
+      {
+        "title": "Run OPA as a server",
+        "description": "Start OPA as a policy decision service.\n\n```bash\nopa run --server &\ncurl localhost:8181/v1/data\n```\n\n> OPA listens on port 8181 and responds to policy queries via REST API.",
+        "commands": [
+          "opa run --server",
+          "curl localhost:8181/v1/data"
+        ]
+      },
+      {
+        "title": "Test with a sample policy",
+        "description": "Create and evaluate a simple Rego policy.\n\n```bash\necho 'package example\ndefault allow := false\nallow if input.user == \"admin\"' > policy.rego\necho '{\"user\": \"admin\"}' | opa eval -d policy.rego -i /dev/stdin 'data.example.allow'\n```",
+        "commands": [
+          "echo 'package example\ndefault allow := false\nallow if input.user == \"admin\"' > policy.rego",
+          "echo '{\"user\": \"admin\"}' | opa eval -d policy.rego -i /dev/stdin 'data.example.allow'"
+        ]
+      }
+    ],
+    "uninstall": [
+      {
+        "title": "Uninstall OPA",
+        "description": "Remove OPA.\n\n```bash\n# macOS\nbrew uninstall opa\n\n# Linux\nsudo rm /usr/local/bin/opa\n```",
+        "commands": [
+          "sudo rm /usr/local/bin/opa"
+        ]
+      }
+    ]
+  }
+}

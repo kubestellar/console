@@ -1,0 +1,166 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-open-webui",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install Open WebUI on Kubernetes",
+    "description": "Open WebUI (formerly Ollama WebUI) is the popular self-hosted AI chat frontend from open-webui.com. It is a Python and SvelteKit app that talks to any OpenAI-compatible backend — Ollama, vLLM, LocalAI, llama.cpp, LiteLLM, RHAIIS — and adds user accounts, chat history, model switching, RAG, and tool calls on top. This mission installs Open WebUI via the official Helm chart at https://helm.openwebui.com/ , wires it to a backend Service in the same cluster, and exposes the web UI through a ClusterIP Service that you can port-forward.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Decide on a backend LLM runner",
+        "description": "Open WebUI itself does not run inference — it is a frontend. Pick (or install) one of:\n\n- **Ollama** — simplest, single-binary. Install via the `install-ollama` mission if you do not already have one.\n- **vLLM** — GPU-accelerated production inference. See `install-vllm`.\n- **LocalAI** — CPU-first OpenAI-compatible runtime. See `install-localai`.\n- **llama.cpp** — lightest weight, CPU or CUDA. See `install-llama-cpp`.\n- **Red Hat AI Inference Server** — OpenShift-native, Red Hat-supported. See `install-rhaiis`.\n\nYou will point Open WebUI at the backend's ClusterIP Service URL in the next step. Confirm the backend is already running:\n```bash\nkubectl get svc -A | grep -Ei 'ollama|vllm|local-ai|llama-server|rhaiis'\n```"
+      },
+      {
+        "title": "Add the Open WebUI Helm repository",
+        "description": "Open WebUI publishes charts at https://helm.openwebui.com/ and the chart is named `open-webui`:\n```bash\nhelm repo add open-webui https://helm.openwebui.com/ \nhelm repo update\n```"
+      },
+      {
+        "title": "Create the namespace",
+        "description": "Keep Open WebUI in its own namespace for easy cleanup:\n```bash\nkubectl create namespace open-webui\n```"
+      },
+      {
+        "title": "Prepare a values file",
+        "description": "Write a small values override pointing at your backend. The example below targets an in-cluster LocalAI Service running at `http://local-ai.localai.svc.cluster.local:8080/v1` — replace with your actual backend URL. `OPENAI_API_BASE_URL` is the Open WebUI env var that accepts any OpenAI-compatible endpoint:\n```bash\ncat > openwebui-values.yaml <<'EOF'\nreplicaCount: 1\nimage:\n  repository: ghcr.io/open-webui/open-webui\n  tag: main\nollama:\n  enabled: false\nextraEnvVars:\n  - name: OPENAI_API_BASE_URL\n    value: http://local-ai.localai.svc.cluster.local:8080/v1\n  - name: OPENAI_API_KEY\n    value: sk-not-required-for-local-backends\n  - name: ENABLE_SIGNUP\n    value: \"true\"\n  - name: WEBUI_AUTH\n    value: \"true\"\npersistence:\n  enabled: true\n  size: 5Gi\n  accessModes:\n    - ReadWriteOnce\nservice:\n  type: ClusterIP\n  port: 8080\nresources:\n  requests:\n    cpu: \"500m\"\n    memory: 1Gi\n  limits:\n    cpu: \"2\"\n    memory: 4Gi\nEOF\n```\nFor Ollama as backend, set `OPENAI_API_BASE_URL` to `http://<ollama-svc>.<ns>.svc.cluster.local:11434/v1` . For vLLM, set it to `http://<vllm-svc>.<ns>.svc.cluster.local:8000/v1` . Leave `WEBUI_AUTH: true` so the first user-created account becomes the admin — disable only for demo clusters, never production."
+      },
+      {
+        "title": "Install the chart",
+        "description": "Install Open WebUI into the `open-webui` namespace and wait for the Deployment to roll out. The first start takes about a minute because Open WebUI initializes its SQLite database on the PVC:\n```bash\nhelm install open-webui open-webui/open-webui -n open-webui -f openwebui-values.yaml\nkubectl -n open-webui rollout status deploy/open-webui --timeout=5m\n```"
+      },
+      {
+        "title": "Access the web UI",
+        "description": "Port-forward the Service to your workstation and open http://127.0.0.1:8080/ in a browser:\n```bash\nkubectl -n open-webui port-forward svc/open-webui 8080:8080\n```\nThe first user to sign up becomes the admin. From the admin settings, the backend you wired via `OPENAI_API_BASE_URL` should already be visible under Connections, and the models served by that backend should appear in the model picker."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful Open WebUI install has the `open-webui` Deployment rolled out in the `open-webui` namespace, the persistence PVC bound, and the web UI at http://127.0.0.1:8080/ (via port-forward) showing a sign-in page. After creating the admin account, the backend Connection resolves and the model picker lists at least one model served by the backend.",
+      "codeSnippets": [
+        "helm repo add open-webui https://helm.openwebui.com/ ",
+        "helm install open-webui open-webui/open-webui -n open-webui -f openwebui-values.yaml",
+        "kubectl -n open-webui rollout status deploy/open-webui --timeout=5m",
+        "kubectl -n open-webui port-forward svc/open-webui 8080:8080"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Delete the Helm release",
+        "description": "Removing the release tears down the Deployment, Service, and ConfigMaps:\n```bash\nhelm uninstall open-webui -n open-webui\n```"
+      },
+      {
+        "title": "Delete the persistence PVC",
+        "description": "Helm does not delete PVCs on uninstall. The Open WebUI PVC holds user accounts, chat history, and RAG uploads. If you want to fully reset the install, delete it explicitly:\n```bash\nkubectl -n open-webui delete pvc -l app.kubernetes.io/name=open-webui --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the namespace",
+        "description": "Finally remove the namespace:\n```bash\nkubectl delete namespace open-webui --ignore-not-found\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Update the Helm repo",
+        "description": "Open WebUI publishes chart updates alongside every release. Refresh your local cache before upgrading:\n```bash\nhelm repo update open-webui\nhelm search repo open-webui/open-webui --versions\n```"
+      },
+      {
+        "title": "Roll out the upgrade",
+        "description": "Open WebUI performs its own SQLite schema migration on start. Use `helm upgrade` with the same values file — the PVC is preserved so user accounts and chats survive the upgrade:\n```bash\nhelm upgrade open-webui open-webui/open-webui -n open-webui -f openwebui-values.yaml\nkubectl -n open-webui rollout status deploy/open-webui --timeout=5m\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "Sign-in page loads but model picker is empty",
+        "description": "If the UI loads but no models appear, Open WebUI could not reach the backend. Check the pod logs for `OPENAI` or `connection refused`:\n```bash\nkubectl -n open-webui logs deploy/open-webui --tail=100\n```\nThe most common causes are (a) a typo in `OPENAI_API_BASE_URL`, (b) the backend Service is in a different namespace than the DNS name suggests, or (c) a NetworkPolicy blocking egress from the open-webui namespace to the backend namespace. Confirm the backend is reachable from an ephemeral debug pod:\n```bash\nkubectl run curl-test --rm -it --image=curlimages/curl --restart=Never -- curl -v http://local-ai.localai.svc.cluster.local:8080/v1/models\n```"
+      },
+      {
+        "title": "First admin account cannot sign up",
+        "description": "If sign-up fails with `Signups are disabled`, the `ENABLE_SIGNUP` env var was not set. Either patch the Deployment to add it and restart, or use the Open WebUI CLI helper to create an admin user by exec-ing into the pod. See https://docs.openwebui.com/ for the helper command."
+      },
+      {
+        "title": "PVC stuck Pending",
+        "description": "If `kubectl rollout status` times out and the pod is stuck, the persistence PVC may not have bound. Check:\n```bash\nkubectl -n open-webui get pvc\nkubectl -n open-webui describe pvc\n```\nThe usual cause is a cluster with no default StorageClass. Either set a default (`kubectl patch storageclass <name> -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}'`) or set `persistence.storageClass` in the values file."
+      },
+      {
+        "title": "Pod OOMKilled on a large RAG upload",
+        "description": "Open WebUI runs embedding and chunking for RAG uploads in the same pod by default. Large PDFs or document uploads can push memory past the container limit. Raise `resources.limits.memory` to 4-8 GiB in the values file and redeploy."
+      }
+    ],
+    "security": [
+      {
+        "title": "WEBUI_AUTH must stay true",
+        "description": "Open WebUI ships with an authentication flag that can be disabled for demo installs (`WEBUI_AUTH=false`). Never run with authentication disabled in a shared environment — any client that reaches the Service becomes the anonymous admin. Keep `WEBUI_AUTH=true` and create your admin account as the first sign-up, then disable `ENABLE_SIGNUP` to lock out additional accounts."
+      },
+      {
+        "title": "Secrets in values files",
+        "description": "If your backend requires an API key (for instance, pointing at a hosted OpenRouter or Anthropic endpoint), do not hardcode the key in `openwebui-values.yaml`. Instead, create a Kubernetes Secret and reference it via `envFrom`:\n```bash\nkubectl -n open-webui create secret generic open-webui-env --from-literal=OPENAI_API_KEY=<your-key>\n```\nThen add `envFrom.[].secretRef.name: open-webui-env` to the values file. For local-only backends, the API key is unused and `sk-not-required-for-local-backends` is a reasonable placeholder that never leaves the cluster."
+      },
+      {
+        "title": "No hostPath or privileged access required",
+        "description": "The Open WebUI chart runs as an unprivileged container with no hostPath mounts, no hostNetwork, and no CAP_SYS_ADMIN. It should pass the Kubernetes Pod Security Admission `baseline` profile as-is. For `restricted` enforcement, set `securityContext.runAsNonRoot: true`, `allowPrivilegeEscalation: false`, `seccompProfile.type: RuntimeDefault`, and drop all Linux capabilities in your values override."
+      },
+      {
+        "title": "Egress surface",
+        "description": "Open WebUI makes outbound calls to (a) the backend LLM endpoint you configured, (b) the OpenAI API for model listings if `OPENAI_API_BASE_URL` points at openai.com, and (c) on first start, github.com for release-check telemetry. If your cluster enforces default-deny egress via NetworkPolicy, allow traffic to the backend namespace and deny everything else. Disable release-check telemetry by setting `SAFE_MODE=true` in the env vars."
+      },
+      {
+        "title": "Relationship to the KubeStellar Console SECURITY-MODEL",
+        "description": "Open WebUI is a chat frontend — it can send user chat content to whatever backend you point it at. For the strongest posture, point Open WebUI at an in-cluster backend (vLLM, LocalAI, llama.cpp, Ollama) and use NetworkPolicy to deny egress from the open-webui namespace to the public internet. See docs/security/SECURITY-MODEL.md in the kubestellar/console repo for the Console's own architecture around chat-content handling and kubeconfig isolation."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "llm",
+      "ui",
+      "chat",
+      "openai-compatible",
+      "local-llm",
+      "helm"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Deployment",
+      "Service",
+      "PersistentVolumeClaim",
+      "ConfigMap"
+    ],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "stable",
+    "projectVersion": "main",
+    "containerImages": [
+      "ghcr.io/open-webui/open-webui:main"
+    ],
+    "sourceUrls": {
+      "docs": "https://docs.openwebui.com/",
+      "installDocs": "https://docs.openwebui.com/getting-started/",
+      "repo": "https://github.com/open-webui/open-webui",
+      "releases": "https://github.com/open-webui/open-webui/releases",
+      "chart": "https://github.com/open-webui/helm-charts"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "kubectl",
+      "helm"
+    ],
+    "description": "Kubernetes 1.24+ with a default StorageClass that supports ReadWriteOnce volumes, Helm 3, and a reachable OpenAI-compatible backend already running in the cluster (Ollama, vLLM, LocalAI, llama.cpp, or RHAIIS). Outbound egress to ghcr.io is required on first pull for the Open WebUI image."
+  },
+  "security": {
+    "scannedAt": "2026-04-15T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

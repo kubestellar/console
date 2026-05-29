@@ -1,0 +1,173 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-rhaiis",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install Red Hat AI Inference Server on OpenShift",
+    "description": "Red Hat AI Inference Server (RHAIIS) is Red Hat's productized build of the vLLM inference server, distributed as a hardened container image and installed on OpenShift through the OpenShift AI operator (RHOAI) or as a standalone Deployment on a GPU-enabled node. It exposes an OpenAI-compatible HTTP API at `/v1/chat/completions`, supports paged attention and tensor parallelism from upstream vLLM, and adds Red Hat test coverage and support entitlements for supported models. This mission walks through the standalone Deployment path using the `registry.redhat.io/rhaiis/vllm-cuda-rhel9` image on a node with an NVIDIA GPU and the NVIDIA GPU Operator already installed. Upstream docs: https://docs.redhat.com/en/documentation/red_hat_ai_inference_server/ .",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Confirm OpenShift prerequisites",
+        "description": "RHAIIS is supported on OpenShift 4.15+ with at least one node exposing `nvidia.com/gpu` through the NVIDIA GPU Operator. You also need pull access to `registry.redhat.io` — typically via a RH subscription pull secret already wired into the cluster at install time. Verify:\n```bash\noc version\noc get nodes -o custom-columns=NAME:.metadata.name,GPU:.status.capacity.nvidia\\.com/gpu\noc get clusterserviceversion -n nvidia-gpu-operator | grep gpu-operator\n```\nIf the GPU operator is not installed, follow the Red Hat docs at https://docs.nvidia.com/datacenter/cloud-native/openshift/ to install it before continuing."
+      },
+      {
+        "title": "Create the project and service account",
+        "description": "Create a dedicated OpenShift project for RHAIIS and a service account for the workload. The pod needs the `nvidia-driver-validator` SELinux context to access the GPU device plugin, which the GPU operator provides via its own SCC:\n```bash\noc new-project rhaiis\noc create serviceaccount rhaiis-runner -n rhaiis\n```"
+      },
+      {
+        "title": "Create a pull secret for registry.redhat.io",
+        "description": "RHAIIS images live in `registry.redhat.io`, which requires an authenticated pull. If your cluster's global pull secret already includes `registry.redhat.io`, you can skip this step. Otherwise, create a namespace-scoped secret from your Red Hat service account token (generate one at https://access.redhat.com/terms-based-registry ):\n```bash\noc create secret docker-registry rhaiis-pull \\\n  --docker-server=registry.redhat.io \\\n  --docker-username=\"$RH_SA_NAME\" \\\n  --docker-password=\"$RH_SA_TOKEN\" \\\n  -n rhaiis\noc secrets link rhaiis-runner rhaiis-pull --for=pull -n rhaiis\n```\nNever commit the secret YAML to source control."
+      },
+      {
+        "title": "Create a PVC for the model cache",
+        "description": "vLLM loads safetensors from a local path. For anything larger than a few GB, back the path with a PVC so the model survives pod restarts:\n```bash\noc apply -f - <<'EOF'\napiVersion: v1\nkind: PersistentVolumeClaim\nmetadata:\n  name: rhaiis-models\n  namespace: rhaiis\nspec:\n  accessModes:\n    - ReadWriteOnce\n  resources:\n    requests:\n      storage: 60Gi\nEOF\n```\nRaise the size if your target model is >30 B parameters."
+      },
+      {
+        "title": "Deploy RHAIIS",
+        "description": "This Deployment runs the Red Hat vLLM image, reserves one GPU, mounts the PVC at `/opt/app-root/src/.cache/huggingface`, and starts the server with a representative chat-instruct model. Replace `MODEL_ID` with the HF model identifier you want to serve — the example uses Mistral 7B Instruct v0.3, which fits on a single 24 GB GPU:\n```bash\noc apply -f - <<'EOF'\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: rhaiis\n  namespace: rhaiis\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: rhaiis\n  template:\n    metadata:\n      labels:\n        app: rhaiis\n    spec:\n      serviceAccountName: rhaiis-runner\n      containers:\n        - name: vllm\n          image: registry.redhat.io/rhaiis/vllm-cuda-rhel9:latest\n          args:\n            - --model\n            - mistralai/Mistral-7B-Instruct-v0.3\n            - --host\n            - 0.0.0.0\n            - --port\n            - \"8000\"\n          env:\n            - name: HF_HOME\n              value: /opt/app-root/src/.cache/huggingface\n          ports:\n            - containerPort: 8000\n              name: http\n          resources:\n            requests:\n              cpu: \"4\"\n              memory: 16Gi\n              nvidia.com/gpu: \"1\"\n            limits:\n              cpu: \"8\"\n              memory: 32Gi\n              nvidia.com/gpu: \"1\"\n          volumeMounts:\n            - name: models\n              mountPath: /opt/app-root/src/.cache/huggingface\n          readinessProbe:\n            httpGet:\n              path: /health\n              port: 8000\n            initialDelaySeconds: 120\n            periodSeconds: 10\n      volumes:\n        - name: models\n          persistentVolumeClaim:\n            claimName: rhaiis-models\nEOF\noc -n rhaiis rollout status deploy/rhaiis --timeout=15m\n```\nThe first start takes a while because the container fetches the model from Hugging Face into the PVC."
+      },
+      {
+        "title": "Expose RHAIIS as a Service",
+        "description": "Create a ClusterIP Service so clients inside the cluster reach the endpoint at `http://rhaiis.rhaiis.svc.cluster.local:8000`:\n```bash\noc apply -f - <<'EOF'\napiVersion: v1\nkind: Service\nmetadata:\n  name: rhaiis\n  namespace: rhaiis\nspec:\n  type: ClusterIP\n  selector:\n    app: rhaiis\n  ports:\n    - name: http\n      port: 8000\n      targetPort: 8000\nEOF\n```"
+      },
+      {
+        "title": "Verify the OpenAI-compatible endpoint",
+        "description": "Port-forward the Service and confirm inference responds:\n```bash\noc -n rhaiis port-forward svc/rhaiis 8000:8000\n```\nIn a second terminal:\n```bash\ncurl -s http://127.0.0.1:8000/v1/models\ncurl -s http://127.0.0.1:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{\"model\":\"mistralai/Mistral-7B-Instruct-v0.3\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hi in one word.\"}]}'\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful RHAIIS install has the `rhaiis` Deployment in the `rhaiis` project reporting one Ready replica, the GPU allocation visible on `oc describe node`, `/v1/models` returning the loaded model identifier, and `/v1/chat/completions` returning an OpenAI-compatible response with the expected token usage.",
+      "codeSnippets": [
+        "oc new-project rhaiis",
+        "oc -n rhaiis rollout status deploy/rhaiis --timeout=15m",
+        "oc -n rhaiis port-forward svc/rhaiis 8000:8000",
+        "curl -s http://127.0.0.1:8000/v1/models"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Delete the Deployment and Service",
+        "description": "Remove the workload first so the GPU is released:\n```bash\noc -n rhaiis delete deploy/rhaiis svc/rhaiis --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the model PVC",
+        "description": "Only delete the PVC if you want to reclaim the model cache storage. It can be large (tens of GB for a 7B-class model):\n```bash\noc -n rhaiis delete pvc/rhaiis-models --ignore-not-found\n```"
+      },
+      {
+        "title": "Delete the project",
+        "description": "Remove the namespace-scoped service account, pull secret, and project:\n```bash\noc delete project rhaiis --ignore-not-found\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Bump the image tag",
+        "description": "Red Hat publishes new RHAIIS tags alongside each upstream vLLM release plus backport builds. Check https://catalog.redhat.com/software/containers/rhaiis/vllm-cuda-rhel9 for the current supported tag and roll it out:\n```bash\noc -n rhaiis set image deploy/rhaiis vllm=registry.redhat.io/rhaiis/vllm-cuda-rhel9:<new-tag>\noc -n rhaiis rollout status deploy/rhaiis --timeout=15m\n```"
+      },
+      {
+        "title": "Swap the served model",
+        "description": "To switch models, edit the `--model` arg on the Deployment. The runtime will drop the currently loaded model and load the new one from the PVC cache (or re-download from Hugging Face if it is not yet cached). Restart the Deployment after the edit:\n```bash\noc -n rhaiis set env deploy/rhaiis MODEL_ID=<new-model-id>\noc -n rhaiis rollout restart deploy/rhaiis\n```"
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "ImagePullBackOff from registry.redhat.io",
+        "description": "Pull failures against `registry.redhat.io` are almost always authentication issues. Confirm your pull secret is linked to the service account and check the pod events:\n```bash\noc -n rhaiis describe pod -l app=rhaiis\noc -n rhaiis get sa rhaiis-runner -o jsonpath='{.imagePullSecrets}'\n```\nIf the global cluster pull secret is the expected path, update it with `oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=<path>` and restart the kubelet on the target node."
+      },
+      {
+        "title": "Pod stuck with insufficient GPU",
+        "description": "RHAIIS requires at least one `nvidia.com/gpu` on the target node. If the pod is Pending with an insufficient resources event, verify the GPU operator health:\n```bash\noc get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.status.allocatable.nvidia\\.com/gpu}{\"\\n\"}{end}'\noc get pods -n nvidia-gpu-operator\n```\nIf GPU-operator pods are themselves unhealthy, follow https://docs.nvidia.com/datacenter/cloud-native/openshift/ for the operator troubleshooting guide."
+      },
+      {
+        "title": "OOM on a large model",
+        "description": "A 7B-class model in fp16 uses about 14 GB of VRAM. Larger models need quantization or tensor parallelism across multiple GPUs. If the container is being OOMKilled by the GPU, either switch to a smaller model or pass `--tensor-parallel-size <N>` to spread the model across N GPUs on the same node (and raise `nvidia.com/gpu` requests accordingly)."
+      },
+      {
+        "title": "Readiness probe timing out",
+        "description": "The first start-up takes a long time because vLLM downloads model weights from Hugging Face into the PVC. If `rollout status` times out, check the container logs for the `Loading model` progress line and raise the readiness probe's `initialDelaySeconds`. Once the PVC is warm, subsequent restarts complete in under a minute."
+      }
+    ],
+    "security": [
+      {
+        "title": "OpenShift SCCs and the GPU operator",
+        "description": "Running RHAIIS on OpenShift requires the NVIDIA GPU operator to be installed first. The GPU operator itself brings in several SecurityContextConstraints that grant the driver pods host-level access. This is a prerequisite for any CUDA workload — review the operator's SCC footprint at https://docs.nvidia.com/datacenter/cloud-native/openshift/ before approving it. The RHAIIS container itself does NOT need hostNetwork, hostPID, or hostPath mounts, and runs under the `restricted-v2` SCC once the GPU plumbing is in place."
+      },
+      {
+        "title": "registry.redhat.io authentication",
+        "description": "RHAIIS images are pulled from `registry.redhat.io`, which requires a Red Hat authenticated pull. Use a subscription-scoped service account token — never share a user's personal token. Store the pull secret in a Kubernetes Secret and link it to the RHAIIS service account. For cluster-wide access, the OpenShift installer's global pull secret is the right place. For namespace-scoped access, link the Secret to the service account via `oc secrets link`."
+      },
+      {
+        "title": "Red Hat supportability and CVE coverage",
+        "description": "The point of using RHAIIS over upstream vLLM is that Red Hat provides CVE backports, FIPS-validated image builds, and a supported base layer on top of the same vLLM engine. Keep images up to date by subscribing to Red Hat product security advisories at https://access.redhat.com/security/updates/advisory/ and tracking the RHAIIS release notes at https://docs.redhat.com/en/documentation/red_hat_ai_inference_server/ ."
+      },
+      {
+        "title": "Model provenance",
+        "description": "RHAIIS loads Hugging Face safetensors like upstream vLLM. Red Hat's supportability extends to the runtime, not to arbitrary third-party models — using a model that is not on the RH supported-models list is allowed, but outside of RH support. For production, prefer models with a clear provenance, a permissive license, and a published safety evaluation."
+      },
+      {
+        "title": "Relationship to the KubeStellar Console SECURITY-MODEL",
+        "description": "The Console's AI-agent code path is architected so user chat content and command output reach the LLM provider, but kubeconfig files and cluster credentials never do — see docs/security/SECURITY-MODEL.md in the kubestellar/console repo. RHAIIS is the strongest enterprise posture the Console can point at: inference runs inside the OpenShift cluster, the image ships from a Red Hat registry, and there is no egress to an external model provider at steady state."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "llm",
+      "inference",
+      "openshift",
+      "red-hat",
+      "gpu",
+      "enterprise",
+      "local-llm",
+      "openai-compatible"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [
+      "Namespace",
+      "Project",
+      "Deployment",
+      "Service",
+      "PersistentVolumeClaim",
+      "ServiceAccount",
+      "Secret"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "manifest"
+    ],
+    "maturity": "stable",
+    "projectVersion": "latest",
+    "containerImages": [
+      "registry.redhat.io/rhaiis/vllm-cuda-rhel9:latest"
+    ],
+    "sourceUrls": {
+      "docs": "https://docs.redhat.com/en/documentation/red_hat_ai_inference_server/",
+      "installDocs": "https://docs.redhat.com/en/documentation/red_hat_ai_inference_server/",
+      "repo": "https://catalog.redhat.com/software/containers/rhaiis/vllm-cuda-rhel9",
+      "releases": "https://access.redhat.com/documentation/en-us/red_hat_ai_inference_server/"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.28",
+    "tools": [
+      "oc",
+      "kubectl"
+    ],
+    "description": "OpenShift 4.15+ with the NVIDIA GPU Operator installed and at least one node exposing `nvidia.com/gpu`. An authenticated pull against `registry.redhat.io` (subscription-scoped service account token) and a default StorageClass supporting ReadWriteOnce volumes. Outbound egress to huggingface.co is required on first start for the model fetch."
+  },
+  "security": {
+    "scannedAt": "2026-04-15T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

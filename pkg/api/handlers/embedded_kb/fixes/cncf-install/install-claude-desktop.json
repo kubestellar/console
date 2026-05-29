@@ -1,0 +1,152 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-claude-desktop",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install Claude Desktop and Wire the KubeStellar Console MCP Server",
+    "description": "Claude Desktop is the Anthropic-official Claude chat app for macOS, Windows, and (via the web app) Linux. It supports the Model Context Protocol (MCP), which lets the desktop app talk to local MCP servers that expose tools. The KubeStellar Console ships a companion MCP server (`kubestellar-mcp`) that exposes cluster-aware tools to any MCP client — including Claude Desktop. This mission is a workstation setup: install Claude Desktop, add the kubestellar-mcp server to its configuration, and surface Claude Desktop as a provider in the KubeStellar Console agent selector dropdown so the Console can delegate chat to it. Upstream: https://claude.ai/download .",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install Claude Desktop",
+        "description": "Download the Claude Desktop installer from https://claude.ai/download . On macOS this is a `.dmg` that copies `Claude.app` to `/Applications`. On Windows it is a standard `.exe` installer. On Linux, use the web app at https://claude.ai — Linux does not currently have a dedicated desktop build, so the MCP bridge in this mission only applies to macOS and Windows. Launch the app and sign in with your Anthropic account. After installing on macOS, verify the app bundle is present:\n```bash\nls -ld '/Applications/Claude.app'\n```"
+      },
+      {
+        "title": "Locate the Claude Desktop config",
+        "description": "Claude Desktop reads its MCP server list from a JSON file:\n\n- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`\n- Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`\n\nIf the file does not exist yet, create it with an empty object:\n```bash\nmkdir -p ~/Library/Application\\ Support/Claude\necho '{}' > ~/Library/Application\\ Support/Claude/claude_desktop_config.json\n```"
+      },
+      {
+        "title": "Install kubestellar-mcp",
+        "description": "kubestellar-mcp is published on the KubeStellar Homebrew tap and as a standalone release binary. Install via Homebrew on macOS:\n```bash\nbrew tap kubestellar/tap\nbrew install kubestellar-mcp\nkubestellar-mcp --version\n```\nOn Windows, download the release binary from https://github.com/kubestellar/kubestellar-mcp/releases and add it to your PATH. The binary reads your default kubeconfig and exposes cluster tools to any MCP client."
+      },
+      {
+        "title": "Add kubestellar-mcp to Claude Desktop",
+        "description": "Edit the Claude Desktop config to register kubestellar-mcp as an MCP server. Replace `<path>` with the absolute path to the binary (find with `which kubestellar-mcp`):\n```json\n{\n  \"mcpServers\": {\n    \"kubestellar\": {\n      \"command\": \"/opt/homebrew/bin/kubestellar-mcp\",\n      \"args\": [],\n      \"env\": {\n        \"KUBECONFIG\": \"/Users/<you>/.kube/config\"\n      }\n    }\n  }\n}\n```\nClaude Desktop re-reads the config on restart, so quit the app completely (`Cmd+Q` on macOS) and relaunch it. On next launch, the MCP tool icon should appear in the chat composer — click it to see the kubestellar tools the server exposes."
+      },
+      {
+        "title": "Wire the KubeStellar Console Chat path at Claude Desktop",
+        "description": "Claude Desktop does not expose an HTTP server — it is a UI, not a runtime. However, the Console already registers a `claudecode` provider for the Claude CLI, and Claude Desktop on the same machine shares the same Anthropic session. Set these env vars on the Console backend host to have the Console chat path prefer Claude (via the CLI) when Claude Desktop is installed:\n```bash\nexport CLAUDE_DESKTOP_URL=https://claude.ai\nexport CLAUDE_DESKTOP_MODEL=claude-opus-4-6\n```\nThen restart `kc-agent` (or the Console backend). The agent selector dropdown should now list `Claude Desktop` as a chat-capable provider with the anthropic-local icon. If you want the Console to actually execute cluster actions (not just chat), use the `claude` provider (Claude CLI) instead — it is the tool-capable path. Claude Desktop chat is the passive reading path."
+      }
+    ],
+    "resolution": {
+      "summary": "A successful setup has Claude Desktop installed and signed in, `kubestellar-mcp` on the PATH and registered in `claude_desktop_config.json`, the kubestellar MCP tools visible from Claude Desktop's tool menu, and the KubeStellar Console agent selector listing `Claude Desktop` alongside `Claude Code (CLI)` and the other registered providers.",
+      "codeSnippets": [
+        "brew tap kubestellar/tap",
+        "brew install kubestellar-mcp",
+        "kubestellar-mcp --version"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove kubestellar-mcp from Claude Desktop config",
+        "description": "Edit `claude_desktop_config.json` and delete the `kubestellar` entry under `mcpServers`. Restart Claude Desktop so it picks up the change."
+      },
+      {
+        "title": "Uninstall kubestellar-mcp",
+        "description": "On macOS with Homebrew:\n```bash\nbrew uninstall kubestellar-mcp\nbrew untap kubestellar/tap\n```\nOn Windows, remove the binary from your PATH and delete it."
+      },
+      {
+        "title": "Uninstall Claude Desktop",
+        "description": "On macOS, drag `Claude.app` from `/Applications` to the Trash in Finder. Then, also in Finder, use Go menu → Go to Folder (`Cmd+Shift+G`) to open `~/Library/Application Support/Claude` and drag that folder to the Trash. On Windows, use the standard Add/Remove Programs uninstaller and delete `%APPDATA%\\Claude` from File Explorer. Before deleting, confirm the directory exists with a read-only `ls`:\n```bash\nls -ld ~/Library/Application\\ Support/Claude 2>/dev/null\n```"
+      },
+      {
+        "title": "Unset Console env vars",
+        "description": "Remove `CLAUDE_DESKTOP_URL` and `CLAUDE_DESKTOP_MODEL` from your shell profile and restart the Console backend:\n```bash\nunset CLAUDE_DESKTOP_URL CLAUDE_DESKTOP_MODEL\n```"
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Upgrade Claude Desktop in-place",
+        "description": "Claude Desktop auto-updates on launch. Accept the update prompt when it appears. The MCP server config is preserved across updates."
+      },
+      {
+        "title": "Upgrade kubestellar-mcp via Homebrew",
+        "description": "`brew upgrade kubestellar-mcp` refreshes to the latest release. On Windows, download the latest release binary from GitHub and replace the existing one."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "kubestellar MCP tools do not appear in Claude Desktop",
+        "description": "Open the Claude Desktop Developer menu (Cmd+Option+I on macOS) and check the MCP log for a startup error. Common causes are: (a) wrong `command` path — run `which kubestellar-mcp` and update the config, (b) stale kubeconfig path — point `KUBECONFIG` at an actual file, (c) the binary is not executable — run `chmod +x` on the downloaded binary. After fixing, fully quit Claude Desktop (`Cmd+Q`, not just close the window) and relaunch."
+      },
+      {
+        "title": "Console does not list Claude Desktop in the agent selector",
+        "description": "The Claude Desktop provider only appears if `CLAUDE_DESKTOP_URL` is set when the Console backend starts. Set the env var, restart the backend, and check the startup log for a provider-registration line. If the CLI-based `claude` provider is also available, it is the preferred default — Claude Desktop is only selected if the user picks it explicitly from the dropdown."
+      },
+      {
+        "title": "Claude Desktop prompts for API key on every request",
+        "description": "Claude Desktop uses your Anthropic session cookie for authentication. If you are being prompted repeatedly, sign out and back in, then restart the app. If the problem persists, check for a conflict with a browser password manager that may be overwriting cookies."
+      }
+    ],
+    "security": [
+      {
+        "title": "Session credentials live in the desktop app",
+        "description": "Claude Desktop stores your Anthropic session tokens in the OS keychain (macOS Keychain, Windows Credential Manager). Any process running as your user can read them — treat the workstation as sensitive. Do not sign into Claude Desktop on a shared machine. For a CI or server-side path, use the Anthropic HTTP API with a dedicated service account token instead."
+      },
+      {
+        "title": "MCP server grants cluster access",
+        "description": "Once kubestellar-mcp is registered in Claude Desktop, any message you send in the desktop app can invoke cluster tools through MCP. The server uses your default kubeconfig context — so if you are `cluster-admin`, so is every chat session. Create a restricted kubeconfig context (read-only, scoped to a specific namespace) and set `KUBECONFIG` to that file in the MCP config rather than your cluster-admin default. Review the tools the server exposes at https://github.com/kubestellar/kubestellar-mcp before enabling it against production clusters."
+      },
+      {
+        "title": "Chat content leaves the workstation",
+        "description": "Unlike llama.cpp, LocalAI, and the other in-cluster local LLM runners, Claude Desktop sends your prompts to Anthropic's hosted Claude models. Your chat content leaves the workstation. This is the correct tradeoff for most users — Claude is far more capable than any local model — but it is not a local-LLM posture. For a fully-offline path, see `install-llama-cpp`, `install-localai`, or `install-lm-studio`."
+      },
+      {
+        "title": "MCP server signed releases",
+        "description": "Install kubestellar-mcp from the signed Homebrew tap or the official GitHub release — not from a random fork. Verify the release signature if your threat model warrants it. kubestellar-mcp runs with the caller's privileges and reads kubeconfigs, so tampering with the binary is a privilege-escalation vector."
+      },
+      {
+        "title": "Relationship to the KubeStellar Console SECURITY-MODEL",
+        "description": "Claude Desktop + kubestellar-mcp is a workstation-centric posture, not a cluster-side posture. The KubeStellar Console's own security model (docs/security/SECURITY-MODEL.md in the kubestellar/console repo) is built around never letting kubeconfig files reach the LLM provider's HTTP request path. Claude Desktop + MCP bypasses that boundary — kubestellar-mcp runs locally, reads the kubeconfig you point it at, and executes tool calls directly. Use it for single-user workstation workflows; for multi-user or cluster-centric paths, stay on the Console's built-in chat path."
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "llm",
+      "chat",
+      "mcp",
+      "workstation",
+      "claude",
+      "anthropic"
+    ],
+    "cncfProjects": [],
+    "targetResourceKinds": [],
+    "difficulty": "beginner",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "workstation",
+      "homebrew"
+    ],
+    "maturity": "stable",
+    "projectVersion": "latest",
+    "containerImages": [],
+    "sourceUrls": {
+      "docs": "https://docs.anthropic.com/en/docs/claude-desktop",
+      "installDocs": "https://claude.ai/download",
+      "repo": "https://github.com/kubestellar/kubestellar-mcp",
+      "releases": "https://github.com/kubestellar/kubestellar-mcp/releases"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": "not-required",
+    "tools": [
+      "brew"
+    ],
+    "description": "A workstation running macOS or Windows (Linux is not supported by the desktop app yet), an Anthropic account, and kubestellar-mcp installed via Homebrew on macOS or the GitHub release binary on Windows. No Kubernetes cluster is required on the workstation itself, but a working kubeconfig is needed if you want the kubestellar MCP tools to actually reach a cluster."
+  },
+  "security": {
+    "scannedAt": "2026-04-15T00:00:00.000Z",
+    "scannerVersion": "manual-review-1.0.0",
+    "sanitized": true,
+    "findings": []
+  }
+}

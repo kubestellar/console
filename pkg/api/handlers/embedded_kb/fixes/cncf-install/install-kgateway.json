@@ -1,0 +1,130 @@
+{
+  "version": "kc-mission-v1",
+  "name": "install-kgateway",
+  "missionClass": "install",
+  "author": "KubeStellar Bot",
+  "authorGithub": "kubestellar",
+  "mission": {
+    "title": "Install and Configure kgateway on Kubernetes",
+    "description": "kgateway is a resilient, performance-oriented control plane that implements the Kubernetes Gateway API for Envoy. It is the most widely deployed gateway in Kubernetes for microservices, supporting API gateway, hybrid application migration, and complex tenancy environments.",
+    "type": "deploy",
+    "status": "completed",
+    "steps": [
+      {
+        "title": "Install Gateway API CRDs",
+        "description": "Install the Kubernetes Gateway API CRDs which kgateway requires.\n```bash\nkubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml\n```"
+      },
+      {
+        "title": "Install kgateway CRDs via Helm",
+        "description": "Install the kgateway CRDs from the repository's Helm chart.\n```bash\ngit clone https://github.com/kgateway-dev/kgateway.git\ncd kgateway\nhelm install kgateway-crds install/helm/kgateway-crds --namespace kgateway-system --create-namespace\n```"
+      },
+      {
+        "title": "Install kgateway using Helm",
+        "description": "Deploy kgateway using the Helm chart from the repository.\n```bash\nhelm install kgateway install/helm/kgateway --namespace kgateway-system\n```"
+      },
+      {
+        "title": "Verify the installation",
+        "description": "Check that kgateway pods are running and the Gateway API resources are available.\n```bash\nkubectl get pods --namespace kgateway-system\nkubectl get gatewayclass\n```"
+      },
+      {
+        "title": "Create a sample Gateway",
+        "description": "Create a Gateway resource to verify the installation is working.\n```bash\ncat <<EOF | kubectl apply -f -\napiVersion: gateway.networking.k8s.io/v1\nkind: Gateway\nmetadata:\n  name: example-gateway\n  namespace: kgateway-system\nspec:\n  gatewayClassName: kgateway\n  listeners:\n  - name: http\n    port: 8080\n    protocol: HTTP\nEOF\n```"
+      }
+    ],
+    "resolution": {
+      "summary": "A successful installation will show kgateway pods running in the kgateway-system namespace with the GatewayClass registered. You can then create Gateway and HTTPRoute resources to manage traffic routing via Envoy.",
+      "codeSnippets": [
+        "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml",
+        "helm install kgateway-crds install/helm/kgateway-crds --namespace kgateway-system --create-namespace",
+        "helm install kgateway install/helm/kgateway --namespace kgateway-system",
+        "kubectl get pods --namespace kgateway-system"
+      ]
+    },
+    "uninstall": [
+      {
+        "title": "Remove Gateway resources",
+        "description": "Delete all Gateway and HTTPRoute resources before uninstalling kgateway."
+      },
+      {
+        "title": "Uninstall kgateway Helm releases",
+        "description": "Remove the kgateway and kgateway-crds Helm releases."
+      },
+      {
+        "title": "Clean up namespace",
+        "description": "Delete the kgateway-system namespace and remove Gateway API CRDs if no longer needed."
+      }
+    ],
+    "upgrade": [
+      {
+        "title": "Pull latest source",
+        "description": "Update the kgateway repository to get the latest Helm charts."
+      },
+      {
+        "title": "Upgrade via Helm",
+        "description": "Run helm upgrade for both the CRDs and the main kgateway chart."
+      }
+    ],
+    "troubleshooting": [
+      {
+        "title": "GatewayClass not found",
+        "description": "Ensure the kgateway CRDs were installed before the main chart.\n```bash\nkubectl get crd | grep gateway\n```"
+      },
+      {
+        "title": "Gateway stuck in pending",
+        "description": "Check the kgateway controller logs for errors.\n```bash\nkubectl logs -l app.kubernetes.io/name=kgateway --namespace kgateway-system\n```"
+      }
+    ]
+  },
+  "metadata": {
+    "tags": [
+      "installation",
+      "configuration",
+      "cncf",
+      "networking",
+      "api-gateway",
+      "sandbox"
+    ],
+    "cncfProjects": [
+      "kgateway"
+    ],
+    "targetResourceKinds": [
+      "Deployment",
+      "Service",
+      "Namespace",
+      "CustomResourceDefinition"
+    ],
+    "difficulty": "intermediate",
+    "issueTypes": [
+      "installation",
+      "configuration"
+    ],
+    "installMethods": [
+      "helm"
+    ],
+    "maturity": "sandbox",
+    "projectVersion": "v2.2.2",
+    "containerImages": [
+      "ghcr.io/kgateway-dev/kgateway:v2.2.2"
+    ],
+    "sourceUrls": {
+      "docs": "https://kgateway.dev/docs",
+      "repo": "https://github.com/kgateway-dev/kgateway"
+    },
+    "qualityScore": 100
+  },
+  "prerequisites": {
+    "kubernetes": ">=1.24",
+    "tools": [
+      "helm",
+      "kubectl",
+      "git"
+    ],
+    "description": "Ensure you have a Kubernetes cluster running version 1.24 or higher, along with Helm, kubectl, and git installed."
+  },
+  "security": {
+    "scannedAt": "2026-03-18T18:00:00.000Z",
+    "scannerVersion": "manual-audit",
+    "sanitized": true,
+    "findings": []
+  }
+}
