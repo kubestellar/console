@@ -164,7 +164,9 @@ const CACHE_DB_NAME = 'kc_cache'
 const STORAGE_CLEANUP_TIMEOUT_MS = 5_000
 const STORAGE_CLEANUP_POLL_INTERVAL_MS = 100
 const STORAGE_CLEANUP_POLL_ATTEMPTS = 20
+const SOFT_NAV_SETTER_TIMEOUT_MS = 2_000
 const COLD_BATCH_RESET_WINDOW_NAME = '__kc-cache-test-cold-reset__'
+const COMPLIANCE_ROUTE = '/__compliance/all-cards'
 const EMPTY_SSE_BODY = ': keep-alive\n\n'
 const COLD_BATCH_KEEP_LOCAL_STORAGE_KEYS = [
   'token',
@@ -411,20 +413,51 @@ function mergeRecoveredWarmSnapshot(
   }
 }
 
+async function waitForComplianceBatchManifest(
+  page: Page,
+  batch: number,
+  batchSize: number,
+  timeoutMs = BATCH_NAV_TIMEOUT_MS
+): Promise<ManifestData> {
+  const handle = await page.waitForFunction(
+    ({ expectedBatch, expectedBatchSize }: { expectedBatch: number; expectedBatchSize: number }) => {
+      const manifest = (window as Window & { __COMPLIANCE_MANIFEST__?: ManifestData }).__COMPLIANCE_MANIFEST__
+      const marker = document.querySelector('[data-testid="compliance-manifest"]')
+      const currentUrl = new URL(window.location.href)
+      const currentBatch = Number.parseInt(currentUrl.searchParams.get('batch') || '', 10) - 1
+      const currentBatchSize = Number.parseInt(currentUrl.searchParams.get('size') || '', 10)
+
+      if (!manifest || manifest.batch !== expectedBatch || manifest.batchSize !== expectedBatchSize) return null
+      if (!marker) return null
+      if (marker.getAttribute('data-compliance-batch') !== String(expectedBatch)) return null
+      if (marker.getAttribute('data-compliance-batch-size') !== String(expectedBatchSize)) return null
+      if (currentBatch !== expectedBatch || currentBatchSize !== expectedBatchSize) return null
+
+      return manifest
+    },
+    { expectedBatch: batch, expectedBatchSize: batchSize },
+    { timeout: timeoutMs }
+  )
+
+  return (await handle.jsonValue()) as ManifestData
+}
+
 /**
  * Soft navigation — calls the React-exposed __COMPLIANCE_SET_BATCH__ setter
  * to switch batches via useSearchParams without a full page reload, preserving
- * React Query's in-memory cache.  Falls back to page.goto if the setter is
- * unavailable.
+ * React Query's in-memory cache. Falls back to a full navigation only if the
+ * setter stays unavailable long enough to exceed a short retry window.
  */
 async function softNavigateToBatch(
   page: Page,
   batch: number,
   batchSize = 24
 ): Promise<ManifestData | null> {
-  const hasSetter = await page.evaluate(() =>
-    typeof (window as Window & { __COMPLIANCE_SET_BATCH__?: unknown }).__COMPLIANCE_SET_BATCH__ === 'function'
-  )
+  const hasSetter = await page.waitForFunction(
+    () => typeof (window as Window & { __COMPLIANCE_SET_BATCH__?: unknown }).__COMPLIANCE_SET_BATCH__ === 'function',
+    undefined,
+    { timeout: SOFT_NAV_SETTER_TIMEOUT_MS }
+  ).then(() => true).catch(() => false)
 
   if (hasSetter) {
     await page.evaluate(
@@ -433,28 +466,16 @@ async function softNavigateToBatch(
       },
       { b: batch, s: batchSize }
     )
-    // Wait for cards to appear after React re-render
-    try {
-      await page.waitForSelector('[data-card-id]', { timeout: 10000 })
-    } catch {
-      console.log(`[CacheTest] softNavigateToBatch: no cards appeared for batch ${batch}`)
-    }
-  } else {
-    console.log(`[CacheTest] softNavigateToBatch: __COMPLIANCE_SET_BATCH__ not available, falling back to page.goto`)
-    await page.goto(`/compliance-perf-test?batch=${batch + 1}&size=${batchSize}`, { waitUntil: 'networkidle' })
-    // Wait for cards to appear after full page navigation
-    try {
-      await page.waitForSelector('[data-card-id]', { timeout: 10000 })
-    } catch {
-      console.log(`[CacheTest] softNavigateToBatch: no cards appeared for batch ${batch} after page.goto`)
-    }
+    return await waitForComplianceBatchManifest(page, batch, batchSize)
   }
 
-  // Read manifest
-  const manifest = await page.evaluate(() =>
-    (window as Window & { __COMPLIANCE_MANIFEST__?: unknown }).__COMPLIANCE_MANIFEST__
-  ) as ManifestData | undefined
-  return manifest ?? null
+  console.log(`[CacheTest] softNavigateToBatch: __COMPLIANCE_SET_BATCH__ unavailable, falling back to ${COMPLIANCE_ROUTE}`)
+  await page.goto(`${COMPLIANCE_ROUTE}?batch=${batch + 1}&size=${batchSize}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: BATCH_NAV_TIMEOUT_MS,
+  })
+
+  return await waitForComplianceBatchManifest(page, batch, batchSize)
 }
 
 // ---------------------------------------------------------------------------
