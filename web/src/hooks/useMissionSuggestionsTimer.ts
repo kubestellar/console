@@ -66,16 +66,16 @@ export function useMissionSuggestionsTimer({
   }, [])
 
   // Pause countdown on hover, resume on leave
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     if (countdownRef.current) {
       clearInterval(countdownRef.current)
       countdownRef.current = null
     }
-  }
+  }, [])
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (!minimized) startCountdown()
-  }
+  }, [minimized, startCountdown])
 
   return {
     countdown,
