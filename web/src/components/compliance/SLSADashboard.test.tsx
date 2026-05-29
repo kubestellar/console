@@ -3,6 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { authFetch } from '../../lib/api'
 import { SLSADashboardContent as SLSADashboard } from './SLSADashboard'
 
+/**
+ * Tests for SLSADashboard.
+ * Health status is displayed via SLSA level indicators and attestation verification status.
+ */
+
 /* ── Mock authFetch at the top level ─────────────────────────────── */
 
 

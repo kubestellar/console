@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
+/**
+ * Dashboard runtime tests.
+ * Health status indicator functionality is tested separately in DashboardHealthIndicator.test.tsx.
+ */
+
 // ---------------------------------------------------------------------------
 // Mocks — declared before component import
 // ---------------------------------------------------------------------------

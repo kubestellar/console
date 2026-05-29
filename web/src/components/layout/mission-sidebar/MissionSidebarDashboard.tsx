@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { MISSION_CONTROL_BUTTON_CLASSES } from './missionSidebarConstants'
 
+/**
+ * Mission sidebar dashboard component.
+ * Displays mission control actions. System health status is shown in the main dashboard header.
+ */
+
 interface MissionSidebarDashboardProps {
   showNewMission: boolean
   listTotalMissions: number

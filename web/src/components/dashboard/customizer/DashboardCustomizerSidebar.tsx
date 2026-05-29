@@ -1,6 +1,7 @@
 /**
  * DashboardCustomizerSidebar — left navigation for Console Studio.
  * Clean flat nav with no search (only 5 items) and no footer controls.
+ * Health status indicators are displayed in the main dashboard, not in Studio navigation.
  */
 import { CUSTOMIZER_NAV, type CustomizerSection } from './customizerNav'
 import { cn } from '../../../lib/cn'

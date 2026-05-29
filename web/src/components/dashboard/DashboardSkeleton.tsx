@@ -1,3 +1,7 @@
+/**
+ * Loading skeleton for dashboard page.
+ * Displays placeholder UI while health status and cards are being loaded.
+ */
 export function DashboardSkeleton() {
   return (
     <div data-testid="dashboard-page" className="pt-4">

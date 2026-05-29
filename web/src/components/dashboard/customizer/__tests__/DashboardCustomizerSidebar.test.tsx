@@ -6,6 +6,8 @@
  * - Highlights active section
  * - Calls onSectionChange when an item is clicked
  * - Shows divider before items that have dividerBefore
+ * 
+ * Health status indicators are managed by the parent dashboard components.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'

@@ -4,6 +4,11 @@ import type { PayloadProject } from '../types'
 import { CategoryIcon } from './fixerDefinitionPanel.constants'
 import { getCategoryCounts, getPriorityCounts, getTotalDependencies } from './fixerDefinitionPanel.utils'
 
+/**
+ * Mission summary sidebar for mission control.
+ * Displays project overview with priority and category counts (status indicators).
+ */
+
 interface MissionSummarySidebarProps {
   projects: PayloadProject[]
   selectedProjectName?: string

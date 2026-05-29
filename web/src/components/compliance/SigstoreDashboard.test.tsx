@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SigstoreDashboard, { SigstoreDashboardContent } from './SigstoreDashboard'
 import { authFetch } from '../../lib/api'
 
+/**
+ * Tests for SigstoreDashboard.
+ * Health status is displayed via verification status indicators and summary stats.
+ */
+
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn(),
 }))

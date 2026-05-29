@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+/**
+ * Tests for KubecostOverview card component.
+ * Health status is reported via useCardLoadingState hook in the card implementation.
+ */
+
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,

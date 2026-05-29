@@ -4,6 +4,12 @@ import { WidgetExportModal } from '../widgets/WidgetExportModal'
 import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
 import type { DashboardState } from './DashboardState'
 
+/**
+ * Dashboard modals container component.
+ * Health status indicators are managed by DashboardHealthIndicator in the parent DashboardView.
+ * This component coordinates modal state for card configuration, customization, and deployment.
+ */
+
 const DashboardCustomizer = safeLazy(() => import('./customizer/DashboardCustomizer'), 'DashboardCustomizer')
 const ConfigureCardModal = safeLazy(() => import('./ConfigureCardModal'), 'ConfigureCardModal')
 

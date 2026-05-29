@@ -3,6 +3,8 @@
  * (DragPreviewCard, DashboardHeader, DashboardCardsSection,
  * DashboardEmptyCards, DashboardCardsGrid). SortableDashboardCard is
  * skipped because it requires a full dnd-kit context.
+ * 
+ * Health status indicators are tested in DashboardHealthIndicator.test.tsx.
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'

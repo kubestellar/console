@@ -1,5 +1,7 @@
 /**
  * StatsOverview Component Tests
+ * 
+ * StatsOverview displays health status via color-coded stat blocks and value indicators.
  */
 import { describe, it, expect, vi } from 'vitest'
 

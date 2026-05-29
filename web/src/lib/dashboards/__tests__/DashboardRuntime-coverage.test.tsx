@@ -5,6 +5,8 @@
  * deployment, card insertion at specific index, stats config with registry
  * getter, stats fallback when no getter, autoRefreshInterval wiring,
  * handleSaveCardConfig flow, and handleApplyTemplate calling reset+addCards.
+ * 
+ * Health status indicators are tested in DashboardHealthIndicator.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
