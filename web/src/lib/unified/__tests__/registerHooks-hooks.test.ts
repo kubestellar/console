@@ -107,6 +107,11 @@ vi.mock('../../../hooks/useCachedData', () => ({
   useCachedEvents: (...a: unknown[]) => mockUseCachedEvents(...a),
   useCachedDeployments: (...a: unknown[]) => mockUseCachedDeployments(...a),
   useCachedDeploymentIssues: (...a: unknown[]) => mockUseCachedDeploymentIssues(...a),
+  useCachedHPAs: vi.fn().mockReturnValue({ hpas: [], isLoading: false, error: null, refetch: vi.fn() }),
+  useCachedReplicaSets: vi.fn().mockReturnValue({ replicasets: [], isLoading: false, error: null, refetch: vi.fn() }),
+  useCachedStatefulSets: vi.fn().mockReturnValue({ statefulsets: [], isLoading: false, error: null, refetch: vi.fn() }),
+  useCachedDaemonSets: vi.fn().mockReturnValue({ daemonsets: [], isLoading: false, error: null, refetch: vi.fn() }),
+  useCachedCronJobs: vi.fn().mockReturnValue({ cronjobs: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 
 vi.mock('../../../hooks/mcp', () => ({
