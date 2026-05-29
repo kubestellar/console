@@ -12,10 +12,12 @@ import {
   ExternalLink,
   Play,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
 import { activatePublicDemoMode } from '../lib/demoMode'
 import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
 import { ROUTES } from '../config/routes'
+import { useToast } from '../components/ui/Toast'
 
 /* ------------------------------------------------------------------ */
 /*  SEO / meta constants                                               */
@@ -153,6 +155,8 @@ function sanitizeRef(raw: string | null): string {
 export function Welcome() {
   const [searchParams] = useSearchParams()
   const ref = sanitizeRef(searchParams.get('ref'))
+  const { t } = useTranslation('errors')
+  const { showToast } = useToast()
   const [cardCount, setCardCount] = useState(HERO_STATS_PLACEHOLDER)
   useEffect(() => {
     let cancelled = false
@@ -163,11 +167,12 @@ export function Welcome() {
       })
       .catch((err: unknown) => {
         console.error('Welcome: failed to load cardRegistry chunk', err)
+        showToast(t('messages.loadFailed'), 'error')
       })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [showToast, t])
 
   useEffect(() => {
     const prevTitle = document.title
