@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom'
 
 const changeLanguage = vi.fn()
 const safeSetItem = vi.fn()
+const mockIsDemoModeForced = vi.fn()
 
 const modalState = vi.hoisted(() => ({
   isOpen: false,
@@ -63,7 +64,7 @@ vi.mock('../../../lib/i18n', () => ({
 }))
 
 vi.mock('../../../lib/demoMode', () => ({
-  isDemoModeForced: () => true,
+  isDemoModeForced: () => mockIsDemoModeForced(),
 }))
 
 const emitLanguageChanged = vi.fn()
@@ -89,6 +90,26 @@ vi.mock('../../setup/DeveloperSetupDialog', () => ({
   DeveloperSetupDialog: () => null,
 }))
 
+vi.mock('../../../lib/modals/ConfirmDialog', () => ({
+  ConfirmDialog: ({ isOpen, onClose, onConfirm, title, message, confirmLabel }: {
+    isOpen: boolean
+    onClose: () => void
+    onConfirm: () => void
+    title: string
+    message: string
+    confirmLabel?: string
+  }) => (
+    isOpen ? (
+      <div data-testid="confirm-dialog">
+        <span>{title}</span>
+        <span>{message}</span>
+        <button onClick={onClose}>cancel-confirm</button>
+        <button onClick={onConfirm}>{confirmLabel || 'confirm'}</button>
+      </div>
+    ) : null
+  ),
+}))
+
 describe('UserProfileDropdown', () => {
   beforeEach(() => {
     modalState.isOpen = false
@@ -96,6 +117,8 @@ describe('UserProfileDropdown', () => {
     changeLanguage.mockResolvedValue(undefined)
     safeSetItem.mockReset()
     emitLanguageChanged.mockReset()
+    mockIsDemoModeForced.mockReset()
+    mockIsDemoModeForced.mockReturnValue(false)
   })
 
   it('exports UserProfileDropdown', async () => {
@@ -168,5 +191,26 @@ describe('UserProfileDropdown', () => {
       expect(safeSetItem).toHaveBeenCalledWith('i18nextLng', 'zh')
       expect(emitLanguageChanged).toHaveBeenCalledWith('zh')
     })
+  })
+
+  it('opens a logout confirmation and waits for confirm before logging out', async () => {
+    modalState.isOpen = true
+    const onLogout = vi.fn()
+    const { UserProfileDropdown } = await import('../UserProfileDropdown')
+    render(
+      <MemoryRouter>
+        <UserProfileDropdown user={{ github_login: 'testuser', email: 'test@example.com', role: 'viewer' }} onLogout={onLogout} />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByText('actions.signOut'))
+
+    expect(onLogout).not.toHaveBeenCalled()
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByText('confirmDialog.logoutTitle')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('actions.logout'))
+
+    expect(onLogout).toHaveBeenCalledTimes(1)
   })
 })

@@ -7,6 +7,31 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}))
+
+vi.mock('../../../modals/ConfirmDialog', () => ({
+  ConfirmDialog: ({ isOpen, onClose, onConfirm, title, message, confirmLabel }: {
+    isOpen: boolean
+    onClose: () => void
+    onConfirm: () => void
+    title: string
+    message: string
+    confirmLabel?: string
+  }) => (
+    isOpen ? (
+      <div data-testid="confirm-dialog">
+        <span>{title}</span>
+        <span>{message}</span>
+        <button onClick={onClose}>cancel-confirm</button>
+        <button onClick={onConfirm}>{confirmLabel || 'confirm'}</button>
+      </div>
+    ) : null
+  ),
+}))
+
 import { UnifiedDashboard } from '../UnifiedDashboard'
 import type { UnifiedDashboardConfig, DashboardCardPlacement } from '../../types'
 
@@ -328,33 +353,47 @@ describe('Reset to defaults', () => {
     expect(screen.getByText('Reset')).toBeDefined()
   })
 
-  it('restores default cards on reset click', () => {
+  it('opens a confirmation dialog before resetting cards', () => {
     const config = makeConfig()
     render(<UnifiedDashboard config={config} />)
 
-    // Remove a card
     const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
     act(() => { onRemoveCard('card-1') })
 
-    // Click reset
     fireEvent.click(screen.getByText('Reset'))
+
+    const cards = capturedGridProps.cards as DashboardCardPlacement[]
+    expect(cards).toHaveLength(1)
+    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByText('confirmDialog.resetDashboardTitle')).toBeInTheDocument()
+  })
+
+  it('restores default cards after reset is confirmed', () => {
+    const config = makeConfig()
+    render(<UnifiedDashboard config={config} />)
+
+    const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
+    act(() => { onRemoveCard('card-1') })
+
+    fireEvent.click(screen.getByText('Reset'))
+    fireEvent.click(screen.getByText('actions.reset'))
 
     const cards = capturedGridProps.cards as DashboardCardPlacement[]
     expect(cards).toHaveLength(2)
   })
 
-  it('calls localStorage.removeItem on reset when storageKey is set', () => {
+  it('calls localStorage.removeItem on confirmed reset when storageKey is set', () => {
     const storageKey = 'test-dashboard-cards'
     const config = makeConfig({ storageKey })
-    // Store a different card set so initial state is customized
     localStorage.setItem(storageKey, JSON.stringify([makeCard('custom')]))
 
     const removeSpy = vi.spyOn(localStorage, 'removeItem')
 
     render(<UnifiedDashboard config={config} />)
 
-    // Cards loaded from localStorage differ from config.cards, so Reset is visible
     fireEvent.click(screen.getByText('Reset'))
+    fireEvent.click(screen.getByText('actions.reset'))
+
     expect(removeSpy).toHaveBeenCalledWith(storageKey)
     removeSpy.mockRestore()
   })

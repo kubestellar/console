@@ -4,6 +4,7 @@ import type { QuantumAuthStatus, QuantumSystemStatus } from '../../../../hooks/u
 
 const mockUseQuantumSystemStatus = vi.fn()
 const mockUseQuantumAuthStatus = vi.fn()
+const mockShowToast = vi.fn()
 
 vi.mock('../../../../hooks/useCachedQuantum', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../hooks/useCachedQuantum')>()
@@ -44,6 +45,20 @@ vi.mock('../../../../hooks/useQASMFiles', () => ({
     isLoading: false,
     error: null,
   }),
+}))
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}))
+
+vi.mock('../../../ui/Toast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}))
+
+vi.mock('../CustomQASMModal', () => ({
+  CustomQASMModal: ({ isOpen, onSubmit }: { isOpen: boolean; onSubmit: (content: string) => void }) => (
+    isOpen ? <button data-testid="custom-qasm-submit" onClick={() => onSubmit('OPENQASM 2.0;')}>Submit custom QASM</button> : null
+  ),
 }))
 
 import { QuantumControlPanel } from '../QuantumControlPanel'
@@ -139,6 +154,7 @@ function selectIbmBackend(container: HTMLElement) {
 describe('QuantumControlPanel — auth-status polling gating', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockShowToast.mockReset()
     mockUseAuth.mockReturnValue(defaultAuthReturn())
     mockUseQuantumSystemStatus.mockReturnValue(statusHookReturn())
     mockUseQuantumAuthStatus.mockReturnValue(authHookReturn())
@@ -277,6 +293,28 @@ describe('QuantumControlPanel — error classification', () => {
     const fatal = screen.getByTestId('quantum-control-panel-fatal-banner')
     expect(fatal).toBeInTheDocument()
     expect(fatal).toHaveTextContent('invalid api key')
+  })
+})
+
+describe('QuantumControlPanel — feedback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockShowToast.mockReset()
+    mockUseAuth.mockReturnValue(defaultAuthReturn())
+    mockUseQuantumSystemStatus.mockReturnValue(statusHookReturn())
+    mockUseQuantumAuthStatus.mockReturnValue(authHookReturn())
+  })
+
+  it('shows a success toast after saving custom QASM content', () => {
+    const { container } = render(<QuantumControlPanel />)
+    const selects = container.querySelectorAll('select')
+    const qasmSelect = selects[1] as HTMLSelectElement
+
+    fireEvent.change(qasmSelect, { target: { value: 'custom' } })
+    fireEvent.click(screen.getByTestId('custom-qasm-submit'))
+
+    expect(mockShowToast).toHaveBeenCalledWith('quantumControlPanel.customQasmSaved', 'success')
+    expect(screen.queryByTestId('custom-qasm-submit')).toBeNull()
   })
 })
 
