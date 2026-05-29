@@ -18,6 +18,7 @@ import {
   type QuantumSystemStatus,
 } from '../../../hooks/useCachedQuantum'
 import { useToast } from '../../ui/Toast'
+import { ConfirmDialog } from '../../../lib/modals/ConfirmDialog'
 
 interface ControlState {
   backend: string
@@ -219,7 +220,7 @@ export const QuantumControlPanel: React.FC = () => {
   const handleOpenCredentialsDialog = useCallback(() => {
     const handleSaveCredentials = async (form: { apiKey: string; crn: string }) => {
       if (!form.apiKey.trim() || !form.crn.trim()) {
-        throw new Error('Both API Key and CRN are required')
+        throw new Error(t('quantumControlPanel.credentialFieldsRequired'))
       }
 
       const res = await fetch('/api/quantum/auth/save', {
@@ -235,23 +236,24 @@ export const QuantumControlPanel: React.FC = () => {
 
       if (!res.ok) {
         const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to save credentials')
+        throw new Error(errorData.error || t('quantumControlPanel.saveCredentialsFailed'))
       }
 
       setMutationError(null)
       await refetchAuthStatus()
+      showToast(t('quantumControlPanel.ibmCredentialsSaved'), 'success')
     }
 
     openDrillDown({
       type: 'quantum-credentials',
-      title: 'IBM Quantum Credentials',
+      title: t('quantumControlPanel.ibmCredentialsTitle'),
       data: {
         ibmAuthenticated,
         onSave: handleSaveCredentials,
         onClose: closeDrillDown,
       },
     })
-  }, [ibmAuthenticated, openDrillDown, closeDrillDown, refetchAuthStatus, token])
+  }, [ibmAuthenticated, openDrillDown, closeDrillDown, refetchAuthStatus, showToast, t, token])
 
   // Clear IBM Quantum credentials
   const handleClearCredentials = useCallback(async () => {
@@ -266,20 +268,21 @@ export const QuantumControlPanel: React.FC = () => {
 
       if (!res.ok) {
         const errorData = await res.json()
-        throw new Error(errorData.error || 'Failed to clear credentials')
+        throw new Error(errorData.error || t('quantumControlPanel.clearCredentialsFailed'))
       }
 
       setSessionValidatedAt(null)
       await refetchAuthStatus()
       setShowClearCredentialsDialog(false)
       setMutationError(null)
+      showToast(t('quantumControlPanel.ibmCredentialsCleared'), 'success')
     } catch (err) {
       console.error('Error clearing credentials:', err)
-      setMutationError(err instanceof Error ? err.message : 'Unknown error')
+      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.unknownError'))
     } finally {
       setIsClearing(false)
     }
-  }, [refetchAuthStatus, token])
+  }, [refetchAuthStatus, showToast, t, token])
 
   useEffect(() => {
     if (!showClearCredentialsDialog || isClearing) return
@@ -357,11 +360,11 @@ export const QuantumControlPanel: React.FC = () => {
           setMutationError(null)
       } catch (err) {
           console.error('Error polling after execution:', err)
-          setMutationError('Execution started, but status refresh failed')
+          setMutationError(t('quantumControlPanel.executionRefreshFailed'))
       }
       }, EXECUTION_STATUS_POLL_DELAY_MS)
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Execution error')
+      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.executionError'))
     } finally {
       setControl(prev => ({ ...prev, executing: false }))
     }
@@ -378,14 +381,14 @@ export const QuantumControlPanel: React.FC = () => {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
-      if (!response.ok) throw new Error('Failed to toggle loop mode')
+      if (!response.ok) throw new Error(t('quantumControlPanel.loopModeToggleFailed'))
 
       // Fix #1: Don't rely on response.loop_mode - refetch status instead
       await new Promise(resolve => setTimeout(resolve, LOOP_MODE_STATUS_SYNC_DELAY_MS))
       await refetchStatus()
       setMutationError(null)
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : 'Failed to toggle loop mode')
+      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.loopModeToggleFailed'))
     }
   }
 
@@ -469,7 +472,7 @@ export const QuantumControlPanel: React.FC = () => {
             >
               <div className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">IBM Credentials</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('quantumControlPanel.ibmCredentialsLabel')}</span>
               </div>
               <div className={cn('flex items-center gap-1 text-xs font-semibold',
                 ibmCredentialState === 'configured' && 'text-green-600 dark:text-green-400',
@@ -507,46 +510,24 @@ export const QuantumControlPanel: React.FC = () => {
                 onClick={() => setShowClearCredentialsDialog(true)}
                 disabled={isClearing}
                 className="px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 flex items-center"
-                title="Clear IBM Credentials"
+                title={t('quantumControlPanel.clearCredentials')}
               >
                 <Trash2 className={`w-4 h-4 ${isClearing ? 'text-gray-400' : 'text-red-600 dark:text-red-400'}`} />
               </button>
             )}
           </div>
 
-          {/* Clear Credentials Confirmation Dialog */}
-          {showClearCredentialsDialog && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div
-                className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm mx-4 shadow-lg"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="quantum-clear-credentials-title"
-                onClick={event => event.stopPropagation()}
-              >
-                <h3 id="quantum-clear-credentials-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Clear Credentials?</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Are you sure you want to delete your IBM Quantum credentials? You'll need to enter them again to run circuits on IBM hardware.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowClearCredentialsDialog(false)}
-                    disabled={isClearing}
-                    className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleClearCredentials}
-                    disabled={isClearing}
-                    className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:opacity-50 text-white font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    {isClearing ? 'Clearing...' : 'Clear'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ConfirmDialog
+            isOpen={showClearCredentialsDialog}
+            onClose={() => setShowClearCredentialsDialog(false)}
+            onConfirm={handleClearCredentials}
+            title={t('quantumControlPanel.clearCredentialsTitle')}
+            message={t('quantumControlPanel.clearCredentialsMessage')}
+            confirmLabel={t('quantumControlPanel.clearCredentials')}
+            cancelLabel={t('common:actions.cancel')}
+            variant="danger"
+            isLoading={isClearing}
+          />
 
           {/* Backend Selection */}
           {(() => {

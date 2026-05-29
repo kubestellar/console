@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { QuantumAuthStatus, QuantumSystemStatus } from '../../../../hooks/useCachedQuantum'
 
 const mockUseQuantumSystemStatus = vi.fn()
@@ -150,6 +150,10 @@ function selectIbmBackend(container: HTMLElement) {
   const select = container.querySelector('select') as HTMLSelectElement
   fireEvent.change(select, { target: { value: 'qx5' } })
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('QuantumControlPanel — auth-status polling gating', () => {
   beforeEach(() => {
@@ -315,6 +319,58 @@ describe('QuantumControlPanel — feedback', () => {
 
     expect(mockShowToast).toHaveBeenCalledWith('quantumControlPanel.customQasmSaved', 'success')
     expect(screen.queryByTestId('custom-qasm-submit')).toBeNull()
+  })
+
+  it('opens the credentials drilldown with translated copy and shows a success toast after save', async () => {
+    const refetchAuthStatus = vi.fn().mockResolvedValue(undefined)
+    mockUseQuantumAuthStatus.mockReturnValue(authHookReturn({ refetch: refetchAuthStatus }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({}),
+    }))
+
+    render(<QuantumControlPanel />)
+    fireEvent.click(screen.getByText('quantumControlPanel.ibmCredentialsLabel'))
+
+    expect(mockOpenDrillDown).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'quantum-credentials',
+      title: 'quantumControlPanel.ibmCredentialsTitle',
+    }))
+
+    const drillDownConfig = mockOpenDrillDown.mock.calls.at(-1)?.[0]
+    await drillDownConfig.data.onSave({ apiKey: 'test-key', crn: 'test-crn' })
+
+    expect(refetchAuthStatus).toHaveBeenCalled()
+    expect(mockShowToast).toHaveBeenCalledWith('quantumControlPanel.ibmCredentialsSaved', 'success')
+  })
+
+  it('uses ConfirmDialog and shows a success toast after clearing credentials', async () => {
+    const refetchAuthStatus = vi.fn().mockResolvedValue(undefined)
+    mockUseQuantumAuthStatus.mockReturnValue(authHookReturn({
+      data: {
+        authenticated: false,
+        tokenStored: true,
+        lastIbmError: null,
+      },
+      refetch: refetchAuthStatus,
+    }))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({}),
+    }))
+
+    render(<QuantumControlPanel />)
+    fireEvent.click(screen.getByTitle('quantumControlPanel.clearCredentials'))
+
+    expect(screen.getByText('quantumControlPanel.clearCredentialsTitle')).toBeInTheDocument()
+    expect(screen.getByText('quantumControlPanel.clearCredentialsMessage')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'quantumControlPanel.clearCredentials' }))
+
+    await waitFor(() => {
+      expect(refetchAuthStatus).toHaveBeenCalled()
+      expect(mockShowToast).toHaveBeenCalledWith('quantumControlPanel.ibmCredentialsCleared', 'success')
+    })
   })
 })
 
