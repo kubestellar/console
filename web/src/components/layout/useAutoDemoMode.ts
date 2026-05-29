@@ -61,6 +61,7 @@ export function useAutoDemoMode({
       setDemoMode(false, true)
     } else if (demoReEnableTimerRef.current) {
       clearTimeout(demoReEnableTimerRef.current)
+      userToggledOffRef.current = false
     }
 
     return () => {
