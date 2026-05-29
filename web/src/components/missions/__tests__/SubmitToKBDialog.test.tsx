@@ -7,7 +7,6 @@
  */
 
 import type React from 'react'
-import * as ReactModule from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { MockedFunction } from 'vitest'
@@ -140,21 +139,29 @@ const DEFAULT_PROPS = {
 
 const SUBMIT_DIALOG_STATE_CALLS_PER_RENDER = 5
 
-function mockUseStateAtCall(callIndex: number, forcedValue: unknown) {
-  const actualUseState = ReactModule.useState
+async function importSubmitToKBDialogWithForcedState(callIndex: number, forcedValue: unknown) {
+  vi.resetModules()
+  const actualReact = await vi.importActual<typeof import('react')>('react')
   let callCount = 0
 
-  return vi.spyOn(ReactModule, 'useState').mockImplementation(((initial: unknown) => {
-    callCount += 1
-    if (
-      callCount >= callIndex
-      && (callCount - callIndex) % SUBMIT_DIALOG_STATE_CALLS_PER_RENDER === 0
-    ) {
-      return [forcedValue, vi.fn()] as never
-    }
+  vi.doMock('react', () => ({
+    ...actualReact,
+    useState: ((initial: unknown) => {
+      callCount += 1
+      if (
+        callCount >= callIndex
+        && (callCount - callIndex) % SUBMIT_DIALOG_STATE_CALLS_PER_RENDER === 0
+      ) {
+        return [forcedValue, vi.fn()] as never
+      }
 
-    return actualUseState(initial as never)
-  }) as typeof ReactModule.useState)
+      return actualReact.useState(initial as never)
+    }) as typeof actualReact.useState,
+  }))
+
+  const mod = await import('../SubmitToKBDialog')
+  vi.doUnmock('react')
+  return mod.SubmitToKBDialog
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -178,6 +185,8 @@ describe('SubmitToKBDialog', () => {
   })
 
   afterEach(() => {
+    vi.doUnmock('react')
+    vi.resetModules()
     vi.restoreAllMocks()
   })
 
@@ -321,10 +330,10 @@ describe('SubmitToKBDialog', () => {
     expect(submitBtn).not.toBeDisabled()
   })
 
-  it('shows a spinner and disables the submit button while submitting', () => {
-    mockUseStateAtCall(5, true)
+  it('shows a spinner and disables the submit button while submitting', async () => {
+    const SubmitToKBDialogWithSubmittingState = await importSubmitToKBDialogWithForcedState(5, true)
 
-    renderDialog()
+    render(<SubmitToKBDialogWithSubmittingState {...DEFAULT_PROPS} />)
 
     const submitBtn = screen.getByRole('button', { name: /Submitting/i })
     expect(submitBtn).toBeDisabled()

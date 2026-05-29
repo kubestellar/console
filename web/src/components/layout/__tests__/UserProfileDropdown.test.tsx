@@ -7,7 +7,10 @@ import { MemoryRouter } from 'react-router-dom'
 
 const changeLanguage = vi.fn()
 const safeSetItem = vi.fn()
-const mockIsDemoModeForced = vi.fn()
+
+const { demoModeState } = vi.hoisted(() => ({
+  demoModeState: { isForced: false },
+}))
 
 const modalState = vi.hoisted(() => ({
   isOpen: false,
@@ -64,7 +67,9 @@ vi.mock('../../../lib/i18n', () => ({
 }))
 
 vi.mock('../../../lib/demoMode', () => ({
-  isDemoModeForced: () => mockIsDemoModeForced(),
+  get isDemoModeForced() {
+    return demoModeState.isForced
+  },
 }))
 
 const emitLanguageChanged = vi.fn()
@@ -117,8 +122,7 @@ describe('UserProfileDropdown', () => {
     changeLanguage.mockResolvedValue(undefined)
     safeSetItem.mockReset()
     emitLanguageChanged.mockReset()
-    mockIsDemoModeForced.mockReset()
-    mockIsDemoModeForced.mockReturnValue(false)
+    demoModeState.isForced = false
   })
 
   it('exports UserProfileDropdown', async () => {
@@ -203,13 +207,13 @@ describe('UserProfileDropdown', () => {
       </MemoryRouter>
     )
 
-    fireEvent.click(screen.getByText('actions.signOut'))
+    fireEvent.click(screen.getByRole('button', { name: 'actions.signOut' }))
 
     expect(onLogout).not.toHaveBeenCalled()
-    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(await screen.findByTestId('confirm-dialog')).toBeInTheDocument()
     expect(screen.getByText('confirmDialog.logoutTitle')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText('actions.logout'))
+    fireEvent.click(screen.getByRole('button', { name: 'actions.logout' }))
 
     expect(onLogout).toHaveBeenCalledTimes(1)
   })

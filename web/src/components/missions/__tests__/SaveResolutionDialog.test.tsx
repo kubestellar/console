@@ -6,7 +6,6 @@
  */
 
 import type React from 'react'
-import * as ReactModule from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 
@@ -170,21 +169,29 @@ const DEFAULT_PROPS = {
 
 const SAVE_DIALOG_STATE_CALLS_PER_RENDER = 11
 
-function mockUseStateAtCall(callIndex: number, forcedValue: unknown) {
-  const actualUseState = ReactModule.useState
+async function importSaveResolutionDialogWithForcedState(callIndex: number, forcedValue: unknown) {
+  vi.resetModules()
+  const actualReact = await vi.importActual<typeof import('react')>('react')
   let callCount = 0
 
-  return vi.spyOn(ReactModule, 'useState').mockImplementation(((initial: unknown) => {
-    callCount += 1
-    if (
-      callCount >= callIndex
-      && (callCount - callIndex) % SAVE_DIALOG_STATE_CALLS_PER_RENDER === 0
-    ) {
-      return [forcedValue, vi.fn()] as never
-    }
+  vi.doMock('react', () => ({
+    ...actualReact,
+    useState: ((initial: unknown) => {
+      callCount += 1
+      if (
+        callCount >= callIndex
+        && (callCount - callIndex) % SAVE_DIALOG_STATE_CALLS_PER_RENDER === 0
+      ) {
+        return [forcedValue, vi.fn()] as never
+      }
 
-    return actualUseState(initial as never)
-  }) as typeof ReactModule.useState)
+      return actualReact.useState(initial as never)
+    }) as typeof actualReact.useState,
+  }))
+
+  const mod = await import('../SaveResolutionDialog')
+  vi.doUnmock('react')
+  return mod.SaveResolutionDialog
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -218,6 +225,8 @@ describe('SaveResolutionDialog', () => {
   })
 
   afterEach(() => {
+    vi.doUnmock('react')
+    vi.resetModules()
     vi.restoreAllMocks()
   })
 
@@ -397,11 +406,11 @@ describe('SaveResolutionDialog', () => {
 
   // ── Save success ─────────────────────────────────────────────────────
 
-  it('shows a spinner while saving', () => {
-    mockUseStateAtCall(8, true)
+  it('shows a spinner while saving', async () => {
+    const SaveResolutionDialogWithSavingState = await importSaveResolutionDialogWithForcedState(8, true)
     mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
 
-    render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
+    render(<SaveResolutionDialogWithSavingState {...DEFAULT_PROPS} />)
 
     const saveButton = screen.getByRole('button', { name: /Saving/i })
     expect(saveButton).toBeDisabled()
