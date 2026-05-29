@@ -39,10 +39,16 @@ export function loadMissions(): DeployMission[] {
 }
 
 export function saveMissions(missions: DeployMission[]) {
-  const clean = missions.slice(0, MAX_MISSIONS).map(m => ({
-    ...m,
-    clusterStatuses: (m.clusterStatuses || []).map(cs => ({
-      ...cs,
-      logs: isTerminalStatus(m.status) ? cs.logs : undefined })) }))
-  localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
+  try {
+    const clean = missions.slice(0, MAX_MISSIONS).map(m => ({
+      ...m,
+      clusterStatuses: (m.clusterStatuses || []).map(cs => ({
+        ...cs,
+        logs: isTerminalStatus(m.status) ? cs.logs : undefined,
+      })),
+    }))
+    localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
+  } catch {
+    // ignore quota / private-mode storage failures
+  }
 }
