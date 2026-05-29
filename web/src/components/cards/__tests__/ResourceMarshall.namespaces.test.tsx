@@ -33,7 +33,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 }))
 
 vi.mock('../../ui/ClusterSelect', () => ({
-  ClusterSelect: ({ clusters, onChange, value, placeholder }: { clusters: Array<{ name: string }>; value: string; onChange: (value: string) => void; placeholder?: string }) => (
+  ClusterSelect: ({ clusters, onChange, value: _value, placeholder }: { clusters: Array<{ name: string }>; value: string; onChange: (value: string) => void; placeholder?: string }) => (
     <div aria-label="cluster-select">
       <button type="button" onClick={() => onChange('')}>
         {placeholder || 'Select cluster...'}
@@ -177,7 +177,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
       error: null,
     })
 
-    const { container } = render(<ResourceMarshall />)
+    render(<ResourceMarshall />)
 
     // Verify namespaces array is empty
     expect(mockUseCachedNamespaces).toHaveBeenCalled()
