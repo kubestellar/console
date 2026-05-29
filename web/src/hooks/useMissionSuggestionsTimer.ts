@@ -22,6 +22,12 @@ export function useMissionSuggestionsTimer({
 }: UseMissionSuggestionsTimerOptions) {
   const [countdown, setCountdown] = useState(AUTO_COLLAPSE_SECONDS)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Store onAutoCollapse in a ref so the interval callback always uses the
+  // latest version without restarting the timer on every parent render (#16000).
+  const onAutoCollapseRef = useRef(onAutoCollapse)
+  useEffect(() => {
+    onAutoCollapseRef.current = onAutoCollapse
+  })
 
   // Start / stop countdown timer
   const startCountdown = useCallback(() => {
@@ -34,13 +40,13 @@ export function useMissionSuggestionsTimer({
           // Timer-initiated collapse: do NOT persist to localStorage.
           // Only user-initiated minimize (explicit click) persists state.
           // This allows the panel to re-expand on next session/page load.
-          onAutoCollapse()
+          onAutoCollapseRef.current()
           return AUTO_COLLAPSE_SECONDS
         }
         return prev - 1
       })
     }, COUNTDOWN_TICK_MS)
-  }, [onAutoCollapse])
+  }, [])
 
   // Manage countdown lifecycle based on minimized state
   useEffect(() => {
