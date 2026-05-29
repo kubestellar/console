@@ -39,6 +39,7 @@ vi.mock('../../../../hooks/useLocalAgent', () => ({
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToNamespace: vi.fn(), drillToCluster: vi.fn(), drillToPod: vi.fn(), drillToDeployment: vi.fn() }),
+  useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn() }),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
@@ -53,7 +54,19 @@ import { ReplicaSetDrillDown } from '../ReplicaSetDrillDown'
 
 describe('ReplicaSetDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<ReplicaSetDrillDown data={{ cluster: 'c1', namespace: 'ns1', replicaset: 'rs1' }} />)
+    const { container} = render(<ReplicaSetDrillDown data={{ cluster: 'c1', namespace: 'ns1', replicaset: 'rs1' }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows back button when drill-down stack has entries', () => {
+    const mockPop = vi.fn()
+    vi.mocked(vi.importActual('../../../../hooks/useDrillDown')).useDrillDown = () => ({
+      state: { stack: [{}] },
+      pop: mockPop,
+    })
+
+    const { container } = render(<ReplicaSetDrillDown data={{ cluster: 'c1', namespace: 'ns1', replicaset: 'rs1' }} />)
+    const backButton = container.querySelector('button[aria-label="Go back"]')
+    expect(backButton).toBeTruthy()
   })
 })

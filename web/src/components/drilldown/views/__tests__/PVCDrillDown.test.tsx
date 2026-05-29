@@ -14,7 +14,7 @@ vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
       drillToNamespace: vi.fn(),
       drillToCluster: vi.fn(),
     }),
-    useDrillDown: () => ({ close: vi.fn() }),
+    useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn(), close: vi.fn() }),
   }
 })
 
@@ -116,5 +116,18 @@ describe('PVCDrillDown interactions', () => {
     await waitFor(() => {
       expect(screen.getByText(/Name: data-vol/)).toBeInTheDocument()
     })
+  })
+
+  it('shows back button when drill-down stack has entries', async () => {
+    const mockPop = vi.fn()
+    vi.mocked(await vi.importActual('../../../../hooks/useDrillDown')).useDrillDown = () => ({
+      state: { stack: [{}] },
+      pop: mockPop,
+      close: vi.fn(),
+    })
+
+    const { container } = renderWithDrillDown(<PVCDrillDown data={BOUND_DATA} />)
+    const backButton = container.querySelector('button[aria-label="Go back"]')
+    expect(backButton).toBeTruthy()
   })
 })

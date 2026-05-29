@@ -39,6 +39,7 @@ vi.mock('../../../../hooks/useLocalAgent', () => ({
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToNamespace: vi.fn(), drillToCluster: vi.fn(), drillToPod: vi.fn(), drillToReplicaSet: null }),
+  useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn() }),
 }))
 
 vi.mock('../../../../hooks/usePermissions', () => ({
@@ -59,5 +60,17 @@ describe('DeploymentDrillDown', () => {
   it('renders without crashing', () => {
     const { container } = render(<DeploymentDrillDown data={{ cluster: 'c1', namespace: 'ns1', deployment: 'dep1', replicas: 1 }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows back button when drill-down stack has entries', () => {
+    const mockPop = vi.fn()
+    vi.mocked(vi.importActual('../../../../hooks/useDrillDown')).useDrillDown = () => ({
+      state: { stack: [{}] },
+      pop: mockPop,
+    })
+
+    const { container } = render(<DeploymentDrillDown data={{ cluster: 'c1', namespace: 'ns1', deployment: 'dep1', replicas: 1 }} />)
+    const backButton = container.querySelector('button[aria-label="Go back"]')
+    expect(backButton).toBeTruthy()
   })
 })
