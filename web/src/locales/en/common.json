@@ -2493,7 +2493,8 @@
       "dryRunPrefix": "[DRY RUN] ",
       "dryRunValidation": "Dry-run validation",
       "unifiedDeployment": "Unified deployment"
-    }
+    },
+    "projectAdded": "Project added to mission"
   },
   "feedback": {
     "share": "Share",
@@ -5403,9 +5404,6 @@
     "logoutMessage": "You will be logged out and all session data will be cleared.",
     "clearTokensTitle": "Clear All Tokens?",
     "clearTokensMessage": "This will remove all stored tokens including agent and authentication tokens. You will need to log in again."
-  },
-  "missionControl": {
-    "projectAdded": "Project added to mission"
   },
   "saveResolution": "Save Resolution",
   "shareToOrg": "Share to Org",
