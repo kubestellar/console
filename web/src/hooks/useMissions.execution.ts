@@ -268,6 +268,15 @@ export function createMissionExecutionApi(
     }
 
     connectionApi.ensureConnection().then(() => {
+      if (state.unmountedRef.current) {
+        state.executingMissions.current.delete(missionId)
+        return
+      }
+      if (state.cancelIntents.current.has(missionId)) {
+        state.executingMissions.current.delete(missionId)
+        stateUtils.finalizeCancellation(missionId, 'Mission cancelled by user before execution started.')
+        return
+      }
       state.executingMissions.current.delete(missionId)
       const requestId = generateRequestId()
       state.pendingRequests.current.set(requestId, missionId)
