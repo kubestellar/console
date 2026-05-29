@@ -17,6 +17,7 @@ import {
   QUANTUM_STATUS_DEFAULT_POLL_MS,
   type QuantumSystemStatus,
 } from '../../../hooks/useCachedQuantum'
+import { useToast } from '../../ui/Toast'
 
 interface ControlState {
   backend: string
@@ -70,6 +71,7 @@ function buildQuantumMutationHeaders(token: string | null): HeadersInit {
 
 export const QuantumControlPanel: React.FC = () => {
   const { t } = useTranslation('cards')
+  const { showToast } = useToast()
   const { isAuthenticated, login, isLoading: authIsLoading, token } = useAuth()
   const { open: openDrillDown, close: closeDrillDown } = useDrillDown()
   const [control, setControl] = useState<ControlState>(DEMO_DATA)
@@ -392,7 +394,8 @@ export const QuantumControlPanel: React.FC = () => {
     setCustomQasmContent(content)
     setControl(prev => ({ ...prev, qasm_file: 'custom' }))
     setShowCustomQasmModal(false)
-  }, [])
+    showToast(t('quantumControlPanel.customQasmSaved'), 'success')
+  }, [showToast, t])
 
   const handleCustomQasmCancel = useCallback(() => {
     setControl(prev => ({ ...prev, qasm_file: previousQasmFile }))

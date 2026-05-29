@@ -219,7 +219,8 @@
     "credsNone": "Not configured",
     "validateNow": "Validate now",
     "validating": "Validating…",
-    "ibmUpstreamUnavailable": "IBM Quantum is temporarily unavailable. We'll keep retrying — your saved credentials are unaffected."
+    "ibmUpstreamUnavailable": "IBM Quantum is temporarily unavailable. We'll keep retrying — your saved credentials are unaffected.",
+    "customQasmSaved": "Custom QASM configuration saved"
   },
   "titles": {
     "cluster_health": "Cluster Health",
@@ -1984,7 +1985,8 @@
     "limitedHeadroom": "Limited Scaling Headroom",
     "limitedHeadroomDesc": "Autoscaler is at {{current}}/{{max}} replicas. Limited capacity for traffic spikes.",
     "limitedHeadroomRec": "Consider increasing maxReplicas to allow for traffic bursts, or optimize resource usage.",
-    "thinking": "Thinking..."
+    "thinking": "Thinking...",
+    "chatSubmitted": "Question submitted successfully"
   },
   "clusterCosts": {
     "title": "Cluster Costs",

@@ -15,6 +15,7 @@ import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
 import { PROGRESS_SIMULATION_MS } from '../../../lib/constants/network'
+import { useToast } from '../../../components/ui/Toast'
 
 /** Loose translation function type for helper functions that use dynamic keys */
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string
@@ -301,6 +302,7 @@ function generateStackInsights(stack: LLMdStack, t?: TranslateFn): AIInsight[] {
 
 export function LLMdAIInsights() {
   const { t } = useTranslation(['cards', 'common'])
+  const { showToast } = useToast()
   const stackContext = useOptionalStack()
   const { shouldUseDemoData, showDemoBadge, reason } = useCardDemoState({ requires: 'stack' })
   const isRefreshing = stackContext?.isRefreshing ?? false
@@ -397,6 +399,7 @@ export function LLMdAIInsights() {
       }
 
       setChatHistory(prev => [...prev, { role: 'ai', message: response }])
+      showToast(t('cards:llmdAIInsights.chatSubmitted'), 'success')
     } catch (err: unknown) {
       console.error('[LLMdAIInsights] Chat generation failed:', err)
       setChatHistory(prev => [...prev, { role: 'ai', message: t('cards:llmdAIInsights.chatError', { defaultValue: 'Failed to generate response. Please try again.' }) }])

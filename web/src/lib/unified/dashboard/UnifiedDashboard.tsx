@@ -24,6 +24,8 @@ import { AddCardModal } from '../../../components/dashboard/AddCardModal'
 import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
 import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
 import { SHORT_DELAY_MS } from '../../constants/network'
+import { ConfirmDialog } from '../../modals/ConfirmDialog'
+import { useTranslation } from 'react-i18next'
 
 /** Card suggestion type from AddCardModal */
 interface CardSuggestion {
@@ -49,6 +51,7 @@ export function UnifiedDashboard({
   config,
   statsData,
   className = '' }: UnifiedDashboardProps) {
+  const { t } = useTranslation('common')
   // Tab state (for dashboards with tabs) — needed by the cards initializer
   // to route persistence differently in tab-mode dashboards.
   const hasTabs = (config.tabs?.length ?? 0) > 0
@@ -138,6 +141,7 @@ export function UnifiedDashboard({
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
   const [isConfigureCardModalOpen, setIsConfigureCardModalOpen] = useState(false)
   const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   // Persist cards to localStorage when they change.
   //
@@ -263,7 +267,11 @@ export function UnifiedDashboard({
   }
 
   // Handle reset to defaults
-  const handleReset = () => {
+  const handleResetRequest = () => {
+    setShowResetConfirm(true)
+  }
+
+  const handleResetConfirmed = () => {
     setCards(config.cards)
     if (config.storageKey) {
       try {
@@ -298,6 +306,7 @@ export function UnifiedDashboard({
         // Ignore storage errors
       }
     }
+    setShowResetConfirm(false)
   }
 
   // #9384 — Cross-tab sync: listen for storage events so that when another
@@ -428,7 +437,7 @@ export function UnifiedDashboard({
           {/* Reset button (if customized) */}
           {isCustomized && (
             <button
-              onClick={handleReset}
+              onClick={handleResetRequest}
               className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
               title="Reset to default layout"
             >
@@ -533,6 +542,17 @@ export function UnifiedDashboard({
           setCardToEdit(null)
         }}
         onSave={handleSaveCardConfig}
+      />
+
+      {/* Reset Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleResetConfirmed}
+        title={t('confirmDialog.resetDashboardTitle')}
+        message={t('confirmDialog.resetDashboardMessage')}
+        confirmLabel={t('actions.reset')}
+        variant="warning"
       />
     </div>
   )

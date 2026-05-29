@@ -27,6 +27,8 @@ import {
 import { MissionSummarySidebar } from './MissionSummarySidebar'
 import { FixerDefinitionForm } from './FixerDefinitionForm'
 import { ProjectDetailPanel } from './ProjectDetailPanel'
+import { useToast } from '../../ui/Toast'
+import { useTranslation } from 'react-i18next'
 
 interface FixerDefinitionPanelProps {
   state: MissionControlState
@@ -72,6 +74,8 @@ export function FixerDefinitionPanel({
   planningMission,
   installedProjects,
 }: FixerDefinitionPanelProps) {
+  const { showToast } = useToast()
+  const { t } = useTranslation('common')
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [manualName, setManualName] = useState('')
@@ -197,6 +201,7 @@ export function FixerDefinitionPanel({
     onAddProject(buildProjectFromManualOption(nextOption))
     setManualName('')
     setShowManualAdd(false)
+    showToast(t('missionControl.projectAdded'), 'success')
   }
 
   return (

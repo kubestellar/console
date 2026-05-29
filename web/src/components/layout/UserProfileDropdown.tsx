@@ -15,6 +15,7 @@ import { checkOAuthConfigured } from '../../lib/api'
 import { safeSetItem } from '../../lib/utils/localStorage'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
+import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
 // Lazy-load the feedback modal (~67 KB) — only needed when user opens it
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
@@ -46,6 +47,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   const [showRewards, setShowRewards] = useState(false)
   const { isOpen: showFeedbackModal, open: openFeedbackModal, close: closeFeedbackModal } = useModalState()
   const [showDevPanel, setShowDevPanel] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [oauthStatus, setOauthStatus] = useState<{ checked: boolean; configured: boolean; backendUp: boolean }>({
     checked: false,
     configured: false,
@@ -436,7 +438,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 if (isDemoModeForced) {
                   setShowSetupDialog(true)
                 } else {
-                  onLogout()
+                  setShowLogoutConfirm(true)
                 }
               }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${
@@ -494,6 +496,20 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           />
         </Suspense>
       )}
+
+      {/* Logout confirmation dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false)
+          onLogout()
+        }}
+        title={t('confirmDialog.logoutTitle')}
+        message={t('confirmDialog.logoutMessage')}
+        confirmLabel={t('actions.logout', 'Log Out')}
+        variant="warning"
+      />
     </div>
   )
 }
