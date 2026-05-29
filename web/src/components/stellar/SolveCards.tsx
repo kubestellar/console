@@ -1,6 +1,21 @@
 import { useState } from 'react'
 import type { StellarSolve, StellarSolveProgress } from '../../types/stellar'
 
+const SOLVE_BODY_TEXT_STYLE = {
+  fontSize: 12,
+  color: 'var(--s-text)',
+  marginTop: 4,
+  lineHeight: 1.4,
+} as const
+
+const SOLVE_METADATA_TEXT_STYLE = {
+  fontSize: 11,
+  color: 'var(--s-text-muted)',
+  fontFamily: 'var(--s-mono)',
+} as const
+
+const SOLVE_SPACER_STYLE = { flex: 1 } as const
+
 /**
  * SolveProgressCard renders a live, non-dismissable card while a Solve loop is
  * running. Each SSE solve_progress message updates the inline status line so
@@ -29,15 +44,15 @@ export function SolveProgressCard({ progress }: { progress: StellarSolveProgress
           fontFamily: 'var(--s-mono)', fontSize: 9, fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-info)',
         }}>✦ Solving</span>
-        <span style={{ fontSize: 11, color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)' }}>
+        <span style={SOLVE_METADATA_TEXT_STYLE}>
           step: {progress.step}
         </span>
-        <div style={{ flex: 1 }} />
+        <div style={SOLVE_SPACER_STYLE} />
         <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>
           {progress.actionsTaken} action{progress.actionsTaken === 1 ? '' : 's'}
         </span>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--s-text)', marginTop: 4, lineHeight: 1.4 }}>
+      <div style={SOLVE_BODY_TEXT_STYLE}>
         {progress.message}
       </div>
     </div>
@@ -72,10 +87,10 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
           fontFamily: 'var(--s-mono)', fontSize: 9, fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', color,
         }}>{tag}</span>
-        <span style={{ fontSize: 11, color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)' }}>
+        <span style={SOLVE_METADATA_TEXT_STYLE}>
           {solve.cluster}/{solve.namespace}/{solve.workload}
         </span>
-        <div style={{ flex: 1 }} />
+        <div style={SOLVE_SPACER_STYLE} />
         <button
           onClick={() => setExpanded(e => !e)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-muted)' }}
@@ -88,11 +103,11 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
           >✕</button>
         )}
       </div>
-      <div style={{ fontSize: 12, color: 'var(--s-text)', marginTop: 4, lineHeight: 1.4 }}>
+      <div style={SOLVE_BODY_TEXT_STYLE}>
         {solve.summary}{limitNote}
       </div>
       {expanded && (
-        <div className="mt-1.5" style={{ fontSize: 11, color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)' }}>
+        <div className="mt-1.5" style={SOLVE_METADATA_TEXT_STYLE}>
           <div>actions taken: {solve.actionsTaken}</div>
           <div>started: {new Date(solve.startedAt).toLocaleString()}</div>
           {solve.endedAt && <div>ended: {new Date(solve.endedAt).toLocaleString()}</div>}

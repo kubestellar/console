@@ -9,6 +9,12 @@ const STALE_THRESHOLD_MS = 10 * 60 * 1000
 const RECURRING_EVENT_THRESHOLD = 3
 const FREQUENCY_WINDOW_HOURS = 24
 
+const WATCH_TIMELINE_TIMESTAMP_STYLE = {
+  fontFamily: 'var(--s-mono)',
+  color: 'var(--s-text-muted)',
+  minWidth: 70,
+} as const
+
 interface WatchDetailModalProps {
   watch: StellarWatch
   allNotifications: StellarNotification[]
@@ -296,7 +302,7 @@ export function WatchDetailModal({
                       background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
                       marginBottom: 3,
                     }}>
-                      <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', minWidth: 70 }}>
+                      <span style={WATCH_TIMELINE_TIMESTAMP_STYLE}>
                         {formatRelative(s.startedAt)}
                       </span>
                       <span style={{ color: statusColor, fontWeight: 600 }}>{icon}</span>
@@ -326,7 +332,7 @@ export function WatchDetailModal({
                     background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
                     marginBottom: 3,
                   }}>
-                    <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', minWidth: 70 }}>
+                    <span style={WATCH_TIMELINE_TIMESTAMP_STYLE}>
                       {formatRelative(ev.createdAt)}
                     </span>
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

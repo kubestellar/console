@@ -9,6 +9,16 @@ const SECONDS_PER_MINUTE = 60
 const MS_PER_SECOND = 1000
 
 const FLEX_MIN_WIDTH_STYLE = { flex: 1, minWidth: 0 } as const
+const BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+} as const
+const BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE = {
+  fontFamily: 'var(--s-mono)',
+  fontSize: 11,
+  color: 'var(--s-text)',
+} as const
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -681,33 +691,33 @@ export function BatchMonitorModal({
           {/* Breakdown */}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {batch.summary.resolved > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
                 <span aria-hidden="true" style={{ color: 'var(--s-success)', fontSize: 14 }}>✓</span>
-                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' }}>
+                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.resolved} {t('stellar.batch.resolved')}
                 </span>
               </div>
             )}
             {batch.summary.failed > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
                 <span aria-hidden="true" style={{ color: 'var(--s-critical)', fontSize: 14 }}>✗</span>
-                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' }}>
+                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.failed} {t('stellar.batch.failed')}
                 </span>
               </div>
             )}
             {batch.summary.skipped > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
                 <span aria-hidden="true" style={{ color: 'var(--s-text-muted)', fontSize: 14 }}>–</span>
-                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' }}>
+                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.skipped} {t('stellar.batch.skipped')}
                 </span>
               </div>
             )}
             {batch.summary.inProgress > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
                 <span aria-hidden="true" style={{ color: 'var(--s-info)', fontSize: 14 }}>⊙</span>
-                <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' }}>
+                <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.inProgress} {t('stellar.batch.inProgress')}
                 </span>
               </div>

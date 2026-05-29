@@ -4,6 +4,27 @@ import { useMissions } from '../../hooks/useMissions'
 import { AgentIcon } from '../agent/AgentIcon'
 import type { ProviderSession } from '../../types/stellar'
 
+const PROVIDER_LABEL_STYLE = { fontWeight: 600 } as const
+
+const PROVIDER_SUBLABEL_STYLE = {
+  fontSize: 10,
+  color: 'var(--s-text-dim)',
+} as const
+
+const PROVIDER_TRUNCATED_SUBLABEL_STYLE = {
+  ...PROVIDER_SUBLABEL_STYLE,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+} as const
+
+const PROVIDER_ICON_PLACEHOLDER_STYLE = { width: 16 } as const
+
+const PROVIDER_TEXT_CONTAINER_STYLE = {
+  flex: 1,
+  minWidth: 0,
+} as const
+
 interface Props {
   session: ProviderSession | null
   onSelect: (session: ProviderSession) => void
@@ -127,8 +148,8 @@ export function ProviderSelector({ session, onSelect }: Props) {
           >
             <span style={{ fontSize: 14, width: 16, textAlign: 'center' }}>✦</span>
             <div>
-              <div style={{ fontWeight: 600 }}>Auto</div>
-              <div style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>Use best available provider</div>
+              <div style={PROVIDER_LABEL_STYLE}>Auto</div>
+              <div style={PROVIDER_SUBLABEL_STYLE}>Use best available provider</div>
             </div>
           </button>
 
@@ -158,10 +179,10 @@ export function ProviderSelector({ session, onSelect }: Props) {
                   >
                     {opt.agentProvider
                       ? <AgentIcon provider={opt.agentProvider as never} className="w-4 h-4 shrink-0" />
-                      : <span style={{ width: 16 }} />}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600 }}>{opt.label}</div>
-                      <div style={{ fontSize: 10, color: 'var(--s-text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.sublabel}</div>
+                      : <span style={PROVIDER_ICON_PLACEHOLDER_STYLE} />}
+                    <div style={PROVIDER_TEXT_CONTAINER_STYLE}>
+                      <div style={PROVIDER_LABEL_STYLE}>{opt.label}</div>
+                      <div style={PROVIDER_TRUNCATED_SUBLABEL_STYLE}>{opt.sublabel}</div>
                     </div>
                     <span style={{ fontSize: 8, color: 'var(--s-success)', flexShrink: 0 }}>●</span>
                   </button>
@@ -201,10 +222,10 @@ export function ProviderSelector({ session, onSelect }: Props) {
                       cursor: opt.available ? 'pointer' : 'default', fontSize: 11,
                     }}
                   >
-                    <span style={{ width: 16 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600 }}>{opt.label}</div>
-                      {opt.sublabel && <div style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>{opt.sublabel}</div>}
+                    <span style={PROVIDER_ICON_PLACEHOLDER_STYLE} />
+                    <div style={PROVIDER_TEXT_CONTAINER_STYLE}>
+                      <div style={PROVIDER_LABEL_STYLE}>{opt.label}</div>
+                      {opt.sublabel && <div style={PROVIDER_SUBLABEL_STYLE}>{opt.sublabel}</div>}
                     </div>
                     <span style={{ fontSize: 8, color: opt.available ? 'var(--s-success)' : 'var(--s-text-dim)', flexShrink: 0 }}>
                       {opt.available ? '●' : '○'}
