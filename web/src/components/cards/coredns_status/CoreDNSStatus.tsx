@@ -133,8 +133,8 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
         </div>
         <span
           className={`text-xs px-1.5 py-0.5 rounded ${cluster.healthy
-            ? 'bg-green-500/15 text-green-400'
-            : 'bg-red-500/15 text-red-400'
+            ? 'bg-green-500/10 text-green-400'
+            : 'bg-red-500/10 text-red-400'
             }`}
         >
           {cluster.healthy ? t('coreDNSStatus.healthy') : t('coreDNSStatus.degraded')}
