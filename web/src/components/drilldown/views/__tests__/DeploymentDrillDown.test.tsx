@@ -55,6 +55,7 @@ vi.mock('../../../../lib/clipboard', () => ({
 }))
 
 import { DeploymentDrillDown } from '../DeploymentDrillDown'
+import { useDrillDown } from '../../../../hooks/useDrillDown'
 
 describe('DeploymentDrillDown', () => {
   it('renders without crashing', () => {
@@ -64,13 +65,16 @@ describe('DeploymentDrillDown', () => {
 
   it('shows back button when drill-down stack has entries', () => {
     const mockPop = vi.fn()
-    vi.mocked(vi.importActual('../../../../hooks/useDrillDown')).useDrillDown = () => ({
-      state: { stack: [{}] },
+    vi.mocked(useDrillDown).mockReturnValue({
+      state: { stack: [{}, {}] },
       pop: mockPop,
+      push: vi.fn(),
+      replace: vi.fn(),
+      clear: vi.fn(),
     })
 
     const { container } = render(<DeploymentDrillDown data={{ cluster: 'c1', namespace: 'ns1', deployment: 'dep1', replicas: 1 }} />)
-    const backButton = container.querySelector('button[aria-label="Go back"]')
+    const backButton = container.querySelector('button[aria-label="drilldown.goBack"]')
     expect(backButton).toBeTruthy()
   })
 })
