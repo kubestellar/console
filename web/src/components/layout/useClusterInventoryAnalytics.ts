@@ -8,12 +8,19 @@ interface ClusterInventoryItem {
 }
 
 export function useClusterInventoryAnalytics(deduplicatedClusters: readonly ClusterInventoryItem[]) {
-  const prevClusterCountRef = useRef<number>(-1)
+  const prevClusterFingerprintRef = useRef<string>('')
 
   useEffect(() => {
     const total = deduplicatedClusters.length
-    if (total === 0 || total === prevClusterCountRef.current) return
-    prevClusterCountRef.current = total
+    if (total === 0) return
+
+    const fingerprint = deduplicatedClusters
+      .map((cluster) => `${cluster.distribution || 'unknown'}:${cluster.healthy}:${cluster.reachable}`)
+      .sort()
+      .join('|')
+
+    if (fingerprint === prevClusterFingerprintRef.current) return
+    prevClusterFingerprintRef.current = fingerprint
 
     let healthy = 0
     let unhealthy = 0
