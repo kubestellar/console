@@ -122,8 +122,8 @@ export function EventSummary() {
 
   const total = summary.total
   const handleToggleClusterFilter = useCallback(() => {
-    setShowClusterFilter(current => !current)
-  }, [setShowClusterFilter])
+    setShowClusterFilter(!showClusterFilter)
+  }, [setShowClusterFilter, showClusterFilter])
 
   if (showSkeleton) {
     return <CardSkeleton type="status" rows={3} showHeader={false} />
