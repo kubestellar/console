@@ -289,9 +289,10 @@ export async function pollClusterStatus(
     return {
       cluster,
       status,
-      replicas: data.replicas ?? 0,
-      readyReplicas: data.readyReplicas ?? 0,
-      logs }
+      replicas: restReplicas,
+      readyReplicas: restReady,
+      logs,
+    }
   } catch {
     return networkPending()
   }
