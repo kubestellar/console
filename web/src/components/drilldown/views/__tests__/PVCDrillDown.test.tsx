@@ -14,11 +14,12 @@ vi.mock('../../../../hooks/useDrillDown', async (importOriginal) => {
       drillToNamespace: vi.fn(),
       drillToCluster: vi.fn(),
     }),
-    useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn(), close: vi.fn() }),
+    useDrillDown: vi.fn(() => ({ state: { stack: [] }, pop: vi.fn(), close: vi.fn() })),
   }
 })
 
 import PVCDrillDown from '../PVCDrillDown'
+import { useDrillDown } from '../../../../hooks/useDrillDown'
 
 const BOUND_DATA = {
   cluster: 'cluster-a',
@@ -118,16 +119,16 @@ describe('PVCDrillDown interactions', () => {
     })
   })
 
-  it('shows back button when drill-down stack has entries', async () => {
+  it('shows back button when drill-down stack has entries', () => {
     const mockPop = vi.fn()
-    vi.mocked(await vi.importActual('../../../../hooks/useDrillDown')).useDrillDown = () => ({
-      state: { stack: [{}] },
+    vi.mocked(useDrillDown).mockReturnValueOnce({
+      state: { stack: [{}, {}] },
       pop: mockPop,
       close: vi.fn(),
-    })
+    } as unknown as ReturnType<typeof useDrillDown>)
 
     const { container } = renderWithDrillDown(<PVCDrillDown data={BOUND_DATA} />)
-    const backButton = container.querySelector('button[aria-label="Go back"]')
+    const backButton = container.querySelector('button[aria-label="drilldown.goBack"]')
     expect(backButton).toBeTruthy()
   })
 })
