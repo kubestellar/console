@@ -78,7 +78,7 @@ test.describe('Demo Mode Banner', () => {
     // so the test is portable across environments.
     const dismissButton = page.getByRole('button', {
       name: /dismiss banner|exit demo mode/i,
-    })
+    }).first()
     await expect(dismissButton).toBeVisible({ timeout: BANNER_VISIBLE_TIMEOUT_MS })
 
     await dismissButton.click()

@@ -1,44 +1,11 @@
 import { test, expect, Page } from '@playwright/test'
+import { setupDemoMode } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for AI mode tests
  */
 async function setupAIModeTest(page: Page) {
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
-
-  // Mock MCP endpoints
-  await page.route('**/api/mcp/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
-    })
-  )
-
-  // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
-  })
-
+  await setupDemoMode(page)
   await page.goto('/settings')
   await page.waitForLoadState('domcontentloaded')
 }

@@ -40,10 +40,10 @@ async function setupComputeDashboard(page: Page) {
   await page.waitForLoadState('domcontentloaded')
 }
 
-/** Check if the GPU Overview card is visible on the page */
+/** Check if the Overview tab is visible on the page */
 async function isGpuCardVisible(page: Page): Promise<boolean> {
-  const gpuCard = page.getByText('GPU Overview')
-  return gpuCard.first().isVisible({ timeout: GPU_CARD_VISIBILITY_TIMEOUT_MS }).catch(() => false)
+  const overviewTab = page.getByRole('tab', { name: 'Overview' })
+  return overviewTab.first().isVisible({ timeout: GPU_CARD_VISIBILITY_TIMEOUT_MS }).catch(() => false)
 }
 
 /**
@@ -72,18 +72,18 @@ test.describe('GPUOverview Card', () => {
       // visible, which meant a broken card component produced a "skipped"
       // status instead of a failure. We now assert visibility directly —
       // if the card is missing, the test MUST fail.
-      const cardTitle = page.getByText('GPU Overview').first()
+      const overviewTab = page.getByRole('tab', { name: 'Overview' }).first()
       await expect(
-        cardTitle,
-        'GPU Overview card is not visible on /gpu-reservations — card may be broken or hidden by a regression',
+        overviewTab,
+        'Overview tab is not visible on /gpu-reservations — GPU overview may be broken or hidden by a regression',
       ).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
     test('Compute dashboard page loads successfully', async ({ page }) => {
       await setupComputeDashboard(page)
 
-      // The heading "Compute" should be visible
-      const heading = page.getByText('Compute').first()
+      // The GPU Reservations page heading should be visible
+      const heading = page.getByText('GPU Reservations').first()
       await expect(heading).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
@@ -172,8 +172,8 @@ test.describe('GPUOverview Card', () => {
 
       // Verify the card component loaded successfully (a prerequisite for
       // the empty state branch to be reachable)
-      const cardTitle = page.getByText('GPU Overview')
-      await expect(cardTitle.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
+      const overviewTab = page.getByRole('tab', { name: 'Overview' })
+      await expect(overviewTab.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
 
@@ -247,9 +247,9 @@ test.describe('GPUOverview Card', () => {
       await setupComputeDashboard(page)
       await page.setViewportSize(DESKTOP_WIDE_VIEWPORT)
 
-      // GPU Overview card should be visible on wide screens
-      const cardTitle = page.getByText('GPU Overview')
-      await expect(cardTitle.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
+      // Overview tab should be visible on wide screens
+      const overviewTab = page.getByRole('tab', { name: 'Overview' })
+      await expect(overviewTab.first()).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
   })
 

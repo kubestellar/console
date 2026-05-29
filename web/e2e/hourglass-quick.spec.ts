@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { setupDemoMode } from './helpers/setup'
 
 const PAGES = [
   { name: 'Dashboard', route: '/' },
@@ -9,40 +10,8 @@ const PAGES = [
 
 test.describe('Hourglass Visibility', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock auth
-    await page.route('**/api/me', (route) =>
-      route.fulfill({
-        status: 200,
-        json: { id: '1', github_id: '12345', github_login: 'testuser', email: 'test@example.com', onboarded: true },
-      })
-    )
-    // Mock MCP - respond normally (fast)
-    await page.route('**/api/mcp/**', (route) =>
-      route.fulfill({
-        status: 200,
-        json: { clusters: [{ name: 'test', status: 'healthy', version: 'v1.28', cpuCores: 4, memoryGB: 16, nodes: 1, namespaces: ['default'] }], issues: [], events: [], nodes: [], deployments: [], services: [], pvcs: [], releases: [], operators: [], subscriptions: [] },
-      })
-    )
-    await page.route('**/api/dashboards/**', (route) =>
-      route.fulfill({ status: 200, json: {} })
-    )
-    // Mock missions file to prevent 502 in CI (#11033)
-    await page.route('**/api/missions/file**', (route) => {
-      const url = route.request().url()
-      const pathParam = new URL(url).searchParams.get('path') || ''
-      if (pathParam.includes('index.json')) {
-        route.fulfill({ status: 200, json: { missions: [] } })
-      } else {
-        route.fulfill({ status: 200, contentType: 'text/plain', body: '' })
-      }
-    })
-    // Set localStorage
-    await page.goto('/login')
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kc-agent-setup-dismissed', 'true')
-    })
+    await setupDemoMode(page)
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
   })
 

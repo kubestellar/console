@@ -1,71 +1,11 @@
 import { test, expect, Page } from '@playwright/test'
+import { setupDemoMode } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for resource usage tests
  */
 async function setupResourceUsageTest(page: Page) {
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
-
-  // Mock MCP endpoints with resource metrics
-  await page.route('**/api/mcp/**', (route) => {
-    const url = route.request().url()
-    if (url.includes('/clusters')) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          clusters: [
-            {
-              name: 'prod-cluster',
-              healthy: true,
-              nodeCount: 5,
-              podCount: 50,
-              cpuCores: 20,
-              memoryGB: 64,
-            },
-          ],
-        }),
-      })
-    } else if (url.includes('/gpu-nodes')) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          nodes: [
-            { name: 'gpu-node-1', cluster: 'prod-cluster', gpuCount: 8, gpuAllocated: 4 },
-          ],
-        }),
-      })
-    } else {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
-      })
-    }
-  })
-
-  // Set auth token
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
-  })
-
+  await setupDemoMode(page)
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
 }
