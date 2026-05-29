@@ -75,7 +75,7 @@ describe('ResourceMarshall Namespace Behavior', () => {
     mockUseCardLoadingState.mockReturnValue({})
   })
 
-  it('when isDemoMode is false and cluster is live, namespace dropdown shows only real cluster namespaces', () => {
+  it('when isDemoMode is false and cluster is live, namespace dropdown stays unselected until a cluster is chosen', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: false })
     mockUseCachedNamespaces.mockReturnValue({
       namespaces: ['prod-ns', 'staging-ns'],
@@ -87,8 +87,9 @@ describe('ResourceMarshall Namespace Behavior', () => {
 
     render(<ResourceMarshall />)
 
-    // Verify useCachedNamespaces was called with correct cluster context
-    expect(mockUseCachedNamespaces).toHaveBeenCalledWith('live-context')
+    // Live mode does not auto-select a cluster, so namespaces are queried only
+    // after user selection. Until then the hook receives no cluster context.
+    expect(mockUseCachedNamespaces).toHaveBeenCalledWith(undefined)
   })
 
   it('when isDemoMode is true, auto-selection prefers "production" namespace if available', () => {
