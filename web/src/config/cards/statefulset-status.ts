@@ -21,7 +21,7 @@ export const statefulSetStatusConfig: UnifiedCardConfig = {
   // Data source
   dataSource: {
     type: 'hook',
-    hook: 'useStatefulSets',
+    hook: 'useCachedStatefulSets',
   },
 
   // Filters

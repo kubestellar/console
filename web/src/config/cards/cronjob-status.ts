@@ -21,7 +21,7 @@ export const cronJobStatusConfig: UnifiedCardConfig = {
   // Data source
   dataSource: {
     type: 'hook',
-    hook: 'useCronJobs',
+    hook: 'useCachedCronJobs',
   },
 
   // Filters

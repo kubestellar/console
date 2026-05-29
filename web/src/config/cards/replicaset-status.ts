@@ -21,7 +21,7 @@ export const replicaSetStatusConfig: UnifiedCardConfig = {
   // Data source
   dataSource: {
     type: 'hook',
-    hook: 'useReplicaSets',
+    hook: 'useCachedReplicaSets',
   },
 
   // Filters

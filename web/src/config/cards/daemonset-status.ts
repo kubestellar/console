@@ -21,7 +21,7 @@ export const daemonSetStatusConfig: UnifiedCardConfig = {
   // Data source
   dataSource: {
     type: 'hook',
-    hook: 'useDaemonSets',
+    hook: 'useCachedDaemonSets',
   },
 
   // Filters

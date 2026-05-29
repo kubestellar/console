@@ -22,7 +22,13 @@ import {
   useCachedPodIssues,
   useCachedEvents,
   useCachedDeployments,
-  useCachedDeploymentIssues } from '../../hooks/useCachedData'
+  useCachedDeploymentIssues,
+  useCachedHPAs,
+  useCachedReplicaSets,
+  useCachedStatefulSets,
+  useCachedDaemonSets,
+  useCachedCronJobs,
+} from '../../hooks/useCachedData'
 import {
   useClusters,
   usePVCs,
@@ -206,6 +212,11 @@ const RESOURCE_HOOKS: Array<ResourceHookConfig & { name: string }> = [
   { name: 'useCachedPodIssues', useHook: useCachedPodIssues, dataField: 'data', arity: 'cluster+namespace', wrapRefetch: true },
   { name: 'useCachedEvents', useHook: useCachedEvents, dataField: 'data', arity: 'cluster+namespace', wrapRefetch: true },
   { name: 'useCachedDeployments', useHook: useCachedDeployments, dataField: 'data', arity: 'cluster+namespace', wrapRefetch: true },
+  { name: 'useCachedHPAs', useHook: useCachedHPAs, dataField: 'hpas', arity: 'cluster+namespace', wrapRefetch: true, extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
+  { name: 'useCachedReplicaSets', useHook: useCachedReplicaSets, dataField: 'replicasets', arity: 'cluster+namespace', wrapRefetch: true, extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
+  { name: 'useCachedStatefulSets', useHook: useCachedStatefulSets, dataField: 'statefulsets', arity: 'cluster+namespace', wrapRefetch: true, extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
+  { name: 'useCachedDaemonSets', useHook: useCachedDaemonSets, dataField: 'daemonsets', arity: 'cluster+namespace', wrapRefetch: true, extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
+  { name: 'useCachedCronJobs', useHook: useCachedCronJobs, dataField: 'cronjobs', arity: 'cluster+namespace', wrapRefetch: true, extra: (result) => ({ isDemoData: (result as unknown as Record<string, unknown>).isDemoFallback }) },
   { name: 'useClusters', useHook: useClusters, dataField: 'clusters', arity: 'none' },
   { name: 'usePVCs', useHook: usePVCs, dataField: 'pvcs', arity: 'cluster+namespace' },
   { name: 'useServices', useHook: useServices, dataField: 'services', arity: 'cluster+namespace' },

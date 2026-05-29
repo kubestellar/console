@@ -21,7 +21,7 @@ export const hpaStatusConfig: UnifiedCardConfig = {
   // Data source
   dataSource: {
     type: 'hook',
-    hook: 'useHPAs',
+    hook: 'useCachedHPAs',
   },
 
   // Filters
