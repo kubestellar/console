@@ -938,7 +938,11 @@ func TestGetKBScores_UpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Greater(t, int(body["count"].(float64)), 0)
 }
 
 func TestGetKBScores_StaleCache(t *testing.T) {
@@ -1082,6 +1086,26 @@ func TestGetMissionScore_ExactIDMatch(t *testing.T) {
 }
 
 func TestGetMissionScore_UpstreamError(t *testing.T) {
+	embeddedIndexBody, err := embeddedKB.ReadFile("embedded_kb/fixes/index.json")
+	require.NoError(t, err)
+
+	var embeddedIndex indexJsonFormat
+	require.NoError(t, json.Unmarshal(embeddedIndexBody, &embeddedIndex))
+
+	project := ""
+	missionID := ""
+	for _, mission := range embeddedIndex.Missions {
+		if len(mission.CncfProjects) == 0 || mission.QualityScore == nil {
+			continue
+		}
+		segments := strings.Split(mission.Path, "/")
+		project = mission.CncfProjects[0]
+		missionID = strings.TrimSuffix(segments[len(segments)-1], ".json")
+		break
+	}
+	require.NotEmpty(t, project)
+	require.NotEmpty(t, missionID)
+
 	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
@@ -1090,11 +1114,15 @@ func TestGetMissionScore_UpstreamError(t *testing.T) {
 	app, handler := setupMissionsTest()
 	handler.githubRawURL = mock.URL
 
-	req, err := http.NewRequest("GET", "/api/missions/scores/coredns/coredns-123", nil)
+	req, err := http.NewRequest("GET", "/api/missions/scores/"+project+"/"+missionID, nil)
 	require.NoError(t, err)
 	resp, err := app.Test(req, 5000)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Equal(t, project, body["project"])
 }
 
 // ---------- GetKBGaps ----------
