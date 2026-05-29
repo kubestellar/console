@@ -751,26 +751,28 @@ export const CardWrapper = memo(function CardWrapper({
                     Must be INSIDE overflow-hidden (CSS spec: container-type and
                     overflow conflict on the same element). */}
                 <div className="@container flex min-h-0 flex-1 flex-col" style={CONTAINER_QUERY_STYLE}>
-                  <CardLoadingState
-                    cardId={cardId || cardType}
-                    cardType={cardType}
-                    title={title}
-                    isVisible={isVisible}
-                    isExpanded={isExpanded}
-                    shouldShowSkeleton={shouldShowSkeleton}
-                    skeletonType={effectiveSkeletonType}
-                    skeletonRows={skeletonRows || 3}
-                    cardLoadingTimedOut={cardLoadingTimedOut}
-                    childDataState={childDataState}
-                    onRefresh={onRefresh}
-                    onRemove={onRemove}
-                    onLoadingTimeoutRetry={onRefresh ? handleLoadingTimeoutRetry : undefined}
-                    isRefreshing={isRefreshing}
-                    isVisuallySpinning={isVisuallySpinning}
-                    showInstallCta={showInstallCta}
-                  >
-                    {children}
-                  </CardLoadingState>
+                  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scroll-enhanced">
+                    <CardLoadingState
+                      cardId={cardId || cardType}
+                      cardType={cardType}
+                      title={title}
+                      isVisible={isVisible}
+                      isExpanded={isExpanded}
+                      shouldShowSkeleton={shouldShowSkeleton}
+                      skeletonType={effectiveSkeletonType}
+                      skeletonRows={skeletonRows || 3}
+                      cardLoadingTimedOut={cardLoadingTimedOut}
+                      childDataState={childDataState}
+                      onRefresh={onRefresh}
+                      onRemove={onRemove}
+                      onLoadingTimeoutRetry={onRefresh ? handleLoadingTimeoutRetry : undefined}
+                      isRefreshing={isRefreshing}
+                      isVisuallySpinning={isVisuallySpinning}
+                      showInstallCta={showInstallCta}
+                    >
+                      {children}
+                    </CardLoadingState>
+                  </div>
                 </div>{/* Close @container query boundary */}
 
               </div>
