@@ -176,6 +176,8 @@ describe('fetchQuantumAuthStatus', () => {
       ['payload is a string', 'service unavailable'],
       ['payload is a number', 503],
       ['payload is an array', ['rate_limited']],
+      ['empty message string', { code: 'unknown', message: '', retryable: false }],
+      ['whitespace-only message', { code: 'unknown', message: '   ', retryable: false }],
     ]
 
     for (const [label, malformed] of malformedCases) {

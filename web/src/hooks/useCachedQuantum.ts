@@ -218,6 +218,7 @@ function coerceLastIbmError(raw: unknown): QuantumIbmError | null {
   const obj = raw as Record<string, unknown>
   if (typeof obj.code !== 'string') return null
   if (typeof obj.message !== 'string') return null
+  if (obj.message.trim() === '') return null
   if (typeof obj.retryable !== 'boolean') return null
   return {
     code: obj.code as QuantumIbmError['code'],
