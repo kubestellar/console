@@ -120,7 +120,8 @@ describe('PVCDrillDown interactions', () => {
 
   it('shows back button when drill-down stack has entries', async () => {
     const mockPop = vi.fn()
-    vi.mocked(await vi.importActual('../../../../hooks/useDrillDown')).useDrillDown = () => ({
+    const useDrillDownModule = await import('../../../../hooks/useDrillDown')
+    vi.spyOn(useDrillDownModule, 'useDrillDown').mockReturnValue({
       state: { stack: [{}] },
       pop: mockPop,
       close: vi.fn(),
