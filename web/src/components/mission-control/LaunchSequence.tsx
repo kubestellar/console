@@ -486,10 +486,10 @@ export function LaunchSequence({
           })),
         }))
       )
-    } catch (err: unknown) {
-      const errorMessage = Array.isArray(err)
-        ? err.map(String).join('; ')
-        : String(err)
+    } catch (error: unknown) {
+      const errorMessage = Array.isArray(error)
+        ? error.map((item) => (item instanceof Error ? item.message : String(item))).join('; ')
+        : error instanceof Error ? error.message : String(error)
       updateProgress((prev) =>
         prev.map((phase) => ({
           ...phase,
