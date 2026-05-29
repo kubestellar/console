@@ -1,53 +1,84 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { ROUTES } from '../../../config/routes'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 const mockNavigate = vi.fn()
-const mockSetShowImportDialog = vi.fn()
+const tSpy = vi.fn((key: string, fallback?: string) => fallback || key)
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => ({ pathname: '/' }),
   }
 })
 
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback || key,
-    i18n: { language: 'en', changeLanguage: vi.fn() },
-  }),
+vi.mock('../../../lib/demoMode', () => ({
+  isDemoMode: () => true,
+  getDemoMode: () => true,
+  isNetlifyDeployment: false,
+  isDemoModeForced: false,
+  canToggleDemoMode: () => true,
+  setDemoMode: vi.fn(),
+  toggleDemoMode: vi.fn(),
+  subscribeDemoMode: () => () => { },
+  isDemoToken: () => true,
+  hasRealToken: () => false,
+  setDemoToken: vi.fn(),
+}))
+
+let mockPodIssues: any[] = []
+let mockDeploymentIssues: any[] = []
+let mockDeployments: any[] = []
+let mockClusters: any[] = []
+let mockIsLoading = false
+let mockAgentStatus: 'connected' | 'disconnected' = 'connected'
+let mockIsDemoMode = true
+
+vi.mock('../../../hooks/useDemoMode', () => ({
+  getDemoMode: () => mockIsDemoMode,
+  default: () => mockIsDemoMode,
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode }),
+  isDemoModeForced: false,
+}))
+
+vi.mock('../../../lib/analytics', () => ({
+  emitNavigate: vi.fn(),
+  emitLogin: vi.fn(),
+  emitEvent: vi.fn(),
+  analyticsReady: Promise.resolve(),
+}))
+
+vi.mock('../../../lib/dashboards/DashboardPage', () => ({
+  DashboardPage: ({ title, rightExtra, children }: { title: string; rightExtra?: React.ReactNode; children?: React.ReactNode }) => (
+    <div data-testid="dashboard-page">
+      <h1>{title}</h1>
+      {rightExtra}
+      {children}
+    </div>
+  ),
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
-  useDeploymentIssues: () => ({ issues: [], isLoading: false, isRefreshing: false }),
-  usePodIssues: () => ({ issues: [], isLoading: false, isRefreshing: false }),
-  useClusters: () => ({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false }),
-  useDeployments: () => ({ deployments: [], isLoading: false, isRefreshing: false }),
+  usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+  useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+  useDeployments: () => ({ deployments: mockDeployments, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
+  useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: mockIsLoading, lastUpdated: null, refetch: vi.fn() }),
 }))
+
+import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({
-    globalSelectedClusters: [],
+  useGlobalFilters: vi.fn(() => ({
+    selectedClusters: [],
     isAllClustersSelected: true,
-  }),
-}))
-
-vi.mock('../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => ({
-    drillToNamespace: vi.fn(),
-    drillToAllNamespaces: vi.fn(),
-    drillToAllDeployments: vi.fn(),
-    drillToAllPods: vi.fn(),
-    drillToDeployment: vi.fn(),
-  }),
+    customFilter: '',
+    filterByCluster: (items: any[]) => items,
+  })),
 }))
 
 vi.mock('../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ status: 'disconnected' }),
+  useLocalAgent: () => ({ status: mockAgentStatus }),
   wasAgentEverConnected: () => false,
 }))
 
@@ -55,87 +86,115 @@ vi.mock('../../../hooks/useBackendHealth', () => ({
   isInClusterMode: () => false,
 }))
 
-vi.mock('../../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-}))
-
 vi.mock('../../../lib/unified/demo', () => ({
   useIsModeSwitching: () => false,
 }))
 
-vi.mock('../../ui/Toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+const { showToastSpy, kubectlExecSpy } = vi.hoisted(() => ({
+  showToastSpy: vi.fn(),
+  kubectlExecSpy: vi.fn().mockResolvedValue({ output: 'success', exitCode: 0 }),
+}))
+
+vi.mock('../../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({
+    drillToNamespace: vi.fn(),
+    drillToDeployment: vi.fn(),
+    drillToAllNamespaces: vi.fn(),
+    drillToAllDeployments: vi.fn(),
+    drillToAllPods: vi.fn(),
+  }),
+}))
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({ t: tSpy, i18n: { language: 'en' } }),
 }))
 
 vi.mock('../../ui/RotatingTip', () => ({
   RotatingTip: () => null,
 }))
 
-vi.mock('../../../lib/dashboards/DashboardPage', () => ({
-  DashboardPage: ({ rightExtra, children }: { rightExtra: React.ReactNode; children: React.ReactNode }) => (
-    <div>
-      <div data-testid="dashboard-right-extra">{rightExtra}</div>
-      <div data-testid="dashboard-children">{children}</div>
-    </div>
-  ),
-}))
-
-vi.mock('../../cards/WorkloadImportDialog', () => ({
-  WorkloadImportDialog: () => null,
+vi.mock('../../cards/llmd/shared/PortalTooltip', () => ({
+  PortalTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../../../lib/modals', () => ({
   ConfirmDialog: () => null,
 }))
 
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({
+    showToast: showToastSpy,
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('../../../lib/kubectlProxy', () => ({
+  kubectlProxy: {
+    exec: kubectlExecSpy,
+  },
+}))
+
+vi.mock('../../cards/WorkloadImportDialog', () => ({
+  WorkloadImportDialog: ({ isOpen }: { isOpen: boolean }) => (
+    isOpen ? <div data-testid="workload-import-dialog">workload-import-dialog</div> : null
+  ),
+}))
+
 import { Workloads } from '../Workloads'
 
-describe('Workloads Navigation', () => {
+describe('Workloads Add Workload button', () => {
+  const renderWorkloads = () =>
+    render(
+      <MemoryRouter>
+        <Workloads />
+      </MemoryRouter>
+    )
+
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockNavigate.mockClear()
+    tSpy.mockClear()
+    mockPodIssues = []
+    mockDeploymentIssues = []
+    mockDeployments = []
+    mockClusters = []
+    mockIsLoading = false
+    mockAgentStatus = 'connected'
+    mockIsDemoMode = true
+    showToastSpy.mockClear()
+    kubectlExecSpy.mockClear()
+    vi.mocked(useGlobalFilters).mockReturnValue({
+      selectedClusters: [],
+      isAllClustersSelected: true,
+      customFilter: '',
+      filterByCluster: (items: any[]) => items,
+    } as any)
   })
 
-  it('renders "+ Add Workload" button with correct label', () => {
-    render(<Workloads />)
-    const addButton = screen.getByTestId('add-workload-btn')
+  it('renders the add workload button using the translated label', () => {
+    renderWorkloads()
+
+    const addButton = screen.getByRole('button', { name: 'Add Workload' })
+
     expect(addButton).toBeTruthy()
-    expect(addButton.textContent).toContain('Add Workload')
+    expect(screen.getByTestId('add-workload-btn').textContent).toContain('Add Workload')
+    expect(tSpy).toHaveBeenCalledWith('workloads.addWorkload', 'Add Workload')
   })
 
-  it('clicking "+ Add Workload" button does NOT call navigate', () => {
-    render(<Workloads />)
-    const addButton = screen.getByTestId('add-workload-btn')
-    fireEvent.click(addButton)
+  it('does not call navigate on render', () => {
+    renderWorkloads()
+
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
-  it('clicking "+ Add Workload" button opens import dialog (not ROUTES.DEPLOY)', () => {
-    const { container } = render(<Workloads />)
-    const addButton = screen.getByTestId('add-workload-btn')
-    fireEvent.click(addButton)
-    // Should NOT navigate to ROUTES.DEPLOY
-    expect(mockNavigate).not.toHaveBeenCalledWith(ROUTES.DEPLOY)
-  })
+  it('shows the import dialog when the add workload button is clicked', () => {
+    renderWorkloads()
 
-  it('empty state "Create a Workload" button does NOT navigate to ROUTES.DEPLOY', () => {
-    render(<Workloads />)
-    // Empty state appears when no workloads exist
-    const emptyStateButton = screen.queryByTestId('empty-state-deploy-workload-btn')
-    if (emptyStateButton) {
-      fireEvent.click(emptyStateButton)
-      expect(mockNavigate).not.toHaveBeenCalledWith(ROUTES.DEPLOY)
-    }
-  })
+    expect(screen.queryByTestId('workload-import-dialog')).toBeNull()
 
-  it('navigate is NOT called on component render', () => {
-    render(<Workloads />)
+    fireEvent.click(screen.getByTestId('add-workload-btn'))
+
+    expect(screen.getByTestId('workload-import-dialog')).toBeTruthy()
     expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('button label uses t() translation with fallback', () => {
-    render(<Workloads />)
-    const addButton = screen.getByTestId('add-workload-btn')
-    // Translation key: workloads.addWorkload, fallback: 'Add Workload'
-    expect(addButton.textContent).toContain('Add Workload')
   })
 })
