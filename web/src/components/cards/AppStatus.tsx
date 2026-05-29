@@ -230,6 +230,8 @@ export function AppStatus(_props: AppStatusProps) {
           <div
             key={`${app.name}-${app.namespace}`}
             onClick={() => {
+              // When app is deployed to multiple clusters, drill down to the first cluster.
+              // Future enhancement: show cluster selector modal (#16050)
               if (app.clusters && app.clusters.length > 0) {
                 handleAppClick(app, app.clusters[0])
               }
@@ -253,6 +255,8 @@ export function AppStatus(_props: AppStatusProps) {
                       kind: 'Deployment',
                       name: app.name,
                       namespace: app.namespace,
+                      // For multi-cluster apps, AI actions target the first cluster.
+                      // Future enhancement: multi-cluster diagnostics (#16050)
                       cluster: app.clusters[0] || '',
                       status: app.status.warning > 0 ? 'Warning' : 'Pending' }}
                     issues={[

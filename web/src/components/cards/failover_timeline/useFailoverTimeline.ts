@@ -197,13 +197,15 @@ function correlateEvents(
 
         const delta = bindingMs - transitionMs
         if (delta >= 0 && delta <= CORRELATION_WINDOW_MS) {
-          const targetCluster = bt.clusters.length > 0 ? bt.clusters[0] : 'unknown'
+          // Multi-cluster support: show all target clusters, not just the first (#16050)
+          const targetClusters = (bt.clusters || []).length > 0 ? bt.clusters.join(', ') : 'unknown'
+          const primaryCluster = (bt.clusters || []).length > 0 ? bt.clusters[0] : 'unknown'
           events.push({
             timestamp: bt.scheduledTime,
             eventType: 'binding_reschedule' as FailoverEventType,
-            cluster: targetCluster,
+            cluster: primaryCluster,
             workload: bt.resourceKind ? `${bt.resourceKind}/${bt.bindingName}` : bt.bindingName,
-            details: `ResourceBinding rescheduled from ${ct.clusterName} to ${targetCluster}`,
+            details: `ResourceBinding rescheduled from ${ct.clusterName} to ${targetClusters}`,
             severity: 'warning' as FailoverSeverity,
           })
         }
@@ -233,13 +235,15 @@ function correlateEvents(
     )
     if (alreadyCorrelated) continue
 
-    const targetCluster = bt.clusters.length > 0 ? bt.clusters[0] : 'unknown'
+    // Multi-cluster support: show all target clusters, not just the first (#16050)
+    const targetClusters = (bt.clusters || []).length > 0 ? bt.clusters.join(', ') : 'unknown'
+    const primaryCluster = (bt.clusters || []).length > 0 ? bt.clusters[0] : 'unknown'
     events.push({
       timestamp: bt.scheduledTime,
       eventType: 'binding_reschedule' as FailoverEventType,
-      cluster: targetCluster,
+      cluster: primaryCluster,
       workload: bt.resourceKind ? `${bt.resourceKind}/${bt.bindingName}` : bt.bindingName,
-      details: `ResourceBinding rescheduled to ${targetCluster}`,
+      details: `ResourceBinding rescheduled to ${targetClusters}`,
       severity: 'warning' as FailoverSeverity,
     })
   }
