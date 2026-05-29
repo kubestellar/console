@@ -71,7 +71,7 @@ function buildQuantumMutationHeaders(token: string | null): HeadersInit {
 }
 
 export const QuantumControlPanel: React.FC = () => {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
   const { isAuthenticated, login, isLoading: authIsLoading, token } = useAuth()
   const { open: openDrillDown, close: closeDrillDown } = useDrillDown()
