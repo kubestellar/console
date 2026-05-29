@@ -408,6 +408,16 @@ describe('SaveResolutionDialog', () => {
     expect(saveButton.querySelector('svg.animate-spin')).toBeInTheDocument()
   })
 
+  it('disables cancel controls while saving', () => {
+    mockUseStateAtCall(8, true)
+    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
+
+    render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
+
+    expect(screen.getByRole('button', { name: /Cancel/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /close dialog/i })).not.toBeInTheDocument()
+  })
+
   it('calls saveResolution and closes on valid save', async () => {
     const onClose = vi.fn()
     const onSaved = vi.fn()

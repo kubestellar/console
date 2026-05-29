@@ -212,6 +212,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   }>({ key: '', result: null, scanning: false })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const scanRanRef = useRef('')
+  const isSubmitPending = isSubmitting
 
   const dialogKey = `${resolution.id}:${resolution.updatedAt}:${isOpen ? 'open' : 'closed'}`
   const filenameKey = `${dialogKey}:${missionClass}`
@@ -248,9 +249,11 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   const warningCount = scanResult?.findings.filter(f => f.severity !== 'info').length ?? 0
   const hasWarnings = warningCount > 0
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
+      await Promise.resolve()
+
       const description = resolution.resolution.summary || resolution.title
       const url = buildGitHubNewFileUrl({
         owner: CONSOLE_KB_OWNER,
@@ -299,8 +302,8 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
-      <BaseModal.Header title={t('missions.submitToKB.title')} icon={BookUp} onClose={onClose} />
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={!isSubmitPending} closeOnEscape={!isSubmitPending}>
+      <BaseModal.Header title={t('missions.submitToKB.title')} icon={BookUp} onClose={isSubmitPending ? undefined : onClose} />
 
       <BaseModal.Content noPadding>
         <div className="p-4 space-y-4">
@@ -320,6 +323,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             <div className="flex gap-3">
               <button
                 onClick={() => setMissionClass('fixer')}
+                disabled={isSubmitting || scanning}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-colors',
                   missionClass === 'fixer'
@@ -335,6 +339,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               </button>
               <button
                 onClick={() => setMissionClass('install')}
+                disabled={isSubmitting || scanning}
                 className={cn(
                   'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-colors',
                   missionClass === 'install'
@@ -359,6 +364,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
               type="text"
               value={cncfProject}
               onChange={(e) => setCncfProjectInput({ key: dialogKey, value: e.target.value })}
+              disabled={isSubmitting || scanning}
               placeholder={t('missions.submitToKB.cncfProjectPlaceholder')}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
@@ -375,6 +381,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
                 type="text"
                 value={filename}
                 onChange={(e) => setFilenameInput({ key: filenameKey, value: e.target.value })}
+                disabled={isSubmitting || scanning}
                 className="flex-1 px-3 py-2 text-sm font-mono bg-secondary/50 border border-border rounded-lg text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               />
             </div>
@@ -396,7 +403,8 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
             ) : (
               <button
                 onClick={runScan}
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSubmitting || scanning}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
               >
                 <Shield className="w-3 h-3" />
                 {t('missions.submitToKB.runSecurityScan')}
@@ -422,13 +430,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
         <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
+            disabled={isSubmitPending}
+            className="px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
             {t('missions.submitToKB.cancel')}
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!filename.trim() || isSubmitting}
+            disabled={!filename.trim() || isSubmitting || scanning}
             className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg bg-linear-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
           >
             {isSubmitting ? (

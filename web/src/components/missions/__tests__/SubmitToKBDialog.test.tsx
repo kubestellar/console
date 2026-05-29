@@ -331,6 +331,15 @@ describe('SubmitToKBDialog', () => {
     expect(submitBtn.querySelector('svg.animate-spin')).toBeInTheDocument()
   })
 
+  it('disables cancel controls while submitting', () => {
+    mockUseStateAtCall(5, true)
+
+    renderDialog()
+
+    expect(screen.getByRole('button', { name: /Cancel/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /close dialog/i })).not.toBeInTheDocument()
+  })
+
   it('re-enables the submit button after submission completes', async () => {
     renderDialog()
 

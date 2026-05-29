@@ -433,6 +433,7 @@ export function SaveResolutionDialog({
   // AI summary state
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const isBusy = isGenerating || isSaving
 
   // Generate AI summary. Stable identity (empty deps) — reads latest mission
   // via missionRef so it doesn't need mission in its closure.
@@ -531,6 +532,8 @@ export function SaveResolutionDialog({
     setError(null)
 
     try {
+      await Promise.resolve()
+
       const issueSignature: IssueSignature = {
         type: issueType.trim(),
         resourceKind: resourceKind.trim() || undefined,
@@ -542,16 +545,16 @@ export function SaveResolutionDialog({
         steps: steps.filter(s => s.trim()),
         yaml: yaml.trim() || undefined }
 
-      saveResolution({
+      await Promise.resolve(saveResolution({
         missionId: mission.id,
         title: title.trim(),
         issueSignature,
         resolution,
         context: {
           cluster: mission.cluster },
-        visibility })
+        visibility }))
 
-      onSaved?.()
+      await Promise.resolve(onSaved?.())
       onClose()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('dashboard.missions.failedToSave'))
@@ -561,8 +564,8 @@ export function SaveResolutionDialog({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
-      <BaseModal.Header title={t('dashboard.missions.saveResolution')} icon={Save} onClose={onClose} />
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={!isBusy} closeOnEscape={!isBusy}>
+      <BaseModal.Header title={t('dashboard.missions.saveResolution')} icon={Save} onClose={isBusy ? undefined : onClose} />
 
       <BaseModal.Content noPadding>
         {/* AI Generation Status */}
@@ -584,8 +587,8 @@ export function SaveResolutionDialog({
             </div>
             <button
               onClick={generateSummary}
-              disabled={isGenerating}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded transition-colors"
+              disabled={isBusy}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 rounded transition-colors disabled:opacity-50"
             >
               <RefreshCw className="w-3 h-3" />
               {t('common.retry')}
@@ -613,7 +616,7 @@ export function SaveResolutionDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('dashboard.missions.titlePlaceholder')}
-              disabled={isGenerating}
+              disabled={isBusy}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
           </div>
@@ -630,7 +633,7 @@ export function SaveResolutionDialog({
                 value={issueType}
                 onChange={(e) => setIssueType(e.target.value)}
                 placeholder={t('dashboard.missions.issueTypePlaceholder')}
-                disabled={isGenerating}
+                disabled={isBusy}
                 className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
@@ -643,7 +646,7 @@ export function SaveResolutionDialog({
                 value={resourceKind}
                 onChange={(e) => setResourceKind(e.target.value)}
                 placeholder={t('dashboard.missions.resourceKindPlaceholder')}
-                disabled={isGenerating}
+                disabled={isBusy}
                 className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
@@ -659,7 +662,7 @@ export function SaveResolutionDialog({
               onChange={(e) => setSummary(e.target.value)}
               placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.problemSolutionPlaceholder')}
               rows={4}
-              disabled={isGenerating}
+              disabled={isBusy}
               className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
@@ -679,13 +682,13 @@ export function SaveResolutionDialog({
                     value={step}
                     onChange={(e) => handleStepChange(index, e.target.value)}
                     placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.stepPlaceholder')}
-                    disabled={isGenerating}
+                    disabled={isBusy}
                     className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
                   />
                   {steps.length > 1 && (
                     <button
                       onClick={() => handleRemoveStep(index)}
-                      disabled={isGenerating}
+                      disabled={isBusy}
                       className="p-1 hover:bg-red-500/20 rounded transition-colors disabled:opacity-50"
                     >
                       <X className="w-4 h-4 text-muted-foreground hover:text-red-400" />
@@ -695,7 +698,7 @@ export function SaveResolutionDialog({
               ))}
               <button
                 onClick={handleAddStep}
-                disabled={isGenerating}
+                disabled={isBusy}
                 className="text-xs text-primary hover:text-primary/80 ml-7 disabled:opacity-50"
               >
                 {t('dashboard.missions.addStep')}
@@ -714,7 +717,7 @@ export function SaveResolutionDialog({
               onChange={(e) => setYaml(e.target.value)}
               placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.yamlPlaceholder')}
               rows={4}
-              disabled={isGenerating}
+              disabled={isBusy}
               className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
@@ -727,13 +730,13 @@ export function SaveResolutionDialog({
             <div className="flex gap-3">
               <button
                 onClick={() => setVisibility('private')}
-                disabled={isGenerating}
+                disabled={isBusy}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
                   visibility === 'private'
                     ? "bg-primary/20 border-primary/50 text-primary"
                     : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground",
-                  isGenerating && "opacity-50"
+                  isBusy && "opacity-50"
                 )}
               >
                 <Save className="w-4 h-4" />
@@ -741,13 +744,13 @@ export function SaveResolutionDialog({
               </button>
               <button
                 onClick={() => setVisibility('shared')}
-                disabled={isGenerating}
+                disabled={isBusy}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-colors",
                   visibility === 'shared'
                     ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
                     : "bg-secondary/50 border-border text-muted-foreground hover:text-foreground",
-                  isGenerating && "opacity-50"
+                  isBusy && "opacity-50"
                 )}
               >
                 <Share2 className="w-4 h-4" />
@@ -769,22 +772,32 @@ export function SaveResolutionDialog({
       <BaseModal.Footer showKeyboardHints={false}>
         <button
           onClick={generateSummary}
-          disabled={isGenerating || isSaving}
+          disabled={isBusy}
           className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
-          <Sparkles className="w-4 h-4" />
-          {t('dashboard.missions.regenerate')}
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t('dashboard.missions.generating')}
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              {t('dashboard.missions.regenerate')}
+            </>
+          )}
         </button>
         <div className="flex items-center gap-3 ml-auto">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            disabled={isBusy}
+            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
             {t('actions.cancel')}
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving || isGenerating}
+            disabled={isBusy}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSaving ? (
