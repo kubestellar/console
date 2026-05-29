@@ -89,6 +89,7 @@ export function ResourceMarshall() {
 
   // Auto-select cluster, namespace, and workload in demo mode
   useEffect(() => {
+    if (!clusters || clusters.length === 0) return
     const firstCluster = clusters[0]
     if (demoMode && firstCluster && !selectedCluster) {
       setSelectedCluster(firstCluster.name)

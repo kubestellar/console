@@ -82,6 +82,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 
   // Auto-select first cluster and namespace in demo mode
   useEffect(() => {
+    if (!clusters || clusters.length === 0) return
     const firstCluster = clusters[0]
     if (isDemoData && firstCluster && !selectedCluster) {
       setSelectedCluster(firstCluster.name)

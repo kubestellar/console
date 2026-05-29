@@ -230,7 +230,7 @@ export function AppStatus(_props: AppStatusProps) {
           <div
             key={`${app.name}-${app.namespace}`}
             onClick={() => {
-              if (app.clusters.length > 0) {
+              if (app.clusters && app.clusters.length > 0) {
                 handleAppClick(app, app.clusters[0])
               }
             }}
