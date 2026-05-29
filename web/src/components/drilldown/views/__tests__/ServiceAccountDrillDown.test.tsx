@@ -38,6 +38,7 @@ vi.mock('../../../../hooks/useLocalAgent', () => ({
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
+  useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn() }),
   useDrillDownActions: () => ({ drillToNamespace: vi.fn(), drillToCluster: vi.fn(), drillToSecret: null }),
 }))
 
