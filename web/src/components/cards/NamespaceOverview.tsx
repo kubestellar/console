@@ -24,6 +24,7 @@ interface NamespaceOverviewProps {
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
+  const safeAllClusters = allClusters || []
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(
@@ -41,7 +42,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Apply global filters
   const clusters = useMemo(() => {
-    let result = allClusters
+    let result = safeAllClusters
 
     if (!isAllClustersSelected) {
       result = result.filter(c => globalSelectedClusters.includes(c.name))
@@ -56,7 +57,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     }
 
     return result
-  }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
+  }, [safeAllClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {
@@ -82,15 +83,16 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Fetch namespaces for the selected cluster
   const { namespaces, isRefreshing: isNamespacesRefreshing, isFailed: namespacesFailed, consecutiveFailures: namespacesConsecutiveFailures, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const safeNamespaces = namespaces || []
 
   // Auto-select first namespace when cluster is selected and no valid namespace is chosen (#3113)
   useEffect(() => {
-    if (selectedCluster && namespaces.length > 0) {
-      if (!selectedNamespace || !namespaces.includes(selectedNamespace)) {
-        setSelectedNamespace(namespaces[0])
+    if (selectedCluster && safeNamespaces.length > 0) {
+      if (!selectedNamespace || !safeNamespaces.includes(selectedNamespace)) {
+        setSelectedNamespace(safeNamespaces[0])
       }
     }
-  }, [selectedCluster, selectedNamespace, namespaces])
+  }, [selectedCluster, selectedNamespace, safeNamespaces])
 
   // Filter by namespace. Guard hook return values against undefined
   // (malformed API response) per CLAUDE.md array safety rule (#9889).
@@ -106,7 +108,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     return safeAllDeploymentIssues.filter(d => d.namespace === selectedNamespace)
   })()
 
-  const cluster = clusters.find(c => c.name === selectedCluster)
+  const cluster = (clusters || []).find(c => c.name === selectedCluster)
 
   // Use the most recent refresh time of the data sources
   const isRefreshing = isPodIssuesRefreshing || isDeploymentIssuesRefreshing || isNamespacesRefreshing
@@ -122,7 +124,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   )
 
   // Report state to CardWrapper for refresh animation
-  const hasData = allClusters.length > 0
+  const hasData = safeAllClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || isRefreshing,
@@ -194,7 +196,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           title={selectedCluster ? t('cards:namespaceOverview.selectNamespaceTitle') : t('cards:namespaceOverview.selectClusterFirst')}
         >
           <option value="">{t('selectors.selectNamespace')}</option>
-          {(namespaces || []).map(ns => (
+          {safeNamespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
         </select>

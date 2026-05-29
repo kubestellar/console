@@ -33,9 +33,27 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, fallback?: string) => fallback || key,
   }),
+}))
+
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardSearchInput: () => <input data-testid="search" />,
+  CardControlsRow: () => <div data-testid="controls-row" />,
+  CardPaginationFooter: () => <div data-testid="pagination" />,
+  CardSkeleton: () => <div data-testid="skeleton" />,
+  CardAIActions: () => <div data-testid="ai-actions" />,
+  CardEmptyState: () => <div data-testid="empty-state" />,
+}))
+
+vi.mock('../../ui/RefreshIndicator', () => ({
+  RefreshIndicator: () => <div data-testid="refresh-indicator" />,
+}))
+
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
 }))
 
 describe('AppStatus - Multi-cluster guards (#16050)', () => {
@@ -103,7 +121,7 @@ describe('AppStatus - Multi-cluster guards (#16050)', () => {
     render(<AppStatus />)
     expect(mockUseCardLoadingState).toHaveBeenCalledWith(
       expect.objectContaining({
-        hasAnyData: 0, // deployments.length evaluated as 0 due to guard
+        hasAnyData: false,
       })
     )
   })

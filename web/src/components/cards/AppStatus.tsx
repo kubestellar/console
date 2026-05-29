@@ -25,7 +25,8 @@ const APP_SORT_COMPARATORS = {
     return bScore - aScore
   },
   name: commonComparators.string<AppData>('name'),
-  clusters: (a: AppData, b: AppData) => b.clusters.length - a.clusters.length }
+  clusters: (a: AppData, b: AppData) => (b.clusters || []).length - (a.clusters || []).length,
+}
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AppStatusConfig {
@@ -48,14 +49,15 @@ export function AppStatus(_props: AppStatusProps) {
   const { t } = useTranslation()
   const { drillToDeployment } = useDrillDownActions()
   const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
+  const safeDeployments = deployments || []
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  const hasData = deployments.length > 0
+  const hasData = safeDeployments.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: deployments.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures })
 
@@ -69,7 +71,7 @@ export function AppStatus(_props: AppStatusProps) {
     const appMap = new Map<string, AppData>()
 
     // Guard against undefined hook return (malformed API response) per CLAUDE.md array safety rule (#9889).
-    ;(deployments || []).forEach(dep => {
+    safeDeployments.forEach(dep => {
       const key = dep.name
       if (!appMap.has(key)) {
         appMap.set(key, {
@@ -96,7 +98,7 @@ export function AppStatus(_props: AppStatusProps) {
     })
 
     return Array.from(appMap.values())
-  }, [deployments])
+  }, [safeDeployments])
 
   // Pre-filter by global cluster filter and custom text filter
   // (useCardData's clusterField doesn't support array fields, so we handle it here)
@@ -225,6 +227,7 @@ export function AppStatus(_props: AppStatusProps) {
         </div>
       ) : (apps || []).map((app, idx) => {
         const total = app.status.healthy + app.status.warning + app.status.pending
+        const appClusters = app.clusters || []
 
         return (
           <div
@@ -232,8 +235,8 @@ export function AppStatus(_props: AppStatusProps) {
             onClick={() => {
               // When app is deployed to multiple clusters, drill down to the first cluster.
               // Future enhancement: show cluster selector modal (#16050)
-              if (app.clusters && app.clusters.length > 0) {
-                handleAppClick(app, app.clusters[0])
+              if (appClusters.length > 0) {
+                handleAppClick(app, appClusters[0])
               }
             }}
             className={`p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/20' : 'bg-secondary/40'}`}
@@ -257,13 +260,13 @@ export function AppStatus(_props: AppStatusProps) {
                       namespace: app.namespace,
                       // For multi-cluster apps, AI actions target the first cluster.
                       // Future enhancement: multi-cluster diagnostics (#16050)
-                      cluster: app.clusters[0] || '',
+                      cluster: appClusters[0] || '',
                       status: app.status.warning > 0 ? 'Warning' : 'Pending' }}
                     issues={[
-                      ...(app.status.warning > 0 ? [{ name: 'Warning', message: `${app.status.warning} instance(s) with warnings across ${app.clusters.length} cluster(s)` }] : []),
+                      ...(app.status.warning > 0 ? [{ name: 'Warning', message: `${app.status.warning} instance(s) with warnings across ${appClusters.length} cluster(s)` }] : []),
                       ...(app.status.pending > 0 ? [{ name: 'Pending', message: `${app.status.pending} instance(s) pending` }] : []),
                     ]}
-                    additionalContext={{ clusters: app.clusters, healthy: app.status.healthy }}
+                    additionalContext={{ clusters: appClusters, healthy: app.status.healthy }}
                   />
                 )}
                 <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -294,7 +297,7 @@ export function AppStatus(_props: AppStatusProps) {
 
             {/* Cluster badges */}
             <div className="flex flex-wrap gap-1 mt-2 overflow-hidden">
-              {(app.clusters || []).map((cluster) => (
+              {appClusters.map((cluster) => (
                 <ClusterBadge key={cluster} cluster={cluster} showIcon={false} />
               ))}
             </div>
