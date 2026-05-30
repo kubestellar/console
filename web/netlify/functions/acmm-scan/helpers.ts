@@ -110,8 +110,29 @@ export function lastNWeeks(n: number): string[] {
   return weeks;
 }
 
+const GLOBSTAR_TOKEN = "__ACMM_GLOBSTAR__";
+const GLOB_SPECIAL_RE = /[|\\{}()[\]^$+?.]/g;
+
+function globToRegExp(pattern: string): RegExp {
+  const regexPattern = pattern
+    .replaceAll("**", GLOBSTAR_TOKEN)
+    .replace(GLOB_SPECIAL_RE, "\\$&")
+    .replaceAll("*", "[^/]*")
+    .replaceAll(GLOBSTAR_TOKEN, ".*");
+
+  return new RegExp(`^${regexPattern}$`);
+}
+
 export function matchesHint(treePaths: Set<string>, hint: DetectionHint): boolean {
   const patterns = Array.isArray(hint.pattern) ? hint.pattern : [hint.pattern];
+
+  if (hint.type === "glob") {
+    return patterns.some((pattern) => {
+      const regex = globToRegExp(pattern);
+      return Array.from(treePaths).some((path) => regex.test(path));
+    });
+  }
+
   for (const pattern of patterns) {
     for (const path of treePaths) {
       if (pattern.endsWith("/")) {
