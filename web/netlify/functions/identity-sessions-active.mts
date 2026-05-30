@@ -3,6 +3,11 @@
  *
  * Returns demo active session list for the enterprise Session dashboard.
  */
+import { buildCorsHeaders, handlePreflight } from "./_shared";
+
+const CORS_OPTIONS = {
+  methods: "GET, OPTIONS",
+} as const;
 
 /** Offset constants for demo timestamps (milliseconds) */
 const THIRTY_SECONDS_MS = 30_000;
@@ -22,7 +27,23 @@ const THREE_HOURS_MS = 10_800_000;
 const FOUR_HOURS_MS = 14_400_000;
 const SEVENTY_FIVE_MINUTES_MS = 4_500_000;
 
-export default async () => {
+export default async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return handlePreflight(req, CORS_OPTIONS);
+  }
+
+  const corsHeaders = buildCorsHeaders(req, CORS_OPTIONS);
+  if (req.method !== "GET") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        Allow: CORS_OPTIONS.methods,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
   const now = Date.now();
   return new Response(
     JSON.stringify([
@@ -37,7 +58,10 @@ export default async () => {
     ]),
     {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     },
   );
 };

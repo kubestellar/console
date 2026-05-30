@@ -3,7 +3,29 @@
  *
  * Returns demo session policy list for the enterprise Session dashboard.
  */
-export default async () => {
+import { buildCorsHeaders, handlePreflight } from "./_shared";
+
+const CORS_OPTIONS = {
+  methods: "GET, OPTIONS",
+} as const;
+
+export default async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return handlePreflight(req, CORS_OPTIONS);
+  }
+
+  const corsHeaders = buildCorsHeaders(req, CORS_OPTIONS);
+  if (req.method !== "GET") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: {
+        ...corsHeaders,
+        Allow: CORS_OPTIONS.methods,
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
   return new Response(
     JSON.stringify([
       { id: "pol-1", name: "Default Session Policy", description: "Standard session timeouts for all users", idle_timeout_minutes: 30, absolute_timeout_hours: 8, max_concurrent: 3, enforce_mfa: true, scope: "global" },
@@ -12,7 +34,10 @@ export default async () => {
     ]),
     {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     },
   );
 };
