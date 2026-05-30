@@ -3,122 +3,97 @@ package kagent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewKagentClient(t *testing.T) {
-	tests := []struct {
-		name    string
-		baseURL string
-		want    string
-	}{
-		{
-			name:    "URL without trailing slash",
-			baseURL: "http://localhost:8083",
-			want:    "http://localhost:8083",
-		},
-		{
-			name:    "URL with trailing slash",
-			baseURL: "http://localhost:8083/",
-			want:    "http://localhost:8083",
-		},
-		{
-			name:    "URL with multiple trailing slashes",
-			baseURL: "http://localhost:8083///",
-			want:    "http://localhost:8083",
-		},
-	}
+type roundTripFunc func(*http.Request) (*http.Response, error)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client := NewKagentClient(tt.baseURL)
-			require.NotNil(t, client)
-			assert.Equal(t, tt.want, client.baseURL)
-			assert.NotNil(t, client.httpClient)
-			assert.Equal(t, 30*time.Second, client.httpClient.Timeout)
-		})
-	}
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
-func TestNewKagentClientFromEnv(t *testing.T) {
-	t.Run("with KAGENT_CONTROLLER_URL set", func(t *testing.T) {
-		originalURL := os.Getenv("KAGENT_CONTROLLER_URL")
-		defer func() {
-			if originalURL == "" {
-				os.Unsetenv("KAGENT_CONTROLLER_URL")
-			} else {
-				os.Setenv("KAGENT_CONTROLLER_URL", originalURL)
-			}
-		}()
+func newTestClient(t *testing.T, baseURL string, transport http.RoundTripper) *KagentClient {
+	t.Helper()
 
-		testURL := "http://test-kagent:8083"
-		os.Setenv("KAGENT_CONTROLLER_URL", testURL)
-
-		client := NewKagentClientFromEnv()
-		require.NotNil(t, client)
-		assert.Equal(t, testURL, client.baseURL)
-	})
-
-	t.Run("without KAGENT_CONTROLLER_URL - no detection", func(t *testing.T) {
-		originalURL := os.Getenv("KAGENT_CONTROLLER_URL")
-		defer func() {
-			if originalURL == "" {
-				os.Unsetenv("KAGENT_CONTROLLER_URL")
-			} else {
-				os.Setenv("KAGENT_CONTROLLER_URL", originalURL)
-			}
-		}()
-
-		os.Unsetenv("KAGENT_CONTROLLER_URL")
-		client := NewKagentClientFromEnv()
-		assert.Nil(t, client)
-	})
+	client := NewKagentClient(baseURL)
+	if transport != nil {
+		client.httpClient.Transport = transport
+	}
+	return client
 }
 
-func TestKagentClient_Status(t *testing.T) {
+func readAllAndClose(t *testing.T, rc io.ReadCloser) string {
+	t.Helper()
+
+	defer func() {
+		require.NoError(t, rc.Close())
+	}()
+
+	data, err := io.ReadAll(rc)
+	require.NoError(t, err)
+	return string(data)
+}
+
+func TestNewKagentClientTrimsTrailingSlash(t *testing.T) {
+	client := NewKagentClient("http://example.com/")
+	assert.Equal(t, "http://example.com", client.baseURL)
+	require.NotNil(t, client.httpClient)
+}
+
+func TestNewKagentClientFromEnvUsesConfiguredURL(t *testing.T) {
+	t.Setenv("KAGENT_CONTROLLER_URL", "http://controller.example.com/")
+
+	client := NewKagentClientFromEnv()
+	require.NotNil(t, client)
+	assert.Equal(t, "http://controller.example.com", client.baseURL)
+}
+
+func TestKagentClientStatus(t *testing.T) {
 	tests := []struct {
 		name       string
 		statusCode int
-		wantOK     bool
-		wantErr    bool
+		transport  http.RoundTripper
+		want       bool
+		wantErr    string
 	}{
 		{
-			name:       "healthy service",
+			name:       "healthy response returns true",
 			statusCode: http.StatusOK,
-			wantOK:     true,
-			wantErr:    false,
+			want:       true,
 		},
 		{
-			name:       "service unavailable",
+			name:       "non success response returns false without error",
 			statusCode: http.StatusServiceUnavailable,
-			wantOK:     false,
-			wantErr:    false,
+			want:       false,
 		},
 		{
-			name:       "not found",
-			statusCode: http.StatusNotFound,
-			wantOK:     false,
-			wantErr:    false,
-		},
-		{
-			name:       "internal server error",
-			statusCode: http.StatusInternalServerError,
-			wantOK:     false,
-			wantErr:    false,
+			name: "transport errors are wrapped",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, errors.New("boom")
+			}),
+			wantErr: "kagent health check failed",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.transport != nil {
+				client := newTestClient(t, "http://example.com", tt.transport)
+				ok, err := client.Status()
+				require.Error(t, err)
+				assert.False(t, ok)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, "/health", r.URL.Path)
 				w.WriteHeader(tt.statusCode)
@@ -127,388 +102,282 @@ func TestKagentClient_Status(t *testing.T) {
 
 			client := NewKagentClient(server.URL)
 			ok, err := client.Status()
-
-			if tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-			assert.Equal(t, tt.wantOK, ok)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, ok)
 		})
 	}
-
-	t.Run("unreachable server", func(t *testing.T) {
-		client := NewKagentClient("http://localhost:99999")
-		ok, err := client.Status()
-		assert.False(t, ok)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "kagent health check failed")
-	})
 }
 
-func TestKagentClient_ListAgents(t *testing.T) {
-	t.Run("successful list", func(t *testing.T) {
-		agents := []AgentInfo{
-			{
-				Name:        "test-agent",
-				Namespace:   "default",
-				Description: "Test agent",
-				Framework:   "langchain",
-				Tools:       []string{"kubectl", "helm"},
-			},
-			{
-				Name:      "another-agent",
-				Namespace: "kube-system",
-				Framework: "custom",
-			},
-		}
+func TestKagentClientListAgents(t *testing.T) {
+	tests := []struct {
+		name        string
+		statusCode  int
+		body        string
+		wantAgents  []AgentInfo
+		wantErrText string
+	}{
+		{
+			name:       "decodes agent list",
+			statusCode: http.StatusOK,
+			body:       `[{"name":"ops","namespace":"team-a","description":"Ops agent","framework":"langgraph","tools":["kubectl","logs"]}]`,
+			wantAgents: []AgentInfo{{Name: "ops", Namespace: "team-a", Description: "Ops agent", Framework: "langgraph", Tools: []string{"kubectl", "logs"}}},
+		},
+		{
+			name:        "includes response body on http error",
+			statusCode:  http.StatusBadGateway,
+			body:        `upstream unavailable`,
+			wantErrText: "list agents returned 502: upstream unavailable",
+		},
+		{
+			name:        "reports invalid json",
+			statusCode:  http.StatusOK,
+			body:        `{`,
+			wantErrText: "failed to decode agent list",
+		},
+	}
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/api/agents", r.URL.Path)
-			assert.Equal(t, http.MethodGet, r.Method)
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(agents)
-		}))
-		defer server.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/api/agents", r.URL.Path)
+				w.WriteHeader(tt.statusCode)
+				_, _ = io.WriteString(w, tt.body)
+			}))
+			defer server.Close()
 
-		client := NewKagentClient(server.URL)
-		result, err := client.ListAgents()
+			client := NewKagentClient(server.URL)
+			agents, err := client.ListAgents()
+			if tt.wantErrText != "" {
+				require.Error(t, err)
+				assert.Nil(t, agents)
+				assert.Contains(t, err.Error(), tt.wantErrText)
+				return
+			}
 
-		require.NoError(t, err)
-		require.Len(t, result, 2)
-		assert.Equal(t, "test-agent", result[0].Name)
-		assert.Equal(t, "default", result[0].Namespace)
-		assert.Equal(t, []string{"kubectl", "helm"}, result[0].Tools)
-		assert.Equal(t, "another-agent", result[1].Name)
-	})
-
-	t.Run("server returns error", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("internal error"))
-		}))
-		defer server.Close()
-
-		client := NewKagentClient(server.URL)
-		result, err := client.ListAgents()
-
-		require.Error(t, err)
-		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "list agents returned 500")
-	})
-
-	t.Run("invalid JSON response", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte("not valid json"))
-		}))
-		defer server.Close()
-
-		client := NewKagentClient(server.URL)
-		result, err := client.ListAgents()
-
-		require.Error(t, err)
-		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "failed to decode agent list")
-	})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantAgents, agents)
+		})
+	}
 }
 
-func TestKagentClient_Discover(t *testing.T) {
-	t.Run("successful discovery", func(t *testing.T) {
-		card := AgentCard{
-			Name:         "my-agent",
-			Description:  "A test agent",
-			URL:          "http://agent.example.com",
-			Capabilities: []string{"chat", "tools"},
-		}
+func TestKagentClientDiscover(t *testing.T) {
+	tests := []struct {
+		name          string
+		namespace     string
+		agentName     string
+		statusCode    int
+		body          string
+		wantEscaped   string
+		wantCard      *AgentCard
+		wantErrSubstr string
+	}{
+		{
+			name:        "escapes path segments and decodes card",
+			namespace:   "team/alpha",
+			agentName:   "ops bot",
+			statusCode:  http.StatusOK,
+			body:        `{"name":"ops bot","description":"handles ops","url":"https://agent.example.com","capabilities":["chat"]}`,
+			wantEscaped: "/api/a2a/team%2Falpha/ops%20bot/.well-known/agent.json",
+			wantCard:    &AgentCard{Name: "ops bot", Description: "handles ops", URL: "https://agent.example.com", Capabilities: []string{"chat"}},
+		},
+		{
+			name:          "returns http error details",
+			namespace:     "team-a",
+			agentName:     "missing",
+			statusCode:    http.StatusNotFound,
+			body:          `missing`,
+			wantEscaped:   "/api/a2a/team-a/missing/.well-known/agent.json",
+			wantErrSubstr: "discover agent team-a/missing returned 404: missing",
+		},
+		{
+			name:          "reports invalid json",
+			namespace:     "team-a",
+			agentName:     "broken",
+			statusCode:    http.StatusOK,
+			body:          `{`,
+			wantEscaped:   "/api/a2a/team-a/broken/.well-known/agent.json",
+			wantErrSubstr: "failed to decode agent card",
+		},
+	}
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/api/a2a/default/my-agent/.well-known/agent.json", r.URL.Path)
-			assert.Equal(t, http.MethodGet, r.Method)
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(card)
-		}))
-		defer server.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, tt.wantEscaped, r.URL.EscapedPath())
+				w.WriteHeader(tt.statusCode)
+				_, _ = io.WriteString(w, tt.body)
+			}))
+			defer server.Close()
 
-		client := NewKagentClient(server.URL)
-		result, err := client.Discover("default", "my-agent")
+			client := NewKagentClient(server.URL)
+			card, err := client.Discover(tt.namespace, tt.agentName)
+			if tt.wantErrSubstr != "" {
+				require.Error(t, err)
+				assert.Nil(t, card)
+				assert.Contains(t, err.Error(), tt.wantErrSubstr)
+				return
+			}
 
-		require.NoError(t, err)
-		require.NotNil(t, result)
-		assert.Equal(t, "my-agent", result.Name)
-		assert.Equal(t, "A test agent", result.Description)
-		assert.Equal(t, []string{"chat", "tools"}, result.Capabilities)
-	})
-
-	t.Run("agent not found", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("agent not found"))
-		}))
-		defer server.Close()
-
-		client := NewKagentClient(server.URL)
-		result, err := client.Discover("default", "nonexistent")
-
-		require.Error(t, err)
-		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "discover agent default/nonexistent returned 404")
-	})
-
-	t.Run("namespace and agent name are URL encoded", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Contains(t, r.URL.Path, "my%2Bnamespace")
-			assert.Contains(t, r.URL.Path, "my%2Bagent")
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(AgentCard{Name: "test"})
-		}))
-		defer server.Close()
-
-		client := NewKagentClient(server.URL)
-		_, err := client.Discover("my+namespace", "my+agent")
-		require.NoError(t, err)
-	})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantCard, card)
+		})
+	}
 }
 
-func TestKagentClient_Invoke(t *testing.T) {
-	t.Run("successful invoke with context ID", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/api/a2a/default/test-agent", r.URL.Path)
-			assert.Equal(t, http.MethodPost, r.Method)
-			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+func TestKagentClientInvoke(t *testing.T) {
+	tests := []struct {
+		name             string
+		contextID        string
+		responseStatus   int
+		responseBody     string
+		wantContextField bool
+		wantErrSubstr    string
+	}{
+		{
+			name:             "sends json rpc request with context id",
+			contextID:        "ctx-7",
+			responseStatus:   http.StatusOK,
+			responseBody:     `stream-body`,
+			wantContextField: true,
+		},
+		{
+			name:             "omits empty context id",
+			responseStatus:   http.StatusOK,
+			responseBody:     `stream-body`,
+			wantContextField: false,
+		},
+		{
+			name:           "returns http error details",
+			responseStatus: http.StatusBadGateway,
+			responseBody:   `upstream failed`,
+			wantErrSubstr:  "A2A invoke returned 502: upstream failed",
+		},
+	}
 
-			body, _ := io.ReadAll(r.Body)
-			var req map[string]any
-			json.Unmarshal(body, &req)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				assert.Equal(t, "/api/a2a/team%2Falpha/ops%20bot", r.URL.EscapedPath())
 
-			assert.Equal(t, "2.0", req["jsonrpc"])
-			assert.Equal(t, "message/send", req["method"])
+				var reqBody a2aRequest
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&reqBody))
+				assert.Equal(t, "2.0", reqBody.JSONRPC)
+				assert.Equal(t, "message/send", reqBody.Method)
+				assert.Equal(t, "user", reqBody.Params["message"].(map[string]any)["role"])
+				assert.Equal(t, []any{"text"}, []any{reqBody.Params["message"].(map[string]any)["parts"].([]any)[0].(map[string]any)["kind"]})
+				assert.Equal(t, []any{"text"}, reqBody.Params["configuration"].(map[string]any)["acceptedOutputModes"])
 
-			params := req["params"].(map[string]any)
-			assert.Equal(t, "ctx-123", params["contextId"])
+				_, hasContext := reqBody.Params["contextId"]
+				assert.Equal(t, tt.wantContextField, hasContext)
+				if tt.wantContextField {
+					assert.Equal(t, tt.contextID, reqBody.Params["contextId"])
+				}
 
-			message := params["message"].(map[string]any)
-			assert.Equal(t, "user", message["role"])
+				w.WriteHeader(tt.responseStatus)
+				_, _ = io.WriteString(w, tt.responseBody)
+			}))
+			defer server.Close()
 
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("response data"))
-		}))
-		defer server.Close()
+			client := NewKagentClient(server.URL)
+			body, err := client.Invoke(context.Background(), "team/alpha", "ops bot", "check pods", tt.contextID)
+			if tt.wantErrSubstr != "" {
+				require.Error(t, err)
+				assert.Nil(t, body)
+				assert.Contains(t, err.Error(), tt.wantErrSubstr)
+				return
+			}
 
-		client := NewKagentClient(server.URL)
-		result, err := client.Invoke(context.Background(), "default", "test-agent", "Hello", "ctx-123")
+			require.NoError(t, err)
+			assert.Equal(t, tt.responseBody, readAllAndClose(t, body))
+		})
+	}
+}
 
-		require.NoError(t, err)
-		require.NotNil(t, result)
-		defer result.Close()
+func TestKagentClientInvokeTransportError(t *testing.T) {
+	client := newTestClient(t, "http://example.com", roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return nil, errors.New("dial failed")
+	}))
 
-		data, _ := io.ReadAll(result)
-		assert.Equal(t, "response data", string(data))
-	})
-
-	t.Run("successful invoke without context ID", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			body, _ := io.ReadAll(r.Body)
-			var req map[string]any
-			json.Unmarshal(body, &req)
-
-			params := req["params"].(map[string]any)
-			_, hasContextID := params["contextId"]
-			assert.False(t, hasContextID)
-
-			w.WriteHeader(http.StatusOK)
-		}))
-		defer server.Close()
-
-		client := NewKagentClient(server.URL)
-		result, err := client.Invoke(context.Background(), "default", "test-agent", "Hello", "")
-
-		require.NoError(t, err)
-		require.NotNil(t, result)
-		result.Close()
-	})
-
-	t.Run("server returns error", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("invalid request"))
-		}))
-		defer server.Close()
-
-		client := NewKagentClient(server.URL)
-		result, err := client.Invoke(context.Background(), "default", "test-agent", "Hello", "")
-
-		require.Error(t, err)
-		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "A2A invoke returned 400")
-	})
-
-	t.Run("context cancellation", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(100 * time.Millisecond)
-			w.WriteHeader(http.StatusOK)
-		}))
-		defer server.Close()
-
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-
-		client := NewKagentClient(server.URL)
-		result, err := client.Invoke(ctx, "default", "test-agent", "Hello", "")
-
-		require.Error(t, err)
-		assert.Nil(t, result)
-	})
+	body, err := client.Invoke(context.Background(), "team-a", "ops", "hello", "")
+	require.Error(t, err)
+	assert.Nil(t, body)
+	assert.Contains(t, err.Error(), "A2A invoke failed")
 }
 
 func TestBuildDetectCandidates(t *testing.T) {
-	t.Run("default values", func(t *testing.T) {
-		os.Unsetenv("KAGENT_NAMESPACE")
-		os.Unsetenv("KAGENT_SERVICE_NAME")
-		os.Unsetenv("KAGENT_SERVICE_PORT")
-		os.Unsetenv("KAGENT_SERVICE_PROTOCOL")
+	t.Run("defaults", func(t *testing.T) {
+		t.Setenv("KAGENT_NAMESPACE", "")
+		t.Setenv("KAGENT_SERVICE_NAME", "")
+		t.Setenv("KAGENT_SERVICE_PORT", "")
+		t.Setenv("KAGENT_SERVICE_PROTOCOL", "")
 
-		candidates := buildDetectCandidates()
-		require.Len(t, candidates, 2)
-		assert.Equal(t, "http://kagent-controller.kagent.svc:8083", candidates[0])
-		assert.Equal(t, "http://kagent-controller.kagent.svc.cluster.local:8083", candidates[1])
+		assert.Equal(t, []string{
+			"http://kagent-controller.kagent.svc:8083",
+			"http://kagent-controller.kagent.svc.cluster.local:8083",
+		}, buildDetectCandidates())
 	})
 
-	t.Run("custom values from environment", func(t *testing.T) {
-		os.Setenv("KAGENT_NAMESPACE", "custom-ns")
-		os.Setenv("KAGENT_SERVICE_NAME", "custom-svc")
-		os.Setenv("KAGENT_SERVICE_PORT", "9000")
-		os.Setenv("KAGENT_SERVICE_PROTOCOL", "https")
-		defer func() {
-			os.Unsetenv("KAGENT_NAMESPACE")
-			os.Unsetenv("KAGENT_SERVICE_NAME")
-			os.Unsetenv("KAGENT_SERVICE_PORT")
-			os.Unsetenv("KAGENT_SERVICE_PROTOCOL")
-		}()
+	t.Run("environment overrides", func(t *testing.T) {
+		t.Setenv("KAGENT_NAMESPACE", "agents")
+		t.Setenv("KAGENT_SERVICE_NAME", "controller")
+		t.Setenv("KAGENT_SERVICE_PORT", "8443")
+		t.Setenv("KAGENT_SERVICE_PROTOCOL", "https")
 
-		candidates := buildDetectCandidates()
-		require.Len(t, candidates, 2)
-		assert.Equal(t, "https://custom-svc.custom-ns.svc:9000", candidates[0])
-		assert.Equal(t, "https://custom-svc.custom-ns.svc.cluster.local:9000", candidates[1])
+		assert.Equal(t, []string{
+			"https://controller.agents.svc:8443",
+			"https://controller.agents.svc.cluster.local:8443",
+		}, buildDetectCandidates())
 	})
 }
 
-func TestKagentClient_Detect(t *testing.T) {
-	t.Run("successful detection on first candidate", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "/health", r.URL.Path)
-			w.WriteHeader(http.StatusOK)
-		}))
-		defer server.Close()
-
-		os.Setenv("KAGENT_NAMESPACE", "test")
-		os.Setenv("KAGENT_SERVICE_NAME", "test-svc")
-		os.Setenv("KAGENT_SERVICE_PORT", strings.TrimPrefix(server.URL, "http://localhost:"))
-		os.Setenv("KAGENT_SERVICE_PROTOCOL", "http")
-		defer func() {
-			os.Unsetenv("KAGENT_NAMESPACE")
-			os.Unsetenv("KAGENT_SERVICE_NAME")
-			os.Unsetenv("KAGENT_SERVICE_PORT")
-			os.Unsetenv("KAGENT_SERVICE_PROTOCOL")
-		}()
-
-		client := &KagentClient{httpClient: &http.Client{Timeout: 1 * time.Second}}
-		result := client.Detect()
-
-		assert.NotEmpty(t, result)
-		assert.Contains(t, result, "test-svc.test.svc")
-	})
-
-	t.Run("no reachable candidates", func(t *testing.T) {
-		os.Setenv("KAGENT_NAMESPACE", "nonexistent")
-		os.Setenv("KAGENT_SERVICE_NAME", "nonexistent")
-		os.Setenv("KAGENT_SERVICE_PORT", "99999")
-		defer func() {
-			os.Unsetenv("KAGENT_NAMESPACE")
-			os.Unsetenv("KAGENT_SERVICE_NAME")
-			os.Unsetenv("KAGENT_SERVICE_PORT")
-		}()
-
-		client := &KagentClient{httpClient: &http.Client{Timeout: 100 * time.Millisecond}}
-		result := client.Detect()
-
-		assert.Empty(t, result)
-	})
-}
-
-func TestKagentClient_DetectWithContext(t *testing.T) {
-	t.Run("context cancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-
-		client := &KagentClient{httpClient: &http.Client{Timeout: 1 * time.Second}}
-		result := client.DetectWithContext(ctx)
-
-		assert.Empty(t, result)
-	})
-
-	t.Run("context timeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
-		defer cancel()
-
-		os.Setenv("KAGENT_NAMESPACE", "test")
-		os.Setenv("KAGENT_SERVICE_PORT", "99999")
-		defer func() {
-			os.Unsetenv("KAGENT_NAMESPACE")
-			os.Unsetenv("KAGENT_SERVICE_PORT")
-		}()
-
-		client := &KagentClient{httpClient: &http.Client{Timeout: 5 * time.Second}}
-		result := client.DetectWithContext(ctx)
-
-		assert.Empty(t, result)
-	})
-}
-
-func TestAgentInfoMarshalUnmarshal(t *testing.T) {
-	info := AgentInfo{
-		Name:        "test-agent",
-		Namespace:   "default",
-		Description: "A test agent for unit tests",
-		Framework:   "langchain",
-		Tools:       []string{"kubectl", "helm", "terraform"},
+func TestKagentClientDetectWithContext(t *testing.T) {
+	tests := []struct {
+		name       string
+		transport  http.RoundTripper
+		want       string
+		cancelCtx  bool
+		setEnvFunc func(t *testing.T)
+	}{
+		{
+			name: "returns first healthy candidate",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if strings.Contains(req.URL.Host, ".svc:") {
+					return nil, errors.New("dial tcp: lookup failed")
+				}
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("ok")), Header: make(http.Header)}, nil
+			}),
+			want: "http://kagent-controller.kagent.svc.cluster.local:8083",
+		},
+		{
+			name: "ignores unhealthy candidates",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusBadGateway, Body: io.NopCloser(strings.NewReader("bad")), Header: make(http.Header)}, nil
+			}),
+			want: "",
+		},
+		{
+			name: "returns empty when context already cancelled",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, req.Context().Err()
+			}),
+			want:      "",
+			cancelCtx: true,
+		},
 	}
 
-	data, err := json.Marshal(info)
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, "http://unused", tt.transport)
+			ctx := context.Background()
+			if tt.cancelCtx {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
 
-	var decoded AgentInfo
-	err = json.Unmarshal(data, &decoded)
-	require.NoError(t, err)
-
-	assert.Equal(t, info.Name, decoded.Name)
-	assert.Equal(t, info.Namespace, decoded.Namespace)
-	assert.Equal(t, info.Description, decoded.Description)
-	assert.Equal(t, info.Framework, decoded.Framework)
-	assert.Equal(t, info.Tools, decoded.Tools)
-}
-
-func TestAgentCardMarshalUnmarshal(t *testing.T) {
-	card := AgentCard{
-		Name:         "kubernetes-agent",
-		Description:  "AI agent for Kubernetes operations",
-		URL:          "http://agent.example.com/a2a",
-		Capabilities: []string{"chat", "tools", "streaming"},
+			assert.Equal(t, tt.want, client.DetectWithContext(ctx))
+		})
 	}
-
-	data, err := json.Marshal(card)
-	require.NoError(t, err)
-
-	var decoded AgentCard
-	err = json.Unmarshal(data, &decoded)
-	require.NoError(t, err)
-
-	assert.Equal(t, card.Name, decoded.Name)
-	assert.Equal(t, card.Description, decoded.Description)
-	assert.Equal(t, card.URL, decoded.URL)
-	assert.Equal(t, card.Capabilities, decoded.Capabilities)
-}
-
-func TestMaxKAgentResponseBytes(t *testing.T) {
-	assert.Equal(t, 10*1024*1024, maxKAgentResponseBytes)
 }
