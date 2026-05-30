@@ -6,6 +6,12 @@ import {
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
+// FIXME(#16080): All tests in this file consistently fail in CI preview environment.
+// EventSource endpoints return "application/json" MIME type instead of "text/event-stream",
+// causing SSE connection failures. Tests are marked as fixme pending:
+// - Fix EventSource MIME type in preview deployment
+// - Add proper SSE mock/intercept for preview environment
+
 /**
  * Stellar Auto-Start E2E Tests — kubestellar/console#14310
  *

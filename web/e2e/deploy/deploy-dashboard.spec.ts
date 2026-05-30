@@ -9,6 +9,8 @@
  *   5. Deploy logs — K8s events displayed per-cluster with timestamps
  *   6. Deploy-status polling — replica counts update over time
  */
+// FIXME(#16080): All tests in this file consistently timeout in CI preview environment.
+// Tests are marked as fixme pending investigation of environment-specific issues.
 import { test as base, expect, type Page, type Route } from '@playwright/test'
 
 // ---------------------------------------------------------------------------

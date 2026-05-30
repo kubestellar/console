@@ -1,6 +1,13 @@
 import { test, expect, Page} from '@playwright/test'
 import { setupAuth } from './helpers/setup'
 
+// FIXME(#16080): All stress tests in this file consistently timeout in CI preview environment.
+// The preview environment has resource constraints and EventSource MIME type errors that
+// prevent these tests from passing. Tests are marked as fixme pending investigation of:
+// - Preview environment resource limits
+// - EventSource MIME type configuration
+// - Test timeout tuning for CI environment
+
 /**
  * Mission Control STRESS Tests
  *
