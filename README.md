@@ -276,6 +276,240 @@ Console uses AI tools (GitHub Copilot, Claude Code) to accelerate development. Q
 
 When a regression class is identified, a maintainer adds an automated check to the earliest possible loop. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full breakdown.
 
+## Environment Variables Reference
+
+The console and kc-agent use many configurable environment variables. This section provides a consolidated reference for all available options. See [.env.example](.env.example) for a complete example file with all commented defaults.
+
+### GitHub Authentication & Integration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GITHUB_CLIENT_ID` | ✓ (if using GitHub OAuth) | — | GitHub OAuth App Client ID. Create at https://github.com/settings/developers |
+| `GITHUB_CLIENT_SECRET` | ✓ (if using GitHub OAuth) | — | GitHub OAuth App Client Secret. Keep this secret — never commit to version control |
+| `FEEDBACK_GITHUB_TOKEN` | Optional | — | GitHub Personal Access Token (PAT) for programmatic issue creation and screenshot uploads. Can be classic (repo scope) or fine-grained (Issues + Contents read/write). Used by feedback/contribute dialog and GitHub-powered dashboard widgets |
+| `FEEDBACK_REPO_OWNER` | Optional | `kubestellar` | GitHub repository owner for feedback issue creation |
+| `FEEDBACK_REPO_NAME` | Optional | `console` | GitHub repository name for feedback issue creation |
+| `GITHUB_WEBHOOK_SECRET` | Optional | — | Secret for validating GitHub webhooks. Generate with `openssl rand -hex 32` |
+| `GITHUB_MUTATIONS_TOKEN` | Optional | — | GitHub PAT for re-running or canceling pipelines. Requires workflow scope |
+| `GITHUB_REPO` | Optional | `kubestellar/console` | GitHub repository for update checks |
+
+### Development & UI Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DEV_MODE` | Optional | `true` | Enable development mode features and debug logging |
+| `FRONTEND_URL` | Optional | `http://localhost:5174` | Frontend base URL for backend redirects. Must match the frontend's listening URL |
+| `SKIP_ONBOARDING` | Optional | `false` | Skip the onboarding questionnaire for new users (useful for testing/demos) |
+| `VITE_DEMO_MODE` | Optional | `false` | Enable demo/preview mode with mock data (build-time only) |
+| `VITE_API_BASE_URL` | Optional | — | API base URL override for frontend backend calls. Leave empty to use same origin. Build-time only |
+| `VITE_NO_LOCAL_AGENT` | Optional | `false` | Disable local kc-agent in the frontend. Build-time only |
+| `VITE_GEOCODING_API_URL` | Optional | `https://geocoding-api.open-meteo.com/v1/search` | Geocoding API endpoint for weather card location search |
+| `VITE_GOOGLE_FONTS_API_URL` | Optional | — | Google Fonts API URL override. Build-time only |
+| `ENABLED_DASHBOARDS` | Optional | — | Comma-separated list of dashboard IDs to show in sidebar. Empty = show all. Affects display order |
+
+### Kubernetes & Cluster Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `KUBECONFIG` | Optional | `~/.kube/config` | Path to kubeconfig file for kubectl access |
+| `CLUSTER_NAME` | Optional | — | Override the cluster name displayed in the console. Auto-detected from kubeconfig if not set |
+| `NO_LOCAL_AGENT` | Optional | `false` | Suppress local kc-agent connections (for in-cluster deployments that use backend directly) |
+
+### AI Providers — API Keys
+
+Configure at least one to enable AI features. Without any AI provider, the console falls back to deterministic/rule-based behavior.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | Optional | — | Anthropic Claude API key from https://console.anthropic.com/settings/keys |
+| `CLAUDE_MODEL` | Optional | `claude-sonnet-4-5-20250514` | Claude model selection |
+| `OPENAI_API_KEY` | Optional | — | OpenAI GPT API key from https://platform.openai.com/api-keys |
+| `OPENAI_MODEL` | Optional | `gpt-4-turbo` | OpenAI model selection |
+| `GOOGLE_API_KEY` | Optional | — | Google Gemini API key from https://makersuite.google.com/app/apikey |
+| `GEMINI_MODEL` | Optional | `gemini-2.0-flash` | Google Gemini model selection |
+| `OPENROUTER_API_KEY` | Optional | — | OpenRouter unified API key from https://openrouter.ai/keys (supports many models) |
+| `OPENROUTER_MODEL` | Optional | `openai/gpt-4o-mini` | OpenRouter model selection. See https://openrouter.ai/models for catalog |
+| `OPENROUTER_BASE_URL` | Optional | — | Custom base URL for self-hosted OpenRouter proxies |
+| `GROQ_API_KEY` | Optional | — | Groq LPU inference API key from https://console.groq.com/keys |
+| `GROQ_MODEL` | Optional | `llama-3.3-70b-versatile` | Groq model selection. See https://console.groq.com/docs/models |
+| `GROQ_BASE_URL` | Optional | — | Custom base URL for self-hosted Groq proxies |
+| `DEFAULT_AGENT` | Optional | — | Default AI provider if multiple are configured. Options: `claude`, `openai`, `gemini`, `openrouter`, `groq`. Auto-detected if not set |
+
+### Local/Self-Hosted LLM Servers
+
+Use for air-gapped deployments or local model serving without external vendor APIs.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OLLAMA_BASE_URL` | Optional | `http://localhost:11434` | Ollama server endpoint for local LLM inference |
+| `OPEN_WEBUI_URL` | Optional | — | Open WebUI self-hosted gateway URL |
+| `OPEN_WEBUI_API_KEY` | Optional | — | Open WebUI API key for authentication |
+
+### Stellar Assistant Configuration
+
+The Stellar assistant provides intelligent operational insights. Configuration is optional.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `STELLAR_DEFAULT_PROVIDER` | Optional | `ollama` | Default provider for `/api/stellar/ask` and `/api/stellar/digest` |
+| `STELLAR_DEFAULT_MODEL` | Optional | `llama3` | Default model selection |
+| `STELLAR_WATCHER_INTERVAL` | Optional | `30s` | Polling interval for Stellar event watcher |
+| `STELLAR_QUIET_START` | Optional | — | Quiet hours start time (HH:MM format) for suppressing non-urgent alerts |
+| `STELLAR_QUIET_END` | Optional | — | Quiet hours end time (HH:MM format) |
+| `STELLAR_DIGEST_HOUR` | Optional | — | Hour of day for digest generation (0-23) |
+| `STELLAR_ENCRYPTION_KEY` | Optional | — | Encryption key for sensitive Stellar data storage |
+| `STELLAR_FALLBACK_PROVIDER` | Optional | — | Fallback provider if default is unavailable |
+
+### kc-agent Authentication & Configuration
+
+`kc-agent` is the local bridge between the console and your clusters/AI providers.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `KC_AGENT_TOKEN` | Optional | — | Shared secret for securing kc-agent WebSocket access. Generate with `openssl rand -hex 32`. If unset, `start-dev.sh` and `startup-oauth.sh` auto-generate per session |
+| `KC_DEV_MODE` | Optional | `false` | Enable kc-agent development mode with verbose logging |
+| `KC_ALLOWED_ORIGINS` | Optional | — | CORS-allowed origins for WebSocket connections (comma-separated) |
+
+### Service Discovery — KAgent & KAgenti Integration
+
+For in-cluster KAgent/KAgenti service discovery. Use controller URLs to skip discovery.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `KAGENT_CONTROLLER_URL` | Optional | — | Direct KAgent controller URL (skips service discovery) |
+| `KAGENT_NAMESPACE` | Optional | — | Kubernetes namespace where KAgent runs |
+| `KAGENT_SERVICE_NAME` | Optional | — | Kubernetes service name for KAgent |
+| `KAGENT_SERVICE_PORT` | Optional | — | Service port for KAgent |
+| `KAGENT_SERVICE_PROTOCOL` | Optional | `http` | Service protocol (http/https) |
+| `KAGENTI_CONTROLLER_URL` | Optional | — | Direct KAgenti controller URL (skips service discovery) |
+| `KAGENTI_AGENT_URL` | Optional | — | KAgenti agent endpoint |
+| `KAGENTI_AGENT_NAME` | Optional | — | KAgenti agent name |
+| `KAGENTI_AGENT_NAMESPACE` | Optional | — | Kubernetes namespace for KAgenti agent |
+| `KAGENTI_NAMESPACE` | Optional | — | Kubernetes namespace where KAgenti controller runs |
+| `KAGENTI_SERVICE_NAME` | Optional | — | Kubernetes service name for KAgenti |
+| `KAGENTI_SERVICE_PORT` | Optional | — | Service port for KAgenti |
+| `KAGENTI_SERVICE_PROTOCOL` | Optional | `http` | Service protocol (http/https) |
+
+### GPU Metrics & Alerting
+
+Enable GPU monitoring and set utilization thresholds.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GPU_METRICS_ENABLED` | Optional | `false` | Enable GPU metrics collection |
+| `GPU_METRICS_DCGM_ENABLED` | Optional | `false` | Enable NVIDIA DCGM exporter scraping (requires NVIDIA GPU Operator) |
+| `GPU_METRICS_DCGM_NAMESPACE` | Optional | `gpu-operator` | Kubernetes namespace where DCGM exporter runs |
+| `GPU_METRICS_DCGM_SERVICE` | Optional | `dcgm-exporter` | Service name of the DCGM exporter |
+| `GPU_UTIL_OVER_THRESHOLD` | Optional | `90` | Alert when GPU utilization exceeds this percentage |
+| `GPU_UTIL_UNDER_THRESHOLD` | Optional | `20` | Alert when GPU utilization falls below this percentage |
+| `GPU_UTIL_POLL_INTERVAL_MS` | Optional | `1200000` | GPU metrics polling interval in milliseconds (default: 20 minutes) |
+
+### ArgoCD Integration
+
+Connect the console to an ArgoCD instance for deployment tracking and synchronization.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ARGOCD_AUTH_TOKEN` | Optional | — | ArgoCD API authentication token. Generate via: `argocd account generate-token --account admin` |
+| `ARGOCD_SERVER_URL` | Optional | — | ArgoCD server URL for API access |
+| `ARGOCD_TLS_INSECURE` | Optional | `false` | Disable TLS certificate verification (dev/test only with self-signed certs) |
+
+### GitHub Pipelines & CI/CD
+
+Monitor and control GitHub Actions workflows.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PIPELINE_REPOS` | Optional | — | Comma-separated list of GitHub repositories to monitor (format: `owner/repo,owner/repo2`) |
+| `GITHUB_MUTATIONS_TOKEN` | Optional | — | GitHub PAT for re-running or canceling pipeline runs (requires `workflow` scope) |
+
+### Analytics & Telemetry
+
+Configure analytics and measurement.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GA4_REAL_MEASUREMENT_ID` | Optional | — | Real GA4 Measurement ID (frontend uses a decoy ID; the proxy rewrites it) |
+| `VITE_GA_MEASUREMENT_ID` | Optional | — | Frontend GA4 Measurement ID (build-time only) |
+
+### Server Configuration
+
+Core backend and network settings.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | Optional | `8080` | Backend listening port |
+| `DATABASE_PATH` | Optional | `./console.db` | Path to SQLite database file |
+| `MAX_BODY_BYTES` | Optional | `5242880` | Global HTTP request body size limit in bytes (default: 5 MB) |
+| `WS_MAX_CONNECTIONS` | Optional | `1000` | WebSocket connection limit (prevents resource exhaustion) |
+
+### TLS Configuration
+
+Enable HTTPS/TLS for secure connections.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `TLS_ENABLED` | Optional | `false` | Enable HTTPS with TLS certificates |
+| `TLS_CERT_FILE` | Optional | — | Path to TLS certificate file (PEM format) |
+| `TLS_KEY_FILE` | Optional | — | Path to TLS private key file (PEM format) |
+
+### In-Cluster Deployment
+
+Configuration for running the console inside a Kubernetes cluster.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `POD_NAMESPACE` | Optional | — | Kubernetes namespace where console pod runs (used for self-upgrade feature) |
+
+### DRASI Integration (Experimental)
+
+Reactive graph subscription for real-time data.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_DRASI_SERVER_URL` | Optional | — | DRASI server URL (build-time only) |
+| `VITE_DRASI_PLATFORM_CLUSTER` | Optional | — | DRASI platform cluster identifier (build-time only) |
+
+### Quick Setup Examples
+
+**Minimal local development (no OAuth, demo user):**
+```bash
+./start-dev.sh
+```
+
+**With GitHub OAuth:**
+```bash
+cat > .env << 'EOF'
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+EOF
+./startup-oauth.sh
+```
+
+**With Claude AI:**
+```bash
+cat > .env << 'EOF'
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+ANTHROPIC_API_KEY=your-anthropic-key
+EOF
+./startup-oauth.sh
+```
+
+**With local Ollama:**
+```bash
+export OLLAMA_BASE_URL=http://localhost:11434
+./start-dev.sh
+```
+
+**With Kubernetes kubeconfig:**
+```bash
+export KUBECONFIG=~/.kube/config
+./start-dev.sh
+```
+
+For more examples and detailed setup instructions, see the [Getting Started](#local-install-self-host) and [GitHub Authentication](#github-authentication) sections above.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
