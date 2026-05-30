@@ -14,6 +14,7 @@ describe('pollingManager', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
@@ -142,5 +143,63 @@ describe('pollingManager', () => {
     unsub()
     vi.advanceTimersByTime(5000)
     expect(cb).toHaveBeenCalledTimes(1) // still 1
+  })
+
+  it('creates one interval per key and clears it only after the last unsubscribe', () => {
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+    const cb1 = vi.fn()
+    const cb2 = vi.fn()
+
+    const unsub1 = subscribePolling('shared-spy-key', 750, cb1)
+    const unsub2 = subscribePolling('shared-spy-key', 750, cb2)
+
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 750)
+
+    unsub1()
+    expect(clearIntervalSpy).not.toHaveBeenCalled()
+
+    unsub2()
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps using the original interval for a shared key', () => {
+    const fastSubscriber = vi.fn()
+    const slowSubscriber = vi.fn()
+    const unsubFast = subscribePolling('same-key', 1000, fastSubscriber)
+    const unsubSlow = subscribePolling('same-key', 250, slowSubscriber)
+
+    vi.advanceTimersByTime(999)
+    expect(fastSubscriber).not.toHaveBeenCalled()
+    expect(slowSubscriber).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(1)
+    expect(fastSubscriber).toHaveBeenCalledTimes(1)
+    expect(slowSubscriber).toHaveBeenCalledTimes(1)
+
+    unsubFast()
+    unsubSlow()
+  })
+
+  it('allows a subscriber to remove itself without stopping sibling subscribers', () => {
+    const sibling = vi.fn()
+    let unsubscribeSelf = () => {}
+    const selfRemoving = vi.fn(() => {
+      unsubscribeSelf()
+    })
+
+    unsubscribeSelf = subscribePolling('self-remove-key', 400, selfRemoving)
+    const unsubscribeSibling = subscribePolling('self-remove-key', 400, sibling)
+
+    vi.advanceTimersByTime(400)
+    expect(selfRemoving).toHaveBeenCalledTimes(1)
+    expect(sibling).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(400)
+    expect(selfRemoving).toHaveBeenCalledTimes(1)
+    expect(sibling).toHaveBeenCalledTimes(2)
+
+    unsubscribeSibling()
   })
 })

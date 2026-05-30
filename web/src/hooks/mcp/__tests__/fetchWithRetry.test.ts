@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { MCP_HOOK_TIMEOUT_MS } from '../../../lib/constants'
 
 // Mock agentFetch
 vi.mock('../agentFetch', () => ({
@@ -197,5 +198,99 @@ describe('fetchWithRetry — maxRetries', () => {
     ).rejects.toThrow()
     // Default: 3 total attempts (1 + 2 retries)
     expect(mockAgentFetch).toHaveBeenCalledTimes(3)
+  })
+})
+
+// =============================================================================
+// Timing and abort behavior
+// =============================================================================
+
+describe('fetchWithRetry — timers and abort wiring', () => {
+  it('applies exponential backoff between 5xx retries', async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+
+    mockAgentFetch
+      .mockResolvedValueOnce({ status: 500, ok: false })
+      .mockResolvedValueOnce({ status: 502, ok: false })
+      .mockResolvedValueOnce({ status: 200, ok: true })
+
+    const promise = fetchWithRetry('https://api.test/data', {
+      maxRetries: 2,
+      initialBackoffMs: 10,
+      timeoutMs: 100,
+    })
+
+    await vi.runAllTimersAsync()
+    const result = await promise
+    const delays = setTimeoutSpy.mock.calls.map(([, delay]) => Number(delay))
+
+    expect(result.status).toBe(200)
+    expect(mockAgentFetch).toHaveBeenCalledTimes(3)
+    expect(delays).toEqual([100, 10, 100, 20, 100])
+  })
+
+  it('removes the caller abort listener after a successful request', async () => {
+    const controller = new AbortController()
+    const addEventListenerSpy = vi.spyOn(controller.signal, 'addEventListener')
+    const removeEventListenerSpy = vi.spyOn(controller.signal, 'removeEventListener')
+    const mockResponse = { status: 200, ok: true }
+    mockAgentFetch.mockResolvedValue(mockResponse)
+
+    const result = await fetchWithRetry('https://api.test/data', {
+      signal: controller.signal,
+    })
+
+    expect(result).toBe(mockResponse)
+    expect(addEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function))
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('abort', expect.any(Function))
+  })
+
+  it('aborts timed out requests and retries until the retry budget is exhausted', async () => {
+    mockAgentFetch.mockImplementation((_, init) => new Promise((_, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        reject(new DOMException('The operation was aborted', 'AbortError'))
+      }, { once: true })
+    }))
+
+    const promise = fetchWithRetry('https://api.test/data', {
+      timeoutMs: 25,
+      initialBackoffMs: 5,
+      maxRetries: 1,
+    })
+
+    await vi.runAllTimersAsync()
+
+    await expect(promise).rejects.toThrow('The operation was aborted')
+    expect(mockAgentFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('passes request options through to agentFetch while using its own abort signal', async () => {
+    const callerController = new AbortController()
+    const mockResponse = { status: 200, ok: true }
+    mockAgentFetch.mockResolvedValue(mockResponse)
+
+    await fetchWithRetry('https://api.test/data', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ok: true }),
+      signal: callerController.signal,
+    })
+
+    expect(mockAgentFetch).toHaveBeenCalledWith('https://api.test/data', expect.objectContaining({
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ok: true }),
+      signal: expect.any(AbortSignal),
+    }))
+    expect(mockAgentFetch.mock.calls[0]?.[1]?.signal).not.toBe(callerController.signal)
+  })
+
+  it('uses the default MCP timeout when timeoutMs is not provided', async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    mockAgentFetch.mockResolvedValue({ status: 200, ok: true })
+
+    await fetchWithRetry('https://api.test/data')
+
+    expect(setTimeoutSpy.mock.calls[0]?.[1]).toBe(MCP_HOOK_TIMEOUT_MS)
   })
 })
