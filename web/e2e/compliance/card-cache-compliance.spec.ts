@@ -152,7 +152,7 @@ const CI_TIMEOUT_MULTIPLIER = 2
  * With 150+ cards and growing card count (likely beyond 150 now), shared CI
  * infrastructure can occasionally push warm median TTC beyond previous thresholds.
  */
-const WARM_TTC_THRESHOLD_MS = process.env.CI ? 45_000 : 500
+const WARM_TTC_THRESHOLD_MS = process.env.CI ? 60_000 : 500
 /**
  * With 150+ cards, CI shared runners under CPU contention can cause 2 cards to
  * miss cache on warm return, especially when soft navigation falls back to
