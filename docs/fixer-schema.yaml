@@ -1,0 +1,83 @@
+# kc-mission-v1 fixer format
+# JSON (.json) and YAML (.yaml/.yml) are both accepted; YAML is preferred for hand-authored fixes.
+#
+# Required top-level fields:
+# - version
+# - name
+# - mission
+#
+# Suggested top-level fields:
+# - missionClass
+# - author
+# - authorGithub
+# - metadata
+# - prerequisites
+# - security
+#
+# Keep `name` aligned with the filename (without extension) and use kebab-case.
+# The schema below matches the structure used by the existing fixes in `fixes/`.
+
+version: "kc-mission-v1"
+name: "install-example-project"
+missionClass: "install"
+author: "Your Name"
+authorGithub: "your-github-handle"
+
+mission:
+  title: "Install Example Project"
+  description: "Short summary of what the mission fixes or installs."
+  type: "deploy"
+  status: "completed"
+  estimatedMinutes: 10
+
+  # Ordered mission steps. Each step should explain one user action.
+  steps:
+    - title: "Inspect the problem"
+      description: "Describe what to check first."
+      commands:
+        - "kubectl get pods -A"
+      validation:
+        command: "kubectl get pods -A | wc -l"
+        expected: "0"
+
+  # What success looks like after the mission completes.
+  resolution:
+    summary: "Describe the expected end state."
+    codeSnippets:
+      - "kubectl get pods -A"
+
+  # Optional sections used by some fixes.
+  uninstall: []
+  upgrade: []
+  troubleshooting: []
+  references: []
+  versionNotes: ""
+  security:
+    scannedAt: ""
+    scannerVersion: ""
+    sanitized: false
+    findings: []
+
+metadata:
+  tags:
+    - "example"
+    - "kubernetes"
+  difficulty: "beginner"
+  platform: "kubernetes"
+  issueTypes:
+    - "configuration"
+  installMethods:
+    - "kubectl"
+  targetResourceKinds:
+    - "Deployment"
+  supportedK8sVersions:
+    - "1.28"
+    - "1.29"
+  sourceUrls:
+    docs: "https://example.com/docs"
+
+prerequisites:
+  kubernetes: ">=1.24"
+  tools:
+    - "kubectl"
+  description: "A cluster with kubectl configured."
