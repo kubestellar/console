@@ -96,6 +96,42 @@ Every PR gets automatically labeled with exactly one `tier/*` label when it open
 
 This system is adapted from fullsend-ai/fullsend's tier-based change classification — see [`SECURITY-AI.md`](docs/security/SECURITY-AI.md) for the broader context.
 
+## Non-Code Contributions
+
+Not every useful contribution requires writing product code. Documentation, translations, UX feedback, and community support all help the project move faster.
+
+### Documentation PRs
+
+Docs updates are always welcome — README improvements, setup fixes, walkthroughs, screenshots, and clarifications in `docs/` or other `*.md` files all count.
+
+- Submit docs PRs the same way you would any other change: fork the repo, branch from `main`, keep the diff focused, and open a PR describing what improved.
+- Docs-only PRs fall under `tier/0-automatic` because they touch only markdown files. Today that label is informational, but it does mean reviewers can usually fast-track the change once CI is green.
+- In practice, small docs PRs are usually among the quickest reviews in the queue. Expect a relatively fast turnaround when the change is scoped, accurate, and easy to verify.
+
+### Translations
+
+We manage UI translations through [Crowdin](https://crowdin.com/). The repo's [`crowdin.yml`](crowdin.yml) syncs source strings from `web/src/locales/en/*.json` into the per-language locale files under `web/src/locales/`.
+
+- If you want to translate existing strings, start with the English source files in `web/src/locales/en/common.json`, `web/src/locales/en/cards.json`, `web/src/locales/en/errors.json`, and `web/src/locales/en/status.json`.
+- Use Crowdin to translate strings for your language rather than editing generated locale files by hand.
+- If you find missing, unclear, or outdated English source text, open an issue or PR against the relevant `locales/en/*.json` file so translators have a clean source string to work from.
+
+### Design and UX Contributions
+
+Design feedback is valuable, especially when it improves usability, onboarding, or accessibility.
+
+- File UX or accessibility issues through [`/issue`](http://localhost:8080/issue) in a local console session or directly in [GitHub Issues](https://github.com/kubestellar/console/issues).
+- Include screenshots, screen recordings, reproduction steps, and the user impact when possible. Accessibility reports are especially helpful when they reference the affected page, component, keyboard flow, or WCAG criterion.
+- If you want to review current accessibility work before filing an issue, start with [`docs/ACCESSIBILITY-AUDIT.md`](docs/ACCESSIBILITY-AUDIT.md).
+
+### Community Contributions
+
+You can also help without opening a PR:
+
+- Triage issues by reproducing bugs, confirming whether they still happen on `main`, and adding concrete repro steps.
+- Help other contributors by answering questions in [GitHub Issues](https://github.com/kubestellar/console/issues) or [Slack - #kubestellar-dev](https://cloud-native.slack.com/archives/C097094RZ3M).
+- Point people to existing docs, related issues, or prior discussions so maintainers can spend more time shipping fixes.
+
 ## Getting Help
 
 - [Documentation](https://console-docs.kubestellar.io)
