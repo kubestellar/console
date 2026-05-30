@@ -50,7 +50,7 @@ func NewOpenAICompat(baseURL, apiKey, name string) *OpenAICompatProvider {
 		BaseURL: strings.TrimRight(baseURL, "/"),
 		APIKey:  apiKey,
 		name:    name,
-		client:  &http.Client{Timeout: providerHTTPTimeout},
+		client:  newSafeHTTPClient(providerHTTPTimeout),
 	}
 }
 

@@ -183,7 +183,9 @@ func TestKubectlProxy_ValidateArgs(t *testing.T) {
 		{[]string{"delete", "node", "foo"}, false},
 		{[]string{"get", "pods", ";", "rm", "-rf", "/"}, false},
 		{[]string{"config", "view"}, true},
-		{[]string{"config", "set-context", "foo"}, false}, // Mutation blocked
+		{[]string{"config", "set-context", "foo"}, false},            // Mutation blocked
+		{[]string{"config", "use-context", "admin"}, false},          // #16126: use-context mutates kubeconfig
+		{[]string{"config", "rename-context", "old", "new"}, false},  // rename-context mutates kubeconfig
 	}
 
 	for _, tt := range tests {

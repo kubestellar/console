@@ -239,7 +239,8 @@ var blockedConfigSubcommands = map[string]bool{
 	"delete-cluster":  true,
 	"delete-context":  true,
 	"delete-user":     true,
-	// Note: rename-context is handled via dedicated endpoint with validation
+	"use-context":     true, // #16126: mutates current-context in kubeconfig
+	"rename-context":  true, // handled via dedicated endpoint with validation
 }
 
 func (k *KubectlProxy) validateArgs(args []string) bool {
