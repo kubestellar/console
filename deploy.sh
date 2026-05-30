@@ -4,7 +4,13 @@
 # Deploys KubeStellar Console to any Kubernetes cluster via Helm.
 # Works with OpenShift, EKS, GKE, AKS, kind, k3s, or any distribution.
 #
-# Usage:
+# Recommended (verify before execute):
+#   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh -o deploy.sh
+#   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh.sha256 -o deploy.sh.sha256
+#   sha256sum -c deploy.sh.sha256
+#   bash deploy.sh
+#
+# Quick (pipe to bash — skips integrity check):
 #   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/deploy.sh | bash
 #
 # Options:

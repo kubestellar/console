@@ -1,0 +1,30 @@
+name: Update deploy.sh checksum
+
+on:
+  push:
+    branches: [main]
+    paths: [deploy.sh]
+
+permissions:
+  contents: write
+
+jobs:
+  update-checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate SHA-256 checksum
+        run: sha256sum deploy.sh > deploy.sh.sha256
+
+      - name: Commit updated checksum
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add deploy.sh.sha256
+          if git diff --cached --quiet; then
+            echo "No changes to checksum"
+          else
+            git commit -m "🌱 Update deploy.sh.sha256"
+            git push
+          fi
