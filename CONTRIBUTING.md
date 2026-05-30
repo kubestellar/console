@@ -8,18 +8,9 @@ The fastest way to file an issue or feature request is by navigating to [`/issue
 
 ## How Development Works
 
-Most code in this repo is written by coding agents — Claude Opus 4.5/4.6, Gemini, and Codex. PRs are generated, reviewed, and iterated on by these agents with human oversight.
+This project uses both human and AI-assisted development. All PRs — regardless of origin — must pass the same quality gates before merge. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full list of CI gates, quality checks, and our regression response model.
 
-**Manual coding PRs are discouraged.** They take significantly longer to complete and review compared to agent-generated code. PRs that miss required patterns (isDemoData wiring, useCardLoadingState, locale strings, marketplace vs console) will be sent back — these are things coding agents catch automatically.
-
-**All PRs — human or AI — must pass the same 9 hard CI gates before merge.** There is no separate path for AI-generated code. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full list of quality gates, post-build safety checks, and our regression response model.
-
-If you want to contribute code, use one of the supported agents:
-
-- **Claude Code** (Claude Opus 4.5 or 4.6) — **strongly recommended**. Knows the full codebase, all CLAUDE.md rules, isDemoData wiring, card loading state patterns, and locale requirements. Install: `npm install -g @anthropic-ai/claude-code`
-- **GitHub Copilot** — used for automated PR fixes
-- **Google Gemini** — supported for code generation
-- **OpenAI Codex** — supported for code generation
+> **Note for AI coding agents:** If you're an AI agent (Claude Code, Copilot, etc.), see [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md) for agent-specific development conventions and patterns.
 
 ## New CNCF Project Cards
 
@@ -27,9 +18,9 @@ New monitoring cards for CNCF projects (Karmada, Falco, KEDA, etc.) belong in [*
 
 PRs that add new card components to `web/src/components/cards/` will be redirected to console-marketplace.
 
-## Test PRs Are Favored
+## Test Contributions Are Welcome
 
-The most valuable code contributions are **tests** — Playwright E2E tests, unit tests, or integration tests submitted as PRs. Tests shape how automated code generation works by defining expected behavior. A failing test PR is more useful than a code PR, because it tells the agents exactly what to build.
+One of the most valuable contributions you can make is **tests** — Playwright E2E tests, unit tests, or integration tests. Tests define expected behavior and help prevent regressions.
 
 See the [`scripts/`](scripts/) directory for 30+ existing test scripts (API contract, security, helm lint, consistency, card registry integrity, and more). Run any of them directly:
 
@@ -71,11 +62,70 @@ cd console
 
 See the [Windows (WSL2) section in README.md](README.md#windows-wsl2) for additional details on `curl` gotchas and building from source.
 
-Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account. See [CLAUDE.md](CLAUDE.md) for development conventions and card development rules.
+Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account.
+
+## Submitting a Pull Request
+
+1. **Fork the repository** on GitHub
+2. **Clone your fork** locally:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/console.git
+   cd console
+   ```
+3. **Create a feature branch** from `main`:
+   ```bash
+   git checkout -b fix/issue-name
+   ```
+4. **Make your changes** and commit with DCO sign-off:
+   ```bash
+   git commit -s -m "Fix: describe your change"
+   ```
+5. **Push to your fork**:
+   ```bash
+   git push origin fix/issue-name
+   ```
+6. **Open a PR** on GitHub targeting the `main` branch
+7. **Wait for CI** to run — all 9 quality gates must pass before merge
+8. **Address review feedback** if needed
+
+### Code Standards
+
+- All commits must be signed with DCO (`-s` flag)
+- Follow existing code patterns in the file you're editing
+- Add tests for new features or bug fixes
+- Update documentation when changing behavior
+- Keep PRs focused on a single concern
+
+### Testing Requirements
+
+Before submitting your PR, verify your changes work:
+
+```bash
+# Run specific test scripts
+bash scripts/api-contract-test.sh
+bash scripts/consistency-test.sh
+
+# Run frontend tests
+cd web && npx playwright test
+```
+
+CI will run the full test suite on your PR. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for details on all quality gates.
 
 ## Commit Conventions
 
-- Sign all commits with DCO: `git commit -s`
+All commits must be signed with the Developer Certificate of Origin (DCO):
+
+```bash
+git commit -s -m "Your commit message"
+```
+
+The `-s` flag adds a `Signed-off-by` line to your commit message, certifying that you have the right to submit the code under the project's license.
+
+**Commit message guidelines:**
+- Use present tense ("Add feature" not "Added feature")
+- Use imperative mood ("Move cursor to..." not "Moves cursor to...")
+- Reference issue numbers when applicable ("Fixes #123")
+- Keep the first line under 72 characters
 
 ## Change Tiers
 
