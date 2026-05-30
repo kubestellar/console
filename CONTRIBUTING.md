@@ -32,7 +32,7 @@ cd web && npx playwright test --grep "your-test"
 
 ## Getting Started Locally
 
-Prerequisites: Go 1.25+, Node.js 20+
+Prerequisites: Go 1.26.3+, Node.js 20+
 
 **macOS / Linux:**
 
