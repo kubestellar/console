@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { operatorStatusConfig } from '../operator-status'
 import { operatorSubscriptionStatusConfig } from '../operator-subscription-status'
 import { kedaStatusConfig } from '../keda-status'
-import { kubevelaStatusConfig } from '../kubevela-status'
+import { kubeVelaStatusConfig } from '../kubevela-status'
 import { strimziStatusConfig } from '../strimzi-status'
 import { cloudCustodianStatusConfig } from '../cloud-custodian-status'
 import { backstageStatusConfig } from '../backstage-status'
@@ -17,7 +17,7 @@ const operatorCards = [
   { name: 'operatorStatus', config: operatorStatusConfig },
   { name: 'operatorSubscriptionStatus', config: operatorSubscriptionStatusConfig },
   { name: 'kedaStatus', config: kedaStatusConfig },
-  { name: 'kubevelaStatus', config: kubevelaStatusConfig },
+  { name: 'kubevelaStatus', config: kubeVelaStatusConfig },
   { name: 'strimziStatus', config: strimziStatusConfig },
   { name: 'cloudCustodianStatus', config: cloudCustodianStatusConfig },
   { name: 'backstageStatus', config: backstageStatusConfig },

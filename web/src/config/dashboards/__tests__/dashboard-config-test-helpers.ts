@@ -40,8 +40,8 @@ function collectCardPlacements(config: UnifiedDashboardConfig): DashboardCardPla
   return [...directCards, ...tabCards]
 }
 
-export function registerDashboardConfigTest(fileName: string, moduleExports: ModuleExports): void {
-  describe(`${fileName} dashboard config`, () => {
+export function registerDashboardConfigTest(registryKey: string, moduleExports: ModuleExports): void {
+  describe(`${registryKey} dashboard config`, () => {
     it('exports a valid unified dashboard config', () => {
       const config = extractDashboardConfig(moduleExports)
       const hasTabs = Array.isArray(config.tabs) && config.tabs.length > 0
@@ -86,11 +86,11 @@ export function registerDashboardConfigTest(fileName: string, moduleExports: Mod
       })
     })
 
-    it('is registered under its dashboard id', () => {
+    it('is registered in the dashboard registry', () => {
       const config = extractDashboardConfig(moduleExports)
 
-      expect(hasUnifiedDashboardConfig(config.id)).toBe(true)
-      expect(getDashboardConfig(config.id)).toBeDefined()
+      expect(hasUnifiedDashboardConfig(registryKey)).toBe(true)
+      expect(getDashboardConfig(registryKey)).toBe(config)
     })
   })
 }

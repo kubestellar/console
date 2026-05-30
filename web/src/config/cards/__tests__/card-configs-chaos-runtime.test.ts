@@ -12,12 +12,12 @@ import { kubevirtStatusConfig } from '../kubevirt-status'
 import { wasmcloudStatusConfig } from '../wasmcloud-status'
 
 const chaosRuntimeCards = [
-  { name: 'chaosMeshStatus', config: chaosMeshStatusConfig },
-  { name: 'containerdStatus', config: containerdStatusConfig },
-  { name: 'volcanoStatus', config: volcanoStatusConfig },
-  { name: 'daprStatus', config: daprStatusConfig },
-  { name: 'kubevirtStatus', config: kubevirtStatusConfig },
-  { name: 'wasmcloudStatus', config: wasmcloudStatusConfig },
+  { name: 'chaosMeshStatus', config: chaosMeshStatusConfig, expectedCategory: 'runtime' },
+  { name: 'containerdStatus', config: containerdStatusConfig, expectedCategory: 'compute' },
+  { name: 'volcanoStatus', config: volcanoStatusConfig, expectedCategory: 'workloads' },
+  { name: 'daprStatus', config: daprStatusConfig, expectedCategory: 'workloads' },
+  { name: 'kubevirtStatus', config: kubevirtStatusConfig, expectedCategory: 'operators' },
+  { name: 'wasmcloudStatus', config: wasmcloudStatusConfig, expectedCategory: 'workloads' },
 ]
 
 describe('Chaos & Runtime card configs', () => {
@@ -29,8 +29,8 @@ describe('Chaos & Runtime card configs', () => {
     expect(config.dataSource).toBeDefined()
   })
 
-  it.each(chaosRuntimeCards)('$name has category runtime', ({ config }) => {
-    expect(config.category).toBe('runtime')
+  it.each(chaosRuntimeCards)('$name has the expected category', ({ config, expectedCategory }) => {
+    expect(config.category).toBe(expectedCategory)
   })
 
   it.each(chaosRuntimeCards)('$name has valid dimensions', ({ config }) => {

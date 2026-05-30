@@ -11,7 +11,7 @@ import { riskAppetiteDashboardConfig } from '../risk-appetite'
 import { riskMatrixDashboardConfig } from '../risk-matrix'
 import { riskRegisterDashboardConfig } from '../risk-register'
 import { sbomDashboardConfig } from '../sbom'
-import { segregationOfDutiesDashboardConfig } from '../segregation-of-duties'
+import { sodDashboardConfig } from '../segregation-of-duties'
 import { sessionManagementDashboardConfig } from '../session-management'
 import { siemDashboardConfig } from '../siem'
 import { sigstoreDashboardConfig } from '../sigstore'
@@ -25,7 +25,7 @@ const governanceDashboards = [
   { name: 'riskMatrix', config: riskMatrixDashboardConfig },
   { name: 'riskRegister', config: riskRegisterDashboardConfig },
   { name: 'sbom', config: sbomDashboardConfig },
-  { name: 'segregationOfDuties', config: segregationOfDutiesDashboardConfig },
+  { name: 'segregationOfDuties', config: sodDashboardConfig },
   { name: 'sessionManagement', config: sessionManagementDashboardConfig },
   { name: 'siem', config: siemDashboardConfig },
   { name: 'sigstore', config: sigstoreDashboardConfig },

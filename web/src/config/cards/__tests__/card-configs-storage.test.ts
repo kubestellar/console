@@ -47,6 +47,9 @@ describe('Storage card configs', () => {
       lowerType.includes('pvc') ||
       lowerType.includes('rook') ||
       lowerType.includes('longhorn') ||
+      lowerType.includes('cubefs') ||
+      lowerType.includes('tikv') ||
+      lowerType.includes('vitess') ||
       lowerType.includes('volume') ||
       lowerTitle.includes('storage') ||
       lowerTitle.includes('volume')

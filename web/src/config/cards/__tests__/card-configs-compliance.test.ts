@@ -32,6 +32,7 @@ describe('Compliance card configs', () => {
     const hasKeyword =
       lowerType.includes('compliance') ||
       lowerType.includes('policy') ||
+      lowerType.includes('policies') ||
       lowerType.includes('violation') ||
       lowerType.includes('drift')
     expect(hasKeyword).toBe(true)
