@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import type { Config } from "@netlify/functions";
 import {
   badRequestResponse,
@@ -45,15 +46,30 @@ function getAuthCookieName(): string {
   return process.env[MUTATION_AUTH_COOKIE_ENV] ?? MUTATION_AUTH_COOKIE_NAME;
 }
 
+// timingSafeStringEqual compares two strings in constant time to prevent
+// timing side-channel attacks that could allow an attacker to guess the
+// auth token byte-by-byte by measuring response latency differences.
+function timingSafeStringEqual(a: string | undefined, b: string): boolean {
+  if (a === undefined) return false;
+  try {
+    const aBuf = Buffer.from(a);
+    const bBuf = Buffer.from(b);
+    if (aBuf.length !== bBuf.length) return false;
+    return timingSafeEqual(aBuf, bBuf);
+  } catch {
+    return false;
+  }
+}
+
 function hasAuthorizedCredential(req: Request, expectedToken: string): boolean {
   const authHeader = req.headers.get("authorization")?.trim();
   if (authHeader?.startsWith(`${AUTH_SCHEME} `)) {
     const bearerToken = authHeader.slice(AUTH_SCHEME.length + 1).trim();
-    if (bearerToken === expectedToken) return true;
+    if (timingSafeStringEqual(bearerToken, expectedToken)) return true;
   }
 
   const cookies = parseCookies(req.headers.get("cookie"));
-  return cookies[getAuthCookieName()] === expectedToken;
+  return timingSafeStringEqual(cookies[getAuthCookieName()], expectedToken);
 }
 
 export default async (req: Request): Promise<Response> => {
