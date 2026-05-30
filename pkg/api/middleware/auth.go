@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"log/slog"
 	"os"
@@ -509,7 +510,7 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 		// the Übersicht widget generator. Sensitive routes (settings, users,
 		// mutating MCP tools, K8s proxy helpers, etc.) must still present a real
 		// user JWT even if a widget agent token is leaked.
-		if widgetAgentToken != "" && tokenString == widgetAgentToken && c.Method() == fiber.MethodGet && c.Query("source") == "ubersicht-widget" {
+		if widgetAgentToken != "" && subtle.ConstantTimeCompare([]byte(tokenString), []byte(widgetAgentToken)) == 1 && c.Method() == fiber.MethodGet && c.Query("source") == "ubersicht-widget" {
 			if _, ok := widgetAgentAllowedPaths[c.Path()]; ok {
 				c.Locals("userID", uuid.Nil)
 				c.Locals("githubLogin", "widget-agent")

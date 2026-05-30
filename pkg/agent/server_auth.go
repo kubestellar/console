@@ -2,6 +2,7 @@ package agent
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -62,7 +63,7 @@ func (s *Server) validateToken(r *http.Request) bool {
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-		if token == s.agentToken {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(s.agentToken)) == 1 {
 			return true
 		}
 	}
@@ -85,7 +86,7 @@ func (s *Server) validateToken(r *http.Request) bool {
 	// the Upgrade header will be missing Connection and/or Sec-WebSocket-Key.
 	if isRealWebSocketUpgrade(r) {
 		if queryToken := r.URL.Query().Get("token"); queryToken != "" {
-			return queryToken == s.agentToken
+			return subtle.ConstantTimeCompare([]byte(queryToken), []byte(s.agentToken)) == 1
 		}
 	}
 
