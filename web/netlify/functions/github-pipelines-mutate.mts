@@ -1,4 +1,5 @@
 import type { Config } from "@netlify/functions";
+import { timingSafeEqual } from "crypto";
 import {
   badRequestResponse,
   buildCorsHeaders,
@@ -45,15 +46,26 @@ function getAuthCookieName(): string {
   return process.env[MUTATION_AUTH_COOKIE_ENV] ?? MUTATION_AUTH_COOKIE_NAME;
 }
 
+function safeCompare(a: string, b: string): boolean {
+  try {
+    const aBuf = Buffer.from(a);
+    const bBuf = Buffer.from(b);
+    if (aBuf.length !== bBuf.length) return false;
+    return timingSafeEqual(aBuf, bBuf);
+  } catch {
+    return false;
+  }
+}
+
 function hasAuthorizedCredential(req: Request, expectedToken: string): boolean {
   const authHeader = req.headers.get("authorization")?.trim();
   if (authHeader?.startsWith(`${AUTH_SCHEME} `)) {
     const bearerToken = authHeader.slice(AUTH_SCHEME.length + 1).trim();
-    if (bearerToken === expectedToken) return true;
+    if (safeCompare(bearerToken, expectedToken)) return true;
   }
 
   const cookies = parseCookies(req.headers.get("cookie"));
-  return cookies[getAuthCookieName()] === expectedToken;
+  return safeCompare(cookies[getAuthCookieName()] ?? "", expectedToken);
 }
 
 export default async (req: Request): Promise<Response> => {
