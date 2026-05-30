@@ -94,13 +94,21 @@ describe('MissionControlDialog', () => {
     expect(screen.getByTestId('phase-define')).toBeDefined()
   })
 
-  it('resets to a fresh session when opened from the sidebar CTA', () => {
-    render(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />)
+  it('preserves seeded state on first sidebar CTA open and resets after the token increments', () => {
+    const { rerender } = render(
+      <MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />
+    )
+
+    expect(mockMC.reset).not.toHaveBeenCalled()
+
+    rerender(<MissionControlDialog open={false} onClose={vi.fn()} freshSessionToken={1} />)
+    rerender(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={2} />)
 
     expect(mockMC.reset).toHaveBeenCalledTimes(1)
   })
 
-  it('resets after reopening from a historical mission into a fresh sidebar session', () => {
+  it('resets historical review mode on close without resetting again on the first fresh reopen', () => {
+    const onClose = vi.fn()
     const mcWithHistory = {
       ...mockMC,
       loadHistoricalSession: vi.fn(() => true),
@@ -108,13 +116,20 @@ describe('MissionControlDialog', () => {
     vi.mocked(useMissionControl).mockReturnValue(mcWithHistory as unknown as ReturnType<typeof useMissionControl>)
 
     const { rerender } = render(
-      <MissionControlDialog open={true} onClose={vi.fn()} historicalMissionId="mission-1" />
+      <MissionControlDialog open={true} onClose={onClose} historicalMissionId="mission-1" />
     )
 
     expect(mcWithHistory.loadHistoricalSession).toHaveBeenCalledWith('mission-1')
+    expect(screen.getByText('REVIEW')).toBeDefined()
     expect(mcWithHistory.reset).not.toHaveBeenCalled()
 
-    rerender(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />)
+    fireEvent.click(screen.getByTestId('mission-control-cancel'))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mcWithHistory.reset).toHaveBeenCalledTimes(1)
+
+    rerender(<MissionControlDialog open={false} onClose={onClose} freshSessionToken={1} />)
+    rerender(<MissionControlDialog open={true} onClose={onClose} freshSessionToken={1} />)
 
     expect(mcWithHistory.reset).toHaveBeenCalledTimes(1)
   })
