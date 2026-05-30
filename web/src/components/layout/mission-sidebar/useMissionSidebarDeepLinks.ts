@@ -181,6 +181,16 @@ export function useMissionControlDeepLink(
       const newParams = new URLSearchParams(searchParams)
       newParams.delete(MISSION_CONTROL_QUERY_KEY)
       setSearchParams(newParams, { replace: true })
+    } else if (missionControlParam === 'restore') {
+      // Open the dialog without triggering fresh-session reset.
+      // Used by E2E tests to preserve seeded localStorage state (#16079).
+      setPendingKubaraChart(undefined)
+      setPendingReviewPlan(undefined)
+      setMissionControlFreshSessionToken(undefined)
+      setShowMissionControl(true)
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete(MISSION_CONTROL_QUERY_KEY)
+      setSearchParams(newParams, { replace: true })
     } else if (missionControlParam === 'review') {
       const planParam = searchParams.get(MISSION_PLAN_QUERY_KEY)
       if (planParam) {

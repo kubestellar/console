@@ -148,7 +148,10 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
     { mc: overrides, mcKey: MC_STORAGE_KEY }
   )
 
-  await page.goto('/?mission-control=open')
+  // Use ?mission-control=restore instead of =open to preserve seeded localStorage.
+  // The 'restore' param opens the dialog without calling openFreshMissionControl(),
+  // which would trigger a fresh-session reset and overwrite the seeded state (#16079).
+  await page.goto('/?mission-control=restore')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
   await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch(() => {})
 

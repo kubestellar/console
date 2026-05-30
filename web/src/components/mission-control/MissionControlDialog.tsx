@@ -106,6 +106,9 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     showToastRef.current = showToast
   }, [showToast])
 
+  // Track previous freshSessionToken to detect increments (not initial mount)
+  const prevFreshSessionTokenRef = useRef<number | undefined>(undefined)
+
   // Initialize Mission Control before the dialog paints so a fresh open never
   // flashes stale state and historical opens land on the selected run.
   useLayoutEffect(() => {
@@ -132,13 +135,21 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
       return
     }
 
-    if (freshSessionToken !== undefined) {
+    // Only reset when freshSessionToken increments from a previous value,
+    // not on initial mount (undefined → N). This prevents overwriting
+    // test-seeded localStorage during E2E tests (#16079).
+    const prevToken = prevFreshSessionTokenRef.current
+    const hasTokenIncremented = freshSessionToken !== undefined && prevToken !== undefined && freshSessionToken !== prevToken
+
+    if (hasTokenIncremented) {
       setIsReviewMode(false)
       setReviewNotes(undefined)
       mc.reset()
       setHighestReached(0)
-      return
     }
+
+    // Update ref after handling
+    prevFreshSessionTokenRef.current = freshSessionToken
   }, [open, historicalMissionId, reviewPlanEncoded, freshSessionToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = useCallback(() => {
