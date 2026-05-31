@@ -101,6 +101,14 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 
+	// SECURITY: Validate cluster name before passing to kubectl CLI
+	if cluster != "" {
+		if err := validateK8sName(cluster, "cluster"); err != nil {
+			slog.Warn("[gitops] invalid cluster parameter (stream-operators)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
+		}
+	}
+
 	if isDemoMode(c) {
 		return streamDemoSSE(c, "operators", getDemoOperatorsForStreaming())
 	}
@@ -480,6 +488,14 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
 
+	// SECURITY: Validate cluster name before passing to kubectl CLI
+	if cluster != "" {
+		if err := validateK8sName(cluster, "cluster"); err != nil {
+			slog.Warn("[gitops] invalid cluster parameter (stream-subscriptions)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
+		}
+	}
+
 	if isDemoMode(c) {
 		return streamDemoSSE(c, "subscriptions", []OperatorSubscription{})
 	}
@@ -654,6 +670,14 @@ func (h *GitOpsHandlers) fetchSubscriptionsFromCluster(ctx context.Context, clus
 // StreamHelmReleases streams helm releases per cluster via SSE
 func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 	cluster := c.Query("cluster")
+
+	// SECURITY: Validate cluster name before passing to helm CLI
+	if cluster != "" {
+		if err := validateK8sName(cluster, "cluster"); err != nil {
+			slog.Warn("[gitops] invalid cluster parameter (stream-helm-releases)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
+		}
+	}
 
 	if isDemoMode(c) {
 		return streamDemoSSE(c, "releases", getDemoHelmReleasesForStreaming())
