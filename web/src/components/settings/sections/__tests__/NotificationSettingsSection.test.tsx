@@ -93,7 +93,7 @@ describe('NotificationSettingsSection', () => {
   })
 
   it('shows a toast when saving notification config fails', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
       throw new Error('storage unavailable')
     })
 

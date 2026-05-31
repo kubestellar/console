@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { TOAST_DISMISS_MS } from '../../../../lib/constants/network'
 import { SettingsBackupSection } from '../SettingsBackupSection'
 
 vi.mock('react-i18next', () => ({
@@ -62,14 +63,15 @@ describe('SettingsBackupSection', () => {
       target: { files: [file] },
     })
 
-    await waitFor(() => {
-      expect(onImport).toHaveBeenCalledWith(file)
+    await act(async () => {
+      await Promise.resolve()
     })
 
+    expect(onImport).toHaveBeenCalledWith(file)
     expect(screen.getByText('settings.backup.importSuccess')).toBeInTheDocument()
 
-    act(() => {
-      vi.advanceTimersByTime(1000)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(TOAST_DISMISS_MS)
     })
 
     expect(screen.queryByText('settings.backup.importSuccess')).not.toBeInTheDocument()
