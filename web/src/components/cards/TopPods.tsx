@@ -144,6 +144,15 @@ function TopPodsInternal({ config }: TopPodsProps) {
     defaultLimit: config?.limit || 5,
   })
 
+  // Find max values for visual scaling based on current sort
+  // Must be called before any conditional returns to comply with Rules of Hooks
+  const { maxRestarts, maxCpu, maxMemory, maxGpu } = useMemo(() => ({
+    maxRestarts: Math.max(...pods.map(p => p.restarts), 1),
+    maxCpu: Math.max(...pods.map(p => getEffectiveCpu(p)), 1),
+    maxMemory: Math.max(...pods.map(p => getEffectiveMemory(p)), 1),
+    maxGpu: Math.max(...pods.map(p => p.gpuRequest || 0), 1),
+  }), [pods])
+
   if (showSkeleton) {
     return <CardSkeleton rows={5} type="list" showHeader showSearch />
   }
@@ -165,14 +174,6 @@ function TopPodsInternal({ config }: TopPodsProps) {
       </div>
     )
   }
-
-  // Find max values for visual scaling based on current sort
-  const { maxRestarts, maxCpu, maxMemory, maxGpu } = useMemo(() => ({
-    maxRestarts: Math.max(...pods.map(p => p.restarts), 1),
-    maxCpu: Math.max(...pods.map(p => getEffectiveCpu(p)), 1),
-    maxMemory: Math.max(...pods.map(p => getEffectiveMemory(p)), 1),
-    maxGpu: Math.max(...pods.map(p => p.gpuRequest || 0), 1),
-  }), [pods])
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
