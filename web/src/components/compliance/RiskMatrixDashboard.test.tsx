@@ -1,5 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { authFetch } from '../../lib/api'
 
 vi.mock('../../lib/api', () => ({ authFetch: vi.fn() }))
 vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
@@ -20,8 +22,8 @@ import RiskMatrixDashboard from './RiskMatrixDashboard'
 describe('RiskMatrixDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const { authFetch } = require('../../lib/api')
-    authFetch.mockImplementation((url: string) => {
+    const mockedAuthFetch = vi.mocked(authFetch)
+    mockedAuthFetch.mockImplementation((url: string) => {
       if (url.includes('/risks')) {
         return Promise.resolve({
           ok: true,
@@ -67,16 +69,21 @@ describe('RiskMatrixDashboard', () => {
   })
 
   it('renders heat map content and unified dashboard', async () => {
+    const user = userEvent.setup()
+
     render(<RiskMatrixDashboard />)
 
     await waitFor(() => {
       expect(screen.getByText('Risk Matrix')).toBeInTheDocument()
       expect(screen.getByText('Risk Heat Map')).toBeInTheDocument()
-      expect(screen.getByText('Control plane outage')).toBeInTheDocument()
+      expect(screen.getByText('All Risks')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('All Risks')).toBeInTheDocument()
     expect(screen.getByText('19% improvement over 6 months')).toBeInTheDocument()
+
+    await user.click(screen.getByTitle('L5 × I4 = 20 (1 risks)'))
+    expect(screen.getByText('Risks: L5 × I4')).toBeInTheDocument()
+    expect(screen.getAllByText('Control plane outage').length).toBeGreaterThan(0)
   })
 })

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { authFetch } from '../../lib/api'
 
 vi.mock('../../lib/api', () => ({ authFetch: vi.fn() }))
 vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
@@ -21,22 +22,20 @@ import RiskAppetiteDashboard from './RiskAppetiteDashboard'
 describe('RiskAppetiteDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const { authFetch } = require('../../lib/api')
-    authFetch.mockImplementation((url: string) => {
-      if (url.includes('/categories')) {
+    const mockedAuthFetch = vi.mocked(authFetch)
+    mockedAuthFetch.mockImplementation((url: string) => {
+      if (url.includes('/thresholds')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([
             {
-              id: 'cat-1',
               category: 'Operational Resilience',
-              appetite: 'cautious',
-              current_score: 62,
-              threshold_green: 40,
-              threshold_amber: 70,
-              threshold_red: 100,
-              owner: 'Risk Office',
-              rationale: 'Minimize disruption to critical workloads.',
+              appetite_level: 5,
+              actual_exposure: 8,
+              tolerance_max: 10,
+              status: 'amber',
+              statement: 'Minimize disruption to critical workloads.',
+              trend_quarters: [4, 5, 6, 8],
             },
           ]),
         })
@@ -50,13 +49,11 @@ describe('RiskAppetiteDashboard', () => {
               id: 'kri-1',
               name: 'Unpatched critical vulns',
               category: 'Operational Resilience',
-              value: 8,
+              threshold: 5,
+              actual: 8,
               unit: '%',
-              target: 2,
-              warning: 5,
-              critical: 10,
-              trend: 'up',
               status: 'amber',
+              last_updated: '2026-01-01T00:00:00Z',
             },
           ]),
         })
@@ -77,7 +74,7 @@ describe('RiskAppetiteDashboard', () => {
     })
   })
 
-  it('renders categories, KRI details, and overview', async () => {
+  it('renders thresholds, KRI details, and quarterly trends', async () => {
     const user = userEvent.setup()
 
     render(<RiskAppetiteDashboard />)
@@ -85,14 +82,15 @@ describe('RiskAppetiteDashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('Risk Appetite')).toBeInTheDocument()
       expect(screen.getByText('Operational Resilience')).toBeInTheDocument()
+      expect(screen.getByText('Minimize disruption to critical workloads.')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: 'Key Risk Indicators' }))
     expect(screen.getByText('Unpatched critical vulns')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Overview' }))
-    expect(screen.getByText('Status Overview')).toBeInTheDocument()
-    expect(screen.getByText('Risk Posture Summary')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Quarterly Trends' }))
+    expect(screen.getByText('Appetite vs actual exposure over the last 4 quarters')).toBeInTheDocument()
+    expect(screen.getByText('Current: 8')).toBeInTheDocument()
   })
 })

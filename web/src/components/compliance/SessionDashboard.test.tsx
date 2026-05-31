@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { authFetch } from '../../lib/api'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? 'Retry' }),
@@ -24,8 +25,8 @@ import SessionDashboard from './SessionDashboard'
 describe('SessionDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const { authFetch } = require('../../lib/api')
-    authFetch.mockImplementation((url: string) => {
+    const mockedAuthFetch = vi.mocked(authFetch)
+    mockedAuthFetch.mockImplementation((url: string) => {
       if (url.includes('/summary')) {
         return Promise.resolve({
           ok: true,

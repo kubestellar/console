@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useCache } from '../../lib/cache'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? 'Retry' }),
@@ -25,8 +26,8 @@ import OIDCDashboard from './OIDCDashboard'
 describe('OIDCDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const { useCache } = require('../../lib/cache')
-    useCache.mockImplementation(({ key }: { key: string }) => {
+    const mockedUseCache = vi.mocked(useCache)
+    mockedUseCache.mockImplementation(({ key }: { key: string }) => {
       if (key === 'identity-oidc-summary') {
         return {
           data: {
