@@ -206,6 +206,126 @@
   to = "/.netlify/functions/identity-sessions-policies"
   status = 200
 
+# Compliance SIEM API — proxy to Netlify Functions (enterprise SIEM dashboard)
+[[redirects]]
+  from = "/api/v1/compliance/siem/events"
+  to = "/.netlify/functions/compliance-siem-events"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/siem/alerts"
+  to = "/.netlify/functions/compliance-siem-alerts"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/siem/summary"
+  to = "/.netlify/functions/compliance-siem-summary"
+  status = 200
+
+# Compliance incident response API — proxy to Netlify Functions
+[[redirects]]
+  from = "/api/v1/compliance/incidents"
+  to = "/.netlify/functions/compliance-incidents"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/incidents/metrics"
+  to = "/.netlify/functions/compliance-incidents-metrics"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/incidents/playbooks"
+  to = "/.netlify/functions/compliance-incidents-playbooks"
+  status = 200
+
+# Compliance threat intelligence API — proxy to Netlify Functions
+[[redirects]]
+  from = "/api/v1/compliance/threat-intel/feeds"
+  to = "/.netlify/functions/compliance-threat-intel-feeds"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/threat-intel/iocs"
+  to = "/.netlify/functions/compliance-threat-intel-iocs"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/threat-intel/summary"
+  to = "/.netlify/functions/compliance-threat-intel-summary"
+  status = 200
+
+# Enterprise risk management API — proxy to Netlify Functions
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-matrix/risks"
+  to = "/.netlify/functions/compliance-risk-matrix-risks"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-matrix/heatmap"
+  to = "/.netlify/functions/compliance-risk-matrix-heatmap"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-matrix/summary"
+  to = "/.netlify/functions/compliance-risk-matrix-summary"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-register/risks"
+  to = "/.netlify/functions/compliance-risk-register-risks"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-register/categories"
+  to = "/.netlify/functions/compliance-risk-register-categories"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-register/summary"
+  to = "/.netlify/functions/compliance-risk-register-summary"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-appetite/thresholds"
+  to = "/.netlify/functions/compliance-risk-appetite-thresholds"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-appetite/kris"
+  to = "/.netlify/functions/compliance-risk-appetite-kris"
+  status = 200
+
+[[redirects]]
+  from = "/api/v1/compliance/erm/risk-appetite/summary"
+  to = "/.netlify/functions/compliance-risk-appetite-summary"
+  status = 200
+
+# Supply chain compliance API — proxy to Netlify Functions
+[[redirects]]
+  from = "/api/supply-chain/sbom/documents"
+  to = "/.netlify/functions/supply-chain-sbom-documents"
+  status = 200
+
+[[redirects]]
+  from = "/api/supply-chain/sbom/summary"
+  to = "/.netlify/functions/supply-chain-sbom-summary"
+  status = 200
+
+[[redirects]]
+  from = "/api/supply-chain/licenses/packages"
+  to = "/.netlify/functions/supply-chain-licenses-packages"
+  status = 200
+
+[[redirects]]
+  from = "/api/supply-chain/licenses/categories"
+  to = "/.netlify/functions/supply-chain-licenses-categories"
+  status = 200
+
+[[redirects]]
+  from = "/api/supply-chain/licenses/summary"
+  to = "/.netlify/functions/supply-chain-licenses-summary"
+  status = 200
+
 # ACMM maturity scan API
 [[redirects]]
   from = "/api/acmm/scan"
