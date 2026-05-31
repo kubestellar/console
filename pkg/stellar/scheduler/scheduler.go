@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +35,8 @@ type Scheduler struct {
 	broadcaster Broadcaster
 	registry    *providers.Registry
 }
+
+var sensitiveURLPattern = regexp.MustCompile(`(?i)\b(?:https?|wss?)://\S+`)
 
 // Broadcaster allows the scheduler to push SSE events to connected clients.
 type Broadcaster interface {
@@ -158,6 +161,9 @@ func sanitizeError(err error) string {
 			return msg
 		}
 	}
+
+	msg = sensitiveURLPattern.ReplaceAllString(msg, "[redacted]")
+
 	// Truncate to avoid leaking long stack traces or server URLs.
 	const maxLen = 120
 	if len(msg) > maxLen {
