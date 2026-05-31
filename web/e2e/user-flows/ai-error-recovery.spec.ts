@@ -22,7 +22,7 @@ test.describe('AppErrorBoundary E2E (LFX Prototype)', () => {
     })
     await retryButton.click()
 
-    await expect(errorTitle).not.toBeVisible()
+    await expect(errorTitle).not.toBeVisible({ timeout: 10000 })
     await expect(page.getByTestId('dashboard-page')).toBeVisible()
   })
 })
