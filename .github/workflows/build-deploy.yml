@@ -296,7 +296,7 @@ jobs:
             --set securityContext.runAsGroup=null \
             --atomic \
             --wait \
-            --timeout 10m
+            --timeout 15m
 
       - name: Collect diagnostics on deploy failure
         if: failure()
@@ -414,7 +414,7 @@ jobs:
             --rollback-on-failure \
             --cleanup-on-fail \
             --wait \
-            --timeout 8m
+            --timeout 15m
 
       - name: Collect diagnostics on deploy failure
         if: failure()
