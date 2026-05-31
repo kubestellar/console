@@ -42,10 +42,11 @@ fi
 
 # Vitest may exit non-zero due to pool worker termination timeout on CI
 # even when all tests pass. Capture the output and check for actual failures.
+# Run with forks so worker heaps are isolated instead of sharing one threaded heap.
 # Use project directory for output file to avoid /tmp restrictions (#16250).
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
-npx vitest run $EXTRA_ARGS --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
+npx vitest run $EXTRA_ARGS --pool=forks --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
 
 if [ "$EXIT_CODE" -ne 0 ]; then
   # Check if all tests actually passed despite the non-zero exit
