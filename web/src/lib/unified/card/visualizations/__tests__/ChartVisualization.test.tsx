@@ -636,4 +636,130 @@ describe('ChartVisualization', () => {
       expect(tooltip.borderColor).toBe('#374151')
     })
   })
+
+  // -------------------------------------------------------------------------
+  // CHART_THEME_COLORS usage (WCAG AA contrast tokens)
+  // -------------------------------------------------------------------------
+  describe('CHART_THEME_COLORS semantic tokens', () => {
+    it('uses centralized axis label color in line chart', () => {
+      renderChart({
+        type: 'chart',
+        chartType: 'line',
+        series: [{ field: 'cpu' }],
+        xAxis: 'time',
+      })
+
+      const xAxis = lastOption!.xAxis as Record<string, unknown>
+      const yAxis = lastOption!.yAxis as Record<string, unknown>
+      const xLabel = xAxis.axisLabel as Record<string, unknown>
+      const yLabel = yAxis.axisLabel as Record<string, unknown>
+      expect(xLabel.color).toBe('#9ca3af')
+      expect(yLabel.color).toBe('#9ca3af')
+    })
+
+    it('uses centralized axis line color in line chart', () => {
+      renderChart({
+        type: 'chart',
+        chartType: 'line',
+        series: [{ field: 'cpu' }],
+        xAxis: 'time',
+      })
+
+      const xAxis = lastOption!.xAxis as Record<string, unknown>
+      const xAxisLine = xAxis.axisLine as { lineStyle: { color: string } }
+      expect(xAxisLine.lineStyle.color).toBe('#4b5563')
+    })
+
+    it('uses centralized grid line color for yAxis splitLine', () => {
+      renderChart({
+        type: 'chart',
+        chartType: 'line',
+        series: [{ field: 'cpu' }],
+        xAxis: 'time',
+      })
+
+      const yAxis = lastOption!.yAxis as Record<string, unknown>
+      const splitLine = yAxis.splitLine as { lineStyle: { color: string } }
+      expect(splitLine.lineStyle.color).toBe('#374151')
+    })
+
+    it('uses centralized tooltip text color', () => {
+      renderChart({
+        type: 'chart',
+        chartType: 'line',
+        series: [{ field: 'cpu' }],
+        xAxis: 'time',
+      })
+
+      const tooltip = lastOption!.tooltip as Record<string, unknown>
+      const textStyle = tooltip.textStyle as { color: string }
+      expect(textStyle.color).toBe('#e5e7eb')
+    })
+
+    it('uses centralized legend text color', () => {
+      renderChart({
+        type: 'chart',
+        chartType: 'line',
+        series: [{ field: 'cpu' }],
+        xAxis: 'time',
+        showLegend: true,
+      })
+
+      const legend = lastOption!.legend as Record<string, unknown>
+      const textStyle = legend.textStyle as { color: string }
+      expect(textStyle.color).toBe('#e5e7eb')
+    })
+
+    it('uses centralized gaugeRemaining color for gauge background', () => {
+      renderChart(
+        {
+          type: 'chart',
+          chartType: 'gauge',
+          series: [{ field: 'utilization' }],
+        },
+        [{ utilization: 60 }],
+      )
+
+      const series = lastOption!.series as Array<Record<string, unknown>>
+      const pieData = series[0].data as Array<{ value: number; name: string; itemStyle: { color: string } }>
+      const remaining = pieData.find(d => d.name === 'remaining')
+      expect(remaining!.itemStyle.color).toBe('#374151')
+    })
+
+    it('uses same theme colors consistently across bar chart axes', () => {
+      renderChart(
+        {
+          type: 'chart',
+          chartType: 'bar',
+          series: [{ field: 'count' }],
+          xAxis: 'name',
+        },
+        [{ name: 'A', count: 10 }],
+      )
+
+      const xAxis = lastOption!.xAxis as Record<string, unknown>
+      const yAxis = lastOption!.yAxis as Record<string, unknown>
+      const xLabel = xAxis.axisLabel as { color: string }
+      const yLabel = yAxis.axisLabel as { color: string }
+      // All chart types should use the same centralized colors
+      expect(xLabel.color).toBe('#9ca3af')
+      expect(yLabel.color).toBe('#9ca3af')
+    })
+
+    it('uses same theme colors consistently across area chart axes', () => {
+      renderChart({
+        type: 'chart',
+        chartType: 'area',
+        series: [{ field: 'cpu' }],
+        xAxis: 'time',
+      })
+
+      const xAxis = lastOption!.xAxis as Record<string, unknown>
+      const yAxis = lastOption!.yAxis as Record<string, unknown>
+      const xLabel = xAxis.axisLabel as { color: string }
+      const yLabel = yAxis.axisLabel as { color: string }
+      expect(xLabel.color).toBe('#9ca3af')
+      expect(yLabel.color).toBe('#9ca3af')
+    })
+  })
 })
