@@ -14,13 +14,15 @@
 #   - syft optional for SBOM generation
 #
 # Output:
-#   /tmp/dependency-audit-report.json    — combined JSON data
-#   /tmp/dependency-audit-summary.md     — human-readable summary
-#   /tmp/sbom.json                       — SBOM (if --sbom flag used)
+#   .artifacts/dependency-audit/dependency-audit-report.json   — combined JSON data
+#   .artifacts/dependency-audit/dependency-audit-summary.md    — human-readable summary
+#   .artifacts/dependency-audit/sbom.json                      — SBOM (if --sbom flag used)
 #
 # Exit code:
-#   0 — no HIGH/CRITICAL vulnerabilities found
-#   1 — HIGH/CRITICAL vulnerabilities detected
+#   0 — no HIGH/CRITICAL production npm vulnerabilities found
+#       and no Go vulnerabilities detected
+#   1 — HIGH/CRITICAL production npm vulnerabilities or
+#       Go vulnerabilities detected
 
 set -euo pipefail
 
@@ -46,9 +48,14 @@ for arg in "$@"; do
   esac
 done
 
-REPORT_JSON="/tmp/dependency-audit-report.json"
-REPORT_MD="/tmp/dependency-audit-summary.md"
-TMPDIR_AUDIT=$(mktemp -d)
+ARTIFACTS_DIR=".artifacts/dependency-audit"
+REPORT_JSON="$ARTIFACTS_DIR/dependency-audit-report.json"
+REPORT_MD="$ARTIFACTS_DIR/dependency-audit-summary.md"
+SBOM_JSON="$ARTIFACTS_DIR/sbom.json"
+TMPDIR_AUDIT="$ARTIFACTS_DIR/work"
+mkdir -p "$ARTIFACTS_DIR"
+rm -rf "$TMPDIR_AUDIT"
+mkdir -p "$TMPDIR_AUDIT"
 trap 'rm -rf "$TMPDIR_AUDIT"' EXIT
 
 echo -e "${BOLD}═══════════════════════════════════════════════════${NC}"
@@ -70,12 +77,15 @@ GO_STATUS="pass"
 # Phase 1: npm audit
 # ============================================================================
 
-echo -e "${BOLD}Phase 1: npm audit (frontend)${NC}"
+# Nightly regression gate should track shipped frontend risk, not dev-only tooling.
+NPM_AUDIT_ARGS=(--omit=dev --audit-level=high --json)
+
+echo -e "${BOLD}Phase 1: npm audit (frontend production dependencies)${NC}"
 
 if [ -d "web" ] && [ -f "web/package-lock.json" ]; then
   NPM_OUTPUT="$TMPDIR_AUDIT/npm-audit.json"
   cd web
-  npm audit --json > "$NPM_OUTPUT" 2>/dev/null || true
+  npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
   cd ..
 
   # Parse npm audit JSON — no silent fallbacks; propagate errors explicitly
@@ -200,10 +210,10 @@ if [ -n "$SBOM_MODE" ]; then
   echo -e "${BOLD}Phase 3: SBOM generation${NC}"
 
   if command -v syft &>/dev/null; then
-    syft . -o spdx-json > /tmp/sbom.json 2>/dev/null
-    SBOM_PACKAGES=$(jq '.packages | length' /tmp/sbom.json 2>/dev/null || echo "0")
+    syft . -o spdx-json > "$SBOM_JSON" 2>/dev/null
+    SBOM_PACKAGES=$(jq '.packages | length' "$SBOM_JSON" 2>/dev/null || echo "0")
     echo -e "  ${GREEN}✓ SBOM generated — ${SBOM_PACKAGES} packages${NC}"
-    echo -e "  ${DIM}Output: /tmp/sbom.json${NC}"
+    echo -e "  ${DIM}Output: $SBOM_JSON${NC}"
   else
     echo -e "  ${YELLOW}⚠️  syft not installed — skipping SBOM${NC}"
     echo -e "  ${DIM}Install: brew install syft${NC}"
@@ -239,7 +249,7 @@ cat > "$REPORT_MD" << EOF
 
 **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-## npm audit (frontend)
+## npm audit (frontend production dependencies)
 
 | Severity | Count |
 |----------|-------|
