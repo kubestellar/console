@@ -8,10 +8,10 @@
  * Extracted from App.tsx to keep the root component focused on composition.
  */
 import { safeLazy } from '../lib/safeLazy'
-// Dashboard is the landing page — import eagerly to avoid Suspense delay on reload
+// Dashboard is the landing page — import eagerly to avoid Suspense delay on reload.
 import { Dashboard } from '../components/dashboard/Dashboard'
 // Login and AuthCallback are eagerly imported — they are on the critical auth
-// path and must render reliably.  Lazy-loading them caused chunk_load errors
+// path and must render reliably. Lazy-loading them caused chunk_load errors
 // during OAuth redirects when the browser navigated away before the chunk
 // finished downloading (#9803).
 import { Login } from '../components/auth/Login'
@@ -19,10 +19,36 @@ import { AuthCallback } from '../components/auth/AuthCallback'
 // Eagerly import key sidebar dashboards to prevent React Router's
 // startTransition from keeping the old route visible during lazy loading.
 import { Clusters } from '../components/clusters/Clusters'
+// Public deep links and 404 pages must render meaningful content immediately
+// after the first paint. Keeping these lightweight routes out of Suspense avoids
+// the blank full-screen placeholder that nightly UX tests caught on cold loads.
+import { MissionLandingPage } from '../components/missions/MissionLandingPage'
+import { EmbedCard } from '../pages/EmbedCard'
+import { Welcome } from '../pages/Welcome'
+import { FromLens } from '../pages/FromLens'
+import { FromHeadlamp } from '../pages/FromHeadlamp'
+import { FromHolmesGPT } from '../pages/FromHolmesGPT'
+import { FeatureInspektorGadget } from '../pages/FeatureInspektorGadget'
+import { FeatureKagent } from '../pages/FeatureKagent'
+import { WhiteLabel } from '../pages/WhiteLabel'
+import NotFound from '../components/NotFound'
 
-export { Dashboard, Login, AuthCallback, Clusters }
-
-export const MissionLandingPage = safeLazy(() => import('../components/missions/MissionLandingPage'), 'MissionLandingPage')
+export {
+  Dashboard,
+  Login,
+  AuthCallback,
+  Clusters,
+  MissionLandingPage,
+  EmbedCard,
+  Welcome,
+  FromLens,
+  FromHeadlamp,
+  FromHolmesGPT,
+  FeatureInspektorGadget,
+  FeatureKagent,
+  WhiteLabel,
+  NotFound,
+}
 
 // Lazy-load DrillDownModal — the drilldown views (~64 KB) are only needed
 // when a user clicks into a card detail, not on initial page render.
@@ -98,17 +124,8 @@ export const Quantum = safeLazy(() => import('../components/quantum/Quantum'), '
 export const StellarPage = safeLazy(() => import('../components/stellar/StellarPage'), 'StellarPage')
 export const AuditPage = safeLazy(() => import('../components/stellar/AuditPage'), 'AuditPage')
 export const MiniDashboard = safeLazy(() => import('../components/widget/MiniDashboard'), 'MiniDashboard')
-export const EmbedCard = safeLazy(() => import('../pages/EmbedCard'), 'EmbedCard')
-export const Welcome = safeLazy(() => import('../pages/Welcome'), 'Welcome')
-export const FromLens = safeLazy(() => import('../pages/FromLens'), 'FromLens')
-export const FromHeadlamp = safeLazy(() => import('../pages/FromHeadlamp'), 'FromHeadlamp')
-export const FromHolmesGPT = safeLazy(() => import('../pages/FromHolmesGPT'), 'FromHolmesGPT')
-export const FeatureInspektorGadget = safeLazy(() => import('../pages/FeatureInspektorGadget'), 'FeatureInspektorGadget')
-export const FeatureKagent = safeLazy(() => import('../pages/FeatureKagent'), 'FeatureKagent')
-export const WhiteLabel = safeLazy(() => import('../pages/WhiteLabel'), 'WhiteLabel')
 export const UnifiedCardTest = safeLazy(() => import('../pages/UnifiedCardTest'), 'UnifiedCardTest')
 export const UnifiedStatsTest = safeLazy(() => import('../pages/UnifiedStatsTest'), 'UnifiedStatsTest')
 export const UnifiedDashboardTest = safeLazy(() => import('../pages/UnifiedDashboardTest'), 'UnifiedDashboardTest')
 export const AllCardsPerfTest = safeLazy(() => import('../pages/AllCardsPerfTest'), 'AllCardsPerfTest')
 export const CompliancePerfTest = safeLazy(() => import('../pages/CompliancePerfTest'), 'CompliancePerfTest')
-export const NotFound = safeLazy(() => import('../components/NotFound'), 'default')

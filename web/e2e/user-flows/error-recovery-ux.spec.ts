@@ -27,28 +27,15 @@ test.describe('Error Recovery', () => {
     await expect(body).toBeVisible()
   })
 
-  test('/nonexistent route does not show blank page', async ({ page }) => {
+  test('/nonexistent route shows 404 content instead of a blank page', async ({ page }) => {
     await setupDemoAndNavigate(page, '/nonexistent-route-abc123')
 
-    // Should either redirect to a known route or show a not-found message
-    const hasContent = await page.evaluate(() => {
-      const body = document.body
-      const text = (body.innerText || '').trim()
-      return text.length > 0
+    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
+    expect(bodyText.length, 'Page should not be blank on unknown route').toBeGreaterThan(0)
+
+    await expect(page.getByText(/page not found|404|doesn.t exist/i)).toBeVisible({
+      timeout: NOT_FOUND_TIMEOUT_MS,
     })
-
-    expect(hasContent, 'Page should not be blank on unknown route').toBe(true)
-
-    // Check for redirect to home or a "not found" message
-    const url = page.url()
-    const isRedirected = url.endsWith('/') || url.includes('/login')
-    const hasNotFound = await page.getByText(/not found|404|page doesn.t exist/i).isVisible().catch(() => false)
-    const hasDashboard = await page.getByTestId('dashboard-page').isVisible().catch(() => false)
-
-    const handledGracefully = isRedirected || hasNotFound || hasDashboard
-    if (!handledGracefully) {
-      test.info().annotations.push({ type: 'ux-finding', description: 'Unknown route did not redirect or show 404 — may show blank content' })
-    }
   })
 
   test('console errors in demo mode are expected (filtered)', async ({ page }) => {
