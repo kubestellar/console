@@ -184,6 +184,6 @@ You can also help without opening a PR:
 
 ## Getting Help
 
-- [Documentation](https://console-docs.kubestellar.io)
+- [Documentation](https://kubestellar.io/docs/console/overview/)
 - [Slack - #kubestellar-dev](https://cloud-native.slack.com/archives/C097094RZ3M)
 - [GitHub Issues](https://github.com/kubestellar/console/issues)
