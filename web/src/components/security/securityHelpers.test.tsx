@@ -15,8 +15,9 @@ describe('severityColor', () => {
     expect(severityColor('low')).toBe('text-blue-400 bg-blue-500/20')
   })
 
-  it('returns muted classes for unknown severity', () => {
+  it('returns muted classes for fallback severities', () => {
     expect(severityColor('')).toBe('text-muted-foreground bg-card')
+    expect(severityColor('unknown')).toBe('text-muted-foreground bg-card')
     expect(severityColor('critical')).toBe('text-muted-foreground bg-card')
   })
 
