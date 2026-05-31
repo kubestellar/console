@@ -11,9 +11,22 @@ import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { safeRevokeObjectURL } from '../lib/download'
+import { STORAGE_KEY_PENDING_SETTINGS_SYNC } from '../lib/constants/storage'
 
 const DEBOUNCE_MS = 1000
 const RETRY_DELAY_MS = 3000
+
+function hasPendingSettingsSync(): boolean {
+  return localStorage.getItem(STORAGE_KEY_PENDING_SETTINGS_SYNC) === 'true'
+}
+
+function markPendingSettingsSync(): void {
+  localStorage.setItem(STORAGE_KEY_PENDING_SETTINGS_SYNC, 'true')
+}
+
+function clearPendingSettingsSync(): void {
+  localStorage.removeItem(STORAGE_KEY_PENDING_SETTINGS_SYNC)
+}
 
 export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
 
@@ -64,6 +77,7 @@ export function usePersistedSettings() {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current)
     }
+    markPendingSettingsSync()
     setSyncStatus('saving')
     debounceTimer.current = setTimeout(async () => {
       try {
@@ -76,6 +90,7 @@ export function usePersistedSettings() {
             await settingsFetch('/settings', {
               method: 'PUT',
               body: JSON.stringify(current) })
+            clearPendingSettingsSync()
             if (mountedRef.current) {
               setSyncStatus('saved')
               setLastSaved(new Date())
@@ -171,7 +186,14 @@ export function usePersistedSettings() {
           data.theme || data.aiMode || data.feedbackGithubToken ||
           Object.keys(data.apiKeys || {}).length > 0)
 
-        if (isLocalStorageEmpty() && backendHasData) {
+        const hasPendingLocalChanges = hasPendingSettingsSync() && !isLocalStorageEmpty()
+        let scheduledSave = false
+
+        if (hasPendingLocalChanges) {
+          // Preserve fresher local changes made just before a navigation/reload.
+          saveToBackend()
+          scheduledSave = true
+        } else if (isLocalStorageEmpty() && backendHasData) {
           // Cache was cleared — restore from backend file
           restoreToLocalStorage(data)
           setRestoredFromFile(true)
@@ -181,11 +203,15 @@ export function usePersistedSettings() {
           // result back so the two stay in sync.
           restoreToLocalStorage(data)
           saveToBackend()
+          scheduledSave = true
         } else {
           // Backend is empty but localStorage has data — seed the backend
           saveToBackend()
+          scheduledSave = true
         }
-        setSyncStatus('saved')
+        if (!scheduledSave) {
+          setSyncStatus('saved')
+        }
       } catch {
         // Agent unavailable — localStorage is sole source
         setSyncStatus('offline')

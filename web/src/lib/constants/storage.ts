@@ -40,6 +40,7 @@ export const STORAGE_KEY_CUSTOM_THEMES = 'kc-custom-themes'
 export const STORAGE_KEY_ACCESSIBILITY = 'accessibility-settings'
 export const STORAGE_KEY_NOTIFICATION_CONFIG = 'kc_notification_config'
 export const STORAGE_KEY_TOUR_COMPLETED = 'kubestellar-console-tour-completed'
+export const STORAGE_KEY_PENDING_SETTINGS_SYNC = 'kubestellar-settings-pending-sync'
 export const STORAGE_KEY_ANALYTICS_OPT_OUT = 'kc-analytics-opt-out'
 export const STORAGE_KEY_ANONYMOUS_USER_ID = 'kc-anonymous-user-id'
 

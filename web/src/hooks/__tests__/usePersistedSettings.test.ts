@@ -62,6 +62,7 @@ vi.stubGlobal('fetch', mockFetch)
 // ---------------------------------------------------------------------------
 
 import { usePersistedSettings } from '../usePersistedSettings'
+import { STORAGE_KEY_PENDING_SETTINGS_SYNC } from '../../lib/constants/storage'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -294,6 +295,8 @@ describe('usePersistedSettings', () => {
       }
     })
 
+    expect(localStorage.getItem(STORAGE_KEY_PENDING_SETTINGS_SYNC)).toBe('true')
+
     // Before debounce window: no PUT yet
     expect(
       mockFetch.mock.calls.filter((c) => c[1]?.method === 'PUT').length,
@@ -307,6 +310,24 @@ describe('usePersistedSettings', () => {
       (c) => c[1]?.method === 'PUT',
     )
     expect(putCalls.length).toBe(1)
+    expect(localStorage.getItem(STORAGE_KEY_PENDING_SETTINGS_SYNC)).toBeNull()
+  })
+
+  it('prefers pending local settings over stale backend data after remount', async () => {
+    localStorage.setItem(STORAGE_KEY_PENDING_SETTINGS_SYNC, 'true')
+    mockIsLocalStorageEmpty.mockReturnValue(false)
+    mockFetch.mockReturnValue(jsonResponse({ theme: 'stale-backend-theme' }))
+
+    renderHook(() => usePersistedSettings())
+
+    await flushMicrotasks()
+
+    expect(mockRestoreToLocalStorage).not.toHaveBeenCalled()
+
+    await advanceAndFlush(1100)
+
+    const putCalls = mockFetch.mock.calls.filter((call) => call[1]?.method === 'PUT')
+    expect(putCalls).toHaveLength(1)
   })
 
   // ── Retry on transient failure ──────────────────────────────────────────
@@ -399,29 +420,28 @@ describe('usePersistedSettings', () => {
 
   // ── Cleanup on unmount ──────────────────────────────────────────────────
 
-  it('clears debounce timer on unmount', async () => {
+  it('keeps pending sync state on unmount before debounce completes', async () => {
     mockFetch.mockReturnValue(jsonResponse({}))
     const { unmount } = renderHook(() => usePersistedSettings())
 
     await flushMicrotasks()
 
-    // Fire event then unmount before debounce completes
     act(() => {
       window.dispatchEvent(new Event('kubestellar-settings-changed'))
     })
+    expect(localStorage.getItem(STORAGE_KEY_PENDING_SETTINGS_SYNC)).toBe('true')
+
     unmount()
 
     mockFetch.mockClear()
 
-    // Advance timers — the debounced save may fire but should not crash
     await advanceAndFlush(2000)
 
     const putCalls = mockFetch.mock.calls.filter(
       (c) => c[1]?.method === 'PUT',
     )
-    // The save may or may not fire (timer was set before unmount), but
-    // the hook should not crash or update state after unmount
-    expect(putCalls.length).toBeLessThanOrEqual(1)
+    expect(putCalls).toHaveLength(0)
+    expect(localStorage.getItem(STORAGE_KEY_PENDING_SETTINGS_SYNC)).toBe('true')
   })
 
   // ── localStorage empty but agent has no data ────────────────────────────
