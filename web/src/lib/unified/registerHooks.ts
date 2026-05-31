@@ -116,7 +116,7 @@ interface HookResult {
 }
 
 /** Base shape returned by cached status hooks. */
-interface CachedHookResult<TData extends Record<string, unknown> = Record<string, unknown>> {
+interface CachedHookResult<TData extends object = object> {
   data: TData
   isLoading?: boolean
   showSkeleton?: boolean
@@ -178,7 +178,7 @@ function createUnifiedResourceHook(config: ResourceHookConfig) {
 }
 
 interface CachedStatusHookConfig<
-  TData extends Record<string, unknown> = Record<string, unknown>,
+  TData extends object = object,
   TResult extends CachedHookResult<TData> = CachedHookResult<TData>,
 > {
   useCachedHook: () => TResult
@@ -192,15 +192,16 @@ interface CachedStatusHookConfig<
 }
 
 function createUnifiedCachedHook<
-  TData extends Record<string, unknown>,
+  TData extends object,
   TResult extends CachedHookResult<TData>,
 >(config: CachedStatusHookConfig<TData, TResult>) {
   return function useUnifiedCachedStatus() {
     const result = config.useCachedHook()
+    const resultData = result.data as Record<string, unknown>
 
     const data = config.optionalData
-      ? (result.data?.[config.dataField] ?? [])
-      : result.data[config.dataField]
+      ? (resultData[config.dataField] ?? [])
+      : resultData[config.dataField]
 
     const isLoading = result[config.loadingField] ?? false
 

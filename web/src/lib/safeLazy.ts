@@ -2,7 +2,7 @@ import { lazy, type ComponentType } from 'react'
 
 type LazyComponentModule<
   TExportName extends string,
-  TProps extends Record<string, unknown> = Record<string, unknown>,
+  TProps extends object = object,
 > = Record<TExportName, ComponentType<TProps>> & Record<string, unknown>
 
 /** Maximum number of retry attempts before giving up on a failed dynamic import */
@@ -43,7 +43,7 @@ const LAZY_IMPORT_ATTEMPT_TIMEOUT_MS = 5_000
  */
 export function safeLazy<
   TExportName extends string,
-  TProps extends Record<string, unknown> = Record<string, unknown>,
+  TProps extends object = object,
 >(
   importFn: () => Promise<LazyComponentModule<TExportName, TProps>>,
   exportName: TExportName,
