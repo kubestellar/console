@@ -324,7 +324,7 @@ jobs:
     needs: merge
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: [self-hosted, kc-pok]
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: pok-prod
     concurrency:
       group: deploy-pok-prod
@@ -388,6 +388,30 @@ jobs:
           kubectl get events -n kubestellar-console --sort-by='.lastTimestamp' --field-selector type=Warning | tail -10 || true
           echo "::endgroup::"
 
+      - name: Clean up stuck pods
+        run: |
+          echo "Cleaning up pods stuck in Terminating or ContainerCreating for more than 10 minutes..."
+          for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+            .items[]
+            | select(.metadata.deletionTimestamp != null)
+            | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+            | .metadata.name
+          '); do
+            echo "Force-deleting terminating pod: $pod"
+            kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+          done
+          for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+            .items[]
+            | select(.status.phase == "Pending")
+            | select((now - (.metadata.creationTimestamp | fromdateiso8601)) > 600)
+            | select(any(.status.containerStatuses[]?; .state.waiting?.reason == "ContainerCreating"))
+            | .metadata.name
+          '); do
+            echo "Deleting pending pod stuck in ContainerCreating: $pod"
+            kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+          done
+          echo "Cleanup complete"
+
       # #6344 / #6353: OpenShift SCC — see comment on the vllm-d Deploy
       # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
       # SCC admission controller can assign a namespace-appropriate UID.
@@ -395,26 +419,79 @@ jobs:
       # the pod.
       - name: Deploy with Helm
         run: |
-          helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
-            --namespace kubestellar-console \
-            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
-            --set image.tag=${{ github.sha }} \
-            --set github.url=https://github.ibm.com \
-            --set github.existingSecret=kc-kubestellar-console \
-            --set jwt.existingSecret=kc-kubestellar-console \
-            --set githubToken.existingSecret=kc-kubestellar-console \
-            --set googleDrive.existingSecret=kc-kubestellar-console \
-            --set route.enabled=true \
-            --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
-            --set clusterName=pok-prod-001 \
-            --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
-            --set rbac.namespaceCreationEnabled=true \
-            --set securityContext.runAsUser=null \
-            --set securityContext.runAsGroup=null \
-            --atomic \
-            --cleanup-on-fail \
-            --wait \
-            --timeout 15m
+          cleanup_stuck_pods() {
+            for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+              .items[]
+              | select(.metadata.deletionTimestamp != null)
+              | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+              | .metadata.name
+            '); do
+              echo "Force-deleting terminating pod: $pod"
+              kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+            done
+            for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+              .items[]
+              | select(.status.phase == "Pending")
+              | select((now - (.metadata.creationTimestamp | fromdateiso8601)) > 600)
+              | select(any(.status.containerStatuses[]?; .state.waiting?.reason == "ContainerCreating"))
+              | .metadata.name
+            '); do
+              echo "Deleting pending pod stuck in ContainerCreating: $pod"
+              kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+            done
+          }
+
+          recover_release() {
+            RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+            if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+              echo "Helm release in '$RELEASE_STATUS' — rolling back to recover"
+              helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m || true
+            fi
+          }
+
+          deploy_helm() {
+            helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
+              --namespace kubestellar-console \
+              --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+              --set image.tag=${{ github.sha }} \
+              --set github.url=https://github.ibm.com \
+              --set github.existingSecret=kc-kubestellar-console \
+              --set jwt.existingSecret=kc-kubestellar-console \
+              --set githubToken.existingSecret=kc-kubestellar-console \
+              --set googleDrive.existingSecret=kc-kubestellar-console \
+              --set route.enabled=true \
+              --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
+              --set clusterName=pok-prod-001 \
+              --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+              --set rbac.namespaceCreationEnabled=true \
+              --set securityContext.runAsUser=null \
+              --set securityContext.runAsGroup=null \
+              --atomic \
+              --cleanup-on-fail \
+              --wait \
+              --timeout 15m
+          }
+
+          MAX_ATTEMPTS=2
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Deploy attempt $attempt of $MAX_ATTEMPTS..."
+            if deploy_helm; then
+              echo "Deploy succeeded on attempt $attempt"
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "::warning::Deploy attempt $attempt failed, recovering and retrying..."
+              sleep 30
+              recover_release
+              cleanup_stuck_pods
+              kubectl delete pods -n kubestellar-console --field-selector=status.phase=Failed --force --grace-period=0 2>/dev/null || true
+              sleep 10
+            fi
+          done
+
+          echo "::error::Deploy failed after $MAX_ATTEMPTS attempts"
+          exit 1
 
       - name: Collect diagnostics on deploy failure
         if: failure()
