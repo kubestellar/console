@@ -553,17 +553,21 @@ export async function setupDemoMode(page: Page) {
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
   await page.addInitScript(async () => {
-    await (async () => {
-      sessionStorage.clear()
-      localStorage.clear()
-      const deletePromise = new Promise<void>((resolve) => {
-        const req = indexedDB.deleteDatabase('kc_cache')
-        req.onsuccess = () => resolve()
-        req.onerror = () => resolve()
-        req.onblocked = () => resolve()
-      })
-      await deletePromise
-    })()
+    // Only clear storage if demo mode is not already set up — prevents wiping
+    // user settings (like toggle states) on internal navigation (#16177).
+    if (!localStorage.getItem('kc-demo-mode')) {
+      await (async () => {
+        sessionStorage.clear()
+        localStorage.clear()
+        const deletePromise = new Promise<void>((resolve) => {
+          const req = indexedDB.deleteDatabase('kc_cache')
+          req.onsuccess = () => resolve()
+          req.onerror = () => resolve()
+          req.onblocked = () => resolve()
+        })
+        await deletePromise
+      })()
+    }
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
