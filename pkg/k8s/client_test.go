@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -970,23 +971,89 @@ func TestGetConfigMapsAndSecrets(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
 
 	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: "cm1", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "cm1",
+			Namespace:   "default",
+			Labels:      map[string]string{"app": "demo"},
+			Annotations: map[string]string{"owner": "team-a"},
+		},
+		Data:       map[string]string{"config.yaml": "value"},
+		BinaryData: map[string][]byte{"cert.pem": []byte("abc")},
 	}
 	sec := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "sec1", Namespace: "default"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "sec1",
+			Namespace:   "default",
+			Labels:      map[string]string{"tier": "backend"},
+			Annotations: map[string]string{"managed-by": "test"},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{"token": []byte("secret")},
 	}
 
 	fakeCS := k8sfake.NewSimpleClientset(cm, sec)
 	m.clients["c1"] = fakeCS
 
-	cms, _ := m.GetConfigMaps(context.Background(), "c1", "default")
+	cms, err := m.GetConfigMaps(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("GetConfigMaps failed: %v", err)
+	}
 	if len(cms) != 1 {
-		t.Errorf("Expected 1 CM, got %d", len(cms))
+		t.Fatalf("Expected 1 CM, got %d", len(cms))
+	}
+	if cms[0].Cluster != "c1" || cms[0].DataCount != 2 || cms[0].Labels["app"] != "demo" || cms[0].Annotations["owner"] != "team-a" {
+		t.Fatalf("unexpected ConfigMap projection: %+v", cms[0])
 	}
 
-	secs, _ := m.GetSecrets(context.Background(), "c1", "default")
+	secs, err := m.GetSecrets(context.Background(), "c1", "default")
+	if err != nil {
+		t.Fatalf("GetSecrets failed: %v", err)
+	}
 	if len(secs) != 1 {
-		t.Errorf("Expected 1 Secret, got %d", len(secs))
+		t.Fatalf("Expected 1 Secret, got %d", len(secs))
+	}
+	if secs[0].Cluster != "c1" || secs[0].Type != string(corev1.SecretTypeOpaque) || secs[0].DataCount != 1 || secs[0].Labels["tier"] != "backend" || secs[0].Annotations["managed-by"] != "test" {
+		t.Fatalf("unexpected Secret projection: %+v", secs[0])
+	}
+}
+
+func TestGetConfigMapsAndSecrets_ReturnClientErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		resource string
+		call     func(*MultiClusterClient) error
+	}{
+		{
+			name:     "configmaps list error",
+			resource: "configmaps",
+			call: func(m *MultiClusterClient) error {
+				_, err := m.GetConfigMaps(context.Background(), "c1", "default")
+				return err
+			},
+		},
+		{
+			name:     "secrets list error",
+			resource: "secrets",
+			call: func(m *MultiClusterClient) error {
+				_, err := m.GetSecrets(context.Background(), "c1", "default")
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, _ := NewMultiClusterClient("")
+			fakeCS := k8sfake.NewSimpleClientset()
+			fakeCS.PrependReactor("list", tt.resource, func(action k8stesting.Action) (bool, k8sruntime.Object, error) {
+				return true, nil, context.DeadlineExceeded
+			})
+			m.clients["c1"] = fakeCS
+
+			if err := tt.call(m); err == nil {
+				t.Fatalf("expected error when listing %s", tt.resource)
+			}
+		})
 	}
 }
 

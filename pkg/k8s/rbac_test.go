@@ -194,12 +194,14 @@ func TestRBAC_CheckClusterAdminAccess(t *testing.T) {
 	}
 
 	fakeCS := fake.NewSimpleClientset()
+	var seenReview *authv1.SelfSubjectAccessReview
 	fakeCS.PrependReactor("create", "selfsubjectaccessreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		createAction := action.(k8stesting.CreateAction)
 		review := createAction.GetObject().(*authv1.SelfSubjectAccessReview)
+		seenReview = review.DeepCopy()
 
 		allowed := false
-		if review.Spec.ResourceAttributes.Resource == "*" && review.Spec.ResourceAttributes.Verb == "*" {
+		if review.Spec.ResourceAttributes.Resource == "*" && review.Spec.ResourceAttributes.Verb == "*" && review.Spec.ResourceAttributes.Group == "*" {
 			allowed = true
 		}
 
@@ -217,6 +219,94 @@ func TestRBAC_CheckClusterAdminAccess(t *testing.T) {
 	}
 	if !isAdmin {
 		t.Error("Expected cluster admin access")
+	}
+	if seenReview == nil || seenReview.Spec.ResourceAttributes == nil {
+		t.Fatal("expected SelfSubjectAccessReview payload to be captured")
+	}
+	if seenReview.Spec.ResourceAttributes.Verb != "*" || seenReview.Spec.ResourceAttributes.Resource != "*" || seenReview.Spec.ResourceAttributes.Group != "*" {
+		t.Fatalf("expected wildcard review, got %+v", *seenReview.Spec.ResourceAttributes)
+	}
+}
+
+func TestRBAC_CheckPermission_TableDriven(t *testing.T) {
+	tests := []struct {
+		name          string
+		verb          string
+		resource      string
+		namespace     string
+		allowed       bool
+		reactorErr    error
+		wantAllowed   bool
+		wantNamespace string
+		wantErr       bool
+	}{
+		{
+			name:          "allows namespaced access",
+			verb:          "get",
+			resource:      "pods",
+			namespace:     "default",
+			allowed:       true,
+			wantAllowed:   true,
+			wantNamespace: "default",
+		},
+		{
+			name:          "denies cluster scoped access",
+			verb:          "list",
+			resource:      "nodes",
+			allowed:       false,
+			wantAllowed:   false,
+			wantNamespace: "",
+		},
+		{
+			name:       "returns reactor error",
+			verb:       "watch",
+			resource:   "pods",
+			namespace:  "team-a",
+			reactorErr: errors.New("review failed"),
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, _ := NewMultiClusterClient("")
+			m.rawConfig = &api.Config{
+				Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
+			}
+
+			fakeCS := fake.NewSimpleClientset()
+			var seenReview *authv1.SelfSubjectAccessReview
+			fakeCS.PrependReactor("create", "selfsubjectaccessreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+				if tt.reactorErr != nil {
+					return true, nil, tt.reactorErr
+				}
+				createAction := action.(k8stesting.CreateAction)
+				review := createAction.GetObject().(*authv1.SelfSubjectAccessReview)
+				seenReview = review.DeepCopy()
+				return true, &authv1.SelfSubjectAccessReview{
+					Status: authv1.SubjectAccessReviewStatus{Allowed: tt.allowed},
+				}, nil
+			})
+			m.clients["c1"] = fakeCS
+
+			allowed, err := m.CheckPermission(context.Background(), "c1", tt.verb, tt.resource, tt.namespace)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("CheckPermission error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if allowed != tt.wantAllowed {
+				t.Fatalf("CheckPermission allowed = %v, want %v", allowed, tt.wantAllowed)
+			}
+			if seenReview == nil || seenReview.Spec.ResourceAttributes == nil {
+				t.Fatal("expected SelfSubjectAccessReview payload to be captured")
+			}
+			attrs := seenReview.Spec.ResourceAttributes
+			if attrs.Verb != tt.verb || attrs.Resource != tt.resource || attrs.Namespace != tt.wantNamespace {
+				t.Fatalf("unexpected review payload: %+v", *attrs)
+			}
+		})
 	}
 }
 
