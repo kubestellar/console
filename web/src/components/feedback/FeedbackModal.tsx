@@ -36,6 +36,7 @@ import {
   isFeedbackRequestBodyTooLarge,
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
+import { buildDirectIssueUrl } from './submitTab.utils'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -377,6 +378,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const coins = type === 'bug' ? REWARD_ACTIONS.bug_report.coins : REWARD_ACTIONS.feature_suggestion.coins
   const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
   const submitShortcutLabel = `${isMacPlatform ? '⌘' : 'Ctrl'}+↵`
+  const directIssueUrl = buildDirectIssueUrl('console', `${title.trim()}\n\n${description.trim()}`.trim())
 
   // Close on backdrop click — only when the click target is the backdrop
   // itself, not any child element (so clicks inside the modal content do
@@ -658,7 +660,17 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                   {submitError && (
                     <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs">
                       <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                      <span className="text-red-400">{submitError}</span>
+                      <div className="space-y-1">
+                        <span className="block text-red-400">{submitError}</span>
+                        <a
+                          href={sanitizeUrl(directIssueUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-300 hover:text-purple-200 underline underline-offset-2"
+                        >
+                          {t('feedback.fileDirectlyOnGitHub')}
+                        </a>
+                      </div>
                     </div>
                   )}
 

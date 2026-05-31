@@ -2543,6 +2543,7 @@
     "inTheMeantime": "In the meantime",
     "githubIssuesInfo": "You can open issues and requests directly on the kubestellar/console GitHub repo. Coins earned from GitHub issues will appear in your console once you configure OAuth.",
     "openGitHubIssue": "Open Issue on GitHub",
+    "fileDirectlyOnGitHub": "File issue directly on GitHub",
     "setupOAuth": "Set Up OAuth",
     "alreadySetUp": "Already have OAuth configured? Login with GitHub →",
     "submitFailed": "Unable to submit — GitHub login may be required.",

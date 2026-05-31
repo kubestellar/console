@@ -439,6 +439,15 @@ export function SubmitForm({
                 >
                   Console Settings
                 </button>
+                {' · '}
+                <a
+                  href={sanitizeUrl(directIssueUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                >
+                  {t('feedback.fileDirectlyOnGitHub')}
+                </a>
               </div>
             </div>
           </div>
