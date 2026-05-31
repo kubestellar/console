@@ -222,7 +222,7 @@
   to = "/.netlify/functions/compliance-siem-summary"
   status = 200
 
-# Compliance incident response API — proxy to Netlify Functions
+# Compliance Incident Response API — proxy to Netlify Functions (enterprise incident response dashboard)
 [[redirects]]
   from = "/api/v1/compliance/incidents"
   to = "/.netlify/functions/compliance-incidents"
@@ -238,7 +238,7 @@
   to = "/.netlify/functions/compliance-incidents-playbooks"
   status = 200
 
-# Compliance threat intelligence API — proxy to Netlify Functions
+# Compliance Threat Intel API — proxy to Netlify Functions (enterprise threat intel dashboard)
 [[redirects]]
   from = "/api/v1/compliance/threat-intel/feeds"
   to = "/.netlify/functions/compliance-threat-intel-feeds"
@@ -254,53 +254,55 @@
   to = "/.netlify/functions/compliance-threat-intel-summary"
   status = 200
 
-# Enterprise risk management API — proxy to Netlify Functions
+# Compliance ERM Risk Matrix API — proxy to Netlify Functions (enterprise risk matrix dashboard)
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-matrix/risks"
-  to = "/.netlify/functions/compliance-risk-matrix-risks"
+  to = "/.netlify/functions/compliance-erm-risk-matrix-risks"
   status = 200
 
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-matrix/heatmap"
-  to = "/.netlify/functions/compliance-risk-matrix-heatmap"
+  to = "/.netlify/functions/compliance-erm-risk-matrix-heatmap"
   status = 200
 
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-matrix/summary"
-  to = "/.netlify/functions/compliance-risk-matrix-summary"
+  to = "/.netlify/functions/compliance-erm-risk-matrix-summary"
   status = 200
 
+# Compliance ERM Risk Register API — proxy to Netlify Functions (enterprise risk register dashboard)
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-register/risks"
-  to = "/.netlify/functions/compliance-risk-register-risks"
+  to = "/.netlify/functions/compliance-erm-risk-register-risks"
   status = 200
 
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-register/categories"
-  to = "/.netlify/functions/compliance-risk-register-categories"
+  to = "/.netlify/functions/compliance-erm-risk-register-categories"
   status = 200
 
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-register/summary"
-  to = "/.netlify/functions/compliance-risk-register-summary"
+  to = "/.netlify/functions/compliance-erm-risk-register-summary"
   status = 200
 
+# Compliance ERM Risk Appetite API — proxy to Netlify Functions (enterprise risk appetite dashboard)
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-appetite/thresholds"
-  to = "/.netlify/functions/compliance-risk-appetite-thresholds"
+  to = "/.netlify/functions/compliance-erm-risk-appetite-thresholds"
   status = 200
 
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-appetite/kris"
-  to = "/.netlify/functions/compliance-risk-appetite-kris"
+  to = "/.netlify/functions/compliance-erm-risk-appetite-kris"
   status = 200
 
 [[redirects]]
   from = "/api/v1/compliance/erm/risk-appetite/summary"
-  to = "/.netlify/functions/compliance-risk-appetite-summary"
+  to = "/.netlify/functions/compliance-erm-risk-appetite-summary"
   status = 200
 
-# Supply chain compliance API — proxy to Netlify Functions
+# Supply Chain SBOM API — proxy to Netlify Functions (enterprise SBOM dashboard)
 [[redirects]]
   from = "/api/supply-chain/sbom/documents"
   to = "/.netlify/functions/supply-chain-sbom-documents"
@@ -311,6 +313,7 @@
   to = "/.netlify/functions/supply-chain-sbom-summary"
   status = 200
 
+# Supply Chain License Compliance API — proxy to Netlify Functions (enterprise license dashboard)
 [[redirects]]
   from = "/api/supply-chain/licenses/packages"
   to = "/.netlify/functions/supply-chain-licenses-packages"
