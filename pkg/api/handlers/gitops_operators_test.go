@@ -108,3 +108,82 @@ func TestGitOpsOperators_ListOperators_Validation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
+
+func TestGitOpsOperators_StreamOperators_Validation(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
+	env.App.Get("/api/gitops/operators/stream", handler.StreamOperators)
+
+	tests := []struct {
+		name    string
+		cluster string
+		status  int
+	}{
+		{"flag injection blocked", "--context=evil", http.StatusBadRequest},
+		{"semicolon blocked", "cluster;rm -rf", http.StatusBadRequest},
+		{"space blocked", "cluster name", http.StatusBadRequest},
+		{"leading dash blocked", "-badname", http.StatusBadRequest},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster="+tc.cluster, nil)
+			require.NoError(t, err)
+			resp, err := env.App.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tc.status, resp.StatusCode)
+		})
+	}
+}
+
+func TestGitOpsOperators_StreamSubscriptions_Validation(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
+	env.App.Get("/api/gitops/subscriptions/stream", handler.StreamOperatorSubscriptions)
+
+	tests := []struct {
+		name    string
+		cluster string
+		status  int
+	}{
+		{"flag injection blocked", "--context=evil", http.StatusBadRequest},
+		{"semicolon blocked", "bad;cluster", http.StatusBadRequest},
+		{"leading dash blocked", "-badname", http.StatusBadRequest},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream?cluster="+tc.cluster, nil)
+			require.NoError(t, err)
+			resp, err := env.App.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tc.status, resp.StatusCode)
+		})
+	}
+}
+
+func TestGitOpsOperators_StreamHelmReleases_Validation(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
+	env.App.Get("/api/gitops/helm/stream", handler.StreamHelmReleases)
+
+	tests := []struct {
+		name    string
+		cluster string
+		status  int
+	}{
+		{"flag injection blocked", "--kube-context=evil", http.StatusBadRequest},
+		{"semicolon blocked", "bad;cluster", http.StatusBadRequest},
+		{"leading dash blocked", "-badname", http.StatusBadRequest},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster="+tc.cluster, nil)
+			require.NoError(t, err)
+			resp, err := env.App.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tc.status, resp.StatusCode)
+		})
+	}
+}
