@@ -115,40 +115,71 @@ jobs:
             }
 
             core.info(`Querying GA4 property ${propertyId} for ksc_error events (last ${lookbackHours}h, threshold: ${threshold}, mode: ${isDailyRun ? 'daily' : 'hourly'})`);
+// ── Retry helper for GA4 API transient failures ──
+             // Wraps async calls with exponential backoff for transient status codes.
+             async function retryWithBackoff(fn, maxRetries = 3) {
+               const TRANSIENT_CODES = [429, 500, 502, 503];
+               let lastError;
+               for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                 try {
+                   return await fn();
+                 } catch (err) {
+                   lastError = err;
+                   const statusCode = err.code || err.status;
+                   const isTransient = TRANSIENT_CODES.includes(statusCode);
+                   if (!isTransient || attempt === maxRetries) {
+                     throw err;
+                   }
+                   const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                   core.warning(`GA4 API transient error (${statusCode}): Retry ${attempt}/${maxRetries} after ${delayMs}ms`);
+                   await new Promise(resolve => setTimeout(resolve, delayMs));
+                 }
+               }
+               throw lastError;
+             }
 
-            const { data } = await analyticsData.properties.runReport({
-              property: `properties/${propertyId}`,
-              requestBody: {
-                dateRanges: [{ startDate: isDailyRun ? '3daysAgo' : '2daysAgo', endDate: 'today' }],
-                dimensions: [
-                  { name: 'dateHour' },
-                  { name: 'customEvent:error_category' },
-                  { name: 'customEvent:error_page' },
-                ],
-                metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
-                dimensionFilter: {
-                  andGroup: {
-                    expressions: [
-                      {
-                        filter: {
-                          fieldName: 'eventName',
-                          stringFilter: { value: 'ksc_error' },
-                        },
-                      },
-                      {
-                        // Exclude localhost / dev traffic — only monitor production
-                        filter: {
-                          fieldName: 'hostname',
-                          stringFilter: { value: 'console.kubestellar.io' },
-                        },
-                      },
-                    ],
-                  },
-                },
-                orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-                limit: 1000,
-              },
-            });
+             let data;
+             try {
+               const result = await retryWithBackoff(() =>
+                 analyticsData.properties.runReport({
+                   property: `properties/${propertyId}`,
+                   requestBody: {
+                     dateRanges: [{ startDate: isDailyRun ? '3daysAgo' : '2daysAgo', endDate: 'today' }],
+                     dimensions: [
+                       { name: 'dateHour' },
+                       { name: 'customEvent:error_category' },
+                       { name: 'customEvent:error_page' },
+                     ],
+                     metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
+                     dimensionFilter: {
+                       andGroup: {
+                         expressions: [
+                           {
+                             filter: {
+                               fieldName: 'eventName',
+                               stringFilter: { value: 'ksc_error' },
+                             },
+                           },
+                           {
+                             // Exclude localhost / dev traffic — only monitor production
+                             filter: {
+                               fieldName: 'hostname',
+                               stringFilter: { value: 'console.kubestellar.io' },
+                             },
+                           },
+                         ],
+                       },
+                     },
+                     orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+                     limit: 1000,
+                   },
+                 })
+               );
+               data = result.data;
+             } catch (err) {
+               core.warning(`GA4 API unavailable after retries: ${err.message} — skipping this run`);
+               return;
+             }
 
             if (!data.rows || data.rows.length === 0) {
               core.info('No ksc_error events found in the lookback window.');
