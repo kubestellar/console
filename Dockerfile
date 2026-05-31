@@ -74,6 +74,8 @@ RUN npm ci --legacy-peer-deps
 # here when the build-frontend job explicitly downloaded the artifact.
 COPY web/ ./
 
+ENV NODE_OPTIONS="--max-old-space-size=8192"
+
 # Build only if dist/ was not pre-built by CI
 RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
       echo "Using pre-built frontend dist/"; \
