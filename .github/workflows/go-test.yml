@@ -51,4 +51,14 @@ jobs:
       # up under load, which is cheap relative to the cost of a broken
       # release pipeline.
       - name: Run full Go test suite
-        run: go test -race -timeout 10m ./...
+        run: go test -race -coverprofile=coverage.out -covermode=atomic -timeout 10m ./...
+
+      - name: Check Go coverage threshold
+        run: |
+          THRESHOLD=60
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total Go coverage: ${COVERAGE}%"
+          if awk -v coverage="$COVERAGE" -v threshold="$THRESHOLD" 'BEGIN { exit !(coverage + 0 < threshold + 0) }'; then
+            echo "::error::Go coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+            exit 1
+          fi
