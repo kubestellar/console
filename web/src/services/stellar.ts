@@ -19,12 +19,17 @@ interface GetStateOptions {
 }
 
 const isAuthError = (err: unknown): boolean => {
-  if (err instanceof Error) {
-    return err.message.includes('Unauthenticated') || err.message.includes('No authentication token') || err.name === 'UnauthenticatedError'
+  if (err instanceof Error && err.name === 'UnauthenticatedError') {
+    return true
   }
 
-  const errorText = String(err)
-  return errorText.includes('Unauthenticated') || errorText.includes('No authentication token')
+  const errorText = (err instanceof Error ? err.message : String(err)).toLowerCase()
+  return (
+    errorText.includes('unauthenticated') ||
+    errorText.includes('no authentication token') ||
+    errorText.includes('unauthorized') ||
+    errorText.includes('403')
+  )
 }
 
 export interface AskResponse {
