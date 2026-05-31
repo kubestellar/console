@@ -17,6 +17,7 @@ import { Skeleton } from '../ui/Skeleton'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
 import { Button } from '../ui/Button'
+import type { EChartsEventHandler } from '../../lib/compat/echarts-for-react/lib/types'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
@@ -357,8 +358,8 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
   }, [])
 
   /** ECharts event map for the onEvents prop */
-  const chartEvents = useMemo(() => ({
-    datazoom: handleDataZoom,
+  const chartEvents = useMemo<Record<string, EChartsEventHandler>>(() => ({
+    datazoom: handleDataZoom as EChartsEventHandler,
   }), [handleDataZoom])
 
   /** Reset zoom to full range and update chart programmatically */

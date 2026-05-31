@@ -17,6 +17,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import type { TimelineEventType, TimelineEvent } from './demoData'
 import { MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 import { CHART_TICK_COLOR } from '../../../lib/constants'
+import type { EChartsEventHandler } from '../../../lib/compat/echarts-for-react/lib/types'
 
 const SIX_HOURS_MS = 6 * MS_PER_HOUR
 const TWENTY_FOUR_HOURS_MS = MS_PER_DAY
@@ -189,8 +190,8 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
     drillToEvents(evt.cluster, evt.namespace, evt.resource)
   }, [drillToEvents])
 
-  const onEvents = useMemo(() => ({
-    click: handleChartClick,
+  const onEvents = useMemo<Record<string, EChartsEventHandler>>(() => ({
+    click: handleChartClick as EChartsEventHandler,
   }), [handleChartClick])
 
   // ------------------------------------------------------------------

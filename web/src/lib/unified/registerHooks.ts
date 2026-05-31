@@ -106,8 +106,6 @@ const THREE_DAYS_MS = 3 * MS_PER_DAY
 // Factory-generated hook registration config
 // ============================================================================
 
-type ResourceArity = 'none' | 'cluster' | 'cluster+namespace'
-
 /** Base shape returned by resource hooks registered with the unified system. */
 interface HookResult {
   isLoading: boolean

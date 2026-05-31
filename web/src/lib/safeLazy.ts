@@ -1,9 +1,11 @@
 import { lazy, type ComponentType } from 'react'
 
-type LazyComponentModule<
-  TExportName extends string,
-  TProps extends object = object,
-> = Record<TExportName, ComponentType<TProps>> & Record<string, unknown>
+type LazyComponentModule = Record<string, unknown>
+type LazyLoadedComponent = ComponentType<Record<string, unknown>>
+
+function isLazyLoadedComponent(component: unknown): component is LazyLoadedComponent {
+  return typeof component === 'function' || (typeof component === 'object' && component !== null)
+}
 
 /** Maximum number of retry attempts before giving up on a failed dynamic import */
 const LAZY_IMPORT_MAX_RETRIES = 2
@@ -41,17 +43,14 @@ const LAZY_IMPORT_ATTEMPT_TIMEOUT_MS = 5_000
  *    import (e.g. during a backend restart) becomes a recoverable rejection
  *    instead of leaving the Suspense fallback stuck on a loading spinner.
  */
-export function safeLazy<
-  TExportName extends string,
-  TProps extends object = object,
->(
-  importFn: () => Promise<LazyComponentModule<TExportName, TProps>>,
-  exportName: TExportName,
+export function safeLazy<TModule extends LazyComponentModule>(
+  importFn: () => Promise<TModule>,
+  exportName: Extract<keyof TModule, string>,
 ): ReturnType<typeof lazy> {
   return lazy(() => {
-    const importWithTimeout = (): Promise<LazyComponentModule<TExportName, TProps>> => {
+    const importWithTimeout = (): Promise<TModule> => {
       let timeoutId: ReturnType<typeof setTimeout> | undefined
-      const timeoutPromise = new Promise<LazyComponentModule<TExportName, TProps>>((_, reject) => {
+      const timeoutPromise = new Promise<TModule>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(
             new Error(
@@ -66,7 +65,7 @@ export function safeLazy<
       })
     }
 
-    const attemptImport = (retriesLeft: number): Promise<{ default: ComponentType<TProps> }> =>
+    const attemptImport = (retriesLeft: number): Promise<{ default: LazyLoadedComponent }> =>
       importWithTimeout()
         .then((m) => {
           // When an eagerly-loaded bundle uses .catch(() => undefined) to suppress
@@ -87,6 +86,9 @@ export function safeLazy<
               'Reload the page to get the latest version.',
             )
           }
+          if (!isLazyLoadedComponent(component)) {
+            throw new Error(`Export "${exportName}" is not a React component.`)
+          }
           return { default: component }
         })
         .catch((err: Error) => {
@@ -96,7 +98,7 @@ export function safeLazy<
               `[safeLazy] Import failed for "${exportName}" (${retriesLeft} retries left), ` +
               `retrying in ${delay}ms: ${err.message}`,
             )
-            return new Promise<{ default: ComponentType<TProps> }>((resolve) =>
+            return new Promise<{ default: LazyLoadedComponent }>((resolve) =>
               setTimeout(() => resolve(attemptImport(retriesLeft - 1)), delay),
             )
           }
