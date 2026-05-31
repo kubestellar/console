@@ -168,18 +168,18 @@ function FeatureRedirect() {
 function LightweightShell({ children }: { children: React.ReactNode }) {
   return (
     <BrandingProvider>
-    <ThemeProvider>
-    <AppErrorBoundary>
-    <ChunkErrorBoundary>
-    <PageErrorBoundary>
-    <PageViewTracker />
-    <Suspense fallback={<LoadingFallback />}>
-      {children}
-    </Suspense>
-    </PageErrorBoundary>
-    </ChunkErrorBoundary>
-    </AppErrorBoundary>
-    </ThemeProvider>
+      <ThemeProvider>
+        <AppErrorBoundary>
+          <ChunkErrorBoundary>
+            <PageErrorBoundary>
+              <PageViewTracker />
+              <Suspense fallback={<LoadingFallback />}>
+                {children}
+              </Suspense>
+            </PageErrorBoundary>
+          </ChunkErrorBoundary>
+        </AppErrorBoundary>
+      </ThemeProvider>
     </BrandingProvider>
   )
 }
@@ -346,6 +346,8 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           {/* /feature, /features open the feedback modal on the feature tab */}
           <Route path={ROUTES.FEATURE} element={<FeatureRedirect />} />
           <Route path={ROUTES.FEATURES} element={<FeatureRedirect />} />
+          {/* Catch-all for unknown routes within the authenticated app */}
+          <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
         </Route>
 
         {/* ── Enterprise Compliance Portal ─────────────────────────────
