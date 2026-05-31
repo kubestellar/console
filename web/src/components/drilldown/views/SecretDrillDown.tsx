@@ -47,6 +47,7 @@ export function SecretDrillDown({ data }: Props) {
   const [yamlLoading, setYamlLoading] = useState(false)
   const [labels, setLabels] = useState<Record<string, string> | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showAllData, setShowAllData] = useState(false)
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set())
   // YAML tab reveal state — defaults to MASKED so the `data:` block doesn't
@@ -124,10 +125,24 @@ export function SecretDrillDown({ data }: Props) {
     loadData()
   }, [agentConnected, fetchData, fetchDescribe, fetchYaml])
 
+  useEffect(() => {
+    return () => {
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copiedFieldTimeoutRef.current) {
+      clearTimeout(copiedFieldTimeoutRef.current)
+    }
+    copiedFieldTimeoutRef.current = setTimeout(() => {
+      setCopiedField(null)
+      copiedFieldTimeoutRef.current = null
+    }, UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const toggleReveal = (key: string) => {

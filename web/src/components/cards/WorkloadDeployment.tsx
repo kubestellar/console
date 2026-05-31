@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Plus } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
@@ -40,6 +40,15 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const [selectedWorkload, setSelectedWorkload] = useState<Workload | null>(null)
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importedWorkloads, setImportedWorkloads] = useState<Workload[]>([])
+  const refetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleImportWorkloads = useCallback((newWorkloads: Workload[]) => {
     setImportedWorkloads(prev => [...prev, ...newWorkloads])
@@ -58,6 +67,16 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     isDemoFallback,
     refetch: refetchWorkloads,
   } = useCachedWorkloads()
+
+  const handleScaled = useCallback(() => {
+    if (refetchTimeoutRef.current) {
+      clearTimeout(refetchTimeoutRef.current)
+    }
+    refetchTimeoutRef.current = setTimeout(() => {
+      void refetchWorkloads()
+      refetchTimeoutRef.current = null
+    }, REFETCH_AFTER_SCALE_MS)
+  }, [refetchWorkloads])
 
   const hasAnyData = isDemo ? DEMO_WORKLOADS.length > 0 : (realWorkloads?.length ?? 0) > 0
   const { showSkeleton } = useCardLoadingState({
@@ -281,7 +300,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
                 onSelect={() =>
                   setSelectedWorkload(selectedWorkload?.name === workload.name ? null : workload)
                 }
-                onScaled={() => setTimeout(refetchWorkloads, REFETCH_AFTER_SCALE_MS)}
+                onScaled={handleScaled}
               />
             ))}
           </div>

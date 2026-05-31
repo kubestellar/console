@@ -138,15 +138,34 @@ export function HelmReleaseDrillDown({ data }: Props) {
     revision?: number
   } | null>(null)
   const [actionFeedback, setActionFeedback] = useState<{ success: boolean; message: string } | null>(null)
+  const actionFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   /** Timeout to auto-clear action feedback */
   const ACTION_FEEDBACK_CLEAR_MS = 5_000
+
+  useEffect(() => {
+    return () => {
+      if (actionFeedbackTimeoutRef.current) {
+        clearTimeout(actionFeedbackTimeoutRef.current)
+      }
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleRollback = async (revision: number) => {
     const result = await rollback({ release: releaseName, namespace, cluster, revision })
     setConfirmAction(null)
     setActionFeedback({ success: result.success, message: result.message })
-    setTimeout(() => setActionFeedback(null), ACTION_FEEDBACK_CLEAR_MS)
+    if (actionFeedbackTimeoutRef.current) {
+      clearTimeout(actionFeedbackTimeoutRef.current)
+    }
+    actionFeedbackTimeoutRef.current = setTimeout(() => {
+      setActionFeedback(null)
+      actionFeedbackTimeoutRef.current = null
+    }, ACTION_FEEDBACK_CLEAR_MS)
     if (result.success) {
       // Refresh data after rollback
       fetchReleaseInfo()
@@ -158,7 +177,13 @@ export function HelmReleaseDrillDown({ data }: Props) {
     const result = await uninstall({ release: releaseName, namespace, cluster })
     setConfirmAction(null)
     setActionFeedback({ success: result.success, message: result.message })
-    setTimeout(() => setActionFeedback(null), ACTION_FEEDBACK_CLEAR_MS)
+    if (actionFeedbackTimeoutRef.current) {
+      clearTimeout(actionFeedbackTimeoutRef.current)
+    }
+    actionFeedbackTimeoutRef.current = setTimeout(() => {
+      setActionFeedback(null)
+      actionFeedbackTimeoutRef.current = null
+    }, ACTION_FEEDBACK_CLEAR_MS)
   }
 
   // Fetch release info
@@ -268,7 +293,13 @@ export function HelmReleaseDrillDown({ data }: Props) {
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copiedFieldTimeoutRef.current) {
+      clearTimeout(copiedFieldTimeoutRef.current)
+    }
+    copiedFieldTimeoutRef.current = setTimeout(() => {
+      setCopiedField(null)
+      copiedFieldTimeoutRef.current = null
+    }, UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Start AI diagnosis

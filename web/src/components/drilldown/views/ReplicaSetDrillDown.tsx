@@ -41,6 +41,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
 
   // Fetch ReplicaSet data
@@ -146,10 +147,24 @@ export function ReplicaSetDrillDown({ data }: Props) {
     loadData()
   }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml])
 
+  useEffect(() => {
+    return () => {
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copiedFieldTimeoutRef.current) {
+      clearTimeout(copiedFieldTimeoutRef.current)
+    }
+    copiedFieldTimeoutRef.current = setTimeout(() => {
+      setCopiedField(null)
+      copiedFieldTimeoutRef.current = null
+    }, UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const isHealthy = readyReplicas === replicas && replicas > 0

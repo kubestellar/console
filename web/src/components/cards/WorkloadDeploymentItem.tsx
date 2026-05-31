@@ -1,4 +1,4 @@
-import { memo, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { AlertTriangle, GripVertical, Loader2, Check, Minus } from 'lucide-react'
 import { Plus } from 'lucide-react'
@@ -133,12 +133,31 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
   const [scaleError, setScaleError] = useState<string | null>(null)
   const [scaleSuccess, setScaleSuccess] = useState(false)
   const [showScaleToZeroDialog, setShowScaleToZeroDialog] = useState(false)
+  const scaleSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { mutate: scaleWorkload } = useScaleWorkload()
   const { t } = useTranslation()
   const isProtectedNamespace = PROTECTED_NAMESPACES.has(workload.namespace.toLowerCase())
   const desiredReplicas = !isScaling && replicaDraft.baseline !== workload.replicas
     ? workload.replicas
     : replicaDraft.desired
+
+  useEffect(() => {
+    return () => {
+      if (scaleSuccessTimeoutRef.current) {
+        clearTimeout(scaleSuccessTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const scheduleScaleSuccessReset = () => {
+    if (scaleSuccessTimeoutRef.current) {
+      clearTimeout(scaleSuccessTimeoutRef.current)
+    }
+    scaleSuccessTimeoutRef.current = setTimeout(() => {
+      setScaleSuccess(false)
+      scaleSuccessTimeoutRef.current = null
+    }, SCALE_SUCCESS_RESET_MS)
+  }
 
   const setDesiredReplicas = (nextDesiredReplicas: number | ((currentReplicas: number) => number)) => {
     const resolvedDesiredReplicas = typeof nextDesiredReplicas === 'function'
@@ -171,7 +190,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
       })
       setScaleSuccess(true)
       onScaled?.()
-      setTimeout(() => setScaleSuccess(false), SCALE_SUCCESS_RESET_MS)
+      scheduleScaleSuccessReset()
     } catch {
       try {
         const clusters = (workload.targetClusters || []).length > 0 ? workload.targetClusters : ['unknown']
@@ -185,7 +204,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
         if (failures.length === 0) {
           setScaleSuccess(true)
           onScaled?.()
-          setTimeout(() => setScaleSuccess(false), SCALE_SUCCESS_RESET_MS)
+          scheduleScaleSuccessReset()
         } else {
           setScaleError((failures || []).map(result => `${result.cluster}: ${result.message || 'Scale failed'}`).join('; '))
         }

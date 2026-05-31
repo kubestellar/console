@@ -12,15 +12,16 @@ import type {
  * Used for both per-cluster status and global component-level statistics.
  */
 export function computeIntotoStats(layouts: IntotoLayout[]): IntotoStats {
+  const safeLayouts = layouts || []
   const stats = {
-    totalLayouts: layouts.length,
+    totalLayouts: safeLayouts.length,
     totalSteps: 0,
     verifiedSteps: 0,
     failedSteps: 0,
     missingSteps: 0,
   }
 
-  for (const layout of (layouts || [])) {
+  for (const layout of safeLayouts) {
     stats.totalSteps += layout.steps.length
     stats.verifiedSteps += layout.verifiedSteps
     stats.failedSteps += layout.failedSteps

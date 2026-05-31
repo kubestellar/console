@@ -52,6 +52,7 @@ export default function ServiceDrillDown({ data }: Props) {
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
 
@@ -122,11 +123,25 @@ export default function ServiceDrillDown({ data }: Props) {
     fetchDetails()
   }, [agentConnected, cluster, namespace, serviceName])
 
+  useEffect(() => {
+    return () => {
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleCopy = async (text: string, field: string) => {
     const ok = await copyToClipboard(text)
     if (ok) {
       setCopiedField(field)
-      setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+      copiedFieldTimeoutRef.current = setTimeout(() => {
+        setCopiedField(null)
+        copiedFieldTimeoutRef.current = null
+      }, UI_FEEDBACK_TIMEOUT_MS)
     }
   }
 
