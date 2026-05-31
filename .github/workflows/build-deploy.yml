@@ -34,14 +34,15 @@ on:
           - pok-prod
           - none
 
-# Only one deploy at a time — newer commits cancel in-progress deploys
+# Cancel superseded PR validation runs, but never cancel a main deploy mid-flight.
+# The production deploy itself is serialized by the deploy-pok-prod job below.
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions: read-all
 
 concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-deploy-kc-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   REGISTRY: ghcr.io
@@ -325,6 +326,9 @@ jobs:
     runs-on: [self-hosted, kc-pok]
     timeout-minutes: 20
     environment: pok-prod
+    concurrency:
+      group: deploy-pok-prod
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
