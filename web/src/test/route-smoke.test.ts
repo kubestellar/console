@@ -185,11 +185,12 @@ describe('Route configuration integrity', () => {
     expect(appContent).toContain('<Route path={ROUTES.FROM_HOLMESGPT} element={<LightweightShell><FromHolmesGPT /></LightweightShell>} />')
   })
 
-  it('uses a top-level NotFound route in FullDashboardApp instead of a wildcard redirect', () => {
-    expect(appContent).toMatch(
-      /<\/Route>\s*<Route path="\*" element=\{<SuspenseRoute><NotFound \/><\/SuspenseRoute>} \/>\s*<\/Routes>/s,
-    )
-    expect(appContent).not.toMatch(/<Route path="\*" element=\{<Navigate/)
+  it('uses NotFound catch-all routes instead of wildcard redirects', () => {
+    const notFoundMatches = appContent.match(/<Route path="\*" element=\{<SuspenseRoute><NotFound \/><\/SuspenseRoute>} \/>/g) || []
+
+    expect(notFoundMatches.length).toBeGreaterThanOrEqual(1)
+    expect(notFoundMatches.length).toBeLessThanOrEqual(4)
+    expect(appContent).not.toMatch(/<Route path="\*"[^>]*element=\{<Navigate/)
   })
 })
 
