@@ -207,11 +207,14 @@ echo ""
 
 declare -a PLAYWRIGHT_SCRIPTS=(
   "scripts/console-error-scan.sh"
+  # Keep cache-test early while the shared preview runner is still fresh.
+  # It is sensitive to accumulated Chromium/V8/IndexedDB pressure from the
+  # long navigation and performance suites (#16245).
+  "scripts/cache-test.sh"
   "scripts/nav-test.sh"
   "scripts/perf-test.sh"
   "scripts/ui-compliance-test.sh"
   "scripts/deploy-test.sh"
-  "scripts/cache-test.sh"
   "scripts/benchmark-test.sh"
   "scripts/ai-ml-test.sh"
   "scripts/a11y-test.sh"
