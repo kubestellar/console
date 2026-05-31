@@ -104,7 +104,7 @@ export function FeatureKagent() {
               Integration
             </span>
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             Connect the console to{' '}
             <a href="https://kagent.dev" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300">
               kagent
@@ -141,13 +141,13 @@ export function FeatureKagent() {
         </h2>
         <div className="space-y-6">
           {HOW_IT_WORKS.map(({ number, title, description }) => (
-            <div key={number} className="flex gap-4 p-5 rounded-xl border border-slate-700/50 bg-slate-900/30">
+            <div key={number} className="flex gap-4 p-5 rounded-xl border border-border/50 bg-card/30">
               <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-bold text-sm flex items-center justify-center shrink-0">
                 {number}
               </span>
               <div>
                 <h3 className="font-semibold mb-1">{title}</h3>
-                <p className="text-sm text-slate-400">{description}</p>
+                <p className="text-sm text-muted-foreground">{description}</p>
               </div>
             </div>
           ))}
@@ -159,17 +159,17 @@ export function FeatureKagent() {
         <h2 className="text-3xl font-bold text-center mb-4">
           Capabilities
         </h2>
-        <p className="text-slate-400 text-center mb-12">
+        <p className="text-muted-foreground text-center mb-12">
           Kagent brings Kubernetes-native AI agents to the console.
         </p>
         <div className="grid md:grid-cols-2 gap-6">
           {CAPABILITIES.map(({ icon, title, description }) => (
-            <div key={title} className="p-6 rounded-xl border border-slate-700/50 bg-slate-900/30 hover:bg-slate-900/50 transition-colors">
+            <div key={title} className="p-6 rounded-xl border border-border/50 bg-card/30 hover:bg-card/50 transition-colors">
               <div className="flex items-center gap-3 mb-3">
                 {icon}
                 <h3 className="font-semibold">{title}</h3>
               </div>
-              <p className="text-sm text-slate-400">{description}</p>
+              <p className="text-sm text-muted-foreground">{description}</p>
             </div>
           ))}
         </div>
@@ -189,7 +189,7 @@ export function FeatureKagent() {
             href="https://kagent.dev/docs"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-lg border border-slate-700 text-slate-300 font-medium text-lg hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-lg border border-border text-muted-foreground font-medium text-lg hover:bg-secondary transition-colors"
           >
             Read the Docs
             <ExternalLink className="w-5 h-5" />

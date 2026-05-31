@@ -29,6 +29,21 @@ const DEFAULT_COLORS = [
   '#ec4899', // pink
 ]
 
+// ECharts does not consistently resolve the app's CSS custom properties, so keep
+// these contrast-safe fallbacks centralized until token-aware colors are supported.
+const CHART_THEME_COLORS = {
+  axisLabel: '#9ca3af',
+  axisLine: '#4b5563',
+  axisTick: '#4b5563',
+  gridLine: '#374151',
+  legendText: '#e5e7eb',
+  tooltipText: '#e5e7eb',
+  gaugeCritical: '#ef4444',
+  gaugeWarning: '#f59e0b',
+  gaugeHealthy: '#22c55e',
+  gaugeRemaining: '#374151',
+} as const
+
 /**
  * ChartVisualization - Renders charts from config
  */
@@ -173,29 +188,29 @@ function LineChartRenderer({
     xAxis: {
       type: 'category' as const,
       data: typedData.map(d => d[xField]),
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#4b5563' } },
-      axisTick: { lineStyle: { color: '#4b5563' } },
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
     },
     yAxis: {
       type: 'value' as const,
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#4b5563' } },
-      axisTick: { lineStyle: { color: '#4b5563' } },
-      splitLine: { lineStyle: { color: '#374151', type: 'dashed' as const } },
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
+      splitLine: { lineStyle: { color: CHART_THEME_COLORS.gridLine, type: 'dashed' as const } },
       name: yAxis?.label,
-      nameTextStyle: { color: '#9ca3af' },
+      nameTextStyle: { color: CHART_THEME_COLORS.axisLabel },
     },
     tooltip: {
       trigger: 'axis' as const,
       backgroundColor: TOOLTIP_BG,
       borderColor: TOOLTIP_BORDER,
-      textStyle: { color: '#e5e7eb', fontSize: 12 },
+      textStyle: { color: CHART_THEME_COLORS.tooltipText, fontSize: 12 },
     },
     legend: showLegend ? {
       data: series.map(s => s.label ?? s.field),
       bottom: 0,
-      textStyle: { color: '#e5e7eb', fontSize: 11 },
+      textStyle: { color: CHART_THEME_COLORS.legendText, fontSize: 11 },
     } : undefined,
     series: series.map((s, i) => ({
       name: s.label ?? s.field,
@@ -240,29 +255,29 @@ function AreaChartRenderer({
     xAxis: {
       type: 'category' as const,
       data: typedData.map(d => d[xField]),
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#4b5563' } },
-      axisTick: { lineStyle: { color: '#4b5563' } },
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
     },
     yAxis: {
       type: 'value' as const,
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#4b5563' } },
-      axisTick: { lineStyle: { color: '#4b5563' } },
-      splitLine: { lineStyle: { color: '#374151', type: 'dashed' as const } },
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
+      splitLine: { lineStyle: { color: CHART_THEME_COLORS.gridLine, type: 'dashed' as const } },
       name: yAxis?.label,
-      nameTextStyle: { color: '#9ca3af' },
+      nameTextStyle: { color: CHART_THEME_COLORS.axisLabel },
     },
     tooltip: {
       trigger: 'axis' as const,
       backgroundColor: TOOLTIP_BG,
       borderColor: TOOLTIP_BORDER,
-      textStyle: { color: '#e5e7eb', fontSize: 12 },
+      textStyle: { color: CHART_THEME_COLORS.tooltipText, fontSize: 12 },
     },
     legend: showLegend ? {
       data: series.map(s => s.label ?? s.field),
       bottom: 0,
-      textStyle: { color: '#e5e7eb', fontSize: 11 },
+      textStyle: { color: CHART_THEME_COLORS.legendText, fontSize: 11 },
     } : undefined,
     series: series.map((s, i) => {
       const color = s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]
@@ -307,29 +322,29 @@ function BarChartRenderer({
     xAxis: {
       type: 'category' as const,
       data: typedData.map(d => d[xField]),
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#4b5563' } },
-      axisTick: { lineStyle: { color: '#4b5563' } },
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
     },
     yAxis: {
       type: 'value' as const,
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#4b5563' } },
-      axisTick: { lineStyle: { color: '#4b5563' } },
-      splitLine: { lineStyle: { color: '#374151', type: 'dashed' as const } },
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
+      splitLine: { lineStyle: { color: CHART_THEME_COLORS.gridLine, type: 'dashed' as const } },
       name: yAxis?.label,
-      nameTextStyle: { color: '#9ca3af' },
+      nameTextStyle: { color: CHART_THEME_COLORS.axisLabel },
     },
     tooltip: {
       trigger: 'axis' as const,
       backgroundColor: TOOLTIP_BG,
       borderColor: TOOLTIP_BORDER,
-      textStyle: { color: '#e5e7eb', fontSize: 12 },
+      textStyle: { color: CHART_THEME_COLORS.tooltipText, fontSize: 12 },
     },
     legend: showLegend ? {
       data: series.map(s => s.label ?? s.field),
       bottom: 0,
-      textStyle: { color: '#e5e7eb', fontSize: 11 },
+      textStyle: { color: CHART_THEME_COLORS.legendText, fontSize: 11 },
     } : undefined,
     series: series.map((s, i) => ({
       name: s.label ?? s.field,
@@ -375,12 +390,12 @@ function DonutChartRenderer({
       trigger: 'item' as const,
       backgroundColor: TOOLTIP_BG,
       borderColor: TOOLTIP_BORDER,
-      textStyle: { color: '#e5e7eb', fontSize: 12 },
+      textStyle: { color: CHART_THEME_COLORS.tooltipText, fontSize: 12 },
     },
     legend: showLegend ? {
       data: typedData.map(d => d.name),
       bottom: 0,
-      textStyle: { color: '#e5e7eb', fontSize: 11 },
+      textStyle: { color: CHART_THEME_COLORS.legendText, fontSize: 11 },
     } : undefined,
     series: [{
       type: 'pie',
@@ -420,7 +435,11 @@ function GaugeChartRenderer({
   })()
 
   const clampedValue = Math.min(100, Math.max(0, value))
-  const color = value >= 90 ? '#ef4444' : value >= 70 ? '#f59e0b' : '#22c55e'
+  const color = value >= 90
+    ? CHART_THEME_COLORS.gaugeCritical
+    : value >= 70
+      ? CHART_THEME_COLORS.gaugeWarning
+      : CHART_THEME_COLORS.gaugeHealthy
 
   const option = useMemo(() => ({
     backgroundColor: 'transparent',
@@ -432,7 +451,7 @@ function GaugeChartRenderer({
       silent: true,
       data: [
         { value: clampedValue, name: 'value', itemStyle: { color } },
-        { value: 100 - clampedValue, name: 'remaining', itemStyle: { color: '#374151' } },
+        { value: 100 - clampedValue, name: 'remaining', itemStyle: { color: CHART_THEME_COLORS.gaugeRemaining } },
       ],
       label: { show: false },
     }],

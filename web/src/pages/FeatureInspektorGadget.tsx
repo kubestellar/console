@@ -114,7 +114,7 @@ export function FeatureInspektorGadget() {
               in your dashboard
             </span>
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             KubeStellar Console integrates with{' '}
             <a href="https://inspektor-gadget.io" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
               Inspektor Gadget
@@ -134,7 +134,7 @@ export function FeatureInspektorGadget() {
               href="https://github.com/inspektor-gadget/inspektor-gadget"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-muted-foreground font-medium hover:bg-secondary transition-colors"
             >
               Inspektor Gadget
               <ExternalLink className="w-4 h-4" />
@@ -148,12 +148,12 @@ export function FeatureInspektorGadget() {
         <h2 className="text-3xl font-bold text-center mb-4">
           Dashboard cards powered by eBPF
         </h2>
-        <p className="text-slate-400 text-center mb-12">
+        <p className="text-muted-foreground text-center mb-12">
           Each card uses a specific Inspektor Gadget tool via the MCP bridge.
         </p>
         <div className="grid md:grid-cols-2 gap-6">
           {CARDS.map(({ icon, title, tool, description, dashboard }) => (
-            <div key={title} className="p-6 rounded-xl border border-slate-700/50 bg-slate-900/30 hover:bg-slate-900/50 transition-colors">
+            <div key={title} className="p-6 rounded-xl border border-border/50 bg-card/30 hover:bg-card/50 transition-colors">
               <div className="flex items-center gap-3 mb-3">
                 {icon}
                 <div>
@@ -161,7 +161,7 @@ export function FeatureInspektorGadget() {
                   <span className="text-xs text-slate-500 font-mono">{tool}</span>
                 </div>
               </div>
-              <p className="text-sm text-slate-400 mb-3">{description}</p>
+              <p className="text-sm text-muted-foreground mb-3">{description}</p>
               <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                 <Layers className="w-3 h-3" />
                 {dashboard} dashboard
@@ -178,13 +178,13 @@ export function FeatureInspektorGadget() {
         </h2>
         <div className="space-y-6">
           {HOW_IT_WORKS.map(({ number, title, description }) => (
-            <div key={number} className="flex gap-4 p-5 rounded-xl border border-slate-700/50 bg-slate-900/30">
+            <div key={number} className="flex gap-4 p-5 rounded-xl border border-border/50 bg-card/30">
               <span className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 font-bold text-sm flex items-center justify-center shrink-0">
                 {number}
               </span>
               <div>
                 <h3 className="font-semibold mb-1">{title}</h3>
-                <p className="text-sm text-slate-400">{description}</p>
+                <p className="text-sm text-muted-foreground">{description}</p>
               </div>
             </div>
           ))}
@@ -195,7 +195,7 @@ export function FeatureInspektorGadget() {
       <section className="max-w-4xl mx-auto px-6 py-16">
         <div className="p-8 rounded-xl border border-blue-500/20 bg-blue-500/5">
           <h2 className="text-2xl font-bold mb-4">Why eBPF in your dashboard?</h2>
-          <div className="space-y-3 text-sm text-slate-400">
+          <div className="space-y-3 text-sm text-muted-foreground">
             <p>
               Traditional dashboards show Kubernetes API-level state: pods, events, deployments.
               But many failures happen below that layer — TCP connection timeouts, DNS resolution failures,

@@ -228,13 +228,13 @@ export function Welcome() {
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto mb-4 leading-relaxed">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
             KubeStellar Console is the open-source Kubernetes dashboard with{' '}
             <span className="text-white font-medium">AI troubleshooting, GPU visibility, cost analytics, and security compliance</span>{' '}
             built in — not bolted on.
           </p>
 
-          <p className="text-sm text-slate-400 max-w-xl mx-auto mb-10">
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-10">
             No sign-up. No install. Explore the full demo right now.
           </p>
 
@@ -255,7 +255,7 @@ export function Welcome() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => emitWelcomeActioned('hero_github', ref)}
-              className="inline-flex items-center gap-2 px-8 py-4 sm:py-3.5 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 active:bg-slate-800 text-slate-300 font-medium text-lg transition-colors w-full sm:w-auto justify-center"
+              className="inline-flex items-center gap-2 px-8 py-4 sm:py-3.5 rounded-lg border border-border hover:border-border hover:bg-secondary/50 active:bg-secondary text-muted-foreground font-medium text-lg transition-colors w-full sm:w-auto justify-center"
             >
               GitHub
               <ExternalLink className="w-4 h-4" />
@@ -267,7 +267,7 @@ export function Welcome() {
             {buildHeroStats(cardCount).map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-3xl font-bold text-purple-400">{stat.value}</div>
-                <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider">{stat.label}</div>
+                <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -280,7 +280,7 @@ export function Welcome() {
           {DIFFERENTIATORS.map((d) => (
             <span
               key={d}
-              className="px-4 py-1.5 rounded-full border border-slate-700/50 bg-slate-800/30 text-sm text-slate-300"
+              className="px-4 py-1.5 rounded-full border border-border/50 bg-secondary/30 text-sm text-muted-foreground"
             >
               {d}
             </span>
@@ -294,7 +294,7 @@ export function Welcome() {
           See it in{' '}
           <span className="text-purple-400">action</span>
         </h2>
-        <p className="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
+        <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
           Click any scenario to jump straight into the demo dashboard.
         </p>
 
@@ -307,13 +307,13 @@ export function Welcome() {
                 activatePublicDemoMode()
                 emitWelcomeActioned(`scenario_${scenario.link}`, ref)
               }}
-              className="group rounded-xl border border-slate-700/50 bg-slate-800/30 p-6 hover:border-purple-500/30 hover:bg-slate-800/50 active:bg-slate-800/70 transition-colors touch-manipulation"
+              className="group rounded-xl border border-border/50 bg-secondary/30 p-6 hover:border-purple-500/30 hover:bg-secondary/50 active:bg-secondary/70 transition-colors touch-manipulation"
             >
               <div className="mb-4">{scenario.icon}</div>
               <h3 className="text-lg font-semibold mb-2 group-hover:text-purple-300 transition-colors">
                 {scenario.title}
               </h3>
-              <p className="text-sm text-slate-400 leading-relaxed mb-3">{scenario.description}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">{scenario.description}</p>
               <span className="inline-flex items-center gap-1.5 text-sm text-purple-400 group-hover:text-purple-300 transition-colors">
                 Try it
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -324,10 +324,10 @@ export function Welcome() {
       </section>
 
       {/* ---- Footer CTA ---- */}
-      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-slate-950">
+      <section className="border-t border-border/50 bg-linear-to-b from-slate-900/50 to-slate-950">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to try it?</h2>
-          <p className="text-slate-400 mb-10 text-lg">
+          <p className="text-muted-foreground mb-10 text-lg">
             The full demo runs in your browser. No cluster required.
           </p>
 
@@ -348,7 +348,7 @@ export function Welcome() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => emitWelcomeActioned('footer_github', ref)}
-              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-slate-600 hover:border-slate-500 hover:bg-slate-800/50 text-slate-300 font-medium text-lg transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-lg border border-border hover:border-border hover:bg-secondary/50 text-muted-foreground font-medium text-lg transition-colors"
             >
               View on GitHub
               <ExternalLink className="w-4 h-4" />

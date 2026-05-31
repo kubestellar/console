@@ -139,7 +139,7 @@ export function FromHolmesGPT() {
               plus 140+ dashboard cards
             </span>
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             KubeStellar Console includes AI-powered root cause analysis, investigation runbooks,
             PagerDuty/OpsGenie integration, and Inspektor Gadget eBPF tracing —
             wrapped in a multi-cluster dashboard with real-time visibility.
@@ -157,7 +157,7 @@ export function FromHolmesGPT() {
               href="https://github.com/kubestellar/console"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-slate-700 text-slate-300 font-medium hover:bg-slate-800 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border text-muted-foreground font-medium hover:bg-secondary transition-colors"
             >
               GitHub
               <ExternalLink className="w-4 h-4" />
@@ -186,18 +186,18 @@ export function FromHolmesGPT() {
         <h2 className="text-3xl font-bold text-center mb-4">
           Migration path
         </h2>
-        <p className="text-slate-400 text-center mb-12">
+        <p className="text-muted-foreground text-center mb-12">
           Your HolmesGPT concepts map directly to the console.
         </p>
         <div className="space-y-4">
           {MIGRATION_ITEMS.map(({ from, to, description }) => (
-            <div key={from} className="p-5 rounded-xl border border-slate-700/50 bg-slate-900/30">
+            <div key={from} className="p-5 rounded-xl border border-border/50 bg-card/30">
               <div className="flex items-center gap-3 mb-2">
-                <span className="px-2 py-0.5 text-xs rounded bg-slate-700 text-slate-300">{from}</span>
+                <span className="px-2 py-0.5 text-xs rounded bg-secondary text-muted-foreground">{from}</span>
                 <ArrowRight className="w-4 h-4 text-purple-400" />
                 <span className="px-2 py-0.5 text-xs rounded bg-purple-500/20 text-purple-400 font-medium">{to}</span>
               </div>
-              <p className="text-sm text-slate-400">{description}</p>
+              <p className="text-sm text-muted-foreground">{description}</p>
             </div>
           ))}
         </div>
@@ -208,7 +208,7 @@ export function FromHolmesGPT() {
           Get started in{' '}
           <span className="text-purple-400">60 seconds</span>
         </h2>
-        <p className="text-slate-400 text-center mb-12">
+        <p className="text-muted-foreground text-center mb-12">
           No sign-up, no license file. Just curl and a kubeconfig.
         </p>
         <div className="max-w-3xl mx-auto space-y-6">
@@ -230,7 +230,7 @@ export function FromHolmesGPT() {
         <h2 className="text-3xl font-bold mb-4">
           Ready to switch?
         </h2>
-        <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+        <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
           The console gives you everything HolmesGPT does for incident investigation,
           plus the multi-cluster dashboard, eBPF tracing, and 140+ monitoring cards you've been missing.
         </p>
