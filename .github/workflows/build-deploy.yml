@@ -294,7 +294,7 @@ jobs:
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
-            --atomic \
+            --rollback-on-failure \
             --wait \
             --timeout 15m
 
@@ -411,7 +411,7 @@ jobs:
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
-            --atomic \
+            --rollback-on-failure \
             --cleanup-on-fail \
             --wait \
             --timeout 15m
