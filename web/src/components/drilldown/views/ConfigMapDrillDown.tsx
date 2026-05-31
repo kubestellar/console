@@ -40,6 +40,7 @@ export function ConfigMapDrillDown({ data }: Props) {
   const [yamlLoading, setYamlLoading] = useState(false)
   const [labels, setLabels] = useState<Record<string, string> | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showAllData, setShowAllData] = useState(false)
   // Per-key reveal gate (#6211). ConfigMaps are NOT secrets, but teams
   // routinely store connection strings, passwords, and TLS material in them
@@ -141,10 +142,24 @@ export function ConfigMapDrillDown({ data }: Props) {
     loadData()
   }, [agentConnected, fetchData, fetchDescribe, fetchYaml, hasRequiredContext])
 
+  useEffect(() => {
+    return () => {
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copiedFieldTimeoutRef.current) {
+      clearTimeout(copiedFieldTimeoutRef.current)
+    }
+    copiedFieldTimeoutRef.current = setTimeout(() => {
+      setCopiedField(null)
+      copiedFieldTimeoutRef.current = null
+    }, UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [

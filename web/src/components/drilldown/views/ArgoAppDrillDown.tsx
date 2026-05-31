@@ -125,6 +125,7 @@ export function ArgoAppDrillDown({ data }: Props) {
   const [diffOutput, setDiffOutput] = useState<string | null>(null)
   const [diffLoading, setDiffLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [aiAnalysis] = useState<string | null>(null)
   const [aiAnalysisLoading] = useState(false)
 
@@ -256,10 +257,24 @@ export function ArgoAppDrillDown({ data }: Props) {
     }
   }, [activeTab, diffOutput, diffLoading, fetchDiff])
 
+  useEffect(() => {
+    return () => {
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copiedFieldTimeoutRef.current) {
+      clearTimeout(copiedFieldTimeoutRef.current)
+    }
+    copiedFieldTimeoutRef.current = setTimeout(() => {
+      setCopiedField(null)
+      copiedFieldTimeoutRef.current = null
+    }, UI_FEEDBACK_TIMEOUT_MS)
   }
 
   // Start AI diagnosis

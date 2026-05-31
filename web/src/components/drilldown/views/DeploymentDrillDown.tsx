@@ -162,6 +162,8 @@ function DeploymentDrillDownContent({ data }: Props) {
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [canScale, setCanScale] = useState<boolean | null>(null)
   const [isScaling, setIsScaling] = useState(false)
   const [scaleError, setScaleError] = useState<string | null>(null)
@@ -363,7 +365,13 @@ function DeploymentDrillDownContent({ data }: Props) {
         // Success - update local state immediately
         setReplicas(targetReplicas)
         // Refetch data to get updated status
-        setTimeout(fetchData, RETRY_DELAY_MS)
+        if (refetchTimeoutRef.current) {
+          clearTimeout(refetchTimeoutRef.current)
+        }
+        refetchTimeoutRef.current = setTimeout(() => {
+          refetchTimeoutRef.current = null
+          void fetchData()
+        }, RETRY_DELAY_MS)
       } else if (output.toLowerCase().includes('error') || output.toLowerCase().includes('forbidden')) {
         // Issue 9284: don't leak raw kubectl stderr — map to a friendly message.
         setScaleError(t(classifyScaleError(output)))
@@ -434,10 +442,27 @@ function DeploymentDrillDownContent({ data }: Props) {
     loadData()
   }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml])
 
+  useEffect(() => {
+    return () => {
+      if (copiedFieldTimeoutRef.current) {
+        clearTimeout(copiedFieldTimeoutRef.current)
+      }
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const handleCopy = (field: string, value: string) => {
     copyToClipboard(value)
     setCopiedField(field)
-    setTimeout(() => setCopiedField(null), UI_FEEDBACK_TIMEOUT_MS)
+    if (copiedFieldTimeoutRef.current) {
+      clearTimeout(copiedFieldTimeoutRef.current)
+    }
+    copiedFieldTimeoutRef.current = setTimeout(() => {
+      setCopiedField(null)
+      copiedFieldTimeoutRef.current = null
+    }, UI_FEEDBACK_TIMEOUT_MS)
   }
 
   const isHealthy = readyReplicas === replicas && replicas > 0

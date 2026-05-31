@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { ImagePlus, Trash2, Copy, Eye, Check, Film } from 'lucide-react'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { copyBlobToClipboard } from '../../lib/clipboard'
@@ -28,6 +28,15 @@ export function SubmitTabAttachments({
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const screenshotInputRef = useRef<HTMLInputElement>(null)
+  const copiedIndexTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copiedIndexTimeoutRef.current) {
+        clearTimeout(copiedIndexTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleScreenshotFiles = useCallback((files: FileList | null) => {
     if (!files) return
@@ -81,7 +90,13 @@ export function SubmitTabAttachments({
         return
       }
       setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_TIMEOUT_MS)
+      if (copiedIndexTimeoutRef.current) {
+        clearTimeout(copiedIndexTimeoutRef.current)
+      }
+      copiedIndexTimeoutRef.current = setTimeout(() => {
+        setCopiedIndex(null)
+        copiedIndexTimeoutRef.current = null
+      }, COPY_FEEDBACK_TIMEOUT_MS)
     } catch {
       showToast('Could not copy image to clipboard', 'error')
     }
