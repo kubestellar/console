@@ -690,6 +690,35 @@ describe('useSidebarConfig — expanded coverage', () => {
     expect(hasAlerts).toBe(false)
   })
 
+  it('normalizes stale built-in routes stored with an outdated href', async () => {
+    const storedConfig = {
+      primaryNav: [
+        { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
+        { id: 'acmm', name: 'ACMM', icon: 'BrainCircuit', href: '/acmm', type: 'link', order: 1 },
+        { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: 'Users', href: '/acmm', type: 'link', order: 2 },
+      ],
+      secondaryNav: [
+        { id: 'settings', name: 'Settings', icon: 'Settings', href: '/settings', type: 'link', order: 0 },
+      ],
+      sections: [],
+      showClusterStatus: true,
+      collapsed: false,
+      isMobileOpen: false,
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedConfig))
+    vi.resetModules()
+
+    const freshMod = await import('../useSidebarConfig')
+    const { result } = renderHook(() => freshMod.useSidebarConfig())
+
+    const multiTenancy = result.current.config.primaryNav.find((item) => item.id === 'multi-tenancy')
+    expect(multiTenancy?.href).toBe('/multi-tenancy')
+
+    const acmmItems = result.current.config.primaryNav.filter((item) => item.id === 'acmm')
+    expect(acmmItems).toHaveLength(1)
+  })
+
   // --- migrateConfig: adds missing default secondary nav items ---
   it('migrates stored config by adding missing default secondary nav items', async () => {
     // Store a config with no secondary nav items
