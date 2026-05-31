@@ -116,9 +116,8 @@ interface HookResult {
 }
 
 /** Base shape returned by cached status hooks. */
-interface CachedHookResult {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any
+interface CachedHookResult<TData extends Record<string, unknown> = Record<string, unknown>> {
+  data: TData
   isLoading?: boolean
   showSkeleton?: boolean
   error?: string | null | boolean
@@ -126,14 +125,29 @@ interface CachedHookResult {
   refetch?: () => void | Promise<void>
 }
 
-interface ResourceHookConfig {
-  useHook: (...args: any[]) => HookResult // eslint-disable-line @typescript-eslint/no-explicit-any
+interface BaseResourceHookConfig {
   dataField: string
-  arity: ResourceArity
   wrapRefetch?: boolean
   extra?: (result: HookResult) => Record<string, unknown>
   dataFallback?: unknown
 }
+
+interface NoArgResourceHookConfig extends BaseResourceHookConfig {
+  arity: 'none'
+  useHook: () => HookResult
+}
+
+interface ClusterResourceHookConfig extends BaseResourceHookConfig {
+  arity: 'cluster'
+  useHook: (cluster?: string) => HookResult
+}
+
+interface ClusterNamespaceResourceHookConfig extends BaseResourceHookConfig {
+  arity: 'cluster+namespace'
+  useHook: (cluster?: string, namespace?: string) => HookResult
+}
+
+type ResourceHookConfig = NoArgResourceHookConfig | ClusterResourceHookConfig | ClusterNamespaceResourceHookConfig
 
 function createUnifiedResourceHook(config: ResourceHookConfig) {
   return function useUnifiedResource(params?: Record<string, unknown>) {
@@ -163,7 +177,10 @@ function createUnifiedResourceHook(config: ResourceHookConfig) {
   }
 }
 
-interface CachedStatusHookConfig<TResult extends CachedHookResult = CachedHookResult> {
+interface CachedStatusHookConfig<
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TResult extends CachedHookResult<TData> = CachedHookResult<TData>,
+> {
   useCachedHook: () => TResult
   dataField: string
   loadingField: 'showSkeleton' | 'isLoading'
@@ -174,7 +191,10 @@ interface CachedStatusHookConfig<TResult extends CachedHookResult = CachedHookRe
   refetchOverride?: (result: TResult) => (() => void | Promise<void>)
 }
 
-function createUnifiedCachedHook(config: CachedStatusHookConfig) {
+function createUnifiedCachedHook<
+  TData extends Record<string, unknown>,
+  TResult extends CachedHookResult<TData>,
+>(config: CachedStatusHookConfig<TData, TResult>) {
   return function useUnifiedCachedStatus() {
     const result = config.useCachedHook()
 
