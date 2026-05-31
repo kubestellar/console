@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -146,11 +147,21 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 
 func ptr[T any](v T) *T { return &v }
 
+var sensitiveURLPattern = regexp.MustCompile(`https?://[^\s"']+`)
+
 // sanitizeError returns a generic message for errors that may contain sensitive
 // Kubernetes cluster details (server addresses, internal paths). Only known safe
 // prefixes are passed through verbatim.
 func sanitizeError(err error) string {
-	msg := err.Error()
+	if err == nil {
+		return ""
+	}
+
+	msg := strings.TrimSpace(err.Error())
+	if msg == "" {
+		return ""
+	}
+
 	safePrefixes := []string{"context deadline exceeded", "context canceled", "not found", "forbidden", "unauthorized"}
 	lower := strings.ToLower(msg)
 	for _, p := range safePrefixes {
@@ -158,6 +169,10 @@ func sanitizeError(err error) string {
 			return msg
 		}
 	}
+
+	msg = sensitiveURLPattern.ReplaceAllString(msg, "[redacted-url]")
+	msg = strings.Join(strings.Fields(msg), " ")
+
 	// Truncate to avoid leaking long stack traces or server URLs.
 	const maxLen = 120
 	if len(msg) > maxLen {
