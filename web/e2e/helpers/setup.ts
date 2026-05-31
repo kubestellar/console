@@ -226,14 +226,6 @@ export async function mockApiFallback(page: Page) {
     })
   })
 
-  await page.route('**/api/stellar/stream*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      body: ': keep-alive\n\n',
-    })
-  )
-
   // IMPORTANT: Playwright matches routes in REVERSE registration order (last registered = first matched).
   // Register the catch-all FIRST (lowest priority) so the active-users specific mock below
   // overrides it. Previously the catch-all was registered last and intercepted /api/active-users
@@ -251,6 +243,16 @@ export async function mockApiFallback(page: Page) {
       body: JSON.stringify({}),
     })
   })
+
+  // Registered AFTER the catch-all → higher priority. Keep SSE responses on
+  // text/event-stream so EventSource connections do not abort in demo mode.
+  await page.route('**/api/stellar/stream*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: ': keep-alive\n\n',
+    })
+  )
 
   // Registered AFTER the catch-all → higher priority. Trailing * matches query params too.
   // Returns valid data so useActiveUsers stays stable (no error state / re-renders).
@@ -536,6 +538,14 @@ export async function mockApiFallbackStrict(page: Page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify([]),
+    })
+  )
+
+  await page.route('**/api/stellar/stream*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: ': keep-alive\n\n',
     })
   )
 
