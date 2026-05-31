@@ -52,6 +52,17 @@ func TestOpenAICompatProvider_ConstructorAndHealth(t *testing.T) {
 		assert.Empty(t, result.Error)
 		assert.GreaterOrEqual(t, result.LatencyMs, 0)
 	})
+
+	t.Run("non ok endpoint is unavailable", func(t *testing.T) {
+		provider := newOpenAICompatTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "/models", r.URL.Path)
+			w.WriteHeader(http.StatusTooManyRequests)
+		})
+
+		result := provider.Health(context.Background())
+		assert.False(t, result.Available)
+		assert.Empty(t, result.Error)
+	})
 }
 
 func TestOpenAICompatGenerate_SelectsModelAndSendsPayload(t *testing.T) {
@@ -103,6 +114,9 @@ func TestOpenAICompatGenerate_StreamsServerSentEvents(t *testing.T) {
 		_, _ = w.Write([]byte(strings.Join([]string{
 			`data: {"choices":[{"delta":{"content":"hel"}}]}`,
 			``,
+			`data: not-json`,
+			`data: {"choices":[]}`,
+			`data: {"choices":[{"delta":{"content":""}}]}`,
 			`data: {"choices":[{"delta":{"content":"lo"}}]}`,
 			`data: [DONE]`,
 			``,
@@ -141,6 +155,17 @@ func TestOpenAICompatGenerate_ErrorPaths(t *testing.T) {
 		assert.Nil(t, resp)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "test-openai: unexpected status 429")
+	})
+
+	t.Run("decode failure", func(t *testing.T) {
+		provider := newOpenAICompatTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("not-json"))
+		})
+
+		resp, err := provider.Generate(context.Background(), GenerateRequest{Model: "custom-model", Messages: []Message{{Role: "user", Content: "hello"}}})
+		assert.Nil(t, resp)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "test-openai decode")
 	})
 
 	t.Run("no choices", func(t *testing.T) {

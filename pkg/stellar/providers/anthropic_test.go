@@ -73,6 +73,23 @@ func TestAnthropicGenerate_SendsExpectedRequest(t *testing.T) {
 	assert.Equal(t, "anthropic", provider.Name())
 }
 
+func TestAnthropicGenerate_EmptyContentResponse(t *testing.T) {
+	t.Parallel()
+
+	provider := newAnthropicTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":[],"usage":{"input_tokens":2,"output_tokens":1},"model":"claude-empty"}`))
+	})
+
+	resp, err := provider.Generate(context.Background(), GenerateRequest{Model: "claude-empty", Messages: []Message{{Role: "user", Content: "hello"}}})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "", resp.Content)
+	assert.Equal(t, 2, resp.TokensInput)
+	assert.Equal(t, 1, resp.TokensOutput)
+	assert.Equal(t, "claude-empty", resp.Model)
+}
+
 func TestAnthropicGenerate_ErrorPaths(t *testing.T) {
 	t.Parallel()
 

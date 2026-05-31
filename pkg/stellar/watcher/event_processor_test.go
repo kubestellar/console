@@ -4,54 +4,160 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestEventProcessorInferSeverity_TableDriven(t *testing.T) {
+const (
+	narrateMessageLimit = 120
+	longMessageLength   = 150
+)
+
+func assertSeverity(t *testing.T, reason, eventType, want string) {
+	t.Helper()
+
+	if got := InferSeverity(reason, eventType); got != want {
+		t.Fatalf("InferSeverity(%q, %q) = %q, want %q", reason, eventType, got, want)
+	}
+}
+
+func assertContainsAll(t *testing.T, got string, fields ...string) {
+	t.Helper()
+
+	for _, field := range fields {
+		if !strings.Contains(got, field) {
+			t.Fatalf("expected %q to contain %q", got, field)
+		}
+	}
+}
+
+func TestInferSeverity_NonWarningEventTypeTable(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
+	testCases := []struct {
 		name      string
 		reason    string
 		eventType string
-		want      string
 	}{
-		{name: "non warning events stay info", reason: "CrashLoopBackOff", eventType: "Normal", want: "info"},
-		{name: "critical warning reason", reason: "CrashLoopBackOff", eventType: "Warning", want: "critical"},
-		{name: "warning warning reason", reason: "FailedMount", eventType: "Warning", want: "warning"},
-		{name: "unknown warning defaults warning", reason: "SomethingElse", eventType: "Warning", want: "warning"},
+		{name: "normal oom killing", reason: "OOMKilling", eventType: "Normal"},
+		{name: "normal crash loop", reason: "CrashLoopBackOff", eventType: "Normal"},
+		{name: "normal failed mount", reason: "FailedMount", eventType: "Normal"},
+		{name: "normal arbitrary reason", reason: "anything", eventType: "Normal"},
+		{name: "info oom killing", reason: "OOMKilling", eventType: "Info"},
+		{name: "info crash loop", reason: "CrashLoopBackOff", eventType: "Info"},
+		{name: "info failed mount", reason: "FailedMount", eventType: "Info"},
+		{name: "info arbitrary reason", reason: "anything", eventType: "Info"},
+		{name: "empty type oom killing", reason: "OOMKilling", eventType: ""},
+		{name: "empty type crash loop", reason: "CrashLoopBackOff", eventType: ""},
+		{name: "empty type failed mount", reason: "FailedMount", eventType: ""},
+		{name: "empty type arbitrary reason", reason: "anything", eventType: ""},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.want, InferSeverity(tt.reason, tt.eventType))
+			assertSeverity(t, tc.reason, tc.eventType, "info")
 		})
 	}
 }
 
-func TestEventProcessorNarrateEvent_FormatsAndTruncates(t *testing.T) {
+func TestInferSeverity_CriticalReasonsTable(t *testing.T) {
 	t.Parallel()
 
-	longMessage := strings.Repeat("x", 130)
-	got := NarrateEvent("cluster-a", "tenant-a", "pod/demo", "BackOff", longMessage, 7, 90*time.Second)
+	criticalReasons := []string{
+		"OOMKilling",
+		"Evicted",
+		"NodeNotReady",
+		"FailedCreatePodSandBox",
+		"NetworkNotReady",
+		"BackOff",
+		"CrashLoopBackOff",
+	}
 
-	assert.Contains(t, got, "cluster-a")
-	assert.Contains(t, got, "tenant-a/pod/demo")
-	assert.Contains(t, got, "I noticed BackOff")
-	assert.Contains(t, got, "Occurred 7 time(s)")
-	assert.Contains(t, got, "last 2m0s ago")
-	assert.NotContains(t, got, longMessage)
-	assert.Contains(t, got, strings.Repeat("x", 120)+"...")
+	for _, reason := range criticalReasons {
+		reason := reason
+		t.Run(reason, func(t *testing.T) {
+			t.Parallel()
+			assertSeverity(t, reason, "Warning", "critical")
+		})
+	}
 }
 
-func TestEventProcessorNarrateEvent_PreservesShortMessage(t *testing.T) {
+func TestInferSeverity_WarningReasonsTable(t *testing.T) {
 	t.Parallel()
 
-	got := NarrateEvent("cluster-b", "default", "deployment/api", "FailedMount", "volume unavailable", 1, 31*time.Second)
+	warningReasons := []string{
+		"FailedMount",
+		"FailedAttachVolume",
+		"FailedScheduling",
+		"ImagePullBackOff",
+		"ErrImagePull",
+		"Unhealthy",
+		"DNSConfigForming",
+		"Preempting",
+	}
 
-	assert.Contains(t, got, "Reason: volume unavailable")
-	assert.Contains(t, got, "last 1m0s ago")
+	for _, reason := range warningReasons {
+		reason := reason
+		t.Run(reason, func(t *testing.T) {
+			t.Parallel()
+			assertSeverity(t, reason, "Warning", "warning")
+		})
+	}
+}
+
+func TestInferSeverity_UnknownReasonWarning(t *testing.T) {
+	t.Parallel()
+	assertSeverity(t, "SomeUnknownReason", "Warning", "warning")
+}
+
+func TestInferSeverity_EmptyReasonWarning(t *testing.T) {
+	t.Parallel()
+	assertSeverity(t, "", "Warning", "warning")
+}
+
+func TestNarrateEvent_ContainsKeyFields(t *testing.T) {
+	t.Parallel()
+
+	got := NarrateEvent("prod-cluster", "default", "nginx-pod", "BackOff", "container failing", 3, 5*time.Minute)
+	assertContainsAll(t, got, "prod-cluster", "default", "nginx-pod", "BackOff", "container failing", "3 time(s)")
+}
+
+func TestNarrateEvent_MessageTruncatedAt120(t *testing.T) {
+	t.Parallel()
+
+	longMessage := strings.Repeat("x", longMessageLength)
+	got := NarrateEvent("c", "ns", "res", "reason", longMessage, 1, time.Minute)
+	if strings.Contains(got, longMessage) {
+		t.Fatalf("expected message to be truncated, got %q", got)
+	}
+	assertContainsAll(t, got, strings.Repeat("x", narrateMessageLimit)+"...")
+}
+
+func TestNarrateEvent_ShortMessageNotTruncated(t *testing.T) {
+	t.Parallel()
+
+	message := "pod restarting"
+	got := NarrateEvent("c", "ns", "res", "CrashLoopBackOff", message, 1, time.Minute)
+	assertContainsAll(t, got, message)
+	if strings.Contains(got, "...") {
+		t.Fatalf("expected short message to be unmodified, got %q", got)
+	}
+}
+
+func TestNarrateEvent_AgeRoundedToMinute(t *testing.T) {
+	t.Parallel()
+
+	got := NarrateEvent("c", "ns", "res", "r", "msg", 1, 90*time.Second)
+	assertContainsAll(t, got, "2m")
+}
+
+func TestNarrateEvent_MessageExactly120Chars(t *testing.T) {
+	t.Parallel()
+
+	message := strings.Repeat("a", narrateMessageLimit)
+	got := NarrateEvent("c", "ns", "res", "r", message, 1, time.Minute)
+	assertContainsAll(t, got, message)
+	if strings.Contains(got, "...") {
+		t.Fatalf("expected %d-char message to avoid truncation, got %q", narrateMessageLimit, got)
+	}
 }

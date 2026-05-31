@@ -47,6 +47,17 @@ func TestOllamaHealth_ReportsAvailabilityAndErrors(t *testing.T) {
 		assert.GreaterOrEqual(t, result.LatencyMs, 0)
 	})
 
+	t.Run("unhealthy endpoint", func(t *testing.T) {
+		provider := newOllamaTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "/api/tags", r.URL.Path)
+			w.WriteHeader(http.StatusServiceUnavailable)
+		})
+
+		result := provider.Health(context.Background())
+		assert.False(t, result.Available)
+		assert.Empty(t, result.Error)
+	})
+
 	t.Run("context cancellation returns unavailable", func(t *testing.T) {
 		provider := newOllamaTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
 			<-r.Context().Done()
@@ -103,6 +114,38 @@ func TestOllamaGenerate_SelectsModelAndUsesDefaultTokenCap(t *testing.T) {
 	assert.Equal(t, "ollama", resp.Provider)
 }
 
+func TestOllamaGenerate_SelectsMatchingTaggedModelAndExplicitTokenCap(t *testing.T) {
+	t.Parallel()
+
+	provider := newOllamaTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/tags":
+			_, _ = w.Write([]byte(`{"models":[{"name":"llama3:8b"},{"name":"mistral:latest"}]}`))
+		case "/api/chat":
+			var payload map[string]any
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
+			assert.Equal(t, "llama3:8b", payload["model"])
+
+			options, ok := payload["options"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, float64(42), options["num_predict"])
+			_, _ = w.Write([]byte(`{"message":{"content":"tagged-model"},"prompt_eval_count":5,"eval_count":2,"model":"llama3:8b"}`))
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	})
+
+	resp, err := provider.Generate(context.Background(), GenerateRequest{
+		Model:     "llama3",
+		MaxTokens: 42,
+		Messages:  []Message{{Role: "user", Content: "hello"}},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "tagged-model", resp.Content)
+	assert.Equal(t, "llama3:8b", resp.Model)
+}
+
 func TestOllamaGenerate_StreamsResponses(t *testing.T) {
 	t.Parallel()
 
@@ -135,6 +178,35 @@ func TestOllamaGenerate_StreamsResponses(t *testing.T) {
 	assert.Equal(t, "phi3", resp.Model)
 }
 
+func TestOllamaGenerate_StreamEOFReturnsAggregatedResponse(t *testing.T) {
+	t.Parallel()
+
+	provider := newOllamaTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/api/chat", r.URL.Path)
+		_, _ = w.Write([]byte(`{"message":{"content":"bye"},"done":false,"prompt_eval_count":4,"eval_count":2,"model":"phi3"}` + "\n"))
+	})
+
+	streamCh := make(chan string, 1)
+	resp, err := provider.Generate(context.Background(), GenerateRequest{
+		Model:    "phi3",
+		Stream:   true,
+		StreamCh: streamCh,
+		Messages: []Message{{Role: "user", Content: "hello"}},
+	})
+	require.NoError(t, err)
+
+	var chunks []string
+	for chunk := range streamCh {
+		chunks = append(chunks, chunk)
+	}
+
+	assert.Equal(t, []string{"bye"}, chunks)
+	assert.Equal(t, "bye", resp.Content)
+	assert.Equal(t, 4, resp.TokensInput)
+	assert.Equal(t, 2, resp.TokensOutput)
+	assert.Equal(t, "phi3", resp.Model)
+}
+
 func TestOllamaGenerate_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
@@ -147,6 +219,17 @@ func TestOllamaGenerate_ErrorPaths(t *testing.T) {
 		assert.Nil(t, resp)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "ollama: unexpected status 500")
+	})
+
+	t.Run("decode failure", func(t *testing.T) {
+		provider := newOllamaTestProvider(t, func(w http.ResponseWriter, r *http.Request) {
+			_, _ = w.Write([]byte("not-json"))
+		})
+
+		resp, err := provider.Generate(context.Background(), GenerateRequest{Model: "phi3", Messages: []Message{{Role: "user", Content: "hello"}}})
+		assert.Nil(t, resp)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ollama decode")
 	})
 
 	t.Run("context canceled", func(t *testing.T) {
