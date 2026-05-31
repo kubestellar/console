@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/google/uuid"
@@ -16,8 +17,8 @@ func TestSQLiteDashboards_CreateAndGet(t *testing.T) {
 	userID := uuid.New()
 	err := store.CreateUser(ctx, &models.User{
 		ID:          userID,
-		GithubID:    "test-123",
-		GithubLogin: "testuser",
+		GitHubID:    "test-123",
+		GitHubLogin: "testuser",
 		Role:        "viewer",
 	})
 	require.NoError(t, err)
@@ -27,7 +28,7 @@ func TestSQLiteDashboards_CreateAndGet(t *testing.T) {
 		ID:        dashboardID,
 		UserID:    userID,
 		Name:      "Test Dashboard",
-		Layout:    `{"cols": 3}`,
+		Layout:    json.RawMessage(`{"cols": 3}`),
 		IsDefault: false,
 	}
 
@@ -48,8 +49,8 @@ func TestSQLiteDashboards_ListByUser(t *testing.T) {
 	userID := uuid.New()
 	err := store.CreateUser(ctx, &models.User{
 		ID:          userID,
-		GithubID:    "test-456",
-		GithubLogin: "testuser2",
+		GitHubID:    "test-456",
+		GitHubLogin: "testuser2",
 		Role:        "viewer",
 	})
 	require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestSQLiteDashboards_ListByUser(t *testing.T) {
 	require.NoError(t, store.CreateDashboard(ctx, dashboard1))
 	require.NoError(t, store.CreateDashboard(ctx, dashboard2))
 
-	dashboards, err := store.ListDashboards(ctx, userID)
+	dashboards, err := store.GetUserDashboards(ctx, userID, 0, 0)
 	require.NoError(t, err)
 	require.Len(t, dashboards, 2)
 
@@ -87,8 +88,8 @@ func TestSQLiteDashboards_Delete(t *testing.T) {
 	userID := uuid.New()
 	err := store.CreateUser(ctx, &models.User{
 		ID:          userID,
-		GithubID:    "test-789",
-		GithubLogin: "testuser3",
+		GitHubID:    "test-789",
+		GitHubLogin: "testuser3",
 		Role:        "viewer",
 	})
 	require.NoError(t, err)

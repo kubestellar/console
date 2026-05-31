@@ -12,7 +12,6 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 )
 
 func TestNewAuthHandler(t *testing.T) {
@@ -76,6 +75,7 @@ func TestNewAuthHandler(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			h := NewAuthHandler(s, tc.cfg)
+			t.Cleanup(h.Stop)
 			require.NotNil(t, h)
 			tc.expect(t, h)
 		})
@@ -95,22 +95,23 @@ func TestAuthHandler_DevMode(t *testing.T) {
 		FrontendURL:    "http://localhost:5174",
 		SkipOnboarding: true,
 	})
+	t.Cleanup(h.Stop)
 
 	app := fiber.New()
-	app.Get("/status", h.Status)
+	app.Get("/auth/github", h.GitHubLogin)
 
-	req := httptest.NewRequest(http.MethodGet, "/status", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/github", nil)
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
-	require.Equal(t, fiber.StatusOK, resp.StatusCode)
+	require.Equal(t, fiber.StatusTemporaryRedirect, resp.StatusCode)
 
-	users, err := s.ListUsers(ctx)
+	users, err := s.ListUsers(ctx, 0, 0)
 	require.NoError(t, err)
 	require.Greater(t, len(users), 0, "dev mode should auto-create user")
 
 	var devUser *models.User
 	for _, u := range users {
-		if u.GithubLogin == "dev-user" {
+		if u.GitHubLogin == "dev-user" {
 			devUser = &u
 			break
 		}

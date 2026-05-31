@@ -9,22 +9,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAuthMiddleware_RequireAuth(t *testing.T) {
-	s := store.OpenTestDB(t)
 	jwtSecret := "test-jwt-secret-for-middleware"
 
-	h := NewAuthHandler(s, AuthConfig{
-		JWTSecret:   jwtSecret,
-		FrontendURL: "http://localhost:5174",
-		BackendURL:  "http://localhost:8080",
-	})
-
 	app := fiber.New()
-	app.Get("/protected", h.RequireAuth(), func(c *fiber.Ctx) error {
+	app.Get("/protected", middleware.JWTAuth(jwtSecret), func(c *fiber.Ctx) error {
 		return c.SendString("success")
 	})
 
@@ -69,39 +62,29 @@ func TestAuthMiddleware_RequireAuth(t *testing.T) {
 	}
 }
 
-func TestAuthMiddleware_OptionalAuth(t *testing.T) {
-	s := store.OpenTestDB(t)
+func TestAuthMiddleware_CookieFallback(t *testing.T) {
 	jwtSecret := "test-jwt-secret-optional"
 
-	h := NewAuthHandler(s, AuthConfig{
-		JWTSecret:   jwtSecret,
-		FrontendURL: "http://localhost:5174",
-		BackendURL:  "http://localhost:8080",
-	})
-
 	app := fiber.New()
-	app.Get("/optional", h.OptionalAuth(), func(c *fiber.Ctx) error {
+	app.Get("/optional", middleware.JWTAuth(jwtSecret), func(c *fiber.Ctx) error {
 		return c.SendString("success")
 	})
 
 	tests := []struct {
 		name           string
-		token          string
+		authorization  string
+		cookieValue    string
 		expectedStatus int
 	}{
 		{
-			name:           "no token allowed",
-			token:          "",
+			name:           "cookie without header",
+			cookieValue:    createBearerlessTestJWT(t, jwtSecret, uuid.New()),
 			expectedStatus: fiber.StatusOK,
 		},
 		{
-			name:           "malformed token ignored",
-			token:          "Bearer malformed",
-			expectedStatus: fiber.StatusOK,
-		},
-		{
-			name:           "valid token processed",
-			token:          createTestJWT(t, jwtSecret, uuid.New()),
+			name:           "malformed header falls back to cookie",
+			authorization:  "Bearer malformed",
+			cookieValue:    createBearerlessTestJWT(t, jwtSecret, uuid.New()),
 			expectedStatus: fiber.StatusOK,
 		},
 	}
@@ -109,15 +92,20 @@ func TestAuthMiddleware_OptionalAuth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/optional", nil)
-			if tc.token != "" {
-				req.Header.Set("Authorization", tc.token)
+			if tc.authorization != "" {
+				req.Header.Set("Authorization", tc.authorization)
 			}
+			req.AddCookie(&http.Cookie{Name: "kc_auth", Value: tc.cookieValue})
 
 			resp, err := app.Test(req, -1)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedStatus, resp.StatusCode)
 		})
 	}
+}
+
+func createBearerlessTestJWT(t *testing.T, secret string, userID uuid.UUID) string {
+	return createTestJWT(t, secret, userID)[len("Bearer "):]
 }
 
 func createTestJWT(t *testing.T, secret string, userID uuid.UUID) string {

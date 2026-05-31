@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,28 +14,6 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 	stellarproviders "github.com/kubestellar/console/pkg/stellar/providers"
 )
-
-func OpenTestDB(t *testing.T) *SQLiteStore {
-	t.Helper()
-
-	drv, err := sqlDriver("sqlite")
-	require.NoError(t, err)
-
-	db := sql.OpenDB(&fkConnector{driver: drv, dsn: ":memory:"})
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(0)
-	db.SetConnMaxIdleTime(0)
-
-	store := &SQLiteStore{db: db}
-	require.NoError(t, store.migrate())
-
-	t.Cleanup(func() {
-		require.NoError(t, store.Close())
-	})
-
-	return store
-}
 
 func TestOpenTestDBAppliesMigrations(t *testing.T) {
 	store := OpenTestDB(t)

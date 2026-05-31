@@ -13,8 +13,7 @@ import (
 
 func TestFanOutClusters_EmptyList(t *testing.T) {
 	s := &Server{
-		clusterBackoff: make(map[string]map[string]*backoffState),
-		mu:             sync.RWMutex{},
+		resourceRetryState: make(map[string]clusterResourceRetryState),
 	}
 
 	ctx := context.Background()
@@ -30,8 +29,7 @@ func TestFanOutClusters_EmptyList(t *testing.T) {
 
 func TestFanOutClusters_SuccessfulFetch(t *testing.T) {
 	s := &Server{
-		clusterBackoff: make(map[string]map[string]*backoffState),
-		mu:             sync.RWMutex{},
+		resourceRetryState: make(map[string]clusterResourceRetryState),
 	}
 
 	ctx := context.Background()
@@ -57,8 +55,7 @@ func TestFanOutClusters_SuccessfulFetch(t *testing.T) {
 
 func TestFanOutClusters_PartialFailure(t *testing.T) {
 	s := &Server{
-		clusterBackoff: make(map[string]map[string]*backoffState),
-		mu:             sync.RWMutex{},
+		resourceRetryState: make(map[string]clusterResourceRetryState),
 	}
 
 	ctx := context.Background()
@@ -81,8 +78,7 @@ func TestFanOutClusters_PartialFailure(t *testing.T) {
 
 func TestFanOutClusters_MaxConcurrency(t *testing.T) {
 	s := &Server{
-		clusterBackoff: make(map[string]map[string]*backoffState),
-		mu:             sync.RWMutex{},
+		resourceRetryState: make(map[string]clusterResourceRetryState),
 	}
 
 	ctx := context.Background()
@@ -124,8 +120,7 @@ func TestFanOutClusters_MaxConcurrency(t *testing.T) {
 
 func TestClusterBackoff_Recording(t *testing.T) {
 	s := &Server{
-		clusterBackoff: make(map[string]map[string]*backoffState),
-		mu:             sync.RWMutex{},
+		resourceRetryState: make(map[string]clusterResourceRetryState),
 	}
 
 	resourceName := "pods"
@@ -134,19 +129,17 @@ func TestClusterBackoff_Recording(t *testing.T) {
 	retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
 	require.Greater(t, retryIn, time.Duration(0))
 
-	s.mu.RLock()
-	state, exists := s.clusterBackoff[resourceName][clusterName]
-	s.mu.RUnlock()
+	s.resourceRetryMu.Lock()
+	state, exists := s.resourceRetryState[s.clusterResourceRetryKey(resourceName, clusterName)]
+	s.resourceRetryMu.Unlock()
 
 	require.True(t, exists)
-	require.NotNil(t, state)
-	require.Equal(t, 1, state.consecutiveFailures)
+	require.Equal(t, 1, state.failures)
 }
 
 func TestClusterBackoff_Success(t *testing.T) {
 	s := &Server{
-		clusterBackoff: make(map[string]map[string]*backoffState),
-		mu:             sync.RWMutex{},
+		resourceRetryState: make(map[string]clusterResourceRetryState),
 	}
 
 	resourceName := "pods"
@@ -154,15 +147,15 @@ func TestClusterBackoff_Success(t *testing.T) {
 
 	s.recordClusterResourceFailure(resourceName, clusterName)
 
-	s.mu.RLock()
-	_, exists := s.clusterBackoff[resourceName][clusterName]
-	s.mu.RUnlock()
+	s.resourceRetryMu.Lock()
+	_, exists := s.resourceRetryState[s.clusterResourceRetryKey(resourceName, clusterName)]
+	s.resourceRetryMu.Unlock()
 	require.True(t, exists)
 
 	s.recordClusterResourceSuccess(resourceName, clusterName)
 
-	s.mu.RLock()
-	_, stillExists := s.clusterBackoff[resourceName][clusterName]
-	s.mu.RUnlock()
+	s.resourceRetryMu.Lock()
+	_, stillExists := s.resourceRetryState[s.clusterResourceRetryKey(resourceName, clusterName)]
+	s.resourceRetryMu.Unlock()
 	require.False(t, stillExists, "success should clear backoff state")
 }
