@@ -254,7 +254,11 @@ func (w *Watcher) pollCluster(ctx context.Context, cluster string) int {
 }
 
 func splitEventObjectName(object string) string {
-	parts := strings.SplitN(strings.TrimSpace(object), "/", 2)
+	trimmed := strings.TrimSpace(object)
+	if trimmed == "" {
+		return "unknown"
+	}
+	parts := strings.SplitN(trimmed, "/", 2)
 	if len(parts) == 2 {
 		return parts[1]
 	}
