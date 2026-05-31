@@ -324,7 +324,7 @@ jobs:
     needs: merge
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: [self-hosted, kc-pok]
-    timeout-minutes: 20
+    timeout-minutes: 30
     environment: pok-prod
     concurrency:
       group: deploy-pok-prod
@@ -379,6 +379,15 @@ jobs:
             helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m || true
           fi
 
+      - name: Pre-deploy cluster health check
+        run: |
+          echo "::group::Current pod status in kubestellar-console"
+          kubectl get pods -n kubestellar-console -o wide || true
+          echo "::endgroup::"
+          echo "::group::Recent warning events"
+          kubectl get events -n kubestellar-console --sort-by='.lastTimestamp' --field-selector type=Warning | tail -10 || true
+          echo "::endgroup::"
+
       # #6344 / #6353: OpenShift SCC — see comment on the vllm-d Deploy
       # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
       # SCC admission controller can assign a namespace-appropriate UID.
@@ -402,9 +411,10 @@ jobs:
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
-            --atomic \
+            --rollback-on-failure \
+            --cleanup-on-fail \
             --wait \
-            --timeout 12m
+            --timeout 8m
 
       - name: Collect diagnostics on deploy failure
         if: failure()
@@ -415,9 +425,13 @@ jobs:
           echo "::group::Deployment describe"
           kubectl describe deployment/kc-kubestellar-console -n kubestellar-console || true
           echo "::endgroup::"
+          echo "::group::Recent warning events"
+          kubectl get events -n kubestellar-console --sort-by='.lastTimestamp' --field-selector type=Warning | tail -20 || true
+          echo "::endgroup::"
           echo "::group::Recent pod logs"
           for pod in $(kubectl get pods -n kubestellar-console -o name 2>/dev/null | head -5); do
             echo "--- ${pod} ---"
+            kubectl describe -n kubestellar-console "${pod}" || true
             kubectl logs -n kubestellar-console "${pod#pod/}" --tail=100 || true
           done
           echo "::endgroup::"
