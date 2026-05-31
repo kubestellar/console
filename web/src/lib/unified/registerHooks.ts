@@ -197,7 +197,7 @@ function createUnifiedCachedHook<
 >(config: CachedStatusHookConfig<TData, TResult>) {
   return function useUnifiedCachedStatus() {
     const result = config.useCachedHook()
-    const resultData = result.data as Record<string, unknown>
+    const resultData: Record<string, unknown> = result.data as Record<string, unknown>
 
     const data = config.optionalData
       ? (resultData[config.dataField] ?? [])

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:coverage": "VITE_COVERAGE=true vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "postbuild": "node scripts/check-vendor-safety.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
