@@ -144,6 +144,9 @@ func TestRegistryGetGlobalAndAvailable(t *testing.T) {
 	if !ok {
 		t.Fatal("GetGlobal(openai) reported provider missing")
 	}
+	if provider == nil {
+		t.Fatal("GetGlobal(openai) returned nil provider")
+	}
 	if provider.Name() != "openai" {
 		t.Fatalf("GetGlobal(openai) name = %q, want %q", provider.Name(), "openai")
 	}
