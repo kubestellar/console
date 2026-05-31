@@ -64,8 +64,8 @@ export const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
   { id: 'insights', name: 'Insights', icon: NAVIGATION_ICONS['insights'], href: ROUTES.INSIGHTS, type: 'link', order: 3.5 },
   { id: 'ai-ml', name: 'AI/ML', icon: NAVIGATION_ICONS['ai-ml'], href: ROUTES.AI_ML, type: 'link', order: 4 },
   { id: 'ai-agents', name: 'AI Agents', icon: NAVIGATION_ICONS['ai-agents'], href: ROUTES.AI_AGENTS, type: 'link', order: 5 },
-  { id: 'ci-cd', name: 'CI/CD', icon: NAVIGATION_ICONS['ci-cd'], href: ROUTES.CI_CD, type: 'link', order: 5.5 },
-  { id: 'acmm', name: 'ACMM', icon: NAVIGATION_ICONS['acmm'], href: ROUTES.ACMM, type: 'link', order: 6 },
+  { id: 'acmm', name: 'ACMM', icon: NAVIGATION_ICONS['acmm'], href: ROUTES.ACMM, type: 'link', order: 5.5 },
+  { id: 'ci-cd', name: 'CI/CD', icon: NAVIGATION_ICONS['ci-cd'], href: ROUTES.CI_CD, type: 'link', order: 6 },
   { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: NAVIGATION_ICONS['multi-tenancy'], href: ROUTES.MULTI_TENANCY, type: 'link', order: 6.5 },
   { id: 'alerts', name: 'Alerts', icon: NAVIGATION_ICONS['alerts'], href: ROUTES.ALERTS, type: 'link', order: 7 },
   { id: 'arcade', name: 'Arcade', icon: NAVIGATION_ICONS['arcade'], href: ROUTES.ARCADE, type: 'link', order: 8 },
@@ -127,6 +127,7 @@ const STORAGE_KEY = 'kubestellar-sidebar-config-v11'
 const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v10'
 const ENABLED_DASHBOARDS_STORAGE_KEY = `${STORAGE_KEY}-enabled-dashboards`
 const BUILTIN_NAV_ITEMS = [...DEFAULT_NAV_ITEMS, ...DISCOVERABLE_DASHBOARDS]
+const BUILTIN_NAV_ITEMS_BY_ID = new Map(BUILTIN_NAV_ITEMS.map((item) => [item.id, item]))
 const BUILTIN_NAV_ITEMS_BY_HREF = new Map(BUILTIN_NAV_ITEMS.map((item) => [item.href, item]))
 const BUILTIN_NAV_ITEM_IDS = new Set(BUILTIN_NAV_ITEMS.map((item) => item.id))
 
@@ -151,6 +152,33 @@ function getRemovedBuiltinItemIds(config: Partial<SidebarConfig>): string[] {
     : []
 }
 
+function getBuiltinSidebarItem(item: Pick<SidebarItem, 'id' | 'href' | 'isCustom'>): SidebarItem | undefined {
+  if (item.isCustom) {
+    return undefined
+  }
+
+  return BUILTIN_NAV_ITEMS_BY_ID.get(item.id) ?? BUILTIN_NAV_ITEMS_BY_HREF.get(item.href)
+}
+
+function normalizeSidebarItems(items: SidebarItem[] | undefined): SidebarItem[] | undefined {
+  return items?.map((item) => {
+    const builtinItem = getBuiltinSidebarItem(item)
+    if (!builtinItem) {
+      return item
+    }
+
+    return {
+      ...item,
+      id: builtinItem.id,
+      name: builtinItem.name,
+      icon: builtinItem.icon,
+      href: builtinItem.href,
+      type: builtinItem.type,
+      isCustom: false,
+    }
+  })
+}
+
 function getKnownDefaultItemIds(config: Partial<SidebarConfig>): string[] {
   if (Array.isArray(config.knownDefaultItemIds)) {
     return Array.from(new Set(
@@ -162,12 +190,12 @@ function getKnownDefaultItemIds(config: Partial<SidebarConfig>): string[] {
 
   const knownDefaultItemIds = new Set(getRemovedBuiltinItemIds(config))
   const configuredItems = [
-    ...(Array.isArray(config.primaryNav) ? config.primaryNav : []),
-    ...(Array.isArray(config.secondaryNav) ? config.secondaryNav : []),
+    ...(normalizeSidebarItems(Array.isArray(config.primaryNav) ? config.primaryNav : undefined) ?? []),
+    ...(normalizeSidebarItems(Array.isArray(config.secondaryNav) ? config.secondaryNav : undefined) ?? []),
   ]
 
   configuredItems.forEach((item) => {
-    const builtinItem = BUILTIN_NAV_ITEMS_BY_HREF.get(item.href)
+    const builtinItem = getBuiltinSidebarItem(item)
     if (builtinItem && DEFAULT_NAV_ITEM_ID_SET.has(builtinItem.id)) {
       knownDefaultItemIds.add(builtinItem.id)
     }
@@ -178,9 +206,9 @@ function getKnownDefaultItemIds(config: Partial<SidebarConfig>): string[] {
 
 function normalizeConfig(config: Partial<SidebarConfig>): SidebarConfig {
   return {
-    primaryNav: Array.isArray(config.primaryNav) ? config.primaryNav : DEFAULT_PRIMARY_NAV,
-    secondaryNav: Array.isArray(config.secondaryNav) ? config.secondaryNav : DEFAULT_SECONDARY_NAV,
-    sections: Array.isArray(config.sections) ? config.sections : [],
+    primaryNav: normalizeSidebarItems(Array.isArray(config.primaryNav) ? config.primaryNav : undefined) ?? DEFAULT_PRIMARY_NAV,
+    secondaryNav: normalizeSidebarItems(Array.isArray(config.secondaryNav) ? config.secondaryNav : undefined) ?? DEFAULT_SECONDARY_NAV,
+    sections: normalizeSidebarItems(Array.isArray(config.sections) ? config.sections : undefined) ?? [],
     showClusterStatus: config.showClusterStatus ?? true,
     collapsed: config.collapsed ?? false,
     isMobileOpen: config.isMobileOpen ?? false,
