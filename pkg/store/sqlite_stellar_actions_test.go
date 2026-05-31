@@ -82,6 +82,7 @@ func TestSQLiteStellarActionsListAndLifecycle(t *testing.T) {
 	require.NoError(t, store.ApproveStellarAction(ctx, "user-1", pending.ID, "approver"))
 	got, err = store.GetStellarAction(ctx, "user-1", pending.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, "approved", got.Status)
 	require.Equal(t, "approver", got.ApprovedBy)
 	require.NotNil(t, got.ApprovedAt)
@@ -89,6 +90,7 @@ func TestSQLiteStellarActionsListAndLifecycle(t *testing.T) {
 	require.NoError(t, store.RejectStellarAction(ctx, "user-1", pending.ID, "approver", "unsafe"))
 	got, err = store.GetStellarAction(ctx, "user-1", pending.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, "rejected", got.Status)
 	require.Equal(t, "unsafe", got.RejectReason)
 

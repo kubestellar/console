@@ -109,6 +109,7 @@ func TestSQLiteStellarSolvesStatusUpdates(t *testing.T) {
 
 	got, err := store.GetSolveByID(ctx, monitored.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	require.Equal(t, "resolved_monitored", got.Status)
 	require.Equal(t, "monitoring", got.Summary)
 	require.Equal(t, 2, got.ActionsTaken)
