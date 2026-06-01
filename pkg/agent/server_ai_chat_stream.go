@@ -17,6 +17,97 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
+func decodeOptionalString(value any) (string, bool) {
+	if value == nil {
+		return "", true
+	}
+	stringValue, ok := value.(string)
+	return stringValue, ok
+}
+
+func decodeOptionalBool(value any) (bool, bool) {
+	if value == nil {
+		return false, true
+	}
+	boolValue, ok := value.(bool)
+	return boolValue, ok
+}
+
+func decodeChatHistory(value any) ([]protocol.ChatMessage, bool) {
+	switch history := value.(type) {
+	case nil:
+		return nil, true
+	case []protocol.ChatMessage:
+		return history, true
+	case []any:
+		decodedHistory := make([]protocol.ChatMessage, 0, len(history))
+		for _, item := range history {
+			switch message := item.(type) {
+			case protocol.ChatMessage:
+				decodedHistory = append(decodedHistory, message)
+			case map[string]any:
+				role, ok := message["role"].(string)
+				if !ok {
+					return nil, false
+				}
+				content, ok := message["content"].(string)
+				if !ok {
+					return nil, false
+				}
+				decodedHistory = append(decodedHistory, protocol.ChatMessage{Role: role, Content: content})
+			default:
+				return nil, false
+			}
+		}
+		return decodedHistory, true
+	default:
+		return nil, false
+	}
+}
+
+func decodeChatRequestPayload(payload any) (protocol.ChatRequest, bool) {
+	switch request := payload.(type) {
+	case protocol.ChatRequest:
+		return request, true
+	case *protocol.ChatRequest:
+		if request == nil {
+			return protocol.ChatRequest{}, false
+		}
+		return *request, true
+	case protocol.ClaudeRequest:
+		return protocol.ChatRequest{Prompt: request.Prompt, SessionID: request.SessionID}, true
+	case *protocol.ClaudeRequest:
+		if request == nil {
+			return protocol.ChatRequest{}, false
+		}
+		return protocol.ChatRequest{Prompt: request.Prompt, SessionID: request.SessionID}, true
+	case map[string]any:
+		prompt, valid := decodeOptionalString(request["prompt"])
+		if !valid {
+			return protocol.ChatRequest{}, false
+		}
+		decoded := protocol.ChatRequest{Prompt: prompt}
+		if decoded.Agent, valid = decodeOptionalString(request["agent"]); !valid {
+			return protocol.ChatRequest{}, false
+		}
+		if decoded.SessionID, valid = decodeOptionalString(request["sessionId"]); !valid {
+			return protocol.ChatRequest{}, false
+		}
+		if decoded.ClusterContext, valid = decodeOptionalString(request["clusterContext"]); !valid {
+			return protocol.ChatRequest{}, false
+		}
+		if decoded.DryRun, valid = decodeOptionalBool(request["dryRun"]); !valid {
+			return protocol.ChatRequest{}, false
+		}
+		if decoded.History, valid = decodeChatHistory(request["history"]); !valid {
+			return protocol.ChatRequest{}, false
+		}
+		return decoded, true
+	default:
+		return protocol.ChatRequest{}, false
+	}
+}
+
 func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
 	safeWrite := func(ctx context.Context, outMsg protocol.Message) {
 		if closed.Load() || ctx.Err() != nil {
@@ -43,23 +134,11 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		}
 	}
 
-	// Parse payload
-	payloadBytes, err := json.Marshal(msg.Payload)
-	if err != nil {
-		safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
+	// Parse payload without a JSON round-trip on the streaming hot path.
+	req, ok := decodeChatRequestPayload(msg.Payload)
+	if !ok {
+		safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
 		return
-	}
-
-	var req protocol.ChatRequest
-	if err := json.Unmarshal(payloadBytes, &req); err != nil {
-		// Try legacy ClaudeRequest format for backward compatibility
-		var legacyReq protocol.ClaudeRequest
-		if err := json.Unmarshal(payloadBytes, &legacyReq); err != nil {
-			safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
-			return
-		}
-		req.Prompt = legacyReq.Prompt
-		req.SessionID = legacyReq.SessionID
 	}
 
 	if req.Prompt == "" {

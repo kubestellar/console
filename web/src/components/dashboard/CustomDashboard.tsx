@@ -1,5 +1,5 @@
 /* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
 import {
@@ -249,10 +249,28 @@ export function CustomDashboard() {
 
   // Stats data from clusters — use the centralised state machine so these
   // counts always match the main cluster grid and sidebar (#5928).
-  const healthyClusters = deduplicatedClusters.filter((c) => !isClusterUnreachable(c) && getClusterHealthState(c) === 'healthy').length
-  const unhealthyClusters = deduplicatedClusters.filter((c) => !isClusterUnreachable(c) && getClusterHealthState(c) === 'unhealthy').length
-  const totalNodes = deduplicatedClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalPods = deduplicatedClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
+  const { healthyClusters, unhealthyClusters, totalNodes, totalPods } = useMemo(() => {
+    return deduplicatedClusters.reduce((stats, cluster) => {
+      if (!isClusterUnreachable(cluster)) {
+        const healthState = getClusterHealthState(cluster)
+        if (healthState === 'healthy') {
+          stats.healthyClusters += 1
+        }
+        if (healthState === 'unhealthy') {
+          stats.unhealthyClusters += 1
+        }
+      }
+
+      stats.totalNodes += cluster.nodeCount || 0
+      stats.totalPods += cluster.podCount || 0
+      return stats
+    }, {
+      healthyClusters: 0,
+      unhealthyClusters: 0,
+      totalNodes: 0,
+      totalPods: 0,
+    })
+  }, [deduplicatedClusters])
 
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
