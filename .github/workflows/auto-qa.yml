@@ -208,6 +208,8 @@ jobs:
         id: build_check
         working-directory: web
         continue-on-error: true
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
         run: npm run build 2>&1 | tee /tmp/build-output.txt
 
       - name: "Check: ESLint"

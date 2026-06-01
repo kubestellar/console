@@ -52,6 +52,8 @@ jobs:
         run: npm ci
 
       - name: Build production bundle
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
         run: npm run build
 
       - name: Upload build
