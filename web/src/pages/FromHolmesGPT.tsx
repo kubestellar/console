@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Activity, ArrowRight, Bell, Brain, Eye, ExternalLink, Layers, Network, Sparkles } from 'lucide-react'
 
@@ -126,7 +126,7 @@ export function FromHolmesGPT() {
     return () => clearTimeout(copiedTimerRef.current)
   }, [copyFeedback])
 
-  const copyCommands = async (commands: string[], step: number) => {
+  const copyCommands = useCallback(async (commands: string[], step: number) => {
     const text = commands.filter(command => !command.startsWith('#') && command !== '').join('\n')
     const ok = await copyToClipboard(text)
     if (!ok) return
@@ -138,7 +138,7 @@ export function FromHolmesGPT() {
 
     const firstCommand = commands.find(command => !command.startsWith('#') && command !== '') ?? commands[0]
     emitInstallCommandCopied('from_holmesgpt', firstCommand)
-  }
+  }, [])
 
   return (
     <div className="min-h-screen bg-background text-foreground">

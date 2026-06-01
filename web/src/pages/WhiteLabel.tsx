@@ -1,5 +1,5 @@
 import { COPY_FEEDBACK_TIMEOUT_MS } from '../lib/constants'
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -247,13 +247,13 @@ function DeploymentSection() {
     return () => clearTimeout(copiedTimerRef.current)
   }, [copyFeedback])
 
-  const switchTab = (tab: DeployTab) => {
+  const switchTab = useCallback((tab: DeployTab) => {
     if (tab === activeTab) return
     setActiveTab(tab)
     emitWhiteLabelTabSwitch(tab)
-  }
+  }, [activeTab])
 
-  const copyCommands = async (commands: string[], step: number) => {
+  const copyCommands = useCallback(async (commands: string[], step: number) => {
     const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
     const ok = await copyToClipboard(text)
     if (!ok) return
@@ -266,13 +266,13 @@ function DeploymentSection() {
     const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
     emitWhiteLabelCommandCopy(activeTab, step, firstCommand)
     emitInstallCommandCopied('white_label', firstCommand)
-  }
+  }, [activeTab])
 
-  const steps = activeTab === 'binary'
+  const steps = useMemo(() => (activeTab === 'binary'
     ? BINARY_STEPS
     : activeTab === 'helm'
       ? HELM_STEPS
-      : DOCKER_STEPS
+      : DOCKER_STEPS), [activeTab])
 
   return (
     <section id="install" className="max-w-5xl mx-auto px-6 py-16">
