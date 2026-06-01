@@ -321,20 +321,14 @@ export default defineConfig(({ mode }) => ({
       ],
       // Per-directory coverage thresholds prevent silent regression in
       // chronically under-tested directories. Ratchet these up as tests are added.
-      thresholds: {
-        '**/hooks/**': {
-          lines: 20,
-          functions: 20,
-          branches: 20,
-          statements: 20,
-        },
-        '**/services/**': {
-          lines: 60,
-          functions: 60,
-          branches: 60,
-          statements: 60,
-        },
-      },
+      // NOTE: Disabled — thresholds are incompatible with sharded vitest runs
+      // (each shard only covers a subset of files, so per-directory thresholds
+      // always fail in shards that don't include matching tests). Re-enable once
+      // coverage is merged before threshold evaluation.
+      // thresholds: {
+      //   '**/hooks/**': { lines: 20, functions: 20, branches: 20, statements: 20 },
+      //   '**/services/**': { lines: 60, functions: 60, branches: 60, statements: 60 },
+      // },
     },
   },
 }))

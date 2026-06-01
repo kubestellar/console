@@ -266,12 +266,12 @@ describe('insights analysis helpers', () => {
         pending: 1,
         failed: 1,
         total: 3,
-        cluster-a_progress: 100,
-        cluster-a_status: 2,
-        cluster-b_progress: 25,
-        cluster-b_status: 1,
-        cluster-c_progress: 0,
-        cluster-c_status: 3,
+        'cluster-a_progress': 100,
+        'cluster-a_status': 2,
+        'cluster-b_progress': 25,
+        'cluster-b_status': 1,
+        'cluster-c_progress': 0,
+        'cluster-c_status': 3,
       },
     })
   })
