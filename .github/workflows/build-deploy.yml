@@ -374,6 +374,33 @@ jobs:
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Clean up stuck persistent volumes
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          STUCK_PV_AGE_THRESHOLD_SECONDS=86400
+          
+          echo "Cleaning up PVs stuck in deletion for more than 24 hours..."
+          PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
+          
+          while IFS=$'\t' read -r pvc_name volume_name pvc_deletion; do
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+            
+            PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null || echo '{}')
+            pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
+            
+            if [ -n "$pv_deletion" ]; then
+              deletion_age=$(($(date +%s) - $(date -d "$pv_deletion" +%s 2>/dev/null || echo 0)))
+              if [ "$deletion_age" -gt "$STUCK_PV_AGE_THRESHOLD_SECONDS" ]; then
+                echo "::warning::PV '$volume_name' stuck in deletion since $pv_deletion (${deletion_age}s ago). Removing finalizers..."
+                kubectl patch pv "$volume_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                echo "Waiting for PV to complete deletion..."
+                kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
+              fi
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
       - name: Validate persistent volumes before deploy
         run: |
           RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
