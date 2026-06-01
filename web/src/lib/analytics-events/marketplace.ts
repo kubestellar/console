@@ -15,7 +15,7 @@ export function emitMarketplaceInstallFailed(
   itemType: string,
   itemName: string,
   error: string,
-  failureStage: 'download' | 'http_error' | 'parse' | 'persist',
+  failureStage: 'download' | 'http_error' | 'integrity' | 'parse' | 'persist',
 ) {
   send('ksc_marketplace_install_failed', {
     item_type: itemType,
