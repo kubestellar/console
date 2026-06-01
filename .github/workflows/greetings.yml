@@ -16,4 +16,3 @@ jobs:
       issues: write
       pull-requests: write
     uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@main
-    secrets: inherit
