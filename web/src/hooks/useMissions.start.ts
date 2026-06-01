@@ -1,5 +1,8 @@
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { emitError, emitMissionStarted } from '../lib/analytics'
+import { fetchMissionContent, missionCache } from '../components/missions/browser/missionCache'
+import { matchInstallIntent } from '../lib/missions/intentMatcher'
+import type { MissionExport } from '../lib/missions/types'
 import {
   buildEnhancedPrompt,
   buildSavedMissionPrompt,
@@ -39,6 +42,66 @@ export interface MissionStartActions {
   retryPreflight: (missionId: string) => void
 }
 
+function buildSavedMissionRecord(missionId: string, params: SaveMissionParams): Mission {
+  const now = new Date()
+
+  return {
+    id: missionId,
+    title: params.title,
+    description: params.description,
+    type: params.type,
+    status: 'saved',
+    messages: [],
+    createdAt: now,
+    updatedAt: now,
+    context: params.context,
+    importedFrom: {
+      title: params.title,
+      description: params.description,
+      missionClass: params.missionClass,
+      cncfProject: params.cncfProject,
+      steps: params.steps,
+      tags: params.tags,
+    },
+  }
+}
+
+function buildMissionSaveParams(mission: MissionExport, context?: Record<string, unknown>): SaveMissionParams {
+  return {
+    title: mission.title,
+    description: mission.description,
+    type: mission.type,
+    missionClass: mission.missionClass,
+    cncfProject: mission.cncfProject,
+    steps: (mission.steps || []).map(step => ({
+      title: step.title,
+      description: step.description,
+      yaml: step.yaml,
+      command: step.command,
+    })),
+    tags: mission.tags,
+    initialPrompt: mission.description || mission.title,
+    context,
+  }
+}
+
+function getMissionSourceFileName(mission: MissionExport): string {
+  const fileName = mission.metadata?.source?.split('/').pop()?.trim()
+  if (fileName) return fileName
+
+  const normalizedName = (mission.name || 'install-mission').replace(/\.json$/i, '')
+  return `${normalizedName}.json`
+}
+
+function buildAutoLoadedSystemMessage(mission: MissionExport): MissionMessage {
+  return {
+    id: generateMessageId('auto-import'),
+    role: 'system',
+    content: `Auto-loaded \`${getMissionSourceFileName(mission)}\` from console-kb — following the community-validated install guide.`,
+    timestamp: new Date(),
+  }
+}
+
 export function createMissionStartActions(
   state: MissionProviderState,
   _stateUtils: MissionStateUtils,
@@ -57,6 +120,59 @@ export function createMissionStartActions(
 
     if (!params.skipReview) {
       state.setPendingReviewQueue(prev => [...prev, { params, missionId }])
+      return missionId
+    }
+
+    const matchedInstaller = matchInstallIntent(params.initialPrompt, missionCache.installers)
+    if (matchedInstaller) {
+      const placeholderMission = buildSavedMissionRecord(
+        missionId,
+        buildMissionSaveParams(matchedInstaller, params.context),
+      )
+
+      state.setMissions(prev => [placeholderMission, ...prev])
+      state.setActiveMissionId(missionId)
+      state.setIsSidebarOpen(true)
+      state.setIsSidebarMinimized(false)
+
+      void (async () => {
+        let resolvedInstaller = matchedInstaller
+
+        if (!resolvedInstaller.steps?.length) {
+          try {
+            const fetched = await fetchMissionContent(resolvedInstaller)
+            resolvedInstaller = fetched.mission
+          } catch {
+            resolvedInstaller = matchedInstaller
+          }
+        }
+
+        const resolvedMission = buildSavedMissionRecord(
+          missionId,
+          buildMissionSaveParams(resolvedInstaller, params.context),
+        )
+
+        state.setMissions(prev => prev.map(candidate => (
+          candidate.id === missionId
+            ? {
+                ...candidate,
+                title: resolvedMission.title,
+                description: resolvedMission.description,
+                type: resolvedMission.type,
+                context: resolvedMission.context,
+                importedFrom: resolvedMission.importedFrom,
+                updatedAt: new Date(),
+              }
+            : candidate
+        )))
+        runSavedMission(
+          missionId,
+          params.cluster,
+          [buildAutoLoadedSystemMessage(resolvedInstaller)],
+          resolvedMission,
+        )
+      })()
+
       return missionId
     }
 
@@ -251,32 +367,21 @@ export function createMissionStartActions(
 
   const saveMission = (params: SaveMissionParams): string => {
     const missionId = `mission-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 9)}`
-    const mission: Mission = {
-      id: missionId,
-      title: params.title,
-      description: params.description,
-      type: params.type,
-      status: 'saved',
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      context: params.context,
-      importedFrom: {
-        title: params.title,
-        description: params.description,
-        missionClass: params.missionClass,
-        cncfProject: params.cncfProject,
-        steps: params.steps,
-        tags: params.tags,
-      },
-    }
+    const mission = buildSavedMissionRecord(missionId, params)
 
     state.setMissions(prev => [mission, ...prev])
     return missionId
   }
 
-  const runSavedMission = (missionId: string, cluster?: string) => {
-    const mission = state.missions.find(candidate => candidate.id === missionId)
+  const runSavedMission = (
+    missionId: string,
+    cluster?: string,
+    extraSystemMessages: MissionMessage[] = [],
+    missionOverride?: Mission,
+  ) => {
+    const mission = missionOverride
+      || state.missionsRef.current.find(candidate => candidate.id === missionId)
+      || state.missions.find(candidate => candidate.id === missionId)
     if (!mission || mission.status !== 'saved') return
 
     if (mission.importedFrom?.steps) {
@@ -341,6 +446,7 @@ export function createMissionStartActions(
                 content: basePrompt,
                 timestamp: new Date(),
               },
+              ...extraSystemMessages,
               ...systemMessages,
             ],
             updatedAt: new Date(),

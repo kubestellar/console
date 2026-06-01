@@ -4,6 +4,7 @@ import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { fetchMissionContent, missionCache } from '../components/missions/browser/missionCache'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -42,6 +43,16 @@ vi.mock('./useResolutions', () => ({
   detectIssueSignature: vi.fn(() => ({ type: 'Unknown' })),
   findSimilarResolutionsStandalone: vi.fn(() => []),
   generateResolutionPromptContext: vi.fn(() => ''),
+}))
+
+vi.mock('../components/missions/browser/missionCache', () => ({
+  missionCache: {
+    installers: [],
+  },
+  fetchMissionContent: vi.fn(async mission => ({
+    mission,
+    raw: JSON.stringify(mission),
+  })),
 }))
 
 vi.mock('../lib/constants', async (importOriginal) => {
@@ -189,6 +200,7 @@ function seedMission(overrides: Partial<{
 beforeEach(() => {
   localStorage.clear()
   MockWebSocket.lastInstance = null
+  missionCache.installers = []
   vi.clearAllMocks()
   vi.mocked(getDemoMode).mockReturnValue(false)
   // Suppress auto-reconnect noise: after onclose, ensureConnection is retried
@@ -463,6 +475,63 @@ describe('startMission cluster targeting', () => {
     const prompt = JSON.parse(chatCall![0]).payload.prompt
     expect(prompt).toContain('Target clusters: cluster-a, cluster-b')
     expect(prompt).toContain('Perform the following on EACH cluster')
+  })
+
+  it('auto-loads validated install missions for free-form install prompts', async () => {
+    const installer = {
+      version: 'kc-mission-v1',
+      name: 'install-kuberay',
+      title: 'Install KubeRay',
+      description: 'Validated install guide',
+      type: 'deploy' as const,
+      tags: ['kuberay'],
+      missionClass: 'install',
+      cncfProject: 'kuberay',
+      steps: [],
+      metadata: { source: 'fixes/cncf-install/install-kuberay.json' },
+    }
+
+    missionCache.installers = [installer]
+    vi.mocked(fetchMissionContent).mockResolvedValue({
+      mission: {
+        ...installer,
+        steps: [{
+          title: 'Install KubeRay operator',
+          description: 'Apply the validated KubeRay manifests',
+          command: 'kubectl apply -f kuberay.yaml',
+        }],
+      },
+      raw: JSON.stringify(installer),
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+
+    let missionId = ''
+    await act(async () => {
+      missionId = result.current.startMission({
+        title: 'Install request',
+        description: 'User asked to install KubeRay',
+        type: 'deploy',
+        initialPrompt: 'install kuberay',
+        skipReview: true,
+      })
+    })
+
+    await flushMissionPreflightChain()
+    await waitFor(() => {
+      expect(MockWebSocket.lastInstance).not.toBeNull()
+    })
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateOpen()
+    })
+
+    const mission = result.current.missions.find(candidate => candidate.id === missionId)
+    expect(mission?.messages.some(message => (
+      message.role === 'system'
+        && message.content.includes('Auto-loaded `install-kuberay.json` from console-kb')
+    ))).toBe(true)
+    expect(fetchMissionContent).toHaveBeenCalledWith(installer)
   })
 
   it('adds non-interactive warnings for deploy-type missions', async () => {

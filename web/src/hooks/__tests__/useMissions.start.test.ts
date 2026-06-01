@@ -15,7 +15,6 @@ vi.mock('../useMissionPromptBuilder', () => ({
   })),
   buildSavedMissionPrompt: vi.fn(() => 'saved-mission-prompt'),
   buildSystemMessages: vi.fn(() => []),
-  generateMessageId: vi.fn(() => 'mock-msg-id'),
 }))
 
 vi.mock('../../lib/analytics', () => ({
@@ -58,6 +57,20 @@ vi.mock('../../lib/missions/scanner/malicious', () => ({
   scanForMaliciousContent: vi.fn(() => []),
 }))
 
+vi.mock('../../components/missions/browser/missionCache', () => ({
+  missionCache: {
+    installers: [],
+  },
+  fetchMissionContent: vi.fn(async mission => ({
+    mission,
+    raw: JSON.stringify(mission),
+  })),
+}))
+
+vi.mock('../../lib/missions/composer', () => ({
+  buildSavedMissionPrompt: vi.fn(() => 'saved-mission-prompt'),
+}))
+
 import { createMissionStartActions } from '../useMissions.start'
 import { createMissionStateUtils } from '../useMissions.state'
 import {
@@ -67,6 +80,7 @@ import {
 import { scanForMaliciousContent } from '../../lib/missions/scanner/malicious'
 import { buildMissingToolWarning } from '../useMissions.helpers'
 import { emitMissionStarted } from '../../lib/analytics'
+import { fetchMissionContent, missionCache } from '../../components/missions/browser/missionCache'
 import type { Mission, StartMissionParams } from '../useMissionTypes'
 import type { MissionProviderState } from '../useMissions.state'
 
@@ -192,6 +206,7 @@ async function flushMicrotasks() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  missionCache.installers = []
   vi.mocked(runToolPreflightCheck).mockResolvedValue({ ok: true })
   vi.mocked(runPreflightCheck).mockResolvedValue({ ok: true })
   vi.mocked(buildMissingToolWarning).mockReturnValue(MISSING_TOOL_WARNING)
@@ -252,6 +267,66 @@ describe('createMissionStartActions', () => {
       params,
     )
     expect(state.setPendingReviewQueue).not.toHaveBeenCalled()
+  })
+
+  it('routes matching install prompts through saved console-kb missions', async () => {
+    const executionApi = makeExecutionApi()
+    const state = makeState()
+    const actions = makeStartActions(state, executionApi)
+    const installer = {
+      version: 'kc-mission-v1',
+      name: 'install-kuberay',
+      title: 'Install KubeRay',
+      description: 'Validated install guide',
+      type: 'deploy' as const,
+      tags: ['kuberay'],
+      missionClass: 'install',
+      cncfProject: 'kuberay',
+      steps: [],
+      metadata: { source: 'fixes/cncf-install/install-kuberay.json' },
+    }
+
+    missionCache.installers = [installer]
+    vi.mocked(fetchMissionContent).mockResolvedValue({
+      mission: {
+        ...installer,
+        steps: [{
+          title: 'Install KubeRay operator',
+          description: 'Apply the KubeRay manifests',
+        }],
+      },
+      raw: JSON.stringify(installer),
+    })
+
+    const missionId = actions.startMission({
+      title: 'Install request',
+      description: 'User asked to install KubeRay',
+      type: 'deploy',
+      initialPrompt: 'install kuberay',
+      skipReview: true,
+    })
+    await flushMicrotasks()
+
+    expect(missionId).toMatch(/^mission-/)
+    expect(fetchMissionContent).toHaveBeenCalledWith(installer)
+    expect(executionApi.preflightAndExecute).toHaveBeenCalledWith(
+      missionId,
+      'enhanced-prompt',
+      expect.objectContaining({
+        title: 'Install KubeRay',
+        description: 'Validated install guide',
+        initialPrompt: 'saved-mission-prompt',
+      }),
+    )
+
+    const missions = applySetMissions(state, [])
+    expect(missions).toHaveLength(1)
+    expect(missions[0]?.status).toBe('pending')
+    expect(missions[0]?.messages.some(message => (
+      message.role === 'system'
+        && message.content.includes('Auto-loaded `install-kuberay.json` from console-kb')
+    ))).toBe(true)
+    expect(emitMissionStarted).toHaveBeenCalledWith('deploy', 'claude-code')
   })
 
   it('removes __preGeneratedMissionId from mission context before start', () => {
