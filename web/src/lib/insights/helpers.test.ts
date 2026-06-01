@@ -51,12 +51,15 @@ describe('workloadPrefix', () => {
   })
 
   it('keeps pod names when the trailing suffix is shorter than the workload heuristic', () => {
-    const result = workloadPrefix('pod/app-abc12-xyz')
-    expect(result).toBe('app-abc12-xyz')
+    // Suffix 'xy' is only 2 chars (below the 3-char minimum for pod suffix), so no strip
+    const result = workloadPrefix('pod/app-abc12-xy')
+    expect(result).toBe('app-abc12-xy')
   })
 
   it('keeps the ReplicaSet segment when the pod suffix is longer than the workload heuristic', () => {
-    const result = workloadPrefix('pod/app-abcdef1234-wxyz56')
+    // Pod suffix 'wxyz567' is 7 chars (above the 6-char max for two-suffix strip),
+    // but one-suffix regex matches it (7 chars with digit), leaving 'app-abcdef1234'
+    const result = workloadPrefix('pod/app-abcdef1234-wxyz567')
     expect(result).toBe('app-abcdef1234')
   })
 
