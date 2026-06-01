@@ -35,7 +35,7 @@ on:
           - none
 
 # Cancel superseded PR validation runs, but never cancel a main deploy mid-flight.
-# The production deploy itself is serialized by the deploy-pok-prod job below.
+# Cluster deploys themselves are serialized by per-job concurrency below.
 
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions: read-all
@@ -200,6 +200,9 @@ jobs:
     runs-on: [self-hosted, kc, openshift]
     timeout-minutes: 20
     environment: vllm-d
+    concurrency:
+      group: deploy-vllm-d
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
