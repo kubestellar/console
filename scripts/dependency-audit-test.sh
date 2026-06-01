@@ -48,7 +48,10 @@ for arg in "$@"; do
   esac
 done
 
-ARTIFACTS_DIR=".artifacts/dependency-audit"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+ARTIFACTS_DIR="$PROJECT_ROOT/.artifacts/dependency-audit"
 REPORT_JSON="$ARTIFACTS_DIR/dependency-audit-report.json"
 REPORT_MD="$ARTIFACTS_DIR/dependency-audit-summary.md"
 SBOM_JSON="$ARTIFACTS_DIR/sbom.json"
