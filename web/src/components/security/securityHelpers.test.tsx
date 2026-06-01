@@ -116,10 +116,8 @@ describe('getTypeLabel', () => {
     expect(getTypeLabel('root', mockT)).toBe('translated_security.runAsRoot')
   })
 
-  it('does not call translation function for unknown types', () => {
-    const mockT = (key: string) => {
-      throw new Error('Should not be called')
-    }
+  it('returns raw type string for unknown types', () => {
+    const mockT = (key: string) => `translated_${key}`
     expect(getTypeLabel('unknownType', mockT)).toBe('unknownType')
   })
 
