@@ -83,7 +83,7 @@ NPM_AUDIT_ARGS=(--omit=dev --audit-level=high --json)
 echo -e "${BOLD}Phase 1: npm audit (frontend production dependencies)${NC}"
 
 if [ -d "web" ] && [ -f "web/package-lock.json" ]; then
-  NPM_OUTPUT="$TMPDIR_AUDIT/npm-audit.json"
+  NPM_OUTPUT="$(pwd)/$TMPDIR_AUDIT/npm-audit.json"
   cd web
   npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
   cd ..
