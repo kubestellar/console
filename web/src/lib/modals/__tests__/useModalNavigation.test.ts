@@ -491,4 +491,12 @@ describe('useModalState', () => {
     act(() => { result.current.toggle() })
     expect(result.current.isOpen).toBe(false)
   })
+
+  it('setIsOpen() sets arbitrary values', () => {
+    const { result } = renderHook(() => useModalState())
+    act(() => { result.current.setIsOpen(true) })
+    expect(result.current.isOpen).toBe(true)
+    act(() => { result.current.setIsOpen(false) })
+    expect(result.current.isOpen).toBe(false)
+  })
 })

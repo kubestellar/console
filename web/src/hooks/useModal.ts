@@ -1,28 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useModalState, type UseModalStateResult } from '../lib/modals/useModalNavigation'
 
-export interface UseModalResult {
-  isOpen: boolean
-  open: () => void
-  close: () => void
-  toggle: () => void
-  /** Escape hatch for components that accept a raw setter (e.g. `setIsOpen`). */
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
-}
+export type UseModalResult = UseModalStateResult
 
 /**
- * Centralizes the `useState(false)` + open/close/toggle pattern used for
- * modal and drawer visibility across dashboard cards and drilldowns.
- * Auto-QA (#8815) flagged 1193 ad-hoc `useState(false)` call sites for
- * modal-ish flags; this hook is the migration target.
- *
- *   const modal = useModal()
- *   <button onClick={modal.open}>Open</button>
- *   {modal.isOpen && <Modal onClose={modal.close}>...</Modal>}
+ * Compatibility wrapper for callers that still import `useModal` from hooks.
+ * The shared implementation lives in `lib/modals/useModalNavigation.ts` so
+ * modal state behavior is centralized in one place.
  */
 export function useModal(initialOpen = false): UseModalResult {
-  const [isOpen, setIsOpen] = useState(initialOpen)
-  const open = useCallback(() => setIsOpen(true), [])
-  const close = useCallback(() => setIsOpen(false), [])
-  const toggle = useCallback(() => setIsOpen((v) => !v), [])
-  return { isOpen, open, close, toggle, setIsOpen }
+  return useModalState(initialOpen)
 }

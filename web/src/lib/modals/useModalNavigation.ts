@@ -346,6 +346,7 @@ export interface UseModalStateResult {
   open: () => void
   close: () => void
   toggle: () => void
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export function useModalState(initialOpen = false): UseModalStateResult {
@@ -353,5 +354,5 @@ export function useModalState(initialOpen = false): UseModalStateResult {
   const open = useCallback(() => setIsOpen(true), [])
   const close = useCallback(() => setIsOpen(false), [])
   const toggle = useCallback(() => setIsOpen(prev => !prev), [])
-  return { isOpen, open, close, toggle }
+  return { isOpen, open, close, toggle, setIsOpen }
 }
