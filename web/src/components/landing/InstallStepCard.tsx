@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Check, Copy } from 'lucide-react'
 
 import { ACCENT_CLASSES, type AccentColor } from './styles'
@@ -19,7 +20,7 @@ interface InstallStepCardProps {
   variant?: 'tabbed' | 'linear'
 }
 
-export function InstallStepCard({
+export const InstallStepCard = memo(function InstallStepCard({
   step,
   copyKey,
   isCopied,
@@ -105,6 +106,6 @@ export function InstallStepCard({
       </div>
     </div>
   )
-}
+})
 
 export default InstallStepCard
