@@ -5,6 +5,7 @@ import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFa
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { isCardTypeRegistered } from '../../components/cards/cardRegistry'
 import { getDefaultCardSize } from '../../components/dashboard/dashboardUtils'
+import { verifyIntegrity, IntegrityError } from './integrity'
 import type {
   DashboardSummary,
   InstallResult,
@@ -183,7 +184,19 @@ export function useMarketplaceActions(installedItems: InstalledMap) {
       emitMarketplaceInstallFailed(item.type, item.name, `HTTP ${response.status}`, 'http_error')
       throw new Error(`Download failed: ${response.status}`)
     }
-    const json = await response.json()
+    const rawText = await response.text()
+
+    try {
+      await verifyIntegrity(rawText, item.sha256)
+    } catch (error: unknown) {
+      const message = error instanceof IntegrityError
+        ? error.message
+        : 'integrity verification failed'
+      emitMarketplaceInstallFailed(item.type, item.name, message, 'integrity')
+      throw error
+    }
+
+    const json = JSON.parse(rawText)
 
     if (item.type === 'card-preset') {
       const { card_type, config, title } = json as {
