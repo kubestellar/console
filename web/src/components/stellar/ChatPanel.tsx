@@ -202,11 +202,7 @@ export function ChatPanel({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '7px 12px',
+      <div className="flex items-center gap-1.5 px-3 py-2" style={{
         flexShrink: 0,
         borderBottom: '1px solid var(--s-border)',
       }}>
@@ -227,15 +223,9 @@ export function ChatPanel({
       </div>
 
       <div
-        className="s-scroll"
+        className="s-scroll flex min-h-0 flex-1 flex-col gap-3 px-2.5 pb-1 pt-2.5"
         style={{
-          flex: 1,
           overflowY: 'auto',
-          padding: '10px 10px 4px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          minHeight: 0,
         }}
       >
         {catchUp && (
@@ -256,16 +246,14 @@ export function ChatPanel({
           <div key={msg.id}>
             <MessageBubble msg={msg} />
             {msg.suggestedTask && (
-              <div style={{ paddingLeft: 8, marginTop: -8 }}>
+              <div className="-mt-2 pl-2">
                 <button
-                  className="text-xs"
+                  className="mt-1 px-2 py-0.5 text-xs"
                   onClick={() => { void createTask(msg.suggestedTask || '', `From Stellar chat message ${msg.id}`, 'stellar') }}
                   style={{
-                    marginTop: 4,
                     background: 'none',
                     border: '1px solid var(--s-border)',
                     borderRadius: 'var(--s-rs)',
-                    padding: '2px 8px',
                     color: 'var(--s-text-muted)',
                     cursor: 'pointer',
                   }}
@@ -279,16 +267,11 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div style={{ padding: '8px 10px', flexShrink: 0, borderTop: '1px solid var(--s-border)' }}>
+      <div className="px-2.5 py-2" style={{ flexShrink: 0, borderTop: '1px solid var(--s-border)' }}>
         {localPendingAction && (
           <div
-            className="text-xs"
+            className="mb-1.5 flex items-center gap-1.5 px-2 py-1 text-xs"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              marginBottom: 6,
-              padding: '3px 8px',
               background: 'rgba(227,179,65,0.1)',
               border: '1px solid rgba(227,179,65,0.3)',
               borderRadius: 'var(--s-rs)',
@@ -306,14 +289,10 @@ export function ChatPanel({
             </button>
           </div>
         )}
-        <div style={{
-          display: 'flex',
-          gap: 6,
-          alignItems: 'flex-end',
+        <div className="flex items-end gap-1.5 px-2.5 py-2" style={{
           background: 'var(--s-surface-2)',
           border: '1px solid var(--s-border)',
           borderRadius: 'var(--s-r)',
-          padding: '7px 10px',
         }}>
           <TextArea
             ref={textRef}
@@ -338,7 +317,7 @@ export function ChatPanel({
             }}
           />
           <button
-            className="text-sm"
+            className="px-2.5 py-1 text-sm"
             onClick={() => { void send() }}
             disabled={!input.trim() || busy}
             style={{
@@ -346,7 +325,6 @@ export function ChatPanel({
               color: input.trim() && !busy ? 'var(--s-brand-foreground)' : 'var(--s-text-dim)',
               border: 'none',
               borderRadius: 'var(--s-rs)',
-              padding: '4px 10px',
               fontWeight: 700,
               cursor: input.trim() && !busy ? 'pointer' : 'default',
               flexShrink: 0,
@@ -356,7 +334,7 @@ export function ChatPanel({
             {busy ? '···' : '↑'}
           </button>
         </div>
-        <div className="text-xs" style={{ color: 'var(--s-text-dim)', marginTop: 4, paddingLeft: 2 }}>
+        <div className="mt-1 pl-0.5 text-xs" style={{ color: 'var(--s-text-dim)' }}>
           Enter to send · Shift+Enter for newline
         </div>
       </div>

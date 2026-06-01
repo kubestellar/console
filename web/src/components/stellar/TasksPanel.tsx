@@ -19,11 +19,8 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
     }}>
       <button
         onClick={onToggle}
+        className="flex w-full items-center gap-2 px-3 py-2"
         style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '7px 12px',
           background: 'none',
           border: 'none',
           color: 'var(--s-text)',
@@ -32,17 +29,15 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
           fontFamily: 'var(--s-mono)',
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
-          gap: 8,
         }}
       >
         <span>{t('stellar.tasks.title')}</span>
-        <span style={{
+        <span className="px-1.5" style={{
           fontSize: 10,
           color: 'var(--s-warning)',
           background: 'rgba(227,179,65,0.12)',
           border: '1px solid rgba(227,179,65,0.3)',
           borderRadius: 10,
-          padding: '0 5px',
         }}>
           {tasks.length} open
         </span>
@@ -52,7 +47,7 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
       {expanded && (
         <div className="pb-1.5">
           {tasks.length === 0 ? (
-            <div style={{ padding: '2px 12px 8px', color: 'var(--s-text-dim)', fontSize: 11 }}>
+            <div className="px-3 pb-2 pt-0.5" style={{ color: 'var(--s-text-dim)', fontSize: 11 }}>
               No open tasks.
             </div>
           ) : (

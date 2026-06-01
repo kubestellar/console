@@ -82,14 +82,13 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           onOpenDetail?.(watch)
         }
       }}
+      className="mb-1 px-2.5 py-2"
       style={{
-        padding: '7px 10px',
         background: 'var(--s-surface-2)',
         border: '1px solid var(--s-border)',
         borderLeftWidth: 3,
         borderLeftColor: 'var(--s-info)',
         borderRadius: 'var(--s-r)',
-        marginBottom: 4,
         cursor: onOpenDetail ? 'pointer' : 'default',
       }}
     >
@@ -105,7 +104,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
             e.stopPropagation()
           }
         }}
-        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        className="flex items-center gap-1.5"
       >
         {/* Pulse dot */}
         <div style={{
@@ -128,19 +127,19 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           {watch.namespace}/{watch.resourceName}
         </span>
         <button
-          className="text-[11px]"
+          className="px-1 text-[11px]"
           onClick={() => onSnooze(watch.id, 60)}
           title="Snooze 1h"
           style={iconBtnStyle('var(--s-text-dim)')}
         >⏸</button>
         <button
-          className="text-[11px]"
+          className="px-1 text-[11px]"
           onClick={() => onResolve(watch.id)}
           title="Mark resolved"
           style={iconBtnStyle('var(--s-success)')}
         >✓</button>
         <button
-          className="text-[11px]"
+          className="px-1 text-[11px]"
           onClick={() => onDismiss(watch.id)}
           title="Dismiss"
           style={iconBtnStyle('var(--s-text-dim)')}
@@ -148,24 +147,18 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       </div>
 
       {/* Meta */}
-      <div className="text-[10px] font-mono" style={{
+      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 pl-3 text-[10px] font-mono" style={{
         color: 'var(--s-text-muted)',
-        marginTop: 2,
-        paddingLeft: 13,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        flexWrap: 'wrap',
       }}>
         <span>{watch.resourceKind} · {watch.cluster}</span>
         {showTrend && (
           <span
             title={`${trendStats.recent} events in last 24h (prior 24h: ${trendStats.prior}) · hourly distribution shown`}
+            className="inline-flex items-center gap-1 px-1"
             style={{
               color: trendColor(trendStats.trend),
               border: `1px solid ${trendColor(trendStats.trend)}`,
-              borderRadius: 6, padding: '0 4px',
-              display: 'inline-flex', alignItems: 'center', gap: 3,
+              borderRadius: 6,
               fontWeight: 600,
             }}
           >
@@ -181,9 +174,8 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       </div>
 
       {attemptSummary && (
-        <div className="text-[10px] font-mono" style={{
+        <div className="mt-1 pl-3 text-[10px] font-mono" style={{
           color: 'var(--s-text-muted)',
-          marginTop: 3, paddingLeft: 13,
         }}>
           Stellar: {attemptSummary.total} attempt{attemptSummary.total === 1 ? '' : 's'} · {attemptSummary.resolved}✓ · {attemptSummary.escalated}⚠ · {attemptSummary.paused}⏸
         </div>
@@ -191,10 +183,8 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Reason */}
       {watch.reason && (
-        <div className="text-[11px]" style={{
+        <div className="mt-1 pl-3 text-[11px]" style={{
           color: 'var(--s-text-dim)',
-          marginTop: 3,
-          paddingLeft: 13,
           fontStyle: 'italic',
           lineHeight: 1.4,
         }}>
@@ -204,12 +194,10 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Last update from observer */}
       {watch.lastUpdate && (
-        <div className="text-[11px]" style={{
+        <div className="mt-1 pl-3 pr-1.5 py-1 text-[11px]" style={{
           color: 'var(--s-text-muted)',
-          marginTop: 4,
           background: 'rgba(56,139,253,0.05)',
           borderRadius: 'var(--s-rs)',
-          padding: '3px 6px 3px 13px',
         }}>
           {watch.lastUpdate}
         </div>
@@ -217,7 +205,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Stale indicator */}
       {watch.lastChecked && isStale(watch.lastChecked) && (
-        <div className="text-[10px]" style={{ color: 'var(--s-warning)', paddingLeft: 13, marginTop: 2 }}>
+        <div className="mt-0.5 pl-3 text-[10px]" style={{ color: 'var(--s-warning)' }}>
           ⚠ last checked {getRelativeTime(watch.lastChecked)} ago
         </div>
       )}
@@ -235,16 +223,10 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
               e.stopPropagation()
             }
           }}
-          style={{
-            display: 'flex',
-            gap: 6,
-            marginTop: 6,
-            paddingLeft: 13,
-            flexWrap: 'wrap',
-          }}
+          className="mt-1.5 flex flex-wrap gap-1.5 pl-3"
         >
           <button
-            className="text-[11px]"
+            className="flex items-center gap-1 px-2 py-0.5 text-[11px]"
             onClick={() => onAction(investigatePrompt)}
             style={actionBtnStyle('var(--s-info)')}
             title="Pull logs and analyze"
@@ -253,7 +235,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           </button>
           {actionType && (
             <button
-              className="text-[11px]"
+              className="flex items-center gap-1 px-2 py-0.5 text-[11px]"
               onClick={() => onAction(restartPrompt, {
                 prompt: restartPrompt,
                 actionType,
@@ -279,19 +261,14 @@ function iconBtnStyle(color: string): React.CSSProperties {
     border: 'none',
     cursor: 'pointer',
     color,
-    padding: '0 3px',
   }
 }
 
 function actionBtnStyle(color: string): React.CSSProperties {
   return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 3,
     background: 'none',
     border: `1px solid ${color}`,
     borderRadius: 'var(--s-rs)',
-    padding: '2px 8px',
     color,
     cursor: 'pointer',
   }

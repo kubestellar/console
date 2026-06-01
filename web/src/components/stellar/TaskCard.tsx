@@ -8,13 +8,7 @@ interface TaskCardProps {
 export function TaskCard({ task, onStatusChange }: TaskCardProps) {
   const nextStatus = task.status === 'done' ? 'open' : 'done'
   return (
-    <div style={{
-      display: 'flex',
-      gap: 6,
-      alignItems: 'flex-start',
-      padding: '5px 10px',
-      fontSize: 12,
-    }}>
+    <div className="flex items-start gap-1.5 px-2.5 py-1.5 text-xs">
       <button
         onClick={() => onStatusChange(task.id, nextStatus)}
         style={{
@@ -36,7 +30,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
         {task.title}
       </span>
       {task.source === 'stellar' && (
-        <span style={{ fontSize: 10, color: 'var(--s-brand)', marginLeft: 'auto' }}>stellar</span>
+        <span className="ml-auto text-[10px]" style={{ color: 'var(--s-brand)' }}>stellar</span>
       )}
     </div>
   )

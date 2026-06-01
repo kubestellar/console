@@ -460,11 +460,10 @@ export function EventModal({ notification, allNotifications, pendingActions, sol
 
 function Badge({ color, children }: { color: string; children: ReactNode }) {
   return (
-    <span style={{
+    <span className="px-2 py-0.5" style={{
       border: `1px solid ${color}`,
       color,
       borderRadius: 999,
-      padding: '2px 8px',
       background: 'var(--s-surface-2)',
     }}>
       {children}
@@ -526,10 +525,9 @@ function ActionButton({ children, color, disabled = false, onClick }: { children
         color,
         background: 'var(--s-surface-2)',
         borderRadius: 8,
-        padding: '6px 12px',
         opacity: disabled ? 0.5 : 1,
       }}
-      className="text-sm font-medium"
+      className="px-3 py-1.5 text-sm font-medium"
     >
       {children}
     </button>

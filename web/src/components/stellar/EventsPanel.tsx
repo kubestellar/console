@@ -180,11 +180,7 @@ export function EventsPanel({
 
   return (
     <div style={EVENTS_PANEL_LAYOUT_STYLE}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '7px 12px',
+      <div className="flex items-center gap-1.5 px-3 py-2" style={{
         flexShrink: 0,
         borderBottom: '1px solid var(--s-border)',
       }}>
@@ -199,7 +195,7 @@ export function EventsPanel({
           Events
         </span>
         {unread.length > 0 && (
-          <span style={{
+          <span className="px-1.5" style={{
             fontFamily: 'var(--s-mono)',
             fontSize: 10,
             fontWeight: 700,
@@ -207,7 +203,6 @@ export function EventsPanel({
             background: 'rgba(227,179,65,0.12)',
             border: '1px solid rgba(227,179,65,0.3)',
             borderRadius: 10,
-            padding: '0 5px',
           }}>
             {unread.length} new
           </span>
@@ -233,20 +228,18 @@ export function EventsPanel({
       </div>
 
       {pendingActions.length > 0 && (
-        <div style={{
-          padding: '8px 10px',
+        <div className="px-2.5 py-2" style={{
           flexShrink: 0,
           borderBottom: '1px solid var(--s-border)',
           background: 'rgba(227,179,65,0.05)',
         }}>
-          <div style={{
+          <div className="mb-1.5" style={{
             fontFamily: 'var(--s-mono)',
             fontSize: 10,
             fontWeight: 600,
             color: 'var(--s-warning)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            marginBottom: 6,
           }}>
             ⚠ Approval required
           </div>
@@ -282,13 +275,12 @@ export function EventsPanel({
               setSelectedBatchTimestamp(currentBatch.timestamp)
               setBatchMonitorOpen(true)
             }}
+            className="mx-1 mb-2.5 mt-1.5 px-3 py-2.5"
             style={{
               borderLeft: '3px solid var(--s-info)',
               background: 'rgba(99,150,237,0.08)',
               border: '1px solid rgba(99,150,237,0.3)',
               borderRadius: 'var(--s-r)',
-              padding: '10px 12px',
-              margin: '6px 4px 10px',
               cursor: 'pointer',
               transition: 'all 0.2s',
               width: 'calc(100% - 8px)',
@@ -308,7 +300,7 @@ export function EventsPanel({
               background: 'linear-gradient(90deg, transparent, var(--s-info), transparent)',
               animation: 'stellar-pulse 1.6s linear infinite',
             }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="flex items-center gap-2">
               <span style={{ fontSize: 14 }}>⊙</span>
               <span
                 className="font-mono text-xs"

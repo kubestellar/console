@@ -72,14 +72,15 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
     <div style={{ flexShrink: 0 }}>
       <div
         onClick={() => setCollapsed(c => !c)}
+        className="flex items-center gap-1.5 px-3 py-2"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 10,
           background: 'var(--s-surface)',
           borderBottom: '1px solid var(--s-border)',
-          display: 'flex', alignItems: 'center', gap: 6,
-          padding: '7px 12px', cursor: 'pointer', userSelect: 'none',
+          cursor: 'pointer',
+          userSelect: 'none',
         }}
       >
         <span style={{
@@ -98,18 +99,16 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
       </div>
 
       {!collapsed && (
-        <div style={{ padding: '0 8px 8px' }}>
-          <div style={{
-            display: 'flex', gap: 4, marginBottom: 6, paddingLeft: 4,
-          }}>
+        <div className="px-2 pb-2">
+          <div className="mb-1.5 flex gap-1 pl-1">
             <FilterChip active={filter === 'all'} onClick={() => setFilter('all')}>All</FilterChip>
             <FilterChip active={filter === 'actions'} onClick={() => setFilter('actions')}>Actions only</FilterChip>
           </div>
 
           {visible.length === 0 ? (
-            <div style={{
+            <div className="px-1.5 py-2" style={{
               fontSize: 11, color: 'var(--s-text-dim)',
-              fontStyle: 'italic', padding: '8px 6px', textAlign: 'center',
+              fontStyle: 'italic', textAlign: 'center',
             }}>
               Stellar is watching. Nothing to report yet.
             </div>
@@ -122,8 +121,8 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                 // sweeps with no event) render as plain rows.
                 const clickable = !!(entry.eventId && onOpenEvent)
                 const baseStyle: React.CSSProperties = {
-                  display: 'flex', alignItems: 'baseline', gap: 6,
-                  padding: '4px 6px', borderRadius: 'var(--s-rs)',
+                  display: 'flex', alignItems: 'baseline', gap: 8,
+                  borderRadius: 'var(--s-rs)',
                   borderLeft: `2px solid ${k.color}`,
                   background: 'var(--s-surface-2)',
                   fontSize: 11, lineHeight: 1.4,
@@ -168,6 +167,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                   <button
                     key={entry.id}
                     type="button"
+                    className="px-2 py-1"
                     title={`${entry.detail ?? ''}\n\nClick to open the event in the events column.`}
                     onClick={() => entry.eventId && onOpenEvent?.(entry.eventId, entry)}
                     style={baseStyle}
@@ -175,7 +175,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                     {body}
                   </button>
                 ) : (
-                  <div key={entry.id} title={entry.detail} style={baseStyle}>
+                  <div key={entry.id} className="px-2 py-1" title={entry.detail} style={baseStyle}>
                     {body}
                   </div>
                 )

@@ -142,11 +142,12 @@ export function WatchDetailModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
+      className="p-5"
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0, 0, 0, 0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20, backdropFilter: 'blur(4px)',
+        backdropFilter: 'blur(4px)',
       }}
     >
       <div
@@ -163,8 +164,8 @@ export function WatchDetailModal({
         }}
       >
         {/* Header */}
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--s-border)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div className="px-4 py-3.5" style={{ borderBottom: '1px solid var(--s-border)', flexShrink: 0 }}>
+          <div className="flex items-start gap-2.5">
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
                 Watch · {watch.resourceKind} · watching for {formatDuration(watchAgeMs)}
@@ -178,14 +179,15 @@ export function WatchDetailModal({
             </div>
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)', padding: 2 }}
+              className="p-0.5"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)' }}
               title="Close (Esc)"
               aria-label="Close"
             >✕</button>
           </div>
 
           {/* Tags */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 10 }}>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             <Tag label={dominantSeverity} color={color} highlighted />
             <Tag label={watch.status} color="var(--s-text-muted)" />
             {isRecurring && <Tag label="recurring" color="var(--s-warning)" />}
@@ -195,7 +197,7 @@ export function WatchDetailModal({
         </div>
 
         {/* Body */}
-        <div className="s-scroll" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px' }}>
+        <div className="s-scroll flex-1 overflow-y-auto px-4 py-3.5">
           {/* Why watching */}
           {watch.reason && (
             <Section title="Why we're watching">
@@ -205,10 +207,7 @@ export function WatchDetailModal({
 
           {/* Stats row */}
           <SectionHeader title="At a glance" />
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8,
-            marginBottom: 12,
-          }}>
+          <div className="mb-3 grid grid-cols-4 gap-2">
             <Stat label="Events total" value={totalEvents.toString()} />
             <Stat label={`Last ${FREQUENCY_WINDOW_HOURS}h`} value={last24h.toString()} accent={last24h > 0 ? color : undefined} />
             <Stat label="Critical" value={criticalCount.toString()} accent={criticalCount > 0 ? 'var(--s-critical)' : undefined} />
@@ -218,10 +217,10 @@ export function WatchDetailModal({
           {/* Latest observation */}
           {watch.lastUpdate && (
             <Section title="Latest observation">
-              <div style={{
+              <div className="px-2.5 py-1.5" style={{
                 fontSize: 12, color: 'var(--s-text-muted)',
                 background: 'rgba(56,139,253,0.05)',
-                borderRadius: 'var(--s-rs)', padding: '6px 10px',
+                borderRadius: 'var(--s-rs)',
                 lineHeight: 1.5,
               }}>
                 {watch.lastUpdate}
@@ -270,14 +269,13 @@ export function WatchDetailModal({
           <SectionHeader title="Stellar's actions" />
           <div className="mb-3">
             {!attemptSummary || attemptSummary.recent.length === 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--s-text-dim)', fontStyle: 'italic', padding: '4px 10px' }}>
+              <div className="px-2.5 py-1" style={{ fontSize: 11, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>
                 No attempts in last 24 hours.
               </div>
             ) : (
               <>
-                <div style={{
+                <div className="mb-1 px-2.5 py-1" style={{
                   fontSize: 11, color: 'var(--s-text-muted)', fontFamily: 'var(--s-mono)',
-                  padding: '4px 10px', marginBottom: 4,
                 }}>
                   {attemptSummary.total} attempt{attemptSummary.total === 1 ? '' : 's'} ·
                   {' '}{attemptSummary.resolved}✓ resolved ·
@@ -295,12 +293,10 @@ export function WatchDetailModal({
                     s.status === 'escalated' ? '⚠' :
                     s.status === 'exhausted' ? '⏸' : '…'
                   return (
-                    <div key={s.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '6px 10px', fontSize: 11,
+                    <div key={s.id} className="mb-1 flex items-center gap-2 px-2.5 py-1.5" style={{
+                      fontSize: 11,
                       borderLeft: `2px solid ${statusColor}`,
                       background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
-                      marginBottom: 3,
                     }}>
                       <span style={WATCH_TIMELINE_TIMESTAMP_STYLE}>
                         {formatRelative(s.startedAt)}
@@ -325,12 +321,10 @@ export function WatchDetailModal({
               <SectionHeader title={`Event timeline (${relatedEvents.length})`} />
               <div className="mb-3">
                 {relatedEvents.slice(0, EVENT_TIMELINE_LIMIT).map(ev => (
-                  <div key={ev.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '6px 10px', fontSize: 11,
+                  <div key={ev.id} className="mb-1 flex items-center gap-2 px-2.5 py-1.5" style={{
+                    fontSize: 11,
                     borderLeft: `2px solid ${severityColor(ev.severity)}`,
                     background: 'var(--s-surface-2)', borderRadius: 'var(--s-rs)',
-                    marginBottom: 3,
                   }}>
                     <span style={WATCH_TIMELINE_TIMESTAMP_STYLE}>
                       {formatRelative(ev.createdAt)}
@@ -351,19 +345,21 @@ export function WatchDetailModal({
         </div>
 
         {/* Footer — watch controls */}
-        <div style={{
-          padding: '10px 18px', borderTop: '1px solid var(--s-border)',
-          display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0,
+        <div className="flex flex-shrink-0 flex-wrap gap-1.5 px-4 py-2.5" style={{
+          borderTop: '1px solid var(--s-border)',
         }}>
           <button
+            className="px-3 py-1"
             onClick={() => { onResolve(watch.id); onClose() }}
             style={footerBtn('var(--s-success)')}
           >✓ Mark resolved</button>
           <button
+            className="px-3 py-1"
             onClick={() => { onSnooze(watch.id, 60); onClose() }}
             style={footerBtn('var(--s-text-muted)')}
           >⏸ Snooze 1h</button>
           <button
+            className="px-3 py-1"
             onClick={() => { onDismiss(watch.id); onClose() }}
             style={footerBtn('var(--s-text-dim)')}
           >✕ Stop watching</button>
@@ -375,9 +371,9 @@ export function WatchDetailModal({
 
 function Tag({ label, color, highlighted }: { label: string; color: string; highlighted?: boolean }) {
   return (
-    <span style={{
+    <span className="px-1.5 py-0.5" style={{
       fontSize: 10, fontFamily: 'var(--s-mono)',
-      padding: '2px 6px', borderRadius: 10,
+      borderRadius: 10,
       background: highlighted ? `${color}22` : 'var(--s-surface-2)',
       color: highlighted ? color : 'var(--s-text-muted)',
       border: `1px solid ${highlighted ? color : 'var(--s-border)'}`,
@@ -387,9 +383,9 @@ function Tag({ label, color, highlighted }: { label: string; color: string; high
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div style={{
+    <div className="px-2 py-1.5" style={{
       background: 'var(--s-surface-2)', border: '1px solid var(--s-border)',
-      borderRadius: 'var(--s-rs)', padding: '6px 8px',
+      borderRadius: 'var(--s-rs)',
     }}>
       <div style={{ fontSize: 18, fontWeight: 600, color: accent ?? 'var(--s-text)', fontFamily: 'var(--s-mono)' }}>{value}</div>
       <div style={{ fontSize: 9, color: 'var(--s-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{label}</div>
@@ -399,10 +395,10 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div style={{
+    <div className="mb-1.5 mt-2.5" style={{
       fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
       letterSpacing: '0.1em', textTransform: 'uppercase',
-      color: 'var(--s-text-muted)', marginTop: 10, marginBottom: 6,
+      color: 'var(--s-text-muted)',
     }}>{title}</div>
   )
 }
@@ -422,11 +418,10 @@ function Recommendation({
   const { t } = useTranslation()
 
   return (
-    <div style={{
+    <div className="mb-2 px-3 py-2.5" style={{
       border: '1px solid var(--s-border)', borderRadius: 'var(--s-r)',
-      padding: '10px 12px', marginBottom: 8,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+      <div className="mb-1 flex items-center gap-2">
         <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
         <span style={{
           fontSize: 10, fontFamily: 'var(--s-mono)',
@@ -435,14 +430,15 @@ function Recommendation({
           confidence: {confidence}%
         </span>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
+      <div className="mb-2" style={{ fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.5 }}>
         {rationale}
       </div>
       <button
         onClick={onExecute}
+        className="px-3 py-1"
         style={{
           background: 'none', border: `1px solid ${color}`, color,
-          borderRadius: 'var(--s-rs)', padding: '4px 12px',
+          borderRadius: 'var(--s-rs)',
           fontSize: 11, cursor: 'pointer',
         }}
       >{t('stellar.watchDetail.executeViaChat')}</button>
@@ -453,7 +449,7 @@ function Recommendation({
 function footerBtn(color: string): React.CSSProperties {
   return {
     background: 'none', border: `1px solid ${color}`, color,
-    borderRadius: 'var(--s-rs)', padding: '4px 12px',
+    borderRadius: 'var(--s-rs)',
     fontSize: 11, cursor: 'pointer',
   }
 }

@@ -115,17 +115,14 @@ export function ProviderSelector({ session, onSelect }: Props) {
       <button
         id="stellar-provider-selector-btn"
         onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 px-2 py-0.5"
         style={{
           border: '1px solid var(--s-border)',
           borderRadius: 'var(--s-rs)',
-          padding: '2px 8px',
           fontSize: 10,
           color: 'var(--s-text-muted)',
           background: 'var(--s-bg)',
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
           whiteSpace: 'nowrap',
         }}
       >
@@ -133,20 +130,16 @@ export function ProviderSelector({ session, onSelect }: Props) {
       </button>
 
       {open && (
-        <div style={{
+        <div className="mt-1 max-h-[340px] overflow-y-auto p-1" style={{
           position: 'absolute',
           right: 0,
           top: '100%',
-          marginTop: 4,
           minWidth: 280,
           background: 'var(--s-surface)',
           border: '1px solid var(--s-border)',
           borderRadius: 'var(--s-rs)',
           zIndex: 40,
-          padding: 4,
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          maxHeight: 340,
-          overflowY: 'auto',
         }}>
 
           {/* Auto / default */}
@@ -155,12 +148,11 @@ export function ProviderSelector({ session, onSelect }: Props) {
               onSelect({ provider: '', model: '', source: 'auto' })
               setOpen(false)
             }}
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px]"
             style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-              textAlign: 'left',
               background: !session?.provider ? 'rgba(99,102,241,0.12)' : 'transparent',
-              border: 'none', color: 'var(--s-text)', padding: '6px 8px',
-              borderRadius: 4, cursor: 'pointer', fontSize: 11,
+              border: 'none', color: 'var(--s-text)',
+              cursor: 'pointer',
             }}
           >
             <span style={{ fontSize: 14, width: 16, textAlign: 'center' }}>✦</span>
@@ -173,7 +165,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
           {/* CLI Agents — same providers that power AI Missions */}
           {cliOptions.length > 0 && (
             <>
-              <div style={{ padding: '6px 8px 2px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-text-dim)', marginTop: 4 }}>
+              <div className="mt-1 px-2 pb-0.5 pt-1.5 text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--s-text-dim)' }}>
                 CLI Agents
               </div>
               {cliOptions.map(opt => {
@@ -186,12 +178,11 @@ export function ProviderSelector({ session, onSelect }: Props) {
                       onSelect({ provider: agentName, model: '', source: 'env-default', isCli: true })
                       setOpen(false)
                     }}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px]"
                     style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                      textAlign: 'left',
                       background: isSelected ? 'rgba(99,102,241,0.12)' : 'transparent',
-                      border: 'none', color: 'var(--s-text)', padding: '6px 8px',
-                      borderRadius: 4, cursor: 'pointer', fontSize: 11,
+                      border: 'none', color: 'var(--s-text)',
+                      cursor: 'pointer',
                     }}
                   >
                     {opt.agentProvider
@@ -211,28 +202,30 @@ export function ProviderSelector({ session, onSelect }: Props) {
           {/* LLM Providers — configured via Stellar provider settings */}
           {(isLoadingProviders || providersError || stellarProviders.length > 0) && (
             <>
-              <div style={{
-                padding: '6px 8px 2px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', color: 'var(--s-text-dim)', marginTop: 4,
-                borderTop: cliOptions.length > 0 ? '1px solid var(--s-border)' : 'none',
-                paddingTop: cliOptions.length > 0 ? 8 : 2,
-              }}>
+              <div
+                className={`mt-1 px-2 pb-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${cliOptions.length > 0 ? 'border-t pt-2' : 'pt-0.5'}`}
+                style={{
+                  color: 'var(--s-text-dim)',
+                  borderTopColor: 'var(--s-border)',
+                }}
+              >
                 LLM Providers
               </div>
               {isLoadingProviders ? (
-                <div style={{ padding: '10px 8px', fontSize: 11, color: 'var(--s-text-dim)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="flex items-center gap-2 px-2 py-2.5 text-[11px]" style={{ color: 'var(--s-text-dim)' }}>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span>{t('loading', 'Loading…')}</span>
                 </div>
               ) : providersError ? (
-                <div style={{ margin: '6px 8px 0', padding: '8px 10px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, background: 'rgba(239,68,68,0.08)', color: 'var(--s-text)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+                <div className="mx-2 mt-1.5 rounded-lg border px-2.5 py-2" style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: 'var(--s-text)' }}>
+                  <div className="flex items-center gap-2 text-[11px]">
                     <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                     <span>{providersError}</span>
                   </div>
                   <button
                     onClick={() => void loadProviders()}
-                    style={{ marginTop: 8, border: 'none', background: 'transparent', color: 'var(--s-text)', fontSize: 10, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                    className="mt-2"
+                    style={{ border: 'none', background: 'transparent', color: 'var(--s-text)', fontSize: 10, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
                   >
                     {t('retry', 'Retry')}
                   </button>
@@ -249,13 +242,11 @@ export function ProviderSelector({ session, onSelect }: Props) {
                         onSelect({ provider: providerName, model: opt.sublabel, source: opt.source, isCli: false })
                         setOpen(false)
                       }}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px]"
                       style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                        textAlign: 'left',
                         background: isSelected ? 'rgba(99,102,241,0.12)' : 'transparent',
                         border: 'none', color: opt.available ? 'var(--s-text)' : 'var(--s-text-dim)',
-                        padding: '6px 8px', borderRadius: 4,
-                        cursor: opt.available ? 'pointer' : 'default', fontSize: 11,
+                        cursor: opt.available ? 'pointer' : 'default',
                       }}
                     >
                       <span style={PROVIDER_ICON_PLACEHOLDER_STYLE} />
@@ -274,7 +265,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
           )}
 
           {cliOptions.length === 0 && !isLoadingProviders && !providersError && stellarProviders.length === 0 && (
-            <div style={{ padding: '10px 8px', fontSize: 11, color: 'var(--s-text-dim)', textAlign: 'center' }}>
+            <div className="px-2 py-2.5 text-center text-[11px]" style={{ color: 'var(--s-text-dim)' }}>
               No providers detected. Configure an AI agent in the toolbar above.
             </div>
           )}

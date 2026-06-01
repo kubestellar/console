@@ -76,7 +76,7 @@ const ACTION_CONFIG: Record<string, { labelKey: string; icon: string; color: str
   solve: { labelKey: 'stellar.eventCard.actions.solve', icon: '✦', color: 'var(--s-success)' },
 }
 
-const EVENT_CARD_ACTIONS_STYLE = { display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' } as const
+const EVENT_CARD_ACTIONS_STYLE = { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } as const
 const EVENT_CARD_BUTTON_STYLE = { background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' } as const
 
 function buildActionPrompt(hint: string, notification: StellarNotification): string {
@@ -204,22 +204,21 @@ export function EventCard({
         </div>
         <div className="flex items-baseline justify-end gap-2">
           {!notification.read && (
-            <span className="text-[9px] font-mono" title={t('stellar.eventCard.importanceScore', { score: importance.score })} style={{
+            <span className="px-1.5 text-[9px] font-mono" title={t('stellar.eventCard.importanceScore', { score: importance.score })} style={{
               fontWeight: 700,
               letterSpacing: '0.05em', textTransform: 'uppercase',
               color: importanceCol, border: `1px solid ${importanceCol}`,
-              borderRadius: 8, padding: '0 5px', flexShrink: 0,
+              borderRadius: 8, flexShrink: 0,
             }}>{importance.label}</span>
           )}
           {statusBadge && (
-            <span className="text-[9px] font-mono" style={{
+            <span className="px-1.5 text-[9px] font-mono" style={{
               fontWeight: 700,
               letterSpacing: '0.05em',
               textTransform: 'uppercase',
               color: statusBadge.color,
               border: `1px solid ${statusBadge.color}`,
               borderRadius: 8,
-              padding: '0 5px',
               flexShrink: 0,
             }}>{statusBadge.label}</span>
           )}
@@ -234,8 +233,8 @@ export function EventCard({
       {tags.length > 0 && !notification.read && (
         <div className="mt-1 flex flex-wrap gap-1">
           {tags.map(t => (
-            <span className="text-[9px] font-mono" key={t} style={{
-              padding: '1px 5px', borderRadius: 6,
+            <span className="px-1.5 py-0.5 text-[9px] font-mono" key={t} style={{
+              borderRadius: 6,
               background: 'var(--s-surface)', color: 'var(--s-text-muted)',
               border: '1px solid var(--s-border-muted)',
             }}>{t}</span>
@@ -377,7 +376,6 @@ export function EventCard({
             const isSolveActive = hint === 'solve' && solveStatus?.isActive
             return (
               <button
-                className="inline-flex items-center px-2 py-0.5 text-[11px]"
                 key={hint}
                 disabled={isSolveActive}
                 onClick={() => {
@@ -399,8 +397,8 @@ export function EventCard({
                   onAction?.(prompt, action)
                 }}
                 title={isSolveActive ? t('stellar.eventCard.solveAlreadyInProgress') : t('stellar.eventCard.actionTitle', { action: actionLabel, title: notification.title })}
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px]"
                 style={{
-                  gap: 3,
                   background: 'none',
                   border: `1px solid ${cfg.color}`,
                   borderRadius: 'var(--s-rs)',

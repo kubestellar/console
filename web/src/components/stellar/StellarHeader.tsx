@@ -47,11 +47,7 @@ export function StellarHeader({
   const nextBatchCountdown = getNextBatchCountdown(nextBatchAtMs, currentTimeMs)
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '9px 12px',
+    <div className="flex items-center gap-2 px-3 py-2.5" style={{
       background: 'var(--s-bg)',
       borderBottom: '1px solid var(--s-border)',
       flexShrink: 0,
@@ -77,14 +73,13 @@ export function StellarHeader({
       </span>
 
       {clusterCount > 0 && (
-        <span style={{
+        <span className="px-1.5 py-0.5" style={{
           fontFamily: 'var(--s-mono)',
           fontSize: 10,
           color: 'var(--s-text-muted)',
           background: 'var(--s-surface-2)',
           border: '1px solid var(--s-border-muted)',
           borderRadius: 'var(--s-rs)',
-          padding: '1px 6px',
         }}>
           {t('stellar.header.clusterCount', { count: clusterCount })}
         </span>
@@ -130,13 +125,12 @@ export function StellarHeader({
       </div>
 
       {unreadCount > 0 && (
-        <div style={{
+        <div className="px-1.5 py-0.5" style={{
           background: 'var(--s-critical)',
           color: 'hsl(var(--destructive-foreground))',
           borderRadius: STELLAR_HEADER_BADGE_RADIUS_PX,
           fontSize: 10,
           fontWeight: 700,
-          padding: '1px 6px',
           minWidth: STELLAR_HEADER_UNREAD_BADGE_MIN_WIDTH_PX,
           textAlign: 'center',
         }}>
@@ -147,13 +141,13 @@ export function StellarHeader({
       {showCollapse && onCollapse && (
         <button
           onClick={onCollapse}
+          className="p-0.5"
           style={{
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             color: 'var(--s-text-dim)',
             fontSize: 14,
-            padding: 2,
             lineHeight: 1,
             borderRadius: 'var(--s-rs)',
             transition: 'color var(--s-t)',

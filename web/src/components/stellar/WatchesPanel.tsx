@@ -29,11 +29,8 @@ export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze, onAction
       {/* Title row */}
       <div
         onClick={() => setCollapsed(c => !c)}
+        className="flex items-center gap-1.5 px-3 py-2"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '7px 12px',
           cursor: 'pointer',
           userSelect: 'none',
         }}
@@ -48,14 +45,13 @@ export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze, onAction
         }}>
           Watching
         </span>
-        <span style={{
+        <span className="px-1.5" style={{
           fontFamily: 'var(--s-mono)',
           fontSize: 10,
           color: 'var(--s-info)',
           background: 'rgba(56,139,253,0.1)',
           border: '1px solid rgba(56,139,253,0.25)',
           borderRadius: 10,
-          padding: '0 5px',
         }}>
           {active.length}
         </span>
@@ -66,7 +62,7 @@ export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze, onAction
       </div>
 
       {!collapsed && (
-        <div style={{ padding: '0 8px 8px' }}>
+        <div className="px-2 pb-2">
           {active.map(w => (
             <WatchCard
               key={w.id}

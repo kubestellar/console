@@ -12,7 +12,7 @@ const FLEX_MIN_WIDTH_STYLE = { flex: 1, minWidth: 0 } as const
 const BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE = {
   display: 'flex',
   alignItems: 'center',
-  gap: 6,
+  gap: 8,
 } as const
 const BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE = {
   fontFamily: 'var(--s-mono)',
@@ -274,11 +274,8 @@ function EventRow({ event }: { event: BatchEvent }) {
         aria-expanded={hasSteps ? expanded : undefined}
         onClick={hasSteps ? () => setExpanded(x => !x) : undefined}
         onKeyDown={hasSteps ? handleKeyDown : undefined}
+        className="flex items-center gap-2.5 px-3 py-2.5"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '10px 12px',
           cursor: hasSteps ? 'pointer' : 'default',
           userSelect: 'none',
         }}
@@ -349,26 +346,21 @@ function EventRow({ event }: { event: BatchEvent }) {
 
       {/* Expanded steps */}
       {expanded && hasSteps && (
-        <div style={{
+        <div className="flex flex-col gap-2 px-3 pb-3 pl-6 pt-2.5" style={{
           borderTop: '1px solid var(--s-border)',
-          padding: '10px 12px 12px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
         }}>
-          <div style={{
+          <div className="mb-1" style={{
             fontFamily: 'var(--s-mono)',
             fontSize: 10,
             fontWeight: 600,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: 'var(--s-text-muted)',
-            marginBottom: 4,
           }}>
             {t('stellar.batch.resolutionSteps')}
           </div>
           {event.steps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div key={i} className="flex items-start gap-2">
               <span style={{
                 fontSize: 12,
                 flexShrink: 0,
@@ -557,11 +549,12 @@ export function BatchMonitorModal({
 
   return createPortal(
     <div
+      className="p-4"
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,0.7)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 9999, padding: 16,
+        zIndex: 9999,
       }}
       onClick={onClose}
     >
@@ -582,13 +575,12 @@ export function BatchMonitorModal({
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          padding: '16px 20px',
+        <div className="flex items-center gap-3 px-5 py-4" style={{
           borderBottom: '1px solid var(--s-border)',
-          display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+          flexShrink: 0,
         }}>
           <div style={FLEX_MIN_WIDTH_STYLE}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+            <div className="mb-1 flex flex-wrap items-center gap-2.5">
               <h2
                 id={titleId}
                 style={{
@@ -598,18 +590,22 @@ export function BatchMonitorModal({
               >
                 {t('stellar.batch.title')}
               </h2>
-              <span style={{
-                fontFamily: 'var(--s-mono)', fontSize: 11,
-                color: 'var(--s-text-muted)',
-                background: 'var(--s-surface-2)',
-                padding: '2px 8px', borderRadius: 'var(--s-rs)',
-              }}>
+              <span
+                className="px-2 py-0.5"
+                style={{
+                  fontFamily: 'var(--s-mono)', fontSize: 11,
+                  color: 'var(--s-text-muted)',
+                  background: 'var(--s-surface-2)',
+                  borderRadius: 'var(--s-rs)',
+                }}
+              >
                 {new Date(batchTimestamp).toLocaleString()}
               </span>
               <span
                 aria-live="polite"
                 aria-atomic="true"
                 id={statusRegionId}
+                className="px-2 py-0.5"
                 style={{
                   fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
                   letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -622,7 +618,7 @@ export function BatchMonitorModal({
                   border: `1px solid ${batch.status === 'completed' ? 'rgba(63,185,80,0.3)'
                     : batch.status === 'failed' ? 'rgba(227,179,65,0.3)'
                     : 'rgba(99,150,237,0.3)'}`,
-                  borderRadius: 10, padding: '2px 8px',
+                  borderRadius: 10,
                 }}
               >
                 {statusLabel}
@@ -639,9 +635,10 @@ export function BatchMonitorModal({
             onClick={onClose}
             aria-label={t('stellar.batch.closeAriaLabel')}
             title={t('actions.close')}
+            className="p-1"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 18, color: 'var(--s-text-dim)', padding: 4, lineHeight: 1, flexShrink: 0,
+              fontSize: 18, color: 'var(--s-text-dim)', lineHeight: 1, flexShrink: 0,
             }}
           >
             ✕
@@ -649,12 +646,11 @@ export function BatchMonitorModal({
         </div>
 
         {/* Summary */}
-        <div style={{
-          padding: '16px 20px',
+        <div className="px-5 py-4" style={{
           borderBottom: '1px solid var(--s-border)',
           background: 'var(--s-surface-1)', flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+          <div className="mb-3 flex items-center gap-4">
             <span style={{
               fontFamily: 'var(--s-mono)', fontSize: 11, fontWeight: 600,
               color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase',
@@ -673,10 +669,11 @@ export function BatchMonitorModal({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={t('stellar.batch.progressAriaLabel', { percent: progressPercent })}
+            className="mb-3"
             style={{
               width: '100%', height: 8,
               background: 'var(--s-surface-2)',
-              borderRadius: 4, overflow: 'hidden', marginBottom: 12,
+              borderRadius: 4, overflow: 'hidden',
             }}
           >
             <div style={{
@@ -689,7 +686,7 @@ export function BatchMonitorModal({
           </div>
 
           {/* Breakdown */}
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap gap-4">
             {batch.summary.resolved > 0 && (
               <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
                 <span aria-hidden="true" style={{ color: 'var(--s-success)', fontSize: 14 }}>✓</span>
@@ -727,16 +724,11 @@ export function BatchMonitorModal({
 
         {/* Event list */}
         <div
-          style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}
-          className="s-scroll"
+          className="s-scroll flex-1 overflow-y-auto px-5 py-3"
           aria-label={t('stellar.batch.eventListAriaLabel')}
         >
           {batch.events.length === 0 ? (
-            <div style={{
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              gap: 8, padding: 40, color: 'var(--s-text-dim)',
-            }}>
+            <div className="flex flex-col items-center justify-center gap-2 p-10" style={{ color: 'var(--s-text-dim)' }}>
               <span aria-hidden="true" style={{ fontSize: 24, opacity: 0.4 }}>✦</span>
               <span style={{ fontSize: 12 }}>{t('stellar.batch.noEvents')}</span>
             </div>
@@ -744,7 +736,7 @@ export function BatchMonitorModal({
             <div
               role="list"
               aria-label={t('stellar.batch.eventListAriaLabel')}
-              style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+              className="flex flex-col gap-2"
             >
               {batch.events.map(event => (
                 <div key={event.id} role="listitem">

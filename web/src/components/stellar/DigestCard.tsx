@@ -29,15 +29,13 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
   const paused = window.filter(s => s.status === 'exhausted')
 
   return (
-    <div style={{
+    <div className="mx-1 mb-2.5 mt-1.5 px-3 py-2.5" style={{
       borderLeft: '3px solid var(--s-info)',
       background: 'rgba(99,150,237,0.08)',
       border: '1px solid rgba(99,150,237,0.25)',
       borderRadius: 'var(--s-r)',
-      padding: '10px 12px',
-      margin: '6px 4px 10px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="flex items-center gap-2">
         <span className="text-sm">⭐</span>
         <span
           className="font-mono text-xs"
@@ -61,12 +59,12 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}
         >✕</button>
       </div>
-      <div className="text-xs" style={{ color: 'var(--s-text)', marginTop: 6, lineHeight: 1.5 }}>
+      <div className="mt-1.5 text-xs" style={{ color: 'var(--s-text)', lineHeight: 1.5 }}>
         {notification.body}
       </div>
 
       {expanded && (
-        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="mt-2 flex flex-col gap-1.5">
           <DigestGroup label={t('stellar.digest.autoFixed')} color="var(--s-success)" items={resolved} onOpen={onOpenEvent} />
           <DigestGroup label={t('stellar.digest.escalated')} color="var(--s-warning)" items={escalated} onOpen={onOpenEvent} />
           <DigestGroup label={t('stellar.digest.pausedAtBudget')} color="var(--s-warning)" items={paused} onOpen={onOpenEvent} />
@@ -96,22 +94,21 @@ function DigestGroup({
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
           color,
-          marginBottom: 2,
+          marginBottom: 0,
         }}
       >
         {label} ({items.length})
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="flex flex-col gap-0.5">
         {items.map(item => (
           <button
             key={item.id}
             onClick={() => item.eventId && onOpen?.(item.eventId)}
-            className="text-xs"
+            className="flex items-baseline gap-2 px-1.5 py-1 text-xs"
             style={{
               background: 'none', border: '1px solid var(--s-border-muted)',
-              borderRadius: 'var(--s-rs)', padding: '4px 6px', textAlign: 'left',
+              borderRadius: 'var(--s-rs)', textAlign: 'left',
               cursor: item.eventId ? 'pointer' : 'default', color: 'var(--s-text)',
-              display: 'flex', gap: 8, alignItems: 'baseline',
             }}
           >
             <span className="font-mono text-xs" style={{ color: 'var(--s-text-muted)' }}>

@@ -24,13 +24,11 @@ const SOLVE_SPACER_STYLE = { flex: 1 } as const
  */
 export function SolveProgressCard({ progress }: { progress: StellarSolveProgress }) {
   return (
-    <div style={{
+    <div className="mb-1 px-2.5 py-2" style={{
       borderLeft: '3px solid var(--s-info)',
       background: 'var(--s-surface-2)',
       border: '1px solid var(--s-border)',
       borderRadius: 'var(--s-r)',
-      padding: '8px 10px',
-      marginBottom: 4,
       position: 'relative',
       overflow: 'hidden',
     }}>
@@ -39,7 +37,7 @@ export function SolveProgressCard({ progress }: { progress: StellarSolveProgress
         background: 'linear-gradient(90deg, transparent, var(--s-info), transparent)',
         animation: 'stellar-pulse 1.6s linear infinite',
       }} />
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+      <div className="flex items-baseline gap-2">
         <span style={{
           fontFamily: 'var(--s-mono)', fontSize: 9, fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-info)',
@@ -74,15 +72,13 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
   const tag = isExhausted ? '⏸ Paused at budget' : '⚠ Escalated'
   const limitNote = solve.limitHit ? ` (limit hit: ${solve.limitHit})` : ''
   return (
-    <div style={{
+    <div className="mb-1 px-2.5 py-2" style={{
       borderLeft: `3px solid ${color}`,
       background: 'rgba(227,179,65,0.05)',
       border: '1px solid rgba(227,179,65,0.25)',
       borderRadius: 'var(--s-r)',
-      padding: '8px 10px',
-      marginBottom: 4,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="flex items-center gap-2">
         <span style={{
           fontFamily: 'var(--s-mono)', fontSize: 9, fontWeight: 700,
           letterSpacing: '0.08em', textTransform: 'uppercase', color,

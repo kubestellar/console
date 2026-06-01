@@ -8,15 +8,10 @@ interface ProactiveNudgeProps {
 
 export function ProactiveNudge({ nudge, onDismiss, onApplySuggestion }: ProactiveNudgeProps) {
   return (
-    <div style={{
-      margin: '8px 10px 0',
-      padding: '8px 10px',
+    <div className="mx-2.5 mt-2 flex items-start gap-2 px-2.5 py-2" style={{
       background: 'rgba(56,139,253,0.08)',
       border: '1px solid rgba(56,139,253,0.3)',
       borderRadius: 'var(--s-r)',
-      display: 'flex',
-      gap: 8,
-      alignItems: 'flex-start',
     }}>
       <span style={{ color: 'var(--s-brand)', fontSize: 13 }}>●</span>
       <div style={{ flex: 1 }}>
@@ -24,8 +19,8 @@ export function ProactiveNudge({ nudge, onDismiss, onApplySuggestion }: Proactiv
         {nudge.suggest && (
           <button
             onClick={() => onApplySuggestion(nudge.suggest || '')}
+            className="mt-1"
             style={{
-              marginTop: 4,
               background: 'none',
               border: 'none',
               cursor: 'pointer',

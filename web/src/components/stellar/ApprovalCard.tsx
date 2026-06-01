@@ -13,12 +13,12 @@ export function ApprovalCard({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   return (
-    <div style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-warning)', borderRadius: 'var(--s-r)', padding: '8px 10px', marginBottom: 4 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text)', marginBottom: 3 }}>{action.description}</div>
-      <div style={{ fontFamily: 'var(--s-mono)', fontSize: 10, color: 'var(--s-text-muted)', marginBottom: 8 }}>
+    <div className="mb-1 px-2.5 py-2" style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-warning)', borderRadius: 'var(--s-r)' }}>
+      <div className="mb-1 text-xs font-semibold" style={{ color: 'var(--s-text)' }}>{action.description}</div>
+      <div className="mb-2 text-[10px]" style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)' }}>
         {action.actionType} · {action.cluster}{action.namespace ? `/${action.namespace}` : ''}
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div className="flex gap-1.5">
         <button
           onClick={() => {
             setBusy(true)
@@ -26,7 +26,8 @@ export function ApprovalCard({
             onApprove(action.confirmToken).catch((e) => setError(e instanceof Error ? e.message : 'approval failed')).finally(() => setBusy(false))
           }}
           disabled={busy}
-          style={{ background: 'var(--s-success)', color: 'var(--s-success-foreground)', border: 'none', borderRadius: 'var(--s-rs)', padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          className="px-3 py-1"
+          style={{ background: 'var(--s-success)', color: 'var(--s-success-foreground)', border: 'none', borderRadius: 'var(--s-rs)', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
         >
           {busy ? '...' : 'Approve'}
         </button>
@@ -37,7 +38,8 @@ export function ApprovalCard({
             onReject('Rejected by user').catch((e) => setError(e instanceof Error ? e.message : 'reject failed')).finally(() => setBusy(false))
           }}
           disabled={busy}
-          style={{ background: 'none', color: 'var(--s-critical)', border: '1px solid var(--s-critical)', borderRadius: 'var(--s-rs)', padding: '4px 12px', fontSize: 11, fontWeight: 600, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          className="px-3 py-1"
+          style={{ background: 'none', color: 'var(--s-critical)', border: '1px solid var(--s-critical)', borderRadius: 'var(--s-rs)', fontSize: 11, fontWeight: 600, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
         >
           Reject
         </button>
