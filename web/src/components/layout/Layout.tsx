@@ -40,6 +40,7 @@ import { useStaleCacheCleanup } from './useStaleCacheCleanup'
 import { useAutoDemoMode } from './useAutoDemoMode'
 import { useClusterInventoryAnalytics } from './useClusterInventoryAnalytics'
 import { useLayoutBanners } from './LayoutBanners'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 export { ContentLoadingSkeleton } from './LoadingSkeleton'
 export { getStaleCacheMetaKeys } from './useStaleCacheCleanup'
@@ -264,20 +265,22 @@ export function Layout({ children: _children }: LayoutProps) {
             onClose={() => setShowInClusterAgentDialog(false)}
           />
           <AgentSetupDialog />
-          <ProgressToast
-            backendDown={backendDown}
-            backendUnavailable={backendUnavailable}
-            onDismissUpdateToast={() => setUpdateToastDismissed(true)}
-            onRestartBackend={handleRestartBackend}
-            restartError={restartError}
-            restartState={restartState}
-            showBackendBanner={showBackendBanner}
-            showStartupSnackbar={showStartupSnackbar}
-            showUpdateToast={showUpdateToast}
-            updateProgress={updateProgress}
-            versionChanged={versionChanged}
-            watchdogStage={watchdogStage}
-          />
+          <CompactErrorBoundary context="layout-progress-toast">
+            <ProgressToast
+              backendDown={backendDown}
+              backendUnavailable={backendUnavailable}
+              onDismissUpdateToast={() => setUpdateToastDismissed(true)}
+              onRestartBackend={handleRestartBackend}
+              restartError={restartError}
+              restartState={restartState}
+              showBackendBanner={showBackendBanner}
+              showStartupSnackbar={showStartupSnackbar}
+              showUpdateToast={showUpdateToast}
+              updateProgress={updateProgress}
+              versionChanged={versionChanged}
+              watchdogStage={watchdogStage}
+            />
+          </CompactErrorBoundary>
         </NavigationShell>
       </TourProvider>
     </VersionCheckProvider>

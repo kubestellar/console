@@ -9,6 +9,7 @@ import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
 import { SnoozedItem } from './SnoozedItem'
 import { SnoozedRecommendationItem } from './SnoozedRecommendationItem'
 import { SnoozedMissionItem } from './SnoozedMissionItem'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 interface SnoozedCardsProps {
   onApplySwap?: (swap: SnoozedSwap) => void
@@ -89,12 +90,21 @@ export function SnoozedCards({ onApplySwap, onApplyRecommendation, onApplyMissio
       </div>
       <div className="space-y-2">
         {snoozedMissions.map((mission) => (
-          <SnoozedMissionItem
+          <CompactErrorBoundary
             key={mission.id}
-            mission={mission}
-            onApply={() => handleApplyMission(mission)}
-            onDismiss={() => handleDismissMission(mission.id, mission.suggestion.id)}
-          />
+            context="snoozed-mission-item"
+            fallback={(
+              <div className="mx-2 rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400">
+                {t('sidebar.snoozedItemUnavailable', 'A snoozed item could not be displayed.')}
+              </div>
+            )}
+          >
+            <SnoozedMissionItem
+              mission={mission}
+              onApply={() => handleApplyMission(mission)}
+              onDismiss={() => handleDismissMission(mission.id, mission.suggestion.id)}
+            />
+          </CompactErrorBoundary>
         ))}
       </div>
     </div>

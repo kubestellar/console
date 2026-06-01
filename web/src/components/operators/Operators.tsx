@@ -30,14 +30,14 @@ export function Operators() {
   }
 
   // Filter clusters based on global selection
-  const filteredClusters = clusters.filter(c =>
+  const filteredClusters = (clusters || []).filter(c => (
     isAllClustersSelected || globalSelectedClusters.includes(c.name)
-  )
+  ))
   const reachableClusters = filteredClusters.filter(c => c.reachable !== false)
 
   // Filter operator subscriptions based on global cluster selection
   const filteredSubscriptions = (() => {
-    let result = operatorSubs.filter(op => {
+    let result = (operatorSubs || []).filter(op => {
       if (isAllClustersSelected) return true
       const clusterName = op.cluster?.split('/')[0] || ''
       return globalSelectedClusters.includes(clusterName) || globalSelectedClusters.includes(op.cluster || '')
@@ -55,7 +55,7 @@ export function Operators() {
 
   // Filter operators based on global cluster selection
   const filteredOperatorsAPI = (() => {
-    let result = allOperators.filter(op => {
+    let result = (allOperators || []).filter(op => {
       if (isAllClustersSelected) return true
       const clusterName = op.cluster?.split('/')[0] || ''
       return globalSelectedClusters.includes(clusterName) || globalSelectedClusters.includes(op.cluster || '')

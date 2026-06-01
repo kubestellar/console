@@ -4,7 +4,9 @@
  * Renders the SidebarCustomizer content inline (embedded mode) so users
  * can manage their dashboard list without opening a separate dialog.
  */
+import { useTranslation } from 'react-i18next'
 import { SidebarCustomizer } from '../../../layout/SidebarCustomizer'
+import { CompactErrorBoundary } from '../../../CompactErrorBoundary'
 
 interface NavigationSectionProps {
   onClose: () => void
@@ -13,6 +15,8 @@ interface NavigationSectionProps {
 }
 
 export function NavigationSection({ onClose, dashboardName }: NavigationSectionProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {dashboardName && (
@@ -22,7 +26,16 @@ export function NavigationSection({ onClose, dashboardName }: NavigationSectionP
           </p>
         </div>
       )}
-      <SidebarCustomizer isOpen={true} onClose={onClose} embedded />
+      <CompactErrorBoundary
+        context="dashboard-studio-sidebar-customizer"
+        fallback={(
+          <div className="m-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            {t('sidebar.customizer.unavailable', 'Navigation customization is temporarily unavailable.')}
+          </div>
+        )}
+      >
+        <SidebarCustomizer isOpen={true} onClose={onClose} embedded />
+      </CompactErrorBoundary>
     </div>
   )
 }

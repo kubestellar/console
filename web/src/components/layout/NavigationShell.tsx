@@ -20,6 +20,7 @@ import { CLOSE_ANIMATION_MS } from '../../lib/constants/network'
 import { StarsBackground } from './StarsBackground'
 import { StellarToastBridge } from '../stellar/StellarToastBridge'
 import { StellarMissionBridge } from '../stellar/StellarMissionBridge'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 const MissionSidebar = safeLazy(() => import('./mission-sidebar'), 'MissionSidebar')
 const MissionSidebarToggle = safeLazy(() => import('./mission-sidebar'), 'MissionSidebarToggle')
@@ -104,7 +105,9 @@ export function NavigationShell({
           }}
           className={cn('fixed max-w-full transition-[left,right] duration-300', banner.className)}
         >
-          {banner.content}
+          <CompactErrorBoundary context={`layout-banner-${banner.id}`}>
+            {banner.content}
+          </CompactErrorBoundary>
         </div>
       ))}
 

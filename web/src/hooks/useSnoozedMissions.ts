@@ -32,6 +32,21 @@ interface StoredState {
   dismissed: string[] // just IDs for dismissed
 }
 
+function isValidSnoozedMission(value: unknown): value is SnoozedMission {
+  if (!value || typeof value !== 'object') return false
+  const mission = value as Partial<SnoozedMission>
+  const suggestion = mission.suggestion as Partial<MissionSuggestion> | undefined
+
+  return typeof mission.id === 'string'
+    && typeof mission.snoozedAt === 'number'
+    && typeof mission.expiresAt === 'number'
+    && !!suggestion
+    && typeof suggestion.id === 'string'
+    && typeof suggestion.title === 'string'
+    && typeof suggestion.priority === 'string'
+    && typeof suggestion.type === 'string'
+}
+
 // Module-level state for cross-component sharing
 let state: StoredState = { snoozed: [], dismissed: [] }
 const listeners: Set<() => void> = new Set()
@@ -45,12 +60,12 @@ function loadState(): StoredState {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       const parsed = safeJsonParse<StoredState>(stored, { snoozed: [], dismissed: [] }, 'snoozed missions')
-      // Clean up expired snoozes
       const now = Date.now()
-      parsed.snoozed = (parsed.snoozed || []).filter(
-        (s: SnoozedMission) => s.expiresAt > now
-      )
-      return parsed
+      const snoozed = (parsed.snoozed || []).filter((mission): mission is SnoozedMission => (
+        isValidSnoozedMission(mission) && mission.expiresAt > now
+      ))
+      const dismissed = (parsed.dismissed || []).filter((id): id is string => typeof id === 'string')
+      return { snoozed, dismissed }
     }
   } catch {
     // Ignore parse errors

@@ -13,6 +13,7 @@ import { LearnDropdown } from './LearnDropdown'
 import { LogoWithStar } from '../../ui/LogoWithStar'
 import { Tooltip } from '../../ui/Tooltip'
 import { UserProfileDropdown } from '../UserProfileDropdown'
+import { CompactErrorBoundary } from '../../CompactErrorBoundary'
 import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
 // Lazy-load SearchDropdown — it imports useSearchIndex which pulls in 5 MCP
@@ -302,11 +303,20 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
 
         {/* User menu - always visible; shrink-0 so it is never squeezed (#3191) */}
         <div className="shrink-0">
-          <UserProfileDropdown
-            user={user}
-            onLogout={logout}
-            onPreferences={() => navigate(ROUTES.SETTINGS)}
-          />
+          <CompactErrorBoundary
+            context="navbar-user-profile"
+            fallback={(
+              <div className="rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+                {t('profile.profileUnavailable', 'Profile unavailable')}
+              </div>
+            )}
+          >
+            <UserProfileDropdown
+              user={user}
+              onLogout={logout}
+              onPreferences={() => navigate(ROUTES.SETTINGS)}
+            />
+          </CompactErrorBoundary>
         </div>
       </div>
 
