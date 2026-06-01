@@ -48,7 +48,7 @@ function getCopyButtonForStep(stepTitle: string) {
 describe('WhiteLabel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     mockCopyToClipboard.mockResolvedValue(true)
   })
 

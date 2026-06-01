@@ -86,7 +86,7 @@ function renderPage() {
 describe('FromHolmesGPT', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     renderCounts.clear()
     mockCopyToClipboard.mockResolvedValue(true)
   })
