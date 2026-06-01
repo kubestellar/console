@@ -7,7 +7,7 @@ export function workloadPrefix(objectRef: string): string {
   if (!prefixes.some(prefix => objectRef.startsWith(prefix))) return objectRef
 
   const name = objectRef.includes('/') ? objectRef.split('/')[1] : objectRef
-  const twoSuffix = name.replace(/-(?=[a-z0-9]*\d)[a-z0-9]{5,10}-(?=[a-z0-9]*\d)[a-z0-9]{3,5}$/, '')
+  const twoSuffix = name.replace(/-(?=[a-z0-9]*\d)[a-z0-9]{5,10}-[a-z0-9]{3,6}$/, '')
   if (twoSuffix !== name) return twoSuffix
 
   const oneSuffix = name.replace(/-(?=[a-z0-9]*\d)[a-z0-9]{5,10}$/, '')
