@@ -122,6 +122,8 @@ User asks a question in AI chat
 
 ## Deployment Modes
 
+For in-cluster Kagenti controller/agent topologies, setup steps, and troubleshooting, see the [Kagenti deployment guide](kagenti-deployment-guide.md).
+
 | Mode | Command | Port | Use Case |
 |------|---------|------|----------|
 | **Local** | `./start.sh` | 8080 | Development and personal use |

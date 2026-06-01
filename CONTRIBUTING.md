@@ -96,6 +96,16 @@ Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account
 - Update documentation when changing behavior
 - Keep PRs focused on a single concern
 
+### Netlify Functions parity for API changes
+
+If your PR changes shared API behavior, update both sides of the production architecture:
+
+- The hosted site at `console.kubestellar.io` runs on **Netlify**, so supported `/api/*` routes in production are served by `web/netlify/functions/*.mts`, not only by the Go backend.
+- When you change Go handlers, request/response shapes, or shared route behavior under paths such as `pkg/api/`, `cmd/console/`, or related API models, update the matching Netlify Function at the same time.
+- Reviewers should be able to verify route parity from the diff before merge.
+
+For the full dual-deployment explanation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#production-deployment-architecture).
+
 ### Testing Requirements
 
 Before submitting your PR, verify your changes work:

@@ -39,7 +39,7 @@ The quickest path to a working console with your own data. `start.sh` downloads 
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
-Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`). For Helm chart installs that should talk to an in-cluster Kagenti backend, see [Connecting Kagenti](deploy/helm/kubestellar-console/README.md#connecting-kagenti).
+Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`). For Helm chart installs that should talk to an in-cluster Kagenti backend, see [Connecting Kagenti](deploy/helm/kubestellar-console/README.md#connecting-kagenti) and the [Kagenti deployment guide](docs/kagenti-deployment-guide.md) for controller/agent topology, setup steps, and troubleshooting.
 
 ## kc-agent (bridge self-hosted console to your clusters)
 
@@ -201,9 +201,9 @@ The console can use AI for adaptive card suggestions and mission help. AI is **o
 
 **Important**: AI BYOK only works on the **self-hosted** console. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) explicitly disables `LOCAL_AGENT_HTTP_URL` (verified in `web/src/lib/constants/network.ts`), so the browser cannot reach a local agent there. To use your own AI keys, self-host the console first.
 
-### Supported AI providers (CLI-based and local LLMs)
+### Supported kc-agent providers (CLI-based and operator-controlled LLMs)
 
-The console uses **local CLI providers** and **self-hosted LLMs** to maintain full control over cluster access and tooling capabilities. Direct API-key providers (like raw `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY`) are **intentionally not supported** because they bypass the local CLI tooling model required for executing cluster commands (see `pkg/agent/registry.go:378` and [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md#L175)).
+`kc-agent` uses **local CLI providers** and **operator-controlled OpenAI-compatible / self-hosted LLMs** for AI features that need cluster-aware tool execution. Raw vendor API keys such as `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `GOOGLE_API_KEY` do **not** make Anthropic/OpenAI/Gemini available as mission-capable `kc-agent` providers in the current build. Those variables are documented later for backend/Stellar paths and source-level provider configuration, while `kc-agent` itself still relies on the tooling model described in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md#3-local--self-hosted-llms).
 
 **Recommended setup paths:**
 
@@ -235,11 +235,13 @@ The console uses **local CLI providers** and **self-hosted LLMs** to maintain fu
    ./bin/kc-agent
    ```
 
-> **Why are direct API keys not supported?** The agent registry intentionally excludes upstream API-key providers (Anthropic API, OpenAI API, Google Gemini API) because they cannot execute cluster commands AND they route traffic to a specific vendor endpoint that the operator has no control over. The console's security model requires tool-capable agents that can run `kubectl`, `helm`, and other diagnostic commands locally. See `pkg/agent/registry.go:378-384` for the rationale.
+> **Why are Anthropic/OpenAI/Gemini API keys not enough for `kc-agent`?** The agent registry intentionally excludes those upstream API-key providers because they cannot execute cluster commands AND they route traffic to a specific vendor endpoint that the operator has no control over. The console's mission and diagnostic flows require tool-capable agents that can run `kubectl`, `helm`, and other commands locally. See `pkg/agent/registry.go:378-384` for the rationale.
 
-> **A note on the Settings → API Keys modal**: The console UI exposes a "Manage Keys" button under **Settings → API Keys**. This modal is wired to the agent's `/settings/keys` endpoint, but in the current build that endpoint returns an empty providers list (`providers := []providerDef{}` in `pkg/agent/server_operations.go:288`) because API-key-driven agents are hidden. The modal is non-functional by design. **Use the CLI-based or local LLM setup paths above instead.**
+> **What do the README API-key variables enable?** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `GOOGLE_API_KEY` are relevant to backend/Stellar provider configuration and source-level HTTP-provider support, while `GROQ_API_KEY` and `OPENROUTER_API_KEY` enable registered **chat-only** providers. None of those variables replace the CLI-based setup above when you need `kc-agent` missions or other tool-executing workflows.
 
-**If no AI provider is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
+> **A note on the Settings → API Keys modal**: The console UI exposes a "Manage Keys" button under **Settings → API Keys**. This modal is wired to the agent's `/settings/keys` endpoint, but in the current build that endpoint returns an empty providers list (`providers := []providerDef{}` in `pkg/agent/server_operations.go:288`) because API-key-driven agents are hidden there. **Use the CLI-based or local LLM setup paths above for `kc-agent` features.**
+
+**If no supported AI provider is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
 
 **Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and the currently supported self-hosted path using kc-agent's CLI-based agents.
 
@@ -315,9 +317,15 @@ The console and kc-agent use many configurable environment variables. This secti
 | `CLUSTER_NAME` | Optional | — | Override the cluster name displayed in the console. Auto-detected from kubeconfig if not set |
 | `NO_LOCAL_AGENT` | Optional | `false` | Suppress local kc-agent connections (for in-cluster deployments that use backend directly) |
 
-### AI Providers — API Keys
+### AI API Keys — backend features and chat-only providers
 
-Configure at least one to enable AI features. Without any AI provider, the console falls back to deterministic/rule-based behavior.
+These variables are **not all equivalent**:
+
+- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `GOOGLE_API_KEY` document backend/Stellar and source-level HTTP-provider configuration, but they do **not** make Anthropic/OpenAI/Gemini available as mission-capable `kc-agent` providers in the current build.
+- `GROQ_API_KEY` and `OPENROUTER_API_KEY` enable registered **chat-only** providers for analysis/chat workflows; they still do not power `kc-agent` missions or other tool-executing flows.
+- For `kc-agent` tool execution, use the CLI-based or operator-controlled local/self-hosted providers described above and in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md#3-local--self-hosted-llms).
+
+Without any supported AI provider, the console falls back to deterministic/rule-based behavior.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -372,7 +380,7 @@ The Stellar assistant provides intelligent operational insights. Configuration i
 
 ### Service Discovery — KAgent & KAgenti Integration
 
-For in-cluster KAgent/KAgenti service discovery. Use controller URLs to skip discovery.
+For in-cluster KAgent/KAgenti service discovery. Use controller URLs to skip discovery. For full KAgenti deployment patterns, warnings, and troubleshooting, see the [Kagenti deployment guide](docs/kagenti-deployment-guide.md).
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -486,7 +494,7 @@ EOF
 ./startup-oauth.sh
 ```
 
-**With Claude AI:**
+**With backend Anthropic credentials:**
 ```bash
 cat > .env << 'EOF'
 GITHUB_CLIENT_ID=your-client-id
@@ -495,6 +503,8 @@ ANTHROPIC_API_KEY=your-anthropic-key
 EOF
 ./startup-oauth.sh
 ```
+
+This config is useful for backend/Stellar provider paths, but `kc-agent` missions still require a supported CLI-based provider or operator-controlled local/self-hosted endpoint.
 
 **With local Ollama:**
 ```bash
