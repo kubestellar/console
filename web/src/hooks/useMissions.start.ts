@@ -5,6 +5,8 @@ import {
   buildSavedMissionPrompt,
   buildSystemMessages,
 } from './useMissionPromptBuilder'
+import { matchInstallIntent } from '../lib/missions/intentMatcher'
+import { missionCache } from '../components/missions/browser/missionCache'
 import {
   getMissionMessages,
   generateMessageId,
@@ -60,6 +62,23 @@ export function createMissionStartActions(
       return missionId
     }
 
+    // Auto-detect install intent and route through console-kb if a matching mission exists
+    const matchedKbMission = matchInstallIntent(params.initialPrompt, missionCache.installers)
+    if (matchedKbMission) {
+      const kbDescription = `${matchedKbMission.description}\n\nSteps:\n${(matchedKbMission.steps || []).map((s, i) => {
+        let stepText = `${i + 1}. ${s.title}: ${s.description}`
+        if (s.yaml) stepText += `\n\n\`\`\`yaml\n${s.yaml}\n\`\`\``
+        if (s.command) stepText += `\n\n\`\`\`bash\n${s.command}\n\`\`\``
+        return stepText
+      }).join('\n\n')}`
+      params = {
+        ...params,
+        initialPrompt: kbDescription,
+        description: matchedKbMission.description,
+        title: matchedKbMission.title || params.title,
+      }
+    }
+
     const { enhancedPrompt, matchedResolutions, isInstallMission } = buildEnhancedPrompt(params)
     const initialMessages: MissionMessage[] = [
       {
@@ -68,7 +87,13 @@ export function createMissionStartActions(
         content: params.initialPrompt,
         timestamp: new Date(),
       },
-      ...buildSystemMessages(isInstallMission, matchedResolutions),
+      ...(matchedKbMission ? [{
+        id: generateMessageId(),
+        role: 'system' as const,
+        content: `Auto-loaded \`${matchedKbMission.name || matchedKbMission.title}\` from console-kb — following the community-validated install guide.`,
+        timestamp: new Date(),
+      }] : []),
+      ...buildSystemMessages(isInstallMission || !!matchedKbMission, matchedResolutions),
     ]
 
     const mission: Mission = {
