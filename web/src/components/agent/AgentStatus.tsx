@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
 import { useTranslation } from 'react-i18next'
+import { useModal } from '@/hooks/useModal'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { emitInstallCommandCopied } from '@/lib/analytics'
 import { copyToClipboard } from '../../lib/clipboard'
@@ -10,7 +10,7 @@ import { copyToClipboard } from '../../lib/clipboard'
 export function AgentStatus() {
   const { t } = useTranslation('common')
   const { status, health, error, isDemoMode } = useLocalAgent()
-  const [showSetup, setShowSetup] = useState(false)
+  const setupDialog = useModal()
 
   if (status === 'connecting') {
     return (
@@ -33,13 +33,13 @@ export function AgentStatus() {
             {error || t('agentStatus.demoModeDefaultMessage')}
           </p>
           <button
-            onClick={() => setShowSetup(true)}
+            onClick={setupDialog.open}
             className="mt-2 text-sm text-yellow-500 hover:text-yellow-400 underline underline-offset-2 transition-colors"
           >
             {t('agentStatus.howToConnect')}
           </button>
         </div>
-        <SetupInstructionsDialog isOpen={showSetup} onClose={() => setShowSetup(false)} />
+        <SetupInstructionsDialog isOpen={setupDialog.isOpen} onClose={setupDialog.close} />
       </>
     )
   }

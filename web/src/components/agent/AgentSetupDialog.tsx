@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Download, ChevronDown, ChevronRight } from 'lucide-react'
 import { useLocalAgent } from '@/hooks/useLocalAgent'
+import { useModal } from '@/hooks/useModal'
 import { BaseModal } from '../../lib/modals'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +20,9 @@ const SNOOZE_DURATION = MS_PER_DAY // 24 hours
 export function AgentSetupDialog() {
   const { t } = useTranslation('common')
   const { status, isConnected } = useLocalAgent()
-  const [show, setShow] = useState(false)
+  const mainDialog = useModal()
+  const linuxSection = useModal()
+  const windowsSection = useModal()
   const [copiedMacOS, setCopiedMacOS] = useState(false)
   const [copiedLinux, setCopiedLinux] = useState(false)
   const [copiedWindows, setCopiedWindows] = useState(false)
@@ -44,10 +47,10 @@ export function AgentSetupDialog() {
 
   // Allow external triggers (e.g. from MissionChat saved state)
   useEffect(() => {
-    const handler = () => setShow(true)
+    const handler = () => mainDialog.open()
     window.addEventListener('open-agent-setup', handler)
     return () => window.removeEventListener('open-agent-setup', handler)
-  }, [])
+  }, [mainDialog])
 
   useEffect(() => {
     // Never auto-show on Netlify — no agent can be installed there
@@ -58,7 +61,7 @@ export function AgentSetupDialog() {
 
     // Auto-close if connection succeeded while dialog was open (#5674)
     if (isConnected) {
-      setShow(false)
+      mainDialog.close()
       return
     }
 
@@ -75,11 +78,8 @@ export function AgentSetupDialog() {
     if (snoozedUntil && Date.now() < parseInt(snoozedUntil)) return
 
     // Show the dialog
-    setShow(true)
-  }, [status, isConnected])
-
-  const [showLinux, setShowLinux] = useState(false)
-  const [showWindows, setShowWindows] = useState(false)
+    mainDialog.open()
+  }, [status, isConnected, mainDialog])
 
   const copyMacOS = async () => {
     await copyToClipboard(macOSInstallCommand)
@@ -104,18 +104,18 @@ export function AgentSetupDialog() {
 
   const handleSnooze = () => {
     safeSetItem(SNOOZED_KEY, String(Date.now() + SNOOZE_DURATION))
-    setShow(false)
+    mainDialog.close()
   }
 
   const handleDismiss = (rememberChoice: boolean) => {
     if (rememberChoice) {
       safeSetItem(DISMISSED_KEY, 'true')
     }
-    setShow(false)
+    mainDialog.close()
   }
 
   return (
-    <BaseModal isOpen={show} onClose={() => handleDismiss(false)} size="lg">
+    <BaseModal isOpen={mainDialog.isOpen} onClose={() => handleDismiss(false)} size="lg">
       <BaseModal.Header
         title={t('agentSetup.welcomeTitle')}
         description={t('agentSetup.welcomeDescription')}
@@ -152,13 +152,13 @@ export function AgentSetupDialog() {
         {/* Linux Install Option (collapsible) */}
         <div className="mt-3">
           <button
-            onClick={() => setShowLinux(!showLinux)}
+            onClick={linuxSection.toggle}
             className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
           >
-            {showLinux ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {linuxSection.isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             {t('agentSetup.linuxInstructions')}
           </button>
-          {showLinux && (
+          {linuxSection.isOpen && (
             <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
               <p className="text-xs text-muted-foreground">{t('agentSetup.linuxBuildDesc')}</p>
               <div className="flex items-center gap-2">
@@ -180,13 +180,13 @@ export function AgentSetupDialog() {
         {/* Windows (WSL2) Install Option (collapsible) — #6185 */}
         <div className="mt-2">
           <button
-            onClick={() => setShowWindows(!showWindows)}
+            onClick={windowsSection.toggle}
             className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
           >
-            {showWindows ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            {windowsSection.isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             {t('agentSetup.windowsInstructions', 'Windows (WSL2) instructions')}
           </button>
-          {showWindows && (
+          {windowsSection.isOpen && (
             <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 space-y-2">
               <p className="text-xs text-muted-foreground">
                 {t(

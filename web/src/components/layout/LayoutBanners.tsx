@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Box, Plug, Rocket, Settings, Wifi, WifiOff, X } from 'lucide-react'
+import { useModal } from '@/hooks/useModal'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 import {
@@ -56,7 +57,7 @@ export function useLayoutBanners({
   onToggleDemoOrDismiss,
 }: UseLayoutBannersOptions) {
   const { t } = useTranslation()
-  const [mobileBannerStackExpanded, setMobileBannerStackExpanded] = useState(false)
+  const bannerStack = useModal()
 
   const showNetworkBanner = !isOnline || wasOffline
   const showDemoBanner = isDemoMode && !demoBannerDismissed
@@ -262,10 +263,10 @@ export function useLayoutBanners({
   useEffect(() => {
     if (showMobileBannerSummary) return undefined
     const resetExpandedState = window.setTimeout(() => {
-      setMobileBannerStackExpanded(false)
+      bannerStack.close()
     }, 0)
     return () => window.clearTimeout(resetExpandedState)
-  }, [showMobileBannerSummary])
+  }, [showMobileBannerSummary, bannerStack])
 
   const visibleBanners: LayoutBanner[] = showMobileBannerSummary
     ? [{
@@ -281,15 +282,15 @@ export function useLayoutBanners({
             </div>
             <button
               type="button"
-              onClick={() => setMobileBannerStackExpanded(expanded => !expanded)}
+              onClick={bannerStack.toggle}
               className="text-xs px-2 py-2 min-h-11 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
-              aria-expanded={mobileBannerStackExpanded}
+              aria-expanded={bannerStack.isOpen}
             >
-              {mobileBannerStackExpanded ? t('layout.hideAlerts') : t('layout.reviewAlerts')}
+              {bannerStack.isOpen ? t('layout.hideAlerts') : t('layout.reviewAlerts')}
             </button>
           </div>
         ),
-      }, ...(mobileBannerStackExpanded ? activeBanners : [])]
+      }, ...(bannerStack.isOpen ? activeBanners : [])]
     : activeBanners
 
   return {
