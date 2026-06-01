@@ -16,6 +16,11 @@ import type {
 } from './types'
 
 const INSTALLED_KEY = 'kc-marketplace-installed'
+const SHA_256_HASH_ALGORITHM = 'SHA-256'
+const SHA_256_HEX_LENGTH = 64
+const HEX_RADIX = 16
+const HEX_BYTE_WIDTH = 2
+const SHA_256_PREFIX = 'sha256:'
 
 const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-karmada': 'karmada_status',
@@ -134,6 +139,41 @@ function markUninstalled(itemId: string) {
   notifyInstalledChange()
 }
 
+function normalizeSha256(value: string): string {
+  const normalized = value.trim().toLowerCase()
+  return normalized.startsWith(SHA_256_PREFIX) ? normalized.slice(SHA_256_PREFIX.length) : normalized
+}
+
+function getExpectedMarketplaceDigest(item: MarketplaceItem): string {
+  if (typeof item.sha256 !== 'string') {
+    throw new Error(`Marketplace item ${item.id} is missing a valid SHA-256 digest`)
+  }
+
+  const expectedDigest = normalizeSha256(item.sha256)
+  if (!expectedDigest || expectedDigest.length !== SHA_256_HEX_LENGTH) {
+    throw new Error(`Marketplace item ${item.id} is missing a valid SHA-256 digest`)
+  }
+  return expectedDigest
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(byte => byte.toString(HEX_RADIX).padStart(HEX_BYTE_WIDTH, '0'))
+    .join('')
+}
+
+async function verifyMarketplaceItemIntegrity(itemId: string, expectedDigest: string, body: ArrayBuffer): Promise<void> {
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    throw new Error('SHA-256 integrity verification is unavailable in this browser')
+  }
+
+  const actualDigestBuffer = await crypto.subtle.digest(SHA_256_HASH_ALGORITHM, body)
+  const actualDigest = bytesToHex(new Uint8Array(actualDigestBuffer))
+  if (actualDigest !== expectedDigest) {
+    throw new Error(`SHA-256 integrity check failed for marketplace item ${itemId}`)
+  }
+}
+
 export function useInstalledMarketplaceItems(): InstalledMap {
   return useSyncExternalStore(subscribeInstalled, getInstalledSnapshot, () => emptyInstalledMap)
 }
@@ -170,10 +210,20 @@ export function useMarketplaceActions(installedItems: InstalledMap) {
   const getInstalledDashboardId = (itemId: string): string | undefined => installedItems[itemId]?.dashboardId
 
   const installItem = async (item: MarketplaceItem): Promise<InstallResult> => {
+    let expectedDigest: string
+    try {
+      expectedDigest = getExpectedMarketplaceDigest(item)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'integrity verification failed'
+      emitMarketplaceInstallFailed(item.type, item.name, message, 'integrity')
+      throw error
+    }
+
     let response: Response
     try {
       response = await fetch(item.downloadUrl, {
-        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+        signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
+      })
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'network error'
       emitMarketplaceInstallFailed(item.type, item.name, message, 'download')
@@ -183,7 +233,25 @@ export function useMarketplaceActions(installedItems: InstalledMap) {
       emitMarketplaceInstallFailed(item.type, item.name, `HTTP ${response.status}`, 'http_error')
       throw new Error(`Download failed: ${response.status}`)
     }
-    const json = await response.json()
+
+    let body: ArrayBuffer
+    try {
+      body = await response.arrayBuffer()
+      await verifyMarketplaceItemIntegrity(item.id, expectedDigest, body)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'integrity verification failed'
+      emitMarketplaceInstallFailed(item.type, item.name, message, 'integrity')
+      throw error
+    }
+
+    let json: unknown
+    try {
+      json = JSON.parse(new TextDecoder().decode(body))
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'invalid JSON payload'
+      emitMarketplaceInstallFailed(item.type, item.name, message, 'parse')
+      throw error
+    }
 
     if (item.type === 'card-preset') {
       const { card_type, config, title } = json as {

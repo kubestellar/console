@@ -8,6 +8,8 @@ const createMockItem = (overrides: Partial<MarketplaceItem> = {}): MarketplaceIt
   name: 'Test Item',
   description: 'Test description',
   type: 'dashboard',
+  downloadUrl: 'https://example.com/test.json',
+  sha256: 'a'.repeat(64),
   tags: ['kubernetes', 'monitoring'],
   status: 'available',
   ...overrides,

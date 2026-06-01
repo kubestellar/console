@@ -96,6 +96,21 @@ import type { MarketplaceItem } from '../useMarketplace'
 
 const INSTALLED_KEY = 'kc-marketplace-installed'
 
+async function hashPayload(payload: unknown): Promise<string> {
+  const body = JSON.stringify(payload)
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))
+  return Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function makeJsonResponse(payload: unknown, status = 200): Response {
+  return new Response(JSON.stringify(payload), {
+    headers: { 'Content-Type': 'application/json' },
+    status,
+  })
+}
+
 function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
   return {
     id: 'test-item',
@@ -104,6 +119,7 @@ function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
     author: 'tester',
     version: '1.0.0',
     downloadUrl: 'https://example.com/test.json',
+    sha256: 'a'.repeat(64),
     tags: ['monitoring'],
     cardCount: 2,
     type: 'dashboard',
@@ -121,10 +137,7 @@ function makeRegistry(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
 }
 
 function seedCache(items: MarketplaceItem[], presets?: MarketplaceItem[]) {
-  vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-    ok: true,
-    json: () => Promise.resolve(makeRegistry(items, presets)),
-  } as Response)
+  vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeJsonResponse(makeRegistry(items, presets)))
 }
 
 function seedInstalledItems(map: Record<string, unknown>) {
@@ -616,13 +629,17 @@ describe('useMarketplace', () => {
   // ──────────────────────── Install / Remove ────────────────────────
 
   it('installs a dashboard item via API import', async () => {
-    seedCache([makeItem({ id: 'dash-1', type: 'dashboard', downloadUrl: 'https://example.com/dash.json' })])
     const dashJson = { layout: [{ type: 'cluster_health' }] }
+    seedCache([
+      makeItem({
+        id: 'dash-1',
+        type: 'dashboard',
+        downloadUrl: 'https://example.com/dash.json',
+        sha256: await hashPayload(dashJson),
+      }),
+    ])
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(dashJson),
-    } as Response)
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeJsonResponse(dashJson))
     mockApiPost.mockResolvedValueOnce({ data: { id: 'imported-dash-id' } })
 
     const { result } = renderHook(() => useMarketplace())
@@ -641,18 +658,22 @@ describe('useMarketplace', () => {
   })
 
   it('installs a card-preset item by POSTing to the default dashboard and dispatching the event', async () => {
-    seedCache([makeItem({ id: 'preset-1', type: 'card-preset', downloadUrl: 'https://example.com/preset.json' })])
     // Payload matches the backend card shape — card_type (snake_case) is
     // what the Go handler and Dashboard.tsx both use.
     const presetJson = { card_type: 'custom_card', config: { foo: 'bar' }, title: 'Custom Card' }
+    seedCache([
+      makeItem({
+        id: 'preset-1',
+        type: 'card-preset',
+        downloadUrl: 'https://example.com/preset.json',
+        sha256: await hashPayload(presetJson),
+      }),
+    ])
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-add-card-from-marketplace', eventSpy)
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(presetJson),
-    } as Response)
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeJsonResponse(presetJson))
     // GET /api/dashboards — return a list with a default dashboard.
     // Set as the persistent default so both reconciliation and installItem get the same data.
     mockApiGet.mockResolvedValue({ data: [{ id: 'dash-default', is_default: true }, { id: 'dash-other' }] })
@@ -688,16 +709,20 @@ describe('useMarketplace', () => {
   })
 
   it('does not mark card-preset installed when the backend POST fails (#6620)', async () => {
-    seedCache([makeItem({ id: 'preset-fail', type: 'card-preset', downloadUrl: 'https://example.com/preset.json' })])
     const presetJson = { card_type: 'custom_card', config: {} }
+    seedCache([
+      makeItem({
+        id: 'preset-fail',
+        type: 'card-preset',
+        downloadUrl: 'https://example.com/preset.json',
+        sha256: await hashPayload(presetJson),
+      }),
+    ])
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-add-card-from-marketplace', eventSpy)
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(presetJson),
-    } as Response)
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeJsonResponse(presetJson))
     // Set as persistent default so both reconciliation and installItem get the same data.
     mockApiGet.mockResolvedValue({ data: [{ id: 'dash-default', is_default: true }] })
     mockApiPost.mockRejectedValueOnce(new Error('backend exploded'))
@@ -717,16 +742,20 @@ describe('useMarketplace', () => {
   })
 
   it('installs a theme item and calls addCustomTheme', async () => {
-    seedCache([makeItem({ id: 'theme-1', type: 'theme', downloadUrl: 'https://example.com/theme.json' })])
     const themeJson = { id: 'theme-1', name: 'Dark Ocean', colors: {} }
+    seedCache([
+      makeItem({
+        id: 'theme-1',
+        type: 'theme',
+        downloadUrl: 'https://example.com/theme.json',
+        sha256: await hashPayload(themeJson),
+      }),
+    ])
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-custom-themes-changed', eventSpy)
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(themeJson),
-    } as Response)
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeJsonResponse(themeJson))
 
     const { result } = renderHook(() => useMarketplace())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -764,10 +793,7 @@ describe('useMarketplace', () => {
   it('emits install-failed analytics on HTTP error during download', async () => {
     seedCache([makeItem({ id: 'fail-2', type: 'dashboard' })])
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-    } as Response)
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response('not found', { status: 404 }))
 
     const { result } = renderHook(() => useMarketplace())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -777,6 +803,35 @@ describe('useMarketplace', () => {
     ).rejects.toThrow('Download failed: 404')
 
     expect(mockEmitInstallFailed).toHaveBeenCalledWith('dashboard', expect.any(String), 'HTTP 404', 'http_error')
+  })
+
+  it('rejects marketplace downloads with a SHA-256 mismatch', async () => {
+    const dashJson = { layout: [{ type: 'cluster_health' }] }
+    seedCache([
+      makeItem({
+        id: 'fail-sha',
+        type: 'dashboard',
+        sha256: 'b'.repeat(64),
+      }),
+    ])
+
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeJsonResponse(dashJson))
+
+    const { result } = renderHook(() => useMarketplace())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await expect(
+      act(() => result.current.installItem(result.current.allItems[0]))
+    ).rejects.toThrow('SHA-256 integrity check failed for marketplace item fail-sha')
+
+    expect(mockApiPost).not.toHaveBeenCalled()
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith(
+      'dashboard',
+      expect.any(String),
+      'SHA-256 integrity check failed for marketplace item fail-sha',
+      'integrity'
+    )
+    expect(result.current.isInstalled('fail-sha')).toBe(false)
   })
 
   it('removes an installed dashboard via API delete', async () => {
