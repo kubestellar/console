@@ -622,6 +622,7 @@ describe('useMarketplace', () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(dashJson),
+      text: () => Promise.resolve(JSON.stringify(dashJson)),
     } as Response)
     mockApiPost.mockResolvedValueOnce({ data: { id: 'imported-dash-id' } })
 
@@ -652,6 +653,7 @@ describe('useMarketplace', () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(presetJson),
+      text: () => Promise.resolve(JSON.stringify(presetJson)),
     } as Response)
     // GET /api/dashboards — return a list with a default dashboard.
     // Set as the persistent default so both reconciliation and installItem get the same data.
@@ -697,6 +699,7 @@ describe('useMarketplace', () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(presetJson),
+      text: () => Promise.resolve(JSON.stringify(presetJson)),
     } as Response)
     // Set as persistent default so both reconciliation and installItem get the same data.
     mockApiGet.mockResolvedValue({ data: [{ id: 'dash-default', is_default: true }] })
@@ -726,6 +729,7 @@ describe('useMarketplace', () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(themeJson),
+      text: () => Promise.resolve(JSON.stringify(themeJson)),
     } as Response)
 
     const { result } = renderHook(() => useMarketplace())
