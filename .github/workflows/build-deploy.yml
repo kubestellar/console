@@ -382,11 +382,20 @@ jobs:
           echo "Cleaning up PVs stuck in deletion for more than 24 hours..."
           PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
           
-          while IFS=$'\t' read -r pvc_name volume_name pvc_deletion; do
+          while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
             if [ -z "$volume_name" ]; then
               continue
             fi
             
+            # Handle PVCs in Lost phase (PV no longer exists) — delete the orphaned PVC so Helm can reprovision
+            if ! kubectl get pv "$volume_name" &>/dev/null; then
+              echo "::warning::PVC '$pvc_name' references missing PV '$volume_name' (phase=$pvc_phase). Deleting orphaned PVC..."
+              kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+              kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null || true
+              continue
+            fi
+
             PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null || echo '{}')
             pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
             
@@ -399,7 +408,7 @@ jobs:
                 kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
               fi
             fi
-          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.status.phase // "Unknown"), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
 
       - name: Validate persistent volumes before deploy
         run: |
