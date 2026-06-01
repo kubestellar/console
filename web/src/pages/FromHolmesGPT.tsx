@@ -105,7 +105,7 @@ const INSTALL_STEPS: InstallStep[] = [
 ]
 
 export function FromHolmesGPT() {
-  const [copiedStep, setCopiedStep] = useState<string | null>(null)
+  const [copyFeedback, setCopyFeedback] = useState({ stepKey: null as string | null, token: 0 })
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -113,13 +113,29 @@ export function FromHolmesGPT() {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
 
+  useEffect(() => {
+    if (copyFeedback.stepKey === null) return
+
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => {
+      setCopyFeedback(current => current.token === copyFeedback.token
+        ? { ...current, stepKey: null }
+        : current)
+    }, COPY_FEEDBACK_TIMEOUT_MS)
+
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [copyFeedback])
+
   const copyCommands = async (commands: string[], step: number) => {
     const text = commands.filter(command => !command.startsWith('#') && command !== '').join('\n')
     const ok = await copyToClipboard(text)
     if (!ok) return
-    setCopiedStep(`step-${step}`)
-    clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_TIMEOUT_MS)
+
+    setCopyFeedback(current => ({
+      stepKey: `step-${step}`,
+      token: current.token + 1,
+    }))
+
     const firstCommand = commands.find(command => !command.startsWith('#') && command !== '') ?? commands[0]
     emitInstallCommandCopied('from_holmesgpt', firstCommand)
   }
@@ -217,7 +233,7 @@ export function FromHolmesGPT() {
               key={step.step}
               step={step}
               copyKey={`step-${step.step}`}
-              isCopied={copiedStep === `step-${step.step}`}
+              isCopied={copyFeedback.stepKey === `step-${step.step}`}
               onCopy={copyCommands}
               accentColor="purple"
               variant="linear"

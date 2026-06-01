@@ -227,12 +227,25 @@ function VisibilityIcon({ visible }: { visible: boolean }) {
 
 function DeploymentSection() {
   const [activeTab, setActiveTab] = useState<DeployTab>('helm')
-  const [copiedStep, setCopiedStep] = useState<string | null>(null)
+  const [copyFeedback, setCopyFeedback] = useState({ stepKey: null as string | null, token: 0 })
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     return () => clearTimeout(copiedTimerRef.current)
   }, [])
+
+  useEffect(() => {
+    if (copyFeedback.stepKey === null) return
+
+    clearTimeout(copiedTimerRef.current)
+    copiedTimerRef.current = setTimeout(() => {
+      setCopyFeedback(current => current.token === copyFeedback.token
+        ? { ...current, stepKey: null }
+        : current)
+    }, COPY_FEEDBACK_TIMEOUT_MS)
+
+    return () => clearTimeout(copiedTimerRef.current)
+  }, [copyFeedback])
 
   const switchTab = (tab: DeployTab) => {
     if (tab === activeTab) return
@@ -244,10 +257,12 @@ function DeploymentSection() {
     const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
     const ok = await copyToClipboard(text)
     if (!ok) return
-    const key = `${activeTab}-${step}`
-    setCopiedStep(key)
-    clearTimeout(copiedTimerRef.current)
-    copiedTimerRef.current = setTimeout(() => setCopiedStep(null), COPY_FEEDBACK_TIMEOUT_MS)
+
+    setCopyFeedback(current => ({
+      stepKey: `${activeTab}-${step}`,
+      token: current.token + 1,
+    }))
+
     const firstCommand = commands.find(c => !c.startsWith('#') && c !== '') ?? commands[0]
     emitWhiteLabelCommandCopy(activeTab, step, firstCommand)
     emitInstallCommandCopied('white_label', firstCommand)
@@ -316,7 +331,7 @@ function DeploymentSection() {
       <div className="space-y-6 max-w-3xl mx-auto">
         {steps.map((s) => {
           const copyKey = `${activeTab}-${s.step}`
-          const isCopied = copiedStep === copyKey
+          const isCopied = copyFeedback.stepKey === copyKey
           return (
             <div
               key={copyKey}
