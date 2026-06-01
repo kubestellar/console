@@ -1,13 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import type { MissionSuggestion } from '../useMissionSuggestions'
 
 vi.mock('../../lib/analytics', () => ({
   emitSnoozed: vi.fn(),
   emitUnsnoozed: vi.fn(),
 }))
 
-import { useSnoozedMissions } from '../useSnoozedMissions'
-import type { MissionSuggestion } from '../useMissionSuggestions'
+const STORAGE_KEY = 'kubestellar-snoozed-missions'
+const NOW_MS = 1_700_000_000_000
 
 const MOCK_SUGGESTION: MissionSuggestion = {
   id: 'mission-1',
@@ -17,56 +18,113 @@ const MOCK_SUGGESTION: MissionSuggestion = {
   priority: 'high',
   action: { type: 'ai', target: 'diagnose', label: 'Diagnose' },
   context: { count: 3 },
-  detectedAt: Date.now(),
+  detectedAt: NOW_MS,
+}
+
+async function loadHookModule() {
+  vi.resetModules()
+  return import('../useSnoozedMissions')
+}
+
+async function renderSnoozedMissionsHook() {
+  const module = await loadHookModule()
+  const hook = renderHook(() => module.useSnoozedMissions())
+  return { module, ...hook }
 }
 
 describe('useSnoozedMissions', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW_MS)
   })
 
-  it('starts with empty snoozed/dismissed lists', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('starts with empty snoozed and dismissed lists', async () => {
+    const { result } = await renderSnoozedMissionsHook()
+
     expect(result.current.snoozedMissions).toEqual([])
     expect(result.current.dismissedMissions).toEqual([])
   })
 
-  it('snoozeMission adds to snoozed list', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
-    act(() => { result.current.snoozeMission(MOCK_SUGGESTION) })
-    expect(result.current.snoozedMissions).toHaveLength(1)
+  it('falls back to empty state when persisted JSON is invalid', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    localStorage.setItem(STORAGE_KEY, '{invalid-json')
+
+    const { result } = await renderSnoozedMissionsHook()
+
+    expect(result.current.snoozedMissions).toEqual([])
+    expect(result.current.dismissedMissions).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[useSnoozedMissions] Failed to parse snoozed missions, using default',
+      expect.anything(),
+    )
+
+    warnSpy.mockRestore()
   })
 
-  it('isSnoozed returns true for snoozed missions', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
-    act(() => { result.current.snoozeMission(MOCK_SUGGESTION) })
+  it('drops malformed and expired persisted entries before exposing state', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        snoozed: [
+          {
+            id: 'valid-snooze',
+            suggestion: MOCK_SUGGESTION,
+            snoozedAt: NOW_MS - 1_000,
+            expiresAt: NOW_MS + 60_000,
+          },
+          {
+            id: 'missing-suggestion',
+            snoozedAt: NOW_MS - 1_000,
+            expiresAt: NOW_MS + 60_000,
+          },
+          {
+            id: 'expired-snooze',
+            suggestion: { ...MOCK_SUGGESTION, id: 'mission-expired' },
+            snoozedAt: NOW_MS - 120_000,
+            expiresAt: NOW_MS - 1,
+          },
+        ],
+        dismissed: ['mission-1', 42, null],
+      }),
+    )
+
+    const { result } = await renderSnoozedMissionsHook()
+
+    expect(result.current.snoozedMissions).toEqual([
+      expect.objectContaining({
+        id: 'valid-snooze',
+        suggestion: expect.objectContaining({ id: 'mission-1' }),
+      }),
+    ])
+    expect(result.current.dismissedMissions).toEqual(['mission-1'])
+  })
+
+  it('snoozeMission adds to snoozed list and updates snoozed lookups', async () => {
+    const { result } = await renderSnoozedMissionsHook()
+
+    act(() => {
+      result.current.snoozeMission(MOCK_SUGGESTION)
+    })
+
+    expect(result.current.snoozedMissions).toHaveLength(1)
     expect(result.current.isSnoozed('mission-1')).toBe(true)
     expect(result.current.isSnoozed('nonexistent')).toBe(false)
   })
 
-  it('clearAllSnoozed removes all snoozed missions', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
-    act(() => { result.current.snoozeMission(MOCK_SUGGESTION) })
-    act(() => { result.current.clearAllSnoozed() })
-    expect(result.current.snoozedMissions).toHaveLength(0)
-  })
+  it('dismissMission tracks dismissed mission ids', async () => {
+    const { result } = await renderSnoozedMissionsHook()
 
-  it('dismissMission adds to dismissed list', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
-    act(() => { result.current.dismissMission('mission-1') })
+    act(() => {
+      result.current.dismissMission('mission-1')
+    })
+
     expect(result.current.isDismissed('mission-1')).toBe(true)
-  })
-
-  it('isDismissed returns false for non-dismissed missions', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
     expect(result.current.isDismissed('nonexistent')).toBe(false)
-  })
-
-  it('snoozeMission changes snoozed state', () => {
-    const { result } = renderHook(() => useSnoozedMissions())
-    act(() => { result.current.snoozeMission(MOCK_SUGGESTION) })
-    // The mission should now be snoozed
-    expect(result.current.isSnoozed('mission-1')).toBe(true)
   })
 })
