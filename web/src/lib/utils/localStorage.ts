@@ -60,6 +60,33 @@ export function safeRemoveItem(key: string): boolean {
 }
 
 /**
+ * Safely read a localStorage key by index.
+ * @param index - The storage index to read
+ * @returns The key at the given index or null if unavailable
+ */
+export function safeKey(index: number): string | null {
+  try {
+    return localStorage.key(index)
+  } catch (error: unknown) {
+    console.error('Failed to read localStorage key by index:', index, error)
+    return null
+  }
+}
+
+/**
+ * Safely read the current localStorage length.
+ * @returns The number of keys or 0 if localStorage is unavailable
+ */
+export function safeGetStorageLength(): number {
+  try {
+    return localStorage.length
+  } catch (error: unknown) {
+    console.error('Failed to read localStorage length:', error)
+    return 0
+  }
+}
+
+/**
  * Safely parse JSON from localStorage
  * @param key - The key to retrieve and parse
  * @returns The parsed object or null if not found, invalid JSON, or error occurs

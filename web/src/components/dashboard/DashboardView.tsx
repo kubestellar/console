@@ -53,7 +53,6 @@ export function DashboardView() {
         handleGridKeyDown={state.handleGridKeyDown}
         handleHeightChange={state.handleHeightChange}
         handleInsertAfter={state.handleInsertAfter}
-        handleInsertBefore={state.handleInsertBefore}
         handleRegisterExpandTrigger={state.handleRegisterExpandTrigger}
         handleRemoveCard={state.handleRemoveCard}
         handleWidthChange={state.handleWidthChange}

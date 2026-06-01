@@ -3,6 +3,13 @@
  * Used by usePersistedSettings to collect and restore settings.
  */
 
+import {
+  safeGetItem,
+  safeGetStorageLength,
+  safeKey,
+  safeRemoveItem,
+  safeSetItem,
+} from './utils/localStorage'
 import type { AllSettings } from './settingsTypes'
 import {
   STORAGE_KEY_AI_MODE,
@@ -19,69 +26,6 @@ import {
   STORAGE_KEY_NOTIFICATION_CONFIG,
   STORAGE_KEY_TOUR_COMPLETED,
 } from './constants'
-
-/**
- * Safe wrapper for localStorage.getItem that handles private browsing and quota errors.
- * Returns null on failure instead of throwing.
- */
-function safeGetItem(key: string): string | null {
-  try {
-    return localStorage.getItem(key)
-  } catch {
-    console.warn(`Failed to read localStorage key: ${key}`)
-    return null
-  }
-}
-
-/**
- * Safe wrapper for localStorage.setItem that handles private browsing and quota errors.
- * Silently fails on error instead of throwing.
- */
-function safeSetItem(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    console.warn(`Failed to write localStorage key: ${key}`)
-  }
-}
-
-/**
- * Safe wrapper for localStorage.removeItem that handles private browsing and quota errors.
- * Silently fails on error instead of throwing.
- */
-function safeRemoveItem(key: string): void {
-  try {
-    localStorage.removeItem(key)
-  } catch {
-    console.warn(`Failed to remove localStorage key: ${key}`)
-  }
-}
-
-/**
- * Safe wrapper for localStorage.key that handles private browsing and quota errors.
- * Returns null on failure instead of throwing.
- */
-function safeKey(index: number): string | null {
-  try {
-    return localStorage.key(index)
-  } catch {
-    console.warn(`Failed to access localStorage key at index: ${index}`)
-    return null
-  }
-}
-
-/**
- * Safe wrapper for localStorage.length that handles private browsing and quota errors.
- * Returns 0 on failure instead of throwing.
- */
-function getSafeStorageLength(): number {
-  try {
-    return localStorage.length
-  } catch {
-    console.warn('Failed to access localStorage length')
-    return 0
-  }
-}
 
 // Event dispatched by individual hooks when they write to localStorage
 export const SETTINGS_CHANGED_EVENT = 'kubestellar-settings-changed'
@@ -169,7 +113,7 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
 
   // Stat block configs — collect all *-stats-config keys from localStorage
   const statBlockConfigs: Record<string, unknown[]> = {}
-  const storageLength = getSafeStorageLength()
+  const storageLength = safeGetStorageLength()
   for (let i = 0; i < storageLength; i++) {
     const key = safeKey(i)
     if (key && key.endsWith('-stats-config')) {
@@ -211,10 +155,10 @@ export function restoreToLocalStorage(settings: AllSettings): void {
   // If the write fails (e.g. localStorage full), themes remain unavailable until the
   // next successful sync — the same state as before the restore attempt.
   if (Array.isArray(settings.customThemes) && settings.customThemes.length > 0) {
-    try {
-      safeSetItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(settings.customThemes))
+    const storedCustomThemes = safeSetItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(settings.customThemes))
+    if (storedCustomThemes) {
       window.dispatchEvent(new Event('kc-custom-themes-changed'))
-    } catch { /* localStorage unavailable — themes will reappear on next successful sync */ }
+    }
   }
 
   if (settings.accessibility) {
@@ -250,7 +194,7 @@ export function restoreToLocalStorage(settings: AllSettings): void {
   if (settings.statBlockConfigs) {
     for (const [key, value] of Object.entries(settings.statBlockConfigs)) {
       if (Array.isArray(value)) {
-        try { safeSetItem(key, JSON.stringify(value)) } catch { /* skip */ }
+        safeSetItem(key, JSON.stringify(value))
       }
     }
   }

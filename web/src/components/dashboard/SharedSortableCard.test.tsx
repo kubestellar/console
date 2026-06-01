@@ -40,6 +40,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
   useCardCollapse: () => ({ isCollapsed: false }),
 }))
 
+import { DashboardCardActionsProvider } from './DashboardCardActionsContext'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 
 const baseCard = {
@@ -52,14 +53,22 @@ const baseCard = {
 
 function renderSortableCard(card = baseCard) {
   return render(
-    <SortableCard
-      card={card}
-      onConfigure={vi.fn()}
-      onRemove={vi.fn()}
-      onWidthChange={vi.fn()}
-      onHeightChange={vi.fn()}
-      onRefresh={vi.fn()}
-    />
+    <DashboardCardActionsProvider
+      value={{
+        handleConfigureCard: vi.fn(),
+        handleRemoveCard: vi.fn(),
+        handleWidthChange: vi.fn(),
+        handleHeightChange: vi.fn(),
+        handleInsertAfter: vi.fn(),
+        triggerRefresh: vi.fn(),
+      }}
+    >
+      <SortableCard
+        card={card}
+        index={0}
+        isDragging={false}
+      />
+    </DashboardCardActionsProvider>
   )
 }
 

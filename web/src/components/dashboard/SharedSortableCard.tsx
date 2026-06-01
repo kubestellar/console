@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, type KeyboardEvent } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { GripVertical } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -7,6 +7,7 @@ import { CARD_COMPONENTS, DEMO_DATA_CARDS, LIVE_DATA_CARDS } from '../cards/card
 import { useCardCollapse } from '../../lib/cards/cardHooks'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import type { Card } from './dashboardUtils'
+import { useDashboardCardActions } from './DashboardCardActionsContext'
 
 /**
  * Number of grid rows a collapsed card occupies (#6072). Collapsed cards
@@ -31,21 +32,8 @@ const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180
 
 interface SortableCardProps {
   card: Card
-  onConfigure: () => void
-  onRemove: () => void
-  onWidthChange: (newWidth: number) => void
-  onHeightChange: (newHeight: number) => void
+  index: number
   isDragging: boolean
-  isRefreshing?: boolean
-  onRefresh?: () => void
-  lastUpdated?: Date | null
-  onKeyDown?: (e: KeyboardEvent) => void
-  registerRef?: (el: HTMLElement | null) => void
-  registerExpandTrigger?: (expand: () => void) => void
-  onInsertBefore?: () => void
-  onInsertAfter?: () => void
-  /** When true, a workload item (not a card) is being dragged — disable sortable to prevent card from hijacking the drag */
-  isWorkloadDragActive?: boolean
 }
 
 /**
@@ -74,7 +62,20 @@ const NARROW_BREAKPOINT = 1024
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6
 
-export const SortableCard = memo(function SortableCard({ card, onConfigure, onRemove, onWidthChange, onHeightChange, isDragging, isRefreshing, onRefresh, lastUpdated, onKeyDown, registerRef, registerExpandTrigger, onInsertBefore: _onInsertBefore, onInsertAfter, isWorkloadDragActive: _isWorkloadDragActive }: SortableCardProps) {
+export const SortableCard = memo(function SortableCard({ card, index, isDragging }: SortableCardProps) {
+  const {
+    handleConfigureCard,
+    handleGridKeyDown,
+    handleHeightChange,
+    handleInsertAfter,
+    handleRemoveCard,
+    handleWidthChange,
+    isRefreshing,
+    lastUpdated,
+    registerCardRef,
+    registerExpandTrigger,
+    triggerRefresh,
+  } = useDashboardCardActions()
   const {
     attributes,
     listeners,
@@ -92,10 +93,10 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT - 1}px)`)
     const handler = (e: MediaQueryListEvent) => setIsNarrow(e.matches)
-    if (mq.matches !== isNarrow) setIsNarrow(mq.matches)
+    setIsNarrow(mq.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
-  }, [isNarrow])
+  }, [])
 
   const posW = card.position?.w || 4
   const posH = card.position?.h || 2
@@ -132,12 +133,12 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         role="row"
       >
         <div
-          ref={registerRef}
+          ref={(element) => registerCardRef?.(card.id, element)}
           className="glass rounded-lg p-4 flex h-full items-center justify-center text-muted-foreground text-sm border border-dashed border-warning/40 outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
           tabIndex={0}
           role="gridcell"
           aria-label={formatCardTitle(card.card_type)}
-          onKeyDown={onKeyDown}
+          onKeyDown={handleGridKeyDown}
         >
           Unknown card type: <code className="ml-1 font-mono text-warning">{card.card_type}</code>
         </div>
@@ -152,9 +153,9 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
       className="relative group/card h-full"
       role="row"
     >
-      {onInsertAfter && (
+      {handleInsertAfter && (
         <button
-          onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
+          onClick={(e) => { e.stopPropagation(); handleInsertAfter(index) }}
           // #8383: Anchor to the right edge centered vertically so the "+"
           // sits between this card and the next column, not on top of the
           // card header action row where the kebab / maximize / report
@@ -170,12 +171,12 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
         </button>
       )}
       <div
-        ref={registerRef}
+        ref={(element) => registerCardRef?.(card.id, element)}
         className="h-full outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
         tabIndex={0}
         role="gridcell"
         aria-label={formatCardTitle(card.card_type)}
-        onKeyDown={onKeyDown}
+        onKeyDown={handleGridKeyDown}
       >
         <CardWrapper
           cardId={card.id}
@@ -187,13 +188,13 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
           cardWidth={card.position?.w || 4}
           cardHeight={card.position?.h || 2}
           isRefreshing={isRefreshing}
-          onRefresh={onRefresh}
+          onRefresh={triggerRefresh}
           lastUpdated={lastUpdated}
-          onConfigure={onConfigure}
-          onRemove={onRemove}
-          onWidthChange={onWidthChange}
-          onHeightChange={onHeightChange}
-          registerExpandTrigger={registerExpandTrigger}
+          onConfigure={() => handleConfigureCard(card)}
+          onRemove={() => handleRemoveCard(card.id)}
+          onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
+          onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
+          registerExpandTrigger={(expand) => registerExpandTrigger?.(card.id, expand)}
           dragHandle={
             <button
               ref={setActivatorNodeRef}
@@ -220,18 +221,14 @@ export const SortableCard = memo(function SortableCard({ card, onConfigure, onRe
 }, (prevProps, nextProps) => {
   return (
     prevProps.card.id === nextProps.card.id &&
+    prevProps.index === nextProps.index &&
     prevProps.card.card_type === nextProps.card.card_type &&
     (prevProps.card.position?.w || 4) === (nextProps.card.position?.w || 4) &&
     (prevProps.card.position?.h || 2) === (nextProps.card.position?.h || 2) &&
     prevProps.card.title === nextProps.card.title &&
     prevProps.card.last_summary === nextProps.card.last_summary &&
     shallowEqualConfig(prevProps.card.config, nextProps.card.config) &&
-    prevProps.isDragging === nextProps.isDragging &&
-    prevProps.isRefreshing === nextProps.isRefreshing &&
-    prevProps.lastUpdated === nextProps.lastUpdated &&
-    prevProps.onKeyDown === nextProps.onKeyDown &&
-    prevProps.onInsertAfter === nextProps.onInsertAfter &&
-    prevProps.isWorkloadDragActive === nextProps.isWorkloadDragActive
+    prevProps.isDragging === nextProps.isDragging
   )
 })
 
