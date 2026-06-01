@@ -18,6 +18,14 @@ New monitoring cards for CNCF projects (Karmada, Falco, KEDA, etc.) belong in [*
 
 PRs that add new card components to `web/src/components/cards/` will be redirected to console-marketplace.
 
+## Repo Inventory Files
+
+The repo-root [`INVENTORY.md`](INVENTORY.md) tracks the component, route, modal, and drill-down inventory that the Auto-QA workflow cross-checks against the source tree.
+
+- **What it tracks:** repo inventory metadata used for consistency checks, especially entries that should stay aligned with files under `web/src/`.
+- **How it is generated:** there is currently no single regeneration command; maintain `INVENTORY.md` manually when inventory-covered items change.
+- **Whether CI enforces it:** yes. The Auto-QA workflow in [`.github/workflows/auto-qa.yml`](.github/workflows/auto-qa.yml) validates INVENTORY.md references against component files, routes, card types, and drill-downs.
+
 ## Test Contributions Are Welcome
 
 One of the most valuable contributions you can make is **tests** — Playwright E2E tests, unit tests, or integration tests. Tests define expected behavior and help prevent regressions.
@@ -117,6 +125,8 @@ bash scripts/consistency-test.sh
 
 # Run frontend tests
 cd web && npx playwright test
+cd web && npm test
+cd web && npm test -- src/components/MyComponent.test.tsx
 ```
 
 CI will run the full test suite on your PR. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for details on all quality gates.
