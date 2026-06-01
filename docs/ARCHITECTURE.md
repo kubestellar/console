@@ -131,6 +131,49 @@ User asks a question in AI chat
 | **Helm** | `helm install` from `deploy/helm/` | Ingress | Production Kubernetes deployment |
 | **Hosted** | [console.kubestellar.io](https://console.kubestellar.io) | 443 | SaaS with kc-agent for cluster access |
 
+## Production Deployment Architecture
+
+The hosted site at [console.kubestellar.io](https://console.kubestellar.io) runs on Netlify. In that environment, browser requests are served by Netlify and API routes are implemented by Netlify Functions in `web/netlify/functions/`, not by the Go backend directly.
+
+Self-hosted deployments (local scripts, containers, Kubernetes, and Helm installs) use the Go backend on port 8080 to serve the frontend and `/api/*` routes directly.
+
+Any route exposed in both environments must keep the same API contract and behavior. When a Go handler has production parity on the hosted site, update the matching Netlify Function and verify the redirect mapping in `netlify.toml`.
+
+### Routes with Netlify parity
+
+| Go route | Netlify Function | Purpose |
+|----------|------------------|---------|
+| `/api/youtube/playlist` | `youtube-playlist` | YouTube content feed |
+| `/api/youtube/thumbnail/*` | `youtube-thumbnail` | Thumbnail proxy |
+| `/api/medium/blog` | `medium-blog` | Blog feed |
+| `/api/rewards/github` | `github-rewards` | GitHub contributor rewards |
+| `/api/rewards/badge/*` | `rewards-badge` | Reward badge images |
+| `/api/rewards/bonus` | `bonus-points` | Bonus point claims |
+| `/api/missions/browse` | `missions-browse` | Mission catalog |
+| `/api/missions/file` | `missions-file` | Mission YAML files |
+| `/api/missions/scores` | `missions-scores` | Mission leaderboard |
+| `/api/issue-stats` | `issue-stats` | GitHub issue statistics |
+| `/api/github-pipelines` | `github-pipelines` | CI/CD pipeline status |
+| `/api/nightly-e2e/runs` | `nightly-e2e` | E2E test run history |
+| `/api/acmm/scan` | `acmm-scan` | ACMM compliance scan |
+| `/api/acmm/badge/*` | `acmm-badge` | ACMM badge images |
+| `/api/nps` | `nps` | Net Promoter Score |
+| `/api/feedback-app` | `feedback-app` | Feedback submissions |
+| `/api/active-users` | `presence` | Online user count |
+| `/api/analytics-dashboard` | `analytics-dashboard` | Analytics overview |
+| `/api/analytics-accm` | `analytics-accm` | ACCM analytics |
+| `/api/identity/oidc/*` | `identity-oidc-*` | OIDC identity summary |
+| `/api/identity/rbac/*` | `identity-rbac-*` | RBAC findings and summary |
+| `/api/identity/sessions/*` | `identity-sessions-*` | Session analytics |
+| `/api/affiliate/clicks` | `affiliate-clicks` | Affiliate link tracking |
+| `/api/gtag`, `/api/m`, `/api/send`, `/api/ksc` | `gtag-proxy`, `analytics-collect`, `umami-collect`, `umami-script` | Analytics collection proxies |
+
+### When parity is required
+
+Routes need Netlify parity when the hosted site serves public or stateless data, such as GitHub, YouTube, Medium, badge, mission catalog, or analytics proxy endpoints.
+
+Routes remain backend-only when they depend on self-hosted capabilities such as Kubernetes access, SQLite persistence, the local `kc-agent`, or authenticated user/session state. Examples include `/api/settings`, `/api/dashboards/*`, `/api/cards/*`, `/api/namespaces`, `/api/agent/*`, `/api/gpu/*`, and `/api/github/token/*`.
+
 ## Security Architecture
 
 - **Authentication**: GitHub OAuth 2.0 flow with JWT tokens. No passwords stored.
