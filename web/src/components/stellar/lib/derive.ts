@@ -65,6 +65,11 @@ function workloadFromPodName(podName: string): string {
   return podName
 }
 
+export const __testables = {
+  describePhase,
+  workloadFromPodName,
+}
+
 /** Best-effort extraction of (cluster, namespace, workload) from a
  *  notification. Used to match solves across events that share a workload —
  *  every BackOff/CrashLoopBackOff card for payments/api-server should reflect
@@ -316,6 +321,10 @@ export function severityColor(sev: string): string {
  */
 export function deriveShortReason(n: StellarNotification): string | null {
   const t = n.title.toLowerCase()
+  const isImagePull = t.includes('imagepullbackoff') || t.includes('errimagepull')
+  if (isImagePull) {
+    return "Kubelet can't pull the image — bad tag, unreachable registry, or expired pull secret."
+  }
   if (t.includes('crashloop') || t.includes('backoff')) {
     return 'Pod stuck in a restart loop — container keeps exiting on startup.'
   }
@@ -328,9 +337,6 @@ export function deriveShortReason(n: StellarNotification): string | null {
   if (t.includes('failedmount') || t.includes('volume')) {
     return "Pod can't mount its volume — missing PVC, ConfigMap, or Secret."
   }
-  if (t.includes('imagepullbackoff') || t.includes('errimagepull')) {
-    return "Kubelet can't pull the image — bad tag, unreachable registry, or expired pull secret."
-  }
   if (t.includes('failedcreate') || t.includes('failedcreatepodsandbox')) {
     return 'Pod sandbox creation failed — usually CNI, runtime, or admission issue.'
   }
@@ -341,13 +347,14 @@ export function deriveTags(n: StellarNotification, relatedCount: number): string
   const tags: string[] = []
   const t = n.title.toLowerCase()
   const hints = n.actionHints || []
+  const isImagePull = t.includes('imagepullbackoff') || t.includes('errimagepull')
   if (hints.includes('restart') || hints.includes('scale')) tags.push('auto-fixable')
   if (relatedCount >= RECURRING_THRESHOLD) tags.push('recurring')
   if (t.includes('oom') || t.includes('memory')) tags.push('memory')
-  if (t.includes('crashloop') || t.includes('backoff')) tags.push('crash-loop')
+  if ((t.includes('crashloop') || t.includes('backoff')) && !isImagePull) tags.push('crash-loop')
   if (t.includes('failedscheduling')) tags.push('scheduling')
   if (t.includes('failedmount') || t.includes('volume')) tags.push('storage')
-  if (t.includes('imagepullbackoff') || t.includes('errimagepull')) tags.push('image-pull')
+  if (isImagePull) tags.push('image-pull')
   return tags
 }
 

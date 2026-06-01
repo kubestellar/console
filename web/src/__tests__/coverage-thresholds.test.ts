@@ -11,11 +11,8 @@ type ViteConfigFactory = (env: {
   isPreview?: boolean
 }) => Awaited<ReturnType<typeof viteConfig>>
 
-type CoverageMetric = 'lines' | 'functions' | 'branches' | 'statements'
-type ThresholdConfig = Record<CoverageMetric, number>
-
-const COVERAGE_METRICS: CoverageMetric[] = ['lines', 'functions', 'branches', 'statements']
 const EXPECTED_THRESHOLD_DIRECTORIES = ['hooks', 'services'] as const
+const COVERAGE_INCLUDE_PATTERNS = ['src/hooks/**', 'src/lib/**'] as const
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url))
 const SRC_ROOT = path.resolve(TEST_DIR, '..')
 
@@ -36,26 +33,13 @@ function countFilesRecursively(directory: string): number {
 }
 
 describe('coverage thresholds configuration', () => {
-  it('defines bounded threshold percentages for the expected directories', async () => {
+  it('keeps coverage include rules while thresholds stay disabled for sharded runs', async () => {
     const resolvedConfig = await resolveViteConfig()
-    const thresholds = resolvedConfig.test?.coverage?.thresholds as Record<string, ThresholdConfig> | undefined
+    const coverage = resolvedConfig.test?.coverage
 
-    expect(thresholds).toBeDefined()
-
-    for (const directoryName of EXPECTED_THRESHOLD_DIRECTORIES) {
-      const pattern = `**/${directoryName}/**`
-      const metrics = thresholds?.[pattern]
-
-      expect(metrics, `${pattern} should be configured`).toBeDefined()
-
-      for (const metric of COVERAGE_METRICS) {
-        expect(metrics?.[metric]).toBeTypeOf('number')
-        expect(metrics?.[metric]).toBeGreaterThanOrEqual(0)
-        expect(metrics?.[metric]).toBeLessThanOrEqual(100)
-      }
-    }
-
-    expect(thresholds?.['**/services/**']?.lines).toBeGreaterThanOrEqual(thresholds?.['**/hooks/**']?.lines ?? 0)
+    expect(coverage).toBeDefined()
+    expect(coverage?.thresholds).toBeUndefined()
+    expect(coverage?.include).toEqual(expect.arrayContaining([...COVERAGE_INCLUDE_PATTERNS]))
   })
 
   it('points each threshold rule at a real source directory with files', () => {

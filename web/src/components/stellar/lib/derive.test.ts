@@ -1,27 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as derive from './derive';
 
+const { describePhase, workloadFromPodName } = derive.__testables;
 const now = Date.now();
 vi.useFakeTimers();
 vi.setSystemTime(now);
 
 describe('derivePhase', () => {
   it('returns correct label/color/percent/phase for known steps', () => {
-    expect(derive['describePhase']('investigating', '')).toMatchObject({ label: expect.any(String), color: expect.any(String), percent: 20, phase: 'investigating' });
-    expect(derive['describePhase']('root_cause', '')).toMatchObject({ phase: 'root_cause' });
-    expect(derive['describePhase']('solving', '')).toMatchObject({ phase: 'solving' });
-    expect(derive['describePhase']('resolved', '')).toMatchObject({ phase: 'resolved' });
-    expect(derive['describePhase']('resolved_monitored', '')).toMatchObject({ phase: 'resolved_monitored' });
-    expect(derive['describePhase']('escalated', '')).toMatchObject({ phase: 'escalated' });
-    expect(derive['describePhase']('exhausted', '')).toMatchObject({ phase: 'exhausted' });
-    expect(derive['describePhase']('unknown', 'custom')).toMatchObject({ label: 'custom', phase: 'unknown' });
+    expect(describePhase('investigating', '')).toMatchObject({ label: expect.any(String), color: expect.any(String), percent: 20, phase: 'investigating' });
+    expect(describePhase('root_cause', '')).toMatchObject({ phase: 'root_cause' });
+    expect(describePhase('solving', '')).toMatchObject({ phase: 'solving' });
+    expect(describePhase('resolved', '')).toMatchObject({ phase: 'resolved' });
+    expect(describePhase('resolved_monitored', '')).toMatchObject({ phase: 'resolved_monitored' });
+    expect(describePhase('escalated', '')).toMatchObject({ phase: 'escalated' });
+    expect(describePhase('exhausted', '')).toMatchObject({ phase: 'exhausted' });
+    expect(describePhase('unknown', 'custom')).toMatchObject({ label: 'custom', phase: 'unknown' });
   });
 });
 
 describe('workloadFromPodName', () => {
   it('parses deployment name from pod name', () => {
-    expect(derive['workloadFromPodName']('foo-bar-12345-abcde')).toBe('foo-bar');
-    expect(derive['workloadFromPodName']('foo-bar')).toBe('foo-bar');
+    expect(workloadFromPodName('foo-bar-12345-abcde')).toBe('foo-bar');
+    expect(workloadFromPodName('foo-bar')).toBe('foo-bar');
   });
 });
 
@@ -53,6 +54,7 @@ describe('deriveTags', () => {
     expect(derive.deriveTags({ title: 'FailedScheduling', id: '', createdAt: '', severity: 'info', body: '', read: false }, 3)).toContain('scheduling');
     expect(derive.deriveTags({ title: 'FailedMount', id: '', createdAt: '', severity: 'info', body: '', read: false }, 3)).toContain('storage');
     expect(derive.deriveTags({ title: 'ImagePullBackOff', id: '', createdAt: '', severity: 'info', body: '', read: false }, 3)).toContain('image-pull');
+    expect(derive.deriveTags({ title: 'ImagePullBackOff', id: '', createdAt: '', severity: 'info', body: '', read: false }, 3)).not.toContain('crash-loop');
     expect(derive.deriveTags({ title: 'OOM', id: '', createdAt: '', severity: 'info', body: '', read: false }, 3)).toContain('memory');
     expect(derive.deriveTags({ title: 'Unrecognized', id: '', createdAt: '', severity: 'info', body: '', read: false }, 3)).not.toContain('crash-loop');
   });

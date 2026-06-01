@@ -42,10 +42,12 @@ describe('resolveStellarBatchIntervalMs', () => {
 });
 
 describe('getNextBatchTime', () => {
-  it('returns correct next batch time', () => {
+  it('returns correct next batch time for supported intervals', () => {
     const now = Date.now();
     vi.setSystemTime(now);
-    expect(time.getNextBatchTime(60_000, now)).toBe(now + 60_000);
+    expect(time.getNextBatchTime(time.STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS, now)).toBe(
+      now + time.STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS,
+    );
   });
 });
 
