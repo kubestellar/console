@@ -371,6 +371,57 @@ jobs:
             --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Validate persistent volumes before deploy
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          BLOCKING_STORAGE_ISSUES=0
+          PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
+
+          if [ "$(jq '.items | length' <<<"$PVCS_JSON")" -eq 0 ]; then
+            echo "No existing release PVCs found; continuing with deploy"
+            exit 0
+          fi
+
+          echo "::group::Release PVC status"
+          jq -r '.items[] | "\(.metadata.name)\tphase=\(.status.phase // "Unknown")\tvolume=\(.spec.volumeName // "-")\tdeleting=\(.metadata.deletionTimestamp // "false")"' <<<"$PVCS_JSON"
+          echo "::endgroup::"
+
+          while IFS=$'\t' read -r pvc_name volume_name pvc_deletion; do
+            if [ -n "$pvc_deletion" ]; then
+              echo "::error::PersistentVolumeClaim '$pvc_name' is marked for deletion. Remove stuck finalizers or recreate the claim before rerunning deploy-pok-prod."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+
+            if ! PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null); then
+              echo "::error::PersistentVolumeClaim '$pvc_name' references missing PersistentVolume '$volume_name'. Recreate the claim or provision a replacement volume before rerunning deploy-pok-prod."
+              BLOCKING_STORAGE_ISSUES=1
+              continue
+            fi
+
+            pv_phase=$(jq -r '.status.phase // "Unknown"' <<<"$PV_JSON")
+            pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
+            echo "PVC '$pvc_name' -> PV '$volume_name' phase=$pv_phase${pv_deletion:+ deleting=$pv_deletion}"
+
+            if [ -n "$pv_deletion" ]; then
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' is marked for deletion. Cluster admin must clear PV finalizers or recreate the PVC before rerunning deploy-pok-prod."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+
+            if [ "$pv_phase" = "Released" ] || [ "$pv_phase" = "Failed" ]; then
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' is in phase '$pv_phase'. Recreate the PVC or provision a healthy replacement volume before rerunning deploy-pok-prod."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
+          if [ "$BLOCKING_STORAGE_ISSUES" -ne 0 ]; then
+            echo "::error::Blocking persistent volume cleanup is required before Helm can recover or upgrade this release."
+            exit 1
+          fi
+
       - name: Recover stuck Helm release
         run: |
           RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
@@ -496,8 +547,18 @@ jobs:
       - name: Collect diagnostics on deploy failure
         if: failure()
         run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
           echo "::group::Pods in kubestellar-console namespace"
           kubectl get pods -n kubestellar-console -o wide || true
+          echo "::endgroup::"
+          echo "::group::Release PVC status"
+          kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o wide || true
+          echo "::endgroup::"
+          echo "::group::Release PV status"
+          for volume in $(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null | jq -r '.items[] | .spec.volumeName // empty'); do
+            kubectl get pv "$volume" -o wide || true
+            kubectl describe pv "$volume" || true
+          done
           echo "::endgroup::"
           echo "::group::Deployment describe"
           kubectl describe deployment/kc-kubestellar-console -n kubestellar-console || true
