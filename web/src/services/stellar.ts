@@ -65,6 +65,10 @@ export interface UserProviderConfig {
   lastLatency: number
 }
 
+interface GetProvidersOptions {
+  fallbackOnError?: boolean
+}
+
 export const stellarApi = {
   async getState(options: GetStateOptions = {}): Promise<StellarOperationalState> {
     const { timeout, fallbackOnError = true, signal } = options
@@ -250,7 +254,8 @@ export const stellarApi = {
     }
   },
 
-  async getProviders(): Promise<{ global: ProviderInfo[]; user: UserProviderConfig[] }> {
+  async getProviders(options: GetProvidersOptions = {}): Promise<{ global: ProviderInfo[]; user: UserProviderConfig[] }> {
+    const { fallbackOnError = true } = options
     try {
       const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
       return data
@@ -259,6 +264,9 @@ export const stellarApi = {
         console.debug('stellar: getProviders skipped (no auth token)')
       } else {
         console.error('stellar: getProviders failed:', err)
+      }
+      if (!fallbackOnError) {
+        throw err
       }
       return { global: [], user: [] }
     }

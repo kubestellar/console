@@ -25,6 +25,9 @@ interface FixerDefinitionFormProps {
   manualName: string
   manualSuggestions: ManualWorkloadOption[]
   manualHelperText: string
+  isManualCatalogLoading: boolean
+  manualCatalogError: boolean
+  onRetryManualCatalog: () => void
   manualAddDisabled: boolean
   installedProjects?: Set<string>
   onTitleChange: (title: string) => void
@@ -55,6 +58,9 @@ export function FixerDefinitionForm({
   manualName,
   manualSuggestions,
   manualHelperText,
+  isManualCatalogLoading,
+  manualCatalogError,
+  onRetryManualCatalog,
   manualAddDisabled,
   installedProjects,
   onTitleChange,
@@ -196,6 +202,22 @@ export function FixerDefinitionForm({
             </div>
 
             <p className="mt-2 text-xs text-muted-foreground">{manualHelperText}</p>
+
+            {isManualCatalogLoading && (
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Loading additional catalog workloads…</span>
+              </p>
+            )}
+
+            {manualCatalogError && !isManualCatalogLoading && (
+              <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-100">
+                <span>Could not load the latest workload catalog. Static suggestions are still available.</span>
+                <Button variant="ghost" size="sm" onClick={onRetryManualCatalog}>
+                  Retry
+                </Button>
+              </div>
+            )}
 
             {manualSuggestions.length > 0 && (
               <div className="mt-3 overflow-hidden rounded-lg border border-border/70 bg-background/60">

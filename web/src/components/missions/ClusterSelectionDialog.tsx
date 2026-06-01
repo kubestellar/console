@@ -61,7 +61,7 @@ function matchesClusterSearch(cluster: ClusterOption, query: string): boolean {
 
 export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel }: ClusterSelectionDialogProps) {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading, refetch } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, error, refetch } = useClusters()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
 
@@ -158,6 +158,18 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
             <div className="flex items-start gap-2 text-xs text-yellow-200">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-400" />
               <span>{t('missions.browser.clusterSelection.invalidClusterData', { count: invalidClusterCount })}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => refetch()} className="shrink-0">
+              {t('common.retry')}
+            </Button>
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="mx-3 mt-3 flex items-start justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+            <div className="flex items-start gap-2 text-xs text-red-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+              <span>{error}</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => refetch()} className="shrink-0">
               {t('common.retry')}

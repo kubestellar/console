@@ -81,6 +81,9 @@ export function FixerDefinitionPanel({
   const [manualName, setManualName] = useState('')
   const [stickyProject, setStickyProject] = useState<PayloadProject | null>(null)
   const [manualWorkloads, setManualWorkloads] = useState<ManualWorkloadOption[]>(() => buildStaticManualWorkloadOptions())
+  const [isManualCatalogLoading, setIsManualCatalogLoading] = useState(true)
+  const [manualCatalogError, setManualCatalogError] = useState(false)
+  const [manualCatalogReloadKey, setManualCatalogReloadKey] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const projects = state.projects || []
 
@@ -94,6 +97,8 @@ export function FixerDefinitionPanel({
 
   useEffect(() => {
     let cancelled = false
+    setIsManualCatalogLoading(true)
+    setManualCatalogError(false)
 
     fetchKubaraCatalog()
       .then((catalog) => {
@@ -110,13 +115,20 @@ export function FixerDefinitionPanel({
         setManualWorkloads((previous) => mergeManualWorkloadOptions(previous, kubaraOptions))
       })
       .catch(() => {
-        // Static suggestions already cover the manual-add fallback.
+        if (!cancelled) {
+          setManualCatalogError(true)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsManualCatalogLoading(false)
+        }
       })
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [manualCatalogReloadKey])
 
   const latestAIContent = getAssistantContentSinceLastUser(planningMission?.messages)
   const planningFailed = planningMission?.status === 'failed'
@@ -226,6 +238,9 @@ export function FixerDefinitionPanel({
         manualName={manualName}
         manualSuggestions={manualSuggestions}
         manualHelperText={manualHelperText}
+        isManualCatalogLoading={isManualCatalogLoading}
+        manualCatalogError={manualCatalogError}
+        onRetryManualCatalog={() => setManualCatalogReloadKey((value) => value + 1)}
         manualAddDisabled={!nextManualOption}
         installedProjects={installedProjects}
         onTitleChange={onTitleChange}

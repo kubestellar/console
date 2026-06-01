@@ -32,7 +32,7 @@ vi.mock('../../../lib/cn', () => ({
 }))
 
 vi.mock('../../../hooks/mcp/clusters', () => ({
-  useClusters: () => ({ clusters: [], deduplicatedClusters: [], isLoading: false }),
+  useClusters: () => ({ clusters: [], deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 
 import { ClusterSelectionDialog } from '../ClusterSelectionDialog'
