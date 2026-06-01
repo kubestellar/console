@@ -63,6 +63,18 @@ describe('workloadPrefix', () => {
   it('returns original if suffix pattern does not match', () => {
     expect(workloadPrefix('pod/no-suffix-pattern')).toBe('no-suffix-pattern')
   })
+
+  it('strips two-level suffix when pod suffix has no digits (all-alpha)', () => {
+    // K8s can generate pod suffixes like "abcdef" with no digits
+    expect(workloadPrefix('pod/my-app-7d6f8c9b4-abcdef')).toBe('my-app')
+    expect(workloadPrefix('pod/api-server-5c7b9d8f2-xyzwv')).toBe('api-server')
+  })
+
+  it('strips two-level suffix when pod suffix is 6 chars', () => {
+    // Previous regex limited second segment to 3-5 chars; 6-char suffixes exist
+    expect(workloadPrefix('pod/worker-abc123def4-xyzabc')).toBe('worker')
+    expect(workloadPrefix('pod/cache-7f8a9b0c1d-abcd12')).toBe('cache')
+  })
 })
 
 describe('isCausallyRelated', () => {
