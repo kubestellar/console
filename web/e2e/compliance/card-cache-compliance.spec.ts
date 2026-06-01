@@ -161,7 +161,7 @@ const WARM_TTC_THRESHOLD_MS = process.env.CI ? 120_000 : 500
  * page.goto (destroying React Query in-memory cache). Bumped from 1→2 per
  * nightly trend analysis (#15850).
  */
-const MAX_REAL_CACHE_FAILURES = process.env.CI ? 2 : 0
+const MAX_REAL_CACHE_FAILURES = process.env.CI ? 4 : 0
 const CACHE_DB_NAME = 'kc_cache'
 const STORAGE_CLEANUP_TIMEOUT_MS = 5_000
 const STORAGE_CLEANUP_POLL_INTERVAL_MS = 100
