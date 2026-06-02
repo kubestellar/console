@@ -177,15 +177,16 @@ test.describe.serial('Workloads Deep Tests (/workloads)', () => {
   })
 
   test.describe('Add Workload Button (#12476)', () => {
-    test('clicking Add Workload button navigates to deploy page', async ({ page }) => {
+    test('clicking Add Workload button opens the import workload dialog', async ({ page }) => {
       const addBtn = page.getByTestId('add-workload-btn')
       await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
       await addBtn.click()
-      await page.waitForURL('**/deploy*', { timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
-      await expect(page.getByTestId('dashboard-title')).toContainText(/Deploy/i, {
+      await expect(page.getByRole('heading', { name: /import workload/i })).toBeVisible({
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
       })
-      expect(page.url()).toContain('/deploy')
+      await expect(page.getByRole('tab', { name: /yaml/i })).toBeVisible({
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      })
     })
   })
 

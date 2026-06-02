@@ -24,10 +24,13 @@ export function AISettingsSection({ mode, setMode, description }: AISettingsSect
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label={t('settings.aiMode.title')}>
           {(['low', 'medium', 'high'] as AIMode[]).map((m) => (
             <button
               key={m}
+              type="button"
+              aria-pressed={mode === m}
+              data-selected={mode === m ? 'true' : undefined}
               onClick={() => { setMode(m); emitAIModeChanged(m) }}
               className={`p-3 rounded-lg border transition-all ${
                 mode === m

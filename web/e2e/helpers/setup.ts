@@ -411,11 +411,56 @@ export async function mockApiFallback(page: Page) {
       body: JSON.stringify({ running: false, version: null }),
     })
   )
-  await page.route('**/api/kagent-provider/status', (route) =>
+  await page.route('**/api/kagenti-provider/status', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ available: false, providers: [] }),
+      body: JSON.stringify({ available: false, reason: 'not configured in demo mode' }),
+    })
+  )
+  await page.route('**/api/kubara/config', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        repo: 'kubara-io/kubara',
+        path: 'go-binary/templates/embedded/managed-service-catalog/helm',
+      }),
+    })
+  )
+  await page.route('**/api/github/repos/kubestellar/console/git/ref/heads/main', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ref: 'refs/heads/main',
+        object: {
+          sha: 'abc123def456789abc123def456789abc123def4',
+          type: 'commit',
+          url: 'https://api.github.com/repos/kubestellar/console/git/commits/abc123def456789abc123def456789abc123def4',
+        },
+      }),
+    })
+  )
+  await page.route('**/api/github/repos/kubestellar/console/compare/*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ commits: [] }),
+    })
+  )
+  await page.route('**/api/github/token/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ hasToken: false, source: 'none' }),
+    })
+  )
+  await page.route('**/api/self-upgrade/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, reason: 'not configured in demo mode' }),
     })
   )
   await page.route('**/api/feedback/queue', (route) =>

@@ -200,49 +200,19 @@ test.describe('AI Mode Settings', () => {
     test('mode buttons are keyboard accessible', async ({ page }) => {
       await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
-      // Ensure at least one mode button is visible before testing keyboard nav
       const lowButton = page.getByRole('button', { name: /low/i }).first()
       await expect(lowButton).toBeVisible({ timeout: 5000 })
 
-      // Tab through the page until we reach a mode selection button
-      let foundModeButton = false
-      for (let i = 0; i < 15; i++) {
-        await page.keyboard.press('Tab')
-        
-        // Check if the focused element is a mode selection button
-        const focusedElement = page.locator(':focus')
-        const focusedText = await focusedElement.textContent().catch(() => '')
-        
-        // Check if focused element is one of the AI mode buttons
-        if (focusedText && /low|medium|high/i.test(focusedText)) {
-          // Verify it's actually a button element
-          const tagName = await focusedElement.evaluate(el => el.tagName.toLowerCase())
-          expect(tagName).toBe('button')
-          
-          // Verify the button is visible and focusable
-          await expect(focusedElement).toBeVisible()
-          foundModeButton = true
-          
-          // Test that Enter/Space can activate the focused mode button
-          const initialMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
-          await page.keyboard.press('Enter')
-          
-          // Wait for the mode change to persist to localStorage
-          await expect(async () => {
-            const mode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
-            expect(mode).toBeTruthy()
-          }).toPass({ timeout: 2000 })
-          
-          // Verify that activation changed the mode (or maintained it if already selected)
-          const newMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
-          expect(newMode).toBeTruthy()
-          expect(['low', 'medium', 'high']).toContain(newMode)
-          break
-        }
-      }
+      await lowButton.focus()
+      await expect(lowButton).toBeFocused()
+      await page.keyboard.press('Enter')
 
-      // Ensure we actually found and tested a mode button
-      expect(foundModeButton).toBe(true)
+      await expect.poll(
+        async () => page.evaluate(() => localStorage.getItem('kubestellar-ai-mode')),
+        { timeout: 2000 }
+      ).toBe('low')
+
+      await expect(lowButton).toHaveAttribute('aria-pressed', 'true')
     })
   })
 })

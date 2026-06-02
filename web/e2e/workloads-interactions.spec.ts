@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import {
-  setupWorkloadsDemoPage,
+  setupDemoAndNavigate,
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
@@ -8,10 +8,7 @@ import {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Deploy route path — target of "Add Workload" button */
-const DEPLOY_ROUTE = '/deploy'
-
-/** Timeout for navigation to settle after click */
+/** Timeout for workload dialog interactions */
 const CLICK_NAV_TIMEOUT_MS = 10_000
 
 /** Restart toast content shown after clicking the restart action */
@@ -22,7 +19,13 @@ const CLUSTER_STATUS_PATTERN = /Healthy|Error|Warning|Offline/
 
 async function setupWorkloadsPage(page: Page) {
   await page.context().clearCookies()
-  await setupWorkloadsDemoPage(page)
+  await setupDemoAndNavigate(page, '/workloads')
+  await expect(page.getByRole('heading', { name: /workloads/i })).toBeVisible({
+    timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+  })
+  await expect(page.getByTestId('add-workload-btn')).toBeVisible({
+    timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+  })
 }
 
 async function getFirstWorkloadRowOrSkip(page: Page) {
@@ -108,19 +111,20 @@ test.describe.serial('Workloads interactions (/workloads)', () => {
       await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     })
 
-    test('clicking Add Workload navigates to deploy page', async ({ page }) => {
+    test('clicking Add Workload opens the import workload dialog', async ({ page }) => {
       const addBtn = page.getByTestId('add-workload-btn')
       await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
       await addBtn.click()
 
-      await page.waitForURL(`**${DEPLOY_ROUTE}*`, { timeout: CLICK_NAV_TIMEOUT_MS })
-      await expect(page.getByTestId('dashboard-title')).toContainText(/Deploy/i, {
+      await expect(page.getByRole('heading', { name: /import workload/i })).toBeVisible({
         timeout: CLICK_NAV_TIMEOUT_MS,
       })
-      expect(page.url()).toContain(DEPLOY_ROUTE)
+      await expect(page.getByRole('tab', { name: /yaml/i })).toBeVisible({
+        timeout: CLICK_NAV_TIMEOUT_MS,
+      })
     })
 
-    test('empty state also has a deploy button that navigates', async ({ page }) => {
+    test('empty state also has a deploy button that opens the import dialog', async ({ page }) => {
       const deployBtn = page.getByTestId('empty-state-deploy-workload-btn')
       const buttonVisible = await deployBtn
         .waitFor({ state: 'visible', timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
@@ -130,11 +134,12 @@ test.describe.serial('Workloads interactions (/workloads)', () => {
       test.skip(!buttonVisible, 'Empty state deploy button is not shown when workloads exist')
 
       await deployBtn.click()
-      await page.waitForURL(`**${DEPLOY_ROUTE}*`, { timeout: CLICK_NAV_TIMEOUT_MS })
-      await expect(page.getByTestId('dashboard-title')).toContainText(/Deploy/i, {
+      await expect(page.getByRole('heading', { name: /import workload/i })).toBeVisible({
         timeout: CLICK_NAV_TIMEOUT_MS,
       })
-      expect(page.url()).toContain(DEPLOY_ROUTE)
+      await expect(page.getByRole('tab', { name: /yaml/i })).toBeVisible({
+        timeout: CLICK_NAV_TIMEOUT_MS,
+      })
     })
   })
 

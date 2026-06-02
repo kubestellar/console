@@ -114,6 +114,45 @@ export const API_RESPONSES = {
   githubPipelines: () => ({
     workflows: [],
   }),
+
+  /** /api/kubara/config — mission catalog config */
+  kubaraConfig: () => ({
+    repo: 'kubara-io/kubara',
+    path: 'go-binary/templates/embedded/managed-service-catalog/helm',
+  }),
+
+  /** /api/github/repos/kubestellar/console/git/ref/heads/main — version check */
+  githubMainRef: () => ({
+    ref: 'refs/heads/main',
+    object: {
+      sha: 'abc123def456789abc123def456789abc123def4',
+      type: 'commit',
+      url: 'https://api.github.com/repos/kubestellar/console/git/commits/abc123def456789abc123def456789abc123def4',
+    },
+  }),
+
+  /** /api/github/repos/kubestellar/console/compare/* — version diff */
+  githubCompare: () => ({
+    commits: [],
+  }),
+
+  /** /api/github/token/status — optional GitHub token status */
+  githubTokenStatus: () => ({
+    hasToken: false,
+    source: 'none',
+  }),
+
+  /** /api/kagenti-provider/status — optional provider status */
+  kagentiProviderStatus: () => ({
+    available: false,
+    reason: 'not configured in demo mode',
+  }),
+
+  /** /api/self-upgrade/status — optional self-upgrade status */
+  selfUpgradeStatus: () => ({
+    available: false,
+    reason: 'not configured in demo mode',
+  }),
 } as const
 
 // ---------------------------------------------------------------------------
@@ -197,7 +236,29 @@ export async function strictApiMocking(
   })
 
   // ---------------------------------------------------------------------------
-  // Explicit endpoint handlers (highest priority — registered last)
+  // Catch-all for unmocked /api/** — register FIRST so specific handlers below
+  // take priority (Playwright matches routes in reverse registration order).
+  // ---------------------------------------------------------------------------
+
+  await page.route('**/api/**', async (route) => {
+    const url = route.request().url()
+    tracker.allCalls.push(url)
+    tracker.unmockedCalls.push(url)
+
+    if (logUnmocked) {
+      // eslint-disable-next-line no-console
+      console.error(`[strict-api-mocking] Unmocked API call: ${url}`)
+    }
+
+    if (failOnUnmocked) {
+      await route.abort('failed')
+    } else {
+      await route.fulfill(jsonResponse({}))
+    }
+  })
+
+  // ---------------------------------------------------------------------------
+  // Explicit endpoint handlers (highest priority — registered after catch-all)
   // ---------------------------------------------------------------------------
 
   // /api/me
@@ -288,6 +349,52 @@ export async function strictApiMocking(
     await route.fulfill(jsonResponse(API_RESPONSES.githubPipelines()))
   })
 
+  // /api/kubara/config
+  await page.route('**/api/kubara/config', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill(jsonResponse(API_RESPONSES.kubaraConfig()))
+  })
+
+  // /api/github/repos/kubestellar/console/git/ref/heads/main
+  await page.route('**/api/github/repos/kubestellar/console/git/ref/heads/main', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill(jsonResponse(API_RESPONSES.githubMainRef()))
+  })
+
+  // /api/github/repos/kubestellar/console/compare/*
+  await page.route('**/api/github/repos/kubestellar/console/compare/*', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill(jsonResponse(API_RESPONSES.githubCompare()))
+  })
+
+  // /api/github/token/status
+  await page.route('**/api/github/token/status', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill(jsonResponse(API_RESPONSES.githubTokenStatus()))
+  })
+
+  // /api/kagenti-provider/status
+  await page.route('**/api/kagenti-provider/status', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill(jsonResponse(API_RESPONSES.kagentiProviderStatus()))
+  })
+
+  // /api/self-upgrade/status
+  await page.route('**/api/self-upgrade/status', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill(jsonResponse(API_RESPONSES.selfUpgradeStatus()))
+  })
+
+  // /api/stellar/stream*
+  await page.route('**/api/stellar/stream*', async (route) => {
+    tracker.allCalls.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: ': keep-alive\n\n',
+    })
+  })
+
   // kc-agent HTTP endpoint (http://127.0.0.1:8585/**)
   await page.route('http://127.0.0.1:8585/**', async (route) => {
     tracker.allCalls.push(route.request().url())
@@ -302,29 +409,6 @@ export async function strictApiMocking(
   for (const { pattern, handler } of customHandlers) {
     await page.route(pattern, handler)
   }
-
-  // ---------------------------------------------------------------------------
-  // Catch-all for unmocked /api/** — logs/fails instead of silent {}
-  // ---------------------------------------------------------------------------
-
-  await page.route('**/api/**', async (route) => {
-    const url = route.request().url()
-    tracker.allCalls.push(url)
-    tracker.unmockedCalls.push(url)
-
-    if (logUnmocked) {
-      // eslint-disable-next-line no-console
-      console.error(`[strict-api-mocking] Unmocked API call: ${url}`)
-    }
-
-    if (failOnUnmocked) {
-      // Abort the request — test will see a network error
-      await route.abort('failed')
-    } else {
-      // Return empty object but log the issue
-      await route.fulfill(jsonResponse({}))
-    }
-  })
 
   return tracker
 }

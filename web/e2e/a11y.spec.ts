@@ -32,8 +32,7 @@ test.describe('Accessibility Audits', () => {
     for (const { name, path } of pagesToAudit) {
       test(`${name} page passes accessibility audit`, async ({ page }) => {
         await setupDemoMode(page)
-        await page.goto(path)
-        await page.waitForLoadState('domcontentloaded')
+        await page.goto(path, { waitUntil: 'domcontentloaded' })
         await expect(page.locator('body')).toBeVisible()
 
         const results = await new AxeBuilder({ page })
@@ -198,8 +197,7 @@ test.describe('Accessibility Audits', () => {
 
     test('form inputs have labels', async ({ page }) => {
       await setupDemoMode(page)
-      await page.goto('/settings')
-      await page.waitForLoadState('domcontentloaded')
+      await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
       const results = await new AxeBuilder({ page })
         .withRules(['label'])

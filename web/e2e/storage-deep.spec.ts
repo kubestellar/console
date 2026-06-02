@@ -292,37 +292,34 @@ test.describe('Storage Deep Tests (/storage)', () => {
 
   test.describe('Error State', () => {
     test('shows error message on API failure', async ({ page }) => {
-      // Intercept MCP endpoints and return errors for clusters and PVCs
       await page.route('**/api/mcp/**', (route) => {
         const url = route.request().url()
         if (url.includes('/clusters') || url.includes('/pvcs')) {
-          route.fulfill({
+          return route.fulfill({
             status: 500,
             contentType: 'application/json',
             body: JSON.stringify({ error: 'Internal server error' }),
           })
-        } else {
-          route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ nodes: [], events: [], issues: [] }),
-          })
         }
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ nodes: [], events: [], issues: [] }),
+        })
       })
 
       await setupDemoAndNavigate(page, STORAGE_ROUTE)
 
-      // In demo mode, errors may not surface because demo data bypasses API.
-      // Check that the page at least loads without crashing.
       const header = page.getByTestId('dashboard-header')
-      const isHeaderVisible = await header.isVisible().catch(() => false)
-
-      // If error text is shown, verify it matches expected message
       const errorText = page.getByText('Error loading storage data')
-      const isErrorVisible = await errorText.isVisible().catch(() => false)
 
-      // Either the page loaded successfully or showed the error — both are valid
-      expect(isHeaderVisible || isErrorVisible).toBe(true)
+      await expect.poll(async () => {
+        const isHeaderVisible = await header.isVisible().catch(() => false)
+        const isErrorVisible = await errorText.isVisible().catch(() => false)
+        return isHeaderVisible || isErrorVisible
+      }, {
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      }).toBe(true)
     })
   })
 })

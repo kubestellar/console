@@ -30,12 +30,13 @@ test.describe('Error Recovery', () => {
   test('/nonexistent route shows 404 content instead of a blank page', async ({ page }) => {
     await setupDemoAndNavigate(page, '/nonexistent-route-abc123')
 
-    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
-    expect(bodyText.length, 'Page should not be blank on unknown route').toBeGreaterThan(0)
-
-    await expect(page.getByText(/page not found|404|doesn.t exist/i)).toBeVisible({
+    await expect(page.getByRole('heading', { name: /page not found/i })).toBeVisible({
       timeout: NOT_FOUND_TIMEOUT_MS,
     })
+
+    const bodyText = await page.evaluate(() => (document.body.innerText || '').trim())
+    expect(bodyText.length, 'Page should not be blank on unknown route').toBeGreaterThan(0)
+    await expect(page.getByText(/doesn.t exist yet|404/i)).toBeVisible()
   })
 
   test('console errors in demo mode are expected (filtered)', async ({ page }) => {
