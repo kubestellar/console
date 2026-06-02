@@ -34,7 +34,7 @@ type StellarExecutionStore interface {
 type StellarMemoryStore interface {
 	CreateStellarMemoryEntry(ctx context.Context, entry *StellarMemoryEntry) error
 	DeleteStellarMemoryEntry(ctx context.Context, userID, entryID string) error
-	ListStellarMemoryEntries(ctx context.Context, userID string, limit int) ([]StellarMemoryEntry, error)
+	ListStellarMemoryEntries(ctx context.Context, userID, cluster, category string, limit, offset int) ([]StellarMemoryEntry, error)
 	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]StellarMemoryEntry, error)
 	SearchStellarMemoryEntries(ctx context.Context, userID, query string, limit int) ([]StellarMemoryEntry, error)
 	SetMemoryDedupeKey(ctx context.Context, userID, category, key string) error
