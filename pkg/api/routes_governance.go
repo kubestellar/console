@@ -29,6 +29,6 @@ func (s *Server) setupGovernanceRoutes(routes *routeSetupContext) {
 	api.Get("/namespaces", routes.namespaces.ListNamespaces)
 	api.Get("/namespaces/:name/access", routes.namespaces.GetNamespaceAccess)
 
-	adminHandler := handlers.NewAdminHandler(s.failureTracker)
+	adminHandler := handlers.NewAdminHandler(s.failureTracker, s.store)
 	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
 }
