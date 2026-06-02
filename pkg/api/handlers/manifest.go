@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -9,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,9 +19,14 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-// manifestAppNameSuffixBytes is the number of random bytes appended to the
-// GitHub App name to avoid global name collisions on retry.
-const manifestAppNameSuffixBytes = 3
+const (
+	// manifestAppNameSuffixBytes is the number of random bytes appended to the
+	// GitHub App name to avoid global name collisions on retry.
+	manifestAppNameSuffixBytes = 3
+	// manifestOAuthStateBytes is the number of random bytes used for the
+	// single-use CSRF state on the manifest setup/callback flow.
+	manifestOAuthStateBytes = 32
+)
 
 // ManifestHandler implements the GitHub App Manifest one-click OAuth flow.
 // When a user clicks "Set up GitHub Sign-In," the handler renders a page
@@ -93,16 +100,34 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 		slog.Error("[Manifest] failed to generate random suffix", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
 	}
+	state, err := randomHex(manifestOAuthStateBytes)
+	if err != nil {
+		slog.Error("[Manifest] failed to generate OAuth state", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+	}
+	if err := h.storeManifestState(c.UserContext(), state); err != nil {
+		slog.Error("[Manifest] failed to persist OAuth state", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+	}
+
+	redirectURL, err := url.Parse(h.backendURL + "/auth/manifest/callback")
+	if err != nil {
+		slog.Error("[Manifest] failed to build manifest redirect URL", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+	}
+	query := redirectURL.Query()
+	query.Set("state", state)
+	redirectURL.RawQuery = query.Encode()
 
 	manifest := manifestPayload{
-		Name:         fmt.Sprintf("KubeStellar Console %s", suffix),
-		URL:          h.backendURL,
-		CallbackURLs: []string{h.backendURL + "/auth/github/callback"},
-		RedirectURL:  h.backendURL + "/auth/manifest/callback",
-		HookAttributes: map[string]any{"url": "https://example.com/events", "active": false},
-		Public:       false,
+		Name:               fmt.Sprintf("KubeStellar Console %s", suffix),
+		URL:                h.backendURL,
+		CallbackURLs:       []string{h.backendURL + "/auth/github/callback"},
+		RedirectURL:        redirectURL.String(),
+		HookAttributes:     map[string]any{"url": "https://example.com/events", "active": false},
+		Public:             false,
 		DefaultPermissions: map[string]string{},
-		RequestOAuth: true,
+		RequestOAuth:       true,
 	}
 
 	manifestJSON, err := json.Marshal(manifest)
@@ -145,6 +170,16 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL + "/login?error=manifest_already_configured")
 	}
 
+	state := c.Query("state")
+	if state == "" {
+		slog.Warn("[Manifest] callback called without state")
+		return c.Redirect(h.frontendURL + "/login?error=manifest_invalid_state")
+	}
+	if !h.validateAndConsumeManifestState(c.UserContext(), state) {
+		slog.Warn("[Manifest] callback rejected — invalid state")
+		return c.Redirect(h.frontendURL + "/login?error=manifest_invalid_state")
+	}
+
 	code := c.Query("code")
 	if code == "" {
 		slog.Warn("[Manifest] callback called without code")
@@ -157,7 +192,7 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 	}
 	conversionURL := fmt.Sprintf("%s/app-manifests/%s/conversions", apiBase, code)
 
-	req, err := http.NewRequestWithContext(c.Context(), http.MethodPost, conversionURL, nil)
+	req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, conversionURL, nil)
 	if err != nil {
 		slog.Error("[Manifest] failed to create conversion request", "error", err)
 		return c.Redirect(h.frontendURL + "/login?error=manifest_conversion_failed")
@@ -194,7 +229,7 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL + "/login?error=manifest_conversion_failed")
 	}
 
-	if err := h.store.SaveOAuthCredentials(c.Context(), conversion.ClientID, conversion.ClientSecret); err != nil {
+	if err := h.store.SaveOAuthCredentials(c.UserContext(), conversion.ClientID, conversion.ClientSecret); err != nil {
 		slog.Error("[Manifest] failed to persist credentials", "error", err)
 		return c.Redirect(h.frontendURL + "/login?error=manifest_conversion_failed")
 	}
@@ -207,6 +242,19 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 	}
 
 	return c.Redirect(h.frontendURL + "/login?manifest=success")
+}
+
+func (h *ManifestHandler) storeManifestState(ctx context.Context, state string) error {
+	return h.store.StoreOAuthState(ctx, state, oauthStateExpiration)
+}
+
+func (h *ManifestHandler) validateAndConsumeManifestState(ctx context.Context, state string) bool {
+	ok, err := h.store.ConsumeOAuthState(ctx, state)
+	if err != nil {
+		slog.Error("[Manifest] failed to consume OAuth state", "error", err)
+		return false
+	}
+	return ok
 }
 
 func randomHex(n int) (string, error) {
