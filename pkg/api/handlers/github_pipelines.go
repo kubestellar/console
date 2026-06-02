@@ -478,6 +478,9 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	if h.mutationToken == "" {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Workflow mutations disabled on this deployment"})
 	}
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
 	op := c.Query("op")
 	repo := c.Query("repo")
 	run := c.Query("run")

@@ -91,7 +91,7 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	api.Post("/github/token", githubProxy.SaveToken)
 	api.Delete("/github/token", githubProxy.DeleteToken)
 
-	githubPipelines := handlers.NewGitHubPipelinesHandler(s.config.GitHubToken)
+	githubPipelines := handlers.NewGitHubPipelinesHandler(s.config.GitHubToken, s.store)
 	api.Get("/github-pipelines", githubPipelines.Serve)
 	api.Post("/github-pipelines", githubPipelines.Serve)
 	api.Get("/github-pipelines/health", githubPipelines.HandleHealth)

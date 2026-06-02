@@ -76,8 +76,7 @@ export const MS_PER_DAY = 86_400_000;
 export const GH_RETRY_MAX_ATTEMPTS = 3;
 export const GH_RETRY_BASE_DELAY_MS = 1_000;
 
-/** Matches `owner/repo` format — allows any valid GitHub repo, not just
- * preconfigured PIPELINE_REPOS. The token's access controls what's fetchable. */
+/** Matches `owner/repo` format before checking the configured PIPELINE_REPOS allowlist. */
 export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
 /**

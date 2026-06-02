@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/store"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -21,6 +22,7 @@ type GitHubPipelinesHandler struct {
 	mutationToken string
 	httpClient    *http.Client
 	history       *ghpHistory
+	store         store.Store
 
 	mu       sync.RWMutex
 	cache    map[string]ghpCacheEntry
@@ -30,12 +32,13 @@ type GitHubPipelinesHandler struct {
 // NewGitHubPipelinesHandler constructs the handler. `githubToken` is the
 // read-only PAT. Mutation token comes from GITHUB_MUTATIONS_TOKEN env var
 // — if unset, mutations return 503.
-func NewGitHubPipelinesHandler(githubToken string) *GitHubPipelinesHandler {
+func NewGitHubPipelinesHandler(githubToken string, s store.Store) *GitHubPipelinesHandler {
 	return &GitHubPipelinesHandler{
 		token:         githubToken,
 		mutationToken: os.Getenv("GITHUB_MUTATIONS_TOKEN"),
 		httpClient:    client.GitHub,
 		history:       newGHPHistory(),
+		store:         s,
 		cache:         make(map[string]ghpCacheEntry),
 	}
 }

@@ -2,13 +2,9 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,7 +17,6 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
-	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -159,96 +154,57 @@ func StopGitHubProxyLimiterEvictor() {
 	githubProxyEvictCancel()
 }
 
-// allowedGitHubPrefixes restricts which non-repo GitHub API paths can be proxied.
-// Repo-scoped /repos/* requests are validated separately against the repo allowlist.
+const (
+	githubProxyReposPrefix   = "/repos/"
+	githubProxyRateLimitPath = "/rate_limit"
+)
+
+// allowedGitHubPrefixes restricts which GitHub API paths can be proxied.
+// Only read-only endpoints actually needed by the frontend are permitted.
+// Any path not matching one of these prefixes is rejected with 403 Forbidden.
 var allowedGitHubPrefixes = []string{
-	"/search/",       // issue/PR search for contributions list
-	"/rate_limit",    // rate-limit check / token validation
-	"/user",          // token validation (GET /user returns the authenticated user)
-	"/notifications", // notification badge (if used by frontend)
+	githubProxyReposPrefix,   // repo info, PRs, issues, releases, contributors, actions, git refs, compare
+	githubProxyRateLimitPath, // rate-limit check / token validation
 }
 
-var githubProxyDefaultRepos = []string{
-	"kubestellar/kubestellar",
-	"kubestellar/console",
-	"kubestellar/docs",
-	"kubestellar/ocm-transport-plugin",
-	"kubestellar/galaxy",
-	"kubestellar/ui",
-}
-
-func normalizeGitHubProxyRepo(repo string) (string, bool) {
-	repo = strings.TrimSpace(repo)
-	if repo == "" || !ghpValidRepoPattern.MatchString(repo) {
+func githubProxyRepoSlug(apiPath string) (string, bool) {
+	if !strings.HasPrefix(apiPath, githubProxyReposPrefix) {
 		return "", false
 	}
-	return strings.ToLower(repo), true
-}
-
-func getGitHubProxyAllowedRepos() map[string]struct{} {
-	configuredRepos := githubProxyDefaultRepos
-	if env := os.Getenv("GITHUB_PROXY_REPOS"); env != "" {
-		envRepos := make([]string, 0)
-		for _, repo := range strings.Split(env, ",") {
-			normalized, ok := normalizeGitHubProxyRepo(repo)
-			if !ok {
-				slog.Warn("[GitHubProxy] invalid repo slug in GITHUB_PROXY_REPOS, skipping", "repo", strings.TrimSpace(repo))
-				continue
-			}
-			envRepos = append(envRepos, normalized)
-		}
-		if len(envRepos) > 0 {
-			configuredRepos = envRepos
-		}
-	}
-
-	allowedRepos := make(map[string]struct{}, len(configuredRepos))
-	for _, repo := range configuredRepos {
-		normalized, ok := normalizeGitHubProxyRepo(repo)
-		if !ok {
-			continue
-		}
-		allowedRepos[normalized] = struct{}{}
-	}
-	return allowedRepos
-}
-
-func githubProxyExtractRepo(apiPath string) (string, bool) {
-	if !strings.HasPrefix(apiPath, "/repos/") {
-		return "", false
-	}
-	parts := strings.SplitN(strings.TrimPrefix(apiPath, "/repos/"), "/", 3)
+	rest := strings.TrimPrefix(apiPath, githubProxyReposPrefix)
+	parts := strings.Split(rest, "/")
 	if len(parts) < 2 {
 		return "", false
 	}
-	return normalizeGitHubProxyRepo(parts[0] + "/" + parts[1])
+	repo := parts[0] + "/" + parts[1]
+	if !ghpValidRepoPattern.MatchString(repo) {
+		return "", false
+	}
+	return repo, true
 }
 
-func githubProxySearchQualifier(allowedRepos map[string]struct{}) string {
-	repoQualifiers := make([]string, 0, len(allowedRepos))
-	for repo := range allowedRepos {
-		repoQualifiers = append(repoQualifiers, "repo:"+repo)
+func isAllowedGitHubPath(apiPath string) bool {
+	for _, prefix := range allowedGitHubPrefixes {
+		switch prefix {
+		case githubProxyRateLimitPath:
+			if apiPath == prefix {
+				return true
+			}
+		case githubProxyReposPrefix:
+			if _, ok := githubProxyRepoSlug(apiPath); ok {
+				return true
+			}
+		}
 	}
-	sort.Strings(repoQualifiers)
-	if len(repoQualifiers) == 0 {
-		return ""
-	}
-	if len(repoQualifiers) == 1 {
-		return repoQualifiers[0]
-	}
-	return "(" + strings.Join(repoQualifiers, " OR ") + ")"
+	return false
 }
 
-func githubProxyScopeSearchQuery(query string, allowedRepos map[string]struct{}) string {
-	query = strings.TrimSpace(query)
-	qualifier := githubProxySearchQualifier(allowedRepos)
-	if qualifier == "" {
-		return query
+func shouldUseServerGitHubToken(apiPath string) bool {
+	if apiPath == githubProxyRateLimitPath {
+		return true
 	}
-	if query == "" {
-		return qualifier
-	}
-	return fmt.Sprintf("(%s) %s", query, qualifier)
+	repo, ok := githubProxyRepoSlug(apiPath)
+	return ok && ghpIsAllowedRepo(repo)
 }
 
 // GitHubProxyHandler proxies read-only GitHub API requests through the backend,
@@ -260,65 +216,14 @@ type GitHubProxyHandler struct {
 	serverToken string
 	// store is used for admin role checks on token management endpoints
 	store store.Store
-	// allowedRepos is the configured repo allowlist for /repos/* and /search/* requests.
-	allowedRepos map[string]struct{}
 }
 
 // NewGitHubProxyHandler creates a new GitHub API proxy handler.
 func NewGitHubProxyHandler(serverToken string, s store.Store) *GitHubProxyHandler {
 	return &GitHubProxyHandler{
-		serverToken:  serverToken,
-		store:        s,
-		allowedRepos: getGitHubProxyAllowedRepos(),
+		serverToken: serverToken,
+		store:       s,
 	}
-}
-
-func (h *GitHubProxyHandler) isAllowedRepo(repo string) bool {
-	_, ok := h.allowedRepos[repo]
-	return ok
-}
-
-// isAllowedGitHubPath checks whether apiPath (which must start with "/")
-// matches one of the allowed prefixes. Repo paths must also match the
-// configured owner/repo allowlist.
-func (h *GitHubProxyHandler) isAllowedGitHubPath(apiPath string) bool {
-	if strings.HasPrefix(apiPath, "/repos/") {
-		repo, ok := githubProxyExtractRepo(apiPath)
-		if !ok {
-			return false
-		}
-		return h.isAllowedRepo(repo)
-	}
-
-	for _, prefix := range allowedGitHubPrefixes {
-		if strings.HasSuffix(prefix, "/") {
-			if strings.HasPrefix(apiPath, prefix) {
-				return true
-			}
-			continue
-		}
-		if apiPath == prefix || strings.HasPrefix(apiPath, prefix+"/") {
-			return true
-		}
-	}
-	return false
-}
-
-func (h *GitHubProxyHandler) buildTargetURL(apiPath string, rawQuery string) (string, error) {
-	targetURL, err := url.Parse(githubProxyAPIBase + apiPath)
-	if err != nil {
-		return "", err
-	}
-
-	queryValues, err := url.ParseQuery(rawQuery)
-	if err != nil {
-		return "", err
-	}
-	if strings.HasPrefix(apiPath, "/search/") {
-		queryValues.Set("q", githubProxyScopeSearchQuery(queryValues.Get("q"), h.allowedRepos))
-	}
-	targetURL.RawQuery = queryValues.Encode()
-	return targetURL.String(), nil
 }
 
 // resolveToken returns the best available GitHub token:
@@ -382,22 +287,19 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Security: only allow specific GitHub API prefixes and allowlisted repos.
+	// Security: only allow specific GitHub API prefixes (see allowedGitHubPrefixes)
 	apiPath := "/" + path
-	if !h.isAllowedGitHubPath(apiPath) {
-		repo, _ := githubProxyExtractRepo(apiPath)
-		slog.Warn("[GitHubProxy] blocked disallowed path", "user", limiterKey, "path", apiPath, "repo", repo)
+	if !isAllowedGitHubPath(apiPath) {
+		slog.Info("[GitHubProxy] blocked disallowed path", "path", apiPath)
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "GitHub API path not allowed",
 		})
 	}
 
-	// Build target URL with query params and scope search requests to allowlisted repos.
-	targetURL, err := h.buildTargetURL(apiPath, string(c.Context().QueryArgs().QueryString()))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid query parameters",
-		})
+	// Build target URL with query params
+	targetURL := githubProxyAPIBase + apiPath
+	if qs := c.Context().QueryArgs().QueryString(); len(qs) > 0 {
+		targetURL += "?" + string(qs)
 	}
 
 	// Create proxied request with context propagation so cancellation
@@ -409,10 +311,16 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Add GitHub token from server-side storage
-	token := h.resolveToken()
+	useServerToken := shouldUseServerGitHubToken(apiPath)
+	token := ""
+	if useServerToken {
+		token = h.resolveToken()
+	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	if repo, ok := githubProxyRepoSlug(apiPath); ok {
+		slog.Info("[GitHubProxy] proxying repo request", "repo", repo, "user", limiterKey, "server_token_used", useServerToken)
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("User-Agent", "KubeStellar-Console-Proxy")
@@ -465,44 +373,9 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 // to the encrypted server-side settings file. The token is NOT stored in
 // localStorage after this migration.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
-	// Try to bootstrap first admin if no admins exist
-	var user *models.User
-	if h.store != nil {
-		admins, _, _, err := h.store.CountUsersByRole(c.UserContext())
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check admin status")
-		}
-
-		// Get the current user
-		userID := middleware.GetUserID(c)
-		user, err = h.store.GetUser(c.UserContext(), userID)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
-		}
-
-		// If no admins exist, promote the current user to admin
-		if admins == 0 && user != nil && user.Role != models.UserRoleAdmin {
-			user.Role = models.UserRoleAdmin
-			if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
-				return fiber.NewError(fiber.StatusInternalServerError, "Failed to promote user to admin")
-			}
-		}
-	}
-
-	// Verify admin role (using pre-fetched user if available to avoid duplicate GetUser call)
-	if h.store != nil {
-		if user == nil {
-			// If we didn't fetch the user above (store was nil), do it now
-			userID := middleware.GetUserID(c)
-			var err error
-			user, err = h.store.GetUser(c.UserContext(), userID)
-			if err != nil {
-				return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
-			}
-		}
-		if err := requireAdminCheck(user); err != nil {
-			return err
-		}
+	// Global token management requires console admin role
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
 	}
 
 	var body struct {

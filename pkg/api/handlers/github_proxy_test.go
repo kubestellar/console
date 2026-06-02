@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -43,111 +42,35 @@ func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
 	}
 }
 
-func TestGetGitHubProxyAllowedRepos_Defaults(t *testing.T) {
-	t.Setenv("GITHUB_PROXY_REPOS", "")
-
-	allowed := getGitHubProxyAllowedRepos()
-	expected := []string{
-		"kubestellar/kubestellar",
-		"kubestellar/console",
-		"kubestellar/docs",
-		"kubestellar/ocm-transport-plugin",
-		"kubestellar/galaxy",
-		"kubestellar/ui",
-	}
-	if len(allowed) != len(expected) {
-		t.Fatalf("expected %d default repos, got %d", len(expected), len(allowed))
-	}
-	for _, repo := range expected {
-		if _, ok := allowed[repo]; !ok {
-			t.Fatalf("expected default repo %q in allowlist", repo)
-		}
-	}
-}
-
-func TestGetGitHubProxyAllowedRepos_FromEnv(t *testing.T) {
-	t.Setenv("GITHUB_PROXY_REPOS", "Example/One, invalid slug , two/Repo")
-
-	allowed := getGitHubProxyAllowedRepos()
-	if len(allowed) != 2 {
-		t.Fatalf("expected 2 repos, got %d", len(allowed))
-	}
-	for _, repo := range []string{"example/one", "two/repo"} {
-		if _, ok := allowed[repo]; !ok {
-			t.Fatalf("expected repo %q in allowlist", repo)
-		}
-	}
-}
-
-func TestGitHubProxyExtractRepo(t *testing.T) {
-	tests := []struct {
-		name string
-		path string
-		repo string
-		ok   bool
-	}{
-		{"valid repo path", "/repos/KubeStellar/Console/releases", "kubestellar/console", true},
-		{"missing repo", "/repos/kubestellar", "", false},
-		{"wrong prefix", "/search/issues", "", false},
-		{"invalid repo slug", "/repos/kubestellar/console%2Fbad/issues", "", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo, ok := githubProxyExtractRepo(tt.path)
-			if repo != tt.repo || ok != tt.ok {
-				t.Fatalf("githubProxyExtractRepo(%q) = (%q, %v), want (%q, %v)", tt.path, repo, ok, tt.repo, tt.ok)
-			}
-		})
-	}
-}
-
-func TestGitHubProxyScopeSearchQuery(t *testing.T) {
-	allowedRepos := map[string]struct{}{
-		"kubestellar/console": {},
-		"kubestellar/docs":    {},
-	}
-
-	scoped := githubProxyScopeSearchQuery("is:pr author:octocat", allowedRepos)
-	if !strings.Contains(scoped, "(is:pr author:octocat)") {
-		t.Fatalf("expected original query to be preserved, got %q", scoped)
-	}
-	if !strings.Contains(scoped, "repo:kubestellar/console") || !strings.Contains(scoped, "repo:kubestellar/docs") {
-		t.Fatalf("expected allowlisted repo qualifiers in %q", scoped)
-	}
-	if !strings.Contains(scoped, " OR ") {
-		t.Fatalf("expected OR between repo qualifiers in %q", scoped)
-	}
-}
-
 func TestIsAllowedGitHubPath(t *testing.T) {
-	mockStore := new(test.MockStore)
-	h := NewGitHubProxyHandler("", mockStore)
-	h.allowedRepos = map[string]struct{}{
-		"kubestellar/console": {},
-		"external/allowed":    {},
-	}
-
 	tests := []struct {
 		name    string
 		path    string
 		allowed bool
 	}{
-		{"allowed default repo", "/repos/kubestellar/console/releases", true},
-		{"allowed configured repo", "/repos/external/allowed/issues", true},
-		{"missing repo slug", "/repos/", false},
-		{"blocked external repo", "/repos/evil/private/issues", false},
-		{"rate limit", "/rate_limit", true},
-		{"search", "/search/issues", true},
-		{"user exact", "/user", true},
-		{"user subpath", "/user/repos", true},
-		{"notifications", "/notifications", true},
+		// Allowed paths
+		{"allowlisted repo path", "/repos/kubestellar/console/releases", true},
+		{"public repo path", "/repos/some-org/some-repo/issues", true},
+		{"rate_limit exact", "/rate_limit", true},
+
+		// Blocked paths
+		{"repos root", "/repos/", false},
+		{"invalid repo slug", "/repos/evil/../repo/issues", false},
 		{"gists", "/gists", false},
+		{"orgs", "/orgs/kubestellar", false},
+		{"search", "/search/issues", false},
+		{"user exact", "/user", false},
+		{"notifications exact", "/notifications", false},
+		{"empty", "/", false},
+		{"admin", "/admin/users", false},
+		{"events", "/events", false},
+		{"emojis", "/emojis", false},
+		{"users endpoint", "/users/someuser", false},
 		{"graphql", "/graphql", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := h.isAllowedGitHubPath(tt.path)
+			got := isAllowedGitHubPath(tt.path)
 			if got != tt.allowed {
 				t.Errorf("isAllowedGitHubPath(%q) = %v, want %v", tt.path, got, tt.allowed)
 			}
@@ -155,70 +78,23 @@ func TestIsAllowedGitHubPath(t *testing.T) {
 	}
 }
 
-func TestProxy_BlocksDisallowedRepoRequest(t *testing.T) {
-	app := fiber.New()
-	h := NewGitHubProxyHandler("", nil)
-	h.allowedRepos = map[string]struct{}{"kubestellar/console": {}}
-
-	called := false
-	originalClient := githubProxyClient
-	githubProxyClient = &http.Client{Transport: RoundTripFunc(func(_ *http.Request) *http.Response {
-		called = true
-		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}
-	})}
-	defer func() { githubProxyClient = originalClient }()
-
-	app.Get("/api/github/*", func(c *fiber.Ctx) error {
-		c.Locals("userID", uuid.New())
-		return h.Proxy(c)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/api/github/repos/private/repo/issues", nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("proxy request failed: %v", err)
+func TestShouldUseServerGitHubToken(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		allowed bool
+	}{
+		{"allowlisted repo uses server token", "/repos/kubestellar/console/releases", true},
+		{"public repo does not use server token", "/repos/some-org/some-repo/issues", false},
+		{"rate_limit uses server token", "/rate_limit", true},
+		{"invalid repo path does not use server token", "/repos/evil/../repo/issues", false},
 	}
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected 403 for disallowed repo, got %d", resp.StatusCode)
-	}
-	if called {
-		t.Fatal("expected disallowed repo request to be blocked before reaching GitHub")
-	}
-}
-
-func TestProxy_ScopesSearchRequestsToAllowedRepos(t *testing.T) {
-	app := fiber.New()
-	h := NewGitHubProxyHandler("", nil)
-	h.allowedRepos = map[string]struct{}{
-		"kubestellar/console": {},
-		"kubestellar/docs":    {},
-	}
-
-	var capturedQuery string
-	originalClient := githubProxyClient
-	githubProxyClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
-		capturedQuery = req.URL.Query().Get("q")
-		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"ok":true}`)), Header: make(http.Header)}
-	})}
-	defer func() { githubProxyClient = originalClient }()
-
-	app.Get("/api/github/*", func(c *fiber.Ctx) error {
-		c.Locals("userID", uuid.New())
-		return h.Proxy(c)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/api/github/search/issues?q=is%3Apr+author%3Aoctocat", nil)
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("proxy request failed: %v", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 for scoped search, got %d", resp.StatusCode)
-	}
-	if !strings.Contains(capturedQuery, "(is:pr author:octocat)") {
-		t.Fatalf("expected original search query to be preserved, got %q", capturedQuery)
-	}
-	if !strings.Contains(capturedQuery, "repo:kubestellar/console") || !strings.Contains(capturedQuery, "repo:kubestellar/docs") {
-		t.Fatalf("expected captured query to include allowlisted repos, got %q", capturedQuery)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldUseServerGitHubToken(tt.path)
+			if got != tt.allowed {
+				t.Errorf("shouldUseServerGitHubToken(%q) = %v, want %v", tt.path, got, tt.allowed)
+			}
+		})
 	}
 }

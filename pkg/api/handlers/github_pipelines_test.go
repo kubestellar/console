@@ -7,12 +7,16 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/test"
 )
 
-func newGHPTestApp(t *testing.T, token, mutationToken string) *fiber.App {
+func newGHPTestApp(t *testing.T, token, mutationToken string, s store.Store) *fiber.App {
 	t.Helper()
 	t.Setenv("GITHUB_MUTATIONS_TOKEN", mutationToken)
-	h := NewGitHubPipelinesHandler(token)
+	h := NewGitHubPipelinesHandler(token, s)
 	app := fiber.New()
 	app.Get("/api/github-pipelines", h.Serve)
 	app.Post("/api/github-pipelines", h.Serve)
@@ -20,7 +24,7 @@ func newGHPTestApp(t *testing.T, token, mutationToken string) *fiber.App {
 }
 
 func TestGitHubPipelines_MissingTokenReturns500(t *testing.T) {
-	app := newGHPTestApp(t, "", "")
+	app := newGHPTestApp(t, "", "", nil)
 	req := httptest.NewRequest("GET", "/api/github-pipelines?view=pulse", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
@@ -32,7 +36,7 @@ func TestGitHubPipelines_MissingTokenReturns500(t *testing.T) {
 }
 
 func TestGitHubPipelines_UnknownViewReturns400(t *testing.T) {
-	app := newGHPTestApp(t, "fake-token", "")
+	app := newGHPTestApp(t, "fake-token", "", nil)
 	req := httptest.NewRequest("GET", "/api/github-pipelines?view=bogus", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
@@ -46,7 +50,7 @@ func TestGitHubPipelines_UnknownViewReturns400(t *testing.T) {
 func TestGitHubPipelines_MutateDisabledWhenNoMutationToken(t *testing.T) {
 	// Intentional: local/in-cluster deploys are read-only by default.
 	// Mutations only enable when GITHUB_MUTATIONS_TOKEN is set.
-	app := newGHPTestApp(t, "fake-token", "")
+	app := newGHPTestApp(t, "fake-token", "", nil)
 	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=kubestellar/console&run=1", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
@@ -58,7 +62,7 @@ func TestGitHubPipelines_MutateDisabledWhenNoMutationToken(t *testing.T) {
 }
 
 func TestGitHubPipelines_MutateRejectsUnknownRepo(t *testing.T) {
-	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
+	app := newGHPTestApp(t, "fake-token", "fake-mutation-token", nil)
 	// Use a path-traversal slug that the regex must reject.
 	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=evil/../passwd&run=1", nil)
 	res, err := app.Test(req, -1)
@@ -71,7 +75,7 @@ func TestGitHubPipelines_MutateRejectsUnknownRepo(t *testing.T) {
 }
 
 func TestGitHubPipelines_MutateRejectsUnknownOp(t *testing.T) {
-	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
+	app := newGHPTestApp(t, "fake-token", "fake-mutation-token", nil)
 	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=delete&repo=kubestellar/console&run=1", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
@@ -83,7 +87,7 @@ func TestGitHubPipelines_MutateRejectsUnknownOp(t *testing.T) {
 }
 
 func TestGitHubPipelines_MutateRejectsGET(t *testing.T) {
-	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
+	app := newGHPTestApp(t, "fake-token", "fake-mutation-token", nil)
 	req := httptest.NewRequest("GET", "/api/github-pipelines?view=mutate&op=rerun&repo=kubestellar/console&run=1", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
@@ -94,8 +98,34 @@ func TestGitHubPipelines_MutateRejectsGET(t *testing.T) {
 	}
 }
 
+func TestGitHubPipelines_MutateRequiresAdmin(t *testing.T) {
+	mockStore := new(test.MockStore)
+	userID := uuid.New()
+	viewer := &models.User{ID: userID, Role: models.UserRoleViewer}
+	mockStore.On("GetUser", userID).Return(viewer, nil).Once()
+	mockStore.On("CountUsersByRole").Return(1, 0, 1, nil).Once()
+
+	t.Setenv("GITHUB_MUTATIONS_TOKEN", "fake-mutation-token")
+	h := NewGitHubPipelinesHandler("fake-token", mockStore)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/api/github-pipelines", h.Serve)
+
+	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=kubestellar/console&run=1", nil)
+	res, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if res.StatusCode != 403 {
+		t.Fatalf("expected 403 for non-admin mutate, got %d", res.StatusCode)
+	}
+}
+
 func TestGitHubPipelines_LogRequiresParams(t *testing.T) {
-	app := newGHPTestApp(t, "fake-token", "")
+	app := newGHPTestApp(t, "fake-token", "", nil)
 	req := httptest.NewRequest("GET", "/api/github-pipelines?view=log", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
@@ -124,7 +154,7 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 		t.Fatalf("expected success conclusion, got %v", day.Conclusion)
 	}
 	// Trim retention: insert an ancient day and verify it's dropped
-	ancient := time.Now().AddDate(0, 0, -(ghpHistoryRetentionDays + 10)).Format("2006-01-02") + "T00:00:00Z"
+	ancient := time.Now().AddDate(0, 0, -(ghpHistoryRetentionDays+10)).Format("2006-01-02") + "T00:00:00Z"
 	h.merge([]ghpWorkflowRun{
 		{ID: 99, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: ancient, HTMLURL: "old"},
 	})
@@ -139,9 +169,9 @@ func TestGHPIsAllowedRepo(t *testing.T) {
 	if !ghpIsAllowedRepo("kubestellar/console") {
 		t.Fatal("console should be allowed")
 	}
-	// Any valid owner/repo slug is allowed (GitHub token is the real ACL).
-	if !ghpIsAllowedRepo("some-org/some-repo") {
-		t.Fatal("valid owner/repo slug should be allowed")
+	// Repos outside the configured allowlist must be rejected.
+	if ghpIsAllowedRepo("some-org/some-repo") {
+		t.Fatal("repo outside PIPELINE_REPOS should be rejected")
 	}
 	// Path-traversal and malformed slugs must be rejected.
 	for _, bad := range []string{
