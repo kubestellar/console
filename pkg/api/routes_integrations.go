@@ -63,7 +63,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Get("/gpu/reservations/:id/utilization", gpuHandler.GetReservationUtilization)
 	api.Get("/gpu/utilizations", gpuHandler.GetBulkUtilizations)
 
-	gadgetHandler := handlers.NewGadgetHandler(s.bridge)
+	gadgetHandler := handlers.NewGadgetHandler(s.bridge, s.store)
 	api.Get("/gadget/status", gadgetHandler.GetStatus)
 	api.Get("/gadget/tools", gadgetHandler.GetTools)
 	api.Post("/gadget/trace", gadgetHandler.RunTrace)

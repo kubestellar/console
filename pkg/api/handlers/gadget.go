@@ -8,18 +8,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 const gadgetTimeout = 30 * time.Second
 
 // GadgetHandler handles Inspektor Gadget API endpoints
 type GadgetHandler struct {
-	bridge *mcp.Bridge
+	bridge    *mcp.Bridge
+	userStore store.Store
 }
 
 // NewGadgetHandler creates a new GadgetHandler
-func NewGadgetHandler(bridge *mcp.Bridge) *GadgetHandler {
-	return &GadgetHandler{bridge: bridge}
+func NewGadgetHandler(bridge *mcp.Bridge, userStore store.Store) *GadgetHandler {
+	return &GadgetHandler{bridge: bridge, userStore: userStore}
 }
 
 // GetStatus returns the Inspektor Gadget MCP client connection status
@@ -59,6 +61,10 @@ type traceRequest struct {
 
 // RunTrace invokes an Inspektor Gadget tool
 func (h *GadgetHandler) RunTrace(c *fiber.Ctx) error {
+	if err := requireAdmin(c, h.userStore); err != nil {
+		return err
+	}
+
 	var req traceRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})

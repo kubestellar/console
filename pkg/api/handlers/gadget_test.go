@@ -7,7 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +19,7 @@ import (
 func TestGadgetHandlers_GetStatus(t *testing.T) {
 	env := setupTestEnv(t)
 	bridge := mcp.NewBridge(mcp.BridgeConfig{})
-	h := NewGadgetHandler(bridge)
+	h := NewGadgetHandler(bridge, env.Store)
 	env.App.Get("/api/mcp/gadget/status", h.GetStatus)
 
 	t.Run("unavailable", func(t *testing.T) {
@@ -34,7 +38,7 @@ func TestGadgetHandlers_GetStatus(t *testing.T) {
 func TestGadgetHandlers_GetTools(t *testing.T) {
 	env := setupTestEnv(t)
 	bridge := mcp.NewBridge(mcp.BridgeConfig{})
-	h := NewGadgetHandler(bridge)
+	h := NewGadgetHandler(bridge, env.Store)
 	env.App.Get("/api/mcp/gadget/tools", h.GetTools)
 
 	t.Run("unavailable", func(t *testing.T) {
@@ -50,9 +54,32 @@ func TestGadgetHandlers_GetTools(t *testing.T) {
 }
 
 func TestGadgetHandlers_RunTrace(t *testing.T) {
+	t.Run("viewer forbidden", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: models.UserRoleViewer}, nil).Once()
+
+		h := NewGadgetHandler(mcp.NewBridge(mcp.BridgeConfig{}), mockStore)
+		app.Use(func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return c.Next()
+		})
+		app.Post("/api/mcp/gadget/trace", h.RunTrace)
+
+		body := map[string]interface{}{"tool": "trace_dns"}
+		data, err := json.Marshal(body)
+		require.NoError(t, err)
+		req := httptest.NewRequest("POST", "/api/mcp/gadget/trace", bytes.NewReader(data))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
 	env := setupTestEnv(t)
 	bridge := mcp.NewBridge(mcp.BridgeConfig{})
-	h := NewGadgetHandler(bridge)
+	h := NewGadgetHandler(bridge, env.Store)
 	env.App.Post("/api/mcp/gadget/trace", h.RunTrace)
 
 	t.Run("missing body", func(t *testing.T) {
