@@ -15,6 +15,7 @@
 import { getStore } from "@netlify/blobs";
 import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATHS } from "../../src/lib/acmm/scannableIdsByLevel";
 import { readCappedJson } from "./_shared/read-capped-json";
+import { DEFAULT_ACMM_REPOS, getAllowedRepos } from "./acmm-scan/helpers";
 
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
@@ -82,6 +83,14 @@ const LEVEL_NAMES: Record<number, string> = {
 };
 
 const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
+
+/**
+ * Check if a repo is in the allowlist for ACMM scanning.
+ * Returns true only if the repo is in the configured allowed list (CWE-862).
+ */
+function isAllowedRepo(repo: string): boolean {
+  return getAllowedRepos().includes(repo);
+}
 
 function corsHeaders(
   origin: string | null,
@@ -263,6 +272,24 @@ export default async (req: Request) => {
         schemaVersion: 1,
         label: "ACMM",
         message: "invalid repo",
+        color: "red",
+        cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
+      }),
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // 🔒 Security: Check if repo is in the allowlist (CWE-862)
+  if (!isAllowedRepo(repo)) {
+    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
+    return new Response(
+      JSON.stringify({
+        schemaVersion: 1,
+        label: "ACMM",
+        message: "forbidden",
         color: "red",
         cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
       }),

@@ -39,6 +39,7 @@ import {
   REPO_RE,
   corsHeaders,
   matchesHint,
+  isAllowedRepo,
 } from "./acmm-scan/helpers";
 import type { CacheEntry, ScanResult } from "./acmm-scan/helpers";
 import { fetchTreePaths, fetchWeeklyActivity } from "./acmm-scan/fetchers";
@@ -72,6 +73,17 @@ export default async (req: Request) => {
       JSON.stringify({ error: "Invalid repo — must be owner/name" }),
       {
         status: 400,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // 🔒 Security: Check if repo is in the allowlist (CWE-862)
+  if (!isAllowedRepo(repo)) {
+    return new Response(
+      JSON.stringify({ error: "Repo not in allowlist" }),
+      {
+        status: 403,
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );

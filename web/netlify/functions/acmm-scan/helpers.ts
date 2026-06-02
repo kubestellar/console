@@ -19,6 +19,16 @@ export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
 export const UNKNOWN_REPO = "unknown/repo";
+
+/** Default repos that can be scanned by ACMM functions (kubestellar org only) */
+export const DEFAULT_ACMM_REPOS = [
+  "kubestellar/console",
+  "kubestellar/docs",
+  "kubestellar/console-kb",
+  "kubestellar/kubestellar-mcp",
+  "kubestellar/console-marketplace",
+  "kubestellar/homebrew-tap",
+];
 /** Allowed CORS origins (exact match) */
 export const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -87,6 +97,25 @@ export function corsHeaders(origin: string | null): Record<string, string> {
     "Cache-Control": "public, max-age=900",
     Vary: "Origin",
   };
+}
+
+/**
+ * Get the list of allowed repos for ACMM scanning. By default, returns repos
+ * in the kubestellar org. Can be overridden with the ACMM_REPOS env var
+ * (comma-separated list of owner/repo strings).
+ */
+export function getAllowedRepos(): string[] {
+  const env = process.env.ACMM_REPOS || Netlify.env.get("ACMM_REPOS");
+  if (!env) return DEFAULT_ACMM_REPOS;
+  return env.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Check if a repo is in the allowlist for ACMM scanning.
+ * Returns true only if the repo is in the configured allowed list.
+ */
+export function isAllowedRepo(repo: string): boolean {
+  return getAllowedRepos().includes(repo);
 }
 
 export function isoWeek(date: Date): string {
