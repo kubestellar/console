@@ -1,7 +1,7 @@
 // Package handlers — Agentic Workflows Detection Runs
 //
-// Fetches detection run data from GitHub issue #15554, which tracks
-// all workflow runs where threat detection flagged problems.
+// Fetches detection run data from the current GitHub "[aw] Detection Runs"
+// tracking issue, which records workflow runs where threat detection flagged problems.
 package handlers
 
 import (
@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"regexp"
 	"time"
@@ -20,11 +21,14 @@ import (
 )
 
 const (
-	awDetectionRunsTimeout     = 15 * time.Second
-	awDetectionRunsIssueNumber = 15554
-	awDetectionRunsRepo        = "kubestellar/console"
-	awMaxDetectionRuns         = 50
-	awMaxResponseBytes         = 5 * 1024 * 1024 // 5 MB
+	awDetectionRunsTimeout         = 15 * time.Second
+	awDetectionRunsRepo            = "kubestellar/console"
+	awDetectionRunsIssueTitle      = "[aw] Detection Runs"
+	awDetectionRunsIssueLabel      = "agentic-workflows"
+	awDetectionRunsDemoIssueNumber = 16283
+	awDetectionRunsSearchLimit     = 1
+	awMaxDetectionRuns             = 50
+	awMaxResponseBytes             = 5 * 1024 * 1024 // 5 MB
 )
 
 // detectionRunCommentPattern extracts detection run metadata from issue comments.
@@ -71,7 +75,18 @@ type GitHubIssueComment struct {
 	} `json:"user"`
 }
 
-// GetDetectionRuns returns detection runs from issue #15554.
+// GitHubIssueSearchResponse represents a GitHub issue search response.
+type GitHubIssueSearchResponse struct {
+	Items []GitHubIssue `json:"items"`
+}
+
+// GitHubIssue represents a GitHub issue result.
+type GitHubIssue struct {
+	Number  int    `json:"number"`
+	HTMLURL string `json:"html_url"`
+}
+
+// GetDetectionRuns returns detection runs from the active detection tracking issue.
 func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
 	if isDemoMode(c) {
 		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())
@@ -93,39 +108,24 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns(ctx context.Context) (*
 		return nil, fmt.Errorf("GITHUB_TOKEN not configured")
 	}
 
-	// Fetch issue comments from GitHub API
-	url := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d/comments?per_page=%d&sort=created&direction=desc",
-		awDetectionRunsRepo, awDetectionRunsIssueNumber, awMaxDetectionRuns)
-
 	ctx, cancel := context.WithTimeout(ctx, awDetectionRunsTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	issue, err := h.fetchDetectionRunsIssue(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
 
-	req.Header.Set("Authorization", "token "+token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "kubestellar-console")
+	commentsURL := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d/comments?per_page=%d&sort=created&direction=desc",
+		awDetectionRunsRepo, issue.Number, awMaxDetectionRuns)
 
-	resp, err := client.GitHub.Do(req)
+	commentsBody, err := fetchGitHubResponseBody(ctx, token, commentsURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch comments: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, awMaxResponseBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
 
 	var comments []GitHubIssueComment
-	if err := json.Unmarshal(body, &comments); err != nil {
+	if err := json.Unmarshal(commentsBody, &comments); err != nil {
 		return nil, fmt.Errorf("failed to parse comments: %w", err)
 	}
 
@@ -165,11 +165,9 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns(ctx context.Context) (*
 		})
 	}
 
-	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", awDetectionRunsRepo, awDetectionRunsIssueNumber)
-
 	return &DetectionRunsResponse{
 		Runs:       runs,
-		IssueURL:   issueURL,
+		IssueURL:   issue.HTMLURL,
 		TotalCount: len(runs),
 		Source:     "github",
 		CachedAt:   time.Now(),
@@ -177,10 +175,63 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns(ctx context.Context) (*
 	}, nil
 }
 
+func (h *AgenticDetectionRunsHandler) fetchDetectionRunsIssue(ctx context.Context, token string) (*GitHubIssue, error) {
+	searchQuery := neturl.QueryEscape(fmt.Sprintf(
+		"repo:%s is:issue is:open label:%s in:title %q",
+		awDetectionRunsRepo,
+		awDetectionRunsIssueLabel,
+		awDetectionRunsIssueTitle,
+	))
+	searchURL := fmt.Sprintf("https://api.github.com/search/issues?q=%s&per_page=%d", searchQuery, awDetectionRunsSearchLimit)
+
+	searchBody, err := fetchGitHubResponseBody(ctx, token, searchURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch detection runs issue: %w", err)
+	}
+
+	var searchResponse GitHubIssueSearchResponse
+	if err := json.Unmarshal(searchBody, &searchResponse); err != nil {
+		return nil, fmt.Errorf("failed to parse detection runs issue: %w", err)
+	}
+	if len(searchResponse.Items) == 0 {
+		return nil, fmt.Errorf("detection runs issue not found")
+	}
+
+	return &searchResponse.Items[0], nil
+}
+
+func fetchGitHubResponseBody(ctx context.Context, token, requestURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+token)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "kubestellar-console")
+
+	resp, err := client.GitHub.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, awMaxResponseBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return body, nil
+}
+
 // getDemoDetectionRuns returns demo data for detection runs.
 func getDemoDetectionRuns() DetectionRunsResponse {
 	now := time.Now()
-	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", awDetectionRunsRepo, awDetectionRunsIssueNumber)
+	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", awDetectionRunsRepo, awDetectionRunsDemoIssueNumber)
 
 	return DetectionRunsResponse{
 		Runs: []DetectionRun{

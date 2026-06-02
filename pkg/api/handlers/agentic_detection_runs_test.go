@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	neturl "net/url"
 	"strings"
 	"testing"
 	"time"
@@ -191,39 +192,64 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "test-token")
 
 	now := time.Now().UTC().Truncate(time.Second)
+	issueNumber := 16283
+	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", awDetectionRunsRepo, issueNumber)
+	searchResponse := GitHubIssueSearchResponse{
+		Items: []GitHubIssue{{
+			Number:  issueNumber,
+			HTMLURL: issueURL,
+		}},
+	}
 
 	comments := []GitHubIssueComment{
 		fakeGitHubComment(
 			"github-actions",
 			"Conclusion: warning | Reason: parse_error\nhttps://github.com/kubestellar/console/actions/runs/11111",
-			"https://github.com/kubestellar/console/issues/15554#issuecomment-1",
+			issueURL+"#issuecomment-1",
 			now.Add(-1*time.Hour),
 		),
 		fakeGitHubComment(
 			"github-actions",
 			"Conclusion: failure | Reason: agent_failure\nhttps://github.com/kubestellar/console/actions/runs/22222",
-			"https://github.com/kubestellar/console/issues/15554#issuecomment-2",
+			issueURL+"#issuecomment-2",
 			now.Add(-2*time.Hour),
 		),
 		// human comment — must be filtered out
 		fakeGitHubComment(
 			"human-user",
 			"Conclusion: success | Reason: ok",
-			"https://github.com/kubestellar/console/issues/15554#issuecomment-3",
+			issueURL+"#issuecomment-3",
 			now.Add(-3*time.Hour),
 		),
 	}
 
-	raw, err := json.Marshal(comments)
+	searchRaw, err := json.Marshal(searchResponse)
+	require.NoError(t, err)
+	commentsRaw, err := json.Marshal(comments)
 	require.NoError(t, err)
 
 	mockGitHubTransport(t, func(req *http.Request) *http.Response {
-		assert.Contains(t, req.URL.String(), fmt.Sprintf("issues/%d/comments", awDetectionRunsIssueNumber))
 		assert.Equal(t, "token test-token", req.Header.Get("Authorization"))
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(bytes.NewReader(raw)),
-			Header:     make(http.Header),
+		switch {
+		case strings.Contains(req.URL.Path, "/search/issues"):
+			assert.Contains(t, req.URL.RawQuery, neturl.QueryEscape(awDetectionRunsIssueTitle))
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader(searchRaw)),
+				Header:     make(http.Header),
+			}
+		case strings.Contains(req.URL.Path, fmt.Sprintf("/issues/%d/comments", issueNumber)):
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader(commentsRaw)),
+				Header:     make(http.Header),
+			}
+		default:
+			return &http.Response{
+				StatusCode: http.StatusNotFound,
+				Body:       io.NopCloser(strings.NewReader(`{"message":"not found"}`)),
+				Header:     make(http.Header),
+			}
 		}
 	})
 
@@ -233,6 +259,7 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 
 	assert.Equal(t, 2, result.TotalCount, "human comment must be filtered out")
 	assert.Len(t, result.Runs, 2)
+	assert.Equal(t, issueURL, result.IssueURL)
 	assert.Equal(t, "github", result.Source)
 	assert.False(t, result.IsDemoData)
 
@@ -248,16 +275,34 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 func TestFetchDetectionRuns_APIError(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "test-token")
 
+	searchResponse := GitHubIssueSearchResponse{
+		Items: []GitHubIssue{{
+			Number:  16283,
+			HTMLURL: "https://github.com/kubestellar/console/issues/16283",
+		}},
+	}
+	searchRaw, err := json.Marshal(searchResponse)
+	require.NoError(t, err)
+
 	mockGitHubTransport(t, func(req *http.Request) *http.Response {
-		return &http.Response{
-			StatusCode: http.StatusForbidden,
-			Body:       io.NopCloser(strings.NewReader(`{"message":"Resource not accessible by integration"}`)),
-			Header:     make(http.Header),
+		switch {
+		case strings.Contains(req.URL.Path, "/search/issues"):
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader(searchRaw)),
+				Header:     make(http.Header),
+			}
+		default:
+			return &http.Response{
+				StatusCode: http.StatusForbidden,
+				Body:       io.NopCloser(strings.NewReader(`{"message":"Resource not accessible by integration"}`)),
+				Header:     make(http.Header),
+			}
 		}
 	})
 
 	h := NewAgenticDetectionRunsHandler()
-	_, err := h.fetchDetectionRuns(context.Background())
+	_, err = h.fetchDetectionRuns(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "403")
 }
@@ -265,16 +310,34 @@ func TestFetchDetectionRuns_APIError(t *testing.T) {
 func TestFetchDetectionRuns_InvalidJSON(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "test-token")
 
+	searchResponse := GitHubIssueSearchResponse{
+		Items: []GitHubIssue{{
+			Number:  16283,
+			HTMLURL: "https://github.com/kubestellar/console/issues/16283",
+		}},
+	}
+	searchRaw, err := json.Marshal(searchResponse)
+	require.NoError(t, err)
+
 	mockGitHubTransport(t, func(req *http.Request) *http.Response {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader("not valid json")),
-			Header:     make(http.Header),
+		switch {
+		case strings.Contains(req.URL.Path, "/search/issues"):
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader(searchRaw)),
+				Header:     make(http.Header),
+			}
+		default:
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("not valid json")),
+				Header:     make(http.Header),
+			}
 		}
 	})
 
 	h := NewAgenticDetectionRunsHandler()
-	_, err := h.fetchDetectionRuns(context.Background())
+	_, err = h.fetchDetectionRuns(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parse")
 }
