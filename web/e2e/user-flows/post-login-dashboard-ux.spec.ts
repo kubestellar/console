@@ -58,27 +58,25 @@ async function dismissAnyOpenModals(page: Page) {
 
 async function clickSidebarRoute(page: Page, href: string) {
   // After navigating, sidebar sections may re-render / collapse. Wait for
-  // the sidebar to stabilize before looking for the target link.
-  const sidebar = page.getByTestId('sidebar')
+  // the visible sidebar to stabilize before looking for the target link.
+  const sidebar = page.locator('[data-testid="sidebar"]:visible').first()
   await expect(sidebar).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
 
   // Dismiss any auto-opened modals that could overlay the sidebar (#11829).
   await dismissAnyOpenModals(page)
 
-  const linkSelector = `[data-testid="sidebar"] a[href="${href}"]`
-  const link = page.locator(linkSelector).first()
+  const link = sidebar.locator(`a[href="${href}"]`).first()
 
   await link.waitFor({ state: 'attached', timeout: ROUTE_LOAD_TIMEOUT_MS })
   await link.scrollIntoViewIfNeeded()
   await link.waitFor({ state: 'visible', timeout: ROUTE_LOAD_TIMEOUT_MS })
 
-  // Re-locate immediately before the click so React sidebar re-renders do not
-  // leave us clicking a stale node. Prefer a normal click first; forcing the
-  // click too early can miss real navigation when overlays are still settling.
+  // Re-locate within the visible sidebar immediately before the click so React
+  // re-renders do not leave us clicking a stale or hidden duplicate node.
   try {
-    await page.locator(linkSelector).first().click({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+    await sidebar.locator(`a[href="${href}"]`).first().click({ timeout: ROUTE_LOAD_TIMEOUT_MS })
   } catch {
-    await page.locator(linkSelector).first().click({ force: true, timeout: ROUTE_LOAD_TIMEOUT_MS })
+    await sidebar.locator(`a[href="${href}"]`).first().click({ force: true, timeout: ROUTE_LOAD_TIMEOUT_MS })
   }
 
   await assertRouteLoaded(page, href)
@@ -86,7 +84,7 @@ async function clickSidebarRoute(page: Page, href: string) {
 
 async function getVisibleSidebarRoutes(page: Page): Promise<string[]> {
   const routes = await page
-    .locator('[data-testid="sidebar"] a[href^="/"]')
+    .locator('[data-testid="sidebar"]:visible a[href^="/"]')
     .evaluateAll((nodes) => {
       const seen = new Set<string>()
       const hrefs: string[] = []

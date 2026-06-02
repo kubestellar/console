@@ -87,27 +87,13 @@ test.describe('Keyboard Navigation', () => {
   })
 
   test('Escape closes open modal (search)', async ({ page }) => {
-    // global-search-input is always visible in the navbar; track the dropdown
-    // results panel (global-search-results) to determine open/closed state.
+    const searchInput = page.getByTestId('global-search-input')
     const searchResults = page.getByTestId('global-search-results')
 
-    // Try both Ctrl+K and Meta+K to open search (platform-dependent)
-    await page.keyboard.press('Control+k')
-    let opened = await searchResults.isVisible({ timeout: 2_000 }).catch(() => false)
-    if (!opened) {
-      await page.keyboard.press('Meta+k')
-      opened = await searchResults.isVisible({ timeout: 2_000 }).catch(() => false)
-    }
-    if (!opened) {
-      // Fallback: click the search area directly
-      const searchArea = page.getByTestId('global-search')
-      const hasSearch = await searchArea.isVisible({ timeout: 2_000 }).catch(() => false)
-      if (hasSearch) {
-        await searchArea.click()
-        opened = await searchResults.isVisible({ timeout: 2_000 }).catch(() => false)
-      }
-    }
-    if (!opened) { test.skip(true, 'Could not open search dropdown via keyboard or click'); return }
+    await expect(searchInput).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await searchInput.click()
+    await searchInput.fill('settings')
+    await expect(searchResults).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
 
     await page.keyboard.press('Escape')
     await expect(searchResults).not.toBeVisible({ timeout: MODAL_TIMEOUT_MS })

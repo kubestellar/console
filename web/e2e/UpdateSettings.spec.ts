@@ -212,9 +212,12 @@ test.describe('Update Settings', () => {
       })
     )
 
-    // Simulate the "restarting" status — tests the UI rendering
-    sendProgress(ws, 'restarting', 'Waiting for backend to come up...', 90)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    // Retry the progress event until the banner appears — this avoids the race
+    // between the WS connection establishing and the React handler registering.
+    await expect(async () => {
+      sendProgress(ws, 'restarting', 'Waiting for backend to come up...', 90)
+      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
 
     // The done banner should NOT appear while we're still in "restarting" state
     await expect(page.getByTestId('update-done-banner')).not.toBeVisible()
