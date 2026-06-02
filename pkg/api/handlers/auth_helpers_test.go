@@ -13,6 +13,58 @@ import (
 )
 
 func TestAuthHelpers(t *testing.T) {
+	t.Run("RequireAdmin", func(t *testing.T) {
+		tests := []struct {
+			name       string
+			role       models.UserRole
+			userFound  bool
+			storeError bool
+			nilStore   bool
+			wantStatus int
+		}{
+			{"AdminAllowed", models.UserRoleAdmin, true, false, false, http.StatusOK},
+			{"ViewerForbidden", models.UserRoleViewer, true, false, false, http.StatusForbidden},
+			{"UserNotFound", models.UserRole(""), false, false, false, http.StatusForbidden},
+			{"StoreError", models.UserRole(""), false, true, false, http.StatusInternalServerError},
+			{"NilStoreAllowed", models.UserRole(""), false, false, true, http.StatusOK},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				app := fiber.New()
+				mockStore := new(test.MockStore)
+				userID := uuid.New()
+
+				if tt.nilStore {
+					app.Get("/test", func(c *fiber.Ctx) error {
+						return RequireAdmin(c, nil)
+					})
+				} else {
+					if tt.storeError {
+						mockStore.On("GetUser", userID).Return(nil, assert.AnError)
+					} else if !tt.userFound {
+						mockStore.On("GetUser", userID).Return(nil, nil)
+					} else {
+						mockStore.On("GetUser", userID).Return(&models.User{Role: tt.role}, nil)
+						if tt.role != models.UserRoleAdmin {
+							mockStore.On("CountUsersByRole").Return(1, 0, 0, nil)
+						}
+					}
+
+					app.Get("/test", func(c *fiber.Ctx) error {
+						c.Locals("userID", userID)
+						return RequireAdmin(c, mockStore)
+					})
+				}
+
+				req := httptest.NewRequest("GET", "/test", nil)
+				resp, _ := app.Test(req)
+				assert.Equal(t, tt.wantStatus, resp.StatusCode)
+				mockStore.AssertExpectations(t)
+			})
+		}
+	})
+
 	t.Run("requireEditorOrAdmin", func(t *testing.T) {
 		tests := []struct {
 			name       string
