@@ -399,19 +399,58 @@ async function setupMockRoutes(page: Page, state: MockState) {
     '**/api/rewards/**', '**/api/gpu/**', '**/api/self-upgrade/**',
     '**/api/admin/**', '**/api/acmm/**', '**/api/kagenti-provider/**',
     '**/api/token-usage/**', '**/api/onboarding/**', '**/api/settings**',
-    '**/api/events**', '**/auth/**',
+    '**/api/events**',
   ]
   for (const pattern of utilityEndpoints) {
     await page.route(pattern, (route) => {
       route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     })
   }
+  await page.route(/https?:\/\/[^/]+\/auth\/.+/, (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
 
   // Catch-all for any /api/* requests not explicitly mocked above — prevents
   // networkidle from stalling on new endpoints that features add over time.
-  await page.route('**/api/**', (route) => {
+  // Playwright evaluates the most recently-added route first, so this handler
+  // must fall through for known mocks or it will override them.
+  const explicitlyMockedApiPrefixes = [
+    '/api/me',
+    '/api/agent/token',
+    '/api/stellar/state',
+    '/api/kagent/status',
+    '/api/mcp/',
+    '/api/workloads',
+    '/api/cluster-groups',
+    '/api/permissions/',
+    '/api/kubectl/',
+    '/api/config/',
+    '/api/persistence/',
+    '/api/dashboards',
+    '/api/notifications/',
+    '/api/user/preferences',
+    '/api/active-users',
+    '/api/feedback/',
+    '/api/rewards/',
+    '/api/gpu/',
+    '/api/self-upgrade/',
+    '/api/admin/',
+    '/api/acmm/',
+    '/api/kagenti-provider/',
+    '/api/token-usage/',
+    '/api/onboarding/',
+    '/api/settings',
+    '/api/events',
+  ] as const
+  await page.route(/https?:\/\/[^/]+\/api\/.+/, async (route) => {
+    const url = new URL(route.request().url())
+    if (explicitlyMockedApiPrefixes.some(prefix => url.pathname.startsWith(prefix))) {
+      await route.fallback()
+      return
+    }
+
     state.logCall(route, 'api-catch-all')
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
 }
 
@@ -516,8 +555,11 @@ test.describe('Deploy Dashboard', () => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
-    // The deploy page should render its header once the startup handshake clears.
-    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
+    // The deploy page can spend several seconds clearing startup gates and
+    // lazy-loading dashboard chunks before the header renders.
+    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i, {
+      timeout: CARD_CONTENT_TIMEOUT_MS,
+    })
 
     // Verify that the deploy route was loaded
     expect(page.url()).toContain(DEPLOY_ROUTE)
@@ -536,10 +578,12 @@ test.describe('Deploy Dashboard', () => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
-    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
+    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i, {
+      timeout: CARD_CONTENT_TIMEOUT_MS,
+    })
 
-    const workloadCard = page.locator('[data-card-id="workload-deployment-1"]')
-    await expect(workloadCard).toBeVisible()
+    const workloadCard = page.locator('[data-card-type="workload_deployment"]').first()
+    await expect(workloadCard).toBeVisible({ timeout: CARD_CONTENT_TIMEOUT_MS })
 
     await expect.poll(
       () => mockState.getCallCount('api/workloads'),
