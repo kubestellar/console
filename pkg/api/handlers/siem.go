@@ -10,6 +10,9 @@ package handlers
 // of hard-coded demo numbers. Splunk / Elastic / Syslog remain stubs that
 // surface a structured "destination not yet supported" error.
 //
+// #16518: Moved from public router to authenticated router with admin gate.
+// SIEM configuration and events contain sensitive operational data.
+//
 // TODO (#9643): Wire live export engine once pkg/api/audit/export.go engine is complete.
 
 import (
@@ -18,16 +21,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // SIEMHandler serves SIEM export configuration and monitoring endpoints.
-type SIEMHandler struct{}
+type SIEMHandler struct {
+	store store.Store
+}
 
 // NewSIEMHandler creates a SIEM handler.
-func NewSIEMHandler() *SIEMHandler { return &SIEMHandler{} }
+func NewSIEMHandler(s store.Store) *SIEMHandler { return &SIEMHandler{store: s} }
 
-// RegisterPublicRoutes mounts SIEM endpoints under /api/audit/export.
-func (h *SIEMHandler) RegisterPublicRoutes(r fiber.Router) {
+// RegisterRoutes mounts SIEM endpoints under /api/audit/export on the
+// authenticated router. All endpoints require admin role.
+func (h *SIEMHandler) RegisterRoutes(r fiber.Router) {
 	g := r.Group("/audit/export")
 	g.Get("/summary", h.getSummary)
 	g.Get("/destinations", h.listDestinations)
@@ -35,16 +42,22 @@ func (h *SIEMHandler) RegisterPublicRoutes(r fiber.Router) {
 }
 
 func (h *SIEMHandler) getSummary(c *fiber.Ctx) error {
-	// Aggregate from the in-memory event buffer + destination registry. This
-	// will report zeros on a fresh cluster until destinations are configured
-	// and events start flowing — that is intentionally honest per #9887.
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
 	return c.JSON(audit.BuildSummary(time.Now()))
 }
 
 func (h *SIEMHandler) listDestinations(c *fiber.Ctx) error {
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
 	return c.JSON(audit.ListDestinations())
 }
 
 func (h *SIEMHandler) listEvents(c *fiber.Ctx) error {
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
 	return c.JSON(audit.RecentEvents())
 }

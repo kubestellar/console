@@ -120,9 +120,6 @@ airgapHandler.RegisterPublicRoutes(publicAPI)
 // FedRAMP readiness public read endpoints (demo mode).
 fedrampHandler := handlers.NewFedRAMPHandler()
 fedrampHandler.RegisterPublicRoutes(publicAPI)
-// Epic 5: Security Operations — SIEM Export (#9643).
-siemHandler := handlers.NewSIEMHandler()
-siemHandler.RegisterPublicRoutes(publicAPI)
 // Epic 6: Supply Chain & Software Provenance (#9632, #9644, #9646, #9647, #9648).
 sbomHandler := handlers.NewSBOMHandler()
 sbomHandler.RegisterPublicRoutes(publicAPI)

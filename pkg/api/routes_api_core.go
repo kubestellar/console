@@ -190,4 +190,8 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken, s.config.KubaraCatalogRepo, s.config.KubaraCatalogPath)
 	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
 	api.Get("/kubara/config", kubaraCatalog.GetConfig)
+
+	// SIEM Export — moved from public router (#16518: admin-only).
+	siemHandler := handlers.NewSIEMHandler(s.store)
+	siemHandler.RegisterRoutes(api)
 }
