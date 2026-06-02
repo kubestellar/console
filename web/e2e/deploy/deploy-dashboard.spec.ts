@@ -237,6 +237,40 @@ async function setupMockRoutes(page: Page, state: MockState) {
     })
   })
 
+  // Startup handshake + local agent token
+  await page.route('**/api/agent/token', (route) => {
+    state.logCall(route, 'api/agent/token')
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token: 'e2e-agent-token' }),
+    })
+  })
+  await page.route('**/api/stellar/state', (route) => {
+    state.logCall(route, 'api/stellar/state')
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        clustersWatching: [],
+        eventCounts: { critical: 0, warning: 0, info: 0 },
+        recentEvents: [],
+        unreadAlerts: 0,
+        activeMissionIds: [],
+        pendingActionIds: [],
+      }),
+    })
+  })
+  await page.route('**/api/kagent/status', (route) => {
+    state.logCall(route, 'api/kagent/status')
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, reason: 'not configured in deploy e2e' }),
+    })
+  })
+
   // Clusters (SSE)
   await page.route('**/api/mcp/clusters**', (route) => {
     state.logCall(route, 'mcp/clusters')
@@ -469,9 +503,8 @@ test.describe('Deploy Dashboard', () => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
-    // The deploy page should render
-    const pageContent = await page.textContent('body')
-    expect(pageContent).toBeTruthy()
+    // The deploy page should render its header once the startup handshake clears.
+    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
 
     // Verify that the deploy route was loaded
     expect(page.url()).toContain(DEPLOY_ROUTE)
@@ -489,6 +522,8 @@ test.describe('Deploy Dashboard', () => {
   test('workload listing shows correct data', async ({ page, mockState }) => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
+
+    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
 
     // Wait for workloads API to be called
     await page.waitForFunction(
@@ -511,7 +546,6 @@ test.describe('Deploy Dashboard', () => {
     const agentCalls = mockState.getCallCount('agent')
 
     const hasAnyCalls = workloadCalls > 0 || sseCalls > 0 || kubectlCalls > 0 || agentCalls > 0
-    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
     console.log(`[Deploy] Workload REST: ${workloadCalls}, SSE: ${sseCalls}, kubectl: ${kubectlCalls}, agent: ${agentCalls}`)
 
     expect(hasAnyCalls).toBe(true)
