@@ -87,7 +87,7 @@
     "react-dom": "^19.2.6",
     "react-i18next": "^17.0.8",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "^7.16.0",
     "rehype-sanitize": "^6.0.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
