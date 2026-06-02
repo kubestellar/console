@@ -1,4 +1,4 @@
-package kagenti_provider
+package kagentiprovider
 
 import (
 	"context"

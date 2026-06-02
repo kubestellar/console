@@ -10,20 +10,20 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/kagenti_provider"
+	"github.com/kubestellar/console/pkg/kagentiprovider"
 	"github.com/stretchr/testify/assert"
 )
 
 type stubKagentiConfigManager struct {
-	status   *kagenti_provider.ConfigStatus
-	updateFn func(update kagenti_provider.ConfigUpdate) (*kagenti_provider.ConfigStatus, error)
+	status   *kagentiprovider.ConfigStatus
+	updateFn func(update kagentiprovider.ConfigUpdate) (*kagentiprovider.ConfigStatus, error)
 }
 
-func (s *stubKagentiConfigManager) GetStatus(context.Context) (*kagenti_provider.ConfigStatus, error) {
+func (s *stubKagentiConfigManager) GetStatus(context.Context) (*kagentiprovider.ConfigStatus, error) {
 	return s.status, nil
 }
 
-func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagenti_provider.ConfigUpdate) (*kagenti_provider.ConfigStatus, error) {
+func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagentiprovider.ConfigUpdate) (*kagentiprovider.ConfigStatus, error) {
 	if s.updateFn != nil {
 		return s.updateFn(update)
 	}
@@ -52,8 +52,8 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := kagenti_provider.NewKagentiClient(server.URL)
-		h := NewKagentiProviderProxyHandler(client, &stubKagentiConfigManager{status: &kagenti_provider.ConfigStatus{
+		client := kagentiprovider.NewKagentiClient(server.URL)
+		h := NewKagentiProviderProxyHandler(client, &stubKagentiConfigManager{status: &kagentiprovider.ConfigStatus{
 			LLMProvider:         "openai",
 			APIKeyConfigured:    true,
 			ConfiguredProviders: []string{"openai"},
@@ -76,10 +76,10 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 
 func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 	manager := &stubKagentiConfigManager{
-		updateFn: func(update kagenti_provider.ConfigUpdate) (*kagenti_provider.ConfigStatus, error) {
+		updateFn: func(update kagentiprovider.ConfigUpdate) (*kagentiprovider.ConfigStatus, error) {
 			assert.Equal(t, "anthropic", update.LLMProvider)
 			assert.Equal(t, "sk-ant", update.APIKey)
-			return &kagenti_provider.ConfigStatus{
+			return &kagentiprovider.ConfigStatus{
 				LLMProvider:         "anthropic",
 				APIKeyConfigured:    true,
 				ConfiguredProviders: []string{"anthropic"},

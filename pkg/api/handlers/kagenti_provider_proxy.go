@@ -14,7 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
-	"github.com/kubestellar/console/pkg/kagenti_provider"
+	"github.com/kubestellar/console/pkg/kagentiprovider"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -27,13 +27,13 @@ const (
 
 // KagentiProviderProxyHandler proxies requests to the kagenti A2A endpoint.
 type KagentiProviderProxyHandler struct {
-	client        *kagenti_provider.KagentiClient // can be nil if kagenti not detected
-	configManager kagenti_provider.ConfigManager
+	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
+	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagenti_provider.KagentiClient, configManager kagenti_provider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
@@ -248,16 +248,16 @@ func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "llm_provider is required"})
 	}
 
-	status, err := h.configManager.UpdateConfig(c.Context(), kagenti_provider.ConfigUpdate{
+	status, err := h.configManager.UpdateConfig(c.Context(), kagentiprovider.ConfigUpdate{
 		LLMProvider: req.LLMProvider,
 		APIKey:      req.APIKey,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, kagenti_provider.ErrUnsupportedLLMProvider):
+		case errors.Is(err, kagentiprovider.ErrUnsupportedLLMProvider):
 			slog.Warn("kagenti provider config update: unsupported provider", "error", err)
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "unsupported llm provider"})
-		case errors.Is(err, kagenti_provider.ErrAPIKeyRequired):
+		case errors.Is(err, kagentiprovider.ErrAPIKeyRequired):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "api key required for selected provider"})
 		default:
 			slog.Error("kagenti provider config update failed", "error", err)

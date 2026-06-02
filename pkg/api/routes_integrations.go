@@ -8,7 +8,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/kagent"
-	"github.com/kubestellar/console/pkg/kagenti_provider"
+	"github.com/kubestellar/console/pkg/kagentiprovider"
 )
 
 // setupIntegrationsRoutes registers MCP, timeline, benchmark, GPU, and agent integrations.
@@ -75,9 +75,9 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Post("/kagent/chat", kagentHandler.Chat)
 	api.Post("/kagent/tools/call", kagentHandler.CallTool)
 
-	kagentiProviderClient := kagenti_provider.NewKagentiClientFromEnv()
-	var kagentiConfigManager kagenti_provider.ConfigManager
-	if manager, err := kagenti_provider.NewKubernetesConfigManagerFromEnv(); err != nil {
+	kagentiProviderClient := kagentiprovider.NewKagentiClientFromEnv()
+	var kagentiConfigManager kagentiprovider.ConfigManager
+	if manager, err := kagentiprovider.NewKubernetesConfigManagerFromEnv(); err != nil {
 		slog.Debug("kagenti config manager unavailable", "error", err)
 	} else {
 		kagentiConfigManager = manager

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubestellar/console/pkg/kagenti_provider"
+	"github.com/kubestellar/console/pkg/kagentiprovider"
 )
 
 const (
@@ -34,7 +34,7 @@ type KagentiProvider struct {
 	mu          sync.RWMutex // guards agentName and namespace
 	agentName   string
 	namespace   string
-	client      *kagenti_provider.KagentiClient
+	client      *kagentiprovider.KagentiClient
 }
 
 var _ AIProvider = (*KagentiProvider)(nil)
@@ -44,7 +44,7 @@ var _ HandshakeProvider = (*KagentiProvider)(nil)
 // NewKagentiProvider creates a new KagentiProvider and reuses kagenti_provider
 // as the single source of truth for endpoint discovery and invocation.
 func NewKagentiProvider() *KagentiProvider {
-	client := kagenti_provider.NewKagentiClientFromEnv()
+	client := kagentiprovider.NewKagentiClientFromEnv()
 	p := &KagentiProvider{client: client}
 	if client == nil {
 		return p
@@ -264,9 +264,9 @@ func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatR
 
 	// Convert conversation history to the format expected by the kagenti client
 	// so the agent receives full conversation context for follow-up messages (#11904).
-	var history []kagenti_provider.HistoryMessage
+	var history []kagentiprovider.HistoryMessage
 	for _, m := range req.History {
-		history = append(history, kagenti_provider.HistoryMessage{
+		history = append(history, kagentiprovider.HistoryMessage{
 			Role:    m.Role,
 			Content: m.Content,
 		})
