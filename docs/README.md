@@ -29,6 +29,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [components/GITHUB_ACTIVITY_CARD.md](components/GITHUB_ACTIVITY_CARD.md) | Design and implementation notes for the GitHub Activity card. |
 | [components/TEMPLATE.md](components/TEMPLATE.md) | Template for writing new component documentation pages. |
 | [components/component-criteria.md](components/component-criteria.md) | Defines the criteria and review checklist for dashboard components. |
+| [plans/PLUGIN-ARCHITECTURE-RFC.md](plans/PLUGIN-ARCHITECTURE-RFC.md) | RFC defining plugin scope, extension points, security constraints, and phased rollout. |
 | [plans/UNIFIED-DEMO-SKELETON-PLAN.md](plans/UNIFIED-DEMO-SKELETON-PLAN.md) | Implementation plan for the unified demo-data and loading-skeleton system. |
 | [plans/planjan21.md](plans/planjan21.md) | Plan for console filtering and data-consistency improvements from January 2026. |
 | [qa/AI-UX-ISSUE-AGENT-BRIEF.md](qa/AI-UX-ISSUE-AGENT-BRIEF.md) | Operating brief for the agent that turns Playwright UX findings into issues. |
