@@ -43,6 +43,10 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	}
 	agentHTTPClient := &http.Client{Timeout: kcAgentProxyTimeout}
 	api.All("/agent/auto-update/:path", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+
 		subPath := c.Params("path")
 		if strings.Contains(subPath, "..") || strings.Contains(subPath, "%2e") || strings.Contains(subPath, "%2E") || !allowedAgentSubPaths[subPath] {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid agent proxy path"})
