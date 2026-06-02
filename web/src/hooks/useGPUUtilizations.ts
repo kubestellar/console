@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
+import { useDemoMode, hasRealToken } from './useDemoMode'
 
 /** How often to refresh utilization data (5 minutes) */
 const GPU_UTIL_REFRESH_MS = 300_000
@@ -27,6 +28,7 @@ export interface GPUUtilizationSnapshot {
  * reads the latest ids from a ref so it always polls the current set.
  */
 export function useGPUUtilizations(reservationIds: string[]) {
+  const { isDemoMode } = useDemoMode()
   const [data, setData] = useState<Record<string, GPUUtilizationSnapshot[]>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,8 +43,13 @@ export function useGPUUtilizations(reservationIds: string[]) {
   const idsKey = [...(reservationIds || [])].sort().join(',')
 
   const fetchData = useCallback(async (ids: string[]) => {
-    if (!ids || ids.length === 0) {
+    const shouldSkipAuthFetch = isDemoMode && !hasRealToken()
+
+    if (!ids || ids.length === 0 || shouldSkipAuthFetch) {
       setData({})
+      setError(null)
+      setIsFailed(false)
+      setIsLoading(false)
       return
     }
 
@@ -65,7 +72,7 @@ export function useGPUUtilizations(reservationIds: string[]) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [isDemoMode])
 
   useEffect(() => {
     // Initial fetch for the current id set.

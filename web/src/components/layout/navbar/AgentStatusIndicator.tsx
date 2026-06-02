@@ -180,12 +180,16 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
 
     const CLOSE_DISTANCE = 20
 
+    const closeDropdown = () => {
+      setShowAgentStatus(false)
+    }
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
         agentRef.current &&
         !agentRef.current.contains(event.target as Node)
       ) {
-        setShowAgentStatus(false)
+        closeDropdown()
       }
     }
 
@@ -212,15 +216,23 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
         event.clientY < top ||
         event.clientY > bottom
       ) {
-        setShowAgentStatus(false)
+        closeDropdown()
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDropdown()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('keydown', handleEscape)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('keydown', handleEscape)
     }
   }, [showAgentStatus])
 

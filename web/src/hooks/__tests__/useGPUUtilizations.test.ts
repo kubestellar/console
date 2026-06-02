@@ -6,11 +6,18 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 // ============================================================================
 
 const mockGet = vi.fn()
+const mockGetDemoMode = vi.fn(() => false)
+const mockHasRealToken = vi.fn(() => true)
 
 vi.mock('../../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockGet(...args),
   },
+}))
+
+vi.mock('../useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: mockGetDemoMode() }),
+  hasRealToken: () => mockHasRealToken(),
 }))
 
 import { useGPUUtilizations } from '../useGPUUtilizations'
@@ -39,6 +46,8 @@ describe('useGPUUtilizations', () => {
     vi.clearAllMocks()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     mockGet.mockResolvedValue({ data: {} })
+    mockGetDemoMode.mockReturnValue(false)
+    mockHasRealToken.mockReturnValue(true)
   })
 
   afterEach(() => {
@@ -66,6 +75,22 @@ describe('useGPUUtilizations', () => {
   it('does not call API when IDs array is empty', () => {
     renderHook(() => useGPUUtilizations([]))
     expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  it('skips auth-backed fetches in demo mode without a real token', () => {
+    mockGetDemoMode.mockReturnValue(true)
+    mockHasRealToken.mockReturnValue(false)
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { result } = renderHook(() => useGPUUtilizations(['res-1']))
+
+    expect(mockGet).not.toHaveBeenCalled()
+    expect(result.current.utilizations).toEqual({})
+    expect(result.current.error).toBeNull()
+    expect(result.current.isFailed).toBe(false)
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
   })
 
   // ---------- Happy Path ----------
@@ -198,6 +223,16 @@ describe('useGPUUtilizations', () => {
     expect(mockGet.mock.calls.length).toBe(callsAfterUnmount)
   })
 
+  it('does not start polling in demo mode without a real token', async () => {
+    mockGetDemoMode.mockReturnValue(true)
+    mockHasRealToken.mockReturnValue(false)
+
+    renderHook(() => useGPUUtilizations(['res-1']))
+
+    await act(async () => { vi.advanceTimersByTime(300_000) })
+    expect(mockGet).not.toHaveBeenCalled()
+  })
+
   // ---------- ID Change Detection ----------
 
   it('re-fetches when IDs change', async () => {
@@ -227,6 +262,25 @@ describe('useGPUUtilizations', () => {
 
     rerender({ ids: [] })
     expect(result.current.utilizations).toEqual({})
+  })
+
+  it('clears data when demo mode becomes active without a real token', async () => {
+    mockGet.mockResolvedValue({ data: { 'res-1': [MOCK_SNAPSHOT] } })
+
+    const { result, rerender } = renderHook(
+      ({ ids }) => useGPUUtilizations(ids),
+      { initialProps: { ids: ['res-1'] } }
+    )
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.utilizations['res-1']).toHaveLength(1)
+
+    mockGetDemoMode.mockReturnValue(true)
+    mockHasRealToken.mockReturnValue(false)
+    rerender({ ids: ['res-1'] })
+
+    expect(result.current.utilizations).toEqual({})
+    expect(result.current.error).toBeNull()
+    expect(result.current.isFailed).toBe(false)
   })
 
   it('does not re-fetch when IDs are the same (order may differ)', async () => {

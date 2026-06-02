@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, ReactNode } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff, Globe } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
@@ -172,26 +172,39 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
     closeSaveForm()
   }
 
-  // Close dropdown when clicking outside
+  const closePanelAndRestoreFocus = useCallback(() => {
+    closeDropdown()
+    triggerRef.current?.focus()
+  }, [closeDropdown])
+
+  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
+    if (!showDropdown) return
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        closeDropdown()
+        closePanelAndRestoreFocus()
       }
     }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePanelAndRestoreFocus()
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [closeDropdown])
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showDropdown, closePanelAndRestoreFocus])
 
   // Get active filter set for the indicator
   const activeSet = activeFilterSetId
     ? savedFilterSets.find(fs => fs.id === activeFilterSetId)
     : null
-
-  const closePanelAndRestoreFocus = () => {
-    closeDropdown()
-    triggerRef.current?.focus()
-  }
 
   useLayoutEffect(() => {
     const rootStyle = document.documentElement.style

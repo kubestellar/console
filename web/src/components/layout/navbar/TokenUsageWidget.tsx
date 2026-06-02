@@ -73,16 +73,33 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
     previousTokensRef.current = usage.used
   }, [usage.used])
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside or pressing Escape
   useEffect(() => {
+    if (!showTokenDetails) return
+
+    const closeDropdown = () => {
+      setShowTokenDetails(false)
+    }
+
     const handleClickOutside = (event: MouseEvent) => {
       if (tokenRef.current && !tokenRef.current.contains(event.target as Node)) {
-        setShowTokenDetails(false)
+        closeDropdown()
       }
     }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDropdown()
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showTokenDetails])
 
   return (
     <div className="relative" ref={tokenRef}>
