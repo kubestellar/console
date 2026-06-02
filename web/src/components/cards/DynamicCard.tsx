@@ -16,6 +16,21 @@ import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
 
 const MAX_AUTO_GRID_COLS = 3
+
+/**
+ * Validate that an apiEndpoint is same-origin (relative path or matching origin).
+ * Prevents token exfiltration to attacker-controlled URLs (CWE-610, #16506).
+ */
+function isSafeApiEndpoint(endpoint: string): boolean {
+  // Relative paths starting with / are always same-origin
+  if (endpoint.startsWith('/')) return true
+  try {
+    const url = new URL(endpoint, window.location.origin)
+    return url.origin === window.location.origin
+  } catch {
+    return false
+  }
+}
 const DEFAULT_DYNAMIC_CARD_EXPANDABLE_COLUMN_WIDTH = 'minmax(0, 1fr)'
 const DEFAULT_DYNAMIC_CARD_BADGE_COLUMN_WIDTH = 'fit-content(8rem)'
 const DEFAULT_DYNAMIC_CARD_COMPACT_COLUMN_WIDTH = 'fit-content(10rem)'
@@ -170,6 +185,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     persist: true,
     enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
     fetcher: async () => {
+      // Block requests to external origins to prevent token exfiltration (#16506)
+      if (!isSafeApiEndpoint(apiEndpoint)) {
+        throw new Error('Dynamic card apiEndpoint must be same-origin')
+      }
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const res = await fetch(apiEndpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
