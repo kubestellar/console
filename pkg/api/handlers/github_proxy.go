@@ -17,6 +17,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -350,9 +351,44 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 // to the encrypted server-side settings file. The token is NOT stored in
 // localStorage after this migration.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
-	// Global token management requires console admin role
-	if err := requireAdmin(c, h.store); err != nil {
-		return err
+	// Try to bootstrap first admin if no admins exist
+	var user *models.User
+	if h.store != nil {
+		admins, _, _, err := h.store.CountUsersByRole(c.UserContext())
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check admin status")
+		}
+		
+		// Get the current user
+		userID := middleware.GetUserID(c)
+		user, err = h.store.GetUser(c.UserContext(), userID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
+		}
+		
+		// If no admins exist, promote the current user to admin
+		if admins == 0 && user != nil && user.Role != models.UserRoleAdmin {
+			user.Role = models.UserRoleAdmin
+			if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, "Failed to promote user to admin")
+			}
+		}
+	}
+
+	// Verify admin role (using pre-fetched user if available to avoid duplicate GetUser call)
+	if h.store != nil {
+		if user == nil {
+			// If we didn't fetch the user above (store was nil), do it now
+			userID := middleware.GetUserID(c)
+			var err error
+			user, err = h.store.GetUser(c.UserContext(), userID)
+			if err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+			}
+		}
+		if err := requireAdminCheck(user); err != nil {
+			return err
+		}
 	}
 
 	var body struct {

@@ -89,6 +89,13 @@ func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
 	}
+	return requireAdminCheck(user)
+}
+
+// requireAdminCheck verifies that a user has the admin role. It's a lower-level
+// helper that takes an already-fetched user, used by SaveToken to avoid
+// duplicate GetUser calls when bootstrapping.
+func requireAdminCheck(user *models.User) error {
 	if user == nil {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
