@@ -14,7 +14,7 @@ import (
 
 func TestKagentProxyHandler_GetStatus(t *testing.T) {
 	t.Run("Nil Client", func(t *testing.T) {
-		h := NewKagentProxyHandler(nil)
+		h := NewKagentProxyHandler(nil, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -35,7 +35,7 @@ func TestKagentProxyHandler_GetStatus(t *testing.T) {
 		defer server.Close()
 
 		client := kagent.NewKagentClient(server.URL)
-		h := NewKagentProxyHandler(client)
+		h := NewKagentProxyHandler(client, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -59,7 +59,7 @@ func TestKagentProxyHandler_ListAgents(t *testing.T) {
 	defer server.Close()
 
 	client := kagent.NewKagentClient(server.URL)
-	h := NewKagentProxyHandler(client)
+	h := NewKagentProxyHandler(client, nil)
 	app := fiber.New()
 	app.Get("/agents", h.ListAgents)
 

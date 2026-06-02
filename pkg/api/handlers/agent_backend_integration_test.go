@@ -38,7 +38,7 @@ func TestAgentBackend_Integration_Proxy(t *testing.T) {
 
 	// 2. Setup the Backend Handler with a client pointing to the mock server
 	kClient := kagent.NewKagentClient(mockServer.URL)
-	handler := NewKagentProxyHandler(kClient)
+	handler := NewKagentProxyHandler(kClient, nil)
 
 	app := fiber.New()
 	app.Get("/api/kagent/status", handler.GetStatus)
@@ -95,7 +95,7 @@ func TestAgentBackend_Integration_ChatProxy(t *testing.T) {
 	defer mockServer.Close()
 
 	kClient := kagent.NewKagentClient(mockServer.URL)
-	handler := NewKagentProxyHandler(kClient)
+	handler := NewKagentProxyHandler(kClient, nil)
 
 	app := fiber.New()
 	app.Post("/api/kagent/chat", handler.Chat)
