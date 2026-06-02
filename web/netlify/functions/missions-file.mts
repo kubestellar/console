@@ -60,11 +60,33 @@ interface CacheEntry {
 const fileRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
 function hasInvalidPathInput(value: string): boolean {
-  return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  // Iteratively decode to catch %2e%2e, %252e%252e, etc. (CWE-22 defense-in-depth)
+  let decoded = value;
+  try {
+    let prev = "";
+    while (decoded !== prev) {
+      prev = decoded;
+      decoded = decodeURIComponent(decoded);
+    }
+  } catch {
+    return true; // Malformed percent-encoding — reject
+  }
+  return decoded.includes("..") || decoded.startsWith("/") || decoded.includes("#") || decoded.includes("?");
 }
 
 function hasInvalidRefInput(value: string): boolean {
-  return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  // Iteratively decode to catch encoded traversal (CWE-22 defense-in-depth)
+  let decoded = value;
+  try {
+    let prev = "";
+    while (decoded !== prev) {
+      prev = decoded;
+      decoded = decodeURIComponent(decoded);
+    }
+  } catch {
+    return true; // Malformed percent-encoding — reject
+  }
+  return decoded.includes("..") || decoded.startsWith("/") || decoded.includes("#") || decoded.includes("?");
 }
 
 export default async (request: Request): Promise<Response> => {
