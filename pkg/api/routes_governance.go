@@ -31,4 +31,8 @@ func (s *Server) setupGovernanceRoutes(routes *routeSetupContext) {
 
 	adminHandler := handlers.NewAdminHandler(s.failureTracker, s.store)
 	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
+
+	// SIEM export (admin-only, moved from public routes — fix #16518).
+	siemHandler := handlers.NewSIEMHandler(s.store)
+	siemHandler.RegisterRoutes(api)
 }

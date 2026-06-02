@@ -121,8 +121,7 @@ airgapHandler.RegisterPublicRoutes(publicAPI)
 fedrampHandler := handlers.NewFedRAMPHandler()
 fedrampHandler.RegisterPublicRoutes(publicAPI)
 // Epic 5: Security Operations — SIEM Export (#9643).
-siemHandler := handlers.NewSIEMHandler()
-siemHandler.RegisterPublicRoutes(publicAPI)
+// NOTE: SIEM endpoints moved to authenticated router (fix #16518 — CWE-306).
 // Epic 6: Supply Chain & Software Provenance (#9632, #9644, #9646, #9647, #9648).
 sbomHandler := handlers.NewSBOMHandler()
 sbomHandler.RegisterPublicRoutes(publicAPI)

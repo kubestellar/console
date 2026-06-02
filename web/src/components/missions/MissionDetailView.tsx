@@ -28,6 +28,7 @@ import {
   Link } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
+import { validateExternalUrl } from '../../lib/validateExternalUrl'
 import { StatusBadge } from '../ui/StatusBadge'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
@@ -478,9 +479,9 @@ export function MissionDetailView({
           {/* Source links */}
           {sourceUrls && (
             <div className="flex items-center gap-3 text-xs">
-              {sourceUrls.repo && (
+              {validateExternalUrl(sourceUrls.repo) && (
                 <a
-                  href={sourceUrls.repo}
+                  href={validateExternalUrl(sourceUrls.repo)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -489,9 +490,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.repository')}
                 </a>
               )}
-              {sourceUrls.docs && sourceUrls.docs !== sourceUrls.repo && (
+              {validateExternalUrl(sourceUrls.docs) && sourceUrls.docs !== sourceUrls.repo && (
                 <a
-                  href={sourceUrls.docs}
+                  href={validateExternalUrl(sourceUrls.docs)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -500,9 +501,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.documentation')}
                 </a>
               )}
-              {sourceUrls.helm && (
+              {validateExternalUrl(sourceUrls.helm) && (
                 <a
-                  href={sourceUrls.helm}
+                  href={validateExternalUrl(sourceUrls.helm)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -511,9 +512,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.helmChart')}
                 </a>
               )}
-              {sourceUrls.issue && (
+              {validateExternalUrl(sourceUrls.issue) && (
                 <a
-                  href={sourceUrls.issue}
+                  href={validateExternalUrl(sourceUrls.issue)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -522,9 +523,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.issue')}
                 </a>
               )}
-              {sourceUrls.pr && (
+              {validateExternalUrl(sourceUrls.pr) && (
                 <a
-                  href={sourceUrls.pr}
+                  href={validateExternalUrl(sourceUrls.pr)!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
