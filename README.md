@@ -266,6 +266,16 @@ See the full [Architecture documentation](https://kubestellar.io/docs/console/ov
 - **[homebrew-tap](https://github.com/kubestellar/homebrew-tap)** — Homebrew formulae for KubeStellar tools
 - **[KubeStellar](https://kubestellar.io)** — Multi-cluster configuration management
 
+## Development
+
+If you want the canonical developer guide for local setup, coding conventions, testing expectations, and agent instructions, start with [CLAUDE.md](CLAUDE.md).
+
+Additional contributor references:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow and repo-specific expectations.
+- [AGENTS.md](AGENTS.md) — tool-neutral entry point for coding agents working in this repository.
+- [docs/README.md](docs/README.md) — index of documentation grouped by audience.
+
 ## Quality Assurance
 
 Console uses AI tools (GitHub Copilot, Claude Code) to accelerate development. Quality is maintained through **layered feedback loops** — every PR triggers the same automated checks regardless of author, and continuous monitoring catches what PR checks miss.
