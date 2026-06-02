@@ -11,8 +11,8 @@ import (
 func (s *Server) setupStellarRoutes(routes *routeSetupContext) {
 	stelStore, ok := s.store.(handlers.StellarStore)
 	if !ok {
-		("[Server] store does not implement StellarStore — stellar routes will not be registered")
-
+		slog.Warn("[Server] store does not implement StellarStore — stellar routes will not be registered")
+		return
 	}
 
 	newStellarRouteGroup(stelStore, s.k8sClient, s.lifecycle.done).Register(routes.api)

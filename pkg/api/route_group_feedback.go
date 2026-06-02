@@ -11,11 +11,11 @@ type feedbackRouteGroup struct {
 	app         *fiber.App
 	store       store.Store
 	githubToken string
-	rewardOrgs  []string
+	rewardOrgs  string
 	background  *backgroundServices
 }
 
-func newFeedbackRouteGroup(app *fiber.App, store store.Store, githubToken string, rewardOrgs []string, background *backgroundServices) *feedbackRouteGroup {
+func newFeedbackRouteGroup(app *fiber.App, store store.Store, githubToken string, rewardOrgs string, background *backgroundServices) *feedbackRouteGroup {
 	return &feedbackRouteGroup{
 		app:         app,
 		store:       store,
