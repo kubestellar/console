@@ -449,6 +449,14 @@ async function openMissionBrowser(page: Page) {
   await expect(page.getByText('KubeStellar Community', { exact: false })).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 }
 
+function getMissionTree(page: Page) {
+  return page.getByTestId('mission-tree')
+}
+
+function getMissionTreeButton(page: Page, name: RegExp) {
+  return getMissionTree(page).getByRole('button', { name })
+}
+
 async function expandSampleRunbooks(page: Page) {
   // Set watched repos
   await page.evaluate((repo) => {
@@ -482,25 +490,56 @@ async function expandSampleRunbooks(page: Page) {
   await openMissionBrowser(page)
 
   // Expand GitHub Repositories — click the button containing that text
-  const myReposButton = page.locator('button', { hasText: 'GitHub Repositories' }).first()
+  const myReposButton = getMissionTreeButton(page, /GitHub Repositories/i)
   await expect(myReposButton).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await myReposButton.click()
   // Wait for tree expansion — look for the repo node to appear
-  await expect(page.locator('button', { hasText: 'sample-runbooks' }).first()).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
+  await expect(getMissionTreeButton(page, /sample-runbooks/i)).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 
   // Click sample-runbooks to expand it and load contents
-  const repoNode = page.locator('button', { hasText: 'sample-runbooks' }).first()
+  const repoNode = getMissionTreeButton(page, /sample-runbooks/i)
   await expect(repoNode).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await repoNode.click()
 
-  // Wait for file listing to render (replaces brittle waitForTimeout)
-  const argocdFile = page.getByText('argocd-application', { exact: false })
-  const fileVisibleAfterFirstClick = await argocdFile.isVisible({ timeout: 10_000 }).catch(() => false)
-
-  // If files aren't visible yet, click again (first click may have only toggled expand)
+  // Wait for file listing to render
+  // Try multiple strategies to find the file - button role, text content, or link
+  const argocdFileButton = getMissionTreeButton(page, /argocd-application/i)
+  const argocdFileText = getMissionTree(page).getByText(/argocd-application/i).first()
+  const argocdFileLink = getMissionTree(page).getByRole('link', { name: /argocd-application/i })
+  
+  let fileVisibleAfterFirstClick = await argocdFileButton.isVisible({ timeout: 10_000 }).catch(() => false)
   if (!fileVisibleAfterFirstClick) {
+    fileVisibleAfterFirstClick = await argocdFileText.isVisible({ timeout: 2_000 }).catch(() => false)
+  }
+  if (!fileVisibleAfterFirstClick) {
+    fileVisibleAfterFirstClick = await argocdFileLink.isVisible({ timeout: 2_000 }).catch(() => false)
+  }
+
+  // If files aren't visible yet, wait a bit for lazy loading then click again
+  if (!fileVisibleAfterFirstClick) {
+    await page.waitForTimeout(2000) // Allow time for GitHub API fetch
     await repoNode.click()
-    await expect(argocdFile).toBeVisible({ timeout: 10_000 })
+    
+    // Try all selectors again with longer timeout
+    let fileFound = await argocdFileButton.isVisible({ timeout: 15_000 }).catch(() => false)
+    if (!fileFound) {
+      fileFound = await argocdFileText.isVisible({ timeout: 2_000 }).catch(() => false)
+    }
+    if (!fileFound) {
+      fileFound = await argocdFileLink.isVisible({ timeout: 2_000 }).catch(() => false)
+    }
+    
+    if (!fileFound) {
+      // Log debugging info for CI
+      console.log('=== DEBUG: File not found after retry ===')
+      console.log('All requests:', allRequests.join('\n'))
+      console.log('Browser errors:', browserErrors.join('\n'))
+      const bodyText = await page.textContent('body')
+      console.log('Page content (first 500 chars):', bodyText?.substring(0, 500))
+    }
+    
+    // Final assertion - use the most likely selector
+    await expect(argocdFileButton.or(argocdFileText).or(argocdFileLink)).toBeVisible({ timeout: 5_000 })
   }
 }
 
@@ -605,7 +644,7 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
-    await page.getByText('argocd-application', { exact: false }).click()
+    await getMissionTreeButton(page, /argocd-application/i).click()
 
     // Verify ArgoCD project detected
     await expect(page.getByText(/argo/i).first()).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
@@ -624,7 +663,7 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
-    await page.getByText('multi-project', { exact: false }).click()
+    await getMissionTreeButton(page, /multi-project/i).click()
 
     const content = await page.textContent('body')
     const detected = [
@@ -645,7 +684,7 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
-    await page.getByText('deploy-ray-runb', { exact: false }).click()
+    await getMissionTreeButton(page, /deploy-ray-runb/i).click()
 
     await expect(page.getByText(/deploy.*kuberay|kuberay.*ml.*inference/i).first()).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
 
@@ -667,7 +706,7 @@ test.describe('Mission Control E2E', () => {
     await expandSampleRunbooks(page)
 
     const missionBrowser = page.getByTestId('mission-browser')
-    await page.getByText('troubleshoot-ka', { exact: false }).click()
+    await getMissionTreeButton(page, /troubleshoot-ka/i).click()
     await expect(missionBrowser).toContainText('Check PropagationPolicy status', { timeout: STATE_TRANSITION_TIMEOUT_MS })
 
     const content = await page.textContent('body')
@@ -688,8 +727,8 @@ test.describe('Mission Control E2E', () => {
     await expandSampleRunbooks(page)
 
     const missionBrowser = page.getByTestId('mission-browser')
-    const argocdFile = page.getByText('argocd-application', { exact: false })
-    const fluxFile = page.getByText('fluxcd-helmrele', { exact: false })
+    const argocdFile = getMissionTreeButton(page, /argocd-application/i)
+    const fluxFile = getMissionTreeButton(page, /fluxcd-helmrele/i)
 
     // Both files visible
     await expect(argocdFile).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
@@ -702,7 +741,7 @@ test.describe('Mission Control E2E', () => {
     expect(content).toMatch(/argo/i)
 
     // Go back
-    const backButton = page.getByText('Back', { exact: false }).first()
+    const backButton = page.getByRole('button', { name: /back to listing/i }).first()
     if (await backButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await backButton.click()
       await expect(argocdFile).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
@@ -764,7 +803,7 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
-    const avatarIcons = page.locator('img[src*="github.com"][src*=".png"]')
+    const avatarIcons = getMissionTree(page).locator('button:has(img) img[src*="github.com"]')
     const count = await avatarIcons.count()
     expect(count).toBeGreaterThanOrEqual(1)
 
@@ -779,11 +818,11 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
-    const refreshButton = page.getByTitle('Refresh contents')
+    const refreshButton = getMissionTree(page).getByTitle('Refresh contents').first()
     if (await refreshButton.isVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS }).catch(() => false)) {
       await refreshButton.click()
-      await expect(page.getByText('argocd-application', { exact: false })).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
-      await expect(page.getByText('fluxcd-helmrele', { exact: false })).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
+      await expect(getMissionTreeButton(page, /argocd-application/i)).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
+      await expect(getMissionTreeButton(page, /fluxcd-helmrele/i)).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
     }
   })
 
@@ -796,20 +835,20 @@ test.describe('Mission Control E2E', () => {
     await expandSampleRunbooks(page)
 
     const missionBrowser = page.getByTestId('mission-browser')
-    await page.getByText('karmada-propa', { exact: false }).click()
+    await getMissionTreeButton(page, /karmada-propa/i).click()
     await expect(missionBrowser).toContainText('PropagationPolicy', { timeout: STATE_TRANSITION_TIMEOUT_MS })
 
-    const sourceLink = page.getByRole('link', { name: /source/i })
+    const sourceLink = page.getByRole('link', { name: /repository/i })
     await expect(sourceLink).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
     const sourceHref = await sourceLink.getAttribute('href')
     expect(sourceHref).toContain('github.com/clubanderson/sample-runbooks')
     expect(sourceHref).toContain('blob/main')
 
-    const prLink = page.getByRole('link', { name: /pr/i })
+    const prLink = page.getByRole('link', { name: /pull request/i })
     await expect(prLink).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
     const prHref = await prLink.getAttribute('href')
     expect(prHref).toContain('github.com/clubanderson/sample-runbooks')
-    expect(prHref).toContain('edit/main')
+    expect(prHref).toContain('pulls')
 
     await page.screenshot({ path: 'test-results/source-pr-buttons.png', fullPage: true })
   })

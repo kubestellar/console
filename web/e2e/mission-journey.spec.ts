@@ -367,9 +367,23 @@ async function openMissionSidebar(page: Page) {
     await expect(btn).toBeVisible({ timeout: 5000 })
     await btn.click({ force: true })
   }
-  // Wait for the mission sidebar specifically — avoid `aside` which matches the always-present app sidebar
-  await page.locator('[data-testid="mission-sidebar"], [class*="mission-sidebar"]')
-    .first().waitFor({ state: 'visible', timeout: UI_ANIMATION_SETTLE_MS }).catch(() => {})
+  const sidebar = page.locator('[data-testid="mission-sidebar"], [class*="mission-sidebar"]').first()
+  await sidebar.waitFor({ state: 'visible', timeout: UI_ANIMATION_SETTLE_MS }).catch(() => {})
+  await expect(page.getByTestId('mission-chat-composer')).toBeVisible({ timeout: UI_SETTLE_MS })
+}
+
+function getMissionComposerInput(page: Page) {
+  return page.getByTestId('mission-chat-composer').locator('input[type="text"]').first()
+}
+
+function getMissionTerminateButton(page: Page) {
+  return page.locator([
+    '[data-testid="terminate-session-btn"]',
+    'button[title*="Terminate"]',
+    'button[title*="Cancel"]',
+    'button[aria-label*="Terminate"]',
+    'button[aria-label*="Cancel"]',
+  ].join(', ')).first()
 }
 
 async function getMissionStatus(page: Page, missionId?: string): Promise<string | null> {
@@ -525,7 +539,7 @@ test.describe('Mission Control Journey Tests', () => {
       await openMissionSidebar(page)
 
       // Look for the mission input area
-      const chatInput = page.locator('textarea, input[type="text"]').filter({ hasText: '' }).last()
+      const chatInput = getMissionComposerInput(page)
       const inputVisible = await chatInput.isVisible({ timeout: 5000 }).catch(() => false)
 
       if (inputVisible) {
@@ -571,7 +585,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Run pod health check')
         await chatInput.press('Enter')
@@ -608,7 +622,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Run extended diagnostics on production')
         await chatInput.press('Enter')
@@ -658,7 +672,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Run step-by-step analysis')
         await chatInput.press('Enter')
@@ -699,7 +713,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Fix crashed pods in production')
         await chatInput.press('Enter')
@@ -743,7 +757,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Diagnose OOM kills')
         await chatInput.press('Enter')
@@ -783,7 +797,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Analyze cluster security posture')
         await chatInput.press('Enter')
@@ -830,7 +844,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Audit production namespace')
         await chatInput.press('Enter')
@@ -902,7 +916,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Check cluster health')
         await chatInput.press('Enter')
@@ -960,7 +974,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Run 10-step diagnostic')
         await chatInput.press('Enter')
@@ -971,7 +985,7 @@ test.describe('Mission Control Journey Tests', () => {
         ).toBeVisible({ timeout: RENDER_SETTLE_MS })
 
         // Click cancel/stop button
-        const stopBtn = page.locator('button[title*="Stop"], button[title*="Cancel"], button[aria-label*="Stop"], button[aria-label*="Cancel"]').first()
+        const stopBtn = getMissionTerminateButton(page)
         if (await stopBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await stopBtn.click()
           // Wait for cancel acknowledgement to propagate
@@ -1016,13 +1030,13 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Long running task')
         await chatInput.press('Enter')
 
         // Wait for mission to be persisted and stop button to appear
-        const stopBtn = page.locator('button[title*="Stop"], button[title*="Cancel"], button[aria-label*="Stop"]').first()
+        const stopBtn = getMissionTerminateButton(page)
         if (await stopBtn.isVisible({ timeout: PERSIST_SETTLE_MS + 3000 }).catch(() => false)) {
           await stopBtn.click()
           // Wait for cancel to propagate
@@ -1067,7 +1081,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         // Rapid-fire the same mission
         for (let i = 0; i < RAPID_CLICK_COUNT; i++) {
@@ -1112,13 +1126,13 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Start long task')
         await chatInput.press('Enter')
 
         // Look for a stop/cancel button appearing (indicates mission is running)
-        const stopBtn = page.locator('button[title*="Stop"], button[aria-label*="Stop"]').first()
+        const stopBtn = getMissionTerminateButton(page)
         const isRunning = await stopBtn.isVisible({ timeout: EVENT_SETTLE_MS + 2000 }).catch(() => false)
 
         if (isRunning) {
@@ -1155,7 +1169,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Long running diagnostic')
         await chatInput.press('Enter')
@@ -1219,7 +1233,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('Reconnection test')
         await chatInput.press('Enter')
@@ -1253,7 +1267,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         // Create two missions
         await chatInput.fill('Mission Alpha')
@@ -1307,7 +1321,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         // Try submitting empty
         await chatInput.fill('')
@@ -1341,7 +1355,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         const LONG_PROMPT_CHAR_COUNT = 5000
         const longPrompt = 'Check pod health. '.repeat(Math.ceil(LONG_PROMPT_CHAR_COUNT / 18)).slice(0, LONG_PROMPT_CHAR_COUNT)
@@ -1396,7 +1410,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         // XSS-like input
         const dialogs: string[] = []
@@ -1437,7 +1451,7 @@ test.describe('Mission Control Journey Tests', () => {
       await navigateToDashboard(page)
       await openMissionSidebar(page)
 
-      const chatInput = page.locator('textarea, input[type="text"]').last()
+      const chatInput = getMissionComposerInput(page)
       if (await chatInput.isVisible({ timeout: 5000 }).catch(() => false)) {
         await chatInput.fill('First concurrent mission')
         await chatInput.press('Enter')

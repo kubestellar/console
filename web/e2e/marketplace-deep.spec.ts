@@ -31,6 +31,57 @@ const ISSUES_URL_SUBSTRING = 'console-marketplace/issues'
 
 /** Number of type filter buttons (All + Dashboards + Card Presets + Themes) */
 const EXPECTED_TYPE_FILTER_COUNT = 4
+const MARKETPLACE_REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
+const GITHUB_SEARCH_ISSUES_URL = 'https://api.github.com/search/issues'
+const MOCK_MARKETPLACE_REGISTRY = {
+  version: '1',
+  updatedAt: '2026-06-02T00:00:00Z',
+  items: [
+    {
+      id: 'sample-dashboard',
+      name: 'Sample Dashboard',
+      description: 'A sample dashboard entry for stable marketplace E2E coverage.',
+      author: 'KubeStellar',
+      authorGithub: 'kubestellar',
+      version: '1.0.0',
+      downloadUrl: 'https://example.com/dashboard.json',
+      tags: ['demo'],
+      cardCount: 4,
+      type: 'dashboard',
+      cncfProject: { maturity: 'graduated', category: 'Observability' },
+    },
+    {
+      id: 'sample-theme',
+      name: 'Sample Theme',
+      description: 'A stable theme entry for marketplace tests.',
+      author: 'KubeStellar',
+      version: '1.0.0',
+      downloadUrl: 'https://example.com/theme.json',
+      tags: ['theme'],
+      cardCount: 0,
+      type: 'theme',
+      themeColors: ['#111111', '#222222'],
+    },
+  ],
+  presets: [
+    {
+      id: 'sample-help-wanted',
+      name: 'Help Wanted Card',
+      description: 'A help-wanted preset to exercise banner and issue links.',
+      author: 'KubeStellar',
+      version: '1.0.0',
+      downloadUrl: 'https://example.com/preset.json',
+      tags: ['help-wanted'],
+      cardCount: 1,
+      type: 'card-preset',
+      status: 'help-wanted',
+      issueUrl: 'https://github.com/kubestellar/console-marketplace/issues/123',
+      difficulty: 'beginner',
+      skills: ['typescript'],
+      cncfProject: { maturity: 'incubating', category: 'Security' },
+    },
+  ],
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -38,6 +89,20 @@ const EXPECTED_TYPE_FILTER_COUNT = 4
 
 test.describe('Marketplace Deep Tests (/marketplace)', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route(MARKETPLACE_REGISTRY_URL, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_MARKETPLACE_REGISTRY),
+      })
+    )
+    await page.route(`${GITHUB_SEARCH_ISSUES_URL}**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ total_count: 0, items: [] }),
+      })
+    )
     await setupDemoAndNavigate(page, MARKETPLACE_ROUTE)
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
