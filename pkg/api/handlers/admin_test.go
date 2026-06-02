@@ -16,7 +16,7 @@ func TestAdminHandler_GetRateLimitStatus(t *testing.T) {
 	ft := middleware.NewFailureTracker()
 	defer ft.Stop()
 
-	h := NewAdminHandler(ft)
+	h := NewAdminHandler(ft, nil)
 	app.Get("/admin/ratelimit", h.GetRateLimitStatus)
 
 	t.Run("Normal Mode - Empty", func(t *testing.T) {
