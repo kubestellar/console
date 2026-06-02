@@ -56,6 +56,11 @@ func NewConsolePersistenceHandlers(
 // GetConfig returns the current persistence configuration
 // GET /api/persistence/config
 func (h *ConsolePersistenceHandlers) GetConfig(c *fiber.Ctx) error {
+	// Persistence config access requires admin role (#16484)
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	config := h.persistenceStore.GetConfig()
 	return c.JSON(config)
 }
@@ -95,6 +100,11 @@ func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 // GetStatus returns the current persistence status
 // GET /api/persistence/status
 func (h *ConsolePersistenceHandlers) GetStatus(c *fiber.Ctx) error {
+	// Persistence status access requires admin role (#16484)
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	status := h.persistenceStore.GetStatus(c.UserContext())
 	return c.JSON(status)
 }
@@ -264,6 +274,11 @@ func (h *ConsolePersistenceHandlers) SyncNow(c *fiber.Ctx) error {
 // TestConnection tests the connection to the persistence cluster
 // POST /api/persistence/test
 func (h *ConsolePersistenceHandlers) TestConnection(c *fiber.Ctx) error {
+	// Persistence test access requires admin role (#16484)
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	var req struct {
 		Cluster string `json:"cluster"`
 	}
