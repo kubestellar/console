@@ -111,7 +111,16 @@ export default defineConfig(({ mode }) => ({
             ['pages-platform', ['/src/components/gitops/', '/src/components/cicd/', '/src/components/operators/', '/src/components/helm/']],
             ['pages-aiml', ['/src/components/aiml/', '/src/components/aiagents/', '/src/components/llmd-benchmarks/']],
             ['pages-misc', ['/src/components/alerts/', '/src/components/cost/', '/src/components/events/', '/src/components/logs/', '/src/components/deploy/', '/src/components/gpu/', '/src/components/arcade/', '/src/components/marketplace/', '/src/components/clusters/']],
-            // Split card components into their own chunk (after card-registry rules, before dashboard)
+            // Split card components into granular sub-chunks by category
+            ['cards-llmd', ['/src/components/cards/llmd/', '/src/components/cards/quantum/']],
+            ['cards-multi-tenancy', ['/src/components/cards/multi-tenancy/']],
+            ['cards-missions', ['/src/components/cards/console-missions/']],
+            ['cards-workloads', ['/src/components/cards/workload-monitor/', '/src/components/cards/workload-detection/']],
+            ['cards-pipelines', ['/src/components/cards/pipelines/', '/src/components/cards/insights/']],
+            ['cards-platform', ['/src/components/cards/drasi/', '/src/components/cards/kagent/', '/src/components/cards/kagenti/', '/src/components/cards/gadget/']],
+            ['cards-compliance', ['/src/components/cards/compliance/', '/src/components/cards/opa/', '/src/components/cards/intoto_supply_chain/']],
+            ['cards-rss', ['/src/components/cards/rss/']],
+            // Remaining cards (catch-all for /src/components/cards/)
             ['cards', ['/src/components/cards/']],
             // Split drilldown views into their own chunk
             ['drilldown', ['/src/components/drilldown/']],
@@ -120,8 +129,22 @@ export default defineConfig(({ mode }) => ({
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
-            ['app-shell', ['/src/App.tsx', '/src/hooks/usePersistedSettings']],
-            ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
+            // Split hooks into sub-chunks to reduce app-shell size
+            ['hooks-mcp', ['/src/hooks/mcp/']],
+            ['hooks-cached', ['/src/hooks/useCached']],
+            ['hooks-core', ['/src/hooks/']],
+            // Split lib into sub-chunks
+            ['lib-cache', ['/src/lib/cache/']],
+            ['lib-demo', ['/src/lib/demo/']],
+            ['lib-unified', ['/src/lib/unified/']],
+            ['lib-analytics', ['/src/lib/analytics']],
+            ['lib-core', ['/src/lib/']],
+            // Contexts and routes
+            ['contexts', ['/src/contexts/']],
+            ['routes', ['/src/routes/', '/src/pages/']],
+            // App shell (entry point only — most deps now split out above)
+            ['app-shell', ['/src/App.tsx', '/src/main.tsx']],
+            ['i18n-app', ['/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
             if (needles.some(needle => id.includes(needle))) return chunkName
