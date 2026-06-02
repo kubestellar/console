@@ -557,22 +557,28 @@ func parseImagesFromYAML(content string) map[string]string {
 		if !hubRe.MatchString(line) {
 			continue
 		}
-		// Search nearby lines (±5) for name and tag
+		// Get indentation level of the hub line
+		hubIndent := len(line) - len(strings.TrimLeft(line, " \t"))
+		
+		// Search lines AFTER the hub line (downward) for name and tag within the same block
+		// Stop when we encounter a line with less indentation (different block)
 		const searchRadius = 5
 		var name, tag string
-		start := i - searchRadius
-		if start < 0 {
-			start = 0
-		}
 		end := i + searchRadius
 		if end >= len(lines) {
 			end = len(lines) - 1
 		}
-		for j := start; j <= end; j++ {
+		for j := i + 1; j <= end; j++ {
 			trimmed := strings.TrimSpace(lines[j])
-			// Skip commented-out lines
-			if strings.HasPrefix(trimmed, "#") {
+			// Skip empty lines and commented-out lines
+			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 				continue
+			}
+			// Get indentation of current line
+			currentIndent := len(lines[j]) - len(strings.TrimLeft(lines[j], " \t"))
+			// Stop if we encounter a line with less indentation (end of block)
+			if currentIndent < hubIndent {
+				break
 			}
 			if m := nameRe.FindStringSubmatch(lines[j]); m != nil && name == "" {
 				name = m[1]
