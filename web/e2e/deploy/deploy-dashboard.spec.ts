@@ -538,32 +538,36 @@ test.describe('Deploy Dashboard', () => {
 
     await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
 
-    // Wait for workloads API to be called
-    await page.waitForFunction(
-      () => document.body.textContent?.includes('nginx-deploy') || document.body.textContent?.includes('api-gateway'),
-      { timeout: CARD_CONTENT_TIMEOUT_MS },
-    ).catch(() => {
-      // Workload names may appear in different cards — check API was called
-    })
+    const workloadCard = page.locator('[data-card-id="workload-deployment-1"]')
+    await expect(workloadCard).toBeVisible()
 
     await expect.poll(
-      () => mockState.apiCallLog.length,
-      { timeout: CARD_CONTENT_TIMEOUT_MS }
+      () => mockState.getCallCount('api/workloads'),
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
     ).toBeGreaterThan(0)
 
-    // Workloads may be fetched via REST (/api/workloads), SSE (/api/mcp/*),
-    // kc-agent (127.0.0.1:8585), or kubectl proxy (/api/kubectl/*)
+    const workloadRows = workloadCard.locator('[data-dnd-workload="true"]')
+    await expect.poll(
+      async () => await workloadRows.count(),
+      { timeout: CARD_CONTENT_TIMEOUT_MS },
+    ).toBe(MOCK_WORKLOADS.length)
+
+    await expect(workloadCard.getByText(`${MOCK_WORKLOADS.length} total · ${MOCK_WORKLOADS.length} unique`)).toBeVisible()
+
+    for (const workload of MOCK_WORKLOADS) {
+      const workloadRow = workloadRows.filter({ hasText: workload.name }).first()
+      await expect(workloadRow).toBeVisible()
+      await expect(workloadRow).toContainText(workload.status)
+      await expect(workloadRow).toContainText(workload.namespace)
+      await expect(workloadRow).toContainText(workload.type)
+      await expect(workloadRow).toContainText(`${workload.readyReplicas}/${workload.replicas}`)
+      await expect(workloadRow).toContainText(workload.image)
+    }
+
     const workloadCalls = mockState.getCallCount('api/workloads')
-    const sseCalls = mockState.apiCallLog.filter((c) => c.endpoint.includes('mcp')).length
-    const kubectlCalls = mockState.getCallCount('kubectl')
-    const agentCalls = mockState.getCallCount('agent')
+    console.log(`[Deploy] Workload REST calls: ${workloadCalls}, rendered rows: ${MOCK_WORKLOADS.length}`)
 
-    const hasAnyCalls = workloadCalls > 0 || sseCalls > 0 || kubectlCalls > 0 || agentCalls > 0
-    console.log(`[Deploy] Workload REST: ${workloadCalls}, SSE: ${sseCalls}, kubectl: ${kubectlCalls}, agent: ${agentCalls}`)
-
-    expect(hasAnyCalls).toBe(true)
-
-    recordResult('workload-listing', 'pass', `REST:${workloadCalls} SSE:${sseCalls}`, t0)
+    recordResult('workload-listing', 'pass', `rows:${MOCK_WORKLOADS.length} REST:${workloadCalls}`, t0)
   })
 
   // ========================================================================
