@@ -414,6 +414,7 @@ jobs:
         run: |
           RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
           BLOCKING_STORAGE_ISSUES=0
+          PVC_WAIT_TIMEOUT=60s
           PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
 
           if [ "$(jq '.items | length' <<<"$PVCS_JSON")" -eq 0 ]; then
@@ -426,17 +427,39 @@ jobs:
           echo "::endgroup::"
 
           while IFS=$'\t' read -r pvc_name volume_name pvc_deletion; do
+            # PVC is already being deleted — wait for it to finish instead of failing immediately
             if [ -n "$pvc_deletion" ]; then
-              echo "::error::PersistentVolumeClaim '$pvc_name' is marked for deletion. Remove stuck finalizers or recreate the claim before rerunning deploy-pok-prod."
+              echo "PVC '$pvc_name' is terminating (since $pvc_deletion). Waiting up to $PVC_WAIT_TIMEOUT for deletion to complete..."
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PVC '$pvc_name' successfully deleted."
+                continue
+              fi
+              echo "::warning::PVC '$pvc_name' still terminating after $PVC_WAIT_TIMEOUT — removing finalizers..."
+              kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null; then
+                echo "PVC '$pvc_name' deleted after finalizer removal."
+                continue
+              fi
+              echo "::error::PersistentVolumeClaim '$pvc_name' could not be deleted despite finalizer removal. Manual intervention required."
               BLOCKING_STORAGE_ISSUES=1
+              continue
             fi
 
             if [ -z "$volume_name" ]; then
               continue
             fi
 
+            # Check if PV exists
             if ! PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null); then
-              echo "::error::PersistentVolumeClaim '$pvc_name' references missing PersistentVolume '$volume_name'. Recreate the claim or provision a replacement volume before rerunning deploy-pok-prod."
+              # PV is missing — attempt idempotent cleanup
+              echo "::warning::PVC '$pvc_name' references missing PV '$volume_name'. Attempting cleanup..."
+              kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+              kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PVC '$pvc_name' successfully cleaned up."
+                continue
+              fi
+              echo "::error::PersistentVolumeClaim '$pvc_name' references missing PersistentVolume '$volume_name' and could not be deleted. Manual intervention required."
               BLOCKING_STORAGE_ISSUES=1
               continue
             fi
@@ -446,7 +469,26 @@ jobs:
             echo "PVC '$pvc_name' -> PV '$volume_name' phase=$pv_phase${pv_deletion:+ deleting=$pv_deletion}"
 
             if [ -n "$pv_deletion" ]; then
-              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' is marked for deletion. Cluster admin must clear PV finalizers or recreate the PVC before rerunning deploy-pok-prod."
+              echo "PV '$volume_name' is being deleted. Waiting up to $PVC_WAIT_TIMEOUT..."
+              if kubectl wait --for=delete pv/"$volume_name" --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PV '$volume_name' deleted. Cleaning up orphaned PVC '$pvc_name'..."
+                kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+                kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null || true
+                continue
+              fi
+              echo "::warning::PV '$volume_name' still deleting. Removing PV finalizers..."
+              kubectl patch pv "$volume_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
+              # Re-check if PV is now gone
+              if ! kubectl get pv "$volume_name" &>/dev/null; then
+                echo "PV '$volume_name' cleared. Cleaning up orphaned PVC '$pvc_name'..."
+                kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+                kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null || true
+                continue
+              fi
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' could not be deleted. Manual intervention required."
               BLOCKING_STORAGE_ISSUES=1
             fi
 
