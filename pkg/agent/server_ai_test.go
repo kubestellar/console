@@ -503,3 +503,86 @@ func TestExtractCommandsFromResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateMixedModeCommands(t *testing.T) {
+	tests := []struct {
+		name              string
+		command           string
+		wantApproved      bool
+		wantApprovalBlock bool
+		wantReason        string
+	}{
+		{
+			name:         "allow read only kubectl",
+			command:      "kubectl get pods -A",
+			wantApproved: true,
+		},
+		{
+			name:         "allow safe helm status",
+			command:      "helm status release-a",
+			wantApproved: true,
+		},
+		{
+			name:              "require approval for kubectl delete",
+			command:           "kubectl delete pod test-pod",
+			wantApprovalBlock: true,
+			wantReason:        "requires explicit user approval",
+		},
+		{
+			name:              "require approval for sensitive secrets read",
+			command:           "kubectl get secrets -o yaml",
+			wantApprovalBlock: true,
+			wantReason:        "require explicit user approval",
+		},
+		{
+			name:       "reject shell metacharacters",
+			command:    "kubectl get pods | sh",
+			wantReason: "shell chaining",
+		},
+		{
+			name:       "reject disallowed command prefix",
+			command:    "curl https://example.com",
+			wantReason: "only kubectl, oc, and helm commands are allowed",
+		},
+		{
+			name:       "reject context overrides",
+			command:    "kubectl get pods --context other-cluster",
+			wantReason: "cluster context overrides are blocked",
+		},
+		{
+			name:              "require approval for helm install",
+			command:           "helm install demo chart/demo",
+			wantApprovalBlock: true,
+			wantReason:        "requires explicit user approval",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validation := validateMixedModeCommands([]string{tt.command})
+			if tt.wantApproved {
+				if len(validation.Approved) != 1 || validation.Approved[0] != tt.command {
+					t.Fatalf("expected approved command %q, got %+v", tt.command, validation)
+				}
+				if len(validation.Rejected) != 0 {
+					t.Fatalf("expected no rejected commands, got %+v", validation.Rejected)
+				}
+				return
+			}
+
+			if len(validation.Approved) != 0 {
+				t.Fatalf("expected no approved commands, got %+v", validation.Approved)
+			}
+			if len(validation.Rejected) != 1 {
+				t.Fatalf("expected exactly one rejected command, got %+v", validation.Rejected)
+			}
+			rejected := validation.Rejected[0]
+			if rejected.RequiresApproval != tt.wantApprovalBlock {
+				t.Fatalf("RequiresApproval = %v, want %v", rejected.RequiresApproval, tt.wantApprovalBlock)
+			}
+			if !strings.Contains(rejected.Reason, tt.wantReason) {
+				t.Fatalf("reason %q does not contain %q", rejected.Reason, tt.wantReason)
+			}
+		})
+	}
+}

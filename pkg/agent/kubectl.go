@@ -243,7 +243,7 @@ var blockedConfigSubcommands = map[string]bool{
 	"rename-context":  true, // handled via dedicated endpoint with validation
 }
 
-func (k *KubectlProxy) validateArgs(args []string) bool {
+func validateKubectlArgs(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
@@ -349,6 +349,10 @@ func (k *KubectlProxy) validateArgs(args []string) bool {
 	}
 
 	return true
+}
+
+func (k *KubectlProxy) validateArgs(args []string) bool {
+	return validateKubectlArgs(args)
 }
 
 func (k *KubectlProxy) GetCurrentContext() string {
@@ -647,9 +651,9 @@ type AddClusterRequest struct {
 	ServerURL     string `json:"serverUrl"`
 	AuthType      string `json:"authType"` // "token", "certificate"
 	Token         string `json:"token,omitempty"`
-	CertData      string `json:"certData,omitempty"`  // base64 PEM
-	KeyData       string `json:"keyData,omitempty"`   // base64 PEM
-	CAData        string `json:"caData,omitempty"`    // base64 PEM CA cert
+	CertData      string `json:"certData,omitempty"` // base64 PEM
+	KeyData       string `json:"keyData,omitempty"`  // base64 PEM
+	CAData        string `json:"caData,omitempty"`   // base64 PEM CA cert
 	SkipTLSVerify bool   `json:"skipTlsVerify,omitempty"`
 	Namespace     string `json:"namespace,omitempty"` // default namespace
 }
