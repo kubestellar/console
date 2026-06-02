@@ -110,16 +110,16 @@ jobs:
 
       - name: Install kind CLI
         run: |
-          curl -Lo /usr/local/bin/kind \
+          sudo curl -Lo /usr/local/bin/kind \
             "https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64"
-          chmod +x /usr/local/bin/kind
+          sudo chmod +x /usr/local/bin/kind
           kind version
 
       - name: Install kubectl
         run: |
-          curl -Lo /usr/local/bin/kubectl \
+          sudo curl -Lo /usr/local/bin/kubectl \
             "https://dl.k8s.io/release/${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl"
-          chmod +x /usr/local/bin/kubectl
+          sudo chmod +x /usr/local/bin/kubectl
           kubectl version --client
 
       # ------------------------------------------------------------------
