@@ -7,11 +7,13 @@
 // `/drasi` dashboard talks to all three through this single proxy:
 //
 //   - drasi-server (mode 1+2): requested via ?target=server&url=<full-URL>.
-//     The proxy forwards the request to the URL the user configured (typically
-//     localhost:8090 or a Docker host). drasi-server already sends permissive
-//     CORS, so the frontend could call it directly — but routing it through this
-//     proxy keeps the client code path identical for both modes and lets us add
-//     auth/audit later without touching the frontend.
+//     The proxy forwards the request to the configured URL after validating the
+//     host. Loopback/private hosts are blocked by default and may be re-enabled
+//     only via KC_DRASI_SERVER_ALLOWED_HOSTS for trusted deployments.
+//     drasi-server already sends permissive CORS, so the frontend could call it
+//     directly — but routing it through this proxy keeps the client code path
+//     identical for both modes and lets us add auth/audit later without
+//     touching the frontend.
 //
 //   - drasi-platform (mode 3): requested via ?target=platform&cluster=<ctx>.
 //     drasi-platform exposes its REST API on the in-cluster `drasi-api` Service
@@ -33,6 +35,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -55,43 +58,58 @@ const (
 	drasiProxyMaxBodyBytes = 1 << 20 // 1 MiB
 	// drasiProxyDefaultTimeout caps non-streaming proxy calls.
 	drasiProxyDefaultTimeout = 30 * time.Second
+	// drasiAllowedHostsEnv lets operators explicitly allow trusted Drasi hosts,
+	// including loopback, when they intentionally run drasi-server next to the
+	// console. Values are comma-separated hostnames or IP literals.
+	drasiAllowedHostsEnv = "KC_DRASI_SERVER_ALLOWED_HOSTS"
 )
 
-// drasiBlockedCIDRs contains CIDR ranges that must never be proxied by the
-// Drasi server proxy. This is similar to blockedCIDRs in card_proxy.go but
-// deliberately EXCLUDES loopback (127.0.0.0/8, ::1/128) because drasi-server
-// runs on localhost.
-var drasiBlockedCIDRs = func() []*net.IPNet {
-	cidrs := []string{
-		"10.0.0.0/8",         // RFC 1918 private
-		"100.64.0.0/10",      // RFC 6598 CGNAT
-		"172.16.0.0/12",      // RFC 1918 private
-		"192.168.0.0/16",     // RFC 1918 private
-		"169.254.169.254/32", // cloud metadata
-		"169.254.0.0/16",     // link-local
-		"fc00::/7",           // IPv6 unique local
-		"fe80::/10",          // IPv6 link-local
-	}
-	nets := make([]*net.IPNet, 0, len(cidrs))
-	for _, cidr := range cidrs {
-		_, ipnet, err := net.ParseCIDR(cidr)
-		if err != nil {
-			panic(fmt.Sprintf("[DrasiProxy] invalid blocked CIDR %q: %v", cidr, err))
-		}
-		nets = append(nets, ipnet)
-	}
-	return nets
-}()
+var (
+	// drasiCGNATNet is RFC 6598 Carrier-Grade NAT space.
+	_, drasiCGNATNet, _ = net.ParseCIDR("100.64.0.0/10")
+	// drasiCloudMetadataNet is the cloud metadata endpoint range.
+	_, drasiCloudMetadataNet, _ = net.ParseCIDR("169.254.169.254/32")
+	// drasiIETFProtocolNet is RFC 6890 IETF protocol assignments.
+	_, drasiIETFProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
+)
 
-// isDrasiBlockedIP returns true if the IP is in a private/reserved range
-// that the Drasi proxy should not connect to. Loopback addresses are allowed.
+// isDrasiBlockedIP returns true if the IP is in a non-public range that the
+// Drasi proxy should not connect to unless the operator explicitly allowlists
+// that host via KC_DRASI_SERVER_ALLOWED_HOSTS.
 func isDrasiBlockedIP(ip net.IP) bool {
-	for _, cidr := range drasiBlockedCIDRs {
-		if cidr.Contains(ip) {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
+		drasiCGNATNet.Contains(ip) || drasiCloudMetadataNet.Contains(ip) || drasiIETFProtocolNet.Contains(ip)
+}
+
+func normalizeDrasiHost(host string) string {
+	host = strings.TrimSpace(host)
+	host = strings.TrimPrefix(host, "[")
+	host = strings.TrimSuffix(host, "]")
+	return strings.ToLower(host)
+}
+
+func isAllowedDrasiHost(host string) bool {
+	raw := os.Getenv(drasiAllowedHostsEnv)
+	if raw == "" {
+		return false
+	}
+	needle := normalizeDrasiHost(host)
+	for _, allowed := range strings.Split(raw, ",") {
+		if normalizeDrasiHost(allowed) == needle {
 			return true
 		}
 	}
 	return false
+}
+
+func isLocalhostDrasiHost(host string) bool {
+	host = normalizeDrasiHost(host)
+	if host == "localhost" || host == "localhost.localdomain" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // drasiProxyClient is an HTTP client hardened against SSRF for Drasi proxy
@@ -116,9 +134,11 @@ var drasiProxyClient = &http.Client{
 			if len(ips) == 0 {
 				return nil, fmt.Errorf("no IPs resolved for host %s", host)
 			}
-			for _, ip := range ips {
-				if isDrasiBlockedIP(ip.IP) {
-					return nil, fmt.Errorf("blocked: private/reserved IP %s for host %s", ip.IP, host)
+			if !isAllowedDrasiHost(host) {
+				for _, ip := range ips {
+					if isDrasiBlockedIP(ip.IP) {
+						return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
+					}
 				}
 			}
 			dialer := &net.Dialer{Timeout: drasiProxyDefaultTimeout}
@@ -146,7 +166,7 @@ var drasiHopByHopHeaders = map[string]bool{
 // Query parameters:
 //
 //	target  — "server" (drasi-server REST) or "platform" (drasi-platform via K8s Service proxy)
-//	url     — (target=server) full upstream URL, e.g. "http://localhost:8090"
+//	url     — (target=server) full upstream URL, e.g. "https://drasi.example.com"; loopback/private hosts require KC_DRASI_SERVER_ALLOWED_HOSTS
 //	cluster — (target=platform) kubeconfig context name
 //
 // The wildcard segment after `/api/drasi/proxy/` is the upstream path:
@@ -157,13 +177,18 @@ var drasiHopByHopHeaders = map[string]bool{
 //	/api/drasi/proxy/v1/continuousQueries?target=platform&cluster=prow
 //	→ K8s Service proxy on `prow` cluster: drasi-system/drasi-api:8080/v1/continuousQueries
 func (h *MCPHandlers) ProxyDrasi(c *fiber.Ctx) error {
-	if err := requireViewerOrAbove(c, h.store); err != nil {
-		return err
-	}
-
 	target := c.Query("target")
 	if target != "server" && target != "platform" {
 		return fiber.NewError(fiber.StatusBadRequest, "target must be 'server' or 'platform'")
+	}
+	if target == "server" {
+		if err := requireEditorOrAdmin(c, h.store); err != nil {
+			return err
+		}
+	} else {
+		if err := requireViewerOrAbove(c, h.store); err != nil {
+			return err
+		}
 	}
 
 	// The fiber wildcard captures everything after `/api/drasi/proxy/`.
@@ -200,19 +225,17 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 	if base.Scheme != "http" && base.Scheme != "https" {
 		return fiber.NewError(fiber.StatusBadRequest, "url must be http or https")
 	}
-	// Only localhost / loopback is intentionally allowed for drasi-server.
-	// Reject unspecified bind-all hosts and IP literals that resolve to
-	// private/reserved ranges (defense-in-depth — DialContext also checks at
-	// connect time, but early rejection avoids DNS lookup overhead and
-	// eliminates TOCTOU gaps).
 	host := base.Hostname()
-	if host == "0.0.0.0" || host == "::" {
-		return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
+	if host == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid url query param")
 	}
-	// If the host is an IP literal, validate against blocked CIDRs immediately.
-	if ip := net.ParseIP(host); ip != nil {
-		if isDrasiBlockedIP(ip) {
-			return fiber.NewError(fiber.StatusForbidden, "url host is not allowed (private/reserved IP)")
+	if !isAllowedDrasiHost(host) {
+		host = normalizeDrasiHost(host)
+		if host == "0.0.0.0" || host == "::" || isLocalhostDrasiHost(host) {
+			return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
+		}
+		if ip := net.ParseIP(host); ip != nil && isDrasiBlockedIP(ip) {
+			return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
 		}
 	}
 	full := *base

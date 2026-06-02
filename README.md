@@ -485,6 +485,7 @@ Reactive graph subscription for real-time data.
 |----------|----------|---------|-------------|
 | `VITE_DRASI_SERVER_URL` | Optional | — | DRASI server URL (build-time only) |
 | `VITE_DRASI_PLATFORM_CLUSTER` | Optional | — | DRASI platform cluster identifier (build-time only) |
+| `KC_DRASI_SERVER_ALLOWED_HOSTS` | Optional | — | Comma-separated Drasi server hosts/IPs allowed for `/api/drasi/proxy?target=server`; required to permit loopback or private hosts |
 
 ### Quick Setup Examples
 

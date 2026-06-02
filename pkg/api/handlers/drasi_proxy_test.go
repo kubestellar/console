@@ -5,8 +5,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
@@ -68,6 +73,10 @@ func TestProxyDrasi_Server_Post(t *testing.T) {
 	}))
 	defer upstream.Close()
 
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+	t.Setenv(drasiAllowedHostsEnv, upstreamURL.Hostname())
+
 	oldClient := drasiProxyClient
 	drasiProxyClient = upstream.Client()
 	defer func() { drasiProxyClient = oldClient }()
@@ -97,6 +106,9 @@ func TestProxyDrasi_Validation(t *testing.T) {
 		{"missing url for server", "/api/drasi/proxy/foo?target=server", 400},
 		{"invalid url for server", "/api/drasi/proxy/foo?target=server&url=invalid", 400},
 		{"unsupported scheme", "/api/drasi/proxy/foo?target=server&url=ftp://localhost", 400},
+		{"loopback blocked by default", "/api/drasi/proxy/foo?target=server&url=http://127.0.0.1:8080", 403},
+		{"localhost blocked by default", "/api/drasi/proxy/foo?target=server&url=http://localhost:8080", 403},
+		{"private ip blocked by default", "/api/drasi/proxy/foo?target=server&url=http://10.0.0.1:8080", 403},
 		{"missing cluster for platform", "/api/drasi/proxy/foo?target=platform", 400},
 	}
 
@@ -108,6 +120,25 @@ func TestProxyDrasi_Validation(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
 	}
+}
+
+func TestProxyDrasi_Server_RequiresEditorOrAdmin(t *testing.T) {
+	mockStore := new(test.MockStore)
+	userID := uuid.New()
+	mockStore.On("GetUser", userID).Return(&models.User{Role: models.UserRoleViewer}, nil)
+
+	app := fiber.New()
+	h := NewMCPHandlers(nil, nil, mockStore)
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.All("/api/drasi/proxy/*", h.ProxyDrasi)
+
+	req := httptest.NewRequest("GET", "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func TestProxyDrasi_Platform(t *testing.T) {
