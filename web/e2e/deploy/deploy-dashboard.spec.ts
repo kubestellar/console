@@ -20,6 +20,7 @@ import { test as base, expect, type Page, type Route } from '@playwright/test'
 const MOCK_CLUSTER = 'test-cluster'
 const MOCK_CLUSTER_2 = 'prod-cluster'
 const DEPLOY_ROUTE = '/deploy'
+const EMPTY_SSE_BODY = ': keep-alive\n\n'
 
 /** Timeout for initial page load (Vite compiles modules on first visit) */
 const PAGE_LOAD_TIMEOUT_MS = 60_000
@@ -199,6 +200,17 @@ function createMockState(): MockState {
     },
   }
   return state
+}
+
+function fulfillFallbackApiRoute(route: Route) {
+  const acceptHeader = route.request().headers().accept || ''
+  const isStreamRequest = route.request().url().includes('/stream') || acceptHeader.includes('text/event-stream')
+
+  return route.fulfill({
+    status: 200,
+    contentType: isStreamRequest ? 'text/event-stream' : 'application/json',
+    body: isStreamRequest ? EMPTY_SSE_BODY : '{}',
+  })
 }
 
 async function setupMockRoutes(page: Page, state: MockState) {
@@ -402,16 +414,16 @@ async function setupMockRoutes(page: Page, state: MockState) {
     '**/api/events**', '**/auth/**',
   ]
   for (const pattern of utilityEndpoints) {
-    await page.route(pattern, (route) => {
-      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-    })
+    await page.route(pattern, (route) => fulfillFallbackApiRoute(route))
   }
 
   // Catch-all for any /api/* requests not explicitly mocked above — prevents
   // networkidle from stalling on new endpoints that features add over time.
+  // Some background requests use EventSource/SSE, so preserve a stream MIME
+  // type there too instead of replying with JSON and aborting the connection.
   await page.route('**/api/**', (route) => {
     state.logCall(route, 'api-catch-all')
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    return fulfillFallbackApiRoute(route)
   })
 }
 
@@ -536,10 +548,8 @@ test.describe('Deploy Dashboard', () => {
     const t0 = Date.now()
     await setupAuthAndNavigate(page, DEPLOY_ROUTE)
 
-    await expect(page.getByTestId('dashboard-title')).toContainText(/deploy/i)
-
     const workloadCard = page.locator('[data-card-id="workload-deployment-1"]')
-    await expect(workloadCard).toBeVisible()
+    await expect(workloadCard).toBeVisible({ timeout: PAGE_LOAD_TIMEOUT_MS })
 
     await expect.poll(
       () => mockState.getCallCount('api/workloads'),

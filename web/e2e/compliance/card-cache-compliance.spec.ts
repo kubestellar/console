@@ -827,10 +827,9 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
     await page.route(pattern, fulfillSkippedRoute)
   }
 
-  // Catch-all for any remaining /api/* endpoints — prevents 401 redirects.
-  await page.route('**/api/**', (route) => {
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  })
+  // Catch-all for any remaining /api/* endpoints — prevents 401 redirects
+  // and keeps unknown SSE/EventSource requests from aborting on MIME mismatch.
+  await page.route('**/api/**', fulfillSkippedRoute)
 
   await setLiveColdMode(page)
 
