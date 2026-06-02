@@ -9,6 +9,12 @@ import { mockApiFallback } from './helpers/setup'
 
 const VISIBLE_TIMEOUT_MS = 10_000
 
+async function openMissionControlPage(page: Page, route = '/?demo=true') {
+  await page.goto(route)
+  await page.waitForLoadState('domcontentloaded')
+  await expect(page.locator('#root')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
+}
+
 async function setupMissionControlTest(page: Page) {
   await mockApiFallback(page)
 
@@ -127,6 +133,7 @@ test.describe('Mission Control Pipeline', () => {
         })
       })
 
+      await openMissionControlPage(page)
       const chatResponse = await page.evaluate(async () => {
         const res = await fetch('/api/agent/chat', {
           method: 'POST',
@@ -137,9 +144,9 @@ test.describe('Mission Control Pipeline', () => {
       })
 
       expect(chatResponse.status).toBe(200)
-      expect(chatResponse.body.kb_context).toBeDefined()
-      expect(chatResponse.body.kb_context.length).toBeGreaterThan(0)
+      expect(chatResponse.body.response).toContain('deploy KubeStellar')
       expect(chatResponse.body.kb_context).toContain('deploy-guide.md')
+      expect(chatResponse.body.commands).toContain('kubectl apply -f https://kubestellar.io/latest.yaml')
     })
 
     test('generated commands are valid kubectl/helm', async ({ page }) => {
@@ -154,6 +161,7 @@ test.describe('Mission Control Pipeline', () => {
         })
       })
 
+      await openMissionControlPage(page)
       const chatResponse = await page.evaluate(async () => {
         const res = await fetch('/api/agent/chat', {
           method: 'POST',
@@ -164,13 +172,15 @@ test.describe('Mission Control Pipeline', () => {
       })
 
       expect(chatResponse.status).toBe(200)
-      const commands = chatResponse.body.commands
-      expect(commands.length).toBeGreaterThan(0)
-      
-      // Validate syntax
-      commands.forEach((cmd: string) => {
+      const commands = chatResponse.body.commands as string[]
+      expect(commands).toEqual([
+        'kubectl get pods -n kubestellar',
+        'helm install ks core/kubestellar'
+      ])
+
+      commands.forEach((cmd) => {
         const isValid = cmd.startsWith('kubectl ') || cmd.startsWith('helm ') || cmd.startsWith('oc ')
-        expect(isValid).toBeTruthy()
+        expect(isValid).toBe(true)
       })
     })
 
@@ -187,6 +197,7 @@ test.describe('Mission Control Pipeline', () => {
         })
       })
 
+      await openMissionControlPage(page)
       const execResponse = await page.evaluate(async () => {
         const res = await fetch('/api/agent/mission/execute', {
           method: 'POST',
@@ -199,6 +210,7 @@ test.describe('Mission Control Pipeline', () => {
       expect(execResponse.status).toBe(200)
       expect(execResponse.body.status).toBe('success')
       expect(execResponse.body.steps_completed).toBe(3)
+      expect(execResponse.body.logs).toContain('deployed successfully')
     })
   })
 })
