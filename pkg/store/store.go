@@ -314,9 +314,10 @@ type AuditEntry struct {
 	Detail    string `json:"detail,omitempty"`
 }
 
-// Store defines the interface for data persistence
-type Store interface {
-	// Users
+// UserStore covers user account management and onboarding.
+// New services and handlers should accept UserStore rather than the full Store
+// when they only perform user-related persistence.
+type UserStore interface {
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error)
 	GetUserByGitHubLogin(ctx context.Context, login string) (*models.User, error)
@@ -330,13 +331,17 @@ type Store interface {
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	UpdateUserRole(ctx context.Context, userID uuid.UUID, role string) error
 	CountUsersByRole(ctx context.Context) (admins, editors, viewers int, err error)
-	WithTransaction(ctx context.Context, fn func(tx *sql.Tx) error) error
 
 	// Onboarding
 	SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error
 	GetOnboardingResponses(ctx context.Context, userID uuid.UUID) ([]models.OnboardingResponse, error)
 	SetUserOnboarded(ctx context.Context, userID uuid.UUID) error
+}
 
+// DashboardStore covers dashboards, cards, card history, and pending swaps.
+// Pending swaps are grouped here because they target dashboard positions and
+// their SQLite implementation lives in sqlite_dashboards.go.
+type DashboardStore interface {
 	// Dashboards
 	GetDashboard(ctx context.Context, id uuid.UUID) (*models.Dashboard, error)
 	// CountUserDashboards returns the total number of dashboards owned by a
@@ -381,53 +386,12 @@ type Store interface {
 	CreatePendingSwap(ctx context.Context, swap *models.PendingSwap) error
 	UpdateSwapStatus(ctx context.Context, id uuid.UUID, status models.SwapStatus) error
 	SnoozeSwap(ctx context.Context, id uuid.UUID, newSwapAt time.Time) error
+}
 
-	// User Events
-	RecordEvent(ctx context.Context, event *models.UserEvent) error
-	// GetRecentEvents returns a user's events within the given time window.
-	// #6599: limit/offset are required to bound event history reads.
-	// Pass 0 for limit to use the store default.
-	GetRecentEvents(ctx context.Context, userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error)
-
-	// Feature Requests
-	CreateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error
-	GetFeatureRequest(ctx context.Context, id uuid.UUID) (*models.FeatureRequest, error)
-	GetFeatureRequestByIssueNumber(ctx context.Context, issueNumber int) (*models.FeatureRequest, error)
-	GetFeatureRequestsByIssueNumbers(ctx context.Context, issueNumbers []int) ([]*models.FeatureRequest, error)
-	GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error)
-	// GetUserFeatureRequests returns a user's feature requests, newest first.
-	// #6601: limit/offset required. Pass 0 for limit to use the store default.
-	GetUserFeatureRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error)
-	// CountUserPendingFeatureRequests returns the number of a user's feature
-	// requests that are still untriaged (status = open or needs_triage).
-	// #10174: lets the handler tell the frontend about pending submissions.
-	CountUserPendingFeatureRequests(ctx context.Context, userID uuid.UUID) (int, error)
-	// GetAllFeatureRequests returns the global feature-request table, newest first.
-	// #6602: limit/offset required; admin dashboard uses a smaller default (100)
-	// because this is hit on every dashboard load. Pass 0 for limit to use the
-	// store default.
-	GetAllFeatureRequests(ctx context.Context, limit, offset int) ([]models.FeatureRequest, error)
-	UpdateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error
-	UpdateFeatureRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus) error
-	CloseFeatureRequest(ctx context.Context, id uuid.UUID, closedByUser bool) error
-	UpdateFeatureRequestPR(ctx context.Context, id uuid.UUID, prNumber int, prURL string) error
-	UpdateFeatureRequestPreview(ctx context.Context, id uuid.UUID, previewURL string) error
-	UpdateFeatureRequestLatestComment(ctx context.Context, id uuid.UUID, comment string) error
-
-	// PR Feedback
-	CreatePRFeedback(ctx context.Context, feedback *models.PRFeedback) error
-	GetPRFeedback(ctx context.Context, featureRequestID uuid.UUID) ([]models.PRFeedback, error)
-
-	// Notifications
-	CreateNotification(ctx context.Context, notification *models.Notification) error
-	GetUserNotifications(ctx context.Context, userID uuid.UUID, limit int) ([]models.Notification, error)
-	GetUnreadNotificationCount(ctx context.Context, userID uuid.UUID) (int, error)
-	// MarkNotificationRead was intentionally removed from the public interface
-	// (#6950). The unscoped method allows any user to mark any other user's
-	// notification as read. Use MarkNotificationReadByUser instead.
-	MarkNotificationReadByUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
-	MarkAllNotificationsRead(ctx context.Context, userID uuid.UUID) error
-
+// GPUStore covers GPU reservation management and utilization snapshots.
+// Handlers that manage GPU allocation should accept GPUStore to reduce
+// mock surface area in tests.
+type GPUStore interface {
 	// GPU Reservations
 	CreateGPUReservation(ctx context.Context, reservation *models.GPUReservation) error
 	// CreateGPUReservationWithCapacity atomically enforces a cluster GPU
@@ -457,12 +421,39 @@ type Store interface {
 	GetBulkUtilizationSnapshots(ctx context.Context, reservationIDs []string) (map[string][]models.GPUUtilizationSnapshot, error)
 	DeleteOldUtilizationSnapshots(ctx context.Context, before time.Time) (int64, error)
 	ListActiveGPUReservations(ctx context.Context) ([]models.GPUReservation, error)
+}
 
+// AuthStore covers token revocation, OAuth credentials, and OAuth state.
+// All auth lifecycle operations are grouped here so the auth middleware
+// and OAuth handlers can depend on a narrow interface.
+type AuthStore interface {
 	// Token Revocation
 	RevokeToken(ctx context.Context, jti string, expiresAt time.Time) error
 	IsTokenRevoked(ctx context.Context, jti string) (bool, error)
 	CleanupExpiredTokens(ctx context.Context) (int64, error)
 
+	// OAuth Credentials — persisted by the GitHub App Manifest one-click flow
+	// so credentials survive restarts without requiring .env configuration.
+	SaveOAuthCredentials(ctx context.Context, clientID, clientSecret string) error
+	GetOAuthCredentials(ctx context.Context) (clientID, clientSecret string, err error)
+
+	// OAuth State (persisted across server restarts so in-flight OAuth
+	// flows survive a backend restart between /auth/login and /auth/callback).
+	StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error
+	// ConsumeOAuthState atomically looks up and deletes an OAuth state token.
+	// Returns true only when the state was found, not expired, and successfully
+	// deleted (single-use). Returns false for missing, expired, or already-consumed states.
+	//
+	// #6613: accepts a context so the OAuth callback handler can cancel
+	// the BEGIN IMMEDIATE transaction if the browser disconnects.
+	ConsumeOAuthState(ctx context.Context, state string) (bool, error)
+	CleanupExpiredOAuthStates(ctx context.Context) (int64, error)
+}
+
+// RewardsStore covers gamification coin balances and per-user token-usage
+// counters. Grouped together because they share the "upsert on first access,
+// zero-value on missing" read semantics (see GetUserRewards, GetUserTokenUsage).
+type RewardsStore interface {
 	// User Rewards (issue #6011) — persistent coin/point/level balances.
 	// GetUserRewards returns a zero-value *UserRewards (Level=1, UserID set,
 	// all counters 0) when no row exists; it is NOT an error to read a
@@ -507,24 +498,62 @@ type Store interface {
 	//
 	// #6613: accepts a context (see IncrementUserCoins).
 	AddUserTokenDelta(ctx context.Context, userID string, category string, delta int64, agentSessionID string) (*UserTokenUsage, error)
+}
 
-	// OAuth Credentials — persisted by the GitHub App Manifest one-click flow
-	// so credentials survive restarts without requiring .env configuration.
-	SaveOAuthCredentials(ctx context.Context, clientID, clientSecret string) error
-	GetOAuthCredentials(ctx context.Context) (clientID, clientSecret string, err error)
+// ContentStore covers community and engagement features: feature requests,
+// PR feedback, in-app notifications, and user analytics events.
+type ContentStore interface {
+	// Feature Requests
+	CreateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error
+	GetFeatureRequest(ctx context.Context, id uuid.UUID) (*models.FeatureRequest, error)
+	GetFeatureRequestByIssueNumber(ctx context.Context, issueNumber int) (*models.FeatureRequest, error)
+	GetFeatureRequestsByIssueNumbers(ctx context.Context, issueNumbers []int) ([]*models.FeatureRequest, error)
+	GetFeatureRequestByPRNumber(ctx context.Context, prNumber int) (*models.FeatureRequest, error)
+	// GetUserFeatureRequests returns a user's feature requests, newest first.
+	// #6601: limit/offset required. Pass 0 for limit to use the store default.
+	GetUserFeatureRequests(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.FeatureRequest, error)
+	// CountUserPendingFeatureRequests returns the number of a user's feature
+	// requests that are still untriaged (status = open or needs_triage).
+	// #10174: lets the handler tell the frontend about pending submissions.
+	CountUserPendingFeatureRequests(ctx context.Context, userID uuid.UUID) (int, error)
+	// GetAllFeatureRequests returns the global feature-request table, newest first.
+	// #6602: limit/offset required; admin dashboard uses a smaller default (100)
+	// because this is hit on every dashboard load. Pass 0 for limit to use the
+	// store default.
+	GetAllFeatureRequests(ctx context.Context, limit, offset int) ([]models.FeatureRequest, error)
+	UpdateFeatureRequest(ctx context.Context, request *models.FeatureRequest) error
+	UpdateFeatureRequestStatus(ctx context.Context, id uuid.UUID, status models.RequestStatus) error
+	CloseFeatureRequest(ctx context.Context, id uuid.UUID, closedByUser bool) error
+	UpdateFeatureRequestPR(ctx context.Context, id uuid.UUID, prNumber int, prURL string) error
+	UpdateFeatureRequestPreview(ctx context.Context, id uuid.UUID, previewURL string) error
+	UpdateFeatureRequestLatestComment(ctx context.Context, id uuid.UUID, comment string) error
 
-	// OAuth State (persisted across server restarts so in-flight OAuth
-	// flows survive a backend restart between /auth/login and /auth/callback).
-	StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error
-	// ConsumeOAuthState atomically looks up and deletes an OAuth state token.
-	// Returns true only when the state was found, not expired, and successfully
-	// deleted (single-use). Returns false for missing, expired, or already-consumed states.
-	//
-	// #6613: accepts a context so the OAuth callback handler can cancel
-	// the BEGIN IMMEDIATE transaction if the browser disconnects.
-	ConsumeOAuthState(ctx context.Context, state string) (bool, error)
-	CleanupExpiredOAuthStates(ctx context.Context) (int64, error)
+	// PR Feedback
+	CreatePRFeedback(ctx context.Context, feedback *models.PRFeedback) error
+	GetPRFeedback(ctx context.Context, featureRequestID uuid.UUID) ([]models.PRFeedback, error)
 
+	// Notifications
+	CreateNotification(ctx context.Context, notification *models.Notification) error
+	GetUserNotifications(ctx context.Context, userID uuid.UUID, limit int) ([]models.Notification, error)
+	GetUnreadNotificationCount(ctx context.Context, userID uuid.UUID) (int, error)
+	// MarkNotificationRead was intentionally removed from the public interface
+	// (#6950). The unscoped method allows any user to mark any other user's
+	// notification as read. Use MarkNotificationReadByUser instead.
+	MarkNotificationReadByUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+	MarkAllNotificationsRead(ctx context.Context, userID uuid.UUID) error
+
+	// User Events
+	RecordEvent(ctx context.Context, event *models.UserEvent) error
+	// GetRecentEvents returns a user's events within the given time window.
+	// #6599: limit/offset are required to bound event history reads.
+	// Pass 0 for limit to use the store default.
+	GetRecentEvents(ctx context.Context, userID uuid.UUID, since time.Duration, limit, offset int) ([]models.UserEvent, error)
+}
+
+// InfraStore covers infrastructure observability and compliance operations:
+// audit logging, cluster group definitions, KB query gap tracking, and
+// the cross-cluster event journal.
+type InfraStore interface {
 	// Audit Log — persistent audit trail for security-sensitive operations
 	// (#8670 Phase 3). Entries survive restarts so admins can review who did
 	// what. The detail field is a JSON blob for action-specific context.
@@ -555,10 +584,47 @@ type Store interface {
 	QueryTimeline(ctx context.Context, filter TimelineFilter) ([]ClusterEvent, error)
 	// SweepOldEvents deletes events older than retentionDays. Returns rows deleted.
 	SweepOldEvents(ctx context.Context, retentionDays int) (int64, error)
+}
 
-	// Lifecycle
+// Store is the full persistence contract for the console backend.
+// It composes all domain sub-interfaces so:
+//   - The SQLiteStore concrete type satisfies Store and each sub-interface.
+//   - New callers should accept the narrowest sub-interface they actually
+//     need (e.g. GPUStore, AuthStore) to reduce mock surface area in tests.
+//   - Existing callers that accept Store remain fully compatible.
+//
+// WithTransaction and Close are intentionally left at this level because
+// they are cross-cutting infrastructure concerns, not domain capabilities.
+type Store interface {
+	UserStore
+	DashboardStore
+	GPUStore
+	AuthStore
+	RewardsStore
+	ContentStore
+	InfraStore
+
+	// WithTransaction runs fn inside a database transaction. Rollback is
+	// automatic on fn error; callers must not call Rollback themselves.
+	WithTransaction(ctx context.Context, fn func(tx *sql.Tx) error) error
+
+	// Close releases all resources held by the store.
 	Close() error
 }
+
+// Compile-time assertions: verify that SQLiteStore satisfies Store and all
+// domain sub-interfaces. These generate no runtime overhead and fail fast
+// during build if any method is accidentally omitted from a sub-interface.
+var (
+	_ Store          = (*SQLiteStore)(nil)
+	_ UserStore      = (*SQLiteStore)(nil)
+	_ DashboardStore = (*SQLiteStore)(nil)
+	_ GPUStore       = (*SQLiteStore)(nil)
+	_ AuthStore      = (*SQLiteStore)(nil)
+	_ RewardsStore   = (*SQLiteStore)(nil)
+	_ ContentStore   = (*SQLiteStore)(nil)
+	_ InfraStore     = (*SQLiteStore)(nil)
+)
 
 // ClusterEvent represents a single Kubernetes event recorded from a cluster.
 type ClusterEvent struct {
