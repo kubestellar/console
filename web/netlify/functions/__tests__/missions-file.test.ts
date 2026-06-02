@@ -49,12 +49,59 @@ describe("missions-file", () => {
     }
   });
 
+  it("rejects percent-encoded path traversal attempts", async () => {
+    const cases = [
+      // Single-encoded ../ (CWE-22)
+      "%2e%2e%2ffixes/index.json",
+      // Single-encoded .. without slash
+      "%2e%2efixes/index.json",
+      // Double-encoded ../ (defense-in-depth)
+      "%252e%252e%252ffixes/index.json",
+      // Mixed case variations
+      "%2E%2E%2Ffixes/index.json",
+      "%2e%2E%2ffixes/index.json",
+      // Encoded forward slash for leading /
+      "%2ffixes/index.json",
+      // Encoded hash (#)
+      "fixes/index.json%23fragment",
+      // Encoded question mark (?)
+      "fixes/index.json%3fraw=1",
+    ];
+
+    for (const value of cases) {
+      const response = await handler(makeRequest(value));
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "invalid path" });
+    }
+  });
+
   it("rejects ref values that would change URL parsing", async () => {
     const cases = [
       "main#fragment",
       "main?raw=1",
       "../other-repo",
       "/etc/passwd",
+    ];
+
+    for (const value of cases) {
+      const response = await handler(makeRequest("fixes/index.json", value));
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "invalid ref" });
+    }
+  });
+
+  it("rejects percent-encoded traversal in ref values", async () => {
+    const cases = [
+      // Single-encoded ../
+      "%2e%2e%2fother-repo",
+      // Double-encoded ../
+      "%252e%252e%252fother-repo",
+      // Encoded leading /
+      "%2fetc%2fpasswd",
+      // Encoded hash
+      "main%23fragment",
+      // Encoded question mark
+      "main%3fraw=1",
     ];
 
     for (const value of cases) {
