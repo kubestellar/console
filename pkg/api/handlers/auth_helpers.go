@@ -84,12 +84,6 @@ func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	return nil
 }
 
-// RequireAdmin exposes the shared admin RBAC check for routes that are wired
-// outside the handlers package.
-func RequireAdmin(c *fiber.Ctx, s store.Store) error {
-	return requireAdmin(c, s)
-}
-
 // requireEditorOrAdmin verifies the current request's user has at least the
 // editor role. Viewer-role users and anonymous requests are rejected with 403.
 // Use this for mutating endpoints (create/update/delete) where full admin
