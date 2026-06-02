@@ -46,9 +46,6 @@ func TestAuthHelpers(t *testing.T) {
 						mockStore.On("GetUser", userID).Return(nil, nil)
 					} else {
 						mockStore.On("GetUser", userID).Return(&models.User{Role: tt.role}, nil)
-						if tt.role != models.UserRoleAdmin {
-							mockStore.On("CountUsersByRole").Return(1, 0, 0, nil)
-						}
 					}
 
 					app.Get("/test", func(c *fiber.Ctx) error {
@@ -114,15 +111,13 @@ func TestAuthHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("requireAdmin bootstraps first admin", func(t *testing.T) {
+	t.Run("requireAdmin does not bootstrap first admin", func(t *testing.T) {
 		app := fiber.New()
 		mockStore := new(test.MockStore)
 		userID := uuid.New()
 		viewer := &models.User{ID: userID, Role: models.UserRoleViewer}
 
 		mockStore.On("GetUser", userID).Return(viewer, nil).Once()
-		mockStore.On("CountUsersByRole").Return(0, 0, 1, nil).Once()
-		mockStore.On("UpdateUser", viewer).Return(nil).Once()
 
 		app.Get("/test", func(c *fiber.Ctx) error {
 			c.Locals("userID", userID)
@@ -131,8 +126,9 @@ func TestAuthHelpers(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		resp, _ := app.Test(req)
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		assert.Equal(t, models.UserRoleAdmin, viewer.Role)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		assert.Equal(t, models.UserRoleViewer, viewer.Role)
+		mockStore.AssertExpectations(t)
 	})
 
 	t.Run("requireViewerOrAbove", func(t *testing.T) {
