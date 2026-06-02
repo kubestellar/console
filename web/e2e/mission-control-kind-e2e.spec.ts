@@ -27,6 +27,16 @@ const AGENT_MODE = process.env.KC_AGENT === 'true'
 const SKIP_KIND_TESTS = !AGENT_MODE || (process.env.CI === 'true' && process.env.MC_KIND_E2E !== 'true')
 
 const AGENT_BASE_URL = 'http://127.0.0.1:8585'
+const AGENT_TOKEN = process.env.KC_AGENT_TOKEN || ''
+
+/** Build headers for kc-agent requests (includes Bearer token when set) */
+function agentHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...extra }
+  if (AGENT_TOKEN) {
+    headers['Authorization'] = `Bearer ${AGENT_TOKEN}`
+  }
+  return headers
+}
 
 /** Timeout for kind cluster creation (kind create cluster takes ~1-2 min) */
 const KIND_CREATE_TIMEOUT_MS = 180_000
@@ -87,7 +97,7 @@ async function _createKindCluster(name: string): Promise<{ ok: boolean; error?: 
   try {
     const resp = await fetch(`${AGENT_BASE_URL}/local-clusters`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: agentHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ tool: 'kind', name }),
     })
     if (!resp.ok) {
@@ -104,6 +114,7 @@ async function _deleteKindCluster(name: string): Promise<{ ok: boolean; error?: 
   try {
     const resp = await fetch(`${AGENT_BASE_URL}/local-clusters?tool=kind&name=${name}`, {
       method: 'DELETE',
+      headers: agentHeaders(),
     })
     if (!resp.ok) {
       const body = await resp.text()
@@ -328,7 +339,9 @@ test.describe('Mission Control Kind Cluster E2E', () => {
       }
 
       // Verify kc-agent can see the clusters
-      const agentResp = await fetch(`${AGENT_BASE_URL}/local-clusters`)
+      const agentResp = await fetch(`${AGENT_BASE_URL}/local-clusters`, {
+        headers: agentHeaders(),
+      })
       const agentData = await agentResp.json() as { clusters: Array<{ name: string }> }
       const agentClusterNames = (agentData.clusters || []).map((c: { name: string }) => c.name)
       for (const name of KIND_CLUSTERS) {

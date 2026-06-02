@@ -41,6 +41,8 @@ env:
   # Dev-only placeholder — must be >= 32 chars for the server to accept it.
   # Real deployments must set JWT_SECRET via a proper secret.
   DEV_JWT_SECRET: 'ci-mc-kind-e2e-jwt-secret-placeholder-not-a-real-key-abcd'
+  # Shared secret for kc-agent auth in CI — the test passes this as a Bearer token.
+  KC_AGENT_TOKEN: 'ci-mc-kind-e2e-agent-token-placeholder-not-a-real-key-abcdef'
 
 jobs:
   kind-e2e:
@@ -149,6 +151,8 @@ jobs:
           echo "Console PID: $(cat /tmp/console.pid)"
 
       - name: Start kc-agent
+        env:
+          KC_AGENT_TOKEN: ${{ env.KC_AGENT_TOKEN }}
         run: |
           /tmp/kc-agent > /tmp/kc-agent.log 2>&1 &
           echo $! > /tmp/kc-agent.pid
@@ -199,6 +203,7 @@ jobs:
           # Without both, SKIP_KIND_TESTS stays true and all tests are skipped.
           MC_KIND_E2E: 'true'
           KC_AGENT: 'true'
+          KC_AGENT_TOKEN: ${{ env.KC_AGENT_TOKEN }}
           PLAYWRIGHT_BASE_URL: http://localhost:${{ env.BACKEND_PORT }}
         run: |
           npx playwright test e2e/mission-control-kind-e2e.spec.ts \
