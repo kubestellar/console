@@ -1,11 +1,11 @@
-import { memo, useEffect, type RefObject } from 'react'
+import { memo, useEffect, type KeyboardEvent, type RefObject } from 'react'
 
 // Split helper component; parent card owns useCardLoadingState.
 import { AlertCircle, AlertTriangle, BellOff, Clock, List, MoreVertical, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardControlsRow, CardSearchInput } from '../../lib/cards/CardComponents'
 import { SNOOZE_DURATIONS, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
-import { useKeyboardNav, useTabKeyboardNav } from '../../hooks/useKeyboardNav'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
 import { CARD_UI_STRINGS } from './strings'
@@ -17,6 +17,20 @@ interface HardwareHealthCardHeaderProps {
   deduplicatedNodeCount: number
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+  tabListProps: {
+    role: 'tablist'
+    'aria-orientation': 'horizontal'
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => void
+  }
+  getTabProps: (tab: ViewMode) => {
+    id: string
+    role: 'tab'
+    tabIndex: number
+    'data-tab-id': ViewMode
+    'aria-selected': boolean
+    'aria-controls': string
+    onClick: () => void
+  }
   deduplicatedInventoryCount: number
   activeAlertCount: number
   snoozedAlertCount: number
@@ -58,6 +72,8 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
   deduplicatedNodeCount,
   viewMode,
   onViewModeChange,
+  tabListProps,
+  getTabProps,
   deduplicatedInventoryCount,
   activeAlertCount,
   snoozedAlertCount,
@@ -94,7 +110,6 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
 }: HardwareHealthCardHeaderProps) {
   const { t } = useTranslation(['cards', 'common'])
   const snoozeMenuNav = useKeyboardNav({ selector: '[role="menuitem"]:not([disabled])', orientation: 'vertical', onEscape: onToggleSnoozeAllMenu })
-  const { tabListProps, getTabProps } = useTabKeyboardNav<ViewMode>({ tabs: ['inventory', 'alerts'], activeTab: viewMode, onChange: onViewModeChange })
 
   useEffect(() => {
     if (!snoozeAllMenuOpen) return

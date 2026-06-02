@@ -16,10 +16,20 @@ import { cn } from '../../lib/cn'
 
 interface HardwareHealthCardContentProps {
   viewMode: ViewMode
+  getTabPanelProps: (tab: ViewMode) => {
+    id: string
+    role: 'tabpanel'
+    'aria-labelledby': string
+    tabIndex: number
+  }
   paginatedAlerts: DeviceAlert[]
   sortedAlerts: DeviceAlert[]
+  alertsTotalPages: number
+  alertsNeedsPagination: boolean
   paginatedInventory: NodeDeviceInventory[]
   sortedInventory: NodeDeviceInventory[]
+  inventoryTotalPages: number
+  inventoryNeedsPagination: boolean
   search: string
   localClusterFilter: string[]
   drillToNode: (cluster: string, nodeName: string, options?: { issue?: string }) => void
@@ -32,11 +42,8 @@ interface HardwareHealthCardContentProps {
   snoozeAlert: (alertId: string, duration: SnoozeDuration) => void
   clearAlert: (alertId: string) => void
   currentPage: number
-  currentTotalPages: number
-  currentTotalItems: number
   effectivePerPage: number
   setCurrentPage: (page: number) => void
-  currentNeedsPagination: boolean
   isRefreshing: boolean
   isDemoFallback: boolean
   lastUpdate: Date | null
@@ -44,10 +51,15 @@ interface HardwareHealthCardContentProps {
 
 export const HardwareHealthCardContent = memo(function HardwareHealthCardContent({
   viewMode,
+  getTabPanelProps,
   paginatedAlerts,
   sortedAlerts,
+  alertsTotalPages,
+  alertsNeedsPagination,
   paginatedInventory,
   sortedInventory,
+  inventoryTotalPages,
+  inventoryNeedsPagination,
   search,
   localClusterFilter,
   drillToNode,
@@ -60,11 +72,8 @@ export const HardwareHealthCardContent = memo(function HardwareHealthCardContent
   snoozeAlert,
   clearAlert,
   currentPage,
-  currentTotalPages,
-  currentTotalItems,
   effectivePerPage,
   setCurrentPage,
-  currentNeedsPagination,
   isRefreshing,
   isDemoFallback,
   lastUpdate,
@@ -73,9 +82,12 @@ export const HardwareHealthCardContent = memo(function HardwareHealthCardContent
 
   return (
     <>
-      <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">
-        {viewMode === 'alerts' ? (
-          <>
+      <div
+        {...getTabPanelProps('alerts')}
+        hidden={viewMode !== 'alerts'}
+        className={cn('flex-1 flex flex-col min-h-0', viewMode !== 'alerts' && 'hidden')}
+      >
+        <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">
             {paginatedAlerts.map(alert => (
               <div key={alert.id} className={cn('p-2 rounded text-xs transition-colors group', alert.severity === 'critical' ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-yellow-500/10 hover:bg-yellow-500/20')}>
                 <div className="flex items-start justify-between gap-1">
@@ -179,9 +191,24 @@ export const HardwareHealthCardContent = memo(function HardwareHealthCardContent
                 {search || localClusterFilter.length > 0 ? CARD_UI_STRINGS.hardwareHealth.noMatchingAlerts : CARD_UI_STRINGS.hardwareHealth.allHardwareDevicesHealthy}
               </div>
             )}
-          </>
-        ) : (
-          <>
+        </div>
+
+        <CardPaginationFooter
+          currentPage={currentPage}
+          totalPages={alertsTotalPages}
+          totalItems={sortedAlerts.length}
+          itemsPerPage={effectivePerPage}
+          onPageChange={setCurrentPage}
+          needsPagination={alertsNeedsPagination}
+        />
+      </div>
+
+      <div
+        {...getTabPanelProps('inventory')}
+        hidden={viewMode !== 'inventory'}
+        className={cn('flex-1 flex flex-col min-h-0', viewMode !== 'inventory' && 'hidden')}
+      >
+        <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">
             {paginatedInventory.map(node => (
               <div
                 key={`${node.cluster}/${node.nodeName}`}
@@ -236,11 +263,17 @@ export const HardwareHealthCardContent = memo(function HardwareHealthCardContent
                 <span className="text-xs mt-1">{CARD_UI_STRINGS.hardwareHealth.waitingForDeviceScan}</span>
               </div>
             )}
-          </>
-        )}
-      </div>
+        </div>
 
-      <CardPaginationFooter currentPage={currentPage} totalPages={currentTotalPages} totalItems={currentTotalItems} itemsPerPage={effectivePerPage} onPageChange={setCurrentPage} needsPagination={currentNeedsPagination} />
+        <CardPaginationFooter
+          currentPage={currentPage}
+          totalPages={inventoryTotalPages}
+          totalItems={sortedInventory.length}
+          itemsPerPage={effectivePerPage}
+          onPageChange={setCurrentPage}
+          needsPagination={inventoryNeedsPagination}
+        />
+      </div>
 
       <div className="mt-2 flex items-center justify-center">
         <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={isDemoFallback ? null : lastUpdate} size="sm" showLabel={true} staleThresholdMinutes={5} />

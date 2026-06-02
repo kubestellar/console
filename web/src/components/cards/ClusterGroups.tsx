@@ -254,8 +254,11 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
       <div className="flex items-center gap-2 px-3 py-2">
         {/* Expand toggle */}
         <button
+          type="button"
           onClick={onToggle}
           className="text-muted-foreground hover:text-foreground transition-colors"
+          title={`${isExpanded ? t('common:common.collapse', 'Collapse') : t('common:common.expand', 'Expand')} ${group.name}`}
+          aria-label={`${isExpanded ? t('common:common.collapse', 'Collapse') : t('common:common.expand', 'Expand')} ${group.name}`}
         >
           {isExpanded
             ? <ChevronDown className="w-3.5 h-3.5" />

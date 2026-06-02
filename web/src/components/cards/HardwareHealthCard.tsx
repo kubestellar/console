@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useTabKeyboardNav } from '../../hooks/useKeyboardNav'
 import { XCircle } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -60,6 +61,15 @@ export function HardwareHealthCard() {
   // When true, auto-switch logic is suppressed so data refreshes
   // don't override the user's choice.
   const userSelectedView = useRef(false)
+  const handleViewModeChange = (mode: ViewMode) => {
+    userSelectedView.current = true
+    setViewMode(mode)
+  }
+  const { tabListProps, getTabProps, getTabPanelProps } = useTabKeyboardNav<ViewMode>({
+    tabs: ['inventory', 'alerts'],
+    activeTab: viewMode,
+    onChange: handleViewModeChange,
+  })
   const [showSnoozed, setShowSnoozed] = useState(false)
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState<string | null>(null)
   const [snoozeAllMenuOpen, setSnoozeAllMenuOpen] = useState(false)
@@ -358,8 +368,6 @@ export function HardwareHealthCard() {
 
   // Current view data
   const currentTotalPages = viewMode === 'alerts' ? totalPages : inventoryTotalPages
-  const currentNeedsPagination = viewMode === 'alerts' ? needsPagination : inventoryNeedsPagination
-  const currentTotalItems = viewMode === 'alerts' ? sortedAlerts.length : sortedInventory.length
 
   // Ensure current page is valid for current view (#5762).
   // Only depend on currentTotalPages — including currentPage risks infinite loop.
@@ -389,10 +397,9 @@ export function HardwareHealthCard() {
         warningCount={warningCount}
         deduplicatedNodeCount={deduplicatedNodeCount}
         viewMode={viewMode}
-        onViewModeChange={mode => {
-          userSelectedView.current = true
-          setViewMode(mode)
-        }}
+        onViewModeChange={handleViewModeChange}
+        tabListProps={tabListProps}
+        getTabProps={getTabProps}
         deduplicatedInventoryCount={deduplicatedInventory.length}
         activeAlertCount={activeAlertCount}
         snoozedAlertCount={snoozedAlertCount}
@@ -436,10 +443,15 @@ export function HardwareHealthCard() {
 
       <HardwareHealthCardContent
         viewMode={viewMode}
+        getTabPanelProps={getTabPanelProps}
         paginatedAlerts={paginatedAlerts}
         sortedAlerts={sortedAlerts}
+        alertsTotalPages={totalPages}
+        alertsNeedsPagination={needsPagination}
         paginatedInventory={paginatedInventory}
         sortedInventory={sortedInventory}
+        inventoryTotalPages={inventoryTotalPages}
+        inventoryNeedsPagination={inventoryNeedsPagination}
         search={search}
         localClusterFilter={localClusterFilter}
         drillToNode={drillToNode}
@@ -452,11 +464,8 @@ export function HardwareHealthCard() {
         snoozeAlert={snoozeAlert}
         clearAlert={clearAlert}
         currentPage={currentPage}
-        currentTotalPages={currentTotalPages}
-        currentTotalItems={currentTotalItems}
         effectivePerPage={effectivePerPage}
         setCurrentPage={setCurrentPage}
-        currentNeedsPagination={currentNeedsPagination}
         isRefreshing={isRefreshing}
         isDemoFallback={isDemoFallback}
         lastUpdate={lastUpdate}

@@ -389,7 +389,7 @@ describe('Dashboard', () => {
   it('renders discover placeholder outside the dashboard grid when not customized', () => {
     render(<Dashboard />)
     const discover = screen.getByTestId('discover')
-    const grid = screen.getByRole('grid', { name: 'Dashboard cards' })
+    const grid = screen.getByTestId('dashboard-cards-grid')
 
     expect(discover).toBeInTheDocument()
     expect(within(grid).queryByTestId('discover')).not.toBeInTheDocument()
