@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -32,6 +34,10 @@ const (
 
 	// cardProxyMaxURLLen prevents abuse via extremely long URLs.
 	cardProxyMaxURLLen = 2048
+
+	// cardProxyRateLimitPerMin limits card-proxy requests per user per minute (CWE-918 mitigation).
+	// Prevents malicious cards from launching scanning/enumeration attacks.
+	cardProxyRateLimitPerMin = 10
 )
 
 var (
@@ -46,7 +52,23 @@ var (
 	// ietfProtocolNet is RFC 6890 IETF Protocol Assignments (192.0.0.0/24).
 	// Reserved range that should not be used for external requests.
 	_, ietfProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
+
+	// kubernetesServiceNet is the default Kubernetes service CIDR (10.0.0.0/8).
+	// Kubernetes cluster IPs are assigned from this range; blocking prevents SSRF
+	// attacks targeting internal Kubernetes services (e.g., etcd, API server).
+	_, kubernetesServiceNet, _ = net.ParseCIDR("10.0.0.0/8")
 )
+
+// cardProxyRateLimiter tracks per-user requests to /api/card-proxy.
+// Limits to cardProxyRateLimitPerMin requests per minute per user (CWE-918 mitigation).
+type cardProxyRateLimiter struct {
+	mu       sync.Mutex
+	requests map[string][]time.Time // userID -> slice of request timestamps
+}
+
+var cardProxyLimiter = &cardProxyRateLimiter{
+	requests: make(map[string][]time.Time),
+}
 
 // cardProxyClient uses a custom DialContext to check resolved IPs at
 // connection time, preventing DNS rebinding / TOCTOU SSRF bypasses.
@@ -81,11 +103,45 @@ var cardProxyClient = &http.Client{
 }
 
 // isBlockedIP returns true if the IP is in a non-public range.
-// Covers standard private ranges plus CGNAT, cloud metadata, and IETF ranges.
+// Covers standard private ranges, CGNAT, cloud metadata, IETF ranges,
+// and Kubernetes service IPs (CWE-918 mitigation).
 func isBlockedIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
 		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
-		cgnatNet.Contains(ip) || cloudMetadataIP.Contains(ip) || ietfProtocolNet.Contains(ip)
+		cgnatNet.Contains(ip) || cloudMetadataIP.Contains(ip) || 
+		ietfProtocolNet.Contains(ip) || kubernetesServiceNet.Contains(ip)
+}
+
+// checkCardProxyRateLimit returns true if the user has exceeded the rate limit (CWE-918).
+func (limiter *cardProxyRateLimiter) checkLimit(userID string) bool {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+
+	now := time.Now()
+	oneMinuteAgo := now.Add(-time.Minute)
+
+	// Get or create request timestamps slice for this user
+	timestamps := limiter.requests[userID]
+
+	// Remove timestamps older than 1 minute
+	validTimestamps := make([]time.Time, 0, len(timestamps))
+	for _, ts := range timestamps {
+		if ts.After(oneMinuteAgo) {
+			validTimestamps = append(validTimestamps, ts)
+		}
+	}
+
+	// Check if rate limit exceeded
+	if len(validTimestamps) >= cardProxyRateLimitPerMin {
+		limiter.requests[userID] = validTimestamps
+		return true // Rate limited
+	}
+
+	// Record this request
+	validTimestamps = append(validTimestamps, now)
+	limiter.requests[userID] = validTimestamps
+
+	return false // Request allowed
 }
 
 // CardProxyHandler proxies external HTTP GET requests for custom card code.
@@ -106,6 +162,21 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// able to trigger outbound requests through the proxy (#12436).
 	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err
+	}
+
+	// Get user ID for rate limiting
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "User ID not found")
+	}
+
+	// CWE-918: Check per-user rate limit to prevent malicious cards from
+	// launching network scanning or enumeration attacks via the proxy.
+	if cardProxyLimiter.checkLimit(userID) {
+		slog.Warn("[CardProxy] rate limit exceeded", "userID", userID)
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			"error": fmt.Sprintf("Rate limit exceeded: max %d requests per minute", cardProxyRateLimitPerMin),
+		})
 	}
 
 	rawURL := c.Query("url")
@@ -157,7 +228,7 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	slog.Info("[CardProxy] proxied request", "clientIP", c.IP(), "host", host, "status", resp.StatusCode, "bytes", len(body))
+	slog.Info("[CardProxy] proxied request", "userID", userID, "clientIP", c.IP(), "host", host, "status", resp.StatusCode, "bytes", len(body))
 
 	h.sanitizeResponse(c, resp)
 
