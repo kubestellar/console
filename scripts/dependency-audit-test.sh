@@ -88,7 +88,14 @@ echo -e "${BOLD}Phase 1: npm audit (frontend production dependencies)${NC}"
 if [ -d "web" ] && [ -f "web/package-lock.json" ]; then
   NPM_OUTPUT="$(pwd)/$TMPDIR_AUDIT/npm-audit.json"
   cd web
+  # Retry npm audit once — npm registry can be flaky in CI, causing intermittent
+  # failures with empty/error JSON responses (see #16381).
   npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
+  if ! python3 -c "import json; json.load(open('$NPM_OUTPUT')).get('metadata')" 2>/dev/null; then
+    echo -e "  ${DIM}npm audit returned invalid response — retrying after 5s...${NC}"
+    sleep 5
+    npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
+  fi
   cd ..
 
   # Parse npm audit JSON — no silent fallbacks; propagate errors explicitly

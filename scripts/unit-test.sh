@@ -32,7 +32,7 @@ done
 echo "Running Vitest unit tests..."
 
 # CI runners (ubuntu-latest, 7 GB RAM) can OOM when running 900+ test files.
-# 8192 MB (8 GB) is the new limit after test count grew to 1453+ files.
+# 8192 MB (8 GB) is the new limit after test count grew to 1800+ files.
 # The previous 7168 MB limit caused environment setup slowdowns (17+ min
 # jsdom construction time) and intermittent worker crashes (nightly
 # regression 2026-05-28, issue #16250).
@@ -44,12 +44,15 @@ fi
 # even when all tests pass. Capture the output and check for actual failures.
 # Run with forks so worker heaps are isolated instead of sharing one threaded heap.
 # Use project directory for output file to avoid /tmp restrictions (#16250).
-# Limit to 2 workers on CI to prevent OOM (7 GB runner, 8 GB heap per worker).
+# Limit to 3 workers on CI to prevent OOM while keeping runtime reasonable.
+# Test count grew from 1453 to 1800+ files — 2 workers caused nightly timeouts
+# (2087→2464→2605s trend, issue #16380). 3 workers targets ~1700s runtime.
+# Actual RSS per fork is ~400-600MB so 3 forks fit within the 7 GB runner.
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
 WORKER_ARGS=""
 if [ -n "${CI:-}" ]; then
-  WORKER_ARGS="--maxWorkers=2"
+  WORKER_ARGS="--maxWorkers=3"
 fi
 npx vitest run $EXTRA_ARGS --pool=forks $WORKER_ARGS --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
 

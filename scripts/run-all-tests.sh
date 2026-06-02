@@ -151,10 +151,10 @@ for script in "${ALL_SCRIPTS[@]}"; do
   echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
 
   # Run the script and capture output + exit code + duration.
-  # Cap at 3600s (60 min): unit-test takes ~1800s with 1453 test files running
-  # serially (maxWorkers=1 to avoid OOM). Other non-Playwright suites are well
-  # under 5 minutes. This guard prevents a truly hung suite from blocking the
-  # entire run while still allowing healthy suites to complete.
+  # Cap at 3600s (60 min): unit-test takes ~1700s with 1800+ test files running
+  # across 3 fork workers (increased from 2 in #16380 to address nightly timeout
+  # regression). Other non-Playwright suites are well under 5 minutes. This guard
+  # prevents a truly hung suite from blocking the entire run.
   SUITE_START=$(date +%s)
   SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
   SUITE_EXIT=0
@@ -168,11 +168,11 @@ for script in "${ALL_SCRIPTS[@]}"; do
     SUITE_STATUS["$SUITE_NAME"]="pass"
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
   elif [ "$SUITE_EXIT" -eq 124 ]; then
-    echo -e "    ${YELLOW}⏰ TIMEOUT${NC}  (${SUITE_DURATION}s) — 40 minute limit exceeded"
+    echo -e "    ${YELLOW}⏰ TIMEOUT${NC}  (${SUITE_DURATION}s) — 60 minute limit exceeded"
     FAILED_SUITES=$((FAILED_SUITES + 1))
     FAILED_NAMES+=("$SUITE_NAME")
     SUITE_STATUS["$SUITE_NAME"]="fail"
-    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"Test timed out after 40 minutes\"},"
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"Test timed out after 60 minutes\"},"
   else
     echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
     # Show last few lines of output for failed suites
