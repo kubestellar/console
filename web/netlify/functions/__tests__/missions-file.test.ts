@@ -49,22 +49,17 @@ describe("missions-file", () => {
     }
   });
 
-  it("rejects percent-encoded path traversal attempts", async () => {
+  it("rejects percent-encoded traversal variants", async () => {
     const cases = [
-      // Single-encoded ../ (CWE-22)
       "%2e%2e%2ffixes/index.json",
-      // Single-encoded .. without slash
       "%2e%2efixes/index.json",
-      // Double-encoded ../ (defense-in-depth)
       "%252e%252e%252ffixes/index.json",
-      // Mixed case variations
       "%2E%2E%2Ffixes/index.json",
       "%2e%2E%2ffixes/index.json",
-      // Encoded forward slash for leading /
+      "fixes/%2e%2e/secret.json",
       "%2ffixes/index.json",
-      // Encoded hash (#)
+      "%2F/etc/passwd",
       "fixes/index.json%23fragment",
-      // Encoded question mark (?)
       "fixes/index.json%3fraw=1",
     ];
 
