@@ -28,7 +28,6 @@ interface HardwareHealthCardHeaderProps {
     tabIndex: number
     'data-tab-id': ViewMode
     'aria-selected': boolean
-    'aria-controls': string
     onClick: () => void
   }
   deduplicatedInventoryCount: number
