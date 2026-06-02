@@ -18,6 +18,13 @@ var promptInjectionReplacer = strings.NewReplacer(
 	"```", "'''",
 )
 
+// SanitizeK8sStringForPrompt removes control characters, newlines, role markers,
+// and other prompt-injection vectors from a Kubernetes-sourced string before it is
+// included in an LLM prompt.
+func SanitizeK8sStringForPrompt(input string) string {
+	return sanitizeK8sStringForPrompt(input)
+}
+
 func sanitizeK8sStringForPrompt(input string) string {
 	if input == "" {
 		return ""
