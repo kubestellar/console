@@ -37,9 +37,13 @@ describe("missions-file", () => {
   it("rejects traversal-like path input", async () => {
     const cases = [
       "../fixes/index.json",
+      "%2e%2e/fixes/index.json",
+      "%252e%252e/fixes/index.json",
+      "fixes/%2e%2e/index.json",
       "/fixes/index.json",
       "fixes/index.json#fragment",
       "fixes/index.json?raw=1",
+      "%zz",
     ];
 
     for (const value of cases) {
@@ -75,7 +79,10 @@ describe("missions-file", () => {
       "main#fragment",
       "main?raw=1",
       "../other-repo",
+      "%2e%2e/other-repo",
+      "%252e%252e/other-repo",
       "/etc/passwd",
+      "%zz",
     ];
 
     for (const value of cases) {

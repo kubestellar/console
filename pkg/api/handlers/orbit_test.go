@@ -12,6 +12,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 )
 
 func TestOrbitCadenceHoursComplete(t *testing.T) {
@@ -253,6 +257,135 @@ type orbitRunResponse struct {
 	RunAt     string `json:"runAt"`
 	Result    string `json:"result"`
 	Summary   string `json:"summary"`
+}
+
+type orbitListResponse struct {
+	Missions []OrbitMission `json:"missions"`
+}
+
+type orbitSecurityStore struct {
+	test.MockStore
+	users map[uuid.UUID]*models.User
+}
+
+func (s *orbitSecurityStore) GetUser(_ context.Context, id uuid.UUID) (*models.User, error) {
+	if s.users == nil {
+		return nil, nil
+	}
+	return s.users[id], nil
+}
+
+func setupOrbitScopedApp(userID uuid.UUID, h *OrbitHandler) *fiber.App {
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Get("/missions", h.ListMissions)
+	app.Post("/missions", h.CreateMission)
+	app.Post("/missions/:id/run", h.RunMission)
+	app.Get("/schedule", h.GetSchedule)
+	return app
+}
+
+func TestListMissionsScopesToCurrentUser(t *testing.T) {
+	ownerID := uuid.New()
+	otherID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		ownerID: &models.User{ID: ownerID, Role: models.UserRoleViewer},
+	}})
+	h.missions["mine"] = &OrbitMission{ID: "mine", OwnerID: ownerID.String(), History: []OrbitRunRecord{}}
+	h.missions["theirs"] = &OrbitMission{ID: "theirs", OwnerID: otherID.String(), History: []OrbitRunRecord{}}
+
+	app := setupOrbitScopedApp(ownerID, h)
+	req, err := http.NewRequest(http.MethodGet, "/missions", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var got orbitListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(got.Missions) != 1 || got.Missions[0].ID != "mine" {
+		t.Fatalf("missions = %+v, want only owned mission", got.Missions)
+	}
+}
+
+func TestCreateMissionAssignsAuthenticatedOwner(t *testing.T) {
+	userID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: &models.User{ID: userID, Role: models.UserRoleEditor},
+	}})
+	app := setupOrbitScopedApp(userID, h)
+
+	payload, err := json.Marshal(map[string]any{
+		"title":     "Test Mission",
+		"orbitType": "health-check",
+		"cadence":   "daily",
+		"ownerId":   uuid.NewString(),
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/missions", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var got OrbitMission
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.OwnerID != userID.String() {
+		t.Fatalf("ownerId = %q, want %q", got.OwnerID, userID.String())
+	}
+}
+
+func TestRunMissionRejectsOtherUsersMission(t *testing.T) {
+	userID := uuid.New()
+	otherID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: &models.User{ID: userID, Role: models.UserRoleViewer},
+	}})
+	h.missions["orbit-foreign"] = &OrbitMission{
+		ID:      "orbit-foreign",
+		OwnerID: otherID.String(),
+		History: []OrbitRunRecord{},
+	}
+
+	app := setupOrbitScopedApp(userID, h)
+	req, err := http.NewRequest(http.MethodPost, "/missions/orbit-foreign/run", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusForbidden)
+	}
+	if len(h.missions["orbit-foreign"].History) != 0 {
+		t.Fatalf("history = %+v, want no execution recorded", h.missions["orbit-foreign"].History)
+	}
 }
 
 func TestRunMissionReturnsSkippedWithoutExecutor(t *testing.T) {
