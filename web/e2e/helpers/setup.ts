@@ -86,7 +86,7 @@ export const EXPECTED_ERROR_PATTERNS = [
   /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
   /Failed to load resource.*(:8585|:8080|:4173|\/api\/)/i, // Backend/preview API resource failures (#11294, #11660)
   /the server responded with a status of [45]\d{2}/i, // 4xx/5xx status errors in demo/CI mode (#11520, #11660)
-  /console\.kubestellar\.io/i, // External origin fetch failures when hosted site is unavailable from CI (#11520)
+  /^.*(?:^|[^a-z0-9.-])console\.kubestellar\.io(?=[:/ ]|$).*$/i, // External origin fetch failures for the hosted console only (#11520)
   // SQLite WASM cache worker — webkit/Safari can't streaming-compile the
   // sqlite3 wasm, and the worker has a documented IndexedDB fallback path
   // (see lib/cache/worker.ts). These errors emit from the sqlite-wasm loader

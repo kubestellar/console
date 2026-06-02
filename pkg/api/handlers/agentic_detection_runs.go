@@ -36,7 +36,8 @@ const (
 var detectionRunCommentPattern = regexp.MustCompile(`(?m)^Conclusion:\s*(\w+)\s*\|\s*Reason:\s*(\w+)`)
 
 // workflowRunURLPattern extracts workflow run URLs from issue comments.
-var workflowRunURLPattern = regexp.MustCompile(`https://github\.com/[\w-]+/[\w-]+/actions/runs/(\d+)`)
+// URLs must appear on their own line so embedded attacker-controlled text cannot bypass validation.
+var workflowRunURLPattern = regexp.MustCompile(`(?m)^https://github\.com/[\w-]+/[\w-]+/actions/runs/(\d+)\s*$`)
 
 type AgenticDetectionRunsHandler struct{}
 

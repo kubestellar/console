@@ -102,10 +102,15 @@ func TestWorkflowRunURLPattern_Match(t *testing.T) {
 		runID     string
 	}{
 		{
-			name:      "matches repository workflow run URL in sentence",
-			body:      "See run at https://github.com/kubestellar/console/actions/runs/25864572226",
+			name:      "matches workflow run URL on its own line",
+			body:      "https://github.com/kubestellar/console/actions/runs/25864572226",
 			wantMatch: true,
 			runID:     "25864572226",
+		},
+		{
+			name:      "rejects embedded workflow run URL in sentence",
+			body:      "See run at https://github.com/kubestellar/console/actions/runs/25864572226",
+			wantMatch: false,
 		},
 		{
 			name:      "matches bare workflow run URL from another repository",

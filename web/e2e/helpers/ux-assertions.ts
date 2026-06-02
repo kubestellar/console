@@ -162,7 +162,7 @@ export function collectConsoleErrors(page: Page): () => void {
     /Access to fetch.*has been blocked by CORS/i,
     /Access-Control-Allow-Origin.*localhost/i,
     /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
-    /Access-Control-Allow-Origin.*kubestellar\.io/i,
+    /^.*Access-Control-Allow-Origin.*(?:^|[^a-z0-9.-])console\.kubestellar\.io(?=[:/ ]|$).*$/i,
     // -- WebSocket / local agent probes in demo mode
     /WebSocket/i,
     /localhost:8585/i,
