@@ -881,6 +881,13 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
         console.log(`[CacheTest]   COLD DEMO BADGE: ${snap.cardType} (${snap.cardId}) — initialData may contain demo data`)
       }
     }
+
+    // Wait for async IndexedDB/SQLite mirror writes to settle before the next
+    // batch clears storage again, otherwise pending writes can race the reset.
+    const settledCacheState = await waitForSettledCacheState(page)
+    console.log(
+      `[CacheTest] Batch ${batch + 1}/${totalBatches} persistence: ${settledCacheState.indexedDBEntries.length} IndexedDB entries stabilized`
+    )
   }
 
   // Log cold snapshot map stats
