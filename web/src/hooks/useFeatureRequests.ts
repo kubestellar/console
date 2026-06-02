@@ -416,7 +416,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
 
   const withClientContext = useCallback(async <T extends { headers?: Record<string, string>; timeout?: number }>(options?: T): Promise<T | undefined> => {
     const { getClientCtx } = await import('../lib/clientCtx')
-    const ctx = getClientCtx()
+    const ctx = await getClientCtx()
     if (!ctx) {
       return options
     }
