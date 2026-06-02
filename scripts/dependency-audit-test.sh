@@ -25,6 +25,7 @@
 #       Go vulnerabilities detected
 
 set -euo pipefail
+unset CDPATH  # Prevent cd from printing paths when CDPATH is set (causes doubled-path bugs)
 
 cd "$(dirname "$0")/.."
 
