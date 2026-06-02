@@ -253,9 +253,38 @@ fi
 # Create data directory
 mkdir -p ./data
 
-# Stage file — watchdog reads this to show startup progress
-STAGE_FILE="/tmp/.kc-startup-stage"
-write_stage() { echo "$1" > "$STAGE_FILE"; }
+# Watcher runtime metadata points to the private temp files created by kc-watcher.
+WATCHDOG_RUNTIME_FILE="$SCRIPT_DIR/data/kc-watcher-runtime.env"
+WATCHDOG_RUNTIME_DIR=""
+STAGE_FILE=""
+WATCHDOG_PID_FILE=""
+
+load_watcher_runtime() {
+    if [ ! -f "$WATCHDOG_RUNTIME_FILE" ]; then
+        return 1
+    fi
+    # shellcheck disable=SC1090
+    . "$WATCHDOG_RUNTIME_FILE"
+    [ -n "${WATCHDOG_PID_FILE:-}" ] && [ -n "${STAGE_FILE:-}" ]
+}
+
+wait_for_watcher_runtime() {
+    local attempts=20
+    local sleep_seconds=0.1
+    for _ in $(seq 1 $attempts); do
+        if load_watcher_runtime; then
+            return 0
+        fi
+        sleep "$sleep_seconds"
+    done
+    return 1
+}
+
+write_stage() {
+    if [ -n "${STAGE_FILE:-}" ]; then
+        printf '%s\n' "$1" > "$STAGE_FILE"
+    fi
+}
 
 echo -e "${GREEN}Configuration:${NC}"
 echo "  Mode: OAuth (real GitHub login)"
@@ -272,19 +301,18 @@ echo ""
 # Watchdog-aware port cleanup
 # The watchdog on port 8080 survives restarts so users never see "connection refused".
 # Backend runs on port 8081 when watchdog is active.
-WATCHDOG_PID_FILE="/tmp/.kc-watchdog.pid"
 WATCHDOG_RUNNING=false
 BACKEND_LISTEN_PORT=8081
 
 # Check if watchdog is already alive on port 8080
-if [ -f "$WATCHDOG_PID_FILE" ]; then
+if load_watcher_runtime && [ -f "$WATCHDOG_PID_FILE" ]; then
     WD_PID=$(cat "$WATCHDOG_PID_FILE" 2>/dev/null)
     if [ -n "$WD_PID" ] && kill -0 "$WD_PID" 2>/dev/null; then
         echo -e "${GREEN}Watchdog (pid $WD_PID) is alive on port 8080, preserving it${NC}"
         WATCHDOG_RUNNING=true
     else
         echo -e "${YELLOW}Stale watchdog PID file, will clean up${NC}"
-        rm -f "$WATCHDOG_PID_FILE"
+        rm -f "$WATCHDOG_PID_FILE" "$WATCHDOG_RUNTIME_FILE"
     fi
 fi
 
@@ -322,7 +350,7 @@ cleanup() {
     kill $WATCHDOG_PID 2>/dev/null || true
     kill $AGENT_BUILD_PID 2>/dev/null || true
     kill $BACKEND_BUILD_PID 2>/dev/null || true
-    rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE" "${AGENT_PID_FILE:-}"
+    rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE" "$WATCHDOG_RUNTIME_FILE" "${AGENT_PID_FILE:-}"
     exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT
@@ -474,7 +502,7 @@ if [ "$WATCHDOG_RUNNING" = true ]; then
     if [ "$WATCHER_NEEDS_REBUILD" = true ]; then
         echo -e "${YELLOW}Watcher source changed — killing stale watchdog (pid $WD_PID) and rebuilding...${NC}"
         kill "$WD_PID" 2>/dev/null || true
-        rm -f "$WATCHDOG_PID_FILE"
+        rm -f "$WATCHDOG_PID_FILE" "$WATCHDOG_RUNTIME_FILE"
         WATCHDOG_RUNNING=false
         # Free port 8080 for the new watcher
         kill_project_port "8080" "TCP:LISTEN"
@@ -489,7 +517,6 @@ if [ "$USE_DEV_SERVER" = true ]; then
     # Build and start the standalone watcher so users see a branded page immediately.
     # The watcher is stdlib-only — builds in ~2s and starts in milliseconds.
     if [ "$WATCHDOG_RUNNING" = false ]; then
-        write_stage "watchdog"
         # Rebuild watcher if binary is missing or source changed
         WATCHER_NEEDS_BUILD=false
         if [ ! -f "$WATCHER_BIN" ]; then
@@ -510,6 +537,11 @@ if [ "$USE_DEV_SERVER" = true ]; then
         fi
         "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
+        if wait_for_watcher_runtime; then
+            write_stage "watchdog"
+        else
+            echo -e "${YELLOW}Warning: watcher runtime metadata was not created in time${NC}"
+        fi
         sleep 1
         echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
     fi
@@ -604,7 +636,6 @@ else
     # Build and start the standalone watcher so users see a branded page immediately.
     # The watcher is stdlib-only — builds in ~2s and starts in milliseconds.
     if [ "$WATCHDOG_RUNNING" = false ]; then
-        write_stage "watchdog"
         # Rebuild watcher if binary is missing or source changed
         WATCHER_NEEDS_BUILD=false
         if [ ! -f "$WATCHER_BIN" ]; then
@@ -625,6 +656,11 @@ else
         fi
         "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
+        if wait_for_watcher_runtime; then
+            write_stage "watchdog"
+        else
+            echo -e "${YELLOW}Warning: watcher runtime metadata was not created in time${NC}"
+        fi
         sleep 1
         echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
     fi

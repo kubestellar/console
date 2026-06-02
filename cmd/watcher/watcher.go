@@ -43,11 +43,13 @@ const (
 	watcherMaxIdleConns        = 100
 	watcherMaxIdleConnsPerHost = 20
 	watcherIdleConnTimeout     = 90 * time.Second
-	watcherPidFile             = "/tmp/.kc-watchdog.pid"
 	watcherPidFilePerms        = 0600
+	watcherStageFilePerms      = 0600
+	watcherRuntimeDirPerms     = 0700
+	watcherRuntimeFilePerms    = 0600
 	watcherDefaultBackendPort  = 8081
 	watcherDefaultListenPort   = 8080
-	watcherStageFile           = "/tmp/.kc-startup-stage"
+	watcherRuntimeInfoFile     = "./data/kc-watcher-runtime.env"
 	// watcherGitShortHashLen is the number of hex chars shown for the commit
 	// hash in the fallback footer (matches typical `git rev-parse --short` output).
 	watcherGitShortHashLen = 7
@@ -86,16 +88,28 @@ type WatcherConfig struct {
 	ListenPort  int
 	BackendPort int
 	TLS         bool
+	PidFile     string
+	StageFile   string
+}
+
+// WatcherRuntimeState tracks the private temporary files the watcher uses.
+type WatcherRuntimeState struct {
+	Dir       string
+	PidFile   string
+	StageFile string
 }
 
 // runWatcher starts the watcher reverse proxy. It proxies all traffic to the
 // backend and serves a branded "Reconnecting..." page when the backend is down.
 // The watcher survives startup-oauth.sh restart cycles via a PID file.
 func runWatcher(cfg WatcherConfig) error {
-	if err := writePidFile(watcherPidFile); err != nil {
+	if cfg.PidFile == "" || cfg.StageFile == "" {
+		return fmt.Errorf("watcher runtime files are required")
+	}
+	if err := writePidFile(cfg.PidFile); err != nil {
 		slog.Warn("[Watcher] could not write PID file", "error", err)
 	}
-	defer os.Remove(watcherPidFile)
+	defer os.Remove(cfg.PidFile)
 
 	// Resolve the short git hash once at startup so the fallback page can show
 	// it from the very first render (even before the backend finishes compiling).
@@ -180,7 +194,7 @@ func runWatcher(cfg WatcherConfig) error {
 		if atomic.LoadInt32(&backendHealthy) == 1 {
 			beStatus = "ok"
 		}
-		stage := readStartupStage()
+		stage := readStartupStage(cfg.StageFile)
 		if rawStatus, ok := backendStatus.Load().(string); ok && rawStatus == "starting" {
 			stage = "backend_starting"
 		}
@@ -526,8 +540,8 @@ func writeJSON(w http.ResponseWriter, v any) {
 	}
 }
 
-func readStartupStage() string {
-	data, err := os.ReadFile(watcherStageFile)
+func readStartupStage(stageFile string) string {
+	data, err := os.ReadFile(stageFile)
 	if err != nil {
 		return "watchdog"
 	}
@@ -536,6 +550,95 @@ func readStartupStage() string {
 		return "watchdog"
 	}
 	return stage
+}
+
+func prepareWatcherRuntime(runtimeInfoFile string) (WatcherRuntimeState, func(), error) {
+	runtimeDir, err := os.MkdirTemp("", "kc-watcher-*")
+	if err != nil {
+		return WatcherRuntimeState{}, nil, fmt.Errorf("create watcher runtime dir: %w", err)
+	}
+	if err := os.Chmod(runtimeDir, watcherRuntimeDirPerms); err != nil {
+		_ = os.RemoveAll(runtimeDir)
+		return WatcherRuntimeState{}, nil, fmt.Errorf("chmod watcher runtime dir: %w", err)
+	}
+
+	cleanup := func() {
+		_ = os.Remove(runtimeInfoFile)
+		_ = os.RemoveAll(runtimeDir)
+	}
+
+	pidFile, err := createWatcherTempFile(runtimeDir, "watchdog-*.pid", watcherPidFilePerms)
+	if err != nil {
+		cleanup()
+		return WatcherRuntimeState{}, nil, err
+	}
+	stageFile, err := createWatcherTempFile(runtimeDir, "startup-stage-*.tmp", watcherStageFilePerms)
+	if err != nil {
+		cleanup()
+		return WatcherRuntimeState{}, nil, err
+	}
+
+	runtimeState := WatcherRuntimeState{
+		Dir:       runtimeDir,
+		PidFile:   pidFile,
+		StageFile: stageFile,
+	}
+	if err := writeWatcherRuntimeInfo(runtimeInfoFile, runtimeState); err != nil {
+		cleanup()
+		return WatcherRuntimeState{}, nil, err
+	}
+
+	return runtimeState, cleanup, nil
+}
+
+func createWatcherTempFile(dir, pattern string, filePerm os.FileMode) (string, error) {
+	file, err := os.CreateTemp(dir, pattern)
+	if err != nil {
+		return "", fmt.Errorf("create watcher temp file: %w", err)
+	}
+	if err := file.Chmod(filePerm); err != nil {
+		_ = file.Close()
+		_ = os.Remove(file.Name())
+		return "", fmt.Errorf("chmod watcher temp file: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(file.Name())
+		return "", fmt.Errorf("close watcher temp file: %w", err)
+	}
+	return file.Name(), nil
+}
+
+func writeWatcherRuntimeInfo(runtimeInfoFile string, runtimeState WatcherRuntimeState) error {
+	runtimeInfoDir := filepath.Dir(runtimeInfoFile)
+	if err := os.MkdirAll(runtimeInfoDir, watcherRuntimeDirPerms); err != nil {
+		return fmt.Errorf("create watcher runtime info dir: %w", err)
+	}
+
+	tempFile, err := os.CreateTemp(runtimeInfoDir, "kc-watcher-runtime-*")
+	if err != nil {
+		return fmt.Errorf("create watcher runtime info temp file: %w", err)
+	}
+	tempFilePath := tempFile.Name()
+	defer os.Remove(tempFilePath)
+
+	if err := tempFile.Chmod(watcherRuntimeFilePerms); err != nil {
+		_ = tempFile.Close()
+		return fmt.Errorf("chmod watcher runtime info temp file: %w", err)
+	}
+	if _, err := fmt.Fprintf(tempFile, "WATCHDOG_RUNTIME_DIR=%s\nWATCHDOG_PID_FILE=%s\nSTAGE_FILE=%s\n", runtimeState.Dir, runtimeState.PidFile, runtimeState.StageFile); err != nil {
+		_ = tempFile.Close()
+		return fmt.Errorf("write watcher runtime info: %w", err)
+	}
+	if err := tempFile.Close(); err != nil {
+		return fmt.Errorf("close watcher runtime info temp file: %w", err)
+	}
+	if err := os.Rename(tempFilePath, runtimeInfoFile); err != nil {
+		return fmt.Errorf("persist watcher runtime info: %w", err)
+	}
+	if err := os.Chmod(runtimeInfoFile, watcherRuntimeFilePerms); err != nil {
+		return fmt.Errorf("chmod watcher runtime info: %w", err)
+	}
+	return nil
 }
 
 func writePidFile(path string) error {
