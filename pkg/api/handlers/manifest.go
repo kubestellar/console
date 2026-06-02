@@ -9,7 +9,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -20,6 +22,13 @@ import (
 // manifestAppNameSuffixBytes is the number of random bytes appended to the
 // GitHub App name to avoid global name collisions on retry.
 const manifestAppNameSuffixBytes = 3
+
+// manifestStateExpiration is how long a manifest setup state token remains valid.
+// This prevents CSRF attacks by linking the setup and callback requests.
+const manifestStateExpiration = 10 * time.Minute
+
+// manifestStateBytes is the number of random bytes for the CSRF state token.
+const manifestStateBytes = 32
 
 // ManifestHandler implements the GitHub App Manifest one-click OAuth flow.
 // When a user clicks "Set up GitHub Sign-In," the handler renders a page
@@ -94,11 +103,22 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
 	}
 
+	// Generate and store a CSRF state token to prevent manifest callback hijacking.
+	state, err := randomHex(manifestStateBytes)
+	if err != nil {
+		slog.Error("[Manifest] failed to generate state token", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+	}
+	if err := h.store.StoreOAuthState(c.Context(), state, manifestStateExpiration); err != nil {
+		slog.Error("[Manifest] failed to store state token", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+	}
+
 	manifest := manifestPayload{
 		Name:         fmt.Sprintf("KubeStellar Console %s", suffix),
 		URL:          h.backendURL,
 		CallbackURLs: []string{h.backendURL + "/auth/github/callback"},
-		RedirectURL:  h.backendURL + "/auth/manifest/callback",
+		RedirectURL:  h.buildManifestCallbackURL(state),
 		HookAttributes: map[string]any{"url": "https://example.com/events", "active": false},
 		Public:       false,
 		DefaultPermissions: map[string]string{},
@@ -143,6 +163,23 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 	if h.isOAuthConfigured != nil && h.isOAuthConfigured() {
 		slog.Warn("[Manifest] callback rejected — OAuth already configured")
 		return c.Redirect(h.frontendURL + "/login?error=manifest_already_configured")
+	}
+
+	// Validate the CSRF state token to link this callback to a prior setup request.
+	state := c.Query("state")
+	if state == "" {
+		slog.Warn("[Manifest] callback called without state — possible CSRF attack")
+		return c.Redirect(h.frontendURL + "/login?error=manifest_missing_state")
+	}
+
+	ok, err := h.store.ConsumeOAuthState(c.Context(), state)
+	if err != nil {
+		slog.Error("[Manifest] failed to validate state token", "error", err)
+		return c.Redirect(h.frontendURL + "/login?error=manifest_validation_failed")
+	}
+	if !ok {
+		slog.Warn("[Manifest] state token validation failed — possible CSRF attack or expired token")
+		return c.Redirect(h.frontendURL + "/login?error=manifest_csrf_validation_failed")
 	}
 
 	code := c.Query("code")
@@ -215,4 +252,12 @@ func randomHex(n int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// buildManifestCallbackURL constructs the GitHub manifest callback URL with the state parameter.
+func (h *ManifestHandler) buildManifestCallbackURL(state string) string {
+	baseURL := h.backendURL + "/auth/manifest/callback"
+	params := url.Values{}
+	params.Set("state", state)
+	return baseURL + "?" + params.Encode()
 }
