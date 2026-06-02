@@ -146,11 +146,16 @@ const HUB_RE = /^.*hub:\s*ghcr\.io\/llm-d\b.*$/i;
 const NAME_RE = /^.*name:\s*([\w][\w.-]*).*$/i;
 const TAG_RE = /^.*tag:\s*([\w][\w.+-]*).*$/i;
 
+/** Keys that could pollute Object.prototype if used as property names. */
+const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 function parseImagesFromYAML(content: string): Record<string, string> {
-  const images: Record<string, string> = {};
+  const images: Record<string, string> = Object.create(null);
 
   for (const match of content.matchAll(IMAGE_RE)) {
-    images[match[1]] = match[2];
+    if (!UNSAFE_KEYS.has(match[1])) {
+      images[match[1]] = match[2];
+    }
   }
 
   const lines = content.split("\n");
@@ -175,7 +180,7 @@ function parseImagesFromYAML(content: string): Record<string, string> {
       }
     }
 
-    if (name && tag) {
+    if (name && tag && !UNSAFE_KEYS.has(name)) {
       images[name] = tag;
     }
   }
@@ -270,13 +275,13 @@ async function fetchGuideImages(
 
   const guidePaths = [...new Set(NIGHTLY_WORKFLOWS.map((workflow) => workflow.guidePath).filter(Boolean) as string[])];
   const yamlFiles = await fetchGuideYAMLFiles(token);
-  const imagesByGuide: Record<string, Record<string, string>> = {};
+  const imagesByGuide: Record<string, Record<string, string>> = Object.create(null);
 
   await Promise.all(
     guidePaths.map(async (guidePath) => {
       const prefix = `guides/${guidePath}/`;
       const files = yamlFiles.filter((file) => file.path.startsWith(prefix));
-      const images: Record<string, string> = {};
+      const images: Record<string, string> = Object.create(null);
       const contents = await Promise.all(files.map(async (file) => fetchBlob(file.sha, token)));
 
       for (const content of contents) {
@@ -284,7 +289,7 @@ async function fetchGuideImages(
         Object.assign(images, parseImagesFromYAML(content));
       }
 
-      if (Object.keys(images).length > 0) {
+      if (Object.keys(images).length > 0 && !UNSAFE_KEYS.has(guidePath)) {
         imagesByGuide[guidePath] = images;
       }
     }),
