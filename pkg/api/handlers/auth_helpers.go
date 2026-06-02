@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -30,9 +32,23 @@ import (
 // they can be called from any handler without forcing every handler struct to
 // embed a common base.
 
+// bootstrapOnce ensures admin auto-promotion fires at most once per process
+// lifetime. This prevents privilege escalation if admins are removed after
+// initial setup (#16485, CWE-269).
+var bootstrapOnce sync.Once
+
+// ResetBootstrapOnce resets the bootstrap guard for testing. Must not be
+// called in production code.
+func ResetBootstrapOnce() {
+	bootstrapOnce = sync.Once{}
+}
+
 // shouldBootstrapAdmin reports whether the current deployment has no admin
-// users yet. Self-hosted consoles bootstrap the first authenticated user to
-// admin so the instance is manageable immediately after install (#13608).
+// users yet AND the bootstrap has not already been used. Self-hosted consoles
+// bootstrap the first authenticated user to admin so the instance is
+// manageable immediately after install (#13608). After the first bootstrap,
+// subsequent admin removals do NOT re-enable auto-promotion — an operator
+// must manually promote a user via the database or restart the server.
 func shouldBootstrapAdmin(ctx context.Context, s store.Store) (bool, error) {
 	if s == nil {
 		return true, nil
@@ -52,8 +68,10 @@ func RequireAdmin(c *fiber.Ctx, s store.Store) error {
 }
 
 // requireAdmin verifies the current request's user has the admin role. If the
-// console has no admins yet, the current user is promoted so fresh self-hosted
-// installs are not locked out of admin-only settings flows (#13608).
+// console has no admins yet AND bootstrap has not already fired, the current
+// user is promoted so fresh self-hosted installs are not locked out of
+// admin-only settings flows (#13608). Bootstrap fires at most once per process
+// lifetime to prevent privilege escalation (#16485).
 func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	if s == nil {
 		return nil
@@ -66,22 +84,35 @@ func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	if user == nil {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
-	if user.Role != models.UserRoleAdmin {
-		bootstrapAdmin, err := shouldBootstrapAdmin(c.UserContext(), s)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
-		}
-		if bootstrapAdmin {
+	if user.Role == models.UserRoleAdmin {
+		return nil
+	}
+
+	// Check if bootstrap is eligible before consuming the Once.
+	shouldBootstrap, err := shouldBootstrapAdmin(c.UserContext(), s)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+	}
+	if shouldBootstrap {
+		var promoted bool
+		bootstrapOnce.Do(func() {
 			user.Role = models.UserRoleAdmin
-			if err := s.UpdateUser(c.UserContext(), user); err != nil {
-				return fiber.NewError(fiber.StatusInternalServerError, "Failed to bootstrap admin role")
+			if uErr := s.UpdateUser(c.UserContext(), user); uErr != nil {
+				slog.Error("[RBAC] failed to persist bootstrap admin promotion", "error", uErr)
+				user.Role = models.UserRoleViewer // revert in-memory
+				return
 			}
+			promoted = true
+			slog.Warn("[RBAC] BOOTSTRAP: auto-promoted user to admin (first admin on fresh install)",
+				"user_id", user.ID,
+				"github_login", user.GitHubLogin)
+		})
+		if promoted {
+			return nil
 		}
 	}
-	if user.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
-	}
-	return nil
+
+	return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 }
 
 // requireEditorOrAdmin verifies the current request's user has at least the

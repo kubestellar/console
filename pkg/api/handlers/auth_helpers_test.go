@@ -115,6 +115,7 @@ func TestAuthHelpers(t *testing.T) {
 	})
 
 	t.Run("requireAdmin bootstraps first admin", func(t *testing.T) {
+		ResetBootstrapOnce()
 		app := fiber.New()
 		mockStore := new(test.MockStore)
 		userID := uuid.New()

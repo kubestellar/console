@@ -13,6 +13,7 @@ import (
 )
 
 func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
+	ResetBootstrapOnce()
 	app := fiber.New()
 	mockStore := new(test.MockStore)
 	h := NewGitHubProxyHandler("", mockStore)
