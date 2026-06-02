@@ -1,4 +1,4 @@
-package main
+package watcher
 
 import (
 	"bufio"
@@ -19,7 +19,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -32,96 +31,77 @@ import (
 )
 
 const (
-	watcherHealthPollInterval  = 2 * time.Second
-	watcherShutdownTimeout     = 5 * time.Second
-	watcherHealthTimeout       = 2 * time.Second
-	watcherProxyHeaderTimeout  = 30 * time.Second // generous for SSE/slow endpoints
-	watcherReadHeaderTimeout   = 10 * time.Second
-	watcherReadTimeout         = 30 * time.Second
-	watcherWriteTimeout        = 5 * time.Minute // match backend for large static assets
-	watcherIdleTimeout         = 2 * time.Minute
-	watcherMaxIdleConns        = 100
-	watcherMaxIdleConnsPerHost = 20
-	watcherIdleConnTimeout     = 90 * time.Second
-	watcherPidFilePerms        = 0600
-	watcherStageFilePerms      = 0600
-	watcherRuntimeDirPerms     = 0700
-	watcherRuntimeFilePerms    = 0600
-	watcherDefaultBackendPort  = 8081
-	watcherDefaultListenPort   = 8080
-	watcherRuntimeInfoFile     = "./data/kc-watcher-runtime.env"
-	// watcherGitShortHashLen is the number of hex chars shown for the commit
+	HealthPollInterval  = 2 * time.Second
+	ShutdownTimeout     = 5 * time.Second
+	HealthTimeout       = 2 * time.Second
+	ProxyHeaderTimeout  = 30 * time.Second // generous for SSE/slow endpoints
+	ReadHeaderTimeout   = 10 * time.Second
+	ReadTimeout         = 30 * time.Second
+	WriteTimeout        = 5 * time.Minute // match backend for large static assets
+	IdleTimeout         = 2 * time.Minute
+	MaxIdleConns        = 100
+	MaxIdleConnsPerHost = 20
+	IdleConnTimeout     = 90 * time.Second
+	PidFilePerms        = 0600
+	StageFilePerms      = 0600
+	RuntimeDirPerms     = 0700
+	RuntimeFilePerms    = 0600
+	DefaultBackendPort  = 8081
+	DefaultListenPort   = 8080
+	RuntimeInfoFile     = "./data/kc-watcher-runtime.env"
+	// GitShortHashLen is the number of hex chars shown for the commit
 	// hash in the fallback footer (matches typical `git rev-parse --short` output).
-	watcherGitShortHashLen = 7
-	// watcherGitLookupTimeout bounds the one-shot `git rev-parse` fallback used
-	// when debug.ReadBuildInfo() doesn't populate VCSRevision (e.g. under `go run`).
-	watcherGitLookupTimeout = 2 * time.Second
+	GitShortHashLen = 7
 )
-
-// cachedGitCommitShort is the short git hash resolved once at startup
-// and reused for every fallback render. Empty if resolution failed.
-var cachedGitCommitShort string
-
-// resolveGitCommitShort runs `git rev-parse --short HEAD` against the process
-// working directory. Used as a fallback when debug.ReadBuildInfo() doesn't
-// expose vcs.revision (which happens under `go run` in some Go versions).
-func resolveGitCommitShort() string {
-	ctx, cancel := context.WithTimeout(context.Background(), watcherGitLookupTimeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--short="+strconv.Itoa(watcherGitShortHashLen), "HEAD")
-	out, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
-}
 
 const (
-	watcherTLSDir      = "./data/tls"
-	watcherTLSCertFile = "cert.pem"
-	watcherTLSKeyFile  = "key.pem"
-	watcherTLSCertLife = 365 * 24 * time.Hour // 1 year
+	TLSDir      = "./data/tls"
+	TLSCertFile = "cert.pem"
+	TLSKeyFile  = "key.pem"
+	TLSCertLife = 365 * 24 * time.Hour // 1 year
 )
 
-// WatcherConfig holds configuration for the watcher reverse proxy.
-type WatcherConfig struct {
+// Config holds configuration for the watcher reverse proxy.
+type Config struct {
 	ListenPort  int
 	BackendPort int
 	TLS         bool
 	PidFile     string
 	StageFile   string
+	Version     string
+	GitCommit   string
 }
 
-// WatcherRuntimeState tracks the private temporary files the watcher uses.
-type WatcherRuntimeState struct {
+// cachedGitCommitShort is the short git hash resolved once at startup
+// and reused for every fallback render. Empty if resolution failed.
+var cachedGitCommitShort string
+
+// cachedVersion is cached from Config.Version during Run()
+var cachedVersion string
+
+// RuntimeState tracks the private temporary files the watcher uses.
+type RuntimeState struct {
 	Dir       string
 	PidFile   string
 	StageFile string
 }
 
-// runWatcher starts the watcher reverse proxy. It proxies all traffic to the
+// Run starts the watcher reverse proxy. It proxies all traffic to the
 // backend and serves a branded "Reconnecting..." page when the backend is down.
 // The watcher survives startup-oauth.sh restart cycles via a PID file.
-func runWatcher(cfg WatcherConfig) error {
+func Run(cfg Config) error {
 	if cfg.PidFile == "" || cfg.StageFile == "" {
 		return fmt.Errorf("watcher runtime files are required")
 	}
+
+	// Cache version and git commit for fallback renders.
+	cachedVersion = cfg.Version
+	cachedGitCommitShort = cfg.GitCommit
+
 	if err := writePidFile(cfg.PidFile); err != nil {
 		slog.Warn("[Watcher] could not write PID file", "error", err)
 	}
 	defer os.Remove(cfg.PidFile)
-
-	// Resolve the short git hash once at startup so the fallback page can show
-	// it from the very first render (even before the backend finishes compiling).
-	rev := getBuildRevision()
-	if rev != "" {
-		if len(rev) > watcherGitShortHashLen {
-			rev = rev[:watcherGitShortHashLen]
-		}
-		cachedGitCommitShort = rev
-	} else {
-		cachedGitCommitShort = resolveGitCommitShort()
-	}
 
 	backendURL := &url.URL{
 		Scheme: "http",
@@ -143,13 +123,13 @@ func runWatcher(cfg WatcherConfig) error {
 	// causing 404s for static assets like manifest.json and favicon.ico.
 	proxy.Transport = &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout: watcherHealthTimeout,
+			Timeout: HealthTimeout,
 		}).DialContext,
 		DisableCompression:    true,
-		ResponseHeaderTimeout: watcherProxyHeaderTimeout,
-		MaxIdleConns:          watcherMaxIdleConns,
-		MaxIdleConnsPerHost:   watcherMaxIdleConnsPerHost,
-		IdleConnTimeout:       watcherIdleConnTimeout,
+		ResponseHeaderTimeout: ProxyHeaderTimeout,
+		MaxIdleConns:          MaxIdleConns,
+		MaxIdleConnsPerHost:   MaxIdleConnsPerHost,
+		IdleConnTimeout:       IdleConnTimeout,
 	}
 
 	// Flush SSE events immediately instead of buffering.
@@ -177,14 +157,14 @@ func runWatcher(cfg WatcherConfig) error {
 
 		slog.Error("[Watcher] proxy error (backend down)", "error", err)
 		atomic.StoreInt32(&backendHealthy, 0)
-		serveFallback(w, r)
+		ServeFallback(w, r, cachedVersion, cachedGitCommitShort)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	safego.GoWith("watcher-health-poll", func() {
-		pollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
+		PollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
 	})
 
 	mux := http.NewServeMux()
@@ -227,21 +207,21 @@ func runWatcher(cfg WatcherConfig) error {
 			return
 		}
 		atomic.AddInt64(&fallbacksServed, 1)
-		serveFallback(w, r)
+		ServeFallback(w, r, cachedVersion, cachedGitCommitShort)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.ListenPort)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           mux,
-		ReadHeaderTimeout: watcherReadHeaderTimeout,
-		ReadTimeout:       watcherReadTimeout,
-		WriteTimeout:      watcherWriteTimeout,
-		IdleTimeout:       watcherIdleTimeout,
+		ReadHeaderTimeout: ReadHeaderTimeout,
+		ReadTimeout:       ReadTimeout,
+		WriteTimeout:      WriteTimeout,
+		IdleTimeout:       IdleTimeout,
 	}
 
 	if cfg.TLS {
-		certFile, keyFile, tlsErr := ensureTLSCert()
+		certFile, keyFile, tlsErr := EnsureTLSCert()
 		if tlsErr != nil {
 			return fmt.Errorf("TLS cert generation failed: %w", tlsErr)
 		}
@@ -279,7 +259,7 @@ func runWatcher(cfg WatcherConfig) error {
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
 		slog.Info("[Watcher] Shutting down...")
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), watcherShutdownTimeout)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), ShutdownTimeout)
 		defer shutdownCancel()
 		ln.Close()
 		srv.Shutdown(shutdownCtx)
@@ -289,7 +269,7 @@ func runWatcher(cfg WatcherConfig) error {
 			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 			<-sigCh
 			slog.Info("[Watcher] Shutting down...")
-			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), watcherShutdownTimeout)
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), ShutdownTimeout)
 			defer shutdownCancel()
 			srv.Shutdown(shutdownCtx)
 		})
@@ -374,7 +354,9 @@ func (l *singleConnListener) Close() error {
 
 func (l *singleConnListener) Addr() net.Addr { return l.conn.LocalAddr() }
 
-func ensureTLSCert() (certFile, keyFile string, err error) {
+// EnsureTLSCert ensures a TLS certificate exists for the watcher.
+// It returns (certFile, keyFile, error).
+func EnsureTLSCert() (certFile, keyFile string, err error) {
 	if envCert := os.Getenv("TLS_CERT_FILE"); envCert != "" {
 		envKey := os.Getenv("TLS_KEY_FILE")
 		if envKey == "" {
@@ -384,8 +366,8 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 		return envCert, envKey, nil
 	}
 
-	certFile = filepath.Join(watcherTLSDir, watcherTLSCertFile)
-	keyFile = filepath.Join(watcherTLSDir, watcherTLSKeyFile)
+	certFile = filepath.Join(TLSDir, TLSCertFile)
+	keyFile = filepath.Join(TLSDir, TLSKeyFile)
 
 	if _, statErr := os.Stat(certFile); statErr == nil {
 		if _, statErr2 := os.Stat(keyFile); statErr2 == nil {
@@ -395,7 +377,7 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 	}
 
 	slog.Info("[Watcher] generating self-signed TLS cert for localhost")
-	if mkdirErr := os.MkdirAll(watcherTLSDir, 0700); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(TLSDir, 0700); mkdirErr != nil {
 		return "", "", mkdirErr
 	}
 
@@ -409,7 +391,7 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 		SerialNumber: serial,
 		Subject:      pkix.Name{Organization: []string{"KubeStellar Console (dev)"}},
 		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(watcherTLSCertLife),
+		NotAfter:     time.Now().Add(TLSCertLife),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		DNSNames:     []string{"localhost"},
@@ -449,7 +431,8 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 	return certFile, keyFile, nil
 }
 
-func checkBackendHealth(client *http.Client, healthURL string) string {
+// CheckBackendHealth checks the backend health endpoint and returns the status.
+func CheckBackendHealth(client *http.Client, healthURL string) string {
 	resp, err := client.Get(healthURL)
 	if err != nil {
 		return ""
@@ -465,13 +448,14 @@ func checkBackendHealth(client *http.Client, healthURL string) string {
 	return ""
 }
 
-func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, backendStatus *atomic.Value) {
-	client := &http.Client{Timeout: watcherHealthTimeout}
+// PollBackendHealth polls the backend health endpoint and updates the healthy flag.
+func PollBackendHealth(ctx context.Context, backendBase string, healthy *int32, backendStatus *atomic.Value) {
+	client := &http.Client{Timeout: HealthTimeout}
 	healthURL := backendBase + "/health"
 
 	for {
 		wasHealthy := atomic.LoadInt32(healthy) == 1
-		status := checkBackendHealth(client, healthURL)
+		status := CheckBackendHealth(client, healthURL)
 		backendStatus.Store(status)
 		isHealthy := status == "ok" || status == "degraded"
 
@@ -490,12 +474,13 @@ func pollBackendHealth(ctx context.Context, backendBase string, healthy *int32, 
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(watcherHealthPollInterval):
+		case <-time.After(HealthPollInterval):
 		}
 	}
 }
 
-func isAPIRequest(r *http.Request) bool {
+// IsAPIRequest determines if a request should be treated as an API request.
+func IsAPIRequest(r *http.Request) bool {
 	if strings.HasPrefix(r.URL.Path, "/api/") ||
 		strings.HasPrefix(r.URL.Path, "/ws/") ||
 		strings.HasPrefix(r.URL.Path, "/sse/") {
@@ -510,18 +495,18 @@ func isAPIRequest(r *http.Request) bool {
 	return false
 }
 
-func serveFallback(w http.ResponseWriter, r *http.Request) {
+// ServeFallback serves a fallback response when the backend is unavailable.
+func ServeFallback(w http.ResponseWriter, r *http.Request, version, commitShort string) {
 	accept := r.Header.Get("Accept")
 	wantsHTML := strings.Contains(accept, "text/html") || accept == "" || accept == "*/*"
-	if wantsHTML && !isAPIRequest(r) {
+	if wantsHTML && !IsAPIRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		commitShort := cachedGitCommitShort
 		versionText := "v" + version
 		if commitShort != "" {
 			versionText += " · " + commitShort
 		}
-		html := strings.Replace(watcherFallbackHTML, "{{VERSION_INFO}}", versionText, 1)
+		html := strings.Replace(fallbackHTML, "{{VERSION_INFO}}", versionText, 1)
 		w.Write([]byte(html))
 		return
 	}
@@ -552,14 +537,14 @@ func readStartupStage(stageFile string) string {
 	return stage
 }
 
-func prepareWatcherRuntime(runtimeInfoFile string) (WatcherRuntimeState, func(), error) {
+func PrepareRuntime(runtimeInfoFile string) (RuntimeState, func(), error) {
 	runtimeDir, err := os.MkdirTemp("", "kc-watcher-*")
 	if err != nil {
-		return WatcherRuntimeState{}, nil, fmt.Errorf("create watcher runtime dir: %w", err)
+		return RuntimeState{}, nil, fmt.Errorf("create watcher runtime dir: %w", err)
 	}
-	if err := os.Chmod(runtimeDir, watcherRuntimeDirPerms); err != nil {
+	if err := os.Chmod(runtimeDir, RuntimeDirPerms); err != nil {
 		_ = os.RemoveAll(runtimeDir)
-		return WatcherRuntimeState{}, nil, fmt.Errorf("chmod watcher runtime dir: %w", err)
+		return RuntimeState{}, nil, fmt.Errorf("chmod watcher runtime dir: %w", err)
 	}
 
 	cleanup := func() {
@@ -567,25 +552,25 @@ func prepareWatcherRuntime(runtimeInfoFile string) (WatcherRuntimeState, func(),
 		_ = os.RemoveAll(runtimeDir)
 	}
 
-	pidFile, err := createWatcherTempFile(runtimeDir, "watchdog-*.pid", watcherPidFilePerms)
+	pidFile, err := createWatcherTempFile(runtimeDir, "watchdog-*.pid", PidFilePerms)
 	if err != nil {
 		cleanup()
-		return WatcherRuntimeState{}, nil, err
+		return RuntimeState{}, nil, err
 	}
-	stageFile, err := createWatcherTempFile(runtimeDir, "startup-stage-*.tmp", watcherStageFilePerms)
+	stageFile, err := createWatcherTempFile(runtimeDir, "startup-stage-*.tmp", StageFilePerms)
 	if err != nil {
 		cleanup()
-		return WatcherRuntimeState{}, nil, err
+		return RuntimeState{}, nil, err
 	}
 
-	runtimeState := WatcherRuntimeState{
+	runtimeState := RuntimeState{
 		Dir:       runtimeDir,
 		PidFile:   pidFile,
 		StageFile: stageFile,
 	}
-	if err := writeWatcherRuntimeInfo(runtimeInfoFile, runtimeState); err != nil {
+	if err := WriteRuntimeInfo(runtimeInfoFile, runtimeState); err != nil {
 		cleanup()
-		return WatcherRuntimeState{}, nil, err
+		return RuntimeState{}, nil, err
 	}
 
 	return runtimeState, cleanup, nil
@@ -608,9 +593,9 @@ func createWatcherTempFile(dir, pattern string, filePerm os.FileMode) (string, e
 	return file.Name(), nil
 }
 
-func writeWatcherRuntimeInfo(runtimeInfoFile string, runtimeState WatcherRuntimeState) error {
+func WriteRuntimeInfo(runtimeInfoFile string, runtimeState RuntimeState) error {
 	runtimeInfoDir := filepath.Dir(runtimeInfoFile)
-	if err := os.MkdirAll(runtimeInfoDir, watcherRuntimeDirPerms); err != nil {
+	if err := os.MkdirAll(runtimeInfoDir, RuntimeDirPerms); err != nil {
 		return fmt.Errorf("create watcher runtime info dir: %w", err)
 	}
 
@@ -621,7 +606,7 @@ func writeWatcherRuntimeInfo(runtimeInfoFile string, runtimeState WatcherRuntime
 	tempFilePath := tempFile.Name()
 	defer os.Remove(tempFilePath)
 
-	if err := tempFile.Chmod(watcherRuntimeFilePerms); err != nil {
+	if err := tempFile.Chmod(RuntimeFilePerms); err != nil {
 		_ = tempFile.Close()
 		return fmt.Errorf("chmod watcher runtime info temp file: %w", err)
 	}
@@ -635,12 +620,12 @@ func writeWatcherRuntimeInfo(runtimeInfoFile string, runtimeState WatcherRuntime
 	if err := os.Rename(tempFilePath, runtimeInfoFile); err != nil {
 		return fmt.Errorf("persist watcher runtime info: %w", err)
 	}
-	if err := os.Chmod(runtimeInfoFile, watcherRuntimeFilePerms); err != nil {
+	if err := os.Chmod(runtimeInfoFile, RuntimeFilePerms); err != nil {
 		return fmt.Errorf("chmod watcher runtime info: %w", err)
 	}
 	return nil
 }
 
 func writePidFile(path string) error {
-	return os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), watcherPidFilePerms)
+	return os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), PidFilePerms)
 }

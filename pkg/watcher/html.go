@@ -1,11 +1,11 @@
-package main
+package watcher
 
-// watcherFallbackHTML is served when the backend is unreachable.
+// fallbackHTML is served when the backend is unreachable.
 // It matches the KubeStellar Console branding (dark theme + star field)
 // and auto-reloads when the backend becomes healthy.
 // Shows a step-by-step progress indicator based on the startup stage
 // reported by /watchdog/health (written by startup-oauth.sh).
-const watcherFallbackHTML = `<!DOCTYPE html>
+const fallbackHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">

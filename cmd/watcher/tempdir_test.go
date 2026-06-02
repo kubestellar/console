@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/kubestellar/console/pkg/watcher"
 )
 
 const (
@@ -16,16 +18,16 @@ const (
 func TestPrepareWatcherRuntimeCreatesRestrictedPaths(t *testing.T) {
 	runtimeInfoFile := filepath.Join(t.TempDir(), "data", "kc-watcher-runtime.env")
 
-	runtimeState, cleanup, err := prepareWatcherRuntime(runtimeInfoFile)
+	runtimeState, cleanup, err := watcher.PrepareRuntime(runtimeInfoFile)
 	if err != nil {
 		t.Fatalf("prepareWatcherRuntime() error = %v", err)
 	}
 	t.Cleanup(cleanup)
 
-	assertPathMode(t, runtimeState.Dir, watcherRuntimeDirPerms)
-	assertPathMode(t, runtimeState.PidFile, watcherPidFilePerms)
-	assertPathMode(t, runtimeState.StageFile, watcherStageFilePerms)
-	assertPathMode(t, runtimeInfoFile, watcherRuntimeFilePerms)
+	assertPathMode(t, runtimeState.Dir, watcher.RuntimeDirPerms)
+	assertPathMode(t, runtimeState.PidFile, watcher.PidFilePerms)
+	assertPathMode(t, runtimeState.StageFile, watcher.StageFilePerms)
+	assertPathMode(t, runtimeInfoFile, watcher.RuntimeFilePerms)
 
 	if filepath.Dir(runtimeState.PidFile) != runtimeState.Dir {
 		t.Fatalf("pid file %q not created inside runtime dir %q", runtimeState.PidFile, runtimeState.Dir)
@@ -51,13 +53,13 @@ func TestPrepareWatcherRuntimeUsesUniqueUnpredictableNames(t *testing.T) {
 	firstRuntimeInfo := filepath.Join(baseDir, "first", "kc-watcher-runtime.env")
 	secondRuntimeInfo := filepath.Join(baseDir, "second", "kc-watcher-runtime.env")
 
-	firstState, firstCleanup, err := prepareWatcherRuntime(firstRuntimeInfo)
+	firstState, firstCleanup, err := watcher.PrepareRuntime(firstRuntimeInfo)
 	if err != nil {
 		t.Fatalf("first prepareWatcherRuntime() error = %v", err)
 	}
 	t.Cleanup(firstCleanup)
 
-	secondState, secondCleanup, err := prepareWatcherRuntime(secondRuntimeInfo)
+	secondState, secondCleanup, err := watcher.PrepareRuntime(secondRuntimeInfo)
 	if err != nil {
 		t.Fatalf("second prepareWatcherRuntime() error = %v", err)
 	}
@@ -88,24 +90,24 @@ func TestPrepareWatcherRuntimeUsesUniqueUnpredictableNames(t *testing.T) {
 func TestWriteWatcherRuntimeInfoReplacesSymlinkInsteadOfFollowingIt(t *testing.T) {
 	baseDir := t.TempDir()
 	victimFile := filepath.Join(baseDir, "victim.txt")
-	if err := os.WriteFile(victimFile, []byte(victimFileContents), watcherRuntimeFilePerms); err != nil {
+	if err := os.WriteFile(victimFile, []byte(victimFileContents), watcher.RuntimeFilePerms); err != nil {
 		t.Fatalf("WriteFile(%q) error = %v", victimFile, err)
 	}
 
 	runtimeInfoFile := filepath.Join(baseDir, "data", "kc-watcher-runtime.env")
-	if err := os.MkdirAll(filepath.Dir(runtimeInfoFile), watcherRuntimeDirPerms); err != nil {
+	if err := os.MkdirAll(filepath.Dir(runtimeInfoFile), watcher.RuntimeDirPerms); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", filepath.Dir(runtimeInfoFile), err)
 	}
 	if err := os.Symlink(victimFile, runtimeInfoFile); err != nil {
 		t.Fatalf("Symlink(%q, %q) error = %v", victimFile, runtimeInfoFile, err)
 	}
 
-	runtimeState := WatcherRuntimeState{
+	runtimeState := watcher.RuntimeState{
 		Dir:       filepath.Join(baseDir, "runtime"),
 		PidFile:   filepath.Join(baseDir, "watchdog.pid"),
 		StageFile: filepath.Join(baseDir, "startup-stage.tmp"),
 	}
-	if err := writeWatcherRuntimeInfo(runtimeInfoFile, runtimeState); err != nil {
+	if err := watcher.WriteRuntimeInfo(runtimeInfoFile, runtimeState); err != nil {
 		t.Fatalf("writeWatcherRuntimeInfo() error = %v", err)
 	}
 

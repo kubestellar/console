@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/kubestellar/console/pkg/watcher"
 )
 
 func TestCheckBackendHealth(t *testing.T) {
@@ -34,7 +36,7 @@ func TestCheckBackendHealth(t *testing.T) {
 			defer srv.Close()
 
 			client := &http.Client{Timeout: 2 * time.Second}
-			got := checkBackendHealth(client, srv.URL)
+			got := watcher.CheckBackendHealth(client, srv.URL)
 			if got != tt.want {
 				t.Errorf("checkBackendHealth() = %q, want %q", got, tt.want)
 			}
@@ -48,7 +50,7 @@ func TestCheckBackendHealth_Unreachable(t *testing.T) {
 	srv.Close() // close immediately — port is now refused
 
 	client := &http.Client{Timeout: 100 * time.Millisecond}
-	got := checkBackendHealth(client, srv.URL)
+	got := watcher.CheckBackendHealth(client, srv.URL)
 	if got != "" {
 		t.Errorf("checkBackendHealth(unreachable) = %q, want empty string", got)
 	}
@@ -66,7 +68,7 @@ func TestPollBackendHealth_DegradedBecomesHealthy(t *testing.T) {
 	var backendStatus atomic.Value
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go pollBackendHealth(ctx, backend.URL, &healthy, &backendStatus)
+	go watcher.PollBackendHealth(ctx, backend.URL, &healthy, &backendStatus)
 
 	// Wait for the poller to run at least once
 	deadline := time.After(5 * time.Second)
@@ -112,7 +114,7 @@ func TestWatchdogProxiesDegradedBackend(t *testing.T) {
 
 	// Run one poll cycle to set the healthy flag
 	ctx, cancel := context.WithCancel(context.Background())
-	go pollBackendHealth(ctx, backend.URL, &healthy, &backendStatus)
+	go watcher.PollBackendHealth(ctx, backend.URL, &healthy, &backendStatus)
 	deadline := time.After(5 * time.Second)
 	for atomic.LoadInt32(&healthy) != 1 {
 		select {
@@ -182,7 +184,7 @@ func TestServeFallback_APIRequestGetsJSON(t *testing.T) {
 				req.Header.Set("Accept", tc.accept)
 			}
 			rec := httptest.NewRecorder()
-			serveFallback(rec, req)
+			watcher.ServeFallback(rec, req, "test", "abc123")
 
 			if rec.Code != http.StatusServiceUnavailable {
 				t.Errorf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
@@ -224,7 +226,7 @@ func TestServeFallback_NavigationGetsHTML(t *testing.T) {
 				req.Header.Set("Accept", tc.accept)
 			}
 			rec := httptest.NewRecorder()
-			serveFallback(rec, req)
+			watcher.ServeFallback(rec, req, "test", "abc123")
 
 			if rec.Code != http.StatusServiceUnavailable {
 				t.Errorf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
