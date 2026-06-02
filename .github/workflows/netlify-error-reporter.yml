@@ -3,6 +3,8 @@ name: Netlify Deploy Failure Reporter
 on:
   status:
 
+permissions: {}
+
 jobs:
   report-netlify-failure:
     if: >-
@@ -11,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      pull-requests: write
+      contents: read
       issues: write
-      statuses: read
+      pull-requests: read
     steps:
       - name: Find PR for this commit
         id: find-pr

@@ -8,16 +8,15 @@ on:
   issue_comment:
     types: [created]
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   post-directions:
     if: |
       (github.event_name == 'issues' && github.event.issue.user.type != 'Bot') ||
       (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot')
+    permissions:
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -63,7 +62,7 @@ jobs:
       issue-number: ${{ github.event.issue.number }}
       comment-url: ${{ github.event.comment.html_url }}
 
-  hive-mention:
+  record-mention:
     needs: trust-gate
     if: |
       github.event_name == 'issue_comment' &&
@@ -76,10 +75,10 @@ jobs:
       group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
       cancel-in-progress: false
     permissions:
-      actions: write
-      contents: read
       issues: write
-      pull-requests: write
+    outputs:
+      active-run: ${{ steps.evaluate.outputs.active_run }}
+      is-pull-request: ${{ steps.evaluate.outputs.is_pull_request }}
     steps:
       - name: Evaluate mention
         id: evaluate
@@ -101,11 +100,6 @@ jobs:
 
           LABELS=$(gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || true)
 
-          TRIAGED=false
-          if printf '%s\n' "$LABELS" | grep -Fxq 'triage/accepted'; then
-            TRIAGED=true
-          fi
-
           ACTIVE_RUN=false
           if printf '%s\n' "$LABELS" | grep -Eq '^(ai-processing|ai-awaiting-fix|ai-pr-draft|ai-pr-ready)$'; then
             ACTIVE_RUN=true
@@ -113,7 +107,6 @@ jobs:
 
           CLEAN_BODY=$(python3 -c 'import os,re; text=os.environ["COMMENT_BODY"]; text=re.sub(r"@kubestellar-hive\\b", "", text, flags=re.IGNORECASE).strip(); print(text or "No additional instruction provided.")')
 
-          echo "triaged=$TRIAGED" >> "$GITHUB_OUTPUT"
           echo "active_run=$ACTIVE_RUN" >> "$GITHUB_OUTPUT"
           echo "is_pull_request=$IS_PULL_REQUEST" >> "$GITHUB_OUTPUT"
           DELIMITER="EOF_$(openssl rand -hex 8)"
@@ -137,23 +130,6 @@ jobs:
             --description "AI fix has been requested" 2>/dev/null || true
 
           gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "ai-fix-requested"
-
-      - name: Dispatch hive fix workflow
-        if: |
-          steps.evaluate.outputs.is_pull_request != 'true' &&
-          steps.evaluate.outputs.active_run != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          set -euo pipefail
-
-          gh api "repos/$REPO/actions/workflows/implement-fix.lock.yml/dispatches" \
-            -X POST \
-            -f ref="$DEFAULT_BRANCH" \
-            -f inputs[issue_number]="$ISSUE_NUMBER"
 
       - name: Acknowledge mention
         env:
@@ -189,3 +165,33 @@ jobs:
           BODY=$(printf '## 🐝 Hive automation update\n\nThanks @%s — I recorded [your comment](%s) for hive automation.\n\n%s\n\n%s\n\n### Comment recorded\n%s\n' "$COMMENT_AUTHOR" "$COMMENT_URL" "$STATUS_LINE" "$NEXT_STEP" "$QUOTED_BODY")
 
           gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
+
+  dispatch-hive-fix:
+    needs:
+      - trust-gate
+      - record-mention
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@kubestellar-hive') &&
+      needs.trust-gate.outputs.is-trusted == 'true' &&
+      needs.record-mention.outputs.is-pull-request != 'true' &&
+      needs.record-mention.outputs.active-run != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch hive fix workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/actions/workflows/implement-fix.lock.yml/dispatches" \
+            -X POST \
+            -f ref="$DEFAULT_BRANCH" \
+            -f inputs[issue_number]="$ISSUE_NUMBER"
