@@ -25,6 +25,9 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	api := routes.api
 	agentToken := s.config.AgentToken
 	api.Get("/agent/token", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
 		if agentToken == "" {
 			return c.JSON(fiber.Map{"token": ""})
 		}

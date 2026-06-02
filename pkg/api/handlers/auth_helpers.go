@@ -44,6 +44,13 @@ func shouldBootstrapAdmin(ctx context.Context, s store.Store) (bool, error) {
 	return admins == 0, nil
 }
 
+// RequireAdmin verifies the current request's user has the admin role. Exported
+// for route setup code that needs to enforce admin access before returning
+// sensitive data.
+func RequireAdmin(c *fiber.Ctx, s store.Store) error {
+	return requireAdmin(c, s)
+}
+
 // requireAdmin verifies the current request's user has the admin role. If the
 // console has no admins yet, the current user is promoted so fresh self-hosted
 // installs are not locked out of admin-only settings flows (#13608).
