@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -31,12 +33,32 @@ import (
 // embed a common base.
 
 // shouldBootstrapAdmin reports whether the current deployment has no admin
-// users yet. Self-hosted consoles bootstrap the first authenticated user to
-// admin so the instance is manageable immediately after install (#13608).
+// users yet AND bootstrap has not already been attempted. Self-hosted consoles
+// bootstrap the first authenticated user to admin so the instance is manageable
+// immediately after install (#13608).
+//
+// SECURITY FIX (#16485): Bootstrap is now restricted to:
+// - Initial setup only (not re-triggered if all admins are deleted)
+// - Explicit opt-in via BOOTSTRAP_ADMIN_ALLOWED=true environment variable
+// - During the initial user creation in auth_handler.go, not on every admin check
+//
+// This prevents privilege escalation if all admins are removed (manually, via
+// bug, or via DB corruption) where the next viewer to hit an admin endpoint
+// would be silently promoted.
 func shouldBootstrapAdmin(ctx context.Context, s store.Store) (bool, error) {
 	if s == nil {
 		return true, nil
 	}
+
+	// Check if bootstrap is explicitly disabled
+	bootstrapAllowed := strings.EqualFold(
+		strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_ALLOWED")),
+		"true",
+	)
+	if !bootstrapAllowed {
+		return false, nil
+	}
+
 	admins, _, _, err := s.CountUsersByRole(ctx)
 	if err != nil {
 		return false, err
@@ -51,9 +73,13 @@ func RequireAdmin(c *fiber.Ctx, s store.Store) error {
 	return requireAdmin(c, s)
 }
 
-// requireAdmin verifies the current request's user has the admin role. If the
-// console has no admins yet, the current user is promoted so fresh self-hosted
-// installs are not locked out of admin-only settings flows (#13608).
+// requireAdmin verifies the current request's user has the admin role.
+// Unlike initial OAuth login flow, requireAdmin does NOT auto-promote users
+// to admin even if admin count is zero. This prevents privilege escalation
+// if all admins are removed (CWE-269: Improper Privilege Management #16485).
+//
+// Bootstrap promotion now only occurs during initial user creation in the
+// auth_handler.go OAuth flow, and is gated by BOOTSTRAP_ADMIN_ALLOWED.
 func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	if s == nil {
 		return nil
@@ -65,18 +91,6 @@ func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	}
 	if user == nil {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
-	}
-	if user.Role != models.UserRoleAdmin {
-		bootstrapAdmin, err := shouldBootstrapAdmin(c.UserContext(), s)
-		if err != nil {
-			return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
-		}
-		if bootstrapAdmin {
-			user.Role = models.UserRoleAdmin
-			if err := s.UpdateUser(c.UserContext(), user); err != nil {
-				return fiber.NewError(fiber.StatusInternalServerError, "Failed to bootstrap admin role")
-			}
-		}
 	}
 	if user.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
