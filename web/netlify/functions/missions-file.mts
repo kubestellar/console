@@ -60,11 +60,46 @@ interface CacheEntry {
 const fileRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
 function hasInvalidPathInput(value: string): boolean {
-  return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  // Iteratively decode to catch %2e%2e, %252e%252e, and other evasion
+  // variants (#16493, CWE-22). Reject if decoding fails (malformed encoding).
+  let decoded = value;
+  try {
+    let prev = "";
+    while (decoded !== prev) {
+      prev = decoded;
+      decoded = decodeURIComponent(decoded);
+    }
+  } catch {
+    return true;
+  }
+  // After full decoding, check for traversal and other dangerous patterns.
+  return (
+    decoded.includes("..") ||
+    decoded.startsWith("/") ||
+    decoded.includes("#") ||
+    decoded.includes("?") ||
+    decoded.includes("\\")
+  );
 }
 
 function hasInvalidRefInput(value: string): boolean {
-  return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  let decoded = value;
+  try {
+    let prev = "";
+    while (decoded !== prev) {
+      prev = decoded;
+      decoded = decodeURIComponent(decoded);
+    }
+  } catch {
+    return true;
+  }
+  return (
+    decoded.includes("..") ||
+    decoded.startsWith("/") ||
+    decoded.includes("#") ||
+    decoded.includes("?") ||
+    decoded.includes("\\")
+  );
 }
 
 export default async (request: Request): Promise<Response> => {
