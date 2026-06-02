@@ -35,11 +35,11 @@ type StellarMemoryStore interface {
 	CreateStellarMemoryEntry(ctx context.Context, entry *StellarMemoryEntry) error
 	DeleteStellarMemoryEntry(ctx context.Context, userID, entryID string) error
 	ListStellarMemoryEntries(ctx context.Context, userID string, limit int) ([]StellarMemoryEntry, error)
-	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, since time.Time, limit int) ([]StellarMemoryEntry, error)
+	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]StellarMemoryEntry, error)
 	SearchStellarMemoryEntries(ctx context.Context, userID, query string, limit int) ([]StellarMemoryEntry, error)
 	SetMemoryDedupeKey(ctx context.Context, userID, category, key string) error
 	GetMemoryDedupeKey(ctx context.Context, userID, category, key string) (bool, error)
-	PruneExpiredMemory(ctx context.Context, now time.Time) (int64, error)
+	PruneExpiredMemory(ctx context.Context) (int64, error)
 }
 
 // StellarActionStore manages queued and scheduled actions.
@@ -55,10 +55,10 @@ type StellarActionStore interface {
 	GetDueApprovedStellarActions(ctx context.Context, now time.Time, limit int) ([]StellarAction, error)
 	CompleteDueStellarActions(ctx context.Context, now time.Time) ([]StellarAction, error)
 	IncrementRetry(ctx context.Context, id string) error
-	SupersedeAction(ctx context.Context, id string) error
-	BumpActionPriority(ctx context.Context, idempotencyKey string) error
+	SupersedeAction(ctx context.Context, actionID, reason string) error
+	BumpActionPriority(ctx context.Context, actionID string) error
 	ActionCompletedByIdempotencyKey(ctx context.Context, idempotencyKey string) bool
-	GetPendingApprovalActionsOlderThan(ctx context.Context, age time.Duration) ([]StellarAction, error)
+	GetPendingApprovalActionsOlderThan(ctx context.Context, olderThan time.Time, limit int) ([]StellarAction, error)
 }
 
 // StellarNotificationStore manages the persistent Stellar notification feed.
@@ -76,7 +76,7 @@ type StellarNotificationStore interface {
 	UnreadCount(ctx context.Context) (int, error)
 	UpdateNotificationBody(ctx context.Context, dedupeKey, newBody string) error
 	GetLatestEventBatchTimestamp(ctx context.Context) (*time.Time, error)
-	PruneOldNotifications(ctx context.Context, before time.Time) (int64, error)
+	PruneOldNotifications(ctx context.Context, retentionDays int) (int64, error)
 }
 
 // StellarTaskStore manages durable Stellar tasks.
@@ -106,7 +106,7 @@ type StellarWatchStore interface {
 type StellarObservationStore interface {
 	CreateObservation(ctx context.Context, obs *StellarObservation) (string, error)
 	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]StellarObservation, error)
-	GetUnshownObservations(ctx context.Context, cluster string) ([]StellarObservation, error)
+	GetUnshownObservations(ctx context.Context) ([]StellarObservation, error)
 	MarkObservationShown(ctx context.Context, id string) error
 }
 
@@ -115,19 +115,19 @@ type StellarSolveStore interface {
 	CreateSolve(ctx context.Context, solve *StellarSolve) error
 	GetSolveByID(ctx context.Context, id string) (*StellarSolve, error)
 	GetActiveSolveForEvent(ctx context.Context, eventID string) (*StellarSolve, error)
-	GetRecentSolveForWorkload(ctx context.Context, userID, cluster, namespace, workload string, since time.Duration) (*StellarSolve, error)
-	UpdateSolveStatus(ctx context.Context, id, status string) error
-	UpdateSolveStatusWithRecheck(ctx context.Context, id, status string, recheckAt *time.Time) error
+	GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*StellarSolve, error)
+	UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error
+	UpdateSolveStatusWithRecheck(ctx context.Context, solveID, status, summary string, nextRecheckAt time.Time) error
 	IncrementSolveActions(ctx context.Context, id string) error
 	GetSolvesForUser(ctx context.Context, userID string, limit int) ([]StellarSolve, error)
-	GetSolvesSince(ctx context.Context, since time.Time, limit int) ([]StellarSolve, error)
+	GetSolvesSince(ctx context.Context, userID string, since time.Time) ([]StellarSolve, error)
 	CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error)
 }
 
 // StellarActivityStore manages Stellar activity log entries.
 type StellarActivityStore interface {
 	LogActivity(ctx context.Context, activity *StellarActivity) error
-	ListActivity(ctx context.Context, userID string, limit int) ([]StellarActivity, error)
+	ListActivity(ctx context.Context, limit int) ([]StellarActivity, error)
 }
 
 // StellarProviderConfigStore manages per-user provider settings.
