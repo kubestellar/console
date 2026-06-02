@@ -101,9 +101,9 @@ export function GettingStartedBanner({
     <div className="mb-4 rounded-xl border border-purple-500/20 bg-linear-to-br from-purple-500/5 via-blue-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h2 className="text-sm font-semibold text-foreground">
             Welcome to KubeStellar Console
-          </h3>
+          </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             Get started with these quick actions
           </p>

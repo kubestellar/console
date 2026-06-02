@@ -153,31 +153,31 @@ export const SortableCard = memo(function SortableCard({ card, index, isDragging
       className="relative group/card h-full"
       role="row"
     >
-      {handleInsertAfter && (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleInsertAfter(index) }}
-          // #8383: Anchor to the right edge centered vertically so the "+"
-          // sits between this card and the next column, not on top of the
-          // card header action row where the kebab / maximize / report
-          // buttons live. `top-2 right-2` from the original #8337 fix put
-          // this button in the same coordinate space as the kebab menu
-          // (which sits at roughly right:16px inside the header) causing
-          // a direct overlap at rest and on hover.
-          className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
-          aria-label="Add card"
-          title="Add card here"
-        >
-          +
-        </button>
-      )}
       <div
         ref={(element) => registerCardRef?.(card.id, element)}
-        className="h-full outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
+        className="relative h-full outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-xl"
         tabIndex={0}
         role="gridcell"
         aria-label={formatCardTitle(card.card_type)}
         onKeyDown={handleGridKeyDown}
       >
+        {handleInsertAfter && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleInsertAfter(index) }}
+            // #8383: Anchor to the right edge centered vertically so the "+"
+            // sits between this card and the next column, not on top of the
+            // card header action row where the kebab / maximize / report
+            // buttons live. `top-2 right-2` from the original #8337 fix put
+            // this button in the same coordinate space as the kebab menu
+            // (which sits at roughly right:16px inside the header) causing
+            // a direct overlap at rest and on hover.
+            className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+            aria-label="Add card"
+            title="Add card here"
+          >
+            +
+          </button>
+        )}
         <CardWrapper
           cardId={card.id}
           cardType={card.card_type}

@@ -94,7 +94,10 @@ interface UseTabKeyboardNavOptions<T extends string> {
 }
 
 export function useTabKeyboardNav<T extends string>({ tabs, activeTab, onChange }: UseTabKeyboardNavOptions<T>) {
-  const baseId = useId()
+  const baseId = `tabnav-${useId()
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')}`
 
   const handleTabKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {
     const pressedKey = event.key
@@ -132,7 +135,6 @@ export function useTabKeyboardNav<T extends string>({ tabs, activeTab, onChange 
     tabIndex: activeTab === tab ? 0 : -1,
     'data-tab-id': tab,
     'aria-selected': activeTab === tab,
-    'aria-controls': `${baseId}-panel-${tab}`,
     onClick: () => onChange(tab),
   }), [activeTab, baseId, onChange])
 

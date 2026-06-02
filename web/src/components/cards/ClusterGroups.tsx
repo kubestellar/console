@@ -257,8 +257,12 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
           type="button"
           onClick={onToggle}
           className="text-muted-foreground hover:text-foreground transition-colors"
-          title={`${isExpanded ? t('common:common.collapse', 'Collapse') : t('common:common.expand', 'Expand')} ${group.name}`}
-          aria-label={`${isExpanded ? t('common:common.collapse', 'Collapse') : t('common:common.expand', 'Expand')} ${group.name}`}
+          aria-label={isExpanded
+            ? t('cards:clusterGroups.collapseGroup', { defaultValue: 'Collapse group {{name}}', name: group.name })
+            : t('cards:clusterGroups.expandGroup', { defaultValue: 'Expand group {{name}}', name: group.name })}
+          title={isExpanded
+            ? t('cards:clusterGroups.collapseGroup', { defaultValue: 'Collapse group {{name}}', name: group.name })
+            : t('cards:clusterGroups.expandGroup', { defaultValue: 'Expand group {{name}}', name: group.name })}
         >
           {isExpanded
             ? <ChevronDown className="w-3.5 h-3.5" />
