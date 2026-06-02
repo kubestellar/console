@@ -62,13 +62,27 @@ if (!defineCorrupted) pass('No Vite define corruption in JS bundles')
 // ── Check 2: Critical chunks exist and are non-empty ─────────────────────
 // Code splitting must produce these chunks. If any are missing or empty,
 // the app will fail to load with a blank page or chunk load error.
+//
+// REQUIRED: hard-fail if absent or too small.
+// OPTIONAL: warn-only if absent — these may not exist when vite.config.ts
+//   uses fine-grained manual chunking (e.g., React spread across multiple
+//   vendor chunks rather than collected into a single react-vendor-* file).
+//
+// Per-prefix minimum sizes (bytes). index-* can be intentionally tiny after
+// bundle splitting (entry point delegates to lazy-loaded sub-chunks); use a
+// very low floor to catch truly empty outputs only.
 
-const CRITICAL_PREFIXES = ['index-', 'vendor-', 'react-vendor-']
-/** Minimum size in bytes — anything below this is likely an empty/broken chunk */
-const MIN_CHUNK_SIZE_BYTES = 1_000
+const REQUIRED_PREFIXES = ['index-', 'vendor-']
+const OPTIONAL_PREFIXES = ['react-vendor-']
+
+const MIN_CHUNK_SIZES = {
+  'index-':  200,    // entry point may be minimal after bundle splitting
+  'vendor-': 1_000,  // catch-all vendor must have meaningful content
+}
+const DEFAULT_MIN_SIZE = 1_000
 
 let check2Failed = false
-for (const prefix of CRITICAL_PREFIXES) {
+for (const prefix of REQUIRED_PREFIXES) {
   const chunk = allFiles.find(
     (name) => name.startsWith(prefix) && name.endsWith('.js'),
   )
@@ -77,12 +91,26 @@ for (const prefix of CRITICAL_PREFIXES) {
     check2Failed = true
     continue
   }
+  const minSize = MIN_CHUNK_SIZES[prefix] ?? DEFAULT_MIN_SIZE
   const size = statSync(join(ASSETS_DIR, chunk)).size
-  if (size < MIN_CHUNK_SIZE_BYTES) {
+  if (size < minSize) {
     fail(`${chunk} is suspiciously small (${size} bytes) — likely broken`)
     check2Failed = true
   }
 }
+
+// Warn (not fail) on absent optional chunks so restructuring is visible.
+for (const prefix of OPTIONAL_PREFIXES) {
+  const chunk = allFiles.find(
+    (name) => name.startsWith(prefix) && name.endsWith('.js'),
+  )
+  if (!chunk) {
+    console.warn(
+      `\x1b[33m⚠ ${prefix}*.js not found — React may be spread across other vendor chunks\x1b[0m`,
+    )
+  }
+}
+
 if (!check2Failed) pass('Critical chunks present and non-empty')
 
 // ── Check 3: MSW not leaked into non-demo builds ────────────────────────
@@ -115,12 +143,13 @@ if (indexChunk) {
 // Catches accidental dependency inlining (e.g., Three.js, Chart.js, or
 // the entire node_modules ending up in one chunk). Thresholds are generous
 // — they should only trip on catastrophic regressions, not normal growth.
+// react-vendor-* is intentionally absent: that chunk may not exist when
+// fine-grained manual chunking is used; skipping it here avoids false failures.
 
 /** Size limits in bytes — ~2x current sizes to catch catastrophic inlining */
 const SIZE_LIMITS = {
-  'index-':        1_500_000,  // ~430KB currently → fail at 1.5MB
-  'vendor-':       3_000_000,  // ~1.2MB currently → fail at 3MB
-  'react-vendor-':   500_000,  // ~135KB currently → fail at 500KB
+  'index-':  1_500_000,  // ~430KB currently → fail at 1.5MB
+  'vendor-': 3_000_000,  // ~1.2MB currently → fail at 3MB
 }
 
 let sizeOk = true
