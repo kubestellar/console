@@ -80,6 +80,25 @@ func TestKagentProxyHandler_ListAgents(t *testing.T) {
 	assert.Len(t, agents, 1)
 }
 
+func TestKagentProxyHandler_ListAgentsDoesNotRequireEditorOrAdmin(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		io.WriteString(w, `[{"name":"agent1","namespace":"ns1"}]`)
+	}))
+	defer server.Close()
+
+	client := kagent.NewKagentClient(server.URL)
+	h := NewKagentProxyHandler(client, new(test.MockStore))
+	app := fiber.New()
+	app.Get("/agents", h.ListAgents)
+
+	req := httptest.NewRequest(http.MethodGet, "/agents", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
 func TestKagentProxyHandler_RequiresEditorOrAdmin(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -89,20 +108,6 @@ func TestKagentProxyHandler_RequiresEditorOrAdmin(t *testing.T) {
 		body       []byte
 		wantStatus int
 	}{
-		{
-			name:       "viewer forbidden to list agents",
-			role:       models.UserRoleViewer,
-			path:       "/agents",
-			method:     http.MethodGet,
-			wantStatus: http.StatusForbidden,
-		},
-		{
-			name:       "editor can list agents",
-			role:       models.UserRoleEditor,
-			path:       "/agents",
-			method:     http.MethodGet,
-			wantStatus: http.StatusOK,
-		},
 		{
 			name:       "viewer forbidden to chat",
 			role:       models.UserRoleViewer,
