@@ -41,6 +41,14 @@ curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | 
 
 Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`). See [docs/deploy.md](docs/deploy.md) for the full flag, environment-variable, exit-code, and example reference. For Helm chart installs that should talk to an in-cluster Kagenti backend, see [Connecting Kagenti](deploy/helm/kubestellar-console/README.md#connecting-kagenti) and the [Kagenti deployment guide](docs/kagenti-deployment-guide.md) for controller/agent topology, setup steps, and troubleshooting.
 
+## Development
+
+If you want to work on the repo itself, start with these entry points:
+
+- [CLAUDE.md](CLAUDE.md) — canonical developer guide for repo structure, testing expectations, and agent rules
+- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution workflow, issue/PR conventions, and inventory notes
+- [docs/README.md](docs/README.md) — index of the documentation tree, grouped by audience
+
 ## kc-agent (bridge self-hosted console to your clusters)
 
 `kc-agent` is a small local HTTP/WS daemon that the **self-hosted** console talks to (default `http://127.0.0.1:8585`). It forwards requests from the browser to your kubeconfig contexts and to AI providers. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) cannot reach it (#6195) — kc-agent is only useful when you self-host.

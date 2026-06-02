@@ -1,3 +1,12 @@
+<!--
+INVENTORY.md is manually maintained; there is currently no single regeneration command.
+Update this file in the same PR whenever inventory-covered dashboards, routes, card types,
+modals, or drill-down views change.
+
+CI validation: .github/workflows/auto-qa.yml cross-checks INVENTORY.md entries against the
+source tree for referenced component files, routes, card types, modals, and drill-down views.
+-->
+
 # KubeStellar Console — Component Inventory
 
 This document lists the dashboard card components and their source file locations.
