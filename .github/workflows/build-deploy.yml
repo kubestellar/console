@@ -378,10 +378,33 @@ jobs:
         run: |
           RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
           STUCK_PV_AGE_THRESHOLD_SECONDS=86400
+          ORPHANED_PVCS_FOUND=0
           
           echo "Cleaning up PVs stuck in deletion for more than 24 hours..."
           PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
           
+          # First pass: detect orphaned PVCs (those referencing missing PVs)
+          while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+            
+            if ! kubectl get pv "$volume_name" &>/dev/null; then
+              echo "::warning::Found orphaned PVC '$pvc_name' referencing missing PV '$volume_name'"
+              ORPHANED_PVCS_FOUND=1
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.status.phase // "Unknown"), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+          
+          # If orphaned PVCs were found, delete deployment and cronjob first to release them
+          if [ "$ORPHANED_PVCS_FOUND" -eq 1 ]; then
+            echo "::warning::Orphaned PVCs detected. Deleting deployment and cronjob to release them..."
+            kubectl delete deployment -n kubestellar-console -l "$RELEASE_SELECTOR" --wait=false 2>/dev/null || true
+            kubectl delete cronjob -n kubestellar-console -l "$RELEASE_SELECTOR" --wait=false 2>/dev/null || true
+            echo "Waiting for pods to terminate..."
+            kubectl wait --for=delete pod -n kubestellar-console -l "$RELEASE_SELECTOR" --timeout=60s 2>/dev/null || true
+          fi
+          
+          # Second pass: delete orphaned PVCs
           while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
             if [ -z "$volume_name" ]; then
               continue
@@ -392,7 +415,7 @@ jobs:
               echo "::warning::PVC '$pvc_name' references missing PV '$volume_name' (phase=$pvc_phase). Deleting orphaned PVC..."
               kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
               kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
-              kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null || true
+              kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=60s 2>/dev/null || true
               continue
             fi
 
