@@ -52,6 +52,17 @@ var nameRe = regexp.MustCompile(`(?i)^.*name:\s*([\w][\w.-]*).*$`)
 
 var tagRe = regexp.MustCompile(`(?i)^.*tag:\s*([\w][\w.+-]*).*$`)
 
+var prototypePollutionImageKeys = map[string]struct{}{
+	"__proto__":   {},
+	"constructor": {},
+	"prototype":   {},
+}
+
+func isSafeImageKey(key string) bool {
+	_, blocked := prototypePollutionImageKeys[key]
+	return !blocked
+}
+
 // NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
 // It pre-warms the cache in the background so the first request returns instantly.
 // prewarmTimeout is the maximum time allowed for the background cache prewarm.
@@ -532,7 +543,11 @@ func parseImagesFromYAML(content string) map[string]string {
 		if strings.HasPrefix(strings.TrimSpace(line), "#") {
 			continue
 		}
-		images[match[1]] = match[2]
+		key := match[1]
+		if !isSafeImageKey(key) {
+			continue
+		}
+		images[key] = match[2]
 	}
 
 	// Pattern 2: hub/name/tag (EPP images)
@@ -566,7 +581,7 @@ func parseImagesFromYAML(content string) map[string]string {
 				tag = m[1]
 			}
 		}
-		if name != "" && tag != "" {
+		if name != "" && tag != "" && isSafeImageKey(name) {
 			images[name] = tag
 		}
 	}
