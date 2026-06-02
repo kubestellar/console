@@ -397,13 +397,22 @@ async function setupMockRoutes(page: Page, state: MockState) {
     '**/api/persistence/**', '**/api/dashboards**', '**/api/notifications/**',
     '**/api/user/preferences*', '**/api/active-users*', '**/api/feedback/**',
     '**/api/rewards/**', '**/api/gpu/**', '**/api/self-upgrade/**',
-    '**/api/admin/**', '**/api/acmm/**', '**/auth/**',
+    '**/api/admin/**', '**/api/acmm/**', '**/api/kagenti-provider/**',
+    '**/api/token-usage/**', '**/api/onboarding/**', '**/api/settings**',
+    '**/api/events**', '**/auth/**',
   ]
   for (const pattern of utilityEndpoints) {
     await page.route(pattern, (route) => {
       route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     })
   }
+
+  // Catch-all for any /api/* requests not explicitly mocked above — prevents
+  // networkidle from stalling on new endpoints that features add over time.
+  await page.route('**/api/**', (route) => {
+    state.logCall(route, 'api-catch-all')
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -425,7 +434,9 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
 }) {
   // Navigate to a same-origin page first to unlock localStorage
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('networkidle').catch(() => {
+    // Non-fatal: page content renders before all background fetches complete
+  })
 
   // Set auth state
   await page.evaluate(() => {
@@ -470,7 +481,9 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
 
   // Navigate to the target route
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('networkidle').catch(() => {
+    // Non-fatal: page content renders before all background fetches complete
+  })
 }
 
 // ---------------------------------------------------------------------------
