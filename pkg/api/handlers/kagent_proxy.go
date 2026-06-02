@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/kagent"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // maxAgentResponseBytes caps the size of a single agent response we will
@@ -23,11 +24,12 @@ const maxAgentResponseBytes = 10 * 1024 * 1024 // 10 MiB
 // KagentProxyHandler proxies requests to the kagent A2A endpoint.
 type KagentProxyHandler struct {
 	client *kagent.KagentClient // can be nil if kagent not detected
+	store  store.Store           // for RBAC checks
 }
 
 // NewKagentProxyHandler creates a new KagentProxyHandler.
-func NewKagentProxyHandler(client *kagent.KagentClient) *KagentProxyHandler {
-	return &KagentProxyHandler{client: client}
+func NewKagentProxyHandler(client *kagent.KagentClient, s store.Store) *KagentProxyHandler {
+	return &KagentProxyHandler{client: client, store: s}
 }
 
 // GetStatus returns the kagent controller availability status.
@@ -45,6 +47,11 @@ func (h *KagentProxyHandler) GetStatus(c *fiber.Ctx) error {
 
 // ListAgents returns known kagent agents.
 func (h *KagentProxyHandler) ListAgents(c *fiber.Ctx) error {
+	// Restrict agent listing to editor/admin roles for security
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.client == nil {
 		return c.JSON(fiber.Map{"agents": []interface{}{}})
 	}
@@ -66,6 +73,11 @@ type chatRequest struct {
 
 // Chat streams a kagent agent conversation via SSE.
 func (h *KagentProxyHandler) Chat(c *fiber.Ctx) error {
+	// Restrict agent chat to editor/admin roles for security
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.client == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagent not configured"})
 	}
@@ -127,6 +139,11 @@ type callToolRequest struct {
 
 // CallTool invokes a tool through a kagent agent via A2A.
 func (h *KagentProxyHandler) CallTool(c *fiber.Ctx) error {
+	// Restrict tool invocation to editor/admin roles for security (CWE-862)
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.client == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagent not configured"})
 	}

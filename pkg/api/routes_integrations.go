@@ -69,7 +69,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Post("/gadget/trace", gadgetHandler.RunTrace)
 
 	kagentClient := kagent.NewKagentClientFromEnv()
-	kagentHandler := handlers.NewKagentProxyHandler(kagentClient)
+	kagentHandler := handlers.NewKagentProxyHandler(kagentClient, s.store)
 	api.Get("/kagent/status", kagentHandler.GetStatus)
 	api.Get("/kagent/agents", kagentHandler.ListAgents)
 	api.Post("/kagent/chat", kagentHandler.Chat)
