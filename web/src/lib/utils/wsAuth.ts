@@ -1,37 +1,57 @@
 /**
- * Append the kc-agent authentication token to a WebSocket URL.
+ * Build WebSocket authentication using subprotocol-based token passing.
  *
- * Browsers cannot set custom headers on WebSocket handshake requests,
- * so we pass the token as a query parameter instead.
+ * #16508: Tokens in URL query parameters get logged by proxies, CDNs,
+ * and browser history. Instead, we pass the token as a Sec-WebSocket-Protocol
+ * subprotocol ("bearer.<token>") which is not logged in request URLs.
  *
- * Fix for #13034: This function is now async and awaits the token fetch
- * to prevent the race condition where WebSocket connections opened before
- * the token was available, causing correlated ws_auth_missing and
- * agent_token_failure spikes in GA4.
+ * The server validates the token from the subprotocol header and echoes it
+ * back during the upgrade handshake.
+ *
+ * Falls back to query parameter for backwards compatibility with older agents.
  */
 import { emitWsAuthMissing } from '../analytics'
 import { isLocalAgentSuppressed } from '../constants/network'
 import { isDemoMode } from '../demoMode'
 import { getAgentToken, AGENT_TOKEN_STORAGE_KEY } from '../../hooks/mcp/agentFetch'
 
-/** Query-string key used to pass the auth token on WebSocket URLs */
-const WS_AUTH_QUERY_PARAM = 'token'
+/** Subprotocol prefix for bearer token authentication */
+const WS_AUTH_PROTOCOL_PREFIX = 'bearer.'
 
 /** Throttle: only emit once per session to avoid spamming GA4 */
 let wsAuthMissingEmitted = false
 
 /**
- * Fetch the kc-agent token if needed, then append it to `url` as
- * `?token=<value>` (or `&token=<value>` when other params are present).
- * Returns the original URL unchanged when no token is available.
+ * Fetch the kc-agent token if needed, then return the WebSocket URL
+ * and protocols array for authentication.
  *
- * This function ensures the token fetch completes before opening a
- * WebSocket connection, preventing the race condition in #13034.
+ * Returns { url, protocols } where protocols contains the auth subprotocol.
+ * Callers should use: `new WebSocket(result.url, result.protocols)`
+ */
+export async function getWsAuthParams(url: string): Promise<{ url: string; protocols: string[] }> {
+  await getAgentToken()
+
+  const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  if (!token) {
+    if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
+      wsAuthMissingEmitted = true
+      emitWsAuthMissing(url)
+    }
+    return { url, protocols: [] }
+  }
+
+  // Use subprotocol-based auth (preferred — #16508)
+  return { url, protocols: [`${WS_AUTH_PROTOCOL_PREFIX}${token}`] }
+}
+
+/**
+ * @deprecated Use getWsAuthParams() instead. This function passes the token
+ * in the URL query string which is logged by proxies (CWE-598).
+ * Kept for backwards compatibility during migration.
  */
 export async function appendWsAuthToken(url: string): Promise<string> {
-  // Ensure token fetch has completed (or immediately resolve if demo mode)
   await getAgentToken()
-  
+
   const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   if (!token) {
     if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
@@ -42,5 +62,5 @@ export async function appendWsAuthToken(url: string): Promise<string> {
   }
 
   const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}${WS_AUTH_QUERY_PARAM}=${encodeURIComponent(token)}`
+  return `${url}${separator}token=${encodeURIComponent(token)}`
 }

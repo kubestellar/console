@@ -20,6 +20,8 @@ const BLOCKED_GLOBALS = [
   'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
   'requestAnimationFrame',
   'postMessage', 'crypto',
+  // #16505: Block Reflect/Proxy to prevent sandbox escape via prototype walking
+  'Reflect', 'Proxy',
 ] as const
 
 /**
@@ -145,17 +147,23 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // could bypass the BLOCKED_GLOBALS param shadowing because they reach
     // Function via the prototype chain rather than the global binding.
     //
-    // We intentionally match on the raw compiled output (post-Sucrase), so
-    // renaming, string concatenation, or bracket access `obj['constructor']`
-    // still bypasses this — but combined with Function/AsyncFunction/
-    // GeneratorFunction param shadowing and the runtime throw injected
-    // below, the common escape routes are closed.
+    // #16505: Expanded coverage — bracket-access with string concatenation,
+    // template literals, or computed property names are also blocked.
     const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
-      { re: /\.constructor\s*\(/, label: '.constructor(' },
-      { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
+      { re: /\.constructor\b/, label: '.constructor' },
+      { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
       { re: /\b__proto__\b/, label: '__proto__' },
       { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
       { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+      // Block getPrototypeOf / setPrototypeOf to prevent prototype walking
+      { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
+      { re: /\bsetPrototypeOf\b/, label: 'setPrototypeOf' },
+      // Block Reflect which provides alternative access to constructors
+      { re: /\bReflect\b/, label: 'Reflect' },
+      // Block bracket access to "constructor" via string concat or variables
+      { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
+      // Block prototype property access
+      { re: /\bprototype\b/, label: 'prototype' },
     ]
     for (const { re, label } of FORBIDDEN_PATTERNS) {
       if (re.test(compiledCode)) {

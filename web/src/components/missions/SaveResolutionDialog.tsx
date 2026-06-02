@@ -25,7 +25,7 @@ import { useResolutions, detectIssueSignature, type IssueSignature, type Resolut
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { getWsAuthParams } from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 
@@ -211,9 +211,9 @@ function extractLastJsonObject(content: string): string | null {
  * Request AI to generate a resolution summary from the mission conversation
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
-  const wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+  const { url: wsUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(wsUrl)
+    const ws = new WebSocket(wsUrl, protocols)
 
     let responseContent = ''
     // #9162 — Track whether the connection ever opened. If the agent closes
