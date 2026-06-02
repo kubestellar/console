@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/test"
@@ -108,11 +109,7 @@ func TestManifestSetup_ManifestContainsExpectedFields(t *testing.T) {
 	manifest := decodeManifestFromResponse(t, resp.Body)
 	assert.Contains(t, manifest["name"].(string), "KubeStellar Console")
 	assert.Equal(t, "http://localhost:8080", manifest["url"])
-
-	redirectURL, err := url.Parse(manifest["redirect_url"].(string))
-	require.NoError(t, err)
-	assert.Equal(t, "http://localhost:8080/auth/manifest/callback", redirectURL.Scheme+"://"+redirectURL.Host+redirectURL.Path)
-	assert.NotEmpty(t, redirectURL.Query().Get("state"))
+	assert.Contains(t, manifest["redirect_url"].(string), "http://localhost:8080/auth/manifest/callback?state=")
 
 	callbacks := manifest["callback_urls"].([]any)
 	assert.Len(t, callbacks, 1)
@@ -143,6 +140,8 @@ func TestManifestCallback_RedirectsWhenAlreadyConfigured(t *testing.T) {
 func TestManifestCallback_RedirectsWithoutState(t *testing.T) {
 	app := fiber.New()
 	h := newTestManifestHandler(false)
+	// Pre-load a valid state token for testing
+	h.pendingStates.Store("test-state", manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123", nil)
@@ -154,17 +153,9 @@ func TestManifestCallback_RedirectsWithoutState(t *testing.T) {
 
 func TestManifestCallback_RedirectsWithoutCode(t *testing.T) {
 	app := fiber.New()
-	mockStore := &test.MockStore{}
-	mockStore.On("ConsumeOAuthState", "test-state").Return(true, nil).Once()
-	h := &ManifestHandler{
-		store:             mockStore,
-		backendURL:        "http://localhost:8080",
-		frontendURL:       "http://localhost:8080",
-		githubURL:         "https://github.com",
-		onConfigured:      func(clientID, clientSecret string) {},
-		isOAuthConfigured: func() bool { return false },
-		httpClient:        http.DefaultClient,
-	}
+	h := newTestManifestHandler(false)
+	// Pre-load a valid state token for testing
+	h.pendingStates.Store("test-state", manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?state=test-state", nil)
@@ -172,7 +163,6 @@ func TestManifestCallback_RedirectsWithoutCode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
 	assert.Contains(t, resp.Header.Get("Location"), "manifest_missing_code")
-	mockStore.AssertExpectations(t)
 }
 
 func TestManifestCallback_RejectsInvalidState(t *testing.T) {
@@ -184,7 +174,6 @@ func TestManifestCallback_RejectsInvalidState(t *testing.T) {
 	defer githubAPI.Close()
 
 	mockStore := &test.MockStore{}
-	mockStore.On("ConsumeOAuthState", "bad-state").Return(false, nil).Once()
 	h := &ManifestHandler{
 		store:             mockStore,
 		backendURL:        "http://localhost:8080",
@@ -224,7 +213,6 @@ func TestManifestCallback_ExchangesCodeAndPersists(t *testing.T) {
 
 	var reloadedID, reloadedSecret string
 	mockStore := &test.MockStore{}
-	mockStore.On("ConsumeOAuthState", "test-state").Return(true, nil).Once()
 
 	h := &ManifestHandler{
 		store:       mockStore,
@@ -238,11 +226,13 @@ func TestManifestCallback_ExchangesCodeAndPersists(t *testing.T) {
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
 	}
+	// Pre-load a valid state token
+	h.pendingStates.Store("valid-state", manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
-	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test-code&state=test-state", nil)
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test-code&state=valid-state", nil)
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -270,11 +260,12 @@ func TestManifestCallback_HandlesGitHubError(t *testing.T) {
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
 	}
+	h.pendingStates.Store("valid-state", manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
-	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=bad-code&state=test-state", nil)
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=bad-code&state=valid-state", nil)
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -293,7 +284,6 @@ func TestManifestCallback_HandlesMissingCredentials(t *testing.T) {
 	defer githubAPI.Close()
 
 	mockStore := &test.MockStore{}
-	mockStore.On("ConsumeOAuthState", "test-state").Return(true, nil).Once()
 	h := &ManifestHandler{
 		store:             mockStore,
 		backendURL:        "http://localhost:8080",
@@ -303,11 +293,12 @@ func TestManifestCallback_HandlesMissingCredentials(t *testing.T) {
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
 	}
+	h.pendingStates.Store("valid-state", manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
-	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test&state=test-state", nil)
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test&state=valid-state", nil)
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -355,7 +346,6 @@ func TestManifestCallback_GHEAPIBase(t *testing.T) {
 	defer githubAPI.Close()
 
 	mockStore := &test.MockStore{}
-	mockStore.On("ConsumeOAuthState", "test-state").Return(true, nil).Once()
 	h := &ManifestHandler{
 		store:             mockStore,
 		backendURL:        "http://localhost:8080",
@@ -365,14 +355,53 @@ func TestManifestCallback_GHEAPIBase(t *testing.T) {
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
 	}
+	h.pendingStates.Store("ghe-state", manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
-	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=ghe-code&state=test-state", nil)
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=ghe-code&state=ghe-state", nil)
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
 	assert.Contains(t, receivedPath, "/api/v3/app-manifests/ghe-code/conversions")
 	mockStore.AssertExpectations(t)
+}
+
+func TestManifestCallback_RejectsWithoutState(t *testing.T) {
+	app := fiber.New()
+	h := newTestManifestHandler(false)
+	app.Get("/auth/manifest/callback", h.ManifestCallback)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Location"), "manifest_invalid_state")
+}
+
+func TestManifestCallback_RejectsUnknownState(t *testing.T) {
+	app := fiber.New()
+	h := newTestManifestHandler(false)
+	app.Get("/auth/manifest/callback", h.ManifestCallback)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123&state=unknown-token", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Location"), "manifest_invalid_state")
+}
+
+func TestManifestCallback_RejectsExpiredState(t *testing.T) {
+	app := fiber.New()
+	h := newTestManifestHandler(false)
+	// Store an already-expired state token
+	h.pendingStates.Store("expired-state", manifestStateEntry{expiresAt: time.Now().Add(-time.Minute)})
+	app.Get("/auth/manifest/callback", h.ManifestCallback)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123&state=expired-state", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Location"), "manifest_state_expired")
 }

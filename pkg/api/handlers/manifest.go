@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -28,6 +30,17 @@ const (
 	manifestOAuthStateBytes = 32
 )
 
+// manifestStateTTL is how long a manifest state token remains valid.
+const manifestStateTTL = 10 * time.Minute
+
+// manifestStateBytes is the number of random bytes in the state token.
+const manifestStateBytes = 16
+
+// manifestStateEntry stores a pending state token with its expiry time.
+type manifestStateEntry struct {
+	expiresAt time.Time
+}
+
 // ManifestHandler implements the GitHub App Manifest one-click OAuth flow.
 // When a user clicks "Set up GitHub Sign-In," the handler renders a page
 // that auto-submits a manifest to GitHub. GitHub creates the OAuth App and
@@ -40,6 +53,7 @@ type ManifestHandler struct {
 	onConfigured      func(clientID, clientSecret string)
 	isOAuthConfigured func() bool
 	httpClient        *http.Client
+	pendingStates     sync.Map // map[string]manifestStateEntry
 }
 
 // NewManifestHandler creates a ManifestHandler. onConfigured is called after
@@ -119,13 +133,21 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 	query.Set("state", state)
 	redirectURL.RawQuery = query.Encode()
 
+	// Generate a state token to bind this setup request to the callback (#16490)
+	stateToken, err := randomHex(manifestStateBytes)
+	if err != nil {
+		slog.Error("[Manifest] failed to generate state token", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
+	}
+	h.pendingStates.Store(stateToken, manifestStateEntry{expiresAt: time.Now().Add(manifestStateTTL)})
+
 	manifest := manifestPayload{
-		Name:               fmt.Sprintf("KubeStellar Console %s", suffix),
-		URL:                h.backendURL,
-		CallbackURLs:       []string{h.backendURL + "/auth/github/callback"},
-		RedirectURL:        redirectURL.String(),
-		HookAttributes:     map[string]any{"url": "https://example.com/events", "active": false},
-		Public:             false,
+		Name:           fmt.Sprintf("KubeStellar Console %s", suffix),
+		URL:            h.backendURL,
+		CallbackURLs:   []string{h.backendURL + "/auth/github/callback"},
+		RedirectURL:    h.backendURL + "/auth/manifest/callback?state=" + stateToken,
+		HookAttributes: map[string]any{"url": "https://example.com/events", "active": false},
+		Public:         false,
 		DefaultPermissions: map[string]string{},
 		RequestOAuth:       true,
 	}
@@ -170,15 +192,23 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.frontendURL + "/login?error=manifest_already_configured")
 	}
 
+	// Verify state token to prevent CSRF/credential injection (#16490)
 	state := c.Query("state")
 	if state == "" {
-		slog.Warn("[Manifest] callback called without state")
+		slog.Warn("[Manifest] callback called without state parameter")
 		return c.Redirect(h.frontendURL + "/login?error=manifest_invalid_state")
 	}
-	if !h.validateAndConsumeManifestState(c.UserContext(), state) {
-		slog.Warn("[Manifest] callback rejected — invalid state")
+	entry, loaded := h.pendingStates.LoadAndDelete(state)
+	if !loaded {
+		slog.Warn("[Manifest] callback called with unknown state token")
 		return c.Redirect(h.frontendURL + "/login?error=manifest_invalid_state")
 	}
+	stateEntry := entry.(manifestStateEntry)
+	if time.Now().After(stateEntry.expiresAt) {
+		slog.Warn("[Manifest] callback state token expired")
+		return c.Redirect(h.frontendURL + "/login?error=manifest_state_expired")
+	}
+
 
 	code := c.Query("code")
 	if code == "" {
