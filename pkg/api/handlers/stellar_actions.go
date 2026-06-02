@@ -271,6 +271,13 @@ func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	userStore, ok := h.store.(store.Store)
+	if !ok {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+	}
+	if err := requireAdmin(c, userStore); err != nil {
+		return err
+	}
 	var body executeActionRequest
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})

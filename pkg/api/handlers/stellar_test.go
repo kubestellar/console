@@ -21,7 +21,7 @@ import (
 
 const stellarTestFiberTimeoutMs = 5000
 
-func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
+func newStellarTestAppWithRole(t *testing.T, role models.UserRole) (*fiber.App, store.Store) {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "stellar-test.db")
 	sqlStore, err := store.NewSQLiteStore(dbPath)
@@ -31,7 +31,7 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{
 		ID:          testUserID,
 		GitHubLogin: "stellar-test-user",
-		Role:        models.UserRoleAdmin,
+		Role:        role,
 	}))
 	require.NoError(t, sqlStore.UpdateStellarPreferences(context.Background(), &store.StellarPreferences{
 		UserID:          testUserID.String(),
@@ -73,6 +73,7 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Delete("/api/stellar/missions/:id", h.DeleteMission)
 	app.Get("/api/stellar/actions", h.ListActions)
 	app.Post("/api/stellar/actions", h.CreateAction)
+	app.Post("/api/stellar/actions/execute", h.ExecuteAction)
 	app.Post("/api/stellar/actions/:id/approve", h.ApproveAction)
 	app.Get("/api/stellar/state", h.GetState)
 	app.Get("/api/stellar/digest", h.GetDigest)
@@ -87,6 +88,37 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Post("/api/stellar/watches/:id/resolve", h.ResolveWatch)
 
 	return app, sqlStore
+}
+
+func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
+	t.Helper()
+	return newStellarTestAppWithRole(t, models.UserRoleAdmin)
+}
+
+func TestStellarExecuteAction_RequiresAdmin(t *testing.T) {
+	app, _ := newStellarTestAppWithRole(t, models.UserRoleViewer)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/actions/execute", bytes.NewReader([]byte(`{"actionType":"DeletePod","cluster":"prod-a"}`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestStellarExecuteAction_AdminReachesRequestValidation(t *testing.T) {
+	app, _ := newStellarTestAppWithRole(t, models.UserRoleAdmin)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/actions/execute", bytes.NewReader([]byte(`{"actionType":`)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestStellarPreferencesRoundTrip(t *testing.T) {
