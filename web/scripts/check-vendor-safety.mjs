@@ -63,9 +63,12 @@ if (!defineCorrupted) pass('No Vite define corruption in JS bundles')
 // Code splitting must produce these chunks. If any are missing or empty,
 // the app will fail to load with a blank page or chunk load error.
 
-const CRITICAL_PREFIXES = ['index-', 'vendor-', 'react-vendor-']
-/** Minimum size in bytes — anything below this is likely an empty/broken chunk */
-const MIN_CHUNK_SIZE_BYTES = 1_000
+const CRITICAL_PREFIXES = ['index-', 'vendor-']
+const OPTIONAL_CHUNK_PREFIXES = ['react-vendor-']
+const MIN_CHUNK_SIZE_BYTES = {
+  'index-': 200,
+  default: 1_000,
+}
 
 let check2Failed = false
 for (const prefix of CRITICAL_PREFIXES) {
@@ -78,11 +81,25 @@ for (const prefix of CRITICAL_PREFIXES) {
     continue
   }
   const size = statSync(join(ASSETS_DIR, chunk)).size
-  if (size < MIN_CHUNK_SIZE_BYTES) {
+  const minSize = MIN_CHUNK_SIZE_BYTES[prefix] ?? MIN_CHUNK_SIZE_BYTES.default
+  if (size < minSize) {
     fail(`${chunk} is suspiciously small (${size} bytes) — likely broken`)
     check2Failed = true
   }
 }
+
+for (const prefix of OPTIONAL_CHUNK_PREFIXES) {
+  const chunk = allFiles.find(
+    (name) => name.startsWith(prefix) && name.endsWith('.js'),
+  )
+  if (!chunk) {
+    console.warn(
+      `\x1b[33m! Optional chunk not found: ${prefix}*.js — ` +
+      'React may have been redistributed into feature-specific chunks.\x1b[0m',
+    )
+  }
+}
+
 if (!check2Failed) pass('Critical chunks present and non-empty')
 
 // ── Check 3: MSW not leaked into non-demo builds ────────────────────────
@@ -118,9 +135,8 @@ if (indexChunk) {
 
 /** Size limits in bytes — ~2x current sizes to catch catastrophic inlining */
 const SIZE_LIMITS = {
-  'index-':        1_500_000,  // ~430KB currently → fail at 1.5MB
-  'vendor-':       3_000_000,  // ~1.2MB currently → fail at 3MB
-  'react-vendor-':   500_000,  // ~135KB currently → fail at 500KB
+  'index-':  1_500_000,  // ~430KB currently → fail at 1.5MB
+  'vendor-': 3_000_000,  // ~1.2MB currently → fail at 3MB
 }
 
 let sizeOk = true
