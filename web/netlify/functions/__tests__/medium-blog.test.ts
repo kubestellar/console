@@ -132,7 +132,7 @@ describe("medium-blog", () => {
       expect(res.headers.get("access-control-allow-methods")).toContain("OPTIONS");
     });
 
-    it("echoes allowed origin in CORS response", async () => {
+    it("echoes allowlisted origins in CORS response", async () => {
       mockFetch.mockResolvedValueOnce(
         new Response(SAMPLE_RSS_FEED, {
           status: 200,
@@ -142,11 +142,28 @@ describe("medium-blog", () => {
 
       const req = new Request("https://console.kubestellar.io/.netlify/functions/medium-blog", {
         method: "GET",
-        headers: { Origin: PROD_ORIGIN },
+        headers: { Origin: "https://docs.kubestellar.io" },
       });
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_OK);
-      expect(res.headers.get("access-control-allow-origin")).toBe(PROD_ORIGIN);
+      expect(res.headers.get("access-control-allow-origin")).toBe("https://docs.kubestellar.io");
+    });
+
+    it("preserves localhost origins for development", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(SAMPLE_RSS_FEED, {
+          status: 200,
+          headers: { "content-length": String(SAMPLE_RSS_FEED.length) },
+        })
+      );
+
+      const req = new Request("https://console.kubestellar.io/.netlify/functions/medium-blog", {
+        method: "GET",
+        headers: { Origin: "http://localhost:5174" },
+      });
+      const res = await handler(req);
+      expect(res.status).toBe(HTTP_STATUS_OK);
+      expect(res.headers.get("access-control-allow-origin")).toBe("http://localhost:5174");
     });
 
     it("falls back to default origin for disallowed origin", async () => {
@@ -159,7 +176,7 @@ describe("medium-blog", () => {
 
       const req = new Request("https://console.kubestellar.io/.netlify/functions/medium-blog", {
         method: "GET",
-        headers: { Origin: "https://evil.example.com" },
+        headers: { Origin: "https://console-preview.kubestellar.io" },
       });
       const res = await handler(req);
       expect(res.status).toBe(HTTP_STATUS_OK);

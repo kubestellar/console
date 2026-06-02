@@ -4,6 +4,7 @@ import type { DetectionHint } from "../criteria";
 import {
   AI_LABEL,
   ALLOWED_ORIGINS,
+  DEFAULT_ALLOWED_ORIGIN,
   corsHeaders,
   corsOrigin,
   isAIContribution,
@@ -21,21 +22,22 @@ const EXPECTED_CORS_HEADER_KEYS = [
 ];
 
 describe("corsOrigin", () => {
-  it("returns allowed origins unchanged", () => {
-    expect(corsOrigin(ALLOWED_ORIGINS[0])).toBe(ALLOWED_ORIGINS[0]);
-    expect(corsOrigin(ALLOWED_ORIGINS[1])).toBe(ALLOWED_ORIGINS[1]);
+  it("returns allowlisted origins unchanged", () => {
+    expect(corsOrigin(DEFAULT_ALLOWED_ORIGIN)).toBe(DEFAULT_ALLOWED_ORIGIN);
+    expect(corsOrigin("https://docs.kubestellar.io")).toBe("https://docs.kubestellar.io");
+    expect(ALLOWED_ORIGINS.has("https://www.kubestellar.io")).toBe(true);
   });
 
-  it("allows localhost and kubestellar domains", () => {
+  it("allows localhost but rejects unknown kubestellar subdomains", () => {
     expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
     expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(
-      "https://console-preview.kubestellar.io",
+      DEFAULT_ALLOWED_ORIGIN,
     );
   });
 
   it("falls back to the default origin for unknown or missing origins", () => {
-    expect(corsOrigin("https://example.com")).toBe(ALLOWED_ORIGINS[0]);
-    expect(corsOrigin(null)).toBe(ALLOWED_ORIGINS[0]);
+    expect(corsOrigin("https://example.com")).toBe(DEFAULT_ALLOWED_ORIGIN);
+    expect(corsOrigin(null)).toBe(DEFAULT_ALLOWED_ORIGIN);
   });
 });
 

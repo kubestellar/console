@@ -107,6 +107,32 @@ describe("github-pipelines", () => {
     expect(res.status).toBe(204);
   });
 
+  it("falls back to the default origin for unknown subdomains", async () => {
+    const res = await handler(new Request("https://console.kubestellar.io/api/github-pipelines?view=pulse", {
+      method: "GET",
+      headers: {
+        Origin: "https://console-preview.kubestellar.io",
+        "x-nf-client-connection-ip": "203.0.113.10",
+      },
+    }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://console.kubestellar.io");
+  });
+
+  it("preserves localhost origins for development", async () => {
+    const res = await handler(new Request("https://console.kubestellar.io/api/github-pipelines?view=pulse", {
+      method: "GET",
+      headers: {
+        Origin: "http://localhost:5174",
+        "x-nf-client-connection-ip": "203.0.113.10",
+      },
+    }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:5174");
+  });
+
   it("returns 500 when GITHUB_TOKEN is not configured", async () => {
     delete process.env.GITHUB_TOKEN;
     const res = await handler(makeRequest());

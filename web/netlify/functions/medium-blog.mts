@@ -26,13 +26,13 @@ const PREVIEW_MAX_LEN = 200;
 /** Maximum upstream response size (512 KB) — reject unexpectedly large feeds */
 export const MAX_RESPONSE_BYTES = 512 * 1024;
 
-const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://console-deploy-preview.kubestellar.io",
-];
-
-const ALLOWED_ORIGIN_SET = new Set(ALLOWED_ORIGINS);
-const ALLOWED_HOSTS = new Set(ALLOWED_ORIGINS.map((origin) => new URL(origin).hostname));
+const DEFAULT_ALLOWED_ORIGIN = "https://console.kubestellar.io";
+const ALLOWED_ORIGINS = new Set<string>([
+  DEFAULT_ALLOWED_ORIGIN,
+  "https://docs.kubestellar.io",
+  "https://kubestellar.io",
+  "https://www.kubestellar.io",
+]);
 
 function isAllowedOrigin(origin: string): boolean {
   let parsedOrigin: URL;
@@ -43,23 +43,19 @@ function isAllowedOrigin(origin: string): boolean {
     return false;
   }
 
-  if (parsedOrigin.protocol !== "https:") {
-    return false;
-  }
-
-  if (ALLOWED_ORIGIN_SET.has(parsedOrigin.origin) || ALLOWED_HOSTS.has(parsedOrigin.hostname)) {
+  if (parsedOrigin.hostname.toLowerCase() === "localhost") {
     return true;
   }
 
-  return parsedOrigin.hostname === "kubestellar.io" || parsedOrigin.hostname.endsWith(".kubestellar.io");
+  return ALLOWED_ORIGINS.has(parsedOrigin.origin);
 }
 
 function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
+  if (!origin) return DEFAULT_ALLOWED_ORIGIN;
   if (isAllowedOrigin(origin)) {
     return origin;
   }
-  return ALLOWED_ORIGINS[0];
+  return DEFAULT_ALLOWED_ORIGIN;
 }
 
 interface MediumPost {
