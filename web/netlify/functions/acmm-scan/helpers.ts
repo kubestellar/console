@@ -25,6 +25,15 @@ export const ALLOWED_ORIGINS = [
   "https://kubestellar.io",
   "https://www.kubestellar.io",
 ];
+/** Default repos for ACMM scan (same as GitHub Pipelines) */
+export const DEFAULT_ACMM_REPOS = [
+  "kubestellar/console",
+  "kubestellar/docs",
+  "kubestellar/console-kb",
+  "kubestellar/kubestellar-mcp",
+  "kubestellar/console-marketplace",
+  "kubestellar/homebrew-tap",
+];
 /** AI-generated label used to classify AI contributions */
 export const AI_LABEL = "ai-generated";
 /** Known AI authors (shared logins + bots) */
@@ -87,6 +96,30 @@ export function corsHeaders(origin: string | null): Record<string, string> {
     "Cache-Control": "public, max-age=900",
     Vary: "Origin",
   };
+}
+
+/**
+ * Get the list of allowed repositories for ACMM scanning.
+ * Reads from ACMM_REPOS env var (comma-separated owner/repo), falls back to DEFAULT_ACMM_REPOS.
+ * This prevents scanning arbitrary private repositories with the server token.
+ */
+export function allowedRepos(): string[] {
+  const env =
+    typeof Netlify !== "undefined"
+      ? Netlify.env.get("ACMM_REPOS")
+      : process.env.ACMM_REPOS;
+  if (!env) return DEFAULT_ACMM_REPOS;
+  return env
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Check if a repo is in the allowlist.
+ */
+export function isAllowedRepo(repo: string): boolean {
+  return allowedRepos().includes(repo);
 }
 
 export function isoWeek(date: Date): string {
