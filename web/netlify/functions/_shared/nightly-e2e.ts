@@ -146,11 +146,22 @@ const HUB_RE = /^.*hub:\s*ghcr\.io\/llm-d\b.*$/i;
 const NAME_RE = /^.*name:\s*([\w][\w.-]*).*$/i;
 const TAG_RE = /^.*tag:\s*([\w][\w.+-]*).*$/i;
 
+// Dangerous keys that can be used for prototype pollution (CWE-1321)
+const PROTOTYPE_POLLUTION_KEYS = ["__proto__", "constructor", "prototype"];
+
+function isSafeKey(key: string): boolean {
+  return !PROTOTYPE_POLLUTION_KEYS.includes(key);
+}
+
 function parseImagesFromYAML(content: string): Record<string, string> {
-  const images: Record<string, string> = {};
+  const images: Record<string, string> = Object.create(null);
 
   for (const match of content.matchAll(IMAGE_RE)) {
-    images[match[1]] = match[2];
+    const key = match[1];
+    // Filter out prototype-polluting keys
+    if (isSafeKey(key)) {
+      images[key] = match[2];
+    }
   }
 
   const lines = content.split("\n");
@@ -175,7 +186,7 @@ function parseImagesFromYAML(content: string): Record<string, string> {
       }
     }
 
-    if (name && tag) {
+    if (name && tag && isSafeKey(name)) {
       images[name] = tag;
     }
   }
@@ -270,18 +281,24 @@ async function fetchGuideImages(
 
   const guidePaths = [...new Set(NIGHTLY_WORKFLOWS.map((workflow) => workflow.guidePath).filter(Boolean) as string[])];
   const yamlFiles = await fetchGuideYAMLFiles(token);
-  const imagesByGuide: Record<string, Record<string, string>> = {};
+  const imagesByGuide: Record<string, Record<string, string>> = Object.create(null);
 
   await Promise.all(
     guidePaths.map(async (guidePath) => {
       const prefix = `guides/${guidePath}/`;
       const files = yamlFiles.filter((file) => file.path.startsWith(prefix));
-      const images: Record<string, string> = {};
+      const images: Record<string, string> = Object.create(null);
       const contents = await Promise.all(files.map(async (file) => fetchBlob(file.sha, token)));
 
       for (const content of contents) {
         if (!content) continue;
-        Object.assign(images, parseImagesFromYAML(content));
+        const parsed = parseImagesFromYAML(content);
+        // Safely merge without prototype pollution
+        for (const [key, value] of Object.entries(parsed)) {
+          if (isSafeKey(key)) {
+            images[key] = value;
+          }
+        }
       }
 
       if (Object.keys(images).length > 0) {
@@ -355,9 +372,30 @@ async function downloadArtifact(
 
     const text = new TextDecoder().decode(jsonFile);
     const metadata = JSON.parse(text) as Partial<RunImageMetadata>;
+    
+    // Filter out prototype-polluting keys from parsed data
+    const llmdImages = Object.create(null);
+    const otherImages = Object.create(null);
+    
+    if (metadata.llmdImages && typeof metadata.llmdImages === 'object') {
+      for (const [key, value] of Object.entries(metadata.llmdImages)) {
+        if (isSafeKey(key)) {
+          llmdImages[key] = value;
+        }
+      }
+    }
+    
+    if (metadata.otherImages && typeof metadata.otherImages === 'object') {
+      for (const [key, value] of Object.entries(metadata.otherImages)) {
+        if (isSafeKey(key)) {
+          otherImages[key] = value;
+        }
+      }
+    }
+    
     return {
-      llmdImages: metadata.llmdImages ?? {},
-      otherImages: metadata.otherImages ?? {},
+      llmdImages,
+      otherImages,
     };
   } catch {
     return null;
