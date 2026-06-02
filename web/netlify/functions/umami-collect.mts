@@ -49,8 +49,9 @@ function isRequestAllowed(req: Request): boolean {
     }
   }
 
-  // Allow if neither Origin nor Referer is present (rare, same-origin POST with strict Referrer-Policy).
-  return !req.headers.get("origin") && !referer
+  // #16513: Reject requests with no Origin AND no Referer — these are
+  // server-to-server requests that can trivially spoof analytics data.
+  return false
 }
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
