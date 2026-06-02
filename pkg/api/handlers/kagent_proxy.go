@@ -47,6 +47,10 @@ func (h *KagentProxyHandler) GetStatus(c *fiber.Ctx) error {
 
 // ListAgents returns known kagent agents.
 func (h *KagentProxyHandler) ListAgents(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.client == nil {
 		return c.JSON(fiber.Map{"agents": []interface{}{}})
 	}
