@@ -11,10 +11,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestServiceExportsHandlers_List(t *testing.T) {
 	env := setupTestEnv(t)
+	env.K8sClient.SetRawConfig(&api.Config{
+		Clusters:  map[string]*api.Cluster{},
+		Contexts:  map[string]*api.Context{},
+		AuthInfos: map[string]*api.AuthInfo{"test-user": {}},
+	})
 	h := NewServiceExportHandlers(env.K8sClient)
 	env.App.Get("/api/k8s/service-exports", h.ListServiceExports)
 
