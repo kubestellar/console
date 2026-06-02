@@ -63,6 +63,7 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 
 ## Mid-Term (Q3–Q4 2026)
 
+- **GitOps integration milestone** — First-class Flux + Argo CD support with observability parity, declarative Console configuration, and Mission Control deep links; see `docs/plans/GITOPS-INTEGRATION-RFC.md`
 - **Multi-tenant RBAC** — Role-based access control for teams sharing a Console instance, with namespace-scoped permissions
 - **Plugin architecture** — Extensible card and mission system allowing third-party developers to build custom dashboard components
 - **Helm operator** — Kubernetes operator for fleet-wide Console deployment and lifecycle management
@@ -75,7 +76,6 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 
 ## Long-Term (2027+)
 
-- **GitOps integration** — Native integration with Flux and Argo CD for declarative cluster management through the Console
 - **Policy engine** — Built-in policy authoring, testing, and enforcement with OPA/Gatekeeper integration
 - **AI-assisted operations** — Proactive anomaly detection, capacity planning, and automated incident response via MCP
 - **Federation** — Console-to-Console federation for organizations managing multiple Console instances across regions
