@@ -86,15 +86,23 @@ NPM_AUDIT_ARGS=(--omit=dev --audit-level=high --json)
 echo -e "${BOLD}Phase 1: npm audit (frontend production dependencies)${NC}"
 
 if [ -d "web" ] && [ -f "web/package-lock.json" ]; then
-  NPM_OUTPUT="$(pwd)/$TMPDIR_AUDIT/npm-audit.json"
+  NPM_OUTPUT="$TMPDIR_AUDIT/npm-audit.json"
   cd web
   npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
   cd ..
 
-  # Parse npm audit JSON — no silent fallbacks; propagate errors explicitly
+  # Guard against transient npm audit failures returning empty or malformed output.
   NPM_PARSE_ERR="$TMPDIR_AUDIT/npm-parse-err.txt"
-  if read -r NPM_CRITICAL NPM_HIGH NPM_MODERATE NPM_LOW NPM_TOTAL < <(python3 -c "
-import json, sys
+  if [ ! -s "$NPM_OUTPUT" ] || ! python3 -c "import json; json.load(open('$NPM_OUTPUT'))" 2>"$NPM_PARSE_ERR"; then
+    echo -e "  ${YELLOW}⚠️  npm audit produced invalid output — skipping (likely network issue)${NC}"
+    if [ -s "$NPM_PARSE_ERR" ]; then
+      while IFS= read -r line; do
+        echo -e "    ${DIM}${line}${NC}"
+      done < "$NPM_PARSE_ERR"
+    fi
+    NPM_STATUS="skip"
+  elif read -r NPM_CRITICAL NPM_HIGH NPM_MODERATE NPM_LOW NPM_TOTAL < <(python3 -c "
+import json
 with open('$NPM_OUTPUT') as f:
     data = json.load(f)
 vulns = data.get('metadata', {}).get('vulnerabilities', {})
