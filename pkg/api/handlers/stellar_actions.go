@@ -271,6 +271,11 @@ func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	if s, ok := h.store.(store.Store); ok {
+		if err := requireEditorOrAdmin(c, s); err != nil {
+			return err
+		}
+	}
 	var body executeActionRequest
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
