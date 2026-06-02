@@ -41,45 +41,33 @@ const (
 	envMaxBodyBytes = "MAX_BODY_BYTES"
 )
 
-// Config holds server configuration
-type Config struct {
-	Port                  int
-	DevMode               bool
-	SkipOnboarding        bool
-	DatabasePath          string
-	GitHubClientID        string
-	GitHubSecret          string
-	GitHubURL             string // GitHub base URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
-	JWTSecret             string
-	FrontendURL           string
-	ClaudeAPIKey          string
-	KubestellarOpsPath    string
-	KubestellarDeployPath string
-	Kubeconfig            string
-	// Dev mode user settings (used when GitHub OAuth not configured)
-	DevUserLogin  string
-	DevUserEmail  string
-	DevUserAvatar string
-	// GitHubToken is the consolidated GitHub PAT used for all GitHub operations:
-	// API proxy (activity card, CI), feedback/issue creation, missions, and rewards.
-	// Resolved from FEEDBACK_GITHUB_TOKEN env var, falling back to GITHUB_TOKEN.
-	GitHubToken string
-	// Feature request/feedback configuration (repo targeting, not token)
-	GitHubWebhookSecret string // Secret for validating GitHub webhooks
-	FeedbackRepoOwner   string // GitHub org/owner (e.g., "kubestellar")
-	FeedbackRepoName    string // GitHub repo name (e.g., "console")
-	// GitHub activity rewards
-	RewardsGitHubOrgs string // Org filter for GitHub search (e.g., "org:kubestellar org:llm-d")
-	// Benchmark data configuration (Google Drive)
-	BenchmarkGoogleDriveAPIKey string // API key for fetching benchmark data from Google Drive
-	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
-	// Sidebar configuration
+// ServerConfig holds infrastructure and runtime configuration
+type ServerConfig struct {
+	Port              int
+	BackendPort       int    // Watchdog support: when set, the backend listens on this port instead of Port
+	DatabasePath      string
+	Kubeconfig        string
+	DevMode           bool
+	SkipOnboarding    bool
 	EnabledDashboards string // Comma-separated list of dashboard IDs to show in sidebar (empty = all)
-	// White-label project context (e.g., "kubestellar", "crossplane", "istio")
-	// Controls which project-specific cards, dashboards, and routes are active.
-	// Default: "kubestellar"
-	ConsoleProject string
-	// White-label branding configuration
+	ConsoleProject    string // White-label project context (e.g., "kubestellar", "crossplane", "istio")
+	NoLocalAgent      bool   // Suppress local kc-agent connections in in-cluster deployments
+}
+
+// AuthConfig holds authentication and authorization configuration
+type AuthConfig struct {
+	GitHubClientID  string
+	GitHubSecret    string
+	GitHubURL       string // GitHub base URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
+	JWTSecret       string
+	AgentToken      string // Shared secret for authenticating with kc-agent
+	DevUserLogin    string // Dev mode user settings (used when GitHub OAuth not configured)
+	DevUserEmail    string
+	DevUserAvatar   string
+}
+
+// BrandConfig holds white-label branding configuration
+type BrandConfig struct {
 	BrandAppName      string // APP_NAME — display name (default: "KubeStellar Console")
 	BrandAppShortName string // APP_SHORT_NAME — compact name (default: "KubeStellar")
 	BrandTagline      string // APP_TAGLINE (default: "multi-cluster first, saving time and tokens")
@@ -92,27 +80,34 @@ type Config struct {
 	BrandIssuesURL    string // ISSUES_URL (default: "https://github.com/kubestellar/kubestellar/issues/new")
 	BrandRepoURL      string // REPO_URL (default: "https://github.com/kubestellar/console")
 	BrandHostedDomain string // HOSTED_DOMAIN — domain for demo mode (default: "console.kubestellar.io")
-	// AgentToken is the shared secret for authenticating with kc-agent.
-	// startup-oauth.sh generates this and passes it to both kc-agent and
-	// the Go backend via the KC_AGENT_TOKEN env var. The backend serves
-	// it via GET /api/agent/token so the frontend can call kc-agent
-	// endpoints that require Bearer auth.
-	AgentToken string
-	// Kubara platform catalog configuration
-	// KubaraCatalogRepo is the GitHub owner/name of the catalog repo
-	// (e.g. "my-org/my-catalog"). Defaults to "kubara-io/kubara".
-	KubaraCatalogRepo string
-	// KubaraCatalogPath is the directory path inside the repo containing
-	// Helm chart subdirectories. Defaults to the standard Kubara path.
-	KubaraCatalogPath string
-	// NoLocalAgent suppresses the frontend's local kc-agent connections
-	// (ws://127.0.0.1:8585). Set to true for in-cluster deployments
-	// (Helm/Kubernetes) where no local kc-agent exists on the user's machine.
-	// Exposed via /health as "no_local_agent" so the pre-built frontend image
-	// can detect this at runtime without requiring a VITE_NO_LOCAL_AGENT rebuild.
-	NoLocalAgent bool
-	// Watchdog support: when set, the backend listens on this port instead of Port
-	BackendPort int
+}
+
+// IntegrationsConfig holds external service integrations
+type IntegrationsConfig struct {
+	FrontendURL           string
+	ClaudeAPIKey          string
+	KubestellarOpsPath    string
+	KubestellarDeployPath string
+	// GitHub integrations
+	GitHubToken         string // Consolidated GitHub PAT for all GitHub operations
+	GitHubWebhookSecret string // Secret for validating GitHub webhooks
+	FeedbackRepoOwner   string // GitHub org/owner (e.g., "kubestellar")
+	FeedbackRepoName    string // GitHub repo name (e.g., "console")
+	RewardsGitHubOrgs   string // Org filter for GitHub search (e.g., "org:kubestellar org:llm-d")
+	// Google Drive benchmark data
+	BenchmarkGoogleDriveAPIKey string // API key for fetching benchmark data from Google Drive
+	BenchmarkFolderID          string // Google Drive folder ID containing benchmark results
+	// Kubara platform catalog
+	KubaraCatalogRepo string // GitHub owner/name of the catalog repo (e.g. "my-org/my-catalog")
+	KubaraCatalogPath string // Directory path inside the repo containing Helm chart subdirectories
+}
+
+// Config holds server configuration (composed of sub-configs for backward compatibility)
+type Config struct {
+	ServerConfig
+	AuthConfig
+	BrandConfig
+	IntegrationsConfig
 }
 
 // LoadConfigFromEnv loads configuration from environment variables
@@ -200,61 +195,56 @@ func LoadConfigFromEnv() Config {
 	})
 
 	return Config{
-		Port:                  port,
-		DevMode:               devMode,
-		DatabasePath:          dbPath,
-		GitHubClientID:        githubClientID,
-		GitHubSecret:          githubSecret,
-		GitHubURL:             getEnvOrDefault("GITHUB_URL", "https://github.com"),
-		JWTSecret:             jwtSecret,
-		FrontendURL:           frontendURL,
-		ClaudeAPIKey:          os.Getenv("CLAUDE_API_KEY"),
-		KubestellarOpsPath:    getEnvOrDefault("KUBESTELLAR_OPS_PATH", "kubestellar-ops"),
-		KubestellarDeployPath: getEnvOrDefault("KUBESTELLAR_DEPLOY_PATH", "kubestellar-deploy"),
-		Kubeconfig:            os.Getenv("KUBECONFIG"),
-		// Dev mode user settings
-		DevUserLogin:  getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
-		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
-		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
-		// kc-agent shared secret (generated by startup-oauth.sh)
-		AgentToken: os.Getenv("KC_AGENT_TOKEN"),
-		// Consolidated GitHub token — settings DB (user-configured via UI) preferred,
-		// then FEEDBACK_GITHUB_TOKEN env var, then GITHUB_TOKEN env var as alias.
-		GitHubToken:         resolveGitHubToken(),
-		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
-		FeedbackRepoOwner:   getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
-		FeedbackRepoName:    getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
-		// GitHub activity rewards
-		RewardsGitHubOrgs: getEnvOrDefault("REWARDS_GITHUB_ORGS", "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs"),
-		// Skip onboarding questionnaire for new users
-		SkipOnboarding: os.Getenv("SKIP_ONBOARDING") == "true",
-		// Benchmark data from Google Drive
-		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
-		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
-		// Kubara platform catalog (optional — defaults to kubara-io/kubara public catalog)
-		KubaraCatalogRepo: os.Getenv("KUBARA_CATALOG_REPO"),
-		KubaraCatalogPath: os.Getenv("KUBARA_CATALOG_PATH"),
-		// Sidebar dashboard filter
-		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
-		// White-label project context
-		ConsoleProject: getEnvOrDefault("CONSOLE_PROJECT", "kubestellar"),
-		// White-label branding (all default to KubeStellar values)
-		BrandAppName:      getEnvOrDefault("APP_NAME", "KubeStellar Console"),
-		BrandAppShortName: getEnvOrDefault("APP_SHORT_NAME", "KubeStellar"),
-		BrandTagline:      getEnvOrDefault("APP_TAGLINE", "multi-cluster first, saving time and tokens"),
-		BrandLogoURL:      getEnvOrDefault("LOGO_URL", "/kubestellar-logo.svg"),
-		BrandFaviconURL:   getEnvOrDefault("FAVICON_URL", "/favicon.ico"),
-		BrandThemeColor:   getEnvOrDefault("THEME_COLOR", "#7c3aed"),
-		BrandDocsURL:      getEnvOrDefault("DOCS_URL", "https://kubestellar.io/docs/console/readme"),
-		BrandCommunityURL: getEnvOrDefault("COMMUNITY_URL", "https://kubestellar.io/community"),
-		BrandWebsiteURL:   getEnvOrDefault("WEBSITE_URL", "https://kubestellar.io"),
-		BrandIssuesURL:    getEnvOrDefault("ISSUES_URL", "https://github.com/kubestellar/kubestellar/issues/new"),
-		BrandRepoURL:      getEnvOrDefault("REPO_URL", "https://github.com/kubestellar/console"),
-		BrandHostedDomain: getEnvOrDefault("HOSTED_DOMAIN", "console.kubestellar.io"),
-		// Suppress local kc-agent connections in in-cluster deployments
-		NoLocalAgent: os.Getenv("NO_LOCAL_AGENT") == "true",
-		// Watchdog backend port override
-		BackendPort: backendPort,
+		ServerConfig: ServerConfig{
+			Port:              port,
+			BackendPort:       backendPort,
+			DatabasePath:      dbPath,
+			Kubeconfig:        os.Getenv("KUBECONFIG"),
+			DevMode:           devMode,
+			SkipOnboarding:    os.Getenv("SKIP_ONBOARDING") == "true",
+			EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
+			ConsoleProject:    getEnvOrDefault("CONSOLE_PROJECT", "kubestellar"),
+			NoLocalAgent:      os.Getenv("NO_LOCAL_AGENT") == "true",
+		},
+		AuthConfig: AuthConfig{
+			GitHubClientID: githubClientID,
+			GitHubSecret:   githubSecret,
+			GitHubURL:      getEnvOrDefault("GITHUB_URL", "https://github.com"),
+			JWTSecret:      jwtSecret,
+			AgentToken:     os.Getenv("KC_AGENT_TOKEN"),
+			DevUserLogin:   getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
+			DevUserEmail:   getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
+			DevUserAvatar:  getEnvOrDefault("DEV_USER_AVATAR", ""),
+		},
+		BrandConfig: BrandConfig{
+			BrandAppName:      getEnvOrDefault("APP_NAME", "KubeStellar Console"),
+			BrandAppShortName: getEnvOrDefault("APP_SHORT_NAME", "KubeStellar"),
+			BrandTagline:      getEnvOrDefault("APP_TAGLINE", "multi-cluster first, saving time and tokens"),
+			BrandLogoURL:      getEnvOrDefault("LOGO_URL", "/kubestellar-logo.svg"),
+			BrandFaviconURL:   getEnvOrDefault("FAVICON_URL", "/favicon.ico"),
+			BrandThemeColor:   getEnvOrDefault("THEME_COLOR", "#7c3aed"),
+			BrandDocsURL:      getEnvOrDefault("DOCS_URL", "https://kubestellar.io/docs/console/readme"),
+			BrandCommunityURL: getEnvOrDefault("COMMUNITY_URL", "https://kubestellar.io/community"),
+			BrandWebsiteURL:   getEnvOrDefault("WEBSITE_URL", "https://kubestellar.io"),
+			BrandIssuesURL:    getEnvOrDefault("ISSUES_URL", "https://github.com/kubestellar/kubestellar/issues/new"),
+			BrandRepoURL:      getEnvOrDefault("REPO_URL", "https://github.com/kubestellar/console"),
+			BrandHostedDomain: getEnvOrDefault("HOSTED_DOMAIN", "console.kubestellar.io"),
+		},
+		IntegrationsConfig: IntegrationsConfig{
+			FrontendURL:                frontendURL,
+			ClaudeAPIKey:               os.Getenv("CLAUDE_API_KEY"),
+			KubestellarOpsPath:         getEnvOrDefault("KUBESTELLAR_OPS_PATH", "kubestellar-ops"),
+			KubestellarDeployPath:      getEnvOrDefault("KUBESTELLAR_DEPLOY_PATH", "kubestellar-deploy"),
+			GitHubToken:                resolveGitHubToken(),
+			GitHubWebhookSecret:        os.Getenv("GITHUB_WEBHOOK_SECRET"),
+			FeedbackRepoOwner:          getEnvOrDefault("FEEDBACK_REPO_OWNER", "kubestellar"),
+			FeedbackRepoName:           getEnvOrDefault("FEEDBACK_REPO_NAME", "console"),
+			RewardsGitHubOrgs:          getEnvOrDefault("REWARDS_GITHUB_ORGS", "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs"),
+			BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
+			BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
+			KubaraCatalogRepo:          os.Getenv("KUBARA_CATALOG_REPO"),
+			KubaraCatalogPath:          os.Getenv("KUBARA_CATALOG_PATH"),
+		},
 	}
 }
 

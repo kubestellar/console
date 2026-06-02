@@ -121,8 +121,10 @@ func TestHealth_OAuthConfiguredRequiresBothIdAndSecret(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &Server{
 				config: Config{
-					GitHubClientID: tc.clientID,
-					GitHubSecret:   tc.secret,
+					AuthConfig: AuthConfig{
+						GitHubClientID: tc.clientID,
+						GitHubSecret:   tc.secret,
+					},
 				},
 			}
 			assert.Equal(t, tc.want, s.oauthConfigured(),

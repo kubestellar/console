@@ -98,8 +98,10 @@ func TestResolveOAuthCredentials_SkipsDBWhenEnvVarSet(t *testing.T) {
 			}
 
 			srv := newTestServerWithOAuthStore(Config{
-				GitHubClientID: tc.initialID,
-				GitHubSecret:   tc.initialSecret,
+				AuthConfig: AuthConfig{
+					GitHubClientID: tc.initialID,
+					GitHubSecret:   tc.initialSecret,
+				},
 			}, st)
 
 			srv.resolveOAuthCredentials()
