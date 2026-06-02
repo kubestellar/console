@@ -126,6 +126,7 @@ func TestHealth_OAuthConfiguredRequiresBothIdAndSecret(t *testing.T) {
 						GitHubSecret:   tc.secret,
 					},
 				},
+				auth: &authRuntime{},
 			}
 			assert.Equal(t, tc.want, s.oauthConfigured(),
 				"oauth_configured must require both client id and secret (#6056)")
