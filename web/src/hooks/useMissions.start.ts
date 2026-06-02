@@ -1,6 +1,6 @@
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { emitError, emitMissionStarted } from '../lib/analytics'
-import { fetchMissionContent, missionCache } from '../components/missions/browser/missionCache'
+import { fetchMissionContent, missionCache } from '../lib/missions/missionCache'
 import { matchInstallIntent } from '../lib/missions/intentMatcher'
 import type { MissionExport } from '../lib/missions/types'
 import {

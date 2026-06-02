@@ -23,7 +23,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../missions/browser/missionCache', () => ({
+vi.mock('../../../lib/missions/missionCache', () => ({
   fetchMissionContent: vi.fn().mockResolvedValue({
     mission: {
       steps: [],

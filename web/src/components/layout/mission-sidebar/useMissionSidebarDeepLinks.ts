@@ -14,7 +14,7 @@ import {
   MISSION_BROWSER_HISTORY_STATE_KEY,
 } from './missionSidebarConstants'
 import { ROUTES } from '../../../config/routes'
-import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
+import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../../lib/missions/missionCache'
 
 type SetSearchParams = (params: URLSearchParams, options?: { replace?: boolean }) => void
 

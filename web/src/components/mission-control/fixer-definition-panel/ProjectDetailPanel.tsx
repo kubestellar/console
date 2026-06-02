@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import type { MissionExport } from '../../../lib/missions/types'
-import { fetchMissionContent } from '../../missions/browser/missionCache'
+import { fetchMissionContent } from '../../../lib/missions/missionCache'
 import type { PayloadProject } from '../types'
 import { cn } from '../../../lib/cn'
 import { ALTERNATIVES, ALTERNATIVES_DISPLAY, type ProjectAlternative } from './fixerDefinitionPanel.constants'

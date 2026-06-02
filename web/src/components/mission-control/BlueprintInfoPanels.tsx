@@ -20,7 +20,7 @@ import { AMBER_500, GREEN_500_BRIGHT, RED_500, SLATE_700 } from '../../lib/theme
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import type { DependencyEdge, DeployPhase, PayloadProject } from './types'
-import { fetchMissionContent } from '../missions/browser/missionCache'
+import { fetchMissionContent } from '../../lib/missions/missionCache'
 import { fetchKubaraValues } from '../../lib/kubara'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'

@@ -7,20 +7,13 @@
  */
 
 import { useMemo } from 'react'
+import type { ClusterContext } from '../lib/missions/clusterContext'
 import { useClusters } from './mcp/clusters'
 import { useOperators } from './mcp/operators'
 import { useHelmReleases } from './mcp/helm'
 import { usePodIssues } from './mcp/workloads'
 import { useSecurityIssues } from './mcp/security'
 
-export interface ClusterContext {
-  name: string
-  provider?: string
-  version?: string
-  resources: string[]
-  issues: string[]
-  labels: Record<string, string>
-}
 
 export function useClusterContext(): {
   clusterContext: ClusterContext | null

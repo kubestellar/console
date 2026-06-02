@@ -4,7 +4,7 @@ import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
-import { fetchMissionContent, missionCache } from '../components/missions/browser/missionCache'
+import { fetchMissionContent, missionCache } from '../lib/missions/missionCache'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ vi.mock('./useResolutions', () => ({
   generateResolutionPromptContext: vi.fn(() => ''),
 }))
 
-vi.mock('../components/missions/browser/missionCache', () => ({
+vi.mock('../lib/missions/missionCache', () => ({
   missionCache: {
     installers: [],
   },

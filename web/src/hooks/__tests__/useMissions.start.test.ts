@@ -57,7 +57,7 @@ vi.mock('../../lib/missions/scanner/malicious', () => ({
   scanForMaliciousContent: vi.fn(() => []),
 }))
 
-vi.mock('../../components/missions/browser/missionCache', () => ({
+vi.mock('../../lib/missions/missionCache', () => ({
   missionCache: {
     installers: [],
   },
@@ -80,7 +80,7 @@ import {
 import { scanForMaliciousContent } from '../../lib/missions/scanner/malicious'
 import { buildMissingToolWarning } from '../useMissions.helpers'
 import { emitMissionStarted } from '../../lib/analytics'
-import { fetchMissionContent, missionCache } from '../../components/missions/browser/missionCache'
+import { fetchMissionContent, missionCache } from '../../lib/missions/missionCache'
 import type { Mission, StartMissionParams } from '../useMissionTypes'
 import type { MissionProviderState } from '../useMissions.state'
 

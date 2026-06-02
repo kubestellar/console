@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ClusterContext } from '../../hooks/useClusterContext'
+import type { ClusterContext } from '../../lib/missions/clusterContext'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import type { MissionExport, MissionMatch } from '../../lib/missions/types'
 import {

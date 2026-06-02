@@ -46,7 +46,7 @@ import type {
   OverlayMode } from './types'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { detectCloudProvider } from '../ui/CloudProviderIcon'
-import { fetchMissionContent } from '../missions/browser/missionCache'
+import { fetchMissionContent } from '../../lib/missions/missionCache'
 // missionCache provides file-system caching; no lastUpdated timestamp needed — missions are loaded fresh on each open
 import type { MissionExport } from '../../lib/missions/types'
 import { MissionDetailView } from '../missions/MissionDetailView'
