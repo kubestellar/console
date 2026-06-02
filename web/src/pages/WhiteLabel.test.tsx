@@ -42,7 +42,7 @@ function getCopyButtonForStep(stepTitle: string) {
     throw new Error(`Missing card for step: ${stepTitle}`)
   }
 
-  return within(card as HTMLElement).getByTitle('Copy commands')
+  return within(card as HTMLElement).getByRole('button', { name: 'Copy commands' })
 }
 
 describe('WhiteLabel', () => {
@@ -99,8 +99,11 @@ describe('WhiteLabel', () => {
 
     expect(screen.getByText('Add the Helm repo')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Helm/i }))
+    const helmTab = screen.getByRole('tab', { name: /Helm/i })
 
+    await user.click(helmTab)
+
+    expect(helmTab).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Add the Helm repo')).toBeInTheDocument()
     expect(screen.queryByText('Run with Docker')).not.toBeInTheDocument()
   })

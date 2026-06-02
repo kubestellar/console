@@ -268,13 +268,11 @@ describe('ListVisualization', () => {
       const select = screen.getByRole('combobox')
       await user.selectOptions(select, 'name')
 
-      // Should show Asc button
-      const ascButton = screen.getByTitle(/Ascending/)
+      const ascButton = screen.getByRole('button', { name: /sort ascending, click to reverse/i })
       expect(ascButton).toBeInTheDocument()
 
-      // Click to toggle to descending
       await user.click(ascButton)
-      const descButton = screen.getByTitle(/Descending/)
+      const descButton = screen.getByRole('button', { name: /sort descending, click to reverse/i })
       expect(descButton).toBeInTheDocument()
 
       // Data should now be sorted descending

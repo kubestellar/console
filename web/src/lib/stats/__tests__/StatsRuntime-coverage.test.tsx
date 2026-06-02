@@ -296,8 +296,7 @@ describe('StatsRuntime config button', () => {
 
     render(<StatsRuntime definition={def} getStatValue={getStatValue} showConfigButton={true} />)
 
-    // Config button should be present (Settings icon)
-    const configBtn = screen.getByTitle('Configure stats')
+    const configBtn = screen.getByRole('button', { name: 'Configure stats' })
     expect(configBtn).toBeInTheDocument()
   })
 
@@ -307,7 +306,7 @@ describe('StatsRuntime config button', () => {
 
     render(<StatsRuntime definition={def} getStatValue={getStatValue} showConfigButton={false} />)
 
-    expect(screen.queryByTitle('Configure stats')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Configure stats' })).toBeNull()
   })
 
   it('hides config button when collapsed', () => {
@@ -319,7 +318,7 @@ describe('StatsRuntime config button', () => {
     // Collapse
     fireEvent.click(screen.getByText('Test Stats'))
 
-    expect(screen.queryByTitle('Configure stats')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Configure stats' })).toBeNull()
   })
 })
 
