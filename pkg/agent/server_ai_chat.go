@@ -92,7 +92,7 @@ func (s *Server) buildKagentiK8sContext(ctx context.Context, clusterContext stri
 	wg.Wait()
 
 	payload := kagentiK8sContextSnapshot{
-		Scope:       clusterContext,
+		Scope:       sanitizeK8sStringForPrompt(clusterContext),
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 		Clusters:    snapshots,
 	}
@@ -147,35 +147,35 @@ func (s *Server) collectKagentiClusterSnapshot(ctx context.Context, cluster k8s.
 	}
 
 	snapshot := kagentiClusterSnapshot{
-		Name:    cluster.Name,
-		Context: contextName,
+		Name:    sanitizeK8sStringForPrompt(cluster.Name),
+		Context: sanitizeK8sStringForPrompt(contextName),
 	}
 	if snapshot.Name == "" {
-		snapshot.Name = contextName
+		snapshot.Name = sanitizeK8sStringForPrompt(contextName)
 	}
 
 	health, err := s.k8sClient.GetClusterHealth(ctx, contextName)
 	if err != nil {
-		snapshot.Errors = append(snapshot.Errors, fmt.Sprintf("health: %v", err))
+		snapshot.Errors = append(snapshot.Errors, sanitizeK8sStringForPrompt(fmt.Sprintf("health: %v", err)))
 	} else {
-		snapshot.Health = health
+		snapshot.Health = sanitizeClusterHealthForPrompt(health)
 	}
 
 	podIssues, err := s.k8sClient.FindPodIssues(ctx, contextName, "")
 	if err != nil {
-		snapshot.Errors = append(snapshot.Errors, fmt.Sprintf("podIssues: %v", err))
+		snapshot.Errors = append(snapshot.Errors, sanitizeK8sStringForPrompt(fmt.Sprintf("podIssues: %v", err)))
 	} else {
 		if len(podIssues) > kagentiMaxPodIssuesPerCluster {
 			podIssues = podIssues[:kagentiMaxPodIssuesPerCluster]
 		}
-		snapshot.PodIssues = podIssues
+		snapshot.PodIssues = sanitizePodIssuesForPrompt(podIssues)
 	}
 
 	warningEvents, err := s.k8sClient.GetWarningEvents(ctx, contextName, "", kagentiMaxWarningEventsPerCluster)
 	if err != nil {
-		snapshot.Errors = append(snapshot.Errors, fmt.Sprintf("warningEvents: %v", err))
+		snapshot.Errors = append(snapshot.Errors, sanitizeK8sStringForPrompt(fmt.Sprintf("warningEvents: %v", err)))
 	} else {
-		snapshot.WarningEvents = warningEvents
+		snapshot.WarningEvents = sanitizeWarningEventsForPrompt(warningEvents)
 	}
 
 	return snapshot
