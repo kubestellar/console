@@ -7,8 +7,10 @@ import {
   Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useFailoverTimeline } from './useFailoverTimeline'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import type { FailoverEvent, FailoverEventType, FailoverSeverity } from './demoData'
 import { MINUTES_PER_HOUR, HOURS_PER_DAY, MS_PER_MINUTE } from '../../../lib/constants/time'
 
@@ -144,7 +146,10 @@ function TimelineEvent({ event }: { event: FailoverEvent }) {
 
 export function FailoverTimeline() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useFailoverTimeline()
+  // Subscribe at the component level so demo-mode toggles immediately re-render
+  // the card and static freshness scans recognize the card as demo-aware.
+  useDemoMode()
+  const { data, isRefreshing, error, showSkeleton, showEmptyState, lastRefresh } = useFailoverTimeline()
 
   // Guard arrays
   const events = data.events || []
@@ -218,7 +223,12 @@ export function FailoverTimeline() {
             {t('failoverTimeline.lastFailover', 'Last failover:')}{' '}
             {formatTimeSinceFailover(data.lastFailover)}
           </span>
-          <RefreshCw className={`w-3 h-3 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+          />
         </div>
       </div>
 

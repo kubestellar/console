@@ -313,6 +313,7 @@ export interface UseFailoverTimelineResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  lastRefresh: number | null
   isDemoFallback: boolean
 }
 
@@ -324,6 +325,7 @@ export function useFailoverTimeline(): UseFailoverTimelineResult {
     isFailed,
     consecutiveFailures,
     isDemoFallback,
+    lastRefresh,
   } = useCache<FailoverTimelineData>({
     key: CACHE_KEY,
     category: 'default',
@@ -354,6 +356,7 @@ export function useFailoverTimeline(): UseFailoverTimelineResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    lastRefresh,
     isDemoFallback: effectiveIsDemoData,
   }
 }

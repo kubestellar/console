@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -33,11 +33,38 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+vi.mock('../useFailoverTimeline', () => ({
+  useFailoverTimeline: () => ({
+    data: {
+      events: [
+        {
+          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+          eventType: 'cluster_down',
+          cluster: 'member-ap-south',
+          workload: '',
+          details: 'Cluster transitioned to NotReady state',
+          severity: 'critical',
+        },
+      ],
+      activeClusters: 3,
+      totalClusters: 4,
+      lastFailover: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      lastCheckTime: new Date().toISOString(),
+    },
+    isRefreshing: false,
+    error: false,
+    showSkeleton: false,
+    showEmptyState: false,
+    lastRefresh: Date.now() - 30 * 1000,
+  }),
+}))
+
 import { FailoverTimeline } from '../FailoverTimeline'
 
 describe('FailoverTimeline', () => {
-  it('renders without crashing', () => {
+  it('renders a freshness indicator from cache refresh time', () => {
     const { container } = render(<FailoverTimeline />)
     expect(container).toBeTruthy()
+    expect(screen.getByLabelText(/Last updated:/i)).toBeInTheDocument()
   })
 })
