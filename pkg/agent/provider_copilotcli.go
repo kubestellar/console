@@ -148,7 +148,7 @@ func (c *CopilotCLIProvider) refreshGitHubAuth() bool {
 // process environment at startup.
 func freshEnv() []string {
 	env := os.Environ()
-	filtered := make([]string, 0, len(env)+1)
+	filtered := make([]string, 0, safeProviderPreallocationSize(len(env), 1))
 	for _, e := range env {
 		upper := strings.ToUpper(e)
 		if strings.HasPrefix(upper, "GH_TOKEN=") || strings.HasPrefix(upper, "GITHUB_TOKEN=") {

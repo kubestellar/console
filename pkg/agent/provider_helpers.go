@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"math"
 	"net/http"
 	"regexp"
 	"strings"
@@ -35,6 +36,16 @@ var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 // expose token usage in their stdout, so we rely on this estimator to
 // populate the navbar token-usage indicator. See issue #9160.
 const estimatedCharsPerToken = 4
+const maxProviderPreallocationSize = math.MaxInt
+
+// safeProviderPreallocationSize guards capacity hints used for slices/maps so
+// len(x)+n arithmetic never overflows into an invalid allocation size.
+func safeProviderPreallocationSize(base int, extra int) int {
+	if base < 0 || extra < 0 || base > maxProviderPreallocationSize-extra {
+		return 0
+	}
+	return base + extra
+}
 
 // estimateTokensFromText returns an approximate token count for the given
 // text using a 4-chars-per-token heuristic. Returns 0 for the empty string

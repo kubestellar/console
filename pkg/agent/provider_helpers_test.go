@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
@@ -122,5 +123,28 @@ func TestRequestForbidsDesktopCompanion(t *testing.T) {
 	req := &ChatRequest{Prompt: "Don't open the desktop app. Terminal only."}
 	if !requestForbidsDesktopCompanion(req) {
 		t.Fatal("expected desktop companion restriction to be detected")
+	}
+}
+
+func TestSafeProviderPreallocationSize(t *testing.T) {
+	cases := []struct {
+		name  string
+		base  int
+		extra int
+		want  int
+	}{
+		{name: "adds small values", base: 3, extra: 2, want: 5},
+		{name: "zero extra", base: 4, extra: 0, want: 4},
+		{name: "rejects negative base", base: -1, extra: 1, want: 0},
+		{name: "rejects negative extra", base: 1, extra: -1, want: 0},
+		{name: "rejects overflow", base: math.MaxInt, extra: 1, want: 0},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := safeProviderPreallocationSize(tc.base, tc.extra); got != tc.want {
+				t.Fatalf("safeProviderPreallocationSize(%d, %d) = %d, want %d", tc.base, tc.extra, got, tc.want)
+			}
+		})
 	}
 }

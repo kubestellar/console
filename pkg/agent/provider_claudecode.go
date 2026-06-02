@@ -53,7 +53,7 @@ func (s ToolAvailabilityStatus) HasMissingTools() bool {
 }
 
 func (s ToolAvailabilityStatus) missingTools() []string {
-	tools := make([]string, 0, len(s.MissingRequired)+len(s.MissingOptional))
+	tools := make([]string, 0, safeProviderPreallocationSize(len(s.MissingRequired), len(s.MissingOptional)))
 	tools = append(tools, s.MissingRequired...)
 	tools = append(tools, s.MissingOptional...)
 	return tools
@@ -122,7 +122,7 @@ func withToolAvailabilityContext(req *ChatRequest, status ToolAvailabilityStatus
 		return req
 	}
 	cloned := *req
-	cloned.Context = make(map[string]string, len(req.Context)+1)
+	cloned.Context = make(map[string]string, safeProviderPreallocationSize(len(req.Context), 1))
 	for key, value := range req.Context {
 		cloned.Context[key] = value
 	}
