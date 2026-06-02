@@ -1,5 +1,6 @@
 import type { Context } from "@netlify/functions";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+import { validateBearerToken } from "./_shared/jwt-validation";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -192,10 +193,18 @@ export default async (req: Request, context: Context): Promise<Response> => {
   if (req.method === "POST") {
     const authHeader = req.headers.get("authorization") || "";
     const cookie = req.headers.get("cookie") || "";
-    const hasBearer = authHeader.startsWith("Bearer ") && authHeader.length > 7;
     const hasCookie = cookie.includes("kc_auth=");
     
-    if (!hasBearer && !hasCookie) {
+    let hasValidBearer = false;
+    if (authHeader.startsWith("Bearer ")) {
+      const bearerValidation = validateBearerToken(authHeader);
+      hasValidBearer = bearerValidation.valid;
+      if (!hasValidBearer) {
+        console.warn(`Bearer token validation failed: ${bearerValidation.error}`);
+      }
+    }
+    
+    if (!hasValidBearer && !hasCookie) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         {
