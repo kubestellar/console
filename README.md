@@ -437,6 +437,7 @@ Monitor and control GitHub Actions workflows.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `PIPELINE_REPOS` | Optional | — | Comma-separated list of GitHub repositories to monitor (format: `owner/repo,owner/repo2`) |
+| `ACMM_REPOS` | Optional | `PIPELINE_REPOS` or the built-in KubeStellar repos | Comma-separated list of GitHub repositories the ACMM scan and badge endpoints may query |
 | `GITHUB_MUTATIONS_TOKEN` | Optional | — | GitHub PAT for re-running or canceling pipeline runs (requires `workflow` scope) |
 
 ### Analytics & Telemetry

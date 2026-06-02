@@ -32,12 +32,14 @@
  */
 
 import { getStore } from "@netlify/blobs";
-import { buildStrictKubestellarCorsHeaders } from "./_shared/cors";
 import { CRITERIA } from "./acmm-scan/criteria";
 import {
   CACHE_STORE,
   CACHE_TTL_MS,
+  REPO_NOT_ALLOWED_ERROR,
   REPO_RE,
+  corsHeaders,
+  isAllowedRepo,
   matchesHint,
 } from "./acmm-scan/helpers";
 import type { CacheEntry, ScanResult } from "./acmm-scan/helpers";
@@ -49,11 +51,8 @@ import { demoScan } from "./acmm-scan/demo";
 // ---------------------------------------------------------------------------
 
 export default async (req: Request) => {
-  const origin = req.headers.get("origin");
-  const headers = {
-    ...buildStrictKubestellarCorsHeaders(origin),
-    "Cache-Control": "public, max-age=900",
-  };
+  const origin = req.headers.get("Origin");
+  const headers = corsHeaders(origin);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers });
@@ -75,6 +74,16 @@ export default async (req: Request) => {
       JSON.stringify({ error: "Invalid repo — must be owner/name" }),
       {
         status: 400,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  if (!isAllowedRepo(repo)) {
+    return new Response(
+      JSON.stringify({ error: REPO_NOT_ALLOWED_ERROR }),
+      {
+        status: 403,
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );

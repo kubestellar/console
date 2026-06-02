@@ -1,72 +1,78 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  buildStrictKubestellarCorsHeaders,
-  getStrictKubestellarCorsOrigin,
-  STRICT_KUBESTELLAR_ORIGINS,
-} from "../../_shared/cors";
 import type { DetectionHint } from "../criteria";
 import {
   AI_LABEL,
+  ALLOWED_ORIGINS,
+  corsHeaders,
+  corsOrigin,
+  getAllowedRepos,
   isAIContribution,
+  isAllowedRepo,
   isoWeek,
   lastNWeeks,
   matchesHint,
 } from "../helpers";
 
 const EXPECTED_CORS_HEADER_KEYS = [
+  "Access-Control-Allow-Origin",
   "Access-Control-Allow-Methods",
   "Access-Control-Allow-Headers",
+  "Cache-Control",
   "Vary",
-  "Access-Control-Allow-Origin",
 ];
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
-
-describe("getStrictKubestellarCorsOrigin", () => {
+describe("corsOrigin", () => {
   it("returns allowed origins unchanged", () => {
-    expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[0])).toBe(
-      STRICT_KUBESTELLAR_ORIGINS[0],
-    );
-    expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[1])).toBe(
-      STRICT_KUBESTELLAR_ORIGINS[1],
+    expect(corsOrigin(ALLOWED_ORIGINS[0])).toBe(ALLOWED_ORIGINS[0]);
+    expect(corsOrigin(ALLOWED_ORIGINS[1])).toBe(ALLOWED_ORIGINS[1]);
+  });
+
+  it("allows localhost and kubestellar domains", () => {
+    expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
+    expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(
+      "https://console-preview.kubestellar.io",
     );
   });
 
-  it("rejects non-allowlisted kubestellar origins", () => {
-    expect(
-      getStrictKubestellarCorsOrigin("https://console-preview.kubestellar.io"),
-    ).toBeNull();
-    expect(getStrictKubestellarCorsOrigin("https://kubestellar.io")).toBeNull();
-  });
-
-  it("allows localhost only for development runtimes", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBe(
-      "http://localhost:5174",
-    );
-
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NETLIFY_DEV", "true");
-    expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBe(
-      "http://localhost:5174",
-    );
-
-    vi.stubEnv("NETLIFY_DEV", "false");
-    expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBeNull();
+  it("falls back to the default origin for unknown or missing origins", () => {
+    expect(corsOrigin("https://example.com")).toBe(ALLOWED_ORIGINS[0]);
+    expect(corsOrigin(null)).toBe(ALLOWED_ORIGINS[0]);
   });
 });
 
-describe("buildStrictKubestellarCorsHeaders", () => {
+describe("corsHeaders", () => {
   it("returns the expected CORS header keys", () => {
-    const headers = buildStrictKubestellarCorsHeaders("https://console.kubestellar.io");
+    const headers = corsHeaders("https://console.kubestellar.io");
 
     expect(Object.keys(headers)).toEqual(EXPECTED_CORS_HEADER_KEYS);
     expect(headers["Access-Control-Allow-Origin"]).toBe(
       "https://console.kubestellar.io",
     );
+  });
+});
+
+describe("getAllowedRepos", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("prefers ACMM_REPOS over PIPELINE_REPOS", () => {
+    vi.stubEnv("ACMM_REPOS", "kubestellar/console,acme/allowed");
+    vi.stubEnv("PIPELINE_REPOS", "acme/pipeline-only");
+
+    expect(Array.from(getAllowedRepos())).toEqual([
+      "kubestellar/console",
+      "acme/allowed",
+    ]);
+    expect(isAllowedRepo("acme/allowed")).toBe(true);
+    expect(isAllowedRepo("acme/pipeline-only")).toBe(false);
+  });
+
+  it("falls back to PIPELINE_REPOS when ACMM_REPOS is unset", () => {
+    vi.stubEnv("PIPELINE_REPOS", "kubestellar/console,acme/pipeline-only");
+
+    expect(isAllowedRepo("acme/pipeline-only")).toBe(true);
   });
 });
 

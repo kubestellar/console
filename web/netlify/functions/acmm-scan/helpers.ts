@@ -2,6 +2,7 @@
  * ACMM Scan — Types and helper utilities
  */
 
+import { DEFAULT_REPOS as DEFAULT_ACMM_REPOS } from "../github-pipelines/constants";
 import type { DetectionHint } from "./criteria";
 
 // ---------------------------------------------------------------------------
@@ -18,7 +19,14 @@ export const API_TIMEOUT_MS = 15_000;
 export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+export const REPO_NOT_ALLOWED_ERROR = "Repository not allowed";
 export const UNKNOWN_REPO = "unknown/repo";
+/** Allowed CORS origins (exact match) */
+export const ALLOWED_ORIGINS = [
+  "https://console.kubestellar.io",
+  "https://kubestellar.io",
+  "https://www.kubestellar.io",
+];
 /** AI-generated label used to classify AI contributions */
 export const AI_LABEL = "ai-generated";
 /** Known AI authors (shared logins + bots) */
@@ -60,6 +68,60 @@ export interface GitTreeEntry {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Validate CORS origin via URL-parsed hostname check */
+export function corsOrigin(origin: string | null): string {
+  if (!origin) return ALLOWED_ORIGINS[0];
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "localhost") return origin;
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
+  } catch { /* invalid URL */ }
+  return ALLOWED_ORIGINS[0];
+}
+
+export function corsHeaders(origin: string | null): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": corsOrigin(origin),
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Cache-Control": "public, max-age=900",
+    Vary: "Origin",
+  };
+}
+
+type NetlifyRuntime = {
+  Netlify?: {
+    env?: {
+      get?: (name: string) => string | undefined;
+    };
+  };
+};
+
+function getRuntimeEnv(name: string): string | undefined {
+  return (globalThis as NetlifyRuntime).Netlify?.env?.get?.(name) ?? process.env[name];
+}
+
+function parseRepoList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((repo) => repo.trim())
+    .filter((repo) => REPO_RE.test(repo));
+}
+
+export function getAllowedRepos(): Set<string> {
+  const configuredRepos = parseRepoList(
+    getRuntimeEnv("ACMM_REPOS") ?? getRuntimeEnv("PIPELINE_REPOS"),
+  );
+  const repos = configuredRepos.length > 0 ? configuredRepos : DEFAULT_ACMM_REPOS;
+  return new Set(repos);
+}
+
+export function isAllowedRepo(repo: string): boolean {
+  return getAllowedRepos().has(repo);
+}
 
 export function isoWeek(date: Date): string {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));

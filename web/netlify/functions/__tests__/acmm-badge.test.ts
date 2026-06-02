@@ -4,7 +4,7 @@
  * Mocks Netlify Blobs and global fetch so we can exercise every code path
  * without network access.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mock @netlify/blobs ─────────────────────────────────────────────────
 const { mockGet, mockSetJSON } = vi.hoisted(() => ({
@@ -70,12 +70,17 @@ function staleBlobEntry(detectedIds: string[] = ["acmm:claude-md"]) {
 describe("acmm-badge", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubEnv("ACMM_REPOS", "owner/repo,other/repo,kubestellar/console");
     mockGet.mockReset();
     mockSetJSON.mockReset();
     // Default: no blob data, all fetches fail
     mockGet.mockResolvedValue(null);
     mockSetJSON.mockResolvedValue(undefined);
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   // 1. Happy path — returns valid shields.io JSON
@@ -221,7 +226,27 @@ describe("acmm-badge", () => {
     );
   });
 
-  // 8. Invalid repo — returns "invalid repo" badge (not HTTP error)
+  // 8. Disallowed repo — returns "repo not allowed" badge without any network access
+  it("returns 'repo not allowed' badge for disallowed repo params", async () => {
+    vi.stubEnv("ACMM_REPOS", "kubestellar/console");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const res = await handler(makeRequest("owner/repo"));
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body).toMatchObject({
+      schemaVersion: 1,
+      label: "ACMM",
+      message: "repo not allowed",
+      color: "red",
+      cacheSeconds: 300,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // 9. Invalid repo — returns "invalid repo" badge (not HTTP error)
   it("returns 'invalid repo' badge for malformed repo param", async () => {
     const res = await handler(makeRequest("not a valid repo!!!"));
     expect(res.status).toBe(200);

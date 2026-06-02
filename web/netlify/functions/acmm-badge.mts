@@ -15,6 +15,7 @@
 import { getStore } from "@netlify/blobs";
 import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATHS } from "../../src/lib/acmm/scannableIdsByLevel";
 import { readCappedJson } from "./_shared/read-capped-json";
+import { isAllowedRepo } from "./acmm-scan/helpers";
 
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
@@ -263,6 +264,23 @@ export default async (req: Request) => {
         schemaVersion: 1,
         label: "ACMM",
         message: "invalid repo",
+        color: "red",
+        cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
+      }),
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  if (!isAllowedRepo(repo)) {
+    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
+    return new Response(
+      JSON.stringify({
+        schemaVersion: 1,
+        label: "ACMM",
+        message: "repo not allowed",
         color: "red",
         cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
       }),
