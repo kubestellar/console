@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -46,19 +44,10 @@ type Server struct {
 	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
-	loadingSrv          *http.Server          // temporary loading screen server
-	authHandler         *handlers.AuthHandler // guarded by oauthMu for hot-reload
-	oauthMu             sync.RWMutex          // protects authHandler during manifest flow hot-reload
-	shuttingDown        int32                 // atomic flag: 1 during graceful shutdown
-	gpuUtilWorker       *GPUUtilizationWorker
-	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
-	rewardsHandler      *handlers.RewardsHandler   // for eviction goroutine shutdown
-	failureTracker      *middleware.FailureTracker // tracks auth failure counts for rate limiting
-	done                chan struct{}              // closed on Shutdown to stop background goroutines
-	shutdownOnce        sync.Once                  // ensures Shutdown is idempotent (#6478)
-	quantumWorkloadMu   sync.RWMutex               // protects quantum workload cache
-	quantumAvailable    bool                       // cached quantum-kc-demo availability
-	quantumCacheTime    time.Time                  // when quantum cache was last updated
+	lifecycle           *serverLifecycle
+	auth                *authRuntime
+	background          *backgroundServices
+	quantumCache        *quantumWorkloadCache
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -246,8 +235,10 @@ func NewServer(cfg Config) (*Server, error) {
 		k8sClient:           k8sClient,
 		notificationService: notificationService,
 		persistenceStore:    persistenceStore,
-		loadingSrv:          loadingSrv,
-		done:                make(chan struct{}),
+		lifecycle:           newServerLifecycle(loadingSrv),
+		auth:                newAuthRuntime(),
+		background:          newBackgroundServices(),
+		quantumCache:        newQuantumWorkloadCache(),
 	}
 
 	// Enable SQLite persistence for audit entries (#8670 Phase 3).
@@ -258,8 +249,8 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Start GPU utilization background worker (collects hourly snapshots)
 	if k8sClient != nil {
-		server.gpuUtilWorker = NewGPUUtilizationWorker(db, k8sClient, notificationService)
-		server.gpuUtilWorker.Start()
+		server.background.gpuUtilWorker = NewGPUUtilizationWorker(db, k8sClient, notificationService)
+		server.background.gpuUtilWorker.Start()
 	} else {
 		slog.Info("[Server] GPU utilization worker skipped — no Kubernetes client available")
 	}
@@ -307,7 +298,7 @@ func (s *Server) startKBGapsSweeper(gapStore kbGapSweeper) {
 		defer ticker.Stop()
 		for {
 			select {
-			case <-s.done:
+			case <-s.lifecycle.done:
 				return
 			case <-ticker.C:
 				runSweep()

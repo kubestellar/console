@@ -188,11 +188,11 @@ func (s *Server) Start() error {
 	addr := fmt.Sprintf(":%d", listenPort)
 
 	// Shut down the temporary loading page server to free the port
-	if s.loadingSrv != nil {
+	if s.lifecycle != nil && s.lifecycle.loadingSrv != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
 		defer cancel()
-		s.loadingSrv.Shutdown(ctx)
-		s.loadingSrv = nil
+		s.lifecycle.loadingSrv.Shutdown(ctx)
+		s.lifecycle.loadingSrv = nil
 
 		// Wait for the OS to fully release the port instead of a fixed sleep.
 		// The previous 50ms sleep was insufficient on some systems.
@@ -242,36 +242,40 @@ func waitForPortRelease(port int, timeout time.Duration) error {
 // before services are torn down, giving the frontend time to notice.
 //
 // Shutdown is idempotent (#6478): subsequent calls are no-ops. Previously a
-// second call panicked with "close of closed channel" when close(s.done)
-// was invoked a second time.
+// second call panicked with "close of closed channel" when the lifecycle done
+// channel was closed a second time.
 func (s *Server) Shutdown() error {
+	if s.lifecycle == nil {
+		return nil
+	}
+
 	var shutdownErr error
-	s.shutdownOnce.Do(func() {
-		atomic.StoreInt32(&s.shuttingDown, 1)
+	s.lifecycle.shutdownOnce.Do(func() {
+		atomic.StoreInt32(&s.lifecycle.shuttingDown, 1)
 
 		// Signal background goroutines (orbit scheduler, etc.) to stop.
-		close(s.done)
+		close(s.lifecycle.done)
 
 		// If Shutdown is called before Start, the temporary loading server
 		// is still running and holding the port. Shut it down first.
-		if s.loadingSrv != nil {
+		if s.lifecycle.loadingSrv != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
 			defer cancel()
-			s.loadingSrv.Shutdown(ctx)
-			s.loadingSrv = nil
+			s.lifecycle.loadingSrv.Shutdown(ctx)
+			s.lifecycle.loadingSrv = nil
 		}
 
-		if s.gpuUtilWorker != nil {
-			s.gpuUtilWorker.Stop()
+		if s.background != nil && s.background.gpuUtilWorker != nil {
+			s.background.gpuUtilWorker.Stop()
 		}
 		s.hub.Close()
 		// #10007 — stop the periodic cluster group cache refresh goroutine.
-		if s.workloadHandlers != nil {
-			s.workloadHandlers.StopCacheRefresh()
+		if s.background != nil && s.background.workloadHandlers != nil {
+			s.background.workloadHandlers.StopCacheRefresh()
 		}
 		// stop the rewards eviction goroutine (goroutine leak prevention).
-		if s.rewardsHandler != nil {
-			s.rewardsHandler.StopEviction()
+		if s.background != nil && s.background.rewardsHandler != nil {
+			s.background.rewardsHandler.StopEviction()
 		}
 		// stop the operator cache and GitHub proxy limiter eviction goroutines.
 		handlers.StopOperatorCacheEvictor()

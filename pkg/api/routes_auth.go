@@ -29,8 +29,8 @@ type routeSetupContext struct {
 
 // oauthConfigured reports whether the server has a usable GitHub OAuth configuration.
 func (s *Server) oauthConfigured() bool {
-	s.oauthMu.RLock()
-	defer s.oauthMu.RUnlock()
+	s.auth.oauthMu.RLock()
+	defer s.auth.oauthMu.RUnlock()
 	return s.config.GitHubClientID != "" && s.config.GitHubSecret != ""
 }
 
@@ -54,17 +54,17 @@ func (s *Server) resolveOAuthCredentials() {
 
 // reloadOAuth hot-swaps the auth handler with new OAuth credentials after manifest flow completion.
 func (s *Server) reloadOAuth(clientID, clientSecret string) {
-	s.oauthMu.Lock()
-	defer s.oauthMu.Unlock()
+	s.auth.oauthMu.Lock()
+	defer s.auth.oauthMu.Unlock()
 
 	s.config.GitHubClientID = clientID
 	s.config.GitHubSecret = clientSecret
 
-	if s.authHandler != nil {
-		s.authHandler.Stop()
+	if s.auth.handler != nil {
+		s.auth.handler.Stop()
 	}
 
-	s.authHandler = handlers.NewAuthHandler(s.store, handlers.AuthConfig{
+	s.auth.handler = handlers.NewAuthHandler(s.store, handlers.AuthConfig{
 		GitHubClientID: clientID,
 		GitHubSecret:   clientSecret,
 		GitHubURL:      s.config.GitHubURL,
@@ -78,7 +78,7 @@ func (s *Server) reloadOAuth(clientID, clientSecret string) {
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
-	s.authHandler.SetHub(s.hub)
+	s.auth.handler.SetHub(s.hub)
 	slog.Info("[Server] OAuth config hot-reloaded after manifest flow")
 }
 
@@ -98,10 +98,10 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
-	s.authHandler = auth
+	s.auth.handler = auth
 
 	failureTracker := middleware.NewFailureTracker()
-	s.failureTracker = failureTracker
+	s.auth.failureTracker = failureTracker
 
 	authLimiterMaxRequests := 10
 	authLimiterWindow := 1 * time.Minute
@@ -127,9 +127,9 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 
 	auth.SetHub(s.hub)
 	currentAuthHandler := func() *handlers.AuthHandler {
-		s.oauthMu.RLock()
-		defer s.oauthMu.RUnlock()
-		return s.authHandler
+		s.auth.oauthMu.RLock()
+		defer s.auth.oauthMu.RUnlock()
+		return s.auth.handler
 	}
 
 	app.Get("/auth/github", authLimiter, injectTracker, func(c *fiber.Ctx) error {

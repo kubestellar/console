@@ -17,7 +17,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 
 	timeline := handlers.NewTimelineHandler(s.store, s.k8sClient)
 	api.Get("/timeline", timeline.GetTimeline)
-	timeline.StartEventCollector(s.done)
+	timeline.StartEventCollector(s.lifecycle.done)
 
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
 	clusterDiscoveryAuth := routes.jwtAuth

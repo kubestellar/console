@@ -11,8 +11,8 @@ import (
 )
 
 // TestShutdown_Idempotent is a regression test for #6478. Previously
-// Server.Shutdown closed s.done directly, so a second call panicked with
-// "close of closed channel". The fix wraps teardown in sync.Once so
+// Server.Shutdown closed the lifecycle done channel directly, so a second call
+// panicked with "close of closed channel". The fix wraps teardown in sync.Once so
 // subsequent calls are no-ops.
 func TestShutdown_Idempotent(t *testing.T) {
 	// Build a minimal Server with only the dependencies Shutdown touches.
@@ -26,10 +26,10 @@ func TestShutdown_Idempotent(t *testing.T) {
 	}
 
 	s := &Server{
-		app:   fiber.New(),
-		store: sqliteStore,
-		hub:   handlers.NewHub(),
-		done:  make(chan struct{}),
+		app:       fiber.New(),
+		store:     sqliteStore,
+		hub:       handlers.NewHub(),
+		lifecycle: newServerLifecycle(nil),
 	}
 
 	// First call tears everything down.
@@ -40,10 +40,10 @@ func TestShutdown_Idempotent(t *testing.T) {
 	// done must be closed after the first call. A receive on a closed
 	// channel returns immediately with the zero value.
 	select {
-	case <-s.done:
+	case <-s.lifecycle.done:
 		// expected
 	default:
-		t.Fatalf("expected s.done to be closed after first Shutdown")
+		t.Fatalf("expected lifecycle.done to be closed after first Shutdown")
 	}
 
 	// Second call must NOT panic (#6478). Before the fix this panicked
