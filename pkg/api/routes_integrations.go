@@ -82,7 +82,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	} else {
 		kagentiConfigManager = manager
 	}
-	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient)
+	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient, s.store)
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
 	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)

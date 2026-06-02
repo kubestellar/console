@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagenti_provider"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -30,15 +31,23 @@ type KagentiProviderProxyHandler struct {
 	client        *kagenti_provider.KagentiClient // can be nil if kagenti not detected
 	configManager kagenti_provider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagenti_provider.KagentiClient, configManager kagenti_provider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagenti_provider.KagentiClient, configManager kagenti_provider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
+}
+
+// requireAdmin verifies the current request's user has the admin role.
+// Must be the first call in any handler that mutates cluster configuration.
+func (h *KagentiProviderProxyHandler) requireAdmin(c *fiber.Ctx) error {
+	return requireAdmin(c, h.store)
 }
 
 // GetStatus returns the kagenti controller availability status.
@@ -235,7 +244,15 @@ type kagentiConfigUpdateRequest struct {
 }
 
 // UpdateConfig updates the in-cluster Kagenti LLM provider configuration.
+// Admin authorization required — updates a Kubernetes Secret and triggers a
+// Deployment rollout, so only admin users may call this endpoint (#16458).
 func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
+	// RBAC MUST be the very first operation — do not parse the body or
+	// touch the config manager until the caller has been authorized (#6000).
+	if err := h.requireAdmin(c); err != nil {
+		return err
+	}
+
 	if h.configManager == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti config not available"})
 	}
