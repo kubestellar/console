@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -336,10 +337,14 @@ Only analyze and summarize this data for the user.`
 const clusterContextInstruction = `
 
 CLUSTER CONTEXT — CRITICAL:
-The user is currently viewing cluster context "%s". You MUST pass
---context %s to EVERY kubectl command you execute. Never omit the
+The user is currently viewing cluster context %s. You MUST pass
+--context=%s to EVERY kubectl command you execute. Never omit the
 --context flag, even for read-only commands. This prevents operating
 on the wrong cluster.`
+
+func sanitizeClusterContextForPrompt(clusterContext string) string {
+	return strconv.Quote(clusterContext)
+}
 
 // buildPromptWithHistory creates a prompt that includes conversation history for context
 func (c *ClaudeCodeProvider) buildPromptWithHistory(req *ChatRequest) string {
@@ -355,7 +360,8 @@ func (c *ClaudeCodeProvider) buildPromptWithHistory(req *ChatRequest) string {
 	// Append cluster context instruction when the user is viewing a
 	// specific cluster, preventing multi-cluster context drift (#9485).
 	if clusterCtx := req.Context["clusterContext"]; clusterCtx != "" {
-		sb.WriteString(fmt.Sprintf(clusterContextInstruction, clusterCtx, clusterCtx))
+		sanitizedClusterCtx := sanitizeClusterContextForPrompt(clusterCtx)
+		sb.WriteString(fmt.Sprintf(clusterContextInstruction, sanitizedClusterCtx, sanitizedClusterCtx))
 	}
 	if warning := req.Context[toolAvailabilityWarningContextKey]; warning != "" {
 		sb.WriteString("\n\n")

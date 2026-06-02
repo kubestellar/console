@@ -214,7 +214,8 @@ func (p *KagentiProvider) buildPrompt(req *ChatRequest) string {
 	}
 
 	if clusterCtx := req.Context["clusterContext"]; clusterCtx != "" {
-		sb.WriteString(fmt.Sprintf(clusterContextInstruction, clusterCtx, clusterCtx))
+		sanitizedClusterCtx := sanitizeClusterContextForPrompt(clusterCtx)
+		sb.WriteString(fmt.Sprintf(clusterContextInstruction, sanitizedClusterCtx, sanitizedClusterCtx))
 	}
 	if warning := req.Context[toolAvailabilityWarningContextKey]; warning != "" {
 		sb.WriteString("\n\n")
