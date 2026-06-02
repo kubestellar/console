@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -32,6 +34,12 @@ const (
 
 	// cardProxyMaxURLLen prevents abuse via extremely long URLs.
 	cardProxyMaxURLLen = 2048
+
+	// cardProxyRateWindow is the sliding window for per-user rate limiting.
+	cardProxyRateWindow = 1 * time.Minute
+
+	// cardProxyRateMax is the maximum requests per user per window.
+	cardProxyRateMax = 30
 )
 
 var (
@@ -92,12 +100,46 @@ func isBlockedIP(ip net.IP) bool {
 // Cards call useCardFetch(url) in the sandbox, which routes through this
 // endpoint: GET /api/card-proxy?url=<encoded-url>
 type CardProxyHandler struct {
-	store store.Store
+	store   store.Store
+	limiter *cardProxyRateLimiter
+}
+
+// cardProxyRateLimiter tracks per-user request counts in a sliding window.
+type cardProxyRateLimiter struct {
+	mu      sync.Mutex
+	buckets map[string]*rateBucket
+}
+
+type rateBucket struct {
+	count  int
+	window time.Time
+}
+
+func newCardProxyRateLimiter() *cardProxyRateLimiter {
+	return &cardProxyRateLimiter{buckets: make(map[string]*rateBucket)}
+}
+
+// allow returns true if the user has remaining quota in the current window.
+func (l *cardProxyRateLimiter) allow(userID string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	now := time.Now()
+	b, ok := l.buckets[userID]
+	if !ok || now.Sub(b.window) > cardProxyRateWindow {
+		l.buckets[userID] = &rateBucket{count: 1, window: now}
+		return true
+	}
+	if b.count >= cardProxyRateMax {
+		return false
+	}
+	b.count++
+	return true
 }
 
 // NewCardProxyHandler creates a new card proxy handler.
 func NewCardProxyHandler(s store.Store) *CardProxyHandler {
-	return &CardProxyHandler{store: s}
+	return &CardProxyHandler{store: s, limiter: newCardProxyRateLimiter()}
 }
 
 // Proxy handles GET /api/card-proxy?url=<encoded-url>.
@@ -106,6 +148,18 @@ func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// able to trigger outbound requests through the proxy (#12436).
 	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err
+	}
+
+	// #16515: Per-user rate limiting to prevent SSRF abuse through rapid requests.
+	uid := middleware.GetUserID(c)
+	rateLimitKey := uid.String()
+	if rateLimitKey == "00000000-0000-0000-0000-000000000000" {
+		rateLimitKey = c.IP()
+	}
+	if !h.limiter.allow(rateLimitKey) {
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+			"error": "Card proxy rate limit exceeded. Try again in a minute.",
+		})
 	}
 
 	rawURL := c.Query("url")
