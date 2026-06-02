@@ -119,12 +119,11 @@ var ghpNightlyTagRe = regexp.MustCompile(`(?i)^.*nightly.*$`)
 var ghpPRFromCommitRe = regexp.MustCompile(`^.*\(#(\d+)\)\s*$`)
 
 func ghpIsAllowedRepo(repo string) bool {
-	// Accept any valid owner/repo slug — the GitHub token's permissions
-	// are the real access control. The preconfigured list only controls
-	// which repos are fetched by default (no filter), not which repos
-	// a user is allowed to query.
-	if ghpValidRepoPattern.MatchString(repo) {
-		return true
+	// Only allow repos in the configured allowlist to prevent confused deputy
+	// attacks where the server's GitHub token is used to query arbitrary repos.
+	// Format validation is a prerequisite but not sufficient.
+	if !ghpValidRepoPattern.MatchString(repo) {
+		return false
 	}
 	for _, r := range ghpRepos {
 		if r == repo {
