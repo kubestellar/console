@@ -31,7 +31,6 @@ interface NpsTrendItem {
 interface NpsRecentItem {
   score: number;
   category: string;
-  feedback?: string;
   timestamp: string;
 }
 
@@ -302,14 +301,15 @@ describe("nps", () => {
         avgScore: 2.5,
       });
 
-      // Verify recent list mapping (should reverse order and omit sessionIds entirely)
+      // Verify recent list mapping (should reverse order, omit sessionIds and feedback for privacy)
       expect(aggregation.recent).toHaveLength(4);
       expect(aggregation.recent[0].score).toBe(3);
       expect(aggregation.recent[0].category).toBe("passive");
       expect(aggregation.recent[0].sessionId).toBeUndefined();
+      expect(aggregation.recent[0].feedback).toBeUndefined();
 
       expect(aggregation.recent[1].score).toBe(2);
-      expect(aggregation.recent[1].feedback).toBe("Decent tool");
+      expect(aggregation.recent[1].feedback).toBeUndefined(); // Feedback stripped for privacy
       expect(aggregation.recent[1].sessionId).toBeUndefined();
 
       assertResponseHasNoSecrets(JSON.stringify(aggregation), ["s1", "s2", "s3", "s4"]);

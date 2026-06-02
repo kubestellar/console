@@ -52,8 +52,8 @@ interface NPSAggregation {
   scoreMax: number;
   /** Monthly trend: { month: "2026-04", npsScore, count } */
   trend: Array<{ month: string; npsScore: number; count: number; avgScore: number }>;
-  /** Recent responses (last 20, no PII) */
-  recent: Array<{ score: number; category: string; feedback?: string; timestamp: string }>;
+  /** Recent responses (last 20, no feedback or PII — requires admin endpoint to access feedback) */
+  recent: Array<{ score: number; category: string; timestamp: string }>;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -141,14 +141,15 @@ function computeAggregation(data: NPSData): NPSAggregation {
       return { month, npsScore: monthNps, count, avgScore: Math.round(avgScore * 10) / 10 };
     });
 
-  // Recent responses (strip sessionId for privacy)
+  // Recent responses (strip sessionId and feedback for privacy)
+  // Note: Feedback is user-submitted content that may contain PII and is not included in the public response.
+  // To view feedback comments, an admin endpoint should be implemented with proper authorization.
   const recent = responses
     .slice(-RECENT_COUNT)
     .reverse()
-    .map(({ score, category, feedback, timestamp }) => ({
+    .map(({ score, category, timestamp }) => ({
       score,
       category,
-      ...(feedback ? { feedback } : {}),
       timestamp,
     }));
 
@@ -189,6 +190,10 @@ export default async (req: Request) => {
   const store = getStore(STORE_NAME);
 
   // ── GET: return aggregated results ──
+  // SECURITY: Returns only aggregate metrics and anonymized recent responses (no user feedback or PII).
+  // User-submitted feedback comments may contain emails, incident details, or other sensitive information
+  // and are not exposed in this public response. An authenticated admin endpoint would be required to
+  // access raw feedback. See CWE-200 and CWE-862.
   if (req.method === "GET") {
     try {
       const raw = await store.get(DATA_KEY);
