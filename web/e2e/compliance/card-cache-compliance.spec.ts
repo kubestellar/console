@@ -167,6 +167,9 @@ const STORAGE_CLEANUP_TIMEOUT_MS = 5_000
 const STORAGE_CLEANUP_POLL_INTERVAL_MS = 100
 const STORAGE_CLEANUP_POLL_ATTEMPTS = 20
 const SOFT_NAV_SETTER_TIMEOUT_MS = 2_000
+const CACHE_SNAPSHOT_STABILIZE_TIMEOUT_MS = process.env.CI ? 15_000 : 5_000
+const CACHE_SNAPSHOT_STABILIZE_INTERVAL_MS = 250
+const CACHE_SNAPSHOT_STABLE_READS = 2
 const COLD_BATCH_RESET_WINDOW_NAME = '__kc-cache-test-cold-reset__'
 const COMPLIANCE_ROUTE = '/__compliance/all-cards'
 const EMPTY_SSE_BODY = ': keep-alive\n\n'
@@ -648,6 +651,56 @@ async function snapshotCacheState(page: Page): Promise<{
   }, CACHE_DB_NAME)
 }
 
+async function waitForSettledCacheState(page: Page): Promise<{
+  indexedDBEntries: CacheEntry[]
+  localStorageKeys: string[]
+}> {
+  let settledState: {
+    indexedDBEntries: CacheEntry[]
+    localStorageKeys: string[]
+  } | null = null
+  let lastSignature = ''
+  let stableReads = 0
+
+  await expect(async () => {
+    const cacheState = await snapshotCacheState(page)
+    const idbKeys = cacheState.indexedDBEntries.map((entry) => entry.key).sort()
+    const localStorageKeys = [...cacheState.localStorageKeys].sort()
+    const signature = JSON.stringify({
+      indexedDbKeys: idbKeys,
+      localStorageKeys,
+    })
+
+    expect(
+      cacheState.indexedDBEntries.length,
+      'Expected IndexedDB cache writes to complete before warm-return assertions',
+    ).toBeGreaterThan(0)
+
+    if (signature === lastSignature) {
+      stableReads += 1
+    } else {
+      lastSignature = signature
+      stableReads = 1
+    }
+
+    expect(
+      stableReads,
+      'Expected cache snapshot to stop changing before reading IndexedDB state',
+    ).toBeGreaterThanOrEqual(CACHE_SNAPSHOT_STABLE_READS)
+
+    settledState = cacheState
+  }).toPass({
+    timeout: CACHE_SNAPSHOT_STABILIZE_TIMEOUT_MS,
+    intervals: [CACHE_SNAPSHOT_STABILIZE_INTERVAL_MS],
+  })
+
+  if (!settledState) {
+    throw new Error('Failed to capture settled cache state')
+  }
+
+  return settledState
+}
+
 // Data delay is controlled via mockControl.setDelayMode(true) from shared mocks.
 // When enabled, data routes delay 30s while auth/health/WebSocket respond normally.
 // This avoids 503 errors that trigger app error handling / route redirects.
@@ -840,7 +893,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
 
   // ── Phase 4: Cache snapshot ────────────────────────────────────────────
   console.log('[CacheTest] Phase 4: Inspecting cache state')
-  const cacheState = await snapshotCacheState(page)
+  const cacheState = await waitForSettledCacheState(page)
   console.log(`[CacheTest] IndexedDB: ${cacheState.indexedDBEntries.length} entries, localStorage: ${cacheState.localStorageKeys.length} cache keys`)
 
   for (const entry of cacheState.indexedDBEntries) {
