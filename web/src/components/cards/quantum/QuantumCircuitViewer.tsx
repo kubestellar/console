@@ -79,6 +79,8 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
   })
 
   const [zoomLevel, setZoomLevel] = React.useState<number>(readPersistedZoom)
+  const [iframeOpen, setIframeOpen] = React.useState(false)
+  const [iframeHtml, setIframeHtml] = React.useState<string>('')
   const preRef = React.useRef<HTMLPreElement | null>(null)
   const [naturalSize, setNaturalSize] = React.useState<{ width: number; height: number }>({ width: 0, height: 0 })
 
@@ -87,8 +89,24 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
     writePersistedZoom(pct)
   }
 
-  const handlePopout = () => {
-    window.open(CIRCUIT_POPOUT_URL, '_blank', 'noopener,noreferrer')
+  const handlePopout = async () => {
+    try {
+      const response = await fetch(CIRCUIT_POPOUT_URL)
+      if (!response.ok) {
+        console.error('Failed to fetch circuit HTML:', response.statusText)
+        return
+      }
+      const html = await response.text()
+      setIframeHtml(html)
+      setIframeOpen(true)
+    } catch (err) {
+      console.error('Error fetching circuit HTML:', err)
+    }
+  }
+
+  const closeIframe = () => {
+    setIframeOpen(false)
+    setIframeHtml('')
   }
 
   const circuitAscii = data?.circuitAscii ?? null
@@ -208,6 +226,34 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
               </pre>
             </div>
           </div>
+
+          {/* Sandboxed iframe modal for circuit HTML */}
+          {iframeOpen && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+              <div className="bg-card rounded-lg border border-border shadow-lg flex flex-col max-w-4xl w-full h-[80vh]">
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                  <h2 className="text-lg font-semibold">Quantum Circuit Diagram</h2>
+                  <button
+                    type="button"
+                    onClick={closeIframe}
+                    className="p-1 hover:bg-secondary rounded transition-colors"
+                    aria-label="Close"
+                  >
+                    <span className="text-xl">✕</span>
+                  </button>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  {/* Sandboxed iframe with no permissions — prevents XSS */}
+                  <iframe
+                    sandbox=""
+                    title="Quantum Circuit Diagram"
+                    className="w-full h-full border-none"
+                    srcDoc={iframeHtml}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center text-muted-foreground">

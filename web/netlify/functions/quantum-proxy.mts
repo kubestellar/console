@@ -338,6 +338,11 @@ export default async (req: Request, context: Context): Promise<Response> => {
       if (value) safeHeaders.set(name, value);
     }
 
+    // Security headers for all responses
+    safeHeaders.set("X-Content-Type-Options", "nosniff");
+    // CSP: disallow inline scripts and disable external scripts to prevent XSS
+    safeHeaders.set("Content-Security-Policy", "default-src 'self'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:");
+
     return new Response(responseBody, {
       status: response.status,
       headers: safeHeaders,
