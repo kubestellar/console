@@ -71,10 +71,10 @@ export interface GitTreeEntry {
 export function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  // #16494: Removed wildcard *.kubestellar.io — subdomain takeover risk.
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
+    if (host === "localhost" && process.env.NETLIFY_DEV) return origin;
   } catch { /* invalid URL */ }
   return ALLOWED_ORIGINS[0];
 }

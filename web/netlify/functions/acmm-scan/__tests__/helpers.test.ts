@@ -26,11 +26,13 @@ describe("corsOrigin", () => {
     expect(corsOrigin(ALLOWED_ORIGINS[1])).toBe(ALLOWED_ORIGINS[1]);
   });
 
-  it("allows localhost and kubestellar domains", () => {
-    expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
+  it("allows localhost only in dev mode and rejects subdomain wildcards", () => {
+    // Subdomain wildcards are no longer accepted (#16494)
     expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(
-      "https://console-preview.kubestellar.io",
+      ALLOWED_ORIGINS[0],
     );
+    // Localhost without NETLIFY_DEV falls back to default
+    expect(corsOrigin("http://localhost:5174")).toBe(ALLOWED_ORIGINS[0]);
   });
 
   it("falls back to the default origin for unknown or missing origins", () => {

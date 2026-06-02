@@ -51,7 +51,9 @@ function isAllowedOrigin(origin: string): boolean {
     return true;
   }
 
-  return parsedOrigin.hostname === "kubestellar.io" || parsedOrigin.hostname.endsWith(".kubestellar.io");
+  // #16494: Removed wildcard *.kubestellar.io — subdomain takeover risk.
+  // Only explicitly listed origins above are trusted.
+  return false;
 }
 
 function corsOrigin(origin: string | null): string {

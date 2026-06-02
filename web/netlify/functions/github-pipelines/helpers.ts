@@ -8,12 +8,12 @@ import { ALLOWED_ORIGINS, CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
 export function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  // #16494: Removed wildcard *.kubestellar.io match — subdomain takeover risk.
+  // Only explicitly listed origins are trusted. Dev localhost is gated on
+  // NETLIFY_DEV to prevent production exposure.
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
-    if (host === "localhost") return origin;
+    if (host === "localhost" && process.env.NETLIFY_DEV) return origin;
   } catch {
     // Malformed origin — fall through to default
   }
