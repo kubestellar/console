@@ -60,7 +60,7 @@ interface CacheEntry {
 const fileRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
 function hasInvalidPathInput(value: string): boolean {
-  // Iteratively decode to catch %2e%2e, %252e%252e, etc. (CWE-22 defense-in-depth)
+  // Iteratively decode to catch %2e%2e, %252e%252e, etc. (CWE-22 / #16493 defense-in-depth)
   let decoded = value;
   try {
     let prev = "";
@@ -71,11 +71,17 @@ function hasInvalidPathInput(value: string): boolean {
   } catch {
     return true; // Malformed percent-encoding — reject
   }
-  return decoded.includes("..") || decoded.startsWith("/") || decoded.includes("#") || decoded.includes("?");
+  return (
+    decoded.includes("..") ||
+    decoded.startsWith("/") ||
+    decoded.includes("#") ||
+    decoded.includes("?") ||
+    decoded.includes("\0")
+  );
 }
 
 function hasInvalidRefInput(value: string): boolean {
-  // Iteratively decode to catch encoded traversal (CWE-22 defense-in-depth)
+  // Iteratively decode to catch encoded traversal variants (#16493 defense-in-depth)
   let decoded = value;
   try {
     let prev = "";
@@ -86,7 +92,13 @@ function hasInvalidRefInput(value: string): boolean {
   } catch {
     return true; // Malformed percent-encoding — reject
   }
-  return decoded.includes("..") || decoded.startsWith("/") || decoded.includes("#") || decoded.includes("?");
+  return (
+    decoded.includes("..") ||
+    decoded.startsWith("/") ||
+    decoded.includes("#") ||
+    decoded.includes("?") ||
+    decoded.includes("\0")
+  );
 }
 
 export default async (request: Request): Promise<Response> => {
