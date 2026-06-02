@@ -18,8 +18,8 @@ import (
 )
 
 // fakeGitHubComment builds a minimal GitHub issue comment JSON payload.
-func fakeGitHubComment(login, body, htmlURL string, createdAt time.Time) GitHubIssueComment {
-	c := GitHubIssueComment{
+func fakeGitHubComment(login, body, htmlURL string, createdAt time.Time) DetectionRunIssueComment {
+	c := DetectionRunIssueComment{
 		Body:      body,
 		CreatedAt: createdAt,
 		HTMLURL:   htmlURL,
@@ -194,14 +194,14 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	issueNumber := 16283
 	issueURL := fmt.Sprintf("https://github.com/%s/issues/%d", awDetectionRunsRepo, issueNumber)
-	searchResponse := GitHubIssueSearchResponse{
-		Items: []GitHubIssue{{
+	searchResponse := DetectionRunIssueSearchResponse{
+		Items: []DetectionRunIssue{{
 			Number:  issueNumber,
 			HTMLURL: issueURL,
 		}},
 	}
 
-	comments := []GitHubIssueComment{
+	comments := []DetectionRunIssueComment{
 		fakeGitHubComment(
 			"github-actions",
 			"Conclusion: warning | Reason: parse_error\nhttps://github.com/kubestellar/console/actions/runs/11111",
@@ -275,8 +275,8 @@ func TestFetchDetectionRuns_LivePath(t *testing.T) {
 func TestFetchDetectionRuns_APIError(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "test-token")
 
-	searchResponse := GitHubIssueSearchResponse{
-		Items: []GitHubIssue{{
+	searchResponse := DetectionRunIssueSearchResponse{
+		Items: []DetectionRunIssue{{
 			Number:  16283,
 			HTMLURL: "https://github.com/kubestellar/console/issues/16283",
 		}},
@@ -310,8 +310,8 @@ func TestFetchDetectionRuns_APIError(t *testing.T) {
 func TestFetchDetectionRuns_InvalidJSON(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "test-token")
 
-	searchResponse := GitHubIssueSearchResponse{
-		Items: []GitHubIssue{{
+	searchResponse := DetectionRunIssueSearchResponse{
+		Items: []DetectionRunIssue{{
 			Number:  16283,
 			HTMLURL: "https://github.com/kubestellar/console/issues/16283",
 		}},

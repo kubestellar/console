@@ -64,8 +64,8 @@ type DetectionRunsResponse struct {
 	IsDemoData bool           `json:"isDemoData"`
 }
 
-// GitHubIssueComment represents a GitHub issue comment from the API.
-type GitHubIssueComment struct {
+// DetectionRunIssueComment represents a GitHub issue comment from the API.
+type DetectionRunIssueComment struct {
 	ID        int64     `json:"id"`
 	Body      string    `json:"body"`
 	CreatedAt time.Time `json:"created_at"`
@@ -75,13 +75,13 @@ type GitHubIssueComment struct {
 	} `json:"user"`
 }
 
-// GitHubIssueSearchResponse represents a GitHub issue search response.
-type GitHubIssueSearchResponse struct {
-	Items []GitHubIssue `json:"items"`
+// DetectionRunIssueSearchResponse represents a GitHub issue search response.
+type DetectionRunIssueSearchResponse struct {
+	Items []DetectionRunIssue `json:"items"`
 }
 
-// GitHubIssue represents a GitHub issue result.
-type GitHubIssue struct {
+// DetectionRunIssue represents a GitHub issue result.
+type DetectionRunIssue struct {
 	Number  int    `json:"number"`
 	HTMLURL string `json:"html_url"`
 }
@@ -124,7 +124,7 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns(ctx context.Context) (*
 		return nil, fmt.Errorf("failed to fetch comments: %w", err)
 	}
 
-	var comments []GitHubIssueComment
+	var comments []DetectionRunIssueComment
 	if err := json.Unmarshal(commentsBody, &comments); err != nil {
 		return nil, fmt.Errorf("failed to parse comments: %w", err)
 	}
@@ -175,7 +175,7 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRuns(ctx context.Context) (*
 	}, nil
 }
 
-func (h *AgenticDetectionRunsHandler) fetchDetectionRunsIssue(ctx context.Context, token string) (*GitHubIssue, error) {
+func (h *AgenticDetectionRunsHandler) fetchDetectionRunsIssue(ctx context.Context, token string) (*DetectionRunIssue, error) {
 	searchQuery := neturl.QueryEscape(fmt.Sprintf(
 		"repo:%s is:issue is:open label:%s in:title %q",
 		awDetectionRunsRepo,
@@ -189,7 +189,7 @@ func (h *AgenticDetectionRunsHandler) fetchDetectionRunsIssue(ctx context.Contex
 		return nil, fmt.Errorf("failed to fetch detection runs issue: %w", err)
 	}
 
-	var searchResponse GitHubIssueSearchResponse
+	var searchResponse DetectionRunIssueSearchResponse
 	if err := json.Unmarshal(searchBody, &searchResponse); err != nil {
 		return nil, fmt.Errorf("failed to parse detection runs issue: %w", err)
 	}
