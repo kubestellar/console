@@ -89,5 +89,11 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Patch("/kagenti-provider/config", kagentiProviderHandler.UpdateConfig)
 	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
 	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
-	api.Post("/kagenti-provider/tools/call-direct", kagentiProviderHandler.CallToolDirect)
+	// #16530: Require admin — call-direct exposes raw cluster/pod/event data.
+	api.Post("/kagenti-provider/tools/call-direct", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return kagentiProviderHandler.CallToolDirect(c)
+	})
 }
