@@ -148,7 +148,7 @@ export function ListVisualization({
             <button
               onClick={toggleSortDirection}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground hover:bg-secondary/80 transition-colors"
-              title={sortDirection === 'asc' ? 'Ascending (click to reverse)' : 'Descending (click to reverse)'}
+              aria-label={sortDirection === 'asc' ? 'Sort ascending, click to reverse' : 'Sort descending, click to reverse'}
             >
               {sortDirection === 'asc' ? (
                 <>

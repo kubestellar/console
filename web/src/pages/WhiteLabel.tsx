@@ -286,8 +286,10 @@ function DeploymentSection() {
 
       {/* Deployment mode tabs */}
       <div className="max-w-3xl mx-auto mb-8">
-        <div className="flex rounded-lg border border-border/50 overflow-hidden">
+        <div className="flex rounded-lg border border-border/50 overflow-hidden" role="tablist" aria-label="Deployment method">
           <button
+            role="tab"
+            aria-selected={activeTab === 'binary'}
             onClick={() => switchTab('binary')}
             className={cn(
               'flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors',
@@ -301,6 +303,8 @@ function DeploymentSection() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground">curl | bash</span>
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'helm'}
             onClick={() => switchTab('helm')}
             className={cn(
               'flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors',
@@ -314,6 +318,8 @@ function DeploymentSection() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground">recommended</span>
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'docker'}
             onClick={() => switchTab('docker')}
             className={cn(
               'flex-1 flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-medium transition-colors',
@@ -353,7 +359,7 @@ function DeploymentSection() {
                       <button
                         onClick={() => copyCommands(s.commands!, s.step)}
                         className="absolute top-2.5 right-2.5 p-1.5 rounded-md bg-card border border-border/50 text-muted-foreground hover:text-white hover:border-border transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Copy commands"
+                        aria-label="Copy commands"
                       >
                         {isCopied ? (
                           <Check className="w-3.5 h-3.5 text-green-400" />

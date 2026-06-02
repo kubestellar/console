@@ -257,6 +257,8 @@ export function StatsRuntime({
           {collapsible ? (
             <button
               onClick={toggleExpanded}
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${title}`}
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <Activity className="w-4 h-4" />
@@ -279,7 +281,7 @@ export function StatsRuntime({
           {showConfigButton && isExpanded && (
             <button
               className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
-              title="Configure stats"
+              aria-label="Configure stats"
             >
               <Settings className="w-4 h-4" />
             </button>

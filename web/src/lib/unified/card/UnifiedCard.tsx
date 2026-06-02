@@ -384,6 +384,7 @@ function ErrorState({
       {onRetry && (
         <button
           onClick={onRetry}
+          aria-label="Retry loading data"
           className="mt-3 px-3 py-1 text-xs bg-secondary hover:bg-secondary/80 rounded transition-colors"
         >
           Retry

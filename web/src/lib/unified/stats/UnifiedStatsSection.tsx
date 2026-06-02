@@ -132,6 +132,8 @@ export function UnifiedStatsSection({
           {collapsible ? (
             <button
               onClick={toggleExpanded}
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${config.title || 'Stats Overview'}`}
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <Activity className="w-4 h-4" />
