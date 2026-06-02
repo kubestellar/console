@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubestellar/console/pkg/kagentiprovider"
+	kagentiprovider "github.com/kubestellar/console/pkg/kagentiprovider"
 )
 
 const (
