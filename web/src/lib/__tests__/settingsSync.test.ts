@@ -3,6 +3,8 @@ import {
   collectFromLocalStorage,
   restoreToLocalStorage,
   isLocalStorageEmpty,
+  redactNotificationSecrets,
+  hasNotificationConfig,
   SETTINGS_CHANGED_EVENT,
   SETTINGS_RESTORED_EVENT,
 } from '../settingsSync'
@@ -89,6 +91,51 @@ describe('collectFromLocalStorage', () => {
     const result = collectFromLocalStorage()
     expect(result.customThemes).toBeUndefined()
   })
+
+  it('sanitizes legacy notification secrets in localStorage', () => {
+    localStorage.setItem('kc_notification_config', JSON.stringify({
+      slackWebhookUrl: 'https://hooks.slack.com/services/test',
+      slackChannel: '#alerts',
+    }))
+
+    const result = collectFromLocalStorage()
+
+    expect(result.notifications).toEqual({
+      slackWebhookUrl: 'https://hooks.slack.com/services/test',
+      slackWebhookConfigured: true,
+      slackChannel: '#alerts',
+    })
+    expect(JSON.parse(localStorage.getItem('kc_notification_config') ?? '{}')).toEqual({
+      slackWebhookUrl: '',
+      slackWebhookConfigured: true,
+      slackChannel: '#alerts',
+    })
+  })
+})
+
+describe('redactNotificationSecrets', () => {
+  it('replaces secrets with configured flags', () => {
+    expect(redactNotificationSecrets({
+      emailPassword: 'pass',
+      slackWebhookUrl: 'https://hooks.slack.com/services/test',
+      pagerdutyRoutingKey: 'routing-key',
+    })).toEqual({
+      emailPassword: '',
+      emailPasswordConfigured: true,
+      slackWebhookUrl: '',
+      slackWebhookConfigured: true,
+      pagerdutyRoutingKey: '',
+      pagerdutyRoutingKeyConfigured: true,
+    })
+  })
+})
+
+describe('hasNotificationConfig', () => {
+  it('detects configured secrets and metadata', () => {
+    expect(hasNotificationConfig({ emailPasswordConfigured: true })).toBe(true)
+    expect(hasNotificationConfig({ emailSMTPHost: 'smtp.example.com' })).toBe(true)
+    expect(hasNotificationConfig({})).toBe(false)
+  })
 })
 
 describe('restoreToLocalStorage', () => {
@@ -113,6 +160,22 @@ describe('restoreToLocalStorage', () => {
     restoreToLocalStorage({ hasFeedbackToken: true } as Parameters<typeof restoreToLocalStorage>[0])
     expect(localStorage.getItem('has_feedback_github_token')).toBe('true')
     expect(localStorage.getItem('feedback_github_token')).toBeNull()
+  })
+
+  it('redacts notification secrets before persisting', () => {
+    restoreToLocalStorage({
+      notifications: {
+        emailPassword: 'pass',
+        slackWebhookUrl: 'https://hooks.slack.com/services/test',
+      },
+    } as Parameters<typeof restoreToLocalStorage>[0])
+
+    expect(JSON.parse(localStorage.getItem('kc_notification_config') ?? '{}')).toEqual({
+      emailPassword: '',
+      emailPasswordConfigured: true,
+      slackWebhookUrl: '',
+      slackWebhookConfigured: true,
+    })
   })
 
   it('removes legacy github token keys', () => {

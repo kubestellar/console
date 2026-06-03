@@ -32,10 +32,14 @@ export function SlackNotificationSettings({
 }: SlackNotificationSettingsProps) {
   const { t } = useTranslation()
   const [urlError, setUrlError] = useState<string | null>(null)
+  const hasStoredWebhook = config.slackWebhookConfigured === true && !config.slackWebhookUrl
 
   const handleUrlChange = (value: string) => {
-    updateConfig({ slackWebhookUrl: value })
     const trimmed = value.trim()
+    updateConfig({
+      slackWebhookUrl: value,
+      slackWebhookConfigured: trimmed.length > 0,
+    })
     if (trimmed.length > 0 && !SLACK_WEBHOOK_REGEX.test(trimmed)) {
       setUrlError(t('settings.notifications.slack.invalidWebhookUrl'))
     } else {
@@ -93,6 +97,11 @@ export function SlackNotificationSettings({
         />
         {urlError && (
           <p id="slack-webhook-url-error" role="alert" className="mt-1 text-xs text-red-400">{urlError}</p>
+        )}
+        {hasStoredWebhook && (
+          <p className="text-xs text-green-400 mt-1">
+            {t('settings.notifications.secretConfigured')}
+          </p>
         )}
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.slack.webhookHint')}

@@ -5,6 +5,7 @@ import {
   collectFromLocalStorage,
   restoreToLocalStorage,
   isLocalStorageEmpty,
+  hasNotificationConfig,
   SETTINGS_CHANGED_EVENT } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
@@ -184,7 +185,8 @@ export function usePersistedSettings() {
         // Determine whether the backend file has meaningful content
         const backendHasData = data && (
           data.theme || data.aiMode || data.hasFeedbackToken ||
-          Object.keys(data.apiKeys || {}).length > 0)
+          Object.keys(data.apiKeys || {}).length > 0 ||
+          hasNotificationConfig(data.notifications))
 
         const hasPendingLocalChanges = hasPendingSettingsSync() && !isLocalStorageEmpty()
         let scheduledSave = false

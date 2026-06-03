@@ -817,6 +817,7 @@
         "invalidSmtpPort": "SMTP port must be a number between 1 and 65535."
       },
       "tip": "Configure notification channels here, then add them to specific alert rules in the Alert Rules editor. Each rule can have multiple notification channels with different configurations.",
+      "secretConfigured": "A secret is already stored. Leave this blank to keep it, or enter a new value to replace it.",
       "browser": {
         "title": "Browser Notifications",
         "permissionStatus": "Permission status:",

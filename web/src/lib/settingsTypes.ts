@@ -44,7 +44,15 @@ export interface APIKeyEntry {
   model?: string
 }
 
-export interface NotificationSecrets {
+export interface NotificationSecretStatus {
+  slackWebhookConfigured?: boolean
+  emailPasswordConfigured?: boolean
+  pagerdutyRoutingKeyConfigured?: boolean
+  pagerdutyIntegrationKeyConfigured?: boolean
+  opsgenieApiKeyConfigured?: boolean
+}
+
+export interface NotificationSecrets extends NotificationSecretStatus {
   slackWebhookUrl?: string
   slackChannel?: string
   emailSMTPHost?: string
@@ -53,6 +61,9 @@ export interface NotificationSecrets {
   emailTo?: string
   emailUsername?: string
   emailPassword?: string
+  pagerdutyRoutingKey?: string
+  pagerdutyIntegrationKey?: string
+  opsgenieApiKey?: string
 }
 
 /**

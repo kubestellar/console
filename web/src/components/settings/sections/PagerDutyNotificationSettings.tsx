@@ -25,6 +25,7 @@ export function PagerDutyNotificationSettings({
   isLoading,
 }: PagerDutyNotificationSettingsProps) {
   const { t } = useTranslation()
+  const hasStoredRoutingKey = config.pagerdutyRoutingKeyConfigured === true && !config.pagerdutyRoutingKey
 
   const handleTestPagerDuty = async () => {
     if (!config.pagerdutyRoutingKey) {
@@ -62,10 +63,18 @@ export function PagerDutyNotificationSettings({
           id="pagerduty-routing-key"
           type="password"
           value={config.pagerdutyRoutingKey || ''}
-          onChange={e => updateConfig({ pagerdutyRoutingKey: e.target.value })}
+          onChange={e => updateConfig({
+            pagerdutyRoutingKey: e.target.value,
+            pagerdutyRoutingKeyConfigured: e.target.value.trim().length > 0,
+          })}
           placeholder="e.g. a1b2c3d4e5f6..."
           className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
+        {hasStoredRoutingKey && (
+          <p className="mt-1 text-xs text-green-400">
+            {t('settings.notifications.secretConfigured')}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.pagerduty.routingKeyHint', 'Find this under Services > Integrations > Events API v2 in PagerDuty')}
         </p>

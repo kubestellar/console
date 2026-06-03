@@ -26,10 +26,12 @@ vi.mock('../../lib/auth', () => ({
 const mockCollectFromLocalStorage = vi.fn(() => ({ theme: 'dark' }))
 const mockRestoreToLocalStorage = vi.fn()
 const mockIsLocalStorageEmpty = vi.fn(() => false)
+const mockHasNotificationConfig = vi.fn((notifications?: { slackWebhookConfigured?: boolean }) => Boolean(notifications && Object.keys(notifications).length > 0))
 vi.mock('../../lib/settingsSync', () => ({
   collectFromLocalStorage: (...args: unknown[]) => mockCollectFromLocalStorage(...args),
   restoreToLocalStorage: (...args: unknown[]) => mockRestoreToLocalStorage(...args),
   isLocalStorageEmpty: (...args: unknown[]) => mockIsLocalStorageEmpty(...args),
+  hasNotificationConfig: (...args: unknown[]) => mockHasNotificationConfig(...args),
   SETTINGS_CHANGED_EVENT: 'kubestellar-settings-changed',
 }))
 
@@ -108,6 +110,7 @@ describe('usePersistedSettings', () => {
     mockCollectFromLocalStorage.mockReturnValue({ theme: 'dark' })
     mockRestoreToLocalStorage.mockReset()
     mockIsLocalStorageEmpty.mockReturnValue(false)
+    mockHasNotificationConfig.mockImplementation((notifications?: { slackWebhookConfigured?: boolean }) => Boolean(notifications && Object.keys(notifications).length > 0))
     mockIsAuthenticated.mockReturnValue(true)
     mockIsNetlifyDeployment = false
     localStorage.clear()
@@ -198,6 +201,19 @@ describe('usePersistedSettings', () => {
 
     expect(mockRestoreToLocalStorage).toHaveBeenCalledWith(
       expect.objectContaining({ apiKeys: { openai: 'key1' } }),
+    )
+    expect(result.current.restoredFromFile).toBe(true)
+  })
+
+  it('restores when agent only has notification settings', async () => {
+    mockIsLocalStorageEmpty.mockReturnValue(true)
+    mockFetch.mockReturnValue(jsonResponse({ notifications: { slackWebhookConfigured: true } }))
+
+    const { result } = renderHook(() => usePersistedSettings())
+    await flushMicrotasks()
+
+    expect(mockRestoreToLocalStorage).toHaveBeenCalledWith(
+      expect.objectContaining({ notifications: { slackWebhookConfigured: true } }),
     )
     expect(result.current.restoredFromFile).toBe(true)
   })
