@@ -20,6 +20,8 @@ const BLOCKED_GLOBALS = [
   'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
   'requestAnimationFrame',
   'postMessage', 'crypto',
+  // Metaprogramming APIs that can bypass parameter shadowing (#16505)
+  'Reflect', 'Proxy',
 ] as const
 
 /**
@@ -151,11 +153,24 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // GeneratorFunction param shadowing and the runtime throw injected
     // below, the common escape routes are closed.
     const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
-      { re: /\.constructor\s*\(/, label: '.constructor(' },
-      { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
+      // Direct constructor access — dotted or bracket notation
+      { re: /\.constructor\b/, label: '.constructor' },
+      { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
+      // Computed bracket access to constructor (template literals, concat, variables)
+      { re: /\[\s*[^'"`\]]*constructor[^'"`\]]*\]/, label: '[...constructor...]' },
+      // Prototype chain traversal
       { re: /\b__proto__\b/, label: '__proto__' },
+      { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
+      { re: /Object\s*\.\s*getOwnPropertyDescriptor/, label: 'Object.getOwnPropertyDescriptor' },
+      // Function constructor variants
       { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
       { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+      // Reflect API can bypass proxies
+      { re: /\bReflect\b/, label: 'Reflect' },
+      // Proxy can be used to intercept and exfiltrate
+      { re: /\bnew\s+Proxy\b/, label: 'new Proxy' },
+      // import() is not blocked by Function param shadowing
+      { re: /\bimport\s*\(/, label: 'import()' },
     ]
     for (const { re, label } of FORBIDDEN_PATTERNS) {
       if (re.test(compiledCode)) {
