@@ -207,6 +207,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
 	}
 
+	// SECURITY (#16759): Enforce the same prompt size limit as the streaming path
+	// to prevent resource exhaustion via the non-streaming endpoint.
+	if len(req.Prompt) > maxPromptChars {
+		return s.errorResponse(msg.ID, "prompt_too_large",
+			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars))
+	}
+
 	// SECURITY: Reject new prompts when the session token quota is exhausted
 	// to prevent unbounded AI API spend (#9438).
 	if s.isSessionQuotaExceeded() {
@@ -247,9 +254,12 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		return s.errorResponse(msg.ID, "agent_unavailable", "AI agent is not available - API key may be missing")
 	}
 
+	// SECURITY (#16756): Strip disallowed roles from client-supplied history.
+	sanitizedHistory := sanitizeChatHistory(req.History)
+
 	// Convert protocol history to provider history
 	var history []ChatMessage
-	for _, msg := range req.History {
+	for _, msg := range sanitizedHistory {
 		history = append(history, ChatMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
@@ -386,15 +396,19 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 		return s.errorResponse(msg.ID, "empty_agent", "Agent name cannot be empty")
 	}
 
-	// For session-based selection, we'd need a session ID from the request
-	// For now, update the default agent
+	// SECURITY (#16757): Scope agent selection to the user's session rather
+	// than mutating the global default, which would affect all users.
 	previousAgent := s.registry.GetDefaultName()
-	if err := s.registry.SetDefault(req.Agent); err != nil {
-		slog.Error("set default agent error", "error", err)
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = uuid.New().String()
+	}
+	if err := s.registry.SetSelectedAgent(sessionID, req.Agent); err != nil {
+		slog.Error("set selected agent error", "error", err, "sessionID", sessionID)
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
-	slog.Info("agent selected", "agent", req.Agent, "previous", previousAgent)
+	slog.Info("agent selected (session-scoped)", "agent", req.Agent, "previous", previousAgent, "sessionID", sessionID)
 
 	return protocol.Message{
 		ID:   msg.ID,

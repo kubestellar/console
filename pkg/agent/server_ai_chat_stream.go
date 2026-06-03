@@ -17,6 +17,26 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
+// sanitizeChatHistory filters client-supplied history to only allow "user" and
+// "assistant" roles. This prevents prompt injection via system-role messages
+// that could override backend safety policies (CWE-20, #16756).
+func sanitizeChatHistory(history []protocol.ChatMessage) []protocol.ChatMessage {
+	if len(history) == 0 {
+		return history
+	}
+	sanitized := make([]protocol.ChatMessage, 0, len(history))
+	for _, msg := range history {
+		switch msg.Role {
+		case "user", "assistant":
+			sanitized = append(sanitized, msg)
+		default:
+			slog.Warn("[Chat] SECURITY: dropped disallowed role from client history",
+				"role", msg.Role)
+		}
+	}
+	return sanitized
+}
+
 func decodeOptionalString(value any) (string, bool) {
 	if value == nil {
 		return "", true
@@ -267,9 +287,13 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		return
 	}
 
+	// SECURITY (#16756): Strip disallowed roles (e.g. "system") from
+	// client-supplied history to prevent prompt policy bypass.
+	sanitizedHistory := sanitizeChatHistory(req.History)
+
 	// Convert protocol history to provider history
 	var history []ChatMessage
-	for _, m := range req.History {
+	for _, m := range sanitizedHistory {
 		history = append(history, ChatMessage{
 			Role:    m.Role,
 			Content: m.Content,
