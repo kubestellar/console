@@ -683,7 +683,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                     )}
                     {isSubmitting ? 'Creating issue...' : `Submit & Earn ${coins} Coins`}
                     {!isSubmitting && (
-                      <kbd className="ml-1 px-2 py-1 rounded-md bg-white/20 text-xs font-semibold leading-none shadow-xs">
+                      <kbd className="ml-1 px-2 py-1 rounded-md bg-foreground/20 text-xs font-semibold leading-none shadow-xs">
                         {submitShortcutLabel}
                       </kbd>
                     )}
@@ -759,7 +759,7 @@ export function LinkedInShareButton({ onShare, compact = false }: { onShare?: ()
     >
       <Linkedin className="w-4 h-4" />
       <span>{t('feedback.shareOnLinkedIn')}</span>
-      <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 text-white">
+      <span className="text-xs px-1.5 py-0.5 rounded bg-foreground/20 text-foreground">
         +{REWARD_ACTIONS.linkedin_share.coins}
       </span>
     </button>

@@ -191,15 +191,15 @@ function DashboardMockup() {
   return (
     <div className="absolute inset-0 overflow-hidden opacity-30 blur-[2px]">
       {/* Sidebar */}
-      <div className="absolute left-0 top-0 bottom-0 w-[52px] bg-card border-r border-white/5">
+      <div className="absolute left-0 top-0 bottom-0 w-[52px] bg-card border-r border-foreground/5">
         {/* Logo area */}
-        <div className="h-12 flex items-center justify-center border-b border-white/5">
+        <div className="h-12 flex items-center justify-center border-b border-foreground/5">
           <div className="w-6 h-6 rounded bg-purple-500/30" />
         </div>
         {/* Nav items */}
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="h-10 flex items-center justify-center">
-            <div className={`w-5 h-5 rounded ${i === 0 ? 'bg-purple-500/40' : 'bg-white/5'}`} />
+            <div className={`w-5 h-5 rounded ${i === 0 ? 'bg-purple-500/40' : 'bg-foreground/5'}`} />
           </div>
         ))}
       </div>
@@ -208,43 +208,43 @@ function DashboardMockup() {
       <div className="ml-[52px] p-4">
         {/* Top bar */}
         <div className="h-10 mb-4 flex items-center gap-3">
-          <div className="w-32 h-6 rounded bg-white/5" />
+          <div className="w-32 h-6 rounded bg-foreground/5" />
           <div className="flex-1" />
-          <div className="w-8 h-8 rounded-full bg-white/5" />
-          <div className="w-8 h-8 rounded-full bg-white/5" />
+          <div className="w-8 h-8 rounded-full bg-foreground/5" />
+          <div className="w-8 h-8 rounded-full bg-foreground/5" />
         </div>
 
         {/* Card grid */}
         <div className="grid grid-cols-3 gap-3">
           {/* Large card */}
-          <div className="col-span-2 h-48 rounded-xl bg-card border border-white/5 p-4">
-            <div className="w-24 h-3 rounded bg-white/8 mb-3" />
+          <div className="col-span-2 h-48 rounded-xl bg-card border border-foreground/5 p-4">
+            <div className="w-24 h-3 rounded bg-foreground/8 mb-3" />
             <div className="grid grid-cols-4 gap-2 h-32">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="rounded-lg bg-white/2 border border-white/5 p-2">
-                  <div className="w-full h-2 rounded bg-white/5 mb-2" />
+                <div key={i} className="rounded-lg bg-foreground/2 border border-foreground/5 p-2">
+                  <div className="w-full h-2 rounded bg-foreground/5 mb-2" />
                   <div className="w-3/4 h-6 rounded bg-purple-500/10" />
                 </div>
               ))}
             </div>
           </div>
           {/* Tall card */}
-          <div className="row-span-2 rounded-xl bg-card border border-white/5 p-4">
-            <div className="w-20 h-3 rounded bg-white/8 mb-3" />
+          <div className="row-span-2 rounded-xl bg-card border border-foreground/5 p-4">
+            <div className="w-20 h-3 rounded bg-foreground/8 mb-3" />
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${i < 2 ? 'bg-red-500/40' : i < 4 ? 'bg-yellow-500/30' : 'bg-green-500/30'}`} />
-                <div className="flex-1 h-2 rounded bg-white/5" />
+                <div className="flex-1 h-2 rounded bg-foreground/5" />
               </div>
             ))}
           </div>
           {/* Bottom row cards */}
-          <div className="h-40 rounded-xl bg-card border border-white/5 p-4">
-            <div className="w-16 h-3 rounded bg-white/8 mb-3" />
+          <div className="h-40 rounded-xl bg-card border border-foreground/5 p-4">
+            <div className="w-16 h-3 rounded bg-foreground/8 mb-3" />
             <div className="h-24 rounded bg-linear-to-t from-blue-500/5 to-transparent" />
           </div>
-          <div className="h-40 rounded-xl bg-card border border-white/5 p-4">
-            <div className="w-20 h-3 rounded bg-white/8 mb-3" />
+          <div className="h-40 rounded-xl bg-card border border-foreground/5 p-4">
+            <div className="w-20 h-3 rounded bg-foreground/8 mb-3" />
             <div className="flex gap-1 h-24 items-end">
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
@@ -344,16 +344,16 @@ export function MissionLandingPage() {
       <DashboardMockup />
 
       {/* Header bar */}
-      <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/5 bg-background/60 backdrop-blur-xs">
+      <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-foreground/5 bg-background/60 backdrop-blur-xs">
         <div className="flex items-center gap-3">
           <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
-          <span className="text-sm font-semibold text-white/80 tracking-wide">KubeStellar Console</span>
+          <span className="text-sm font-semibold text-foreground/80 tracking-wide">KubeStellar Console</span>
         </div>
         <button
           onClick={handleBrowseAll}
-          className="text-xs text-white/50 hover:text-white/80 transition-colors"
+          className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors"
         >
           Browse all missions
         </button>
@@ -364,7 +364,7 @@ export function MissionLandingPage() {
         {loading ? (
           <div className="flex flex-col items-center gap-4">
             <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-            <p className="text-sm text-white/50">Loading mission...</p>
+            <p className="text-sm text-foreground/50">Loading mission...</p>
           </div>
         ) : error ? (
           <div className="max-w-md text-center">
@@ -373,8 +373,8 @@ export function MissionLandingPage() {
                 <path d="M12 9v4m0 4h.01M3.6 20h16.8a1 1 0 0 0 .87-1.5L12.87 3.5a1 1 0 0 0-1.74 0L2.73 18.5A1 1 0 0 0 3.6 20z"/>
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-white mb-2">{error}</h2>
-            <p className="text-sm text-white/50 mb-6">
+            <h2 className="text-lg font-semibold text-foreground mb-2">{error}</h2>
+            <p className="text-sm text-foreground/50 mb-6">
               This mission could not be found in the knowledge base.
             </p>
             <button
@@ -387,7 +387,7 @@ export function MissionLandingPage() {
         ) : mission ? (
           <div className="w-full max-w-2xl">
             {/* Mission card */}
-            <div className="bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
+            <div className="bg-card/95 backdrop-blur-xl border border-foreground/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden">
               {/* Card header */}
               <div className="p-6 pb-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -395,7 +395,7 @@ export function MissionLandingPage() {
                     {mission.type}
                   </span>
                   {mission.missionClass && (
-                    <span className="px-2 py-0.5 text-xs text-white/40 bg-white/5 rounded border border-white/10">
+                    <span className="px-2 py-0.5 text-xs text-foreground/40 bg-foreground/5 rounded border border-foreground/10">
                       {mission.missionClass}
                     </span>
                   )}
@@ -405,18 +405,18 @@ export function MissionLandingPage() {
                     </span>
                   )}
                 </div>
-                <h1 className="text-xl font-bold text-white leading-tight mb-2">
+                <h1 className="text-xl font-bold text-foreground leading-tight mb-2">
                   {mission.title}
                 </h1>
                 {mission.description && (
-                  <p className="text-sm text-white/60 leading-relaxed">
+                  <p className="text-sm text-foreground/60 leading-relaxed">
                     {mission.description}
                   </p>
                 )}
                 {mission.tags && mission.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {mission.tags.map((tag) => (
-                      <span key={tag} className="px-2 py-0.5 text-2xs text-white/40 bg-white/5 rounded-full">
+                      <span key={tag} className="px-2 py-0.5 text-2xs text-foreground/40 bg-foreground/5 rounded-full">
                         {tag}
                       </span>
                     ))}
@@ -433,7 +433,7 @@ export function MissionLandingPage() {
               </div>
 
               {/* Tabs */}
-              <div className="border-t border-white/5">
+              <div className="border-t border-foreground/5">
                 <div className="flex">
                   {TABS.map((tab) => {
                     const hasContent = mission ? tab.getSteps(mission).length > 0 : false
@@ -445,8 +445,8 @@ export function MissionLandingPage() {
                           activeTab === tab.id
                             ? 'border-purple-500 text-purple-400 bg-purple-500/5'
                             : hasContent
-                              ? 'border-transparent text-white/50 hover:text-white/70 hover:bg-white/2'
-                              : 'border-transparent text-white/20 cursor-default'
+                              ? 'border-transparent text-foreground/50 hover:text-foreground/70 hover:bg-foreground/2'
+                              : 'border-transparent text-foreground/20 cursor-default'
                         }`}
                         disabled={!hasContent}
                       >
@@ -473,28 +473,28 @@ export function MissionLandingPage() {
                           <span className="text-2xs font-bold text-purple-400">{i + 1}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white/80 font-medium">{step.title}</p>
+                          <p className="text-sm text-foreground/80 font-medium">{step.title}</p>
                           {step.description && (
-                            <p className="text-2xs text-white/30 mt-0.5 line-clamp-1">{step.description.split('\n')[0]}</p>
+                            <p className="text-2xs text-foreground/30 mt-0.5 line-clamp-1">{step.description.split('\n')[0]}</p>
                           )}
                         </div>
                       </div>
                     ))}
                     {hiddenStepCount > 0 && (
-                      <p className="text-xs text-white/30 pl-8">
+                      <p className="text-xs text-foreground/30 pl-8">
                         +{hiddenStepCount} more step{hiddenStepCount > 1 ? 's' : ''}
                       </p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-white/30 text-center py-4">
+                  <p className="text-sm text-foreground/30 text-center py-4">
                     {activeTabDef.emptyMessage}
                   </p>
                 )}
               </div>
 
               {/* CTA */}
-              <div className="p-6 pt-2 border-t border-white/5 flex flex-col gap-3">
+              <div className="p-6 pt-2 border-t border-foreground/5 flex flex-col gap-3">
                 <button
                   onClick={handleImport}
                   className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-purple-500/25 flex items-center justify-center gap-2 text-sm"
@@ -504,7 +504,7 @@ export function MissionLandingPage() {
                   </svg>
                   Import &amp; Open Console
                 </button>
-                <p className="text-center text-2xs text-white/25">
+                <p className="text-center text-2xs text-foreground/25">
                   Opens the full KubeStellar Console with this mission ready to run
                 </p>
               </div>
@@ -522,9 +522,9 @@ function SectionBadge({ present, label }: { present: boolean; label: string }) {
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-2xs rounded-full border ${
       present
         ? 'text-green-400/70 bg-green-500/8 border-green-500/20'
-        : 'text-white/15 bg-white/2 border-white/5'
+        : 'text-foreground/15 bg-foreground/2 border-foreground/5'
     }`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${present ? 'bg-green-500/60' : 'bg-white/10'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${present ? 'bg-green-500/60' : 'bg-foreground/10'}`} />
       {label}
     </span>
   )

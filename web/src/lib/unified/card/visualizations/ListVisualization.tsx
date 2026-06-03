@@ -173,7 +173,7 @@ export function ListVisualization({
             No items to display
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-border">
             {paginatedData.map((item, index) => (
               <ListItem
                 key={index}

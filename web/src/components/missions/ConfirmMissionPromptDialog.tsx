@@ -148,7 +148,7 @@ export function ConfirmMissionPromptDialog({
           className="ml-auto gap-2"
         >
           {t('confirmMissionPrompt.confirm', 'Run mission')}
-          <kbd className="hidden sm:inline-flex px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono leading-none">
+          <kbd className="hidden sm:inline-flex px-1.5 py-0.5 rounded bg-foreground/10 text-[10px] font-mono leading-none">
             {isMac ? '\u2318' : 'Ctrl'}↵
           </kbd>
         </Button>
