@@ -17,6 +17,32 @@ import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+
+/** Repos permitted for issue-stats queries. Override via ISSUE_STATS_REPOS env var. */
+const DEFAULT_ALLOWED_REPOS = [
+  "kubestellar/kubestellar",
+  "kubestellar/console",
+  "kubestellar/docs",
+  "kubestellar/ocm-transport-plugin",
+  "kubestellar/galaxy",
+  "kubestellar/ui",
+];
+
+function getAllowedRepos(): Set<string> {
+  const env = process.env.ISSUE_STATS_REPOS ?? process.env.PIPELINE_REPOS;
+  if (env) {
+    const repos = env
+      .split(",")
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0 && REPO_RE.test(r));
+    if (repos.length > 0) return new Set(repos.map((r) => r.toLowerCase()));
+  }
+  return new Set(DEFAULT_ALLOWED_REPOS.map((r) => r.toLowerCase()));
+}
+
+function isAllowedRepo(repo: string): boolean {
+  return getAllowedRepos().has(repo.toLowerCase());
+}
 /** Server-side cache TTL (1 hour) */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 /** GitHub API results per page (max 100) */
@@ -136,6 +162,15 @@ export default async function handler(request: Request): Promise<Response> {
       JSON.stringify({ error: "Invalid repo format" }),
       {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+  if (!isAllowedRepo(repo)) {
+    return new Response(
+      JSON.stringify({ error: "Repo is not in the allowed list" }),
+      {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
