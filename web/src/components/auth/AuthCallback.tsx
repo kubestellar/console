@@ -41,9 +41,9 @@ export function AuthCallback() {
       return
     }
 
-    // Capture the one-shot credential passed via URL fragment by the
-    // OAuth callback, stash it (obfuscated) in session storage, then
-    // strip the fragment so it doesn't linger in history.
+    // Capture the one-shot credential passed via the OAuth callback
+    // fragment, strip the fragment immediately, then stash the value in
+    // session storage for follow-up requests.
     captureClientCtxFromFragment()
 
     // The backend sets the JWT in an HttpOnly cookie during the OAuth redirect

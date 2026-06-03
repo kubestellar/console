@@ -1,7 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setClientCtx, getClientCtx, clearClientCtx, captureClientCtxFromFragment } from '../clientCtx'
 
 describe('clientCtx', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   beforeEach(() => {
     sessionStorage.clear()
   })
@@ -68,18 +72,33 @@ describe('clientCtx', () => {
       expect(captureClientCtxFromFragment()).toBe(false)
     })
 
-    it('captures kc_x from fragment and returns true', () => {
+    it('captures kc_x from fragment and clears the fragment first', () => {
       Object.defineProperty(window, 'location', {
         value: {
           hash: '#kc_x=captured-token',
           pathname: '/app',
-          search: '',
+          search: '?tab=auth',
         },
         writable: true,
         configurable: true,
       })
+
+      const calls: string[] = []
+      const originalSetItem = Storage.prototype.setItem
+      const replaceStateSpy = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {
+        calls.push('replaceState')
+      })
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key: string, value: string) {
+        calls.push('setItem')
+        return originalSetItem.call(this, key, value)
+      })
+
       const captured = captureClientCtxFromFragment()
+
       expect(captured).toBe(true)
+      expect(replaceStateSpy).toHaveBeenCalledWith(null, '', '/app?tab=auth')
+      expect(setItemSpy).toHaveBeenCalled()
+      expect(calls).toEqual(['replaceState', 'setItem'])
       expect(getClientCtx()).toBe('captured-token')
     })
   })

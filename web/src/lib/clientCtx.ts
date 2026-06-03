@@ -67,10 +67,19 @@ export function clearClientCtx(): void {
   }
 }
 
+function clearClientCtxFragment(): void {
+  try {
+    const cleaned = window.location.pathname + window.location.search
+    window.history.replaceState(null, '', cleaned)
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Reads the one-shot credential from the URL fragment set by the
- * backend's OAuth callback redirect, stores it (obfuscated), and
- * strips the fragment so it doesn't survive in browser history.
+ * backend's OAuth callback redirect, strips the fragment immediately,
+ * then stores the captured value.
  *
  * Returns true if a credential was captured.
  */
@@ -81,13 +90,7 @@ export function captureClientCtxFromFragment(): boolean {
   const params = new URLSearchParams(hash.slice(1))
   const val = params.get('kc_x')
   if (!val) return false
+  clearClientCtxFragment()
   setClientCtx(val)
-  // Strip the fragment without triggering navigation.
-  try {
-    const cleaned = window.location.pathname + window.location.search
-    window.history.replaceState(null, '', cleaned)
-  } catch {
-    /* ignore */
-  }
   return true
 }
