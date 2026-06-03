@@ -385,7 +385,7 @@ export function createMissionStartActions(
     if (!mission || mission.status !== 'saved') return
 
     if (mission.importedFrom?.steps) {
-      const syntheticExport = {
+      const syntheticExport: MissionExport = {
         version: 'kc-mission-v1',
         title: mission.importedFrom.title || mission.title,
         description: mission.importedFrom.description || mission.description,
@@ -394,6 +394,8 @@ export function createMissionStartActions(
         steps: mission.importedFrom.steps.map(step => ({
           title: step.title,
           description: step.description,
+          command: step.command,
+          yaml: step.yaml,
         })),
       }
       const findings = scanForMaliciousContent(syntheticExport)
