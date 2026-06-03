@@ -16,9 +16,6 @@ import { AuthRefreshResponseSchema, UserSchema } from './schemas'
 import { validateResponse } from './schemas/validate'
 import { ROUTES } from '../config/routes'
 
-/** localStorage key for the kc-agent shared secret (must match shared.ts) */
-const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
-
 interface User {
   id: string
   github_id: string

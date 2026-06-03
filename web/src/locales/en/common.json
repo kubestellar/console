@@ -1219,7 +1219,6 @@
     "noPendingRequests": "No pending requests",
     "noGpuNodesDetected": "No GPU nodes detected across your clusters",
     "loadingData": "Loading GPU data...",
-    "loadingNamespaces": "Loading namespaces…",
     "gpuNodesHint": "GPU nodes with nvidia.com/gpu resources will appear here"
   },
   "gitops": {
@@ -2586,7 +2585,6 @@
     "verifyFixFailed": "Failed to record verification",
     "closeRequestFailed": "Failed to close request",
     "viewFullLeaderboard": "View Full Leaderboard",
-    "draftRestored": "Draft restored.",
     "releases": "Releases",
     "status": {
       "open": "Open",
