@@ -102,7 +102,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node
       const insideTrigger = triggerRef.current?.contains(target)
-      const insideDropdown = dropdownRef.current?.contains(target)
+      const insideDropdown = containerRef.current?.contains(target)
       if (!insideTrigger && !insideDropdown) {
         close()
       }
@@ -163,6 +163,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
         >
           {/* Tour */}
           <button
+            role="menuitem"
             onClick={handleStartTour}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
           >
@@ -194,6 +195,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
             <div className="px-2 pb-2 max-h-64 overflow-y-auto">
               {videos.map(video => (
                 <a
+                  role="menuitem"
                   key={video.id}
                   href={getYouTubeWatchUrl(video.id)}
                   target="_blank"
@@ -263,6 +265,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
                 <div className="px-2 pb-2">
                   {blogPosts.map(post => (
                     <a
+                      role="menuitem"
                       key={post.link}
                       href={sanitizeUrl(post.link)}
                       target="_blank"
@@ -296,6 +299,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
           <div className="px-2 pb-2">
             {RESOURCES.map(resource => (
               <a
+                role="menuitem"
                 key={resource.label}
                 href={sanitizeUrl(resource.href)}
                 target="_blank"

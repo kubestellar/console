@@ -349,6 +349,13 @@ func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 	h.broadcaster = b
 }
 
+// SetUserStore wires user role lookups for authorization checks on mutating
+// endpoints (e.g., IngestEvent #16709). Optional — if unset, role checks are
+// skipped for backward compatibility in tests.
+func (h *StellarHandler) SetUserStore(us store.UserStore) {
+	h.userStore = us
+}
+
 // StartBackgroundWorkers launches long-running goroutines owned by the handler.
 // Currently just the due-task reminder loop; future workers (digest generator,
 // scheduled mission firer) belong here too. Safe to call multiple times — each
@@ -400,7 +407,7 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 			DedupeKey: dedupeKey,
 		}
 		_ = h.store.CreateStellarNotification(ctx, dueNotif)
-		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif})
+		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif, UserID: t.UserID})
 		if h.broadcaster != nil {
 			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
 				"userId": dueNotif.UserID,
