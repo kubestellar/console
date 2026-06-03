@@ -1,6 +1,7 @@
 /**
  * Vitest unit tests for quantum-proxy.mts Netlify function (#15626, Part of #4189).
  */
+import { Buffer } from "node:buffer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@netlify/functions";
 import {
@@ -23,6 +24,24 @@ const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
 // Match the internal limit defined in quantum-proxy.mts (1MB)
 const MAX_PROXY_BODY_BYTES = 1_048_576;
+const JWT_EXPIRY_OFFSET_SECONDS = 60 * 60;
+
+function encodeBase64Url(value: string): string {
+  return Buffer.from(value, "utf8").toString("base64url");
+}
+
+function makeValidBearerToken(): string {
+  const header = encodeBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const payload = encodeBase64Url(
+    JSON.stringify({
+      sub: "quantum-proxy-vitest",
+      exp: Math.floor(Date.now() / 1000) + JWT_EXPIRY_OFFSET_SECONDS,
+    })
+  );
+  const signature = encodeBase64Url("test-signature");
+
+  return `Bearer ${header}.${payload}.${signature}`;
+}
 
 // Hoisted mock functions for rate limit
 const { mockEnforceSimpleRateLimit } = vi.hoisted(() => ({
@@ -101,7 +120,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer valid-token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -130,7 +149,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer valid-token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -167,7 +186,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -184,7 +203,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -201,7 +220,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({}),
@@ -288,7 +307,7 @@ describe("quantum-proxy", () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
-          authorization: "Bearer valid-token",
+          authorization: makeValidBearerToken(),
           "content-length": String(hugeBodyLength),
         },
       });
@@ -303,7 +322,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: "invalid-json-body-string{",
@@ -319,7 +338,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify(["not-an-object"]),
@@ -343,7 +362,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ backend: "aer_simulator", shots: 1024, qasm_file: "bell.qasm" }),
@@ -375,7 +394,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: makeValidBearerToken(),
           "Content-Type": "application/json",
         },
       });
