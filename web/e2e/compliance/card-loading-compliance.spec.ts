@@ -928,7 +928,7 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
     }
   })
 
-  test('setup — mocks + warmup + manifest', async ({}, testInfo) => {
+  test('setup — mocks + warmup + manifest', async (_fixtures, testInfo) => {
     testInfo.setTimeout(IS_CI ? PER_BATCH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_BATCH_TIMEOUT_MS)
 
     await setupAuth(sharedPage)
@@ -965,7 +965,7 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
   // beyond the actual manifest size short-circuit (Playwright requires test
   // declarations at load time, so we can't size this dynamically).
   for (let batchIdx = 0; batchIdx < MAX_EXPECTED_BATCHES; batchIdx++) {
-    test(`cold — batch ${batchIdx + 1}`, async ({}, testInfo) => {
+    test(`cold — batch ${batchIdx + 1}`, async (_fixtures, testInfo) => {
       testInfo.setTimeout(IS_CI ? PER_BATCH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_BATCH_TIMEOUT_MS)
       if (!complianceState.setupDone) {
         test.skip(true, 'setup did not complete')
@@ -978,7 +978,7 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
     })
   }
 
-  test('navigate away — between cold and warm phases', async ({}, testInfo) => {
+  test('navigate away — between cold and warm phases', async (_fixtures, testInfo) => {
     testInfo.setTimeout(IS_CI ? PER_BATCH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_BATCH_TIMEOUT_MS)
     if (!complianceState.setupDone) test.skip(true, 'setup did not complete')
     console.log('[Compliance] Phase 3: Navigate away')
@@ -987,7 +987,7 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
   })
 
   for (let batchIdx = 0; batchIdx < MAX_EXPECTED_BATCHES; batchIdx++) {
-    test(`warm — batch ${batchIdx + 1}`, async ({}, testInfo) => {
+    test(`warm — batch ${batchIdx + 1}`, async (_fixtures, testInfo) => {
       testInfo.setTimeout(IS_CI ? PER_BATCH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_BATCH_TIMEOUT_MS)
       if (!complianceState.setupDone) {
         test.skip(true, 'setup did not complete')
@@ -1004,7 +1004,7 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
     })
   }
 
-  test('aggregate report + cross-batch assertions', async ({}, testInfo) => {
+  test('aggregate report + cross-batch assertions', async (_fixtures, testInfo) => {
     testInfo.setTimeout(IS_CI ? PER_BATCH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_BATCH_TIMEOUT_MS)
     if (!complianceState.setupDone) test.skip(true, 'setup did not complete')
 

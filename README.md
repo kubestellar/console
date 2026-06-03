@@ -63,7 +63,7 @@ If you want to work on the repo itself, start with these entry points:
 # macOS — Homebrew formula (pre-built)
 brew tap kubestellar/tap && brew install kc-agent
 
-# Linux / from source — requires Go 1.26.3+ (matches go.mod)
+# Linux / from source — requires Go 1.26.4+ (matches go.mod)
 mkdir -p bin
 go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
 ```
@@ -115,7 +115,7 @@ curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | 
 > Invoke-RestMethod http://localhost:8080/health
 > ```
 
-**Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.26.3+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
+**Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.26.4+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
 
 ```bash
 # add-apt-repository lives in software-properties-common — install it
