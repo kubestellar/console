@@ -176,15 +176,15 @@ describe('usePersistedSettings', () => {
     expect(result.current.restoredFromFile).toBe(true)
   })
 
-  it('restores when agent has feedbackGithubToken', async () => {
+  it('restores when agent reports hasFeedbackToken', async () => {
     mockIsLocalStorageEmpty.mockReturnValue(true)
-    mockFetch.mockReturnValue(jsonResponse({ feedbackGithubToken: 'tok123' }))
+    mockFetch.mockReturnValue(jsonResponse({ hasFeedbackToken: true }))
 
     const { result } = renderHook(() => usePersistedSettings())
     await flushMicrotasks()
 
     expect(mockRestoreToLocalStorage).toHaveBeenCalledWith(
-      expect.objectContaining({ feedbackGithubToken: 'tok123' }),
+      expect.objectContaining({ hasFeedbackToken: true }),
     )
     expect(result.current.restoredFromFile).toBe(true)
   })

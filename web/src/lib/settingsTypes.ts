@@ -1,6 +1,6 @@
 /**
  * TypeScript types for the persistent settings system.
- * Mirrors the Go types in pkg/settings/types.go.
+ * Mirrors the browser-visible settings fields exposed by the Go backend.
  */
 
 export interface PredictionSettingsData {
@@ -72,10 +72,9 @@ export interface AllSettings {
   widget: WidgetSettingsData
   tourCompleted: boolean
 
-  // Sensitive (decrypted in transit over localhost)
+  // Sensitive settings remain server-side; the browser only receives token presence.
   apiKeys: Record<string, APIKeyEntry>
-  /** Consolidated GitHub token for all operations (activity card, feedback, missions, rewards) */
-  feedbackGithubToken?: string
+  hasFeedbackToken?: boolean
   notifications: NotificationSecrets
 
   /** Where the GitHub token came from: "settings" (user UI), "env" (.env file), or undefined */

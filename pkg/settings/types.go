@@ -16,10 +16,10 @@ type SettingsFile struct {
 
 // PlaintextSettings holds non-sensitive user preferences
 type PlaintextSettings struct {
-	AIMode        string                `json:"aiMode"`
-	Predictions   PredictionSettings    `json:"predictions"`
-	TokenUsage    TokenUsageSettings    `json:"tokenUsage"`
-	Theme         string                `json:"theme"`
+	AIMode      string             `json:"aiMode"`
+	Predictions PredictionSettings `json:"predictions"`
+	TokenUsage  TokenUsageSettings `json:"tokenUsage"`
+	Theme       string             `json:"theme"`
 	// CustomThemes holds the full JSON of marketplace themes installed by the user.
 	// Stored as raw JSON to avoid defining the full theme schema in Go.
 	CustomThemes  json.RawMessage       `json:"customThemes,omitempty"`
@@ -34,12 +34,12 @@ type PlaintextSettings struct {
 
 // PredictionSettings mirrors the frontend PredictionSettings type
 type PredictionSettings struct {
-	AIEnabled      bool                   `json:"aiEnabled"`
-	Interval       int                    `json:"interval"`
-	MinConfidence  int                    `json:"minConfidence"`
-	MaxPredictions int                    `json:"maxPredictions"`
-	ConsensusMode  bool                   `json:"consensusMode"`
-	Thresholds     PredictionThresholds   `json:"thresholds"`
+	AIEnabled      bool                 `json:"aiEnabled"`
+	Interval       int                  `json:"interval"`
+	MinConfidence  int                  `json:"minConfidence"`
+	MaxPredictions int                  `json:"maxPredictions"`
+	ConsensusMode  bool                 `json:"consensusMode"`
+	Thresholds     PredictionThresholds `json:"thresholds"`
 }
 
 // PredictionThresholds holds the threshold values for heuristic predictions
@@ -84,7 +84,7 @@ type EncryptedField struct {
 
 // EncryptedSettings groups all sensitive fields (stored encrypted on disk)
 type EncryptedSettings struct {
-	APIKeys             *EncryptedField `json:"apiKeys,omitempty"`
+	APIKeys *EncryptedField `json:"apiKeys,omitempty"`
 	// GitHubToken is the legacy field — migrated to FeedbackGitHubToken at startup.
 	// Kept for JSON deserialization of old settings files; always nil after migration.
 	GitHubToken         *EncryptedField `json:"githubToken,omitempty"`
@@ -95,10 +95,10 @@ type EncryptedSettings struct {
 // AllSettings is the combined decrypted view sent to/from the frontend
 type AllSettings struct {
 	// Non-sensitive (plaintext)
-	AIMode        string                `json:"aiMode"`
-	Predictions   PredictionSettings    `json:"predictions"`
-	TokenUsage    TokenUsageSettings    `json:"tokenUsage"`
-	Theme         string                `json:"theme"`
+	AIMode      string             `json:"aiMode"`
+	Predictions PredictionSettings `json:"predictions"`
+	TokenUsage  TokenUsageSettings `json:"tokenUsage"`
+	Theme       string             `json:"theme"`
 	// CustomThemes holds the full JSON of marketplace themes installed by the user.
 	CustomThemes  json.RawMessage       `json:"customThemes,omitempty"`
 	Accessibility AccessibilitySettings `json:"accessibility"`
@@ -109,19 +109,45 @@ type AllSettings struct {
 	AutoUpdateEnabled bool   `json:"autoUpdateEnabled"`
 	AutoUpdateChannel string `json:"autoUpdateChannel"`
 
-	// Sensitive (decrypted for transit, encrypted at rest)
-	APIKeys             map[string]APIKeyEntry `json:"apiKeys"`
+	// Sensitive fields remain encrypted at rest. The raw GitHub PAT is internal
+	// only and must never be returned to browser clients; use HasFeedbackToken to
+	// expose configuration state without disclosing the credential.
+	APIKeys map[string]APIKeyEntry `json:"apiKeys"`
 	// FeedbackGitHubToken is the single consolidated GitHub PAT used for all
 	// GitHub operations: API proxy (activity card, CI), feedback/issue creation,
 	// missions, and rewards.
-	FeedbackGitHubToken string                 `json:"feedbackGithubToken,omitempty"`
-	Notifications       NotificationSecrets    `json:"notifications"`
+	FeedbackGitHubToken string              `json:"feedbackGithubToken,omitempty"`
+	HasFeedbackToken    bool                `json:"hasFeedbackToken"`
+	Notifications       NotificationSecrets `json:"notifications"`
 
 	// FeedbackGitHubTokenSource indicates where the GitHub token came from:
 	// "settings" = user-configured via UI (encrypted in settings file),
 	// "env" = auto-detected from FEEDBACK_GITHUB_TOKEN (or GITHUB_TOKEN alias),
 	// "" = no token available.
 	FeedbackGitHubTokenSource string `json:"feedbackGithubTokenSource,omitempty"`
+}
+
+// ClientSafeCopy returns a copy suitable for browser clients: the token itself
+// is removed, while HasFeedbackToken preserves whether a credential exists.
+func (a *AllSettings) ClientSafeCopy() *AllSettings {
+	if a == nil {
+		return nil
+	}
+	clone := *a
+	clone.HasFeedbackToken = clone.FeedbackGitHubToken != ""
+	clone.FeedbackGitHubToken = ""
+	return &clone
+}
+
+// PreserveFeedbackTokenFrom keeps the effective GitHub token and its source
+// when callers submit settings payloads that intentionally omit the secret.
+func (a *AllSettings) PreserveFeedbackTokenFrom(existing *AllSettings) {
+	if a == nil || existing == nil {
+		return
+	}
+	a.FeedbackGitHubToken = existing.FeedbackGitHubToken
+	a.FeedbackGitHubTokenSource = existing.FeedbackGitHubTokenSource
+	a.HasFeedbackToken = existing.FeedbackGitHubToken != ""
 }
 
 // GitHubTokenSource constants
@@ -183,7 +209,7 @@ func DefaultSettings() *SettingsFile {
 				CriticalThreshold: 0.9,
 				StopThreshold:     1.0,
 			},
-			Theme: "kubestellar",
+			Theme:         "kubestellar",
 			Accessibility: AccessibilitySettings{},
 			Profile:       ProfileSettings{},
 			Widget:        WidgetSettings{SelectedWidget: "browser"},

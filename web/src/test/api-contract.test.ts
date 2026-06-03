@@ -187,7 +187,7 @@ describe('API Contract — Settings', () => {
             'aiMode',
             'theme',
             'apiKeys',
-            'feedbackGithubToken',
+            'hasFeedbackToken',
             'notifications'
         ]
 

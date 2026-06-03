@@ -98,7 +98,7 @@ describe('settingsTypes', () => {
       expect(settings.apiKeys).toEqual({})
     })
 
-    it('supports optional feedbackGithubToken field', () => {
+    it('supports optional hasFeedbackToken field', () => {
       const settings: AllSettings = {
         aiMode: 'auto',
         predictions: {
@@ -113,10 +113,10 @@ describe('settingsTypes', () => {
         tourCompleted: true,
         apiKeys: { openai: { apiKey: 'sk-test', model: 'gpt-4' } },
         notifications: { slackWebhookUrl: 'https://hooks.slack.com/test' },
-        feedbackGithubToken: 'ghp_123',
+        hasFeedbackToken: true,
         feedbackGithubTokenSource: 'settings',
       }
-      expect(settings.feedbackGithubToken).toBe('ghp_123')
+      expect(settings.hasFeedbackToken).toBe(true)
       expect(settings.feedbackGithubTokenSource).toBe('settings')
     })
 

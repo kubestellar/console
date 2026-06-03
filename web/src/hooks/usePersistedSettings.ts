@@ -183,7 +183,7 @@ export function usePersistedSettings() {
 
         // Determine whether the backend file has meaningful content
         const backendHasData = data && (
-          data.theme || data.aiMode || data.feedbackGithubToken ||
+          data.theme || data.aiMode || data.hasFeedbackToken ||
           Object.keys(data.apiKeys || {}).length > 0)
 
         const hasPendingLocalChanges = hasPendingSettingsSync() && !isLocalStorageEmpty()

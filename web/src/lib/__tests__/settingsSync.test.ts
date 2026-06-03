@@ -52,10 +52,10 @@ describe('collectFromLocalStorage', () => {
     expect(result.tourCompleted).toBe(true)
   })
 
-  it('collects feedbackGithubToken (base64 decoded)', () => {
-    localStorage.setItem('feedback_github_token', btoa('ghp_test123'))
+  it('collects hasFeedbackToken as a boolean flag', () => {
+    localStorage.setItem('has_feedback_github_token', 'true')
     const result = collectFromLocalStorage()
-    expect(result.feedbackGithubToken).toBe('ghp_test123')
+    expect(result.hasFeedbackToken).toBe(true)
   })
 
   it('collects feedbackGithubTokenSource', () => {
@@ -109,9 +109,10 @@ describe('restoreToLocalStorage', () => {
     expect(JSON.parse(localStorage.getItem('kubestellar-prediction-settings')!)).toEqual({ enabled: true })
   })
 
-  it('restores feedbackGithubToken as base64', () => {
-    restoreToLocalStorage({ feedbackGithubToken: 'ghp_test' } as Parameters<typeof restoreToLocalStorage>[0])
-    expect(atob(localStorage.getItem('feedback_github_token')!)).toBe('ghp_test')
+  it('restores hasFeedbackToken without storing the credential', () => {
+    restoreToLocalStorage({ hasFeedbackToken: true } as Parameters<typeof restoreToLocalStorage>[0])
+    expect(localStorage.getItem('has_feedback_github_token')).toBe('true')
+    expect(localStorage.getItem('feedback_github_token')).toBeNull()
   })
 
   it('removes legacy github token keys', () => {

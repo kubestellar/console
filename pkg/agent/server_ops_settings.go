@@ -106,7 +106,7 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, protocol.ErrorPayload{Code: "settings_load_failed", Message: "Failed to load settings"})
 			return
 		}
-		writeJSON(w, all)
+		writeJSON(w, all.ClientSafeCopy())
 	case http.MethodPut:
 		defer r.Body.Close()
 		body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
@@ -122,6 +122,14 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, protocol.ErrorPayload{Code: "invalid_body", Message: "Invalid request body"})
 			return
 		}
+		current, err := sm.GetAll()
+		if err != nil {
+			slog.Error("[settings] GetAll error", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			writeJSON(w, protocol.ErrorPayload{Code: "settings_load_failed", Message: "Failed to load current settings"})
+			return
+		}
+		all.PreserveFeedbackTokenFrom(current)
 		if err := sm.SaveAll(&all); err != nil {
 			slog.Error("[settings] SaveAll error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)

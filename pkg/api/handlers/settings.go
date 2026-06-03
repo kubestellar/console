@@ -29,7 +29,7 @@ func (h *SettingsHandler) requireAdmin(c *fiber.Ctx) error {
 	return requireAdmin(c, h.store)
 }
 
-// GetSettings returns all settings with sensitive fields decrypted
+// GetSettings returns browser-safe settings metadata without exposing secrets.
 // GET /api/settings
 func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	// RBAC MUST be the very first operation — do not read any settings
@@ -45,7 +45,7 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 			"error": "Failed to load settings",
 		})
 	}
-	return c.JSON(all)
+	return c.JSON(all.ClientSafeCopy())
 }
 
 // SaveSettings persists all settings, encrypting sensitive fields
@@ -64,6 +64,15 @@ func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
 			"error": "Invalid request body",
 		})
 	}
+
+	current, err := h.manager.GetAll()
+	if err != nil {
+		slog.Error("[settings] GetAll error", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to load current settings",
+		})
+	}
+	all.PreserveFeedbackTokenFrom(current)
 
 	if err := h.manager.SaveAll(&all); err != nil {
 		slog.Error("[settings] SaveAll error", "error", err)

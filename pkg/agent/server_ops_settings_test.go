@@ -35,6 +35,12 @@ func TestServer_HandleSettingsAll(t *testing.T) {
 		allowedOrigins: []string{"*"},
 	}
 
+	all := settings.DefaultAllSettings()
+	all.FeedbackGitHubToken = "ghp_hidden"
+	if err := sm.SaveAll(all); err != nil {
+		t.Fatalf("Failed to seed settings: %v", err)
+	}
+
 	// 1. Test GET (default settings)
 	req := httptest.NewRequest("GET", "/settings", nil)
 	w := httptest.NewRecorder()
@@ -42,6 +48,17 @@ func TestServer_HandleSettingsAll(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var getResp settings.AllSettings
+	if err := json.NewDecoder(w.Body).Decode(&getResp); err != nil {
+		t.Fatalf("Failed to decode GET response: %v", err)
+	}
+	if !getResp.HasFeedbackToken {
+		t.Error("Expected hasFeedbackToken to be true")
+	}
+	if getResp.FeedbackGitHubToken != "" {
+		t.Error("Expected feedbackGithubToken to be redacted from GET response")
 	}
 
 	// 2. Test PUT (update settings)
@@ -61,6 +78,14 @@ func TestServer_HandleSettingsAll(t *testing.T) {
 	if resp["success"] != true {
 		t.Error("Expected success: true")
 	}
+
+	stored, err := sm.GetAll()
+	if err != nil {
+		t.Fatalf("Failed to reload settings: %v", err)
+	}
+	if stored.FeedbackGitHubToken != "ghp_hidden" {
+		t.Errorf("Expected feedback token to be preserved, got %q", stored.FeedbackGitHubToken)
+	}
 }
 
 func TestServer_HandleGetKeysStatus(t *testing.T) {
@@ -77,8 +102,8 @@ func TestServer_HandleGetKeysStatus(t *testing.T) {
 	cm.SetConfigPath(tmpConfig.Name())
 
 	s := &Server{
-		allowedOrigins:     []string{"*"},
-		SkipKeyValidation:  true, // Don't hit real APIs
+		allowedOrigins:    []string{"*"},
+		SkipKeyValidation: true, // Don't hit real APIs
 	}
 
 	req := httptest.NewRequest("GET", "/settings/keys", nil)
