@@ -105,6 +105,13 @@ func requireAdminCheck(user *models.User) error {
 	return nil
 }
 
+// RequireEditorOrAdmin verifies the current request's user has at least the
+// editor role. Exported for route setup code that needs to enforce editor or
+// admin access for mutation endpoints.
+func RequireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
+	return requireEditorOrAdmin(c, s)
+}
+
 // requireEditorOrAdmin verifies the current request's user has at least the
 // editor role. Viewer-role users and anonymous requests are rejected with 403.
 // Use this for mutating endpoints (create/update/delete) where full admin
