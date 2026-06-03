@@ -36,11 +36,113 @@ import {
   verifyClientAuth,
 } from "./_shared/feedback-helpers";
 
-import type { FeedbackAppAction, IssueRequest } from "./_shared/feedback-helpers";
+import type {
+  FeedbackAppAction,
+  IssueRequest,
+  RepoPermissions,
+} from "./_shared/feedback-helpers";
 
 const MAX_FEEDBACK_BODY_BYTES = 102_400;
 /** Maximum response body size for GitHub API responses (512 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
+const FEEDBACK_COMMENT_PERMISSION_ERROR =
+  "Push access required to add feedback issue comments as kubestellar-console-bot";
+const FEEDBACK_LABEL_PERMISSION_ERROR =
+  "Push access required to set feedback issue labels as kubestellar-console-bot";
+const FEEDBACK_STATE_PERMISSION_ERROR =
+  "Push access required to change feedback issue state as kubestellar-console-bot";
+const FEEDBACK_PARENT_LINK_PERMISSION_ERROR =
+  "Push access required to link feedback issues to a parent issue as kubestellar-console-bot";
+
+type MutationPermissionRequirement =
+  | { allowed: true }
+  | { allowed: false; error: string };
+
+type FeedbackBotMutationAction =
+  | FeedbackAppAction
+  | "set_labels"
+  | "link_parent_issue";
+
+interface FeedbackAuditUser {
+  login: string;
+  id: number;
+}
+
+interface FeedbackBotMutationAuditDetails {
+  issueNumber?: number;
+  createdIssueNumber?: number;
+  issueId?: number;
+  htmlUrl?: string;
+  parentIssueNumber?: number;
+  labels?: string[];
+  state?: "open" | "closed";
+}
+
+function hasRepoWriteAccess(repoPermissions: RepoPermissions): boolean {
+  return repoPermissions.push || repoPermissions.admin;
+}
+
+function logFeedbackBotMutation(
+  action: FeedbackBotMutationAction,
+  repoSlug: string,
+  user: FeedbackAuditUser,
+  details: FeedbackBotMutationAuditDetails,
+): void {
+  console.log(JSON.stringify({
+    event: "feedback_app_bot_mutation",
+    action,
+    repoSlug,
+    actorLogin: user.login,
+    actorId: user.id,
+    ...details,
+  }));
+}
+
+function logDeniedFeedbackMutation(
+  action: FeedbackAppAction,
+  repoSlug: string,
+  user: FeedbackAuditUser,
+  repoPermissions: RepoPermissions,
+  error: string,
+): void {
+  console.warn(JSON.stringify({
+    event: "feedback_app_permission_denied",
+    action,
+    repoSlug,
+    actorLogin: user.login,
+    actorId: user.id,
+    permissions: repoPermissions,
+    error,
+  }));
+}
+
+function getMutationPermissionRequirement(
+  action: FeedbackAppAction,
+  payload: IssueRequest,
+  repoPermissions: RepoPermissions,
+): MutationPermissionRequirement {
+  if (action === "comment_issue" && !hasRepoWriteAccess(repoPermissions)) {
+    return { allowed: false, error: FEEDBACK_COMMENT_PERMISSION_ERROR };
+  }
+
+  if (action === "update_issue_state" && !hasRepoWriteAccess(repoPermissions)) {
+    return { allowed: false, error: FEEDBACK_STATE_PERMISSION_ERROR };
+  }
+
+  if ((payload.labels || []).length > 0 && !hasRepoWriteAccess(repoPermissions)) {
+    return { allowed: false, error: FEEDBACK_LABEL_PERMISSION_ERROR };
+  }
+
+  if (
+    typeof payload.parentIssueNumber === "number" &&
+    payload.parentIssueNumber > 0 &&
+    !hasRepoWriteAccess(repoPermissions)
+  ) {
+    return { allowed: false, error: FEEDBACK_PARENT_LINK_PERMISSION_ERROR };
+  }
+
+  return { allowed: true };
+}
 
 async function readCappedJson<T>(response: Response): Promise<T> {
   const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
@@ -139,15 +241,37 @@ export default async function handler(request: Request): Promise<Response> {
     }
   }
 
+  let repoPermissions: RepoPermissions;
+  try {
+    repoPermissions = await getRepoPermissions(clientAuth, repoSlug);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[feedback-app] Repo permission check failed:", msg);
+    return jsonResponse(request, 502, { error: "Repository permission check failed" });
+  }
+
   if (request.method === "GET" || mode === "capabilities") {
-    try {
-      const permissions = await getRepoPermissions(clientAuth, repoSlug);
-      return jsonResponse(request, 200, { can_link_parent: permissions.push });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[feedback-app] Repo capability check failed:", msg);
-      return jsonResponse(request, 502, { error: "Repository capability check failed" });
-    }
+    return jsonResponse(request, 200, { can_link_parent: hasRepoWriteAccess(repoPermissions) });
+  }
+
+  if (!payload) {
+    return jsonResponse(request, 400, { error: "Request body required" });
+  }
+
+  const permissionRequirement = getMutationPermissionRequirement(
+    action,
+    payload,
+    repoPermissions,
+  );
+  if (!permissionRequirement.allowed) {
+    logDeniedFeedbackMutation(
+      action,
+      repoSlug,
+      user,
+      repoPermissions,
+      permissionRequirement.error,
+    );
+    return jsonResponse(request, 403, { error: permissionRequirement.error });
   }
 
   let installCred: string;
@@ -157,10 +281,6 @@ export default async function handler(request: Request): Promise<Response> {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[feedback-app] App credential unavailable:", msg);
     return jsonResponse(request, 502, { error: "Service temporarily unavailable" });
-  }
-
-  if (!payload) {
-    return jsonResponse(request, 400, { error: "Request body required" });
   }
 
   const stampedBody = payload.body
@@ -190,6 +310,10 @@ export default async function handler(request: Request): Promise<Response> {
         return jsonResponse(request, resp.status, { error: "Failed to add comment to issue" });
       }
       const data = await readCappedJson<{ html_url: string }>(resp);
+      logFeedbackBotMutation("comment_issue", repoSlug, user, {
+        issueNumber: payload.issueNumber!,
+        htmlUrl: data.html_url,
+      });
       return jsonResponse(request, 200, { html_url: data.html_url, submitter: user.login });
     }
 
@@ -205,7 +329,7 @@ export default async function handler(request: Request): Promise<Response> {
             "Content-Type": "application/json",
             "User-Agent": "KubeStellar-Console-FeedbackApp",
           },
-          body: JSON.stringify({ state: payload.state }),
+          body: JSON.stringify({ state: payload.state! }),
           signal: AbortSignal.timeout(GH_TIMEOUT_MS),
         },
       );
@@ -214,7 +338,12 @@ export default async function handler(request: Request): Promise<Response> {
         console.error("[feedback-app] GitHub issue update failed:", resp.status, sanitizeUpstreamError(txt));
         return jsonResponse(request, resp.status, { error: "Failed to update issue state" });
       }
-      const data = await readCappedJson<{ html_url: string; state: string }>(resp);
+      const data = await readCappedJson<{ html_url: string; state: "open" | "closed" }>(resp);
+      logFeedbackBotMutation("update_issue_state", repoSlug, user, {
+        issueNumber: payload.issueNumber!,
+        htmlUrl: data.html_url,
+        state: data.state,
+      });
       return jsonResponse(request, 200, { html_url: data.html_url, state: data.state, submitter: user.login });
     }
 
@@ -242,16 +371,30 @@ export default async function handler(request: Request): Promise<Response> {
       return jsonResponse(request, resp.status, { error: "Failed to create issue" });
     }
     const data = await readCappedJson<{ id: number; number: number; html_url: string }>(resp);
+    logFeedbackBotMutation("create_issue", repoSlug, user, {
+      createdIssueNumber: data.number,
+      issueId: data.id,
+      htmlUrl: data.html_url,
+    });
+    if ((payload.labels || []).length > 0) {
+      logFeedbackBotMutation("set_labels", repoSlug, user, {
+        createdIssueNumber: data.number,
+        issueId: data.id,
+        htmlUrl: data.html_url,
+        labels: payload.labels ?? [],
+      });
+    }
 
     let warning: string | undefined;
     if (typeof payload.parentIssueNumber === "number" && payload.parentIssueNumber > 0) {
       try {
-        const permissions = await getRepoPermissions(clientAuth, repoSlug);
-        if (!permissions.push) {
-          warning = `Issue #${data.number} was created, but parent issue linking requires push access to ${repoSlug}.`;
-        } else {
-          await addSubIssue(installCred, repoSlug, payload.parentIssueNumber, data.id);
-        }
+        await addSubIssue(installCred, repoSlug, payload.parentIssueNumber, data.id);
+        logFeedbackBotMutation("link_parent_issue", repoSlug, user, {
+          createdIssueNumber: data.number,
+          issueId: data.id,
+          htmlUrl: data.html_url,
+          parentIssueNumber: payload.parentIssueNumber,
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[feedback-app] Sub-issue linking failed:", msg);

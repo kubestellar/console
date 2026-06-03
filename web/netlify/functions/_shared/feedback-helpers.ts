@@ -339,10 +339,16 @@ export async function verifyClientAuth(
 
 // ─── Repository Permissions ───────────────────────────────────────────────────
 
+export interface RepoPermissions {
+  pull: boolean;
+  push: boolean;
+  admin: boolean;
+}
+
 export async function getRepoPermissions(
   credential: string,
   repoSlug: string,
-): Promise<{ push: boolean }> {
+): Promise<RepoPermissions> {
   const resp = await fetch(`${GITHUB_API}/repos/${repoSlug}`, {
     headers: {
       Authorization: `Bearer ${credential}`,
@@ -355,8 +361,14 @@ export async function getRepoPermissions(
   if (!resp.ok) {
     throw new Error(`repo permissions HTTP ${resp.status}`);
   }
-  const data = await readCappedJson<{ permissions?: { push?: boolean } }>(resp, "GitHub repo permissions");
-  return { push: data.permissions?.push === true };
+  const data = await readCappedJson<{
+    permissions?: { pull?: boolean; push?: boolean; admin?: boolean };
+  }>(resp, "GitHub repo permissions");
+  return {
+    pull: data.permissions?.pull === true,
+    push: data.permissions?.push === true,
+    admin: data.permissions?.admin === true,
+  };
 }
 
 // ─── Sub-Issue Linking ────────────────────────────────────────────────────────
