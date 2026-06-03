@@ -31,13 +31,14 @@ interface MockWs {
   _closeSpy: ReturnType<typeof vi.fn>
   readyState: number
   url: string
+  protocols: string[]
   _triggerOpen: () => void
   _triggerMessage: (data: unknown) => void
   _triggerError: () => void
   _triggerClose: () => void
 }
 
-function createMockWs(url = 'ws://localhost:8585'): MockWs {
+function createMockWs(url = 'ws://localhost:8585', protocols: string[] = []): MockWs {
   const closeSpy = vi.fn().mockImplementation(function(this: MockWs) {
     this.readyState = WS_CLOSED
     this.onclose?.(new Event('close'))
@@ -52,6 +53,7 @@ function createMockWs(url = 'ws://localhost:8585'): MockWs {
     _closeSpy: closeSpy,
     readyState: WS_CONNECTING,
     url,
+    protocols,
     _triggerOpen() {
       this.readyState = WS_OPEN
       this.onopen?.(new Event('open'))
@@ -81,8 +83,11 @@ beforeEach(() => {
   wsInstances = []
   vi.useRealTimers()
 
-  const mockWebSocket = vi.fn(function(this: unknown, url: string) {
-    const ws = createMockWs(url)
+  const mockWebSocket = vi.fn(function(this: unknown, url: string, protocols?: string | string[]) {
+    const normalizedProtocols = Array.isArray(protocols)
+      ? protocols
+      : protocols ? [protocols] : []
+    const ws = createMockWs(url, normalizedProtocols)
     wsInstances.push(ws)
     return ws
   })
@@ -290,13 +295,14 @@ describe('useDrillDownWebSocket', () => {
   })
 
   describe('openTrackedWs', () => {
-    it('appends auth token to WS URL', async () => {
+    it('passes bearer auth subprotocols to WebSocket', async () => {
       mockGetWsAuthParams.mockResolvedValueOnce({ url: 'ws://localhost:8585', protocols: ['bearer.abc123'] })
       const { result } = renderHook(() => useDrillDownWebSocket('prod'))
 
       await expect(result.current.openTrackedWs()).resolves.toBeDefined()
       expect(mockGetWsAuthParams).toHaveBeenCalledWith('ws://localhost:8585')
       expect(wsInstances[0].url).toBe('ws://localhost:8585')
+      expect(wsInstances[0].protocols).toEqual(['bearer.abc123'])
     })
 
     it('tracks the WebSocket in the active set', async () => {
