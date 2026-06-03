@@ -37,7 +37,7 @@ func setupGitHubProxyTestSettings(t *testing.T) {
 	}
 }
 
-func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
+func TestSaveToken_RejectsNonAdminWhenNoAdminsExist(t *testing.T) {
 	setupGitHubProxyTestSettings(t)
 
 	app := fiber.New()
@@ -47,8 +47,6 @@ func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
 	viewer := &models.User{ID: userID, Role: models.UserRoleViewer}
 
 	mockStore.On("GetUser", userID).Return(viewer, nil).Once()
-	mockStore.On("CountUsersByRole").Return(0, 0, 1, nil).Once()
-	mockStore.On("UpdateUser", viewer).Return(nil).Once()
 
 	app.Post("/api/github/token", func(c *fiber.Ctx) error {
 		c.Locals("userID", userID)
@@ -61,11 +59,49 @@ func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveToken request failed: %v", err)
 	}
-	if resp.StatusCode == http.StatusForbidden {
-		t.Fatalf("expected admin bootstrap to bypass 403, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-admin save attempt, got %d", resp.StatusCode)
 	}
-	if viewer.Role != models.UserRoleAdmin {
-		t.Fatalf("expected viewer to be promoted to admin, got %q", viewer.Role)
+	if viewer.Role != models.UserRoleViewer {
+		t.Fatalf("expected viewer role to remain unchanged, got %q", viewer.Role)
+	}
+}
+
+func TestSaveToken_AllowsAdmin(t *testing.T) {
+	setupGitHubProxyTestSettings(t)
+
+	app := fiber.New()
+	mockStore := new(test.MockStore)
+	h := NewGitHubProxyHandler("", mockStore)
+	userID := uuid.New()
+	admin := &models.User{ID: userID, Role: models.UserRoleAdmin}
+
+	mockStore.On("GetUser", userID).Return(admin, nil).Once()
+
+	app.Post("/api/github/token", func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return h.SaveToken(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/github/token", strings.NewReader(`{"token":"ghp_test"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("SaveToken request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for admin save attempt, got %d", resp.StatusCode)
+	}
+
+	all, err := settings.GetSettingsManager().GetAll()
+	if err != nil {
+		t.Fatalf("get settings: %v", err)
+	}
+	if all.FeedbackGitHubToken != "ghp_test" {
+		t.Fatalf("expected saved token, got %q", all.FeedbackGitHubToken)
+	}
+	if all.FeedbackGitHubTokenSource != settings.GitHubTokenSourceSettings {
+		t.Fatalf("expected token source %q, got %q", settings.GitHubTokenSourceSettings, all.FeedbackGitHubTokenSource)
 	}
 }
 
