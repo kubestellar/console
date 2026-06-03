@@ -138,6 +138,42 @@ func TestStellarMemorySearchFTSSyncAndShortQueryFallback(t *testing.T) {
 	require.Empty(t, deletedEntries)
 }
 
+func TestListStellarAuditLogScopesByUser(t *testing.T) {
+	s := newTestStore(t)
+	const viewerUserID = "stellar-user-audit-viewer"
+	const adminUserID = "stellar-user-audit-admin"
+
+	require.NoError(t, s.CreateAuditEntry(ctx, &StellarAuditEntry{
+		UserID:     viewerUserID,
+		Action:     "viewer-action",
+		EntityType: "watch",
+		EntityID:   "viewer-watch",
+		Cluster:    "prod-a",
+		Detail:     `{"scope":"viewer"}`,
+		Ts:         time.Now().UTC().Add(-time.Minute),
+	}))
+	require.NoError(t, s.CreateAuditEntry(ctx, &StellarAuditEntry{
+		UserID:     adminUserID,
+		Action:     "admin-action",
+		EntityType: "watch",
+		EntityID:   "admin-watch",
+		Cluster:    "prod-b",
+		Detail:     `{"scope":"admin"}`,
+		Ts:         time.Now().UTC(),
+	}))
+
+	viewerEntries, err := s.ListStellarAuditLog(ctx, viewerUserID, 20)
+	require.NoError(t, err)
+	require.Len(t, viewerEntries, 1)
+	assert.Equal(t, viewerUserID, viewerEntries[0].UserID)
+
+	allEntries, err := s.ListStellarAuditLog(ctx, "", 20)
+	require.NoError(t, err)
+	require.Len(t, allEntries, 2)
+	assert.Equal(t, adminUserID, allEntries[0].UserID)
+	assert.Equal(t, viewerUserID, allEntries[1].UserID)
+}
+
 func TestStellarActionsAndNotifications(t *testing.T) {
 	s := newTestStore(t)
 	const userID = "stellar-user-3"
