@@ -1,18 +1,41 @@
 package handlers
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+func setupGitHubProxyTestSettings(t *testing.T) {
+	t.Helper()
+
+	manager := settings.GetSettingsManager()
+	settingsDir := t.TempDir()
+	manager.SetSettingsPath(filepath.Join(settingsDir, "settings.json"))
+	manager.SetKeyPath(filepath.Join(settingsDir, ".keyfile"))
+	require.NoError(t, manager.Load())
+
+	all, err := manager.GetAll()
+	require.NoError(t, err)
+	all.FeedbackGitHubToken = ""
+	all.FeedbackGitHubTokenSource = ""
+	require.NoError(t, manager.SaveAll(all))
+}
+
 func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
+	setupGitHubProxyTestSettings(t)
+
 	app := fiber.New()
 	mockStore := new(test.MockStore)
 	h := NewGitHubProxyHandler("", mockStore)
@@ -95,6 +118,88 @@ func TestShouldUseServerGitHubToken(t *testing.T) {
 			if got != tt.allowed {
 				t.Errorf("shouldUseServerGitHubToken(%q) = %v, want %v", tt.path, got, tt.allowed)
 			}
+		})
+	}
+}
+
+func TestGitHubProxy_BlocksPathTraversalBeforeUpstream(t *testing.T) {
+	setupGitHubProxyTestSettings(t)
+
+	app := fiber.New()
+	h := NewGitHubProxyHandler("server-token", nil)
+
+	upstreamCalled := false
+	originalClient := githubProxyClient
+	githubProxyClient = &http.Client{Transport: RoundTripFunc(func(_ *http.Request) *http.Response {
+		upstreamCalled = true
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{"ok":true}`)),
+			Header:     make(http.Header),
+		}
+	})}
+	defer func() { githubProxyClient = originalClient }()
+
+	app.Get("/api/github/*", func(c *fiber.Ctx) error {
+		c.Locals("userID", uuid.New())
+		return h.Proxy(c)
+	})
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/github/repos/evil/../private/issues", nil))
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.False(t, upstreamCalled, "path traversal must be rejected before any upstream request")
+}
+
+func TestGitHubProxy_UsesServerTokenOnlyForAllowlistedRepos(t *testing.T) {
+	const serverToken = "server-token"
+
+	tests := []struct {
+		name         string
+		path         string
+		expectAuth   string
+		expectStatus int
+	}{
+		{
+			name:         "allowlisted repo gets server token",
+			path:         "/api/github/repos/kubestellar/console/releases",
+			expectAuth:   "Bearer " + serverToken,
+			expectStatus: http.StatusOK,
+		},
+		{
+			name:         "public repo stays unauthenticated",
+			path:         "/api/github/repos/some-org/some-repo/issues",
+			expectAuth:   "",
+			expectStatus: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			setupGitHubProxyTestSettings(t)
+
+			app := fiber.New()
+			h := NewGitHubProxyHandler(serverToken, nil)
+
+			originalClient := githubProxyClient
+			githubProxyClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+				assert.Equal(t, tc.expectAuth, req.Header.Get("Authorization"))
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"ok":true}`)),
+					Header:     make(http.Header),
+				}
+			})}
+			defer func() { githubProxyClient = originalClient }()
+
+			app.Get("/api/github/*", func(c *fiber.Ctx) error {
+				c.Locals("userID", uuid.New())
+				return h.Proxy(c)
+			})
+
+			resp, err := app.Test(httptest.NewRequest(http.MethodGet, tc.path, nil))
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectStatus, resp.StatusCode)
 		})
 	}
 }

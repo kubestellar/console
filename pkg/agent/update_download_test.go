@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // createTarGz creates a .tar.gz archive in a temp file with the given entries.
@@ -83,9 +86,9 @@ func createTarGzWithSymlink(t *testing.T, name, target string) string {
 
 func TestSafeTarExtract_ValidArchive(t *testing.T) {
 	archive := createTarGz(t, map[string]string{
-		"console":        "binary-content",
-		"README.md":      "# readme",
-		"subdir/config":  "key=value",
+		"console":       "binary-content",
+		"README.md":     "# readme",
+		"subdir/config": "key=value",
 	})
 
 	destDir := t.TempDir()
@@ -173,6 +176,23 @@ func TestSafeTarExtract_ContextCancellation(t *testing.T) {
 		// That's acceptable — this test primarily verifies no panic occurs.
 		t.Log("extraction completed before context expired (acceptable for tiny archive)")
 	}
+}
+
+func TestSafeTarExtract_DoesNotWriteOutsideDestination(t *testing.T) {
+	archive := createTarGz(t, map[string]string{
+		"../escaped.txt": "pwned",
+	})
+
+	rootDir := t.TempDir()
+	destDir := filepath.Join(rootDir, "staging")
+	require.NoError(t, os.MkdirAll(destDir, 0o750))
+
+	err := safeTarExtract(context.Background(), archive, destDir)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "path traversal in archive")
+
+	_, statErr := os.Stat(filepath.Join(rootDir, "escaped.txt"))
+	assert.ErrorIs(t, statErr, os.ErrNotExist)
 }
 
 func TestSanitizeTagName(t *testing.T) {

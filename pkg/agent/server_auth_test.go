@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // TestValidateToken_ConstantTimeComparison verifies that validateToken uses
@@ -53,8 +55,8 @@ func TestValidateToken_ConstantTimeComparison(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "no auth header",
-			setup: func(r *http.Request) {},
+			name:   "no auth header",
+			setup:  func(r *http.Request) {},
 			expect: false,
 		},
 		{
@@ -93,8 +95,8 @@ func TestValidateToken_ConstantTimeComparison(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "no token configured allows all",
-			setup: func(r *http.Request) {},
+			name:   "no token configured allows all",
+			setup:  func(r *http.Request) {},
 			expect: true,
 		},
 	}
@@ -187,8 +189,8 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "all three headers present",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Connection":       "Upgrade",
+				"Upgrade":           "websocket",
+				"Connection":        "Upgrade",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: true,
@@ -204,7 +206,7 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "missing Connection header",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
+				"Upgrade":           "websocket",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: false,
@@ -212,7 +214,7 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "missing Upgrade header",
 			headers: map[string]string{
-				"Connection":       "Upgrade",
+				"Connection":        "Upgrade",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: false,
@@ -225,8 +227,8 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "Connection has upgrade in comma list",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Connection":       "keep-alive, Upgrade",
+				"Upgrade":           "websocket",
+				"Connection":        "keep-alive, Upgrade",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: true,
@@ -246,4 +248,22 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateToken_RejectsWebSocketSubprotocolToken(t *testing.T) {
+	const validToken = "secret-agent-token-abc123"
+
+	s := &Server{
+		agentToken:     validToken,
+		tokenExplicit:  true,
+		allowedOrigins: []string{"http://localhost:5174"},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/ws?token=wrong-token", nil)
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	req.Header.Set("Sec-WebSocket-Protocol", "json, bearer."+validToken)
+
+	assert.False(t, s.validateToken(req), "subprotocol bearer tokens must not authenticate WebSocket requests")
 }
