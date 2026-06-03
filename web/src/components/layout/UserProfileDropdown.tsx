@@ -3,6 +3,7 @@ import { safeLazy } from '../../lib/safeLazy'
 import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { User, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -18,6 +19,7 @@ import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
 import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
 // Lazy-load the feedback modal (~67 KB) — only needed when user opens it
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
+const PROFILE_MENUITEM_SELECTOR = '[role="menuitem"]:not([disabled])'
 
 interface UserProfileDropdownProps {
   user: {
@@ -53,7 +55,17 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     configured: false,
     backendUp: false,
   })
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const triggerButtonRef = useRef<HTMLButtonElement>(null)
+  const dropdownContainerRef = useRef<HTMLDivElement>(null)
+  const {
+    containerRef: menuRef,
+    focusMatchingItem,
+    handleKeyDown: handleMenuKeyDown,
+  } = useKeyboardNav({
+    selector: PROFILE_MENUITEM_SELECTOR,
+    orientation: 'vertical',
+    onEscape: closeDropdown,
+  })
   const { totalCoins, githubPoints, localCoins, bonusPoints, awardCoins } = useRewards()
   const { channel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
@@ -117,8 +129,11 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     if (!isOpen) {
       setShowLanguageSubmenu(false)
       setShowDevPanel(false)
+      return
     }
-  }, [isOpen])
+
+    focusMatchingItem({ fallbackSelector: PROFILE_MENUITEM_SELECTOR })
+  }, [focusMatchingItem, isOpen])
 
   // Close dropdown when clicking outside.
   // Uses 'click' (not 'mousedown') so the event fires after React's onClick
@@ -129,7 +144,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   useEffect(() => {
     if (!isOpen) return
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownContainerRef.current && !dropdownContainerRef.current.contains(event.target as Node)) {
         closeDropdown()
       }
     }
@@ -155,9 +170,10 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   if (!user) return null
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={dropdownContainerRef}>
       {/* Trigger button */}
       <button
+        ref={triggerButtonRef}
         type="button"
         data-testid="navbar-profile-btn"
         onClick={toggleDropdown}
@@ -189,7 +205,19 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div id="profile-dropdown-menu" data-testid="navbar-profile-dropdown" role="menu" className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto z-toast">
+        <div
+          ref={menuRef}
+          id="profile-dropdown-menu"
+          data-testid="navbar-profile-dropdown"
+          role="menu"
+          onKeyDown={(event) => {
+            handleMenuKeyDown(event)
+            if (event.key === 'Escape') {
+              triggerButtonRef.current?.focus()
+            }
+          }}
+          className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto z-toast"
+        >
           {/* Header with avatar and name */}
           <div className="p-4 bg-secondary border-b border-border">
             <div className="flex items-center gap-3">
