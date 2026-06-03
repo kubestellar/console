@@ -24,6 +24,19 @@ vi.mock('../../../../cards/useStablePageHeight', () => ({
   }),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'common.sortByPlaceholder': 'Sort by...',
+        'common.ascendingShort': 'Asc',
+        'common.descendingShort': 'Desc',
+      }
+      return translations[key] ?? key
+    },
+  }),
+}))
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { memo, ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Plus, LayoutGrid, ChevronDown, ChevronRight, RefreshCw, Hourglass, AlertTriangle } from 'lucide-react'
@@ -205,6 +206,7 @@ export function DashboardHeader({
   isFetching,
   extra,
 }: DashboardHeaderProps) {
+  const { t } = useTranslation()
   const Icon = getIcon(icon)
 
   return (
@@ -223,10 +225,10 @@ export function DashboardHeader({
           {/* Reserve fixed width to prevent layout shift */}
           <span
             className={`flex items-center gap-1 text-xs w-[72px] ${isRefreshing ? 'text-yellow-400 animate-pulse' : 'invisible'}`}
-            title="Updating..."
+            title={t('common.updatingEllipsis')}
           >
             <Hourglass className="w-3 h-3" />
-            <span>Updating</span>
+            <span>{t('common.updating')}</span>
           </span>
         </div>
         <div className="flex items-center gap-3">

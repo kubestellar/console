@@ -3,6 +3,7 @@ import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, 
 import { MS_PER_SECOND } from './constants/time'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
+import i18n from './i18n'
 import { clearPermissionsCache } from '../hooks/usePermissions'
 import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
@@ -14,6 +15,9 @@ import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
 import { validateResponse } from './schemas/validate'
 import { ROUTES } from '../config/routes'
+
+/** localStorage key for the kc-agent shared secret (must match shared.ts) */
+const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 
 interface User {
   id: string
@@ -118,11 +122,11 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
     </svg>
-    <span><strong>Session expires soon</strong></span>
+    <span><strong>${i18n.t('auth.sessionExpiresSoon')}</strong></span>
   `
 
   const btn = document.createElement('button')
-  btn.textContent = 'Refresh Now'
+  btn.textContent = i18n.t('auth.refreshNow')
   btn.style.cssText = `
     margin-left: ${BTN_MARGIN_LEFT_PX}; padding: ${BTN_PAD_V_PX} ${BTN_PAD_H_PX}; border-radius: ${BANNER_RADIUS_PX};
     background: rgba(234,179,8,0.3); border: 1px solid rgba(234,179,8,0.5);

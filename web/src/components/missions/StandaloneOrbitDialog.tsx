@@ -157,7 +157,7 @@ function ClusterScopeSection({ clusterName, value, onChange }: ClusterScopeSecti
                         {isKindChecked(k.kind) && (
                           <div className="ml-4 mt-1">
                             {nsLoading ? (
-                              <span className="text-[9px] text-muted-foreground">Loading namespaces…</span>
+                              <span className="text-[9px] text-muted-foreground">{t('gpu.loadingNamespaces')}</span>
                             ) : nsOptions.length === 0 ? (
                               <span className="text-[9px] text-muted-foreground">All namespaces</span>
                             ) : (

@@ -6,6 +6,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { CardContentList, CardColumnConfig, CardDrillDownConfig, CardAIActionsConfig } from '../../types'
 import { renderCell } from '../renderers'
@@ -43,6 +44,7 @@ export function ListVisualization({
     defaultSort,
     defaultDirection = 'asc',
     sortOptions } = content
+  const { t } = useTranslation()
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0)
@@ -137,7 +139,7 @@ export function ListVisualization({
             }}
             className="px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground focus:outline-hidden focus:border-blue-500"
           >
-            <option value="">Sort by...</option>
+            <option value="">{t('common.sortByPlaceholder')}</option>
             {availableSortOptions.map((opt) => (
               <option key={opt.field} value={opt.field}>
                 {opt.label}
@@ -153,12 +155,12 @@ export function ListVisualization({
               {sortDirection === 'asc' ? (
                 <>
                   <ArrowUp className="w-3 h-3" />
-                  <span>Asc</span>
+                  <span>{t('common.ascendingShort')}</span>
                 </>
               ) : (
                 <>
                   <ArrowDown className="w-3 h-3" />
-                  <span>Desc</span>
+                  <span>{t('common.descendingShort')}</span>
                 </>
               )}
             </button>
