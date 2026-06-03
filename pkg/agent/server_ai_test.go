@@ -547,7 +547,47 @@ func TestValidateMixedModeCommands(t *testing.T) {
 		{
 			name:       "reject context overrides",
 			command:    "kubectl get pods --context other-cluster",
-			wantReason: "cluster context overrides are blocked",
+			wantReason: "transport, authentication, and context override flags are blocked",
+		},
+		{
+			name:       "reject transport overrides in equals form",
+			command:    "kubectl get pods --server=https://evil.example",
+			wantReason: "transport, authentication, and context override flags are blocked",
+		},
+		{
+			name:       "reject auth overrides",
+			command:    "kubectl get pods --token attacker-token",
+			wantReason: "transport, authentication, and context override flags are blocked",
+		},
+		{
+			name:       "reject raw access",
+			command:    "kubectl get --raw=/api/v1/namespaces/kube-system/secrets",
+			wantReason: "kubectl --raw and --filename flags are blocked",
+		},
+		{
+			name:       "reject filename access",
+			command:    "kubectl get --filename manifest.yaml",
+			wantReason: "kubectl --raw and --filename flags are blocked",
+		},
+		{
+			name:       "reject watch equals form",
+			command:    "kubectl get pods --watch=true",
+			wantReason: "streaming or watch flags are blocked",
+		},
+		{
+			name:       "reject watch only variant",
+			command:    "kubectl get pods --watch-only=true",
+			wantReason: "streaming or watch flags are blocked",
+		},
+		{
+			name:       "reject cp traversal",
+			command:    "kubectl cp pod:/var/log/../../secrets/token ./loot.txt",
+			wantReason: "path traversal patterns are blocked",
+		},
+		{
+			name:       "reject exec traversal",
+			command:    "kubectl exec pod -- cat ../../var/run/secrets/kubernetes.io/serviceaccount/token",
+			wantReason: "path traversal patterns are blocked",
 		},
 		{
 			name:       "reject --watch streaming flag",
