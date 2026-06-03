@@ -76,7 +76,7 @@ func ghpResolveRepos(repoFilter string) ([]string, error) {
 		return ghpRepos, nil
 	}
 	if !ghpIsAllowedRepo(repoFilter) {
-		return nil, fmt.Errorf("unknown repo")
+		return nil, ghpErrRepoNotAllowed
 	}
 	return []string{repoFilter}, nil
 }

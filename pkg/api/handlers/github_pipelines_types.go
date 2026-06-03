@@ -5,6 +5,7 @@
 package handlers
 
 import (
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -65,6 +66,8 @@ const (
 var ghpDefaultRepos = []string{
 	"kubestellar/console",
 	"kubestellar/docs",
+	"kubestellar/kubestellar",
+	"kubestellar/ocm-transport-plugin",
 	"kubestellar/console-kb",
 	"kubestellar/kubestellar-mcp",
 	"kubestellar/console-marketplace",
@@ -118,13 +121,11 @@ var ghpNightlyTagRe = regexp.MustCompile(`(?i)^.*nightly.*$`)
 // arbitrary; the PR reference must appear at the very end of the line.
 var ghpPRFromCommitRe = regexp.MustCompile(`^.*\(#(\d+)\)\s*$`)
 
+var ghpErrRepoNotAllowed = errors.New("repo is not allowlisted")
+
 func ghpIsAllowedRepo(repo string) bool {
-	// Accept any valid owner/repo slug — the GitHub token's permissions
-	// are the real access control. The preconfigured list only controls
-	// which repos are fetched by default (no filter), not which repos
-	// a user is allowed to query.
-	if ghpValidRepoPattern.MatchString(repo) {
-		return true
+	if !ghpValidRepoPattern.MatchString(repo) {
+		return false
 	}
 	for _, r := range ghpRepos {
 		if r == repo {

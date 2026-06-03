@@ -31,7 +31,7 @@ import {
   READ_RATE_LIMIT_WINDOW_MS,
   getRepos,
 } from "./github-pipelines/constants";
-import { corsOrigin, jsonResponse, readCache, writeCache, isValidRepo } from "./github-pipelines/helpers";
+import { corsOrigin, isAllowedRepo, jsonResponse, readCache, writeCache } from "./github-pipelines/helpers";
 import { buildPulse, buildMatrix, buildFlow, buildFailures, buildLog } from "./github-pipelines/views";
 
 const REPOS = getRepos();
@@ -50,6 +50,7 @@ export default async (req: Request): Promise<Response> => {
 
   const url = new URL(req.url);
   const view = url.searchParams.get("view") ?? "pulse";
+  const repoFilter = url.searchParams.get("repo");
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
@@ -92,12 +93,19 @@ export default async (req: Request): Promise<Response> => {
 
   const store = getStore(STORE_NAME);
 
+  if (repoFilter && !isAllowedRepo(repoFilter)) {
+    return jsonResponse(
+      { error: "repo is not allowlisted" },
+      { status: 403, headers: baseHeaders },
+    );
+  }
+
   try {
     // Reads — cache hit? Include UTC date in the pulse key so it rotates
     // daily and doesn't serve yesterday's release tag for hours after a new
     // nightly publishes. Other views are keyed by their query params.
     const datePrefix = view === "pulse" ? new Date().toISOString().slice(0, 13) : ""; // hourly bucket for pulse
-    const cacheKey = `${view}:${datePrefix}:${url.searchParams.get("repo") ?? "all"}:${url.searchParams.get("days") ?? ""}:${url.searchParams.get("job") ?? ""}`;
+    const cacheKey = `${view}:${datePrefix}:${repoFilter ?? "all"}:${url.searchParams.get("days") ?? ""}:${url.searchParams.get("job") ?? ""}`;
     if (view !== "log") {
       const cached = await readCache<unknown>(store, cacheKey);
       if (cached) {
@@ -114,24 +122,23 @@ export default async (req: Request): Promise<Response> => {
     let payload: unknown;
     switch (view) {
       case "pulse":
-        payload = await buildPulse(store, token, url.searchParams.get("repo"));
+        payload = await buildPulse(store, token, repoFilter);
         break;
       case "matrix": {
         const daysRaw = parseInt(url.searchParams.get("days") ?? String(MATRIX_DEFAULT_DAYS), 10);
         const days = Math.min(Math.max(1, daysRaw || MATRIX_DEFAULT_DAYS), MATRIX_MAX_DAYS);
-        payload = await buildMatrix(store, token, days, url.searchParams.get("repo"));
+        payload = await buildMatrix(store, token, days, repoFilter);
         break;
       }
       case "flow":
-        payload = await buildFlow(token, url.searchParams.get("repo"));
+        payload = await buildFlow(token, repoFilter);
         break;
       case "failures":
-        payload = await buildFailures(token, url.searchParams.get("repo"));
+        payload = await buildFailures(token, repoFilter);
         break;
       case "all": {
         // Unified fetch — builds all four views in parallel so the CI/CD
         // dashboard makes one request instead of four.
-        const repoFilter = url.searchParams.get("repo");
         const daysRaw = parseInt(url.searchParams.get("days") ?? String(MATRIX_DEFAULT_DAYS), 10);
         const days = Math.min(Math.max(1, daysRaw || MATRIX_DEFAULT_DAYS), MATRIX_MAX_DAYS);
         const [pulse, matrix, flow, failures] = await Promise.allSettled([
@@ -149,9 +156,9 @@ export default async (req: Request): Promise<Response> => {
         break;
       }
       case "log": {
-        const repo = url.searchParams.get("repo") ?? "";
+        const repo = repoFilter ?? "";
         const job = url.searchParams.get("job") ?? "";
-        if (!isValidRepo(repo) || !REPOS.includes(repo) || !job || !/^\d+$/.test(job)) {
+        if (!repo || !job || !/^\d+$/.test(job)) {
           return jsonResponse(
             { error: "repo and valid numeric job params required" },
             { status: 400, headers: baseHeaders }
@@ -177,6 +184,9 @@ export default async (req: Request): Promise<Response> => {
       },
     });
   } catch (err) {
+    if (err instanceof Error && err.message === "repo is not allowlisted") {
+      return jsonResponse({ error: err.message }, { status: 403, headers: baseHeaders });
+    }
     return jsonResponse(
       {
         error: "Internal error",

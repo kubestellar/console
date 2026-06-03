@@ -175,11 +175,27 @@ describe("github-pipelines", () => {
     expect(mockBuildMatrix).toHaveBeenCalled();
   });
 
+  it("returns 403 for repos outside the allowlist", async () => {
+    const res = await handler(makeRequest("view=pulse&repo=some-org/some-repo"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toContain("allowlisted");
+    expect(mockBuildPulse).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for log view with invalid job param", async () => {
     const res = await handler(makeRequest("view=log&repo=kubestellar/console&job=not-numeric"));
     expect(res.status).toBe(400);
     const body = await readJson<{ error: string }>(res);
     expect(body.error).toContain("job");
+    expect(mockBuildLog).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for log view with repo outside the allowlist", async () => {
+    const res = await handler(makeRequest("view=log&repo=some-org/some-repo&job=123"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toContain("allowlisted");
     expect(mockBuildLog).not.toHaveBeenCalled();
   });
 

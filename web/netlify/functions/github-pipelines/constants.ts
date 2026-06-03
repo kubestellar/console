@@ -50,6 +50,8 @@ export const FLOW_MAX_RUNS_PER_REPO = 8;
 export const DEFAULT_REPOS = [
   "kubestellar/console",
   "kubestellar/docs",
+  "kubestellar/kubestellar",
+  "kubestellar/ocm-transport-plugin",
   "kubestellar/console-kb",
   "kubestellar/kubestellar-mcp",
   "kubestellar/console-marketplace",

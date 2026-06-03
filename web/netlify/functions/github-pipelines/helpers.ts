@@ -3,7 +3,7 @@
  */
 import type { getStore } from "@netlify/blobs";
 import type { CachedView } from "./types";
-import { ALLOWED_ORIGINS, CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
+import { ALLOWED_ORIGINS, CACHE_TTL_MS, getRepos, VALID_REPO_PATTERN } from "./constants";
 
 export function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
@@ -35,6 +35,10 @@ export function jsonResponse(
 
 export function isValidRepo(repo: string | null): boolean {
   return !!repo && VALID_REPO_PATTERN.test(repo);
+}
+
+export function isAllowedRepo(repo: string | null): boolean {
+  return isValidRepo(repo) && getRepos().includes(repo);
 }
 
 export async function readCache<T>(

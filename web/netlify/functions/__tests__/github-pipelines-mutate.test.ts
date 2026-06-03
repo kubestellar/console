@@ -100,6 +100,27 @@ describe("github-pipelines-mutate", () => {
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
+  it("returns 403 for repos outside the allowlist", async () => {
+    mockMutate.mockResolvedValue(
+      new Response(JSON.stringify({ error: "repo is not allowlisted" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const res = await handler(
+      makeMutateRequest({
+        op: "rerun",
+        repo: "some-org/some-repo",
+        run: "12345",
+        bearer: FAKE_MUTATE_AUTH_TOKEN,
+      }),
+    );
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toContain("allowlisted");
+    expect(mockMutate).toHaveBeenCalledWith("rerun", "some-org/some-repo", "12345");
+  });
+
   it("returns 429 when mutation rate limit is exceeded", async () => {
     mockEnforceSimpleRateLimit.mockResolvedValue({ limited: true, retryAfterSeconds: 120 });
     const res = await handler(

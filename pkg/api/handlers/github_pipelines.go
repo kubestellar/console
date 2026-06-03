@@ -109,7 +109,7 @@ func (h *GitHubPipelinesHandler) buildPulseFromRequest(req ghpBuildRequest) (any
 	if pulseRepo == "" {
 		pulseRepo = ghpNightlyReleaseRepo
 	} else if !ghpIsAllowedRepo(pulseRepo) {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "invalid repo slug")
+		return nil, ghpErrRepoNotAllowed
 	}
 
 	releaseRuns, err := h.fetchWorkflowRuns(
@@ -437,8 +437,11 @@ func (h *GitHubPipelinesHandler) buildAll(c *fiber.Ctx) (any, error) {
 func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 	repo := c.Query("repo")
 	jobStr := c.Query("job")
-	if !ghpIsAllowedRepo(repo) || jobStr == "" {
+	if repo == "" || jobStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "repo and job required"})
+	}
+	if !ghpIsAllowedRepo(repo) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": ghpErrRepoNotAllowed.Error()})
 	}
 	if _, err := strconv.ParseInt(jobStr, 10, 64); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "job must be a numeric ID"})
@@ -482,7 +485,7 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	repo := c.Query("repo")
 	run := c.Query("run")
 	if !ghpIsAllowedRepo(repo) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown repo"})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": ghpErrRepoNotAllowed.Error()})
 	}
 	if _, err := strconv.ParseInt(run, 10, 64); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "run must be a numeric ID"})

@@ -59,14 +59,13 @@ func TestGitHubPipelines_MutateDisabledWhenNoMutationToken(t *testing.T) {
 
 func TestGitHubPipelines_MutateRejectsUnknownRepo(t *testing.T) {
 	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
-	// Use a path-traversal slug that the regex must reject.
-	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=evil/../passwd&run=1", nil)
+	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=some-org/some-repo&run=1", nil)
 	res, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
-	if res.StatusCode != 400 {
-		t.Fatalf("expected 400 for disallowed repo, got %d", res.StatusCode)
+	if res.StatusCode != 403 {
+		t.Fatalf("expected 403 for disallowed repo, got %d", res.StatusCode)
 	}
 }
 
@@ -106,6 +105,30 @@ func TestGitHubPipelines_LogRequiresParams(t *testing.T) {
 	}
 }
 
+func TestGitHubPipelines_LogRejectsRepoOutsideAllowlist(t *testing.T) {
+	app := newGHPTestApp(t, "fake-token", "")
+	req := httptest.NewRequest("GET", "/api/github-pipelines?view=log&repo=some-org/some-repo&job=1", nil)
+	res, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if res.StatusCode != 403 {
+		t.Fatalf("expected 403 for disallowed repo, got %d", res.StatusCode)
+	}
+}
+
+func TestGitHubPipelines_PulseRejectsRepoOutsideAllowlist(t *testing.T) {
+	app := newGHPTestApp(t, "fake-token", "")
+	req := httptest.NewRequest("GET", "/api/github-pipelines?view=pulse&repo=some-org/some-repo", nil)
+	res, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if res.StatusCode != 403 {
+		t.Fatalf("expected 403 for disallowed repo, got %d", res.StatusCode)
+	}
+}
+
 func TestGHPHistory_MergeAndTrim(t *testing.T) {
 	h := newGHPHistory()
 	success := "success"
@@ -124,7 +147,7 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 		t.Fatalf("expected success conclusion, got %v", day.Conclusion)
 	}
 	// Trim retention: insert an ancient day and verify it's dropped
-	ancient := time.Now().AddDate(0, 0, -(ghpHistoryRetentionDays + 10)).Format("2006-01-02") + "T00:00:00Z"
+	ancient := time.Now().AddDate(0, 0, -(ghpHistoryRetentionDays+10)).Format("2006-01-02") + "T00:00:00Z"
 	h.merge([]ghpWorkflowRun{
 		{ID: 99, Repo: "kubestellar/console", Name: "Release", Conclusion: &success, CreatedAt: ancient, HTMLURL: "old"},
 	})
@@ -135,16 +158,18 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 }
 
 func TestGHPIsAllowedRepo(t *testing.T) {
-	// Preconfigured repo must always be allowed.
-	if !ghpIsAllowedRepo("kubestellar/console") {
-		t.Fatal("console should be allowed")
+	for _, allowed := range []string{
+		"kubestellar/console",
+		"kubestellar/docs",
+		"kubestellar/kubestellar",
+		"kubestellar/ocm-transport-plugin",
+	} {
+		if !ghpIsAllowedRepo(allowed) {
+			t.Fatalf("expected %q to be allowlisted", allowed)
+		}
 	}
-	// Any valid owner/repo slug is allowed (GitHub token is the real ACL).
-	if !ghpIsAllowedRepo("some-org/some-repo") {
-		t.Fatal("valid owner/repo slug should be allowed")
-	}
-	// Path-traversal and malformed slugs must be rejected.
-	for _, bad := range []string{
+	for _, blocked := range []string{
+		"some-org/some-repo",
 		"",
 		"noslash",
 		"owner/repo/extra",
@@ -154,8 +179,8 @@ func TestGHPIsAllowedRepo(t *testing.T) {
 		"/leading-slash",
 		"trailing-slash/",
 	} {
-		if ghpIsAllowedRepo(bad) {
-			t.Errorf("expected %q to be rejected", bad)
+		if ghpIsAllowedRepo(blocked) {
+			t.Errorf("expected %q to be rejected", blocked)
 		}
 	}
 }

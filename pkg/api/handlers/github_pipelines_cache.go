@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -93,9 +94,9 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 		}
 		status := fiber.StatusBadGateway
 		genericMsg := "failed to fetch pipeline data"
-		if err.Error() == "unknown repo" {
-			status = fiber.StatusBadRequest
-			genericMsg = "unknown repo"
+		if errors.Is(err, ghpErrRepoNotAllowed) {
+			status = fiber.StatusForbidden
+			genericMsg = ghpErrRepoNotAllowed.Error()
 		}
 		slog.Error("[GitHubPipelines] fetch failed", "error", err)
 		return c.Status(status).JSON(fiber.Map{"error": genericMsg})
