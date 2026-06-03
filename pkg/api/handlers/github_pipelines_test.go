@@ -135,13 +135,14 @@ func TestGHPHistory_MergeAndTrim(t *testing.T) {
 }
 
 func TestGHPIsAllowedRepo(t *testing.T) {
-	// Preconfigured repo must always be allowed.
+	// Preconfigured repos (in ghpRepos list) must be allowed.
 	if !ghpIsAllowedRepo("kubestellar/console") {
-		t.Fatal("console should be allowed")
+		t.Fatal("console should be allowed (in default repo list)")
 	}
-	// Any valid owner/repo slug is allowed (GitHub token is the real ACL).
-	if !ghpIsAllowedRepo("some-org/some-repo") {
-		t.Fatal("valid owner/repo slug should be allowed")
+	// SECURITY: Repos NOT in the allowlist must be rejected, even if format is valid.
+	// This prevents the server token from being used as a confused deputy.
+	if ghpIsAllowedRepo("some-org/some-repo") {
+		t.Fatal("repo not in allowlist should be rejected")
 	}
 	// Path-traversal and malformed slugs must be rejected.
 	for _, bad := range []string{

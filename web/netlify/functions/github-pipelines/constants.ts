@@ -82,8 +82,8 @@ export const ALLOWED_ORIGINS = [
 export const GH_RETRY_MAX_ATTEMPTS = 3;
 export const GH_RETRY_BASE_DELAY_MS = 1_000;
 
-/** Matches `owner/repo` format — allows any valid GitHub repo, not just
- * preconfigured PIPELINE_REPOS. The token's access controls what's fetchable. */
+/** Matches `owner/repo` format. Used as first-pass validation before checking
+ * against the allowlist. Both format AND allowlist checks must pass. */
 export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
 /**

@@ -3,7 +3,7 @@
  */
 import type { getStore } from "@netlify/blobs";
 import type { CachedView } from "./types";
-import { ALLOWED_ORIGINS, CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
+import { ALLOWED_ORIGINS, CACHE_TTL_MS, VALID_REPO_PATTERN, getRepos } from "./constants";
 
 export function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
@@ -33,8 +33,22 @@ export function jsonResponse(
   });
 }
 
+/**
+ * SECURITY: Validate repository input against strict allowlist.
+ * Prevents the server token from being used as a confused deputy to access
+ * arbitrary private repos (CWE-285, CWE-441).
+ * 
+ * @param repo - Repository slug to validate (owner/name format)
+ * @returns true if repo is in the allowlist AND matches format, false otherwise
+ */
 export function isValidRepo(repo: string | null): boolean {
-  return !!repo && VALID_REPO_PATTERN.test(repo);
+  if (!repo || !VALID_REPO_PATTERN.test(repo)) {
+    return false;
+  }
+  
+  // Check against allowlist (PIPELINE_REPOS env var or default KubeStellar repos)
+  const allowedRepos = getRepos();
+  return allowedRepos.includes(repo);
 }
 
 export async function readCache<T>(

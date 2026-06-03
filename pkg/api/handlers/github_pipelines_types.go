@@ -119,18 +119,23 @@ var ghpNightlyTagRe = regexp.MustCompile(`(?i)^.*nightly.*$`)
 var ghpPRFromCommitRe = regexp.MustCompile(`^.*\(#(\d+)\)\s*$`)
 
 func ghpIsAllowedRepo(repo string) bool {
-	// Accept any valid owner/repo slug — the GitHub token's permissions
-	// are the real access control. The preconfigured list only controls
-	// which repos are fetched by default (no filter), not which repos
-	// a user is allowed to query.
-	if ghpValidRepoPattern.MatchString(repo) {
-		return true
+	// SECURITY: Strict allowlist validation — only repos in the PIPELINE_REPOS
+	// env var (or default KubeStellar repos) are permitted. This prevents the
+	// server token from being used as a confused deputy to access arbitrary
+	// private repos (CWE-285, CWE-441).
+	
+	// First, validate format to prevent injection attacks
+	if !ghpValidRepoPattern.MatchString(repo) {
+		return false
 	}
+	
+	// Then check against allowlist
 	for _, r := range ghpRepos {
 		if r == repo {
 			return true
 		}
 	}
+	
 	return false
 }
 
