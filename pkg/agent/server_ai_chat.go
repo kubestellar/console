@@ -24,6 +24,19 @@ const (
 	kagentiMaxConcurrentClusterFetches = 10
 )
 
+// normalizeMessageRole validates and normalizes message roles from client input.
+// Only "user" and "assistant" roles are allowed. Any other role (including
+// "system") is normalized to "user" to prevent prompt injection attacks (CWE-20).
+func normalizeMessageRole(role string) string {
+	switch role {
+	case "user", "assistant":
+		return role
+	default:
+		// Normalize any other role (especially "system") to "user"
+		return "user"
+	}
+}
+
 type kagentiClusterSnapshot struct {
 	Name          string             `json:"name"`
 	Context       string             `json:"context"`
@@ -201,6 +214,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		}
 		req.Prompt = legacyReq.Prompt
 		req.SessionID = legacyReq.SessionID
+	}
+
+	// SECURITY: Normalize message roles from client input to prevent prompt injection (CWE-20).
+	// Only "user" and "assistant" roles are allowed; any other role (especially "system")
+	// is normalized to "user" to prevent bypassing server-side safety prompts.
+	for i, histMsg := range req.History {
+		req.History[i].Role = normalizeMessageRole(histMsg.Role)
 	}
 
 	if req.Prompt == "" {
