@@ -225,6 +225,47 @@ describe('createCardComponent', () => {
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/AsyncFunction/)
     })
+
+    it('blocks String.fromCharCode sandbox escape vector', () => {
+      const code = `
+        var s = String.fromCharCode(99,111,110,115,116,114,117,99,116,111,114);
+        var F = [][s][s];
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/fromCharCode/)
+    })
+
+    it('blocks String.fromCodePoint sandbox escape vector', () => {
+      const code = `
+        var s = String.fromCodePoint(99,111,110,115,116,114,117,99,116,111,114);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/fromCodePoint/)
+    })
+
+    it('blocks charCodeAt usage', () => {
+      const code = `
+        var x = "a".charCodeAt(0);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/charCodeAt/)
+    })
+
+    it('blocks codePointAt usage', () => {
+      const code = `
+        var x = "a".codePointAt(0);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/codePointAt/)
+    })
   })
 
   // Security regression tests (#6677 — deep-freeze injected scope)

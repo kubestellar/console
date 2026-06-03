@@ -22,6 +22,9 @@ const BLOCKED_GLOBALS = [
   'postMessage', 'crypto',
   // #16505: Block Reflect/Proxy to prevent sandbox escape via prototype walking
   'Reflect', 'Proxy',
+  // Block encoding/decoding APIs that can compute "constructor" at runtime to
+  // bypass static regex checks (e.g. atob('Y29uc3RydWN0b3I=') → "constructor").
+  'atob', 'btoa',
 ] as const
 
 /**
@@ -164,6 +167,14 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
       // Block prototype property access
       { re: /\bprototype\b/, label: 'prototype' },
+      // Block String.fromCharCode which can compute "constructor" at runtime
+      // to bypass the static .constructor regex (sandbox escape via bracket access)
+      { re: /\bfromCharCode\b/, label: 'fromCharCode' },
+      { re: /\bfromCodePoint\b/, label: 'fromCodePoint' },
+      { re: /\bcharCodeAt\b/, label: 'charCodeAt' },
+      { re: /\bcodePointAt\b/, label: 'codePointAt' },
+      // Block String.raw which can bypass encoding restrictions
+      { re: /\bString\s*\.\s*raw\b/, label: 'String.raw' },
     ]
     for (const { re, label } of FORBIDDEN_PATTERNS) {
       if (re.test(compiledCode)) {
