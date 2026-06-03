@@ -321,7 +321,7 @@ func TestListMissionsScopesToCurrentUser(t *testing.T) {
 func TestCreateMissionAssignsAuthenticatedOwner(t *testing.T) {
 	userID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
-		userID: &models.User{ID: userID, Role: models.UserRoleEditor},
+		userID: {ID: userID, Role: models.UserRoleEditor},
 	}})
 	app := setupOrbitScopedApp(userID, h)
 
@@ -356,11 +356,55 @@ func TestCreateMissionAssignsAuthenticatedOwner(t *testing.T) {
 	}
 }
 
+func TestCreateMissionRejectsOtherUsersMissionID(t *testing.T) {
+	userID := uuid.New()
+	otherID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: &models.User{ID: userID, Role: models.UserRoleEditor},
+	}})
+	h.missions["orbit-foreign"] = &OrbitMission{
+		ID:      "orbit-foreign",
+		OwnerID: otherID.String(),
+		History: []OrbitRunRecord{},
+	}
+	app := setupOrbitScopedApp(userID, h)
+
+	payload, err := json.Marshal(map[string]any{
+		"id":        "orbit-foreign",
+		"title":     "Hijack Attempt",
+		"orbitType": "health-check",
+		"cadence":   "daily",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/missions", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusConflict {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusConflict, string(body))
+	}
+	if got := h.missions["orbit-foreign"].OwnerID; got != otherID.String() {
+		t.Fatalf("ownerId = %q, want %q", got, otherID.String())
+	}
+}
+
 func TestRunMissionRejectsOtherUsersMission(t *testing.T) {
 	userID := uuid.New()
 	otherID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
-		userID: &models.User{ID: userID, Role: models.UserRoleViewer},
+		userID: {ID: userID, Role: models.UserRoleViewer},
 	}})
 	h.missions["orbit-foreign"] = &OrbitMission{
 		ID:      "orbit-foreign",

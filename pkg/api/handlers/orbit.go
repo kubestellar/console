@@ -213,8 +213,19 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 
 	if m.ID == "" {
 		// Use millisecond-precision timestamp plus a random suffix to avoid
-		// collisions when two missions are created in the same second (#7800).
+		// collisions when two missions are created in the same second.
 		m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
+	} else {
+		// Prevent authenticated users from overwriting another user's mission by
+		// reusing its ID (CWE-639 / #16698).
+		h.mu.RLock()
+		existing, exists := h.missions[m.ID]
+		h.mu.RUnlock()
+		if exists && existing.OwnerID != "" && existing.OwnerID != userID.String() {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "A mission with this ID already exists",
+			})
+		}
 	}
 	if userID != uuid.Nil {
 		m.OwnerID = userID.String()
