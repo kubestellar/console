@@ -16,6 +16,7 @@ const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
 const ARTIFACT_FETCH_TIMEOUT_MS = 10_000; // timeout for individual artifact downloads
 const GH_API_TIMEOUT_MS = 10_000; // timeout for GitHub API calls
 const MAX_ARTIFACT_ZIP_BYTES = 5_242_880;
+const MAX_DECOMPRESSED_BYTES = 1_048_576; // 1 MB — guards against zip bombs (CWE-409)
 const RUNS_PER_PAGE = 7;
 const GITHUB_API = "https://api.github.com";
 const IMAGE_REPO = "llm-d/llm-d";
@@ -366,9 +367,12 @@ async function downloadArtifact(
     if (!response.ok) return null;
 
     const buffer = await readCappedBuffer(response, MAX_ARTIFACT_ZIP_BYTES, "GitHub artifact ZIP");
-    const unzipped = unzipSync(new Uint8Array(buffer));
+    const unzipped = unzipSync(new Uint8Array(buffer), {
+      filter: (file) => file.name === "image-metadata.json",
+    });
     const jsonFile = Object.values(unzipped)[0];
     if (!jsonFile) return null;
+    if (jsonFile.length > MAX_DECOMPRESSED_BYTES) return null;
 
     const text = new TextDecoder().decode(jsonFile);
     const metadata = JSON.parse(text) as Partial<RunImageMetadata>;

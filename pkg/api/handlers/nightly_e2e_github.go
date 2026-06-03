@@ -34,6 +34,10 @@ const (
 
 	// imageRepo is the GitHub repo whose guide directories contain image references
 	imageRepo = "llm-d/llm-d"
+
+	// maxBlobResponseBytes caps the size of git blob API responses to prevent
+	// unbounded memory allocation from large blobs (CWE-400).
+	maxBlobResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
 
 // imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>
@@ -514,7 +518,7 @@ func (h *NightlyE2EHandler) fetchBlob(ctx context.Context, sha string) string {
 		Content  string `json:"content"`
 		Encoding string `json:"encoding"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&blob); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBlobResponseBytes)).Decode(&blob); err != nil {
 		return ""
 	}
 
