@@ -1,6 +1,6 @@
 import type { Context } from "@netlify/functions";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
-import { validateBearerToken } from "./_shared/jwt-validation";
+import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -84,6 +84,9 @@ const MAX_PROXY_BODY_BYTES = 1_048_576;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
+const AUTH_COOKIE_NAME = "kc_auth";
+const JWT_PART_COUNT = 3;
+const MIN_SESSION_TOKEN_LENGTH = 16;
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -116,6 +119,55 @@ function validatePostBody(requestBody: string): string | null {
   }
 
   return null;
+}
+
+function getCookieValue(cookieHeader: string, cookieName: string): string | null {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookieHeader.split(";");
+  for (const cookie of cookies) {
+    const trimmedCookie = cookie.trim();
+    if (!trimmedCookie.startsWith(`${cookieName}=`)) {
+      continue;
+    }
+
+    const cookieValue = trimmedCookie.slice(cookieName.length + 1).trim();
+    return cookieValue || null;
+  }
+
+  return null;
+}
+
+function isLikelyJWT(value: string): boolean {
+  const parts = value.split(".");
+  return parts.length === JWT_PART_COUNT && parts.every((part) => part.length > 0);
+}
+
+function isNonTrivialSessionValue(value: string): boolean {
+  return value.length >= MIN_SESSION_TOKEN_LENGTH && !/\s/.test(value);
+}
+
+async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): Promise<boolean> {
+  const sessionValue = getCookieValue(cookieHeader, AUTH_COOKIE_NAME);
+  if (!sessionValue) {
+    return false;
+  }
+
+  if (isLikelyJWT(sessionValue)) {
+    const validation = await validateJWT(sessionValue, jwtSecret);
+    if (!validation.valid) {
+      console.warn(`kc_auth cookie validation failed: ${validation.error}`);
+    }
+    return validation.valid;
+  }
+
+  const validOpaqueSession = isNonTrivialSessionValue(sessionValue);
+  if (!validOpaqueSession) {
+    console.warn("kc_auth cookie rejected: value is empty or too short");
+  }
+  return validOpaqueSession;
 }
 
 async function readResponseBodyWithCap(response: Response): Promise<Uint8Array | null> {
@@ -192,19 +244,22 @@ export default async (req: Request, context: Context): Promise<Response> => {
   // Auth check for POST mutation endpoints (parity with Go backend requireBearerToken)
   if (req.method === "POST") {
     const authHeader = req.headers.get("authorization") || "";
-    const cookie = req.headers.get("cookie") || "";
-    const hasCookie = cookie.includes("kc_auth=");
-    
+    const cookieHeader = req.headers.get("cookie") || "";
+    const rawJwtSecret = context.env?.JWT_SECRET;
+    const jwtSecret = typeof rawJwtSecret === "string" ? rawJwtSecret : undefined;
+
     let hasValidBearer = false;
     if (authHeader.startsWith("Bearer ")) {
-      const bearerValidation = validateBearerToken(authHeader);
+      const bearerValidation = await validateBearerToken(authHeader, jwtSecret);
       hasValidBearer = bearerValidation.valid;
       if (!hasValidBearer) {
         console.warn(`Bearer token validation failed: ${bearerValidation.error}`);
       }
     }
-    
-    if (!hasValidBearer && !hasCookie) {
+
+    const hasValidCookie = await hasValidSessionCookie(cookieHeader, jwtSecret);
+
+    if (!hasValidBearer && !hasValidCookie) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         {

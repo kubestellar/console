@@ -1,14 +1,11 @@
-/**
- * Minimal JWT validation utility for quantum-proxy.
- * Validates JWT structure, expiry, and basic claims.
- * Does NOT perform signature verification (would require the issuer's public key).
- */
+import { jwtVerify, type JWTPayload as JoseJWTPayload } from "jose";
 
-export interface JWTPayload {
-  exp?: number;
-  iss?: string;
-  sub?: string;
-  aud?: string | string[];
+const JWT_PART_COUNT = 3;
+const JWT_HMAC_ALGORITHM = "HS256";
+const JWT_SECRET_FALLBACK_WARNING =
+  "JWT_SECRET is not configured; falling back to non-cryptographic JWT validation.";
+
+export interface JWTPayload extends JoseJWTPayload {
   [key: string]: unknown;
 }
 
@@ -18,91 +15,76 @@ export interface ValidationResult {
   payload?: JWTPayload;
 }
 
-/**
- * Decodes a base64url-encoded string.
- * Handles padding restoration for proper base64 decoding.
- */
+function decodeBase64(base64: string): string {
+  if (typeof atob === "function") {
+    return atob(base64);
+  }
+  return Buffer.from(base64, "base64").toString("binary");
+}
+
 function base64urlDecode(str: string): string {
   try {
-    // Add padding if necessary
     const paddingLength = 4 - (str.length % 4);
     let padded = str;
     if (paddingLength > 0 && paddingLength < 4) {
       padded = str + "=".repeat(paddingLength);
     }
-    // Convert base64url to standard base64
     const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
-    // Decode and convert to string
-    const binary = atob(base64);
+    const binary = decodeBase64(base64);
     return new TextDecoder().decode(
-      Uint8Array.from(binary, (c) => c.charCodeAt(0))
+      Uint8Array.from(binary, (character) => character.charCodeAt(0))
     );
   } catch {
     throw new Error("Invalid base64url encoding");
   }
 }
 
-/**
- * Validates a Bearer token (JWT) without signature verification.
- *
- * Checks:
- * 1. Token has valid JWT structure (3 base64url-encoded parts separated by dots)
- * 2. Payload can be decoded and parsed as JSON
- * 3. Token is not expired (if exp claim exists)
- *
- * @param token - The raw token string (without "Bearer " prefix)
- * @returns ValidationResult with valid flag and optional error/payload
- */
-export function validateJWT(token: string): ValidationResult {
+function validateStructureAndExpiry(token: string): ValidationResult {
   if (!token || typeof token !== "string") {
     return { valid: false, error: "Token is required" };
   }
 
   const trimmed = token.trim();
-
-  // Check JWT structure: must have 3 parts separated by dots
   const parts = trimmed.split(".");
-  if (parts.length !== 3) {
+  if (parts.length !== JWT_PART_COUNT) {
     return { valid: false, error: "Invalid JWT structure: expected 3 parts" };
   }
 
   const [headerB64, payloadB64, signatureB64] = parts;
-
-  // Validate that all parts are non-empty
   if (!headerB64 || !payloadB64 || !signatureB64) {
     return { valid: false, error: "Invalid JWT: empty parts" };
   }
 
-  // Attempt to decode header (basic validation that it's base64url)
   try {
-    base64urlDecode(headerB64);
+    const headerJson = base64urlDecode(headerB64);
+    JSON.parse(headerJson) as Record<string, unknown>;
   } catch {
-    return { valid: false, error: "Invalid JWT: header is not valid base64url" };
+    return { valid: false, error: "Invalid JWT: header is not valid JSON" };
   }
 
-  // Decode and validate payload
   let payload: JWTPayload;
   try {
     const payloadJson = base64urlDecode(payloadB64);
     payload = JSON.parse(payloadJson) as JWTPayload;
-  } catch (e) {
+  } catch (error) {
     return {
       valid: false,
-      error: `Invalid JWT: payload is not valid JSON (${e instanceof Error ? e.message : "unknown error"})`,
+      error: `Invalid JWT: payload is not valid JSON (${error instanceof Error ? error.message : "unknown error"})`,
     };
   }
 
-  // Validate signature part is base64url (just structure, not cryptographic verification)
   try {
     base64urlDecode(signatureB64);
   } catch {
     return { valid: false, error: "Invalid JWT: signature is not valid base64url" };
   }
 
-  // Check expiry if exp claim exists
   if (payload.exp !== undefined) {
     if (typeof payload.exp !== "number") {
-      return { valid: false, error: "Invalid JWT: exp claim must be a number (UNIX timestamp)" };
+      return {
+        valid: false,
+        error: "Invalid JWT: exp claim must be a number (UNIX timestamp)",
+      };
     }
 
     const now = Math.floor(Date.now() / 1000);
@@ -114,13 +96,45 @@ export function validateJWT(token: string): ValidationResult {
   return { valid: true, payload };
 }
 
-/**
- * Extracts and validates a Bearer token from an Authorization header.
- *
- * @param authHeader - The Authorization header value (e.g., "Bearer eyJ...")
- * @returns ValidationResult
- */
-export function validateBearerToken(authHeader: string): ValidationResult {
+export async function validateJWT(
+  token: string,
+  jwtSecret?: string,
+): Promise<ValidationResult> {
+  const structuralValidation = validateStructureAndExpiry(token);
+  if (!structuralValidation.valid) {
+    return structuralValidation;
+  }
+
+  const normalizedSecret = jwtSecret?.trim();
+  if (!normalizedSecret) {
+    // WARNING: Keep this fallback for demo/dev mode only. Without JWT_SECRET,
+    // this path checks structure and expiry but cannot verify authenticity.
+    console.warn(JWT_SECRET_FALLBACK_WARNING);
+    return structuralValidation;
+  }
+
+  try {
+    const secretKey = new TextEncoder().encode(normalizedSecret);
+    const verified = await jwtVerify(token.trim(), secretKey, {
+      algorithms: [JWT_HMAC_ALGORITHM],
+    });
+
+    return {
+      valid: true,
+      payload: verified.payload as JWTPayload,
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : "JWT signature verification failed",
+    };
+  }
+}
+
+export async function validateBearerToken(
+  authHeader: string,
+  jwtSecret?: string,
+): Promise<ValidationResult> {
   if (!authHeader || typeof authHeader !== "string") {
     return { valid: false, error: "Authorization header is required" };
   }
@@ -129,14 +143,16 @@ export function validateBearerToken(authHeader: string): ValidationResult {
   const bearerPrefix = "Bearer ";
 
   if (!trimmed.startsWith(bearerPrefix)) {
-    return { valid: false, error: "Authorization header must start with 'Bearer '" };
+    return {
+      valid: false,
+      error: "Authorization header must start with 'Bearer '",
+    };
   }
 
-  const token = trimmed.slice(bearerPrefix.length);
-
+  const token = trimmed.slice(bearerPrefix.length).trim();
   if (!token) {
     return { valid: false, error: "Bearer token is empty" };
   }
 
-  return validateJWT(token);
+  return validateJWT(token, jwtSecret);
 }
