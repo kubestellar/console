@@ -37,6 +37,8 @@ func isolateConfigManager(t *testing.T) *ConfigManager {
 }
 
 func TestChatViaOpenAICompatible(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer test-key" {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -86,6 +88,8 @@ func TestChatViaOpenAICompatible(t *testing.T) {
 }
 
 func TestStreamViaOpenAICompatible(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	var mu sync.Mutex
 	var capturedAuth string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

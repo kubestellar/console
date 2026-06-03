@@ -86,6 +86,8 @@ func TestLocalOpenAICompatProvider_IsAvailable(t *testing.T) {
 }
 
 func TestLocalOpenAICompatProvider_Chat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify placeholder key is sent if no key configured
 		auth := r.Header.Get("Authorization")

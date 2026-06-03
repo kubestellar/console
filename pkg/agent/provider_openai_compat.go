@@ -64,7 +64,7 @@ func chatViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest, p
 		httpReq.Header.Set(k, v)
 	}
 
-	resp, err := newAIProviderHTTPClient().Do(httpReq)
+	resp, err := aiProviderHTTPClientForProvider(providerKey).Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}
@@ -157,7 +157,7 @@ func streamViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest,
 		httpReq.Header.Set(k, v)
 	}
 
-	resp, err := newAIProviderHTTPClient().Do(httpReq)
+	resp, err := aiProviderHTTPClientForProvider(providerKey).Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %w", err)
 	}

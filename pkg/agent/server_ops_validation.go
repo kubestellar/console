@@ -16,35 +16,15 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
-var privateIPNets = func() []*net.IPNet {
-	cidrs := []string{
-		"10.0.0.0/8",
-		"172.16.0.0/12",
-		"192.168.0.0/16",
-		"127.0.0.0/8",
-		"169.254.0.0/16",
-		"::1/128",
-		"fc00::/7",
-		"fe80::/10",
-	}
-	nets := make([]*net.IPNet, 0, len(cidrs))
-	for _, cidr := range cidrs {
-		_, network, _ := net.ParseCIDR(cidr)
-		nets = append(nets, network)
-	}
-	return nets
-}()
+var (
+	_, carrierGradeNATNet, _ = net.ParseCIDR("100.64.0.0/10")
+	_, ietfProtocolNet, _    = net.ParseCIDR("192.0.0.0/24")
+)
 
 func isPrivateIP(ip net.IP) bool {
-	if ip.IsUnspecified() {
-		return true
-	}
-	for _, network := range privateIPNets {
-		if network.Contains(ip) {
-			return true
-		}
-	}
-	return false
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
+		carrierGradeNATNet.Contains(ip) || ietfProtocolNet.Contains(ip)
 }
 
 func allowLocalProviders() bool {
@@ -62,38 +42,23 @@ func validateBaseURL(raw string) error {
 	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
 		return fmt.Errorf("base URL must start with http:// or https://")
 	}
-	if allowLocalProviders() {
-		return nil
-	}
-
 	u, err := url.Parse(raw)
 	if err != nil {
 		return fmt.Errorf("malformed URL: %w", err)
 	}
 	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("base URL must include a host")
+	}
+	if allowLocalProviders() {
+		return nil
+	}
 
-	const baseURLDNSLookupTimeout = 3 * time.Second
-	lookupCtx, cancel := context.WithTimeout(context.Background(), baseURLDNSLookupTimeout)
+	lookupCtx, cancel := context.WithTimeout(context.Background(), aiProviderDNSLookupTimeout)
 	defer cancel()
 
-	ips, err := net.DefaultResolver.LookupHost(lookupCtx, host)
-	if err != nil {
-		if ip := net.ParseIP(host); ip != nil {
-			if isPrivateIP(ip) {
-				return fmt.Errorf("base URL resolves to a private/internal IP address")
-			}
-			return nil // literal public IP, no DNS needed
-		}
-		// DNS lookup failed for a hostname — fail closed to prevent SSRF via
-		// DNS rebinding or transient resolution failures (CWE-918, #16918).
-		return fmt.Errorf("DNS lookup failed for %q — cannot verify URL safety: %w", host, err)
-	}
-	for _, ipStr := range ips {
-		if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
-			return fmt.Errorf("base URL resolves to a private/internal IP address")
-		}
-	}
-	return nil
+	_, err = resolveAIProviderIPs(lookupCtx, host, false)
+	return err
 }
 
 func (s *Server) validateAPIKey(provider string) (bool, error) {
@@ -132,8 +97,6 @@ func (s *Server) validateAPIKeyValue(provider, apiKey string) (bool, error) {
 }
 
 const perKeyValidationTimeout = 15 * time.Second
-
-var apiKeyValidationClient = &http.Client{Timeout: 30 * time.Second}
 
 const maxConcurrentValidations = 5
 

@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,6 +49,18 @@ func TestServer_GetKeysStatus(t *testing.T) {
 func TestServer_ValidateBaseURL(t *testing.T) {
 	// Unset ALLOW_LOCAL_PROVIDERS to test default (private-IP blocking) behavior
 	t.Setenv("ALLOW_LOCAL_PROVIDERS", "")
+	withStubbedAIProviderLookup(t, func(_ context.Context, host string) ([]net.IPAddr, error) {
+		switch host {
+		case "api.openai.com":
+			return []net.IPAddr{{IP: net.ParseIP("104.18.33.45")}}, nil
+		case "api.anthropic.com":
+			return []net.IPAddr{{IP: net.ParseIP("104.18.38.74")}}, nil
+		case "openrouter.ai":
+			return []net.IPAddr{{IP: net.ParseIP("104.18.21.66")}}, nil
+		default:
+			return nil, errors.New("unexpected DNS lookup")
+		}
+	})
 
 	tests := []struct {
 		url   string
@@ -88,6 +103,7 @@ func TestServer_ValidateBaseURL_AllowLocal(t *testing.T) {
 		// Syntactic failures still fail
 		{"missing-scheme", false},
 		{"ftp://invalid", false},
+		{"http://", false},
 	}
 
 	for _, tt := range tests {
@@ -96,6 +112,15 @@ func TestServer_ValidateBaseURL_AllowLocal(t *testing.T) {
 			t.Errorf("validateBaseURL(%q) with ALLOW_LOCAL_PROVIDERS=true valid=%v, want %v. Err: %v", tt.url, err == nil, tt.valid, err)
 		}
 	}
+}
+
+func withStubbedAIProviderLookup(t *testing.T, resolver func(context.Context, string) ([]net.IPAddr, error)) {
+	t.Helper()
+	previous := aiProviderLookupIPAddr
+	aiProviderLookupIPAddr = resolver
+	t.Cleanup(func() {
+		aiProviderLookupIPAddr = previous
+	})
 }
 
 func TestServer_HandleSettingsExportImport(t *testing.T) {

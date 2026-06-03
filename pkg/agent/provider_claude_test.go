@@ -11,6 +11,8 @@ import (
 )
 
 func TestClaudeProvider_Chat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	// 1. Mock Claude server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Send mock response
@@ -73,6 +75,8 @@ func TestClaudeProvider_Basics(t *testing.T) {
 }
 
 func TestClaudeProvider_StreamChat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprintf(w, "data: {\"type\": \"message_start\", \"message\": {\"usage\": {\"input_tokens\": 10}}}\n\n")

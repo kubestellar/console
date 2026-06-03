@@ -10,6 +10,8 @@ import (
 )
 
 func TestOpenAIProvider_Chat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	// 1. Mock OpenAI server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Send mock response

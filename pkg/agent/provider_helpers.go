@@ -1,10 +1,7 @@
 package agent
 
 import (
-	"context"
-	"fmt"
 	"math"
-	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -17,57 +14,10 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 // caller has not already attached a deadline.
 const cliProviderExecutionTimeout = 5 * time.Minute
 
-// aiProviderHTTPClient is reused across AI provider API calls to enable
-// connection pooling and reduce per-request allocation overhead.
-// Uses a SSRF-safe transport that blocks connections to private/internal IPs
-// at dial time, preventing DNS rebinding attacks (#16902).
-var aiProviderHTTPClient = &http.Client{
-	Timeout: aiProviderHTTPTimeout,
-	CheckRedirect: func(_ *http.Request, via []*http.Request) error {
-		// Limit redirect hops to prevent open-redirect chains to internal services
-		const maxRedirects = 5
-		if len(via) >= maxRedirects {
-			return fmt.Errorf("stopped after %d redirects", maxRedirects)
-		}
-		return nil
-	},
-	Transport: &http.Transport{
-		DialContext: aiProviderSafeDialContext,
-	},
-}
-
-// allowLoopbackForTests disables the private-IP check for 127.0.0.0/8 and ::1
-// during unit tests that use httptest.NewServer. Must never be set in production.
+// allowLoopbackForTests keeps legacy test wiring compiling. Secured provider
+// clients in provider_network_security.go opt into private destinations only
+// when ALLOW_LOCAL_PROVIDERS is set or a test intentionally enables loopback.
 var allowLoopbackForTests bool
-
-// aiProviderSafeDialContext resolves the host and rejects connections to
-// private/internal IPs before dialing. This prevents SSRF via DNS rebinding
-// where a domain passes save-time validation but resolves to an internal IP
-// at request time.
-func aiProviderSafeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
-	}
-	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve host %s: %w", host, err)
-	}
-	if len(ips) == 0 {
-		return nil, fmt.Errorf("no IPs resolved for host %s", host)
-	}
-	for _, ip := range ips {
-		if allowLoopbackForTests && ip.IP.IsLoopback() {
-			continue
-		}
-		if isPrivateIP(ip.IP) {
-			return nil, fmt.Errorf("blocked: AI provider base URL resolved to non-public IP %s for host %s", ip.IP, host)
-		}
-	}
-	// Connect to the first validated IP directly — no second DNS lookup
-	dialer := &net.Dialer{Timeout: aiProviderHTTPTimeout}
-	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
-}
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
@@ -141,8 +91,8 @@ func estimateChatTokenUsage(req *ChatRequest, responseContent string) *ProviderT
 	}
 }
 
-// newAIProviderHTTPClient returns the shared HTTP client configured with the
-// standard timeout for AI provider API calls.
+// newAIProviderHTTPClient returns the shared remote-provider HTTP client.
+// provider_network_security.go hardens it with dial-time DNS validation.
 func newAIProviderHTTPClient() *http.Client {
 	return aiProviderHTTPClient
 }

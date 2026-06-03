@@ -11,6 +11,8 @@ import (
 )
 
 func TestGeminiProvider_Chat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	// 1. Mock Gemini server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Send mock response
@@ -87,6 +89,8 @@ func TestGeminiProvider_Basics(t *testing.T) {
 }
 
 func TestGeminiProvider_StreamChat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fmt.Fprintf(w, "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"Hello \"}]}}]}\n\n")

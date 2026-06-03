@@ -94,6 +94,8 @@ func TestGetEnvKeyForProvider_OpenRouter(t *testing.T) {
 }
 
 func TestOpenRouterProvider_Chat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	// 1. Mock OpenRouter server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify headers
@@ -142,6 +144,8 @@ func TestOpenRouterProvider_Chat(t *testing.T) {
 }
 
 func TestOpenRouterProvider_StreamChat(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
 	// 1. Mock OpenRouter server for streaming
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
