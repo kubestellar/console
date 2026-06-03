@@ -44,6 +44,7 @@ vi.mock('../useDrasiConnections', () => ({
   getActiveDrasiConnection: () => mockActive.current,
 }))
 
+import { clearAllCaches } from '../../lib/cache'
 import { useDrasiResources } from '../useDrasiResources'
 
 // Minimal fetch mock — responses is keyed by URL *substring* so tests
@@ -62,7 +63,9 @@ describe('useDrasiResources', () => {
   // reassigned `globalThis.fetch` from one test would leak into later files.
   const ORIGINAL_FETCH = globalThis.fetch
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearAllCaches()
+    localStorage.clear()
     mockActive.current = null
     fetchMap.clear()
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -86,16 +89,16 @@ describe('useDrasiResources', () => {
   })
 
   describe('no-fetch short-circuits', () => {
-    it('returns null data when no active connection', async () => {
+    it('returns demo data when no active connection', async () => {
       mockActive.current = null
       const { result } = renderHook(() => useDrasiResources())
-      // Give the effect a tick to run.
-      await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-      expect(result.current.data).toBeNull()
+      await waitFor(() => expect(result.current.isDemoData).toBe(true))
+      expect(result.current.data).not.toBeNull()
+      expect((result.current.data?.sources || []).length).toBeGreaterThan(0)
       expect(globalThis.fetch).not.toHaveBeenCalled()
     })
 
-    it('skips fetch when active connection is a demo seed', async () => {
+    it('uses themed demo data when active connection is a demo seed', async () => {
       mockActive.current = {
         id: 'demo-seed-retail',
         name: 'retail (demo)',
@@ -105,8 +108,10 @@ describe('useDrasiResources', () => {
         createdAt: 1,
       }
       const { result } = renderHook(() => useDrasiResources())
-      await act(async () => { await new Promise(r => setTimeout(r, 10)) })
-      expect(result.current.data).toBeNull()
+      await waitFor(() => expect(result.current.isDemoData).toBe(true))
+      expect(result.current.data).not.toBeNull()
+      expect((result.current.data?.queries || []).length).toBe(3)
+      expect((result.current.data?.reactions || []).length).toBe(3)
       expect(globalThis.fetch).not.toHaveBeenCalled()
     })
   })
@@ -147,6 +152,7 @@ describe('useDrasiResources', () => {
       const { result } = renderHook(() => useDrasiResources())
       await waitFor(() => expect(result.current.data).not.toBeNull())
 
+      expect(result.current.isDemoData).toBe(false)
       expect(result.current.data?.mode).toBe('server')
       expect(result.current.data?.instanceId).toBe('inst-1')
       expect(result.current.data?.sources.length).toBe(2)
@@ -192,10 +198,11 @@ describe('useDrasiResources', () => {
     })
 
     it('surfaces error when the first call fails (non-200)', async () => {
-      // No wire → first fetch returns 404 → throw → setError path
+      // No wire → first fetch returns 404 → error path falls back to demo data
       const { result } = renderHook(() => useDrasiResources())
       await waitFor(() => expect(result.current.error).not.toBeNull())
-      expect(result.current.data).toBeNull()
+      await waitFor(() => expect(result.current.isDemoData).toBe(true))
+      expect(result.current.data).not.toBeNull()
     })
 
     it('surfaces error when drasi-server wrapper signals error', async () => {
@@ -204,6 +211,7 @@ describe('useDrasiResources', () => {
       })
       const { result } = renderHook(() => useDrasiResources())
       await waitFor(() => expect(result.current.error).not.toBeNull())
+      await waitFor(() => expect(result.current.isDemoData).toBe(true))
       expect(result.current.error).toMatch(/oh no/)
     })
 
@@ -275,6 +283,7 @@ describe('useDrasiResources', () => {
 
       const { result } = renderHook(() => useDrasiResources())
       await waitFor(() => expect(result.current.data).not.toBeNull())
+      expect(result.current.isDemoData).toBe(false)
       expect(result.current.data?.mode).toBe('platform')
       expect(result.current.data?.instanceId).toBeNull()
       expect(result.current.data?.sources[0].kind).toBe('POSTGRES')

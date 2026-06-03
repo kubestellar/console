@@ -30,7 +30,9 @@
  * Both adapters return the same normalized `DrasiResourceData` shape so
  * `DrasiReactiveGraph.tsx` is oblivious to which mode is active.
  */
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
+import { generateDemoData, demoThemeForConnection } from '../components/cards/drasi/DrasiDemoData'
+import { useCache } from '../lib/cache'
 import { useDrasiConnections } from './useDrasiConnections'
 
 // ---------------------------------------------------------------------------
@@ -342,69 +344,60 @@ export interface UseDrasiResourcesResult {
   data: DrasiResourceData | null
   isLoading: boolean
   isRefreshing: boolean
+  isDemoData: boolean
   error: string | null
-  refetch: () => void
+  isFailed: boolean
+  consecutiveFailures: number
+  refetch: () => Promise<void>
 }
 
 export function useDrasiResources(): UseDrasiResourcesResult {
   const { activeConnection } = useDrasiConnections()
-  const [data, setData] = useState<DrasiResourceData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
-  const hasDataRef = useRef(false)
+  const demoThemeId = useMemo(
+    () => demoThemeForConnection(activeConnection?.isDemoSeed ? activeConnection.id : undefined),
+    [activeConnection],
+  )
+  const demoData = useMemo<DrasiResourceData>(() => ({
+    mode: activeConnection?.mode ?? 'server',
+    instanceId: null,
+    ...generateDemoData(demoThemeId),
+  }), [activeConnection?.mode, demoThemeId])
+  const isLiveConnectionEnabled = !!activeConnection && !activeConnection.isDemoSeed
 
-  const fetchOnce = useCallback(async () => {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    if (!activeConnection || activeConnection.isDemoSeed) {
-      // No active connection, or the active one is a demo seed (fake URL
-      // that points nowhere) — leave data null so the card stays in demo
-      // mode without triggering failing fetches.
-      setData(null)
-      setIsRefreshing(false)
-      hasDataRef.current = false
-      return
+  const fetchResources = useCallback(async (): Promise<DrasiResourceData | null> => {
+    if (!activeConnection || activeConnection.isDemoSeed) return null
+    if (activeConnection.mode === 'server' && activeConnection.url) {
+      return fetchViaDrasiServer(activeConnection.url, AbortSignal.timeout(DRASI_POLL_INTERVAL_MS))
     }
-
-    if (hasDataRef.current) {
-      setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
+    if (activeConnection.mode === 'platform' && activeConnection.cluster) {
+      return fetchViaDrasiPlatform(activeConnection.cluster, AbortSignal.timeout(DRASI_POLL_INTERVAL_MS))
     }
-    try {
-      let next: DrasiResourceData | null = null
-      if (activeConnection.mode === 'server' && activeConnection.url) {
-        next = await fetchViaDrasiServer(activeConnection.url, controller.signal)
-      } else if (activeConnection.mode === 'platform' && activeConnection.cluster) {
-        next = await fetchViaDrasiPlatform(activeConnection.cluster, controller.signal)
-      }
-      setData(next)
-      hasDataRef.current = next !== null
-      setError(null)
-    } catch (e: unknown) {
-      if ((e as Error).name !== 'AbortError') {
-        setError((e as Error).message || 'Failed to fetch Drasi resources')
-        setData(null)
-        hasDataRef.current = false
-      }
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
+    return null
   }, [activeConnection])
 
-  useEffect(() => {
-    fetchOnce()
-    const interval = setInterval(fetchOnce, DRASI_POLL_INTERVAL_MS)
-    return () => {
-      clearInterval(interval)
-      abortRef.current?.abort()
-    }
-  }, [fetchOnce])
+  const result = useCache<DrasiResourceData | null>({
+    key: `drasi-resources:${activeConnection?.id ?? 'demo'}`,
+    category: 'default',
+    refreshInterval: DRASI_POLL_INTERVAL_MS,
+    initialData: null,
+    demoData,
+    enabled: isLiveConnectionEnabled,
+    demoWhenEmpty: true,
+    isEmpty: value => value === null,
+    fetcher: fetchResources,
+  })
 
-  return { data, isLoading, isRefreshing, error, refetch: fetchOnce }
+  const shouldShowErrorFallback = result.error !== null && !result.isLoading
+  const effectiveIsDemoData = (result.isDemoFallback && !result.isLoading) || shouldShowErrorFallback
+
+  return {
+    data: effectiveIsDemoData ? (result.data ?? demoData) : result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoData: effectiveIsDemoData,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    refetch: result.refetch,
+  }
 }
