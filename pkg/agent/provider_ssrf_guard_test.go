@@ -9,6 +9,10 @@ import (
 func TestSSRFSafeDialContext_RejectsPrivateIPs(t *testing.T) {
 	// Ensure ALLOW_LOCAL_PROVIDERS is not set for this test.
 	t.Setenv("ALLOW_LOCAL_PROVIDERS", "")
+	// Disable the test bypass so we actually test the SSRF guard logic.
+	old := ssrfBypassForTest
+	ssrfBypassForTest = false
+	t.Cleanup(func() { ssrfBypassForTest = old })
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -28,9 +28,16 @@ var ssrfSafeDialer = &net.Dialer{
 // establishing the connection. This guards against DNS rebinding attacks where
 // a hostname resolves to a public IP at validation time but rebinds to an
 // internal IP at request time.
+// ssrfBypassForTest allows tests to disable the SSRF dial guard so that
+// httptest servers on 127.0.0.1 are reachable. The SSRF-specific tests
+// explicitly set this to false to verify blocking behavior.
+var ssrfBypassForTest = false
+
 func ssrfSafeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	// When ALLOW_LOCAL_PROVIDERS is set, skip SSRF checks (dev/local mode).
-	if allowLocalProviders() {
+	// When ALLOW_LOCAL_PROVIDERS is set or the test bypass is active, skip
+	// SSRF checks. Tests use httptest servers on 127.0.0.1 which would
+	// otherwise be blocked by the private-IP guard.
+	if allowLocalProviders() || ssrfBypassForTest {
 		return ssrfSafeDialer.DialContext(ctx, network, addr)
 	}
 

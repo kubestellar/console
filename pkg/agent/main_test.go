@@ -23,6 +23,10 @@ import (
 const hardTestTimeout = 5 * time.Minute
 
 func TestMain(m *testing.M) {
+	// Allow provider tests to reach httptest servers on 127.0.0.1.
+	// The SSRF guard test explicitly resets this to verify blocking.
+	ssrfBypassForTest = true
+
 	// Kill the entire process group (not just this process) so any
 	// subprocess trees (kubectl, kc-agent, Python) are also reaped.
 	// On Unix, setting the process group to our PID lets us kill -PGID.
