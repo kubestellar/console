@@ -34,6 +34,19 @@ const mission: MissionExport = {
   ],
 }
 
+function renderMissionDetailView(missionProp: MissionExport = mission) {
+  render(
+    <MissionDetailView
+      mission={missionProp}
+      rawContent={null}
+      showRaw={false}
+      onToggleRaw={vi.fn()}
+      onImport={vi.fn()}
+      onBack={vi.fn()}
+    />,
+  )
+}
+
 describe('MissionDetailView', () => {
   it('shows a loading state while importing a mission', async () => {
     const user = userEvent.setup()
@@ -52,14 +65,57 @@ describe('MissionDetailView', () => {
     )
 
     const button = screen.getByRole('button', { name: 'Import' })
-    await user.click(button)
+    const clickPromise = user.click(button)
 
-    expect(onImport).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1))
     expect(button).toBeDisabled()
     expect(button.querySelector('.animate-spin')).not.toBeNull()
 
     deferred.resolve()
+    await clickPromise
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).not.toBeDisabled())
+  })
+
+  it('sanitizes unsafe sourceUrl links before rendering mission metadata', () => {
+    renderMissionDetailView({
+      ...mission,
+      metadata: {
+        sourceUrls: {
+          repo: 'javascript:alert(1)',
+          docs: ' data:text/html,<script>alert(1)</script> ',
+          helm: 'JavaScript:alert(1)',
+          issue: '\n javascript:alert(1)',
+          pr: 'java%0ascript:alert(1)',
+        },
+      },
+    })
+
+    expect(screen.getByRole('link', { name: 'missions.detail.links.repository' })).toHaveAttribute('href', 'about:blank')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.documentation' })).toHaveAttribute('href', 'about:blank')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.helmChart' })).toHaveAttribute('href', 'about:blank')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.issue' })).toHaveAttribute('href', 'about:blank')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.pullRequest' })).toHaveAttribute('href', 'about:blank')
+  })
+
+  it('preserves valid http and https sourceUrl links', () => {
+    renderMissionDetailView({
+      ...mission,
+      metadata: {
+        sourceUrls: {
+          repo: 'https://example.com/repository',
+          docs: 'http://example.com/docs',
+          helm: 'https://charts.example.com/kyverno',
+          issue: 'https://github.com/kubestellar/console/issues/16532',
+          pr: 'http://github.com/kubestellar/console/pull/16610',
+        },
+      },
+    })
+
+    expect(screen.getByRole('link', { name: 'missions.detail.links.repository' })).toHaveAttribute('href', 'https://example.com/repository')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.documentation' })).toHaveAttribute('href', 'http://example.com/docs')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.helmChart' })).toHaveAttribute('href', 'https://charts.example.com/kyverno')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.issue' })).toHaveAttribute('href', 'https://github.com/kubestellar/console/issues/16532')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.pullRequest' })).toHaveAttribute('href', 'http://github.com/kubestellar/console/pull/16610')
   })
 })
