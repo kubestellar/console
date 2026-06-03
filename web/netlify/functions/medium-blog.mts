@@ -32,7 +32,6 @@ const ALLOWED_ORIGINS = [
 ];
 
 const ALLOWED_ORIGIN_SET = new Set(ALLOWED_ORIGINS);
-const ALLOWED_HOSTS = new Set(ALLOWED_ORIGINS.map((origin) => new URL(origin).hostname));
 
 function isAllowedOrigin(origin: string): boolean {
   let parsedOrigin: URL;
@@ -43,15 +42,15 @@ function isAllowedOrigin(origin: string): boolean {
     return false;
   }
 
+  if (parsedOrigin.hostname === "localhost") {
+    return true;
+  }
+
   if (parsedOrigin.protocol !== "https:") {
     return false;
   }
 
-  if (ALLOWED_ORIGIN_SET.has(parsedOrigin.origin) || ALLOWED_HOSTS.has(parsedOrigin.hostname)) {
-    return true;
-  }
-
-  return parsedOrigin.hostname === "kubestellar.io" || parsedOrigin.hostname.endsWith(".kubestellar.io");
+  return ALLOWED_ORIGIN_SET.has(parsedOrigin.origin);
 }
 
 function corsOrigin(origin: string | null): string {

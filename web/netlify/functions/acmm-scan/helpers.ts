@@ -74,7 +74,6 @@ export function corsOrigin(origin: string | null): string {
   try {
     const host = new URL(origin).hostname.toLowerCase();
     if (host === "localhost") return origin;
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
   } catch { /* invalid URL */ }
   return ALLOWED_ORIGINS[0];
 }

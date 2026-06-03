@@ -10,9 +10,6 @@ export function corsOrigin(origin: string | null): string {
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
     if (host === "localhost") return origin;
   } catch {
     // Malformed origin — fall through to default
