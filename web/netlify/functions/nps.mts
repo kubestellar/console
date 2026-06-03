@@ -89,6 +89,37 @@ function categorize(score: number): "promoter" | "passive" | "detractor" {
   return "detractor";
 }
 
+/**
+ * Read request body with a hard byte cap on actual bytes read.
+ * Returns null if the body exceeds maxBytes (CWE-400, #16666).
+ */
+async function readBodyWithCap(req: Request, maxBytes: number): Promise<Uint8Array | null> {
+  if (!req.body) {
+    return new Uint8Array(0);
+  }
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalSize = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    totalSize += value.byteLength;
+    if (totalSize > maxBytes) {
+      await reader.cancel("Payload too large");
+      return null;
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(totalSize);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
 function computeAggregation(data: NPSData): NPSAggregation {
   // Re-derive category from raw score on every read so historical rows
   // that were bucketed under the old 0-10 thresholds get corrected in the
@@ -230,6 +261,8 @@ export default async (req: Request) => {
         );
       }
 
+      // SECURITY (#16666): Check Content-Length as a fast-reject, then enforce
+      // the limit on actual bytes read to prevent chunked-encoding bypass.
       const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
       if (contentLength > MAX_BODY_BYTES) {
         return new Response(
@@ -238,7 +271,14 @@ export default async (req: Request) => {
         );
       }
 
-      const body = await req.json();
+      const rawBody = await readBodyWithCap(req, MAX_BODY_BYTES);
+      if (rawBody === null) {
+        return new Response(
+          JSON.stringify({ error: "Payload too large" }),
+          { status: 413, headers }
+        );
+      }
+      const body = JSON.parse(new TextDecoder().decode(rawBody));
       const score = parseInt(body.score, 10);
 
       // Validate — 4-emoji widget uses scores 1-4

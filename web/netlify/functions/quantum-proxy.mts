@@ -211,6 +211,48 @@ async function readResponseBodyWithCap(response: Response): Promise<Uint8Array |
   return body;
 }
 
+/**
+ * Read a request body with a hard byte cap, enforcing the limit on actual bytes
+ * read (not Content-Length header). Returns null if the body exceeds maxBytes.
+ * This prevents chunked-encoding bypass of Content-Length checks (CWE-400, #16666).
+ */
+async function readRequestBodyWithCap(req: Request, maxBytes: number): Promise<Uint8Array | null> {
+  if (!req.body) {
+    return new Uint8Array(0);
+  }
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalSize = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (!value) {
+      continue;
+    }
+
+    totalSize += value.byteLength;
+    if (totalSize > maxBytes) {
+      await reader.cancel("Request body too large");
+      return null;
+    }
+
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(totalSize);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return body;
+}
+
 export default async (req: Request, context: Context): Promise<Response> => {
   const url = new URL(req.url);
   const path = url.pathname.replace("/.netlify/functions/quantum-proxy", "");
@@ -358,6 +400,8 @@ export default async (req: Request, context: Context): Promise<Response> => {
 
     const targetURL = new URL(path, quantumServiceURL).toString();
     if (req.method !== "GET") {
+      // SECURITY (#16666): Enforce body size on actual bytes read, not just
+      // Content-Length header which can be absent (chunked) or spoofed.
       const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
       if (contentLength > MAX_PROXY_BODY_BYTES) {
         return new Response(JSON.stringify({ error: "Request body too large" }), {
@@ -366,7 +410,17 @@ export default async (req: Request, context: Context): Promise<Response> => {
         });
       }
     }
-    const requestBody = req.method === "GET" ? undefined : await req.text();
+    let requestBody: string | undefined;
+    if (req.method !== "GET") {
+      const bodyBuffer = await readRequestBodyWithCap(req, MAX_PROXY_BODY_BYTES);
+      if (bodyBuffer === null) {
+        return new Response(JSON.stringify({ error: "Request body too large" }), {
+          status: 413,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      requestBody = new TextDecoder().decode(bodyBuffer);
+    }
     if (req.method === "POST" && requestBody !== undefined) {
       const validationError = validatePostBody(requestBody);
       if (validationError) {
