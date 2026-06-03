@@ -28,7 +28,6 @@ import (
 const (
 	serverShutdownTimeout   = 30 * time.Second
 	serverHealthTimeout     = 2 * time.Second
-	serverStartupDelay      = 50 * time.Millisecond
 	portReleaseTimeout      = 3 * time.Second
 	portReleasePollInterval = 50 * time.Millisecond
 )

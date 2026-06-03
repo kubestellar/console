@@ -51,14 +51,18 @@ func startLoadingServer(addr string) *http.Server {
 	})
 
 	srv := &http.Server{Addr: addr, Handler: mux}
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		slog.Error("[Server] failed to bind loading server", "addr", addr, "error", err)
+		return srv
+	}
+	
 	safego.GoWith("loading-page-server", func() {
 		slog.Info("[Server] loading page available", "addr", addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.Serve(listener); err != nil && err != http.ErrServerClosed {
 			slog.Error("[Server] loading server error", "error", err)
 		}
 	})
-	// Give the listener time to bind
-	time.Sleep(serverStartupDelay)
 	return srv
 }
 
