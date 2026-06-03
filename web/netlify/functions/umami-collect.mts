@@ -22,6 +22,12 @@ const MAX_UPSTREAM_TEXT_BYTES = 1_048_576
 const ALLOWED_METHODS = "POST, OPTIONS"
 const JSON_OBJECT_TYPE = "object"
 
+const REFERER_FALLBACK_HOSTS = new Set([
+  "console.kubestellar.io",
+  "localhost",
+  "127.0.0.1",
+])
+
 function normalizeOrigin(header: string | null): string | null {
   if (!header) return null
 
@@ -43,12 +49,37 @@ function isJsonObjectPayload(body: string): boolean {
   }
 }
 
+/**
+ * Validates that a netlify.app hostname belongs to a KubeStellar deploy preview.
+ * Rejects arbitrary attacker-controlled *.netlify.app subdomains (#16744).
+ */
+function isKubeStellarNetlifyHost(hostname: string): boolean {
+  if (!hostname.endsWith(".netlify.app")) return false
+  // KubeStellar deploy previews use patterns like:
+  // deploy-preview-123--kubestellar-console.netlify.app
+  // kubestellar-console.netlify.app
+  const subdomain = hostname.replace(".netlify.app", "")
+  return subdomain === "kubestellar-console" ||
+    subdomain.startsWith("deploy-preview-") && subdomain.endsWith("--kubestellar-console")
+}
+
 function isRequestAllowed(req: Request): boolean {
   const origin = normalizeOrigin(req.headers.get("origin"))
   if (isAllowedOrigin(origin)) return true
 
-  const referer = normalizeOrigin(req.headers.get("referer"))
-  return isAllowedOrigin(referer)
+  const referer = req.headers.get("referer")
+  if (referer) {
+    try {
+      const hostname = new URL(referer).hostname
+      if (REFERER_FALLBACK_HOSTS.has(hostname) || isKubeStellarNetlifyHost(hostname)) {
+        return true
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+  }
+
+  return false
 }
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
