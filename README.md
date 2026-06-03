@@ -261,6 +261,21 @@ The console can use AI for adaptive card suggestions and mission help. AI is **o
 4. **Missions** — Step-by-step guided installs with pre-flight checks, validation, troubleshooting, and rollback
 5. **Real-time** — WebSocket-powered live event streaming from all connected clusters
 
+## Stellar (Persistent AI Operations Runtime — Alpha)
+
+**Stellar** extends the console from request/response AI interactions into a **persistent operational runtime** with mission continuity, memory, and proactive execution. It brings autonomous operations capabilities to KubeStellar with support for multi-step mission planning, long-term memory, event-driven triggers, and policy-enforced tool execution.
+
+Key capabilities:
+- **Persistent missions** — Store and re-run multi-step operational tasks (rollouts, incident response, scaling decisions)
+- **Operational memory** — Learn from incidents, postmortems, and rollout history
+- **Event-driven triggers** — Respond to Kubernetes events, Prometheus alerts, webhooks, or schedules
+- **RBAC-aware execution** — Tool runtime validates permissions before cluster actions
+- **Structured auditing** — Full audit trail of prompts, decisions, tools, and outputs
+
+**Note:** Stellar is alpha/experimental. Architecture and APIs are subject to change.
+
+For implementation details, see [docs/stellar/architecture.md](docs/stellar/architecture.md).
+
 ## Architecture
 
 See the full [Architecture documentation](https://kubestellar.io/docs/console/overview/architecture) on the KubeStellar website.

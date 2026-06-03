@@ -29,7 +29,20 @@ web/src/           React + TypeScript frontend
   hooks/             Data fetching hooks (useCached*)
   lib/               Utilities, card registry, demo data
 deploy/helm/       Helm chart
+docs/stellar/      Stellar persistent AI runtime subsystem (alpha)
+  architecture.md  Core design, CRDs, memory service, event gateway, operator
+  crds/            Custom resource definitions (Mission, MissionExecution, Agent, MemoryStore, ToolBinding, Trigger)
 ```
+
+**Stellar Subsystem** (`docs/stellar/`): Extends the console from request/response AI into a persistent operational runtime. Key components:
+- **Stellar Core** — Mission planner, execution coordinator, context assembler, tool router, memory retrieval
+- **Mission Operator** — Kubernetes controller-runtime reconciling Stellar CRDs
+- **Event Gateway** — Normalizes Kubernetes events, Prometheus alerts, webhooks, schedules
+- **Memory Service** — Short-term + long-term + semantic memory APIs
+- **Tool Runtime** — RBAC-aware, policy-enforced tool invocation
+- **Provider Router** — Local/cloud/hybrid LLM routing with failover chains
+
+**Before modifying Stellar-related code, read** [docs/stellar/architecture.md](docs/stellar/architecture.md) to understand the design, CRDs, and data flow.
 
 ---
 
