@@ -550,6 +550,31 @@ func TestValidateMixedModeCommands(t *testing.T) {
 			wantReason: "cluster context overrides are blocked",
 		},
 		{
+			name:       "reject --watch streaming flag",
+			command:    "kubectl get pods --watch",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --watch=true bypass variant",
+			command:    "kubectl get pods --watch=true",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --watch-only bypass variant",
+			command:    "kubectl get pods --watch-only",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --follow streaming flag",
+			command:    "kubectl logs pod-1 --follow",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --follow=true bypass variant",
+			command:    "kubectl logs pod-1 --follow=true",
+			wantReason: "streaming",
+		},
+		{
 			name:              "require approval for helm install",
 			command:           "helm install demo chart/demo",
 			wantApprovalBlock: true,

@@ -90,12 +90,6 @@ var mixedModeFlagsWithValues = map[string]bool{
 	"-o":               true,
 }
 
-var mixedModeBlockedStreamingFlags = map[string]bool{
-	"--follow": true,
-	"--watch":  true,
-	"-f":       true,
-	"-w":       true,
-}
 
 func validateMixedModeCommands(commands []string) mixedModeCommandValidation {
 	validation := mixedModeCommandValidation{
@@ -303,7 +297,12 @@ func hasMixedModeContextOverride(args []string) bool {
 func hasMixedModeStreamingFlag(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if mixedModeBlockedStreamingFlags[lower] {
+		// Exact match for short flags
+		if lower == "-w" || lower == "-f" {
+			return true
+		}
+		// Prefix match for long flags to catch --watch=true, --watch-only, --follow=true, etc.
+		if strings.HasPrefix(lower, "--watch") || strings.HasPrefix(lower, "--follow") {
 			return true
 		}
 	}
