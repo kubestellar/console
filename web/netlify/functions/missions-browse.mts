@@ -19,8 +19,17 @@ const FETCH_TIMEOUT_MS = 30_000;
 /** Cache TTL: serve cached content for 1 hour before re-fetching from GitHub */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+/** Negative cache TTL: cache 404 responses for 60 seconds to prevent repeated invalid lookups */
+const NEGATIVE_CACHE_TTL_MS = 60_000;
+
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
+
+/** Maximum path length to prevent resource exhaustion */
+const MAX_PATH_LENGTH = 200;
+
+/** Allowed top-level path prefixes for mission browsing */
+const ALLOWED_PATH_PREFIXES = ["fixes", "tutorials", "scenarios", "labs", "challenges", "missions", ""];
 
 /** Maximum upstream response size (512 KB — directory listings are typically < 50 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
@@ -50,7 +59,19 @@ interface BrowseCacheEntry {
 
 /** Reject path traversal patterns, URL control characters, and excessively long inputs (#13230, #14500). */
 function hasInvalidPathInput(value: string): boolean {
-  return value.length > 1000 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  return value.length > MAX_PATH_LENGTH || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+}
+
+/** Check if path starts with an allowed prefix */
+function isAllowedPath(path: string): boolean {
+  if (path === "") return true;
+  const topLevel = path.split("/")[0];
+  return ALLOWED_PATH_PREFIXES.includes(topLevel);
+}
+
+interface NegativeCacheEntry {
+  negative: true;
+  fetchedAt: number;
 }
 
 export default async (request: Request): Promise<Response> => {
@@ -65,13 +86,19 @@ export default async (request: Request): Promise<Response> => {
   if (path && hasInvalidPathInput(path)) {
     return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
   }
+  if (!isAllowedPath(path)) {
+    return jsonResponse(corsHeaders, { error: "path not allowed" }, 403);
+  }
   const cacheKey = `browse:${path}`;
 
   try {
     // Check Netlify Blobs cache first
     const store = getStore("missions-cache");
-    const cached = await store.get(cacheKey, { type: "json" }) as BrowseCacheEntry | null;
-    if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    const cached = await store.get(cacheKey, { type: "json" }) as (BrowseCacheEntry | NegativeCacheEntry) | null;
+    if (cached && Date.now() - cached.fetchedAt < (('negative' in cached) ? NEGATIVE_CACHE_TTL_MS : CACHE_TTL_MS)) {
+      if ('negative' in cached) {
+        return jsonResponse(corsHeaders, { error: "not found" }, 404);
+      }
       return new Response(cached.body, {
         status: 200,
         headers: {
@@ -104,8 +131,14 @@ export default async (request: Request): Promise<Response> => {
     }
 
     if (!resp.ok) {
+      // Cache 404 responses to prevent repeated lookups of invalid paths (CWE-400)
+      if (resp.status === 404) {
+        const negEntry: NegativeCacheEntry = { negative: true, fetchedAt: Date.now() };
+        store.setJSON(cacheKey, negEntry).catch(() => { /* best-effort */ });
+        return jsonResponse(corsHeaders, { error: "not found" }, 404);
+      }
       // If GitHub fails but we have stale cache, serve it
-      if (cached) {
+      if (cached && !('negative' in cached)) {
         return new Response(cached.body, {
           status: 200,
           headers: {

@@ -19,7 +19,7 @@ import type {
 import { isAgentConnected, isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, LOCAL_AGENT_WS_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { getWsAuthParams } from '../lib/utils/wsAuth'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /** Debounce before sending enrichment request (2 seconds) */
@@ -162,7 +162,8 @@ async function connectWebSocket(): Promise<void> {
 
   try {
     // LOCAL_AGENT_WS_URL already includes /ws — don't append it again
-    wsConnection = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+    wsConnection = new WebSocket(authUrl, protocols)
 
     wsConnection.onopen = () => {
       // Reset backoff on successful connection

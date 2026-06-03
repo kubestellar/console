@@ -208,6 +208,36 @@ func (s *SQLiteStore) MarkObservationShown(ctx context.Context, id string) error
 	return err
 }
 
+// GetUnshownObservationsForUser returns observations not yet seen by the given user,
+// scoped to clusters the user is actively watching (CWE-200 fix: #16814).
+func (s *SQLiteStore) GetUnshownObservationsForUser(ctx context.Context, userID string) ([]StellarObservation, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT o.id, o.cluster, o.kind, o.summary, o.detail, o.ref_type, o.ref_id, o.shown_to_user, o.created_at
+		FROM stellar_observations o
+		WHERE o.id NOT IN (SELECT observation_id FROM stellar_observation_seen WHERE user_id = ?)
+		AND (o.cluster = '' OR o.cluster IN (SELECT DISTINCT cluster FROM stellar_watches WHERE user_id = ? AND status = 'active'))
+		ORDER BY o.created_at ASC
+		LIMIT 10`, userID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarObservation, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarObservationRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+// MarkObservationShownForUser records that a specific user has seen an observation (#16814).
+func (s *SQLiteStore) MarkObservationShownForUser(ctx context.Context, userID, observationID string) error {
+	_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO stellar_observation_seen (user_id, observation_id) VALUES (?, ?)`, userID, observationID)
+	return err
+}
+
 // Watch methods
 
 func scanStellarTaskRow(rows *sql.Rows) (*StellarTask, error) {

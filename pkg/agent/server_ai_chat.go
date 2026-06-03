@@ -227,6 +227,12 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
 	}
 
+	// SECURITY: Enforce prompt size limit matching the streaming path (CWE-770, #16759).
+	if len(req.Prompt) > maxPromptChars {
+		return s.errorResponse(msg.ID, "prompt_too_large",
+			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars))
+	}
+
 	// SECURITY: Reject new prompts when the session token quota is exhausted
 	// to prevent unbounded AI API spend (#9438).
 	if s.isSessionQuotaExceeded() {

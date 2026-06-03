@@ -14,6 +14,7 @@
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 import { getAllowedRepoSlugs, isAllowedRepoSlug } from "./_shared/repo-allowlist";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
@@ -32,8 +33,12 @@ const MAX_RESPONSE_BYTES = 512_000;
 const MS_PER_DAY = 86_400_000;
 /** Default lookback in days */
 const DEFAULT_DAYS = 90;
-/** Maximum lookback in days */
-const MAX_DAYS = 365;
+/** Allowed discrete lookback values to prevent cache-miss amplification */
+const ALLOWED_DAYS = [7, 14, 30, 60, 90, 180, 365];
+/** Rate limit: max requests per IP per window */
+const RATE_LIMIT_MAX_REQUESTS = 30;
+/** Rate limit window (5 minutes) */
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const ALLOWED_REPOS = getAllowedRepoSlugs(["ISSUE_STATS_REPOS", "PIPELINE_REPOS"]);
 
 // ---------------------------------------------------------------------------
@@ -120,6 +125,26 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
+  // Rate limit by IP to prevent GitHub token quota exhaustion (CWE-770)
+  const clientIp = request.headers.get("x-nf-client-connection-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateResult = await enforceSimpleRateLimit({
+    storeName: "issue-stats-ratelimit",
+    prefix: "rl:",
+    subject: clientIp,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rateResult.limited) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Retry-After": String(rateResult.retryAfterSeconds),
+      },
+    });
+  }
+
   const url = new URL(request.url);
   const repo = url.searchParams.get("repo") || "kubestellar/console";
   if (!REPO_RE.test(repo)) {
@@ -153,7 +178,10 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   const daysParam = parseInt(url.searchParams.get("days") || String(DEFAULT_DAYS), 10);
-  const days = Math.min(Math.max(1, daysParam), MAX_DAYS);
+  // Snap to nearest allowed value to prevent cache-miss amplification
+  const days = ALLOWED_DAYS.reduce((prev, curr) =>
+    Math.abs(curr - daysParam) < Math.abs(prev - daysParam) ? curr : prev
+  );
 
   const cacheKey = `${repo.replace("/", "_")}_${days}`;
 

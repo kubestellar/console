@@ -43,12 +43,14 @@ function createTokenKey(prefix: string, subjectKey: string, bucket: number, now:
   return `${getBucketPrefix(prefix, subjectKey, bucket)}${now}:${crypto.randomUUID()}`;
 }
 
-async function countBucketEntries(store: ReturnType<typeof getStore>, prefix: string): Promise<number> {
+async function countBucketEntries(store: ReturnType<typeof getStore>, prefix: string, limit?: number): Promise<number> {
   let count = 0;
   const paginator = store.list({ prefix, paginate: true }) as AsyncIterable<RateLimitBlobPage>;
 
   for await (const page of paginator) {
     count += page.blobs.length;
+    // Early exit: stop counting once we know we're over limit
+    if (limit !== undefined && count >= limit) return count;
   }
 
   return count;
@@ -80,21 +82,25 @@ export async function enforceSimpleRateLimit(
       await cleanupExpiredBucket(store, getBucketPrefix(options.prefix, subjectKey, cleanupBucket));
     }
 
-    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
-
+    // Count BEFORE write to prevent storage amplification (CWE-400)
     const currentWindowCount = await countBucketEntries(
       store,
       getBucketPrefix(options.prefix, subjectKey, bucket),
+      options.maxRequests,
     );
 
-    if (currentWindowCount > options.maxRequests) {
+    if (currentWindowCount >= options.maxRequests) {
       return {
         limited: true,
         retryAfterSeconds: retryAfterSeconds((bucket + 1) * options.windowMs),
       };
     }
+
+    // Only write token after confirming under limit
+    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
   } catch {
-    return { limited: false, retryAfterSeconds: 0 };
+    // Fail CLOSED on store errors — deny by default (CWE-400)
+    return { limited: true, retryAfterSeconds: 60 };
   }
 
   return { limited: false, retryAfterSeconds: 0 };

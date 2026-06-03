@@ -781,7 +781,11 @@ func (m *MockStore) GetRecentObservations(_ context.Context, _ string, _ int) ([
 func (m *MockStore) GetUnshownObservations(_ context.Context) ([]store.StellarObservation, error) {
 	return nil, nil
 }
+func (m *MockStore) GetUnshownObservationsForUser(_ context.Context, _ string) ([]store.StellarObservation, error) {
+	return nil, nil
+}
 func (m *MockStore) MarkObservationShown(_ context.Context, _ string) error { return nil }
+func (m *MockStore) MarkObservationShownForUser(_ context.Context, _, _ string) error { return nil }
 
 func (m *MockStore) CreateSolve(_ context.Context, _ *store.StellarSolve) error { return nil }
 func (m *MockStore) GetSolveByID(_ context.Context, _ string) (*store.StellarSolve, error) {

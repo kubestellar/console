@@ -446,7 +446,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 					return false
 				}
 			}
-			observations, err := h.store.GetUnshownObservations(streamCtx)
+			observations, err := h.store.GetUnshownObservationsForUser(streamCtx, userID)
 			if err == nil && len(observations) > 0 {
 				next := observations[0]
 				payload := fiber.Map{
@@ -459,7 +459,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				if writeSSE(w, "observation", payload) != nil {
 					return false
 				}
-				if err := h.store.MarkObservationShown(streamCtx, next.ID); err != nil {
+				if err := h.store.MarkObservationShownForUser(streamCtx, userID, next.ID); err != nil {
 					slog.Warn("stellar: mark observation shown failed", "observationID", next.ID, "error", err)
 				}
 			}

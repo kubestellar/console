@@ -688,6 +688,15 @@ func (s *SQLiteStore) migrate() error {
 			hit_count INTEGER NOT NULL DEFAULT 0,
 			last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
+
+		// #16814: Per-user observation visibility tracking (CWE-200).
+		`CREATE TABLE IF NOT EXISTS stellar_observation_seen (
+			user_id        TEXT NOT NULL,
+			observation_id TEXT NOT NULL,
+			seen_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (user_id, observation_id)
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_seen_user ON stellar_observation_seen(user_id, seen_at DESC)",
 	}
 	for i, migration := range migrations {
 		version := i + 1
