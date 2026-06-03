@@ -17,6 +17,8 @@ import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+/** Allowed repository owner — prevents confused deputy for arbitrary repos (CWE-285, #16507). */
+const ALLOWED_OWNER = "kubestellar";
 /** Server-side cache TTL (1 hour) */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 /** GitHub API results per page (max 100) */
@@ -136,6 +138,16 @@ export default async function handler(request: Request): Promise<Response> {
       JSON.stringify({ error: "Invalid repo format" }),
       {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+  const [owner] = repo.split("/");
+  if (owner.toLowerCase() !== ALLOWED_OWNER) {
+    return new Response(
+      JSON.stringify({ error: "Repository not in allowlist" }),
+      {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
