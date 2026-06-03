@@ -17,6 +17,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
@@ -82,6 +83,9 @@ type StellarDigest struct {
 
 // StellarStore is the storage contract used by StellarHandler.
 type StellarStore interface {
+	// GetUser retrieves a user by ID for authorization checks (#16709).
+	GetUser(ctx context.Context, userID uuid.UUID) (*models.User, error)
+
 	GetStellarPreferences(ctx context.Context, userID string) (*store.StellarPreferences, error)
 	UpdateStellarPreferences(ctx context.Context, preferences *store.StellarPreferences) error
 
