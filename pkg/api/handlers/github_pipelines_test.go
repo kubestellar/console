@@ -70,6 +70,19 @@ func TestGitHubPipelines_MutateRejectsUnknownRepo(t *testing.T) {
 	}
 }
 
+func TestGitHubPipelines_MutateRejectsNonAllowlistedRepo(t *testing.T) {
+	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
+	// Format-valid slug but NOT in the configured allowlist — must be rejected.
+	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=attacker/private-repo&run=1", nil)
+	res, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if res.StatusCode != 400 {
+		t.Fatalf("expected 400 for non-allowlisted repo, got %d", res.StatusCode)
+	}
+}
+
 func TestGitHubPipelines_MutateRejectsUnknownOp(t *testing.T) {
 	app := newGHPTestApp(t, "fake-token", "fake-mutation-token")
 	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=delete&repo=kubestellar/console&run=1", nil)

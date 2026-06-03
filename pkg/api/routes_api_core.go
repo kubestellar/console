@@ -93,7 +93,12 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 
 	githubPipelines := handlers.NewGitHubPipelinesHandler(s.config.GitHubToken)
 	api.Get("/github-pipelines", githubPipelines.Serve)
-	api.Post("/github-pipelines", githubPipelines.Serve)
+	api.Post("/github-pipelines", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return githubPipelines.Serve(c)
+	})
 	api.Get("/github-pipelines/health", githubPipelines.HandleHealth)
 
 	agenticDetectionRuns := handlers.NewAgenticDetectionRunsHandler()

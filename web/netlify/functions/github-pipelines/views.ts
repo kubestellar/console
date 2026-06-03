@@ -37,6 +37,11 @@ import { readHistory, writeHistory, mergeIntoHistory } from "./history";
 
 const REPOS = getRepos();
 
+/** Check that a repo filter is both format-valid and in the configured allowlist. */
+function isAllowedRepo(repo: string | null): repo is string {
+  return !!repo && isValidRepo(repo) && REPOS.includes(repo);
+}
+
 // ---------------------------------------------------------------------------
 // Pulse view
 // ---------------------------------------------------------------------------
@@ -48,7 +53,7 @@ export async function buildPulse(
 ): Promise<PulsePayload> {
   // When a specific repo is selected, fetch its most recent workflow runs
   // across all workflows. When null, use the default nightly release workflow.
-  const targetRepo = repoFilter && isValidRepo(repoFilter) ? repoFilter : NIGHTLY_RELEASE_REPO;
+  const targetRepo = repoFilter && isAllowedRepo(repoFilter) ? repoFilter : NIGHTLY_RELEASE_REPO;
   const isDefault = targetRepo === NIGHTLY_RELEASE_REPO;
   const apiPath = isDefault
     ? `/repos/${targetRepo}/actions/workflows/${NIGHTLY_RELEASE_WORKFLOW}/runs?per_page=${MATRIX_DEFAULT_DAYS}`
@@ -176,7 +181,7 @@ export async function buildMatrix(
   days: number,
   repoFilter: string | null
 ): Promise<MatrixPayload> {
-  const targetRepos = repoFilter && isValidRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
+  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
 
   // Fetch fresh runs per repo with pagination (GitHub caps per_page at 100)
   const MAX_PER_PAGE = 100;
@@ -245,7 +250,7 @@ export async function buildFlow(
   token: string,
   repoFilter: string | null
 ): Promise<FlowPayload> {
-  const targetRepos = repoFilter && isValidRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
+  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
 
   const all: FlowRun[] = [];
   for (const repo of targetRepos) {
@@ -308,7 +313,7 @@ export async function buildFailures(
   token: string,
   repoFilter: string | null
 ): Promise<FailuresPayload> {
-  const targetRepos = repoFilter && isValidRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
+  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
 
   const rows: FailureRow[] = [];
   for (const repo of targetRepos) {
