@@ -47,3 +47,45 @@ func TestAgentAutoUpdateProxyRequiresAdmin(t *testing.T) {
 		})
 	}
 }
+
+func TestSIEMExportEndpointsRequireAdmin(t *testing.T) {
+	endpoints := []string{
+		"/api/audit/export/summary",
+		"/api/audit/export/destinations",
+		"/api/audit/export/events",
+	}
+	accessTests := []struct {
+		name       string
+		role       models.UserRole
+		wantStatus int
+	}{
+		{name: "non-admin user is forbidden", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
+		{name: "admin user is allowed", role: models.UserRoleAdmin, wantStatus: http.StatusOK},
+	}
+
+	for _, endpoint := range endpoints {
+		endpoint := endpoint
+		for _, tt := range accessTests {
+			tt := tt
+			t.Run(tt.name+" "+endpoint, func(t *testing.T) {
+				app := fiber.New(fiber.Config{ErrorHandler: customErrorHandler})
+				mockStore := new(teststore.MockStore)
+				userID := uuid.New()
+
+				mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: tt.role}, nil).Once()
+
+				app.Use("/api", func(c *fiber.Ctx) error {
+					c.Locals("userID", userID)
+					return c.Next()
+				})
+				handlers.NewSIEMHandler(mockStore).RegisterRoutes(app.Group("/api"))
+
+				req := httptest.NewRequest(http.MethodGet, endpoint, nil)
+				resp, err := app.Test(req)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantStatus, resp.StatusCode)
+				mockStore.AssertExpectations(t)
+			})
+		}
+	}
+}

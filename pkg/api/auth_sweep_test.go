@@ -84,6 +84,11 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		{"GET", "/api/mcs/imports"},
 		{"GET", "/api/gitops/drifts"},
 		{"GET", "/api/gitops/argocd/applications"},
+		// SIEM export endpoints moved from public routes to the authenticated API
+		// group in #16518 and must stay behind JWT auth.
+		{"GET", "/api/audit/export/summary"},
+		{"GET", "/api/audit/export/destinations"},
+		{"GET", "/api/audit/export/events"},
 	}
 
 	// Register a no-op handler for each protected route under the JWTAuth
