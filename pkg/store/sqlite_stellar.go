@@ -58,7 +58,6 @@ func (s *SQLiteStore) GetStellarPreferences(ctx context.Context, userID string) 
 	return &prefs, nil
 }
 
-
 func (s *SQLiteStore) UpdateStellarPreferences(ctx context.Context, preferences *StellarPreferences) error {
 	pinnedClusters := preferences.PinnedClusters
 	if pinnedClusters == nil {
@@ -91,14 +90,12 @@ func (s *SQLiteStore) UpdateStellarPreferences(ctx context.Context, preferences 
 	return nil
 }
 
-
 func nullableTime(t time.Time) interface{} {
 	if t.IsZero() {
 		return nil
 	}
 	return t.UTC()
 }
-
 
 func (s *SQLiteStore) CreateAuditEntry(ctx context.Context, e *StellarAuditEntry) error {
 	if e.ID == "" {
@@ -110,7 +107,6 @@ func (s *SQLiteStore) CreateAuditEntry(ctx context.Context, e *StellarAuditEntry
 	)
 	return err
 }
-
 
 func (s *SQLiteStore) GetActiveMissionIDs(ctx context.Context) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id FROM stellar_missions WHERE enabled = 1`)
@@ -129,7 +125,6 @@ func (s *SQLiteStore) GetActiveMissionIDs(ctx context.Context) ([]string, error)
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) UpsertUserLastSeen(ctx context.Context, userID string) error {
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO stellar_user_sessions(user_id, last_seen_at)
@@ -138,7 +133,6 @@ func (s *SQLiteStore) UpsertUserLastSeen(ctx context.Context, userID string) err
 		userID)
 	return err
 }
-
 
 func (s *SQLiteStore) GetUserLastSeen(ctx context.Context, userID string) (*time.Time, error) {
 	row := s.db.QueryRowContext(ctx,
@@ -162,7 +156,6 @@ func (s *SQLiteStore) GetUserLastSeen(ctx context.Context, userID string) (*time
 	return &t, nil
 }
 
-
 func (s *SQLiteStore) SetUserLastDigest(ctx context.Context, userID string) error {
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO stellar_user_sessions(user_id, last_seen_at, last_digest_at)
@@ -174,16 +167,20 @@ func (s *SQLiteStore) SetUserLastDigest(ctx context.Context, userID string) erro
 
 // ─── Sprint 5: Watch deduplication ───────────────────────────────────────────
 
-
-func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, limit int) ([]StellarAuditEntry, error) {
+func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, userID string, limit int) ([]StellarAuditEntry, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, ts, user_id, action, entity_type, entity_id, cluster, detail
-		 FROM stellar_audit_log
-		 ORDER BY ts DESC
-		 LIMIT ?`, limit)
+	query := `SELECT id, ts, user_id, action, entity_type, entity_id, cluster, detail
+		 FROM stellar_audit_log`
+	args := make([]interface{}, 0, 2)
+	if userID != "" {
+		query += ` WHERE user_id = ?`
+		args = append(args, userID)
+	}
+	query += ` ORDER BY ts DESC LIMIT ?`
+	args = append(args, limit)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

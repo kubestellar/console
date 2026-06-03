@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
@@ -151,11 +152,25 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
 func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
-	if _, err := h.requireUser(c); err != nil {
+	userID, err := h.requireUser(c)
+	if err != nil {
 		return err
 	}
+
+	filterUserID := userID
+	if strings.EqualFold(strings.TrimSpace(c.Query("all")), "true") {
+		currentUser, err := h.store.GetUser(c.UserContext(), middleware.GetUserID(c))
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to verify admin role"})
+		}
+		if err := requireAdminCheck(currentUser); err != nil {
+			return err
+		}
+		filterUserID = ""
+	}
+
 	limit := readListLimit(c)
-	entries, err := h.store.ListStellarAuditLog(c.UserContext(), limit)
+	entries, err := h.store.ListStellarAuditLog(c.UserContext(), filterUserID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load audit log"})
 	}

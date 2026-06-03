@@ -331,3 +331,108 @@ func TestStellarResolveWatchReturnsJSON(t *testing.T) {
 	assert.Equal(t, "resolved", resolved["status"])
 	assert.NotNil(t, resolved["inactivityTimeoutMs"])
 }
+
+func TestStellarAuditLogScopesByUserAndAdminOverride(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-audit.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	viewerID := uuid.New()
+	otherViewerID := uuid.New()
+	adminID := uuid.New()
+	users := []models.User{
+		{ID: viewerID, GitHubID: "viewer-1", GitHubLogin: "stellar-viewer", Role: models.UserRoleViewer},
+		{ID: otherViewerID, GitHubID: "viewer-2", GitHubLogin: "stellar-other", Role: models.UserRoleViewer},
+		{ID: adminID, GitHubID: "admin-1", GitHubLogin: "stellar-admin", Role: models.UserRoleAdmin},
+	}
+	for _, user := range users {
+		user := user
+		require.NoError(t, sqlStore.CreateUser(context.Background(), &user))
+	}
+
+	baseTime := time.Date(2024, time.January, 2, 3, 4, 5, 0, time.UTC)
+	auditEntries := []store.StellarAuditEntry{
+		{ID: "audit-viewer", Ts: baseTime, UserID: viewerID.String(), Action: "watch.create", EntityType: "watch", EntityID: "watch-1", Cluster: "prod-a", Detail: "viewer entry"},
+		{ID: "audit-other", Ts: baseTime.Add(1 * time.Second), UserID: otherViewerID.String(), Action: "watch.resolve", EntityType: "watch", EntityID: "watch-2", Cluster: "prod-b", Detail: "other viewer entry"},
+		{ID: "audit-admin", Ts: baseTime.Add(2 * time.Second), UserID: adminID.String(), Action: "watch.dismiss", EntityType: "watch", EntityID: "watch-3", Cluster: "prod-c", Detail: "admin entry"},
+	}
+	for _, entry := range auditEntries {
+		entry := entry
+		require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &entry))
+	}
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		switch c.Get("X-Test-User") {
+		case "admin":
+			c.Locals("userID", adminID)
+		case "other":
+			c.Locals("userID", otherViewerID)
+		default:
+			c.Locals("userID", viewerID)
+		}
+		return c.Next()
+	})
+
+	h := NewStellarHandler(sqlStore, nil)
+	app.Get("/api/stellar/audit", h.ListAuditLog)
+
+	t.Run("viewer sees only own entries", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/api/stellar/audit", nil)
+		require.NoError(t, err)
+		resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var payload struct {
+			Items []store.StellarAuditEntry `json:"items"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+		require.Len(t, payload.Items, 1)
+		assert.Equal(t, viewerID.String(), payload.Items[0].UserID)
+	})
+
+	t.Run("viewer cannot request all entries", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/api/stellar/audit?all=true", nil)
+		require.NoError(t, err)
+		resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("admin sees only own entries by default", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/api/stellar/audit", nil)
+		require.NoError(t, err)
+		req.Header.Set("X-Test-User", "admin")
+		resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var payload struct {
+			Items []store.StellarAuditEntry `json:"items"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+		require.Len(t, payload.Items, 1)
+		assert.Equal(t, adminID.String(), payload.Items[0].UserID)
+	})
+
+	t.Run("admin can request all entries", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/api/stellar/audit?all=true", nil)
+		require.NoError(t, err)
+		req.Header.Set("X-Test-User", "admin")
+		resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var payload struct {
+			Items []store.StellarAuditEntry `json:"items"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+		assert.Len(t, payload.Items, len(auditEntries))
+	})
+}
