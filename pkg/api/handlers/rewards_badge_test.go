@@ -6,10 +6,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
@@ -153,6 +156,49 @@ func TestBadgeGetBadge(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 	})
+}
+
+func TestBadgeGetBadge_RateLimitReturns429(t *testing.T) {
+	const badgeRateLimitMaxRequests = 1
+	const badgeRateLimitRetryAfterSeconds = 60
+	const badgeRateLimitWindow = time.Minute
+	const badgeRateLimitKey = "badge-rate-limit-test"
+
+	app := fiber.New()
+	mockFetcher := &fakeBadgeFetcher{
+		points:   map[string]int{"engaged-user": 20000},
+		unknown:  make(map[string]bool),
+		errorFor: make(map[string]error),
+	}
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUserByGitHubLogin", "engaged-user").Return(&models.User{GitHubLogin: "engaged-user", GitHubID: "gh-rate-limit"}, nil).Maybe()
+	mockStore.On("GetUserRewards", "gh-rate-limit").Return(&store.UserRewards{}, nil).Maybe()
+
+	publicLimiter := limiter.New(limiter.Config{
+		Max:        badgeRateLimitMaxRequests,
+		Expiration: badgeRateLimitWindow,
+		KeyGenerator: func(*fiber.Ctx) string {
+			return badgeRateLimitKey
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(badgeRateLimitRetryAfterSeconds))
+			return c.Status(http.StatusTooManyRequests).JSON(fiber.Map{"error": "too many requests, try again later"})
+		},
+	})
+
+	handler := NewBadgeHandler(mockFetcher, mockStore)
+	app.Get("/api/rewards/badge/:github_login", publicLimiter, handler.GetBadge)
+
+	firstReq := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/engaged-user", nil)
+	firstResp, err := app.Test(firstReq)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, firstResp.StatusCode)
+
+	secondReq := httptest.NewRequest(http.MethodGet, "/api/rewards/badge/engaged-user", nil)
+	secondResp, err := app.Test(secondReq)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTooManyRequests, secondResp.StatusCode)
+	assert.Equal(t, strconv.Itoa(badgeRateLimitRetryAfterSeconds), secondResp.Header.Get("Retry-After"))
 }
 
 func TestTierColorHex_AllKnownColors(t *testing.T) {

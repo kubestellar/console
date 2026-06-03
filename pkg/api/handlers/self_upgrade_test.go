@@ -25,6 +25,47 @@ import (
 )
 
 func TestSelfUpgradeHandler_GetStatus(t *testing.T) {
+	t.Run("security: non-admin denied", func(t *testing.T) {
+		env := setupTestEnv(t)
+		h := NewSelfUpgradeHandler(env.K8sClient, env.Hub, env.Store)
+
+		viewerID := uuid.New()
+		env.App.Use(func(c *fiber.Ctx) error {
+			c.Locals("userID", viewerID)
+			return c.Next()
+		})
+
+		mockStore := env.Store.(*test.MockStore)
+		mockStore.On("GetUser", viewerID).Return(&models.User{
+			ID:   viewerID,
+			Role: models.UserRoleViewer,
+		}, nil).Once()
+
+		env.App.Get("/api/self-upgrade/status", h.GetStatus)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/self-upgrade/status", nil)
+		resp, err := env.App.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("security: admin allowed", func(t *testing.T) {
+		env := setupTestEnv(t)
+		h := NewSelfUpgradeHandler(env.K8sClient, env.Hub, env.Store)
+		env.App.Get("/api/self-upgrade/status", h.GetStatus)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/self-upgrade/status", nil)
+		resp, err := env.App.Test(req)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var status SelfUpgradeStatusResponse
+		err = json.NewDecoder(resp.Body).Decode(&status)
+		require.NoError(t, err)
+		assert.False(t, status.Available)
+		assert.Equal(t, "not running in-cluster", status.Reason)
+	})
+
 	t.Run("not in-cluster", func(t *testing.T) {
 		env := setupTestEnv(t)
 		// MultiClusterClient.IsInCluster returns false if inClusterConfig is nil
