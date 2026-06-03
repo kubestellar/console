@@ -160,7 +160,7 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 	if orbitDataDir == "" || orbitDataDir == "." {
 		orbitDataDir = "./data"
 	}
-	orbit := handlers.NewOrbitHandler(orbitDataDir, nil)
+	orbit := handlers.NewOrbitHandler(orbitDataDir, nil, s.store)
 	orbit.RegisterRoutes(api.Group("/orbit"))
 	orbit.StartScheduler(s.done)
 

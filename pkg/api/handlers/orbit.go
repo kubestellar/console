@@ -13,8 +13,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // orbitSuffixBytes is the number of random bytes used to generate a unique
@@ -81,6 +85,7 @@ type OrbitMission struct {
 	LastRunResult *string          `json:"lastRunResult"`
 	CreatedAt     string           `json:"createdAt"`
 	History       []OrbitRunRecord `json:"history"`
+	Owner         uuid.UUID        `json:"owner"` // User ID who created this mission
 }
 
 // OrbitStep is a single step in an orbit mission template.
@@ -120,15 +125,17 @@ type OrbitHandler struct {
 	missions map[string]*OrbitMission
 	dataFile string
 	executor OrbitExecutor
+	store    store.Store
 }
 
 // NewOrbitHandler creates an OrbitHandler, loading any persisted missions
 // from disk. dataDir is the console data directory (e.g. "./data").
-func NewOrbitHandler(dataDir string, executor OrbitExecutor) *OrbitHandler {
+func NewOrbitHandler(dataDir string, executor OrbitExecutor, s store.Store) *OrbitHandler {
 	h := &OrbitHandler{
 		missions: make(map[string]*OrbitMission),
 		dataFile: filepath.Join(dataDir, orbitDefaultDataFile),
 		executor: executor,
+		store:    s,
 	}
 	h.loadFromDisk()
 	return h
@@ -144,20 +151,35 @@ func (h *OrbitHandler) RegisterRoutes(g fiber.Router) {
 
 // ─── Endpoints ──────────────────────────────────────────────────────
 
-// ListMissions returns all orbit missions.
+// ListMissions returns orbit missions owned by the current user.
+// Admins can see all missions.
 // GET /api/orbit/missions
 func (h *OrbitHandler) ListMissions(c *fiber.Ctx) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
+	userID := middleware.GetUserID(c)
+	isAdmin := false
+
+	// Check if user is admin
+	if h.store != nil {
+		user, err := h.store.GetUser(c.UserContext(), userID)
+		if err == nil && user != nil && user.Role == models.UserRoleAdmin {
+			isAdmin = true
+		}
+	}
+
 	out := make([]*OrbitMission, 0, len(h.missions))
 	for _, m := range h.missions {
-		out = append(out, m)
+		// Admins see all missions, others only see their own
+		if isAdmin || m.Owner == userID {
+			out = append(out, m)
+		}
 	}
 	return c.JSON(fiber.Map{"missions": out})
 }
 
-// CreateMission saves a new orbit mission.
+// CreateMission saves a new orbit mission owned by the current user.
 // POST /api/orbit/missions
 func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 	var m OrbitMission
@@ -175,6 +197,10 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 	if _, ok := orbitCadenceHours[m.Cadence]; !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cadence must be daily, weekly, or monthly"})
 	}
+
+	// Set owner to current user
+	userID := middleware.GetUserID(c)
+	m.Owner = userID
 
 	if m.ID == "" {
 		// Use millisecond-precision timestamp plus a random suffix to avoid
@@ -200,6 +226,7 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 }
 
 // RunMission executes an orbit mission right now.
+// Only the mission owner or an admin can run a mission.
 // POST /api/orbit/missions/:id/run
 func (h *OrbitHandler) RunMission(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -210,6 +237,24 @@ func (h *OrbitHandler) RunMission(c *fiber.Ctx) error {
 		h.mu.RUnlock()
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "mission not found"})
 	}
+	
+	// Check ownership
+	userID := middleware.GetUserID(c)
+	isOwner := m.Owner == userID
+	isAdmin := false
+
+	if h.store != nil {
+		user, err := h.store.GetUser(c.UserContext(), userID)
+		if err == nil && user != nil && user.Role == models.UserRoleAdmin {
+			isAdmin = true
+		}
+	}
+
+	if !isOwner && !isAdmin {
+		h.mu.RUnlock()
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "only mission owner or admin can run this mission"})
+	}
+
 	mission := cloneOrbitMission(m)
 	h.mu.RUnlock()
 
