@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"context"
+	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -16,7 +19,48 @@ const cliProviderExecutionTimeout = 5 * time.Minute
 
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
-var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+// Uses a SSRF-safe transport that blocks connections to private/internal IPs
+// at dial time, preventing DNS rebinding attacks (#16902).
+var aiProviderHTTPClient = &http.Client{
+	Timeout: aiProviderHTTPTimeout,
+	CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+		// Limit redirect hops to prevent open-redirect chains to internal services
+		const maxRedirects = 5
+		if len(via) >= maxRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxRedirects)
+		}
+		return nil
+	},
+	Transport: &http.Transport{
+		DialContext: aiProviderSafeDialContext,
+	},
+}
+
+// aiProviderSafeDialContext resolves the host and rejects connections to
+// private/internal IPs before dialing. This prevents SSRF via DNS rebinding
+// where a domain passes save-time validation but resolves to an internal IP
+// at request time.
+func aiProviderSafeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve host %s: %w", host, err)
+	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("no IPs resolved for host %s", host)
+	}
+	for _, ip := range ips {
+		if isPrivateIP(ip.IP) {
+			return nil, fmt.Errorf("blocked: AI provider base URL resolved to non-public IP %s for host %s", ip.IP, host)
+		}
+	}
+	// Connect to the first validated IP directly — no second DNS lookup
+	dialer := &net.Dialer{Timeout: aiProviderHTTPTimeout}
+	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+}
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
