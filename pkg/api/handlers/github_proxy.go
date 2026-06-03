@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -167,10 +168,9 @@ func StopGitHubProxyLimiterEvictor() {
 // allowedGitHubPrefixes restricts which non-repo GitHub API paths can be proxied.
 // Repo-scoped /repos/* requests are validated separately against the repo allowlist.
 var allowedGitHubPrefixes = []string{
-	"/search/",       // issue/PR search for contributions list
-	"/rate_limit",    // rate-limit check / token validation
-	"/user",          // token validation (GET /user returns the authenticated user)
-	"/notifications", // notification badge (if used by frontend)
+	"/search/",    // issue/PR search for contributions list
+	"/rate_limit", // rate-limit check / token validation
+	"/user",       // token validation only — response is sanitized (see sanitizeUserResponse)
 }
 
 var githubProxyDefaultRepos = strings.Split(githubProxyAllowedReposDefault, ",")
@@ -457,7 +457,34 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		c.Set("Content-Type", ct)
 	}
 
+	// Sanitize /user response to avoid exposing the shared PAT owner's
+	// identity details (CWE-200, #16920). Only return fields needed for
+	// token validation.
+	if apiPath == "/user" && resp.StatusCode == fiber.StatusOK {
+		body = sanitizeUserResponse(body)
+	}
+
 	return c.Status(resp.StatusCode).Send(body)
+}
+
+// sanitizeUserResponse strips sensitive fields from the GitHub /user response,
+// returning only what the frontend needs for token-validity confirmation.
+func sanitizeUserResponse(raw []byte) []byte {
+	var full map[string]interface{}
+	if err := json.Unmarshal(raw, &full); err != nil {
+		return []byte(`{"valid":true}`)
+	}
+	safe := map[string]interface{}{
+		"login":      full["login"],
+		"id":         full["id"],
+		"type":       full["type"],
+		"rate_limit": full["rate_limit"],
+	}
+	out, err := json.Marshal(safe)
+	if err != nil {
+		return []byte(`{"valid":true}`)
+	}
+	return out
 }
 
 // SaveToken handles POST /api/github/token — saves a user-provided GitHub PAT

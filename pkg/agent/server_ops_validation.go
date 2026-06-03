@@ -75,10 +75,15 @@ func validateBaseURL(raw string) error {
 
 	ips, err := net.DefaultResolver.LookupHost(lookupCtx, host)
 	if err != nil {
-		if ip := net.ParseIP(host); ip != nil && isPrivateIP(ip) {
-			return fmt.Errorf("base URL resolves to a private/internal IP address")
+		if ip := net.ParseIP(host); ip != nil {
+			if isPrivateIP(ip) {
+				return fmt.Errorf("base URL resolves to a private/internal IP address")
+			}
+			return nil // literal public IP, no DNS needed
 		}
-		return nil
+		// DNS lookup failed for a hostname — fail closed to prevent SSRF via
+		// DNS rebinding or transient resolution failures (CWE-918, #16918).
+		return fmt.Errorf("DNS lookup failed for %q — cannot verify URL safety: %w", host, err)
 	}
 	for _, ipStr := range ips {
 		if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {

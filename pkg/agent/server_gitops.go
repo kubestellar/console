@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -95,6 +96,13 @@ func validateGitopsRepoURL(repoURL string) error {
 		if err != nil || parsed.Scheme != "https" {
 			return fmt.Errorf("only HTTPS and SSH git URLs are allowed")
 		}
+		// SSRF guard: block clones targeting private/internal IPs (CWE-918, #16919).
+		if !allowLocalProviders() {
+			host := parsed.Hostname()
+			if err := blockPrivateHost(host); err != nil {
+				return err
+			}
+		}
 	}
 	dangerousChars := []string{";", "|", "&", "$", "`", "(", ")", "{", "}", "<", ">", "\\", "'", "\"", "\n", "\r"}
 	for _, char := range dangerousChars {
@@ -104,6 +112,31 @@ func validateGitopsRepoURL(repoURL string) error {
 	}
 	if strings.Contains(strings.ToLower(repoURL), "file://") {
 		return fmt.Errorf("file:// URLs are not allowed")
+	}
+	return nil
+}
+
+// blockPrivateHost resolves a hostname and returns an error if any resolved IP
+// is private/internal. Returns error on DNS failure (fail-closed).
+func blockPrivateHost(host string) error {
+	// If host is a literal IP, check directly.
+	if ip := net.ParseIP(host); ip != nil {
+		if isPrivateIP(ip) {
+			return fmt.Errorf("URL resolves to a private/internal IP address")
+		}
+		return nil
+	}
+	const dnsTimeout = 3 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), dnsTimeout)
+	defer cancel()
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	if err != nil {
+		return fmt.Errorf("DNS lookup failed for %q — cannot verify URL safety: %w", host, err)
+	}
+	for _, ipStr := range ips {
+		if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
+			return fmt.Errorf("URL resolves to a private/internal IP address")
+		}
 	}
 	return nil
 }

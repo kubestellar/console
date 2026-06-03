@@ -215,7 +215,7 @@ func TestIsAllowedGitHubPath(t *testing.T) {
 		{"search", "/search/issues", true},
 		{"user exact", "/user", true},
 		{"user subpath", "/user/repos", true},
-		{"notifications", "/notifications", true},
+		{"notifications", "/notifications", false},
 		{"gists", "/gists", false},
 		{"graphql", "/graphql", false},
 	}

@@ -47,6 +47,13 @@ import { fetchTreePaths, fetchWeeklyActivity } from "./acmm-scan/fetchers";
 import { demoScan } from "./acmm-scan/demo";
 
 // ---------------------------------------------------------------------------
+// Rate-limit constants for force-refresh (CWE-400, #16904)
+// ---------------------------------------------------------------------------
+
+/** Minimum interval between force-refresh scans for the same repo (ms). */
+const FORCE_REFRESH_COOLDOWN_MS = 60_000;
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
 
@@ -95,6 +102,32 @@ export default async (req: Request) => {
   // Check blob cache (per-repo key) — skipped when ?force=true
   const store = getStore(CACHE_STORE);
   const cacheKey = `scan:${repo}`;
+
+  // Rate-limit force-refresh to prevent API quota exhaustion (CWE-400, #16904).
+  if (force) {
+    const forceKey = `force-ts:${repo}`;
+    try {
+      const lastForce = await store.get(forceKey, { type: "text" });
+      if (lastForce && Date.now() - Number(lastForce) < FORCE_REFRESH_COOLDOWN_MS) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit: force-refresh available once per minute per repo" }),
+          {
+            status: 429,
+            headers: { ...headers, "Content-Type": "application/json", "Retry-After": "60" },
+          },
+        );
+      }
+    } catch {
+      // blob read failure — allow the request to proceed
+    }
+    // Record this force-refresh timestamp (best-effort)
+    try {
+      await store.set(forceKey, String(Date.now()));
+    } catch {
+      // best-effort
+    }
+  }
+
   if (!force) {
     try {
       const cached = await store.get(cacheKey, { type: "text" });
