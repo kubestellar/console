@@ -27,7 +27,11 @@
 set -euo pipefail
 unset CDPATH  # Prevent cd from printing paths when CDPATH is set (causes doubled-path bugs)
 
-cd "$(dirname "$0")/.."
+# Use BASH_SOURCE for robustness when called via bash <path> or sourced.
+# Derive PROJECT_ROOT with $(pwd) after the cd — avoids $(cd ... && pwd)
+# subshell patterns that are vulnerable to CDPATH pollution even after unset.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+PROJECT_ROOT="$(pwd)"
 
 # ============================================================================
 # Colors & argument parsing
@@ -48,9 +52,6 @@ for arg in "$@"; do
     --sbom) SBOM_MODE="1" ;;
   esac
 done
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 ARTIFACTS_DIR="$PROJECT_ROOT/.artifacts/dependency-audit"
 REPORT_JSON="$ARTIFACTS_DIR/dependency-audit-report.json"
