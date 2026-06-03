@@ -1,7 +1,6 @@
 /**
  * Netlify mirror of pkg/api/handlers/rewards_badge.go (RFC #8862 Phase 3).
  * GET /api/rewards/badge/:github_login — shields.io-style SVG tier badge.
- * Netlify edge handles rate limiting; no app-level limiter needed.
  */
 import { getContributorLevel } from "../../src/types/rewards";
 import { GITHUB_SCORING_GENERATED } from "../../src/types/rewards.generated";
@@ -11,6 +10,22 @@ const GITHUB_API = "https://api.github.com";
 const MAX_PAGES = 10; // GitHub Search API caps at 1000 results
 const PER_PAGE = 100; // GitHub maximum
 const API_TIMEOUT_MS = 30_000;
+
+// Rate limiting — protects server GitHub API quota from abuse (CWE-400, #16621)
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute window
+const RATE_LIMIT_MAX_REQUESTS = 10; // max requests per IP per window
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX_REQUESTS;
+}
 
 const SEARCH_REPOS =
   "repo:kubestellar/console repo:kubestellar/console-marketplace repo:kubestellar/console-kb repo:kubestellar/docs";
@@ -154,6 +169,15 @@ function scorePoints(issues: SearchItem[], prs: SearchItem[]): number {
 }
 
 export default async (req: Request): Promise<Response> => {
+  // Rate limit per source IP to prevent GitHub API quota exhaustion
+  const clientIP = req.headers.get("x-nf-client-connection-ip") || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (isRateLimited(clientIP)) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded" }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } }
+    );
+  }
+
   const url = new URL(req.url);
   const login = url.pathname.startsWith(PATH_PREFIX)
     ? url.pathname.slice(PATH_PREFIX.length).trim()
