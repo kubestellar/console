@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Suspense } from 'react'
+import { useState, useRef, useEffect, Suspense, type RefObject } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
@@ -206,7 +206,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          ref={menuRef}
+          ref={menuRef as RefObject<HTMLDivElement | null>}
           id="profile-dropdown-menu"
           data-testid="navbar-profile-dropdown"
           role="menu"
