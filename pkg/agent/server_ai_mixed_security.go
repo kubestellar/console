@@ -90,6 +90,32 @@ var mixedModeFlagsWithValues = map[string]bool{
 	"-o":               true,
 }
 
+var mixedModeBlockedTransportFlags = map[string]bool{
+	"--as":                       true,
+	"--as-group":                 true,
+	"--certificate-authority":    true,
+	"--client-certificate":       true,
+	"--client-key":               true,
+	"--cluster":                  true,
+	"--context":                  true,
+	"--insecure-skip-tls-verify": true,
+	"--kube-context":             true,
+	"--kubeconfig":               true,
+	"--password":                 true,
+	"--server":                   true,
+	"--tls-server-name":          true,
+	"--token":                    true,
+	"--user":                     true,
+	"--username":                 true,
+	"-s":                         true,
+}
+
+var mixedModeBlockedDataFlags = map[string]bool{
+	"--filename": true,
+	"--raw":      true,
+	"-f":         true,
+}
+
 var mixedModeBlockedStreamingFlags = map[string]bool{
 	"--follow": true,
 	"--watch":  true,
@@ -135,15 +161,18 @@ func validateMixedModeCommand(command string) (bool, string) {
 
 	commandName := strings.ToLower(tokens[0])
 	args := tokens[1:]
-	if hasMixedModeContextOverride(args) {
-		return false, "cluster context overrides are blocked in mixed mode"
-	}
 	if hasMixedModeStreamingFlag(args) {
 		return false, "streaming or watch flags are blocked in mixed mode"
 	}
 
 	switch commandName {
 	case "kubectl", "oc":
+		if hasMixedModeTransportOverride(args) {
+			return false, "transport, authentication, and context override flags are blocked in mixed mode"
+		}
+		if hasMixedModeBlockedDataFlag(args) {
+			return false, "kubectl --raw and --filename flags are blocked in mixed mode"
+		}
 		return validateMixedModeKubectlCommand(args)
 	case "helm":
 		return validateMixedModeHelmCommand(args)
@@ -287,13 +316,21 @@ func normalizeMixedModeOutputFormat(value string) string {
 	}
 }
 
-func hasMixedModeContextOverride(args []string) bool {
+func hasMixedModeTransportOverride(args []string) bool {
+	return hasMixedModeBlockedFlag(args, mixedModeBlockedTransportFlags)
+}
+
+func hasMixedModeBlockedDataFlag(args []string) bool {
+	return hasMixedModeBlockedFlag(args, mixedModeBlockedDataFlags)
+}
+
+func hasMixedModeBlockedFlag(args []string, blockedFlags map[string]bool) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if lower == "--context" || lower == "--kube-context" || lower == "--kubeconfig" {
+		if blockedFlags[lower] {
 			return true
 		}
-		if strings.HasPrefix(lower, "--context=") || strings.HasPrefix(lower, "--kube-context=") || strings.HasPrefix(lower, "--kubeconfig=") {
+		if flag, _, found := strings.Cut(lower, "="); found && blockedFlags[flag] {
 			return true
 		}
 	}
@@ -304,6 +341,9 @@ func hasMixedModeStreamingFlag(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
 		if mixedModeBlockedStreamingFlags[lower] {
+			return true
+		}
+		if strings.HasPrefix(lower, "--follow=") || strings.HasPrefix(lower, "--watch") {
 			return true
 		}
 	}
