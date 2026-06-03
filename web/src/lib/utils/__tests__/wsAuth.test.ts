@@ -66,4 +66,11 @@ describe('getWsAuthParams', () => {
     await getWsAuthParams('ws://localhost:8585/ws/other')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledTimes(1)
   })
+
+  it('never puts token in the URL', async () => {
+    sessionStorage.setItem('kc-agent-token', 'secret')
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+    expect(result.url).not.toContain('secret')
+    expect(result.url).not.toContain('token=')
+  })
 })
