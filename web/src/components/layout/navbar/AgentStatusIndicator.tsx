@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type RefObject } from 'react'
 import { Server, Box, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useMissions } from '../../../hooks/useMissions'
@@ -377,7 +377,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
       {/* Agent status dropdown */}
       {showAgentStatus && (
         <div
-          ref={containerRef}
+          ref={containerRef as RefObject<HTMLDivElement | null>}
           onKeyDown={handleKeyDown}
           role="menu"
           data-testid="navbar-agent-status-dropdown"

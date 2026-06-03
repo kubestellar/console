@@ -153,19 +153,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     return () => document.removeEventListener('click', handleClickOutside)
   }, [isOpen, closeDropdown])
 
-  // Close dropdown on escape
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeDropdown()
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, closeDropdown])
+  // Escape handling is provided by useKeyboardNav via onEscape: closeDropdown
 
   if (!user) return null
 

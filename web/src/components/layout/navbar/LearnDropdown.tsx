@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
@@ -57,7 +57,6 @@ interface LearnDropdownProps {
 export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
   const { isOpen, close, toggle } = useModalState()
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const { containerRef, handleKeyDown } = useKeyboardNav({
     selector: '[role="menuitem"]:not([disabled])',
     orientation: 'vertical',
@@ -163,7 +162,8 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
       {/* Dropdown — portaled to document.body to escape navbar overflow clipping (#10319) */}
       {isOpen && createPortal(
         <div
-          ref={dropdownRef}
+          ref={containerRef as RefObject<HTMLDivElement | null>}
+          onKeyDown={handleKeyDown}
           className="w-[calc(100vw-1rem)] sm:w-96 bg-card border border-border rounded-lg shadow-xl overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
           style={dropdownStyle}
         >
