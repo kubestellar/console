@@ -32,6 +32,16 @@ const REFERER_FALLBACK_HOSTS = new Set([
   "127.0.0.1",
 ])
 
+/**
+ * Only trust deploy preview subdomains that match the KubeStellar Netlify
+ * site pattern (e.g. "deploy-preview-123--kubestellar-console.netlify.app").
+ * Rejects arbitrary attacker-controlled *.netlify.app subdomains (#16744).
+ */
+function isKubeStellarNetlifyPreview(hostname: string): boolean {
+  return hostname.endsWith(".netlify.app") &&
+    hostname.includes("kubestellar")
+}
+
 function isRequestAllowed(req: Request): boolean {
   // Prefer the CORS allowlist via the Origin header.
   if (isAllowedOrigin(req.headers.get("origin"))) return true
@@ -41,7 +51,9 @@ function isRequestAllowed(req: Request): boolean {
   if (referer) {
     try {
       const hostname = new URL(referer).hostname
-      if (REFERER_FALLBACK_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
+      // SECURITY (#16744): Only trust exact KubeStellar deploy preview subdomains,
+      // not arbitrary *.netlify.app sites which any attacker can deploy.
+      if (REFERER_FALLBACK_HOSTS.has(hostname) || isKubeStellarNetlifyPreview(hostname)) {
         return true
       }
     } catch {
