@@ -228,6 +228,52 @@ func TestJWTAuth(t *testing.T) {
 	})
 }
 
+func TestParseJWT_RejectsUnexpectedAlgorithms(t *testing.T) {
+	secret := "test-secret"
+	claims := UserClaims{
+		UserID:      uuid.New(),
+		GitHubLogin: "test",
+		Role:        models.UserRoleViewer,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+
+	tests := []struct {
+		name   string
+		method jwt.SigningMethod
+		key    interface{}
+	}{
+		{
+			name:   "rejects alg none",
+			method: jwt.SigningMethodNone,
+			key:    jwt.UnsafeAllowNoneSignatureType,
+		},
+		{
+			name:   "rejects hs384 even with valid signature",
+			method: jwt.SigningMethodHS384,
+			key:    []byte(secret),
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			token := jwt.NewWithClaims(tc.method, claims)
+			tokenString, err := token.SignedString(tc.key)
+			require.NoError(t, err)
+
+			parsed, err := ParseJWT(tokenString, secret)
+			require.Error(t, err)
+			require.NotNil(t, parsed)
+			assert.False(t, parsed.Valid)
+			assert.Equal(t, tc.method.Alg(), parsed.Method.Alg())
+		})
+	}
+}
+
 func TestJWTAuth_TokenRefreshHeader(t *testing.T) {
 	secret := "test-secret"
 	app := fiber.New()
