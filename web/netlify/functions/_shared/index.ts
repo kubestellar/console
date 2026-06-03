@@ -2,6 +2,8 @@
 export { isAllowedOrigin, buildCorsHeaders, handlePreflight } from "./cors";
 export type { CorsOptions } from "./cors";
 
+export { isAllowedAnalyticsProxyRequest } from "./analytics-origin";
+
 export { enforceSimpleRateLimit } from "./rate-limit";
 export type { SimpleRateLimitOptions, SimpleRateLimitResult } from "./rate-limit";
 

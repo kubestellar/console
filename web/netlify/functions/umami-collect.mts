@@ -9,7 +9,7 @@
  */
 
 import type { Config } from "@netlify/functions"
-import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
+import { buildCorsHeaders, handlePreflight, isAllowedAnalyticsProxyRequest } from "./_shared"
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
@@ -20,43 +20,8 @@ const UMAMI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 const MAX_BODY_BYTES = 65_536
 const MAX_UPSTREAM_TEXT_BYTES = 1_048_576
 
-/**
- * Hosts allowed via Referer fallback when Origin is absent. Keep
- * separate from the CORS allowlist because Referer is a weaker signal
- * (can be stripped by Referrer-Policy) — only used when Origin is
- * entirely missing (e.g. beacon sendBeacon() without CORS).
- */
-const REFERER_FALLBACK_HOSTS = new Set([
-  "console.kubestellar.io",
-  "localhost",
-  "127.0.0.1",
-])
-
 function isRequestAllowed(req: Request): boolean {
-  // Require the CORS allowlist via the Origin header.
-  // Origin header is the authoritative signal from the browser and cannot be omitted
-  // without violating CORS spec for credentialed or cross-origin requests.
-  const origin = req.headers.get("origin")
-  if (isAllowedOrigin(origin)) return true
-
-  // Fall back to Referer for requests where Origin is not sent.
-  // Referer is weaker (can be stripped by Referrer-Policy) but still validated against
-  // explicit fallback hosts. We no longer allow both headers to be absent.
-  const referer = req.headers.get("referer")
-  if (referer) {
-    try {
-      const hostname = new URL(referer).hostname
-      if (REFERER_FALLBACK_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
-        return true
-      }
-    } catch {
-      /* ignore parse errors */
-    }
-  }
-
-  // Reject if neither Origin nor Referer is present.
-  // This prevents unauthenticated server-to-server requests from abusing the proxy.
-  return false
+  return isAllowedAnalyticsProxyRequest(req, { requireOrigin: true })
 }
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).

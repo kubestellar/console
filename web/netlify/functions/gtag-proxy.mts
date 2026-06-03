@@ -16,12 +16,22 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { isAllowedAnalyticsProxyRequest } from "./_shared"
 
 const GTAG_BASE_URL = "https://www.googletagmanager.com/gtag/js"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
 const MAX_RESPONSE_BYTES = 512_000 // 512 KB — gtag.js is ~90 KB
+const VARY_ANALYTICS_HEADERS = "Origin, Referer"
+const FORBIDDEN_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  Vary: VARY_ANALYTICS_HEADERS,
+}
 
 export default async (req: Request) => {
+  if (!isAllowedAnalyticsProxyRequest(req, { requireOrigin: false })) {
+    return new Response("Forbidden", { status: 403, headers: FORBIDDEN_HEADERS })
+  }
+
   const url = new URL(req.url)
   const queryString = url.search || ""
 
@@ -57,6 +67,7 @@ export default async (req: Request) => {
         "Content-Type": "application/javascript; charset=utf-8",
         "Cache-Control": `public, max-age=${CACHE_MAX_AGE_SECS}`,
         "X-Content-Type-Options": "nosniff",
+        Vary: VARY_ANALYTICS_HEADERS,
       },
     })
   } catch {

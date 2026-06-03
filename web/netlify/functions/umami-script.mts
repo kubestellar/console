@@ -10,14 +10,24 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { isAllowedAnalyticsProxyRequest } from "./_shared"
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 
 /** Upstream Umami instance — the custom script name is "ksc" */
 const UMAMI_SCRIPT_URL = "https://analytics.kubestellar.io/ksc"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
 const MAX_SCRIPT_BYTES = 1_048_576
+const VARY_ANALYTICS_HEADERS = "Origin, Referer"
+const FORBIDDEN_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  Vary: VARY_ANALYTICS_HEADERS,
+}
 
 export default async (req: Request) => {
+  if (!isAllowedAnalyticsProxyRequest(req, { requireOrigin: false })) {
+    return new Response("Forbidden", { status: 403, headers: FORBIDDEN_HEADERS })
+  }
+
   try {
     const resp = await fetch(UMAMI_SCRIPT_URL, {
       headers: {
@@ -38,6 +48,7 @@ export default async (req: Request) => {
         "Content-Type": "application/javascript; charset=utf-8",
         "Cache-Control": `public, max-age=${CACHE_MAX_AGE_SECS}`,
         "X-Content-Type-Options": "nosniff",
+        Vary: VARY_ANALYTICS_HEADERS,
       },
     })
   } catch (err) {

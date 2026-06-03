@@ -12,7 +12,7 @@
  */
 
 import type { Config } from "@netlify/functions"
-import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared";
+import { buildCorsHeaders, handlePreflight, isAllowedAnalyticsProxyRequest } from "./_shared";
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
@@ -22,33 +22,8 @@ const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_BODY_BYTES = 65_536;
 const MAX_UPSTREAM_TEXT_BYTES = 1_048_576;
 
-function normalizeOrigin(header: string | null): string | null {
-  if (!header) return null;
-  try {
-    return new URL(header).origin;
-  } catch {
-    return header;
-  }
-}
-
 function isAllowedAnalyticsClient(req: Request): boolean {
-  // Require the Origin header to be present and allowed.
-  // Origin is the authoritative CORS header and is always sent by browsers for cross-origin requests.
-  // This prevents spoofed requests from non-browser HTTP clients.
-  const origin = normalizeOrigin(req.headers.get("origin"));
-  if (origin && isAllowedOrigin(origin)) {
-    return true;
-  }
-
-  // Fall back to Referer validation for same-origin or Referrer-Policy-stripped requests.
-  // Referer is weaker (can be stripped) but still validated against the allowlist.
-  const referer = normalizeOrigin(req.headers.get("referer"));
-  if (referer && isAllowedOrigin(referer)) {
-    return true;
-  }
-
-  // Reject if neither header is present or allowed.
-  return false;
+  return isAllowedAnalyticsProxyRequest(req, { requireOrigin: true });
 }
 
 export default async (req: Request) => {
