@@ -179,18 +179,39 @@ func TestKagentiProviderProxyHandler_ChatUsesGenericPromptWhenInventoryDisabled(
 	assert.Equal(t, buildKagentiGenericPrompt("original"), gotMessage)
 }
 
-func TestBuildKagentiInventoryPromptIncludesClusterDetails(t *testing.T) {
+func TestBuildKagentiInventoryPromptIncludesOnlySanitizedClusterDetails(t *testing.T) {
 	message := buildKagentiInventoryPrompt("check cluster health", []k8s.ClusterInfo{{
 		Name:      "cluster-a",
 		Healthy:   true,
 		NodeCount: 3,
 		PodCount:  42,
+		Server:    "https://10.0.0.1:6443",
+		User:      "cluster-admin",
 	}})
 
 	assert.Contains(t, message, "You are a helpful Kubernetes assistant")
 	assert.Contains(t, message, "Cluster: cluster-a")
 	assert.Contains(t, message, "Status: Healthy")
-	assert.Contains(t, message, "Nodes: 3")
-	assert.Contains(t, message, "Pods: 42")
+	assert.NotContains(t, message, "Nodes: 3")
+	assert.NotContains(t, message, "Pods: 42")
+	assert.NotContains(t, message, "10.0.0.1")
+	assert.NotContains(t, message, "cluster-admin")
 	assert.Contains(t, message, "check cluster health")
+}
+
+func TestSanitizeKagentiClusterInventoryRedactsSensitiveFields(t *testing.T) {
+	summaries := sanitizeKagentiClusterInventory([]k8s.ClusterInfo{{
+		Name:          "cluster-a",
+		Healthy:       false,
+		HealthUnknown: true,
+		Server:        "https://10.0.0.1:6443",
+		User:          "cluster-admin",
+		NodeCount:     3,
+		PodCount:      42,
+	}})
+
+	assert.Equal(t, []kagentiClusterSummary{{
+		Name:   "cluster-a",
+		Status: "Unknown",
+	}}, summaries)
 }

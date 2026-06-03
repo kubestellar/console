@@ -335,30 +335,49 @@ func buildKagentiGenericPrompt(message string) string {
 	return kagentiGenericPrompt + "\n\n" + message
 }
 
+type kagentiClusterSummary struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
 func buildKagentiInventoryPrompt(message string, clusters []k8s.ClusterInfo) string {
 	var contextBuilder strings.Builder
 	contextBuilder.WriteString(kagentiGenericPrompt)
 	contextBuilder.WriteString("\nCluster inventory:\n\n")
 
-	for _, cluster := range clusters {
+	for _, cluster := range sanitizeKagentiClusterInventory(clusters) {
 		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
-		if cluster.Healthy {
-			contextBuilder.WriteString("  Status: Healthy\n")
-		} else {
-			contextBuilder.WriteString("  Status: Unhealthy\n")
-		}
-		contextBuilder.WriteString(fmt.Sprintf("  Nodes: %d\n", cluster.NodeCount))
-		contextBuilder.WriteString(fmt.Sprintf("  Pods: %d\n", cluster.PodCount))
-		contextBuilder.WriteString("\n")
+		contextBuilder.WriteString(fmt.Sprintf("  Status: %s\n\n", cluster.Status))
 	}
 
 	contextBuilder.WriteString("You can use the following tools to query cluster state:\n")
-	contextBuilder.WriteString("- get_cluster_list: Returns detailed cluster information\n")
+	contextBuilder.WriteString("- get_cluster_list: Returns cluster names and health status\n")
 	contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns pods in a namespace\n")
 	contextBuilder.WriteString("- get_events(cluster, namespace): Returns recent warning events\n\n")
 	contextBuilder.WriteString(message)
 
 	return contextBuilder.String()
+}
+
+func sanitizeKagentiClusterInventory(clusters []k8s.ClusterInfo) []kagentiClusterSummary {
+	summaries := make([]kagentiClusterSummary, 0, len(clusters))
+	for _, cluster := range clusters {
+		summaries = append(summaries, kagentiClusterSummary{
+			Name:   cluster.Name,
+			Status: kagentiClusterStatus(cluster),
+		})
+	}
+	return summaries
+}
+
+func kagentiClusterStatus(cluster k8s.ClusterInfo) string {
+	if cluster.HealthUnknown {
+		return "Unknown"
+	}
+	if cluster.Healthy {
+		return "Healthy"
+	}
+	return "Unhealthy"
 }
 
 func (h *KagentiProviderProxyHandler) prepareChatMessage(c *fiber.Ctx, message string) string {
@@ -418,7 +437,7 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 
 	tools = append(tools, map[string]any{
 		"name":        "get_cluster_list",
-		"description": "Returns a list of all Kubernetes clusters with health status, node count, and pod count",
+		"description": "Returns cluster names and health status only",
 		"inputSchema": map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
@@ -518,7 +537,7 @@ func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"tool":   "get_cluster_list",
-		"result": clusters,
+		"result": sanitizeKagentiClusterInventory(clusters),
 	})
 }
 

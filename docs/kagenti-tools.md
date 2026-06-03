@@ -6,7 +6,7 @@ This document describes how KubeStellar Console provides cluster context and too
 
 Kagenti agents running in your Kubernetes clusters can now access cluster state through a bridge provided by the KubeStellar Console backend. When you send a message to a Kagenti agent through the console, the system automatically:
 
-1. **Injects cluster context** — A structured summary of all clusters, their health status, node counts, and pod counts is prepended to your message
+1. **Injects cluster context** — A structured summary of cluster names and basic health status is prepended to your message for admin chats
 2. **Exposes console tools** — Agents can invoke tools to query cluster state in real-time
 3. **Routes tool calls** — Tool invocations are proxied through the console backend to the appropriate Kubernetes API handlers
 
@@ -23,7 +23,7 @@ sequenceDiagram
     User->>Frontend: "How many pods are running?"
     Frontend->>Console Backend: POST /api/kagenti-provider/chat
     Console Backend->>K8s API: Get cluster summary
-    K8s API-->>Console Backend: Cluster list with health/nodes/pods
+    K8s API-->>Console Backend: Cluster list with basic health status
     Console Backend->>Console Backend: Inject context into message
     Console Backend->>Kagenti Agent: Invoke with enriched message
     Kagenti Agent->>Kagenti Agent: Process message + context
@@ -38,7 +38,7 @@ sequenceDiagram
 
 ## Cluster Context Injection
 
-Every chat message sent to a Kagenti agent is automatically enriched with cluster context. The console backend prepends a system context block to the user's message.
+Admin chat messages sent to a Kagenti agent can be enriched with sanitized cluster context. The console backend prepends a system context block to the user's message only when inventory injection is enabled.
 
 ### Context Block Schema
 
@@ -48,21 +48,15 @@ You have access to the following Kubernetes clusters:
 
 Cluster: production-us-east
   Status: Healthy
-  Nodes: 12
-  Pods: 287
 
 Cluster: staging-eu-west
   Status: Healthy
-  Nodes: 4
-  Pods: 58
 
 Cluster: dev-local
   Status: Unhealthy
-  Nodes: 1
-  Pods: 5
 
 You can use the following tools to query cluster state:
-- get_cluster_list: Returns detailed cluster information
+- get_cluster_list: Returns cluster names and health status only
 - get_pod_list(cluster, namespace): Returns pods in a namespace
 - get_events(cluster, namespace): Returns recent warning events
 
@@ -77,7 +71,7 @@ You can use the following tools to query cluster state:
 2. Frontend calls `POST /api/kagenti-provider/chat` with the message
 3. Console backend:
    - Queries `DeduplicatedClusters()` to get cluster list
-   - Builds context block with cluster names, health, node count, pod count
+   - Builds context block with cluster names and health status only
    - Prepends context block to the user's message
 4. Enriched message is forwarded to the Kagenti agent
 5. Agent receives both the context and the user's query in a single invocation
@@ -90,7 +84,7 @@ Cluster context gathering has a 10-second timeout. If cluster queries fail or ti
 
 ### 1. get_cluster_list
 
-Returns a list of all deduplicated Kubernetes clusters with health status, node count, and pod count.
+Returns a list of deduplicated Kubernetes clusters with names and health status only.
 
 **Input Schema:**
 ```json
@@ -107,17 +101,11 @@ Returns a list of all deduplicated Kubernetes clusters with health status, node 
   "result": [
     {
       "name": "production-us-east",
-      "context": "prod-us-east-ctx",
-      "healthy": true,
-      "nodeCount": 12,
-      "podCount": 287
+      "status": "Healthy"
     },
     {
       "name": "staging-eu-west",
-      "context": "staging-eu-ctx",
-      "healthy": true,
-      "nodeCount": 4,
-      "podCount": 58
+      "status": "Healthy"
     }
   ]
 }
@@ -255,7 +243,7 @@ Lists available console tools for Kagenti agents.
   "tools": [
     {
       "name": "get_cluster_list",
-      "description": "Returns a list of all Kubernetes clusters with health status, node count, and pod count",
+      "description": "Returns cluster names and health status only",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -337,7 +325,7 @@ Routes tool calls to the appropriate console handlers.
 
 ### POST /api/kagenti-provider/chat
 
-Streams a Kagenti agent conversation via SSE. Cluster inventory is injected only for console admins, and can be disabled entirely with `KAGENTI_DISABLE_INVENTORY=true`.
+Streams a Kagenti agent conversation via SSE. Cluster inventory is injected only for console admins, can be disabled entirely with `KAGENTI_DISABLE_INVENTORY=true`, and is limited to cluster names plus basic health status.
 
 **Request:**
 ```json
@@ -438,7 +426,7 @@ If your tool should be advertised in the cluster context block, update `enrichMe
 
 ```go
 contextBuilder.WriteString("You can use the following tools to query cluster state:\n")
-contextBuilder.WriteString("- get_cluster_list: Returns detailed cluster information\n")
+contextBuilder.WriteString("- get_cluster_list: Returns cluster names and health status only\n")
 contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns pods in a namespace\n")
 contextBuilder.WriteString("- get_events(cluster, namespace): Returns recent warning events\n")
 contextBuilder.WriteString("- get_deployments(cluster, namespace): Returns deployments\n")
