@@ -10,7 +10,10 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +35,7 @@ func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagent
 
 func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 	t.Run("Nil Client", func(t *testing.T) {
-		h := NewKagentiProviderProxyHandler(nil, nil, nil)
+		h := NewKagentiProviderProxyHandler(nil, nil, nil, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -57,7 +60,7 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 			LLMProvider:         "openai",
 			APIKeyConfigured:    true,
 			ConfiguredProviders: []string{"openai"},
-		}}, nil)
+		}}, nil, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -87,7 +90,7 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 		},
 	}
 
-	h := NewKagentiProviderProxyHandler(nil, manager, nil)
+	h := NewKagentiProviderProxyHandler(nil, manager, nil, nil)
 	app := fiber.New()
 	app.Patch("/config", h.UpdateConfig)
 
@@ -102,6 +105,40 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&payload)
 	assert.Equal(t, "anthropic", payload["llm_provider"])
 	assert.Equal(t, true, payload["api_key_configured"])
+}
+
+func TestKagentiProviderProxyHandler_CallToolDirectRequiresAdmin(t *testing.T) {
+	tests := []struct {
+		name       string
+		role       models.UserRole
+		wantStatus int
+	}{
+		{name: "viewer forbidden", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
+		{name: "admin reaches handler", role: models.UserRoleAdmin, wantStatus: http.StatusServiceUnavailable},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			mockStore := new(test.MockStore)
+			userID := uuid.New()
+			mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: tt.role}, nil).Once()
+
+			h := NewKagentiProviderProxyHandler(nil, nil, nil, mockStore)
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("userID", userID)
+				return c.Next()
+			})
+			app.Post("/tools/call-direct", h.CallToolDirect)
+
+			req := httptest.NewRequest(http.MethodPost, "/tools/call-direct", bytes.NewBufferString(`{"tool":"get_cluster_list"}`))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+			mockStore.AssertExpectations(t)
+		})
+	}
 }
 
 func TestWriteSSEDataEvent_PreservesMultilinePayloads(t *testing.T) {
