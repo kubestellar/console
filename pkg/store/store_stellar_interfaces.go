@@ -106,7 +106,7 @@ type StellarWatchStore interface {
 type StellarObservationStore interface {
 	CreateObservation(ctx context.Context, obs *StellarObservation) (string, error)
 	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]StellarObservation, error)
-	GetUnshownObservations(ctx context.Context) ([]StellarObservation, error)
+	GetUnshownObservations(ctx context.Context, userID string) ([]StellarObservation, error)
 	MarkObservationShown(ctx context.Context, id string) error
 }
 

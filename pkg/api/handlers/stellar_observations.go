@@ -446,7 +446,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 					return false
 				}
 			}
-			observations, err := h.store.GetUnshownObservations(streamCtx)
+			observations, err := h.store.GetUnshownObservations(streamCtx, userID)
 			if err == nil && len(observations) > 0 {
 				next := observations[0]
 				payload := fiber.Map{

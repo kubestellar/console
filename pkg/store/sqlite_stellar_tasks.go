@@ -136,8 +136,8 @@ func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObserva
 		obs.ID = uuid.NewString()
 	}
 	if _, err := s.db.ExecContext(ctx, `INSERT INTO stellar_observations (
-		id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
+		id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, user_id, created_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
 		obs.ID,
 		obs.Cluster,
 		obs.Kind,
@@ -146,6 +146,7 @@ func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObserva
 		obs.RefType,
 		obs.RefID,
 		boolToInt(obs.ShownToUser),
+		obs.UserID,
 		nullableTime(obs.CreatedAt),
 	); err != nil {
 		return "", err
@@ -182,11 +183,11 @@ func (s *SQLiteStore) GetRecentObservations(ctx context.Context, cluster string,
 }
 
 
-func (s *SQLiteStore) GetUnshownObservations(ctx context.Context) ([]StellarObservation, error) {
+func (s *SQLiteStore) GetUnshownObservations(ctx context.Context, userID string) ([]StellarObservation, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
 		FROM stellar_observations
-		WHERE shown_to_user = 0
-		ORDER BY created_at ASC`)
+		WHERE shown_to_user = 0 AND (user_id = ? OR user_id = '')
+		ORDER BY created_at ASC`, userID)
 	if err != nil {
 		return nil, err
 	}
