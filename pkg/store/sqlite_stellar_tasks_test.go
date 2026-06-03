@@ -274,17 +274,22 @@ func TestGetRecentObservations_NoClusterReturnsAll(t *testing.T) {
 
 func TestGetUnshownObservations_AndMarkShown(t *testing.T) {
 	s := newTestStore(t)
-	obs := &StellarObservation{Cluster: "prod-a", Kind: "Alert", Summary: "new alert", ShownToUser: false}
+	obs := &StellarObservation{Cluster: "prod-a", Kind: "Alert", Summary: "new alert", ShownToUser: false, UserID: "user-1"}
 	id, err := s.CreateObservation(ctx, obs)
 	require.NoError(t, err)
 
-	unshown, err := s.GetUnshownObservations(ctx)
+	unshown, err := s.GetUnshownObservations(ctx, "user-1")
 	require.NoError(t, err)
 	require.Len(t, unshown, 1)
 
-	require.NoError(t, s.MarkObservationShown(ctx, id))
+	// Different user should not see another user's observations
+	unshown, err = s.GetUnshownObservations(ctx, "user-2")
+	require.NoError(t, err)
+	assert.Empty(t, unshown)
 
-	unshown, err = s.GetUnshownObservations(ctx)
+	require.NoError(t, s.MarkObservationShown(ctx, id, "user-1"))
+
+	unshown, err = s.GetUnshownObservations(ctx, "user-1")
 	require.NoError(t, err)
 	assert.Empty(t, unshown)
 }

@@ -778,10 +778,10 @@ func (m *MockStore) CreateObservation(_ context.Context, _ *store.StellarObserva
 func (m *MockStore) GetRecentObservations(_ context.Context, _ string, _ int) ([]store.StellarObservation, error) {
 	return nil, nil
 }
-func (m *MockStore) GetUnshownObservations(_ context.Context) ([]store.StellarObservation, error) {
+func (m *MockStore) GetUnshownObservations(_ context.Context, _ string) ([]store.StellarObservation, error) {
 	return nil, nil
 }
-func (m *MockStore) MarkObservationShown(_ context.Context, _ string) error { return nil }
+func (m *MockStore) MarkObservationShown(_ context.Context, _ string, _ string) error { return nil }
 
 func (m *MockStore) CreateSolve(_ context.Context, _ *store.StellarSolve) error { return nil }
 func (m *MockStore) GetSolveByID(_ context.Context, _ string) (*store.StellarSolve, error) {

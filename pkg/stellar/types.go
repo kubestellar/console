@@ -156,6 +156,7 @@ type Task struct {
 // Observation is Stellar's internal observation journal entry.
 type Observation struct {
 	ID          string    `json:"id"`
+	UserID      string    `json:"userId,omitempty"`
 	Cluster     string    `json:"cluster"`
 	Kind        string    `json:"kind"` // noticed|suggested|acted|reminded|escalated
 	Summary     string    `json:"summary"`

@@ -128,8 +128,8 @@ type StellarStore interface {
 
 	CreateObservation(ctx context.Context, obs *store.StellarObservation) (string, error)
 	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]store.StellarObservation, error)
-	GetUnshownObservations(ctx context.Context) ([]store.StellarObservation, error)
-	MarkObservationShown(ctx context.Context, id string) error
+	GetUnshownObservations(ctx context.Context, userID string) ([]store.StellarObservation, error)
+	MarkObservationShown(ctx context.Context, id string, userID string) error
 
 	GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]store.StellarWatch, error)
 	GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)

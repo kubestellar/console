@@ -688,6 +688,9 @@ func (s *SQLiteStore) migrate() error {
 			hit_count INTEGER NOT NULL DEFAULT 0,
 			last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
+		// SECURITY: Add user_id to observations so SSE streams are user-scoped (CWE-200, #16814).
+		"ALTER TABLE stellar_observations ADD COLUMN user_id TEXT NOT NULL DEFAULT ''",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_shown ON stellar_observations(user_id, shown_to_user)",
 	}
 	for i, migration := range migrations {
 		version := i + 1

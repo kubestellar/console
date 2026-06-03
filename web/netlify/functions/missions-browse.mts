@@ -53,6 +53,20 @@ function hasInvalidPathInput(value: string): boolean {
   return value.length > 1000 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
 }
 
+/**
+ * SECURITY: Allowlist of valid top-level path prefixes to prevent cache-miss amplification (CWE-400, #16817).
+ * Only these directory prefixes are valid in the KB repo.
+ */
+const ALLOWED_PATH_PREFIXES = ["fixes/", "tutorials/", "guides/", "references/", "examples/", "scenarios/", "missions/"];
+
+/** Negative-cache TTL: cache 404 responses briefly to prevent repeated lookups (30 seconds). */
+const NEGATIVE_CACHE_TTL_MS = 30_000;
+
+function isAllowedPath(path: string): boolean {
+  if (path === "" || path === "/") return true;
+  return ALLOWED_PATH_PREFIXES.some((prefix) => path === prefix.slice(0, -1) || path.startsWith(prefix));
+}
+
 export default async (request: Request): Promise<Response> => {
   if (request.method === "OPTIONS") {
     return handlePreflight(request, CORS_OPTS);
@@ -65,12 +79,20 @@ export default async (request: Request): Promise<Response> => {
   if (path && hasInvalidPathInput(path)) {
     return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
   }
+  // SECURITY: Reject paths not matching known KB directory prefixes (#16817).
+  if (path && !isAllowedPath(path)) {
+    return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
+  }
   const cacheKey = `browse:${path}`;
 
   try {
     // Check Netlify Blobs cache first
     const store = getStore("missions-cache");
     const cached = await store.get(cacheKey, { type: "json" }) as BrowseCacheEntry | null;
+    // SECURITY: Honor negative-cache entries for recently 404'd paths (#16817).
+    if (cached && cached.body === "[]" && Date.now() - cached.fetchedAt < NEGATIVE_CACHE_TTL_MS) {
+      return jsonResponse(corsHeaders, { error: "not found" }, 404);
+    }
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
       return new Response(cached.body, {
         status: 200,
@@ -104,6 +126,12 @@ export default async (request: Request): Promise<Response> => {
     }
 
     if (!resp.ok) {
+      // SECURITY: Negative-cache 404 responses to prevent repeated lookups of invalid paths (CWE-400, #16817).
+      if (resp.status === 404) {
+        const negativeEntry: BrowseCacheEntry = { body: "[]", fetchedAt: Date.now() };
+        store.set(cacheKey, JSON.stringify(negativeEntry)).catch(() => {});
+        return jsonResponse(corsHeaders, { error: "not found" }, 404);
+      }
       // If GitHub fails but we have stale cache, serve it
       if (cached) {
         return new Response(cached.body, {
