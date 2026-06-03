@@ -26,14 +26,13 @@ describe("corsOrigin", () => {
     expect(corsOrigin(ALLOWED_ORIGINS[1])).toBe(ALLOWED_ORIGINS[1]);
   });
 
-  it("allows localhost and kubestellar domains", () => {
+  it("allows explicit development origins", () => {
     expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
-    expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(
-      "https://console-preview.kubestellar.io",
-    );
+    expect(corsOrigin("http://localhost:8080")).toBe("http://localhost:8080");
   });
 
   it("falls back to the default origin for unknown or missing origins", () => {
+    expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(ALLOWED_ORIGINS[0]);
     expect(corsOrigin("https://example.com")).toBe(ALLOWED_ORIGINS[0]);
     expect(corsOrigin(null)).toBe(ALLOWED_ORIGINS[0]);
   });

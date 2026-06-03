@@ -23,7 +23,8 @@ export const UNKNOWN_REPO = "unknown/repo";
 export const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
   "https://kubestellar.io",
-  "https://www.kubestellar.io",
+  "http://localhost:5174",
+  "http://localhost:8080",
 ];
 /** AI-generated label used to classify AI contributions */
 export const AI_LABEL = "ai-generated";
@@ -67,15 +68,10 @@ export interface GitTreeEntry {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Validate CORS origin via URL-parsed hostname check */
+/** Restrict CORS to an explicit allowlist of known console origins. */
 export function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
-  } catch { /* invalid URL */ }
   return ALLOWED_ORIGINS[0];
 }
 

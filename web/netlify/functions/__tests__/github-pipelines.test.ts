@@ -107,6 +107,28 @@ describe("github-pipelines", () => {
     expect(res.status).toBe(204);
   });
 
+  it("echoes explicitly allowed development origins", async () => {
+    const res = await handler(
+      new Request("https://console.kubestellar.io/api/github-pipelines", {
+        method: "OPTIONS",
+        headers: { Origin: "http://localhost:8080" },
+      }),
+    );
+
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:8080");
+  });
+
+  it("falls back to the production origin for disallowed origins", async () => {
+    const res = await handler(
+      new Request("https://console.kubestellar.io/api/github-pipelines", {
+        method: "OPTIONS",
+        headers: { Origin: "https://console-preview.kubestellar.io" },
+      }),
+    );
+
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://console.kubestellar.io");
+  });
+
   it("returns 500 when GITHUB_TOKEN is not configured", async () => {
     delete process.env.GITHUB_TOKEN;
     const res = await handler(makeRequest());

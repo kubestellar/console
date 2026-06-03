@@ -75,7 +75,8 @@ export const MS_PER_DAY = 86_400_000;
 export const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
   "https://kubestellar.io",
-  "https://www.kubestellar.io",
+  "http://localhost:5174",
+  "http://localhost:8080",
 ];
 
 /** GitHub API fetch with auth + typed error */
