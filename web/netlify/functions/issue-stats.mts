@@ -17,6 +17,7 @@ import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+const ALLOWED_REPO_OWNER = "kubestellar";
 /** Server-side cache TTL (1 hour) */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 /** GitHub API results per page (max 100) */
@@ -51,6 +52,11 @@ interface DailyStats {
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+function isAllowedRepo(repo: string): boolean {
+  const [owner, name] = repo.split("/");
+  return Boolean(owner && name) && owner.toLowerCase() === ALLOWED_REPO_OWNER;
 }
 
 function generateDateRange(start: Date, end: Date): string[] {
@@ -136,6 +142,15 @@ export default async function handler(request: Request): Promise<Response> {
       JSON.stringify({ error: "Invalid repo format" }),
       {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+  if (!isAllowedRepo(repo)) {
+    return new Response(
+      JSON.stringify({ error: "Repository not allowed" }),
+      {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );

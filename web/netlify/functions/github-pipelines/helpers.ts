@@ -37,6 +37,11 @@ export function isValidRepo(repo: string | null): boolean {
   return !!repo && VALID_REPO_PATTERN.test(repo);
 }
 
+export function isAllowlistedRepo(repo: string | null, allowedRepos: readonly string[]): repo is string {
+  if (!isValidRepo(repo)) return false;
+  return allowedRepos.includes(repo);
+}
+
 export async function readCache<T>(
   store: ReturnType<typeof getStore>,
   key: string

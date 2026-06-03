@@ -18,6 +18,7 @@ export const API_TIMEOUT_MS = 15_000;
 export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+export const ALLOWED_REPO_OWNER = "kubestellar";
 export const UNKNOWN_REPO = "unknown/repo";
 /** Allowed CORS origins (exact match) */
 export const ALLOWED_ORIGINS = [
@@ -121,6 +122,11 @@ function globToRegExp(pattern: string): RegExp {
     .replaceAll(GLOBSTAR_TOKEN, ".*");
 
   return new RegExp(`^${regexPattern}$`);
+}
+
+export function isAllowedRepo(repo: string): boolean {
+  const [owner, name] = repo.split("/");
+  return Boolean(owner && name) && owner.toLowerCase() === ALLOWED_REPO_OWNER;
 }
 
 export function matchesHint(treePaths: Set<string>, hint: DetectionHint): boolean {
