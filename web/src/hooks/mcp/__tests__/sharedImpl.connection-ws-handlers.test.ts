@@ -24,6 +24,7 @@ vi.mock('../../../lib/api', () => ({
 
 vi.mock('../../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: vi.fn(async (url: string) => url),
+  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
 vi.mock('../wsDetect', () => ({

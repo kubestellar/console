@@ -43,6 +43,7 @@ vi.mock('../mcp/shared', () => ({
 
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: mockAppendWsAuthToken,
+  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
 }))
 
 vi.mock('../../lib/constants', async (importOriginal) => {

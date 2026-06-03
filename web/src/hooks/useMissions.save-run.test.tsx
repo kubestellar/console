@@ -30,6 +30,7 @@ vi.mock('./useLocalAgent', () => ({
 
 vi.mock('../lib/utils/wsAuth', () => ({
   appendWsAuthToken: vi.fn((url: string) => url),
+  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
 vi.mock('./useTokenUsage', () => ({

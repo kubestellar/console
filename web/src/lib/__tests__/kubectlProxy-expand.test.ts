@@ -13,6 +13,7 @@ let mockIsNetlify = false
 
 vi.mock('../utils/wsAuth', () => ({
   appendWsAuthToken: (url: string) => url,
+  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
 }))
 
 vi.mock('../demoMode', () => ({
