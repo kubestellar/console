@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -30,14 +31,16 @@ type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
 }
 
@@ -236,6 +239,11 @@ type kagentiConfigUpdateRequest struct {
 
 // UpdateConfig updates the in-cluster Kagenti LLM provider configuration.
 func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
+	// Mutating LLM provider config requires admin privileges (CWE-285, #16458).
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.configManager == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti config not available"})
 	}

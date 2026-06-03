@@ -170,7 +170,11 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     persist: true,
     enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
     fetcher: async () => {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      // Only attach the session token to same-origin requests to prevent
+      // exfiltration to attacker-controlled URLs (CWE-610, #16506).
+      const isSameOrigin = apiEndpoint.startsWith('/') ||
+        apiEndpoint.startsWith(window.location.origin)
+      const token = isSameOrigin ? localStorage.getItem(STORAGE_KEY_TOKEN) : null
       const res = await fetch(apiEndpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
