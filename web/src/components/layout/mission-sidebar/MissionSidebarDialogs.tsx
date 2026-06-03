@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import type { Mission } from '../../../hooks/useMissions'
@@ -42,6 +43,8 @@ function SavedMissionDetailModal({
   onRunMission,
   onToggleRaw,
 }: SavedMissionDetailModalProps) {
+  const { t } = useTranslation()
+
   return (
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
@@ -56,6 +59,9 @@ function SavedMissionDetailModal({
           onClose()
         }
       }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('missions.savedMissionDetails', 'Saved mission details')}
       tabIndex={-1}
       ref={(element) => element?.focus()}
     >
@@ -66,6 +72,7 @@ function SavedMissionDetailModal({
         <div className="flex justify-end p-3 pb-0 shrink-0">
           <button
             onClick={onClose}
+            aria-label={t('actions.close')}
             className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />

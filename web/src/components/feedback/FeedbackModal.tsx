@@ -384,7 +384,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
-      aria-label="Submit Feedback"
+      aria-labelledby={titleId}
     >
       <ConfirmDialog
         isOpen={showDiscardConfirm}

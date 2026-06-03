@@ -713,6 +713,9 @@ export function SidebarShell({
           isMobile && config.isMobileOpen && 'translate-x-0'
         )}
         style={{ width: isMobile ? SIDEBAR_DEFAULT_WIDTH_PX : sidebarWidth }}
+        role={isMobile && config.isMobileOpen ? 'dialog' : undefined}
+        aria-modal={isMobile && config.isMobileOpen ? true : undefined}
+        aria-label={isMobile && config.isMobileOpen ? 'Sidebar navigation' : undefined}
       >
         {/* Branding header */}
         {branding && !isCollapsed && (

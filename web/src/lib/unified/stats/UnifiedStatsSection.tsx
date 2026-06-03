@@ -5,7 +5,7 @@
  * collapsing and a configuration modal.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -223,6 +223,7 @@ function StatsConfigModal({
   defaultBlocks,
   title }: StatsConfigModalProps) {
   const [localBlocks, setLocalBlocks] = useState(blocks)
+  const titleId = useId()
 
   if (!isOpen) return null
 
@@ -252,8 +253,13 @@ function StatsConfigModal({
       />
 
       {/* Modal */}
-      <div className="relative glass rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold mb-4">{title}</h2>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative glass rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto"
+      >
+        <h2 id={titleId} className="text-lg font-semibold mb-4">{title}</h2>
 
         {/* Block list */}
         <div className="space-y-2 mb-6">
