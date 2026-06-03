@@ -144,6 +144,68 @@ func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
 	}
 }
 
+func TestStartSolveIDOROwnershipCheck(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-idor.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	ctx := context.Background()
+
+	ownerID := uuid.New()
+	attackerID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: ownerID, GitHubID: "10", GitHubLogin: "owner", Role: models.UserRoleAdmin}))
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: attackerID, GitHubID: "11", GitHubLogin: "attacker", Role: models.UserRoleAdmin}))
+
+	// Create a notification owned by ownerID.
+	notif := &store.StellarNotification{
+		ID:        uuid.New().String(),
+		UserID:    ownerID.String(),
+		Type:      "alert",
+		Severity:  "critical",
+		Title:     "Pod crash",
+		Cluster:   "prod-cluster",
+		Namespace: "default",
+		Status:    "active",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, notif))
+
+	h := NewStellarHandler(sqlStore, nil, WithUserStore(sqlStore))
+
+	solvePath := "/api/stellar/solve/" + notif.ID
+
+	t.Run("owner can start solve", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(func(c *fiber.Ctx) error {
+			c.Locals("userID", ownerID)
+			return c.Next()
+		})
+		app.Post("/api/stellar/solve/:id", h.StartSolve)
+
+		req := httptest.NewRequest(http.MethodPost, solvePath, strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, err)
+		// Expect either 202 (started) or 412 (no k8s client) — NOT 403.
+		assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("attacker gets 403 for other users notification", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(func(c *fiber.Ctx) error {
+			c.Locals("userID", attackerID)
+			return c.Next()
+		})
+		app.Post("/api/stellar/solve/:id", h.StartSolve)
+
+		req := httptest.NewRequest(http.MethodPost, solvePath, strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+}
+
 func readQueuedSSEEvent(t *testing.T, ch <-chan SSEEvent) SSEEvent {
 	t.Helper()
 	select {

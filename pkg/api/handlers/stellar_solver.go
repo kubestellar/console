@@ -611,6 +611,11 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "event not found"})
 	}
 
+	// Ownership check: only the notification owner may trigger a solve (CWE-639).
+	if notif.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
+	}
+
 	// Idempotent return for an already-running solve.
 	active, _ := full.GetActiveSolveForEvent(ctx, eventID)
 	if active != nil {
