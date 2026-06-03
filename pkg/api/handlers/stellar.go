@@ -168,20 +168,27 @@ type StellarStore interface {
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
 type StellarHandler struct {
 	store            StellarStore
+	userStore        store.UserStore // optional; enables role checks (#16709)
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
-	sseClients       map[string]chan SSEEvent
+	sseClients       map[string]*sseClient
 	sseClientsMu     sync.RWMutex
 }
 
-func (h *StellarHandler) registerSSEClient(connID string, ch chan SSEEvent) {
+// sseClient tracks an SSE connection and its owning user (#16708).
+type sseClient struct {
+	ch     chan SSEEvent
+	userID string
+}
+
+func (h *StellarHandler) registerSSEClient(connID string, userID string, ch chan SSEEvent) {
 	h.sseClientsMu.Lock()
 	defer h.sseClientsMu.Unlock()
 	if h.sseClients == nil {
-		h.sseClients = make(map[string]chan SSEEvent)
+		h.sseClients = make(map[string]*sseClient)
 	}
-	h.sseClients[connID] = ch
+	h.sseClients[connID] = &sseClient{ch: ch, userID: userID}
 }
 
 func (h *StellarHandler) unregisterSSEClient(connID string) {
@@ -190,12 +197,18 @@ func (h *StellarHandler) unregisterSSEClient(connID string) {
 	delete(h.sseClients, connID)
 }
 
+// broadcastToClients sends an SSE event to connected clients. If event.UserID
+// is set, only the matching user's connections receive it. If empty, the event
+// is broadcast to all connections (#16708, CWE-200).
 func (h *StellarHandler) broadcastToClients(event SSEEvent) {
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
-	for _, ch := range h.sseClients {
+	for _, client := range h.sseClients {
+		if event.UserID != "" && client.userID != event.UserID {
+			continue
+		}
 		select {
-		case ch <- event:
+		case client.ch <- event:
 		default: // client too slow, skip
 		}
 	}
@@ -210,8 +223,9 @@ type SSEBroadcaster interface {
 }
 
 type SSEEvent struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type   string      `json:"type"`
+	Data   interface{} `json:"data"`
+	UserID string      `json:"-"` // target user; empty = broadcast to all
 }
 
 func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
@@ -230,6 +244,13 @@ func (h *StellarHandler) SetProviderRegistry(reg *providers.Registry) {
 
 func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 	h.broadcaster = b
+}
+
+// SetUserStore wires user role lookups for authorization checks on mutating
+// endpoints (e.g., IngestEvent #16709). Optional — if unset, role checks are
+// skipped for backward compatibility in tests.
+func (h *StellarHandler) SetUserStore(us store.UserStore) {
+	h.userStore = us
 }
 
 // StartBackgroundWorkers launches long-running goroutines owned by the handler.
@@ -283,7 +304,7 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 			DedupeKey: dedupeKey,
 		}
 		_ = h.store.CreateStellarNotification(ctx, dueNotif)
-		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif})
+		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif, UserID: t.UserID})
 		if h.broadcaster != nil {
 			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
 				"taskId": t.ID,

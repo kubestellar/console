@@ -170,17 +170,7 @@ export function MissionBrowserSidebar({
 
               {node.id === 'github' && addingRepo && (
                 <div className="ml-6 mt-1 mb-2">
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      const val = newRepoValue.trim()
-                      if (val && !watchedRepos.includes(val)) {
-                        onAddRepo(val)
-                        showToast(t('missionBrowser.repoAddedToast', { value: val }), 'success')
-                      }
-                      setNewRepoValue('')
-                      setAddingRepo(false)
-                    }}
+                  <div
                     className="flex items-center gap-1"
                   >
                     <input
@@ -194,11 +184,29 @@ export function MissionBrowserSidebar({
                         if (e.key === 'Escape') {
                           setAddingRepo(false)
                           setNewRepoValue('')
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const val = newRepoValue.trim()
+                          if (val && !watchedRepos.includes(val)) {
+                            onAddRepo(val)
+                            showToast(t('missionBrowser.repoAddedToast', { value: val }), 'success')
+                          }
+                          setNewRepoValue('')
+                          setAddingRepo(false)
                         }
                       }}
                     />
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={() => {
+                        const val = newRepoValue.trim()
+                        if (val && !watchedRepos.includes(val)) {
+                          onAddRepo(val)
+                          showToast(t('missionBrowser.repoAddedToast', { value: val }), 'success')
+                        }
+                        setNewRepoValue('')
+                        setAddingRepo(false)
+                      }}
                       className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"
                     >
                       <CheckCircle className="w-3.5 h-3.5" />
@@ -213,23 +221,13 @@ export function MissionBrowserSidebar({
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                  </form>
+                  </div>
                 </div>
               )}
 
               {node.id === 'local' && addingPath && (
                 <div className="ml-6 mt-1 mb-2">
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      const val = newPathValue.trim()
-                      if (val && !watchedPaths.includes(val)) {
-                        onAddPath(val)
-                        showToast(t('missionBrowser.pathAddedToast', { value: val }), 'success')
-                      }
-                      setNewPathValue('')
-                      setAddingPath(false)
-                    }}
+                  <div
                     className="flex items-center gap-1"
                   >
                     <input
@@ -243,11 +241,29 @@ export function MissionBrowserSidebar({
                         if (e.key === 'Escape') {
                           setAddingPath(false)
                           setNewPathValue('')
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const val = newPathValue.trim()
+                          if (val && !watchedPaths.includes(val)) {
+                            onAddPath(val)
+                            showToast(t('missionBrowser.pathAddedToast', { value: val }), 'success')
+                          }
+                          setNewPathValue('')
+                          setAddingPath(false)
                         }
                       }}
                     />
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={() => {
+                        const val = newPathValue.trim()
+                        if (val && !watchedPaths.includes(val)) {
+                          onAddPath(val)
+                          showToast(t('missionBrowser.pathAddedToast', { value: val }), 'success')
+                        }
+                        setNewPathValue('')
+                        setAddingPath(false)
+                      }}
                       className="p-1 text-xs text-green-400 hover:text-green-300 min-h-11 min-w-11 flex items-center justify-center"
                     >
                       <CheckCircle className="w-3.5 h-3.5" />
@@ -262,7 +278,7 @@ export function MissionBrowserSidebar({
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                  </form>
+                  </div>
                 </div>
               )}
             </div>
