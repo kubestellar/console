@@ -32,6 +32,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 type TabId = 'install' | 'uninstall' | 'upgrade' | 'troubleshooting' | 'security'
 
@@ -478,9 +479,9 @@ export function MissionDetailView({
           {/* Source links */}
           {sourceUrls && (
             <div className="flex items-center gap-3 text-xs">
-              {sourceUrls.repo && (
+              {sourceUrls.repo && sanitizeUrl(sourceUrls.repo) !== 'about:blank' && (
                 <a
-                  href={sourceUrls.repo}
+                  href={sanitizeUrl(sourceUrls.repo)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -489,9 +490,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.repository')}
                 </a>
               )}
-              {sourceUrls.docs && sourceUrls.docs !== sourceUrls.repo && (
+              {sourceUrls.docs && sourceUrls.docs !== sourceUrls.repo && sanitizeUrl(sourceUrls.docs) !== 'about:blank' && (
                 <a
-                  href={sourceUrls.docs}
+                  href={sanitizeUrl(sourceUrls.docs)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -500,9 +501,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.documentation')}
                 </a>
               )}
-              {sourceUrls.helm && (
+              {sourceUrls.helm && sanitizeUrl(sourceUrls.helm) !== 'about:blank' && (
                 <a
-                  href={sourceUrls.helm}
+                  href={sanitizeUrl(sourceUrls.helm)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -511,9 +512,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.helmChart')}
                 </a>
               )}
-              {sourceUrls.issue && (
+              {sourceUrls.issue && sanitizeUrl(sourceUrls.issue) !== 'about:blank' && (
                 <a
-                  href={sourceUrls.issue}
+                  href={sanitizeUrl(sourceUrls.issue)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -522,9 +523,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.issue')}
                 </a>
               )}
-              {sourceUrls.pr && (
+              {sourceUrls.pr && sanitizeUrl(sourceUrls.pr) !== 'about:blank' && (
                 <a
-                  href={sourceUrls.pr}
+                  href={sanitizeUrl(sourceUrls.pr)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"

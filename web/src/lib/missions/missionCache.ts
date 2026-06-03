@@ -6,6 +6,7 @@
 import type { MissionExport, MissionMatch } from './types'
 import type { ClusterContext } from './clusterContext'
 import { MS_PER_HOUR, MS_PER_MINUTE } from '../constants/time'
+import { sanitizeUrl } from '../utils/sanitizeUrl'
 
 /** Cache time-to-live: 6 hours */
 const MISSION_CACHE_TTL_MS = 6 * MS_PER_HOUR
@@ -145,6 +146,23 @@ function indexEntryToMission(entry: IndexEntry): MissionExport {
 /** Timeout for fetching individual mission files (ms) */
 export const MISSION_FILE_FETCH_TIMEOUT_MS = 15_000
 
+/** Sanitize sourceUrls to only allow http/https schemes (prevents javascript: XSS). */
+function sanitizeSourceUrls(
+  urls: NonNullable<NonNullable<MissionExport['metadata']>['sourceUrls']>,
+): NonNullable<NonNullable<MissionExport['metadata']>['sourceUrls']> {
+  const SAFE_FALLBACK = 'about:blank'
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(urls)) {
+    if (typeof value === 'string') {
+      const sanitized = sanitizeUrl(value)
+      if (sanitized !== SAFE_FALLBACK) {
+        result[key] = sanitized
+      }
+    }
+  }
+  return result as typeof urls
+}
+
 /**
  * Fetch the full mission file and extract steps.
  *
@@ -193,7 +211,7 @@ export async function fetchMissionContent(
         qualityScore: fileMeta.qualityScore,
         maturity: fileMeta.maturity,
         projectVersion: fileMeta.projectVersion,
-        sourceUrls: fileMeta.sourceUrls,
+        sourceUrls: fileMeta.sourceUrls ? sanitizeSourceUrls(fileMeta.sourceUrls) : undefined,
       },
     }
 
