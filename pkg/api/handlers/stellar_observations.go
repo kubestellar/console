@@ -448,19 +448,24 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 			}
 			observations, err := h.store.GetUnshownObservations(streamCtx)
 			if err == nil && len(observations) > 0 {
-				next := observations[0]
-				payload := fiber.Map{
-					"id":      next.ID,
-					"summary": next.Summary,
-				}
-				if suggest := extractObservationSuggest(next.Detail); suggest != "" {
-					payload["suggest"] = suggest
-				}
-				if writeSSE(w, "observation", payload) != nil {
-					return false
-				}
-				if err := h.store.MarkObservationShown(streamCtx, next.ID); err != nil {
-					slog.Warn("stellar: mark observation shown failed", "observationID", next.ID, "error", err)
+				// SECURITY: Filter observations to user's watched clusters (CWE-200, #16814).
+				// Admins see all observations; non-admins only see observations from
+				// clusters they are actively watching.
+				next := filterObservationForUser(observations, userID, isAdmin, h.store, streamCtx)
+				if next != nil {
+					payload := fiber.Map{
+						"id":      next.ID,
+						"summary": next.Summary,
+					}
+					if suggest := extractObservationSuggest(next.Detail); suggest != "" {
+						payload["suggest"] = suggest
+					}
+					if writeSSE(w, "observation", payload) != nil {
+						return false
+					}
+					if err := h.store.MarkObservationShown(streamCtx, next.ID); err != nil {
+						slog.Warn("stellar: mark observation shown failed", "observationID", next.ID, "error", err)
+					}
 				}
 			}
 			state, err := h.buildState(streamCtx, userID)
@@ -763,4 +768,27 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dh %dm", h, m)
 	}
 	return fmt.Sprintf("%dm", m)
+}
+
+// filterObservationForUser returns the first observation that the user is authorized to see.
+// Admins see all observations. Non-admins only see observations from clusters they are
+// actively watching. This prevents information disclosure across user boundaries (CWE-200, #16814).
+func filterObservationForUser(observations []store.StellarObservation, userID string, isAdmin bool, s StellarStore, ctx context.Context) *store.StellarObservation {
+	if isAdmin {
+		return &observations[0]
+	}
+	watches, err := s.GetActiveWatches(ctx, userID)
+	if err != nil || len(watches) == 0 {
+		return nil
+	}
+	watchedClusters := make(map[string]struct{}, len(watches))
+	for _, w := range watches {
+		watchedClusters[w.Cluster] = struct{}{}
+	}
+	for i := range observations {
+		if _, ok := watchedClusters[observations[i].Cluster]; ok {
+			return &observations[i]
+		}
+	}
+	return nil
 }
