@@ -72,6 +72,9 @@ func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sC
 
 // CreateReservation creates a new GPU reservation
 func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
+	if err := RequireAdmin(c, h.store); err != nil {
+		return err
+	}
 	userID := middleware.GetUserID(c)
 
 	var input models.CreateGPUReservationInput
