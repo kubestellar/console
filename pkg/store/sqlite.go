@@ -276,6 +276,8 @@ const dbDirPerms = 0700
 // dbFilePerms restricts the database file to owner-only read/write.
 const dbFilePerms = 0600
 
+var osChmod = os.Chmod //nolint:gochecknoglobals // overridden in tests
+
 // ensureSecureDBPath creates the parent directory (owner-only) and pre-creates
 // the database file with 0600 permissions if it does not already exist. This
 // prevents the SQLite driver from creating files with a permissive umask on
@@ -286,12 +288,21 @@ func ensureSecureDBPath(dbPath string) error {
 	}
 
 	dir := filepath.Dir(dbPath)
+	_, statErr := os.Stat(dir)
+	dirExisted := statErr == nil
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("stat db directory: %w", statErr)
+	}
 	if err := os.MkdirAll(dir, dbDirPerms); err != nil {
 		return fmt.Errorf("create db directory: %w", err)
 	}
 	// Tighten directory permissions in case MkdirAll inherited a wider umask.
-	if err := os.Chmod(dir, dbDirPerms); err != nil {
-		return fmt.Errorf("chmod db directory: %w", err)
+	if err := osChmod(dir, dbDirPerms); err != nil {
+		if dirExisted && os.IsPermission(err) {
+			slog.Warn("could not tighten existing db directory permissions", "path", dir, "error", err)
+		} else {
+			return fmt.Errorf("chmod db directory: %w", err)
+		}
 	}
 
 	// Pre-create the file with restricted permissions so the driver doesn't
@@ -304,7 +315,7 @@ func ensureSecureDBPath(dbPath string) error {
 		f.Close()
 	} else if err == nil {
 		// Existing file — tighten permissions if they are too wide.
-		if chErr := os.Chmod(dbPath, dbFilePerms); chErr != nil {
+		if chErr := osChmod(dbPath, dbFilePerms); chErr != nil {
 			slog.Warn("could not tighten db file permissions", "path", dbPath, "error", chErr)
 		}
 	}
@@ -319,7 +330,7 @@ func tightenSidecarPerms(dbPath string) {
 	for _, suffix := range []string{"-wal", "-shm"} {
 		p := dbPath + suffix
 		if _, err := os.Stat(p); err == nil {
-			if chErr := os.Chmod(p, dbFilePerms); chErr != nil {
+			if chErr := osChmod(p, dbFilePerms); chErr != nil {
 				slog.Warn("could not tighten sidecar permissions", "path", p, "error", chErr)
 			}
 		}

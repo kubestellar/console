@@ -105,6 +105,27 @@ func TestNewSQLiteStore_FilePermissions(t *testing.T) {
 	}
 }
 
+func TestEnsureSecureDBPath_IgnoresPermissionErrorForExistingDirectory(t *testing.T) {
+	baseDir := t.TempDir()
+	dbDir := filepath.Join(baseDir, "data")
+	require.NoError(t, os.MkdirAll(dbDir, dbDirPerms))
+
+	originalChmod := osChmod
+	osChmod = func(path string, mode os.FileMode) error {
+		if path == dbDir {
+			return os.ErrPermission
+		}
+		return originalChmod(path, mode)
+	}
+	t.Cleanup(func() { osChmod = originalChmod })
+
+	dbPath := filepath.Join(dbDir, "console.db")
+	require.NoError(t, ensureSecureDBPath(dbPath))
+
+	_, err := os.Stat(dbPath)
+	require.NoError(t, err)
+}
+
 func TestUserCRUD(t *testing.T) {
 	store := newTestStore(t)
 
