@@ -253,6 +253,37 @@ The console can use AI for adaptive card suggestions and mission help. AI is **o
 
 **Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and the currently supported self-hosted path using kc-agent's CLI-based agents.
 
+## Stellar (persistent AI operations assistant)
+
+> **Status:** experimental / alpha for self-hosted deployments.
+
+Stellar extends the console from one-shot AI assistance into a **persistent operational runtime**. It keeps mission state and operator preferences over time, stores operational memory, watches cluster resources for follow-up, generates digests, and routes approval-gated actions through the console backend.
+
+**What Stellar adds:**
+- **Persistent missions** with manual, cron, Kubernetes-event, Prometheus-alert, webhook, chained-completion, and API triggers
+- **Operational memory and digests** so the assistant can summarize recent incidents, changes, and recommended actions
+- **Notifications, watches, tasks, and approvals** for proactive follow-up instead of request/response-only chat
+- **Provider routing and auditability** with local-only, cloud-only, or hybrid execution modes plus health, stream, and audit endpoints
+
+**How to enable it (self-hosted):**
+1. Start the console locally or in your cluster — the hosted demo is for evaluation and does not cover self-hosted Stellar workflows.
+2. Configure at least one AI provider for the backend/Stellar path. You can use the standard provider env vars (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TOGETHER_API_KEY`) and optionally pin the default with `STELLAR_DEFAULT_PROVIDER` and `STELLAR_DEFAULT_MODEL`.
+3. If you want to save provider API keys through Stellar's provider configuration APIs/UI, set `STELLAR_ENCRYPTION_KEY` to a base64-encoded 32-byte key before starting the backend:
+
+```bash
+export STELLAR_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+```
+
+**Optional operator tuning:**
+- `STELLAR_DIGEST_HOUR` — hour of day (0-23) for the scheduled daily digest
+- `STELLAR_QUIET_START` / `STELLAR_QUIET_END` — quiet-hours window in `HH:MM` 24-hour format
+- `STELLAR_OLLAMA_ALLOWED_CIDRS` — allowlist for Ollama base URLs when using local provider routing
+
+**Where to learn more:**
+- [`docs/stellar/architecture.md`](docs/stellar/architecture.md) — architecture, runtime topology, memory model, and roadmap
+- [`docs/stellar/crds-v1alpha1.yaml`](docs/stellar/crds-v1alpha1.yaml) — `Mission`, `MissionExecution`, `Agent`, `MemoryStore`, `ToolBinding`, and `Trigger` CRDs
+- [`docs/README.md`](docs/README.md) — docs index, including operator-facing references
+
 ## How It Works
 
 1. **Onboarding** — Sign in with GitHub, answer role questions, get a personalized dashboard
