@@ -154,6 +154,12 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
   const apiEndpoint = cardDefinition?.apiEndpoint || ''
 
+  // Security: Only allow same-origin API endpoints to prevent token exfiltration (CWE-610).
+  // Dynamic card definitions from untrusted sources must not be able to send the user's
+  // session token to attacker-controlled URLs.
+  const isSameOriginEndpoint = apiEndpoint.startsWith('/') ||
+    apiEndpoint.startsWith(window.location.origin + '/')
+
   // API data via useCache (persists across navigation, SWR pattern, demo fallback)
   const {
     data: apiData,
@@ -168,7 +174,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     initialData: [],
     demoData: [{ id: 'demo-1', name: 'Demo Item', status: 'active' }],
     persist: true,
-    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
+    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint && isSameOriginEndpoint,
     fetcher: async () => {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const res = await fetch(apiEndpoint, {
@@ -242,6 +248,18 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
         <p className="text-sm text-yellow-400">{t('dynamicCard.missingEndpoint')}</p>
         <p className="text-xs text-muted-foreground mt-1">
           {t('dynamicCard.missingEndpointHint')}
+        </p>
+      </div>
+    )
+  }
+
+  if (isApiSource && apiEndpoint && !isSameOriginEndpoint) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+        <AlertTriangle className="w-6 h-6 text-red-400 mb-2" />
+        <p className="text-sm text-red-400">{t('dynamicCard.externalEndpointBlocked', 'External API endpoints are blocked')}</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {t('dynamicCard.externalEndpointHint', 'Only same-origin /api/* endpoints are allowed for security.')}
         </p>
       </div>
     )
