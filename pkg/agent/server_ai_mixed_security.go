@@ -287,14 +287,30 @@ func normalizeMixedModeOutputFormat(value string) string {
 	}
 }
 
+// mixedModeIdentityOverrideFlags lists flags that allow switching context,
+// cluster identity, or impersonating another user/group. Any of these must
+// be blocked to prevent privilege escalation (CWE-269).
+var mixedModeIdentityOverrideFlags = []string{
+	"--context",
+	"--kube-context",
+	"--kubeconfig",
+	"--as",
+	"--as-group",
+	"--as-uid",
+	"--user",
+	"--cluster",
+}
+
 func hasMixedModeContextOverride(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if lower == "--context" || lower == "--kube-context" || lower == "--kubeconfig" {
-			return true
-		}
-		if strings.HasPrefix(lower, "--context=") || strings.HasPrefix(lower, "--kube-context=") || strings.HasPrefix(lower, "--kubeconfig=") {
-			return true
+		for _, blocked := range mixedModeIdentityOverrideFlags {
+			if lower == blocked {
+				return true
+			}
+			if strings.HasPrefix(lower, blocked+"=") {
+				return true
+			}
 		}
 	}
 	return false
