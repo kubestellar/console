@@ -287,14 +287,36 @@ func normalizeMixedModeOutputFormat(value string) string {
 	}
 }
 
+// mixedModeBlockedTransportPrefixes lists kubectl flags that override transport,
+// authentication, or impersonation settings. Matched by prefix to catch --flag=value forms.
+var mixedModeBlockedTransportPrefixes = []string{
+	"--context",
+	"--kube-context",
+	"--kubeconfig",
+	"--server",
+	"--token",
+	"--user",
+	"--cluster",
+	"--client-key",
+	"--client-certificate",
+	"--certificate-authority",
+	"--insecure-skip-tls-verify",
+	"--tls-server-name",
+	"--as",
+	"--as-group",
+}
+
 func hasMixedModeContextOverride(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if lower == "--context" || lower == "--kube-context" || lower == "--kubeconfig" {
+		// Short flag for --server
+		if lower == "-s" {
 			return true
 		}
-		if strings.HasPrefix(lower, "--context=") || strings.HasPrefix(lower, "--kube-context=") || strings.HasPrefix(lower, "--kubeconfig=") {
-			return true
+		for _, prefix := range mixedModeBlockedTransportPrefixes {
+			if lower == prefix || strings.HasPrefix(lower, prefix+"=") {
+				return true
+			}
 		}
 	}
 	return false

