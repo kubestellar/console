@@ -14,6 +14,18 @@ import (
 // setupIntegrationsRoutes registers MCP, timeline, benchmark, GPU, and agent integrations.
 func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api := routes.api
+	adminOnly := func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return c.Next()
+	}
+	editorOrAdmin := func(c *fiber.Ctx) error {
+		if err := handlers.RequireEditorOrAdmin(c, s.store); err != nil {
+			return err
+		}
+		return c.Next()
+	}
 
 	timeline := handlers.NewTimelineHandler(s.store, s.k8sClient)
 	api.Get("/timeline", timeline.GetTimeline)
@@ -55,11 +67,11 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 		return total
 	})
 	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity, s.k8sClient)
-	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
+	api.Post("/gpu/reservations", editorOrAdmin, gpuHandler.CreateReservation)
 	api.Get("/gpu/reservations", gpuHandler.ListReservations)
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
-	api.Put("/gpu/reservations/:id", gpuHandler.UpdateReservation)
-	api.Delete("/gpu/reservations/:id", gpuHandler.DeleteReservation)
+	api.Put("/gpu/reservations/:id", editorOrAdmin, gpuHandler.UpdateReservation)
+	api.Delete("/gpu/reservations/:id", editorOrAdmin, gpuHandler.DeleteReservation)
 	api.Get("/gpu/reservations/:id/utilization", gpuHandler.GetReservationUtilization)
 	api.Get("/gpu/utilizations", gpuHandler.GetBulkUtilizations)
 
@@ -86,8 +98,8 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
 	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)
-	api.Patch("/kagenti-provider/config", kagentiProviderHandler.UpdateConfig)
-	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
-	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
-	api.Post("/kagenti-provider/tools/call-direct", kagentiProviderHandler.CallToolDirect)
+	api.Patch("/kagenti-provider/config", adminOnly, kagentiProviderHandler.UpdateConfig)
+	api.Post("/kagenti-provider/chat", editorOrAdmin, kagentiProviderHandler.Chat)
+	api.Post("/kagenti-provider/tools/call", adminOnly, kagentiProviderHandler.CallTool)
+	api.Post("/kagenti-provider/tools/call-direct", editorOrAdmin, kagentiProviderHandler.CallToolDirect)
 }

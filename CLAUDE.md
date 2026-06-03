@@ -22,6 +22,7 @@ cmd/console/       Server entry point
 cmd/kc-agent/      Local agent (bridges browser to kubeconfig + MCP)
 pkg/agent/         AI providers (Claude, OpenAI, Gemini)
 pkg/api/           HTTP/WS server + handlers
+pkg/api/handlers/stellar*  Experimental alpha Stellar APIs (missions, memory, watches)
 pkg/mcp/           MCP bridge to Kubernetes
 pkg/store/         SQLite database layer
 web/src/           React + TypeScript frontend
@@ -232,6 +233,8 @@ NEVER hardcode API keys, tokens, or credentials. Use environment variables only 
 
 ### AI / LLM Surfaces
 Before adding a new workflow or handler that calls an LLM, read [`docs/security/SECURITY-AI.md`](docs/security/SECURITY-AI.md) — it covers prompt injection, supply chain, agent drift, and the audit checklist for LLM-calling code. The six threat categories and exotic-attack notes (Unicode steganography, temporal split-payload, zero-trust between agents) apply to every new LLM surface.
+
+Stellar is an experimental alpha feature. If you touch `/api/stellar/*` handlers or related workflows, read [`docs/stellar/architecture.md`](docs/stellar/architecture.md) first and keep contributor-facing docs aligned with any behavior or API changes.
 
 ### Netlify Functions
 The production site (console.kubestellar.io) uses Netlify Functions, NOT the Go backend. API routes are proxied to `web/netlify/functions/*.mts`. When adding Go API handlers, update Netlify Functions separately. See `netlify.toml` for redirect mapping.

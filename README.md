@@ -261,6 +261,10 @@ The console can use AI for adaptive card suggestions and mission help. AI is **o
 4. **Missions** — Step-by-step guided installs with pre-flight checks, validation, troubleshooting, and rollback
 5. **Real-time** — WebSocket-powered live event streaming from all connected clusters
 
+## Stellar (experimental alpha)
+
+Stellar is the console's experimental alpha assistant for persistent AI operations: mission continuity, memory, watches/digests, and proactive execution beyond one-off chat. If you are evaluating or contributing to Stellar, start with the [Stellar architecture notes](docs/stellar/architecture.md); expect the APIs and UX to keep evolving while the feature set is still alpha.
+
 ## Architecture
 
 See the full [Architecture documentation](https://kubestellar.io/docs/console/overview/architecture) on the KubeStellar website.
