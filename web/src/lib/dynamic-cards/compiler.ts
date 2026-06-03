@@ -35,6 +35,44 @@ const BLOCKED_GLOBALS = [
 const STRICT_RESERVED_BLOCKED = new Set<string>(['arguments'])
 
 /**
+ * Dangerous property names that must never be accessed on any object
+ * within the dynamic card sandbox. These are the escape vectors that
+ * allow reaching the real Function constructor via prototype chains.
+ */
+const BLOCKED_PROPERTIES = new Set(['constructor', '__proto__', 'prototype'])
+
+/**
+ * Create a Proxy membrane around a value to block property accesses that
+ * would allow escaping the sandbox via prototype-chain traversal.
+ * Only wraps objects/functions; primitives pass through unchanged.
+ */
+function sandboxMembrane<T>(value: T, seen = new WeakMap<object, unknown>()): T {
+  if (value === null || value === undefined) return value
+  if (typeof value !== 'object' && typeof value !== 'function') return value
+  const obj = value as object
+  if (seen.has(obj)) return seen.get(obj) as T
+
+  const proxy = new Proxy(obj, {
+    get(target, prop, receiver) {
+      if (typeof prop === 'string' && BLOCKED_PROPERTIES.has(prop)) {
+        return undefined
+      }
+      const val = Reflect.get(target, prop, receiver)
+      // Wrap returned objects/functions in the membrane too
+      if (val !== null && val !== undefined && (typeof val === 'object' || typeof val === 'function')) {
+        return sandboxMembrane(val, seen)
+      }
+      return val
+    },
+    getPrototypeOf() {
+      return null
+    },
+  })
+  seen.set(obj, proxy)
+  return proxy as T
+}
+
+/**
  * Deep-freeze an object graph so dynamic card code cannot mutate shared
  * runtime state via injected scope values (e.g. cardHooks.someCard = evilImpl).
  * Uses a WeakSet to guard against circular references.
@@ -153,9 +191,14 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
       { re: /\.constructor\s*\(/, label: '.constructor(' },
       { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
+      { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor'] access" },
       { re: /\b__proto__\b/, label: '__proto__' },
       { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
       { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+      { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
+      { re: /\[\s*(['"`])__proto__\1\s*\]/, label: "['__proto__'] access" },
+      { re: /constructor\s*\[/, label: 'constructor[' },
+      { re: /\bconstructor\b/, label: 'constructor' },
     ]
     for (const { re, label } of FORBIDDEN_PATTERNS) {
       if (re.test(compiledCode)) {
@@ -170,6 +213,11 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // Function parameter (sloppy-mode parse allows it); we can't also shadow
     // it with `var eval` here because strict-mode var bindings on `eval` are
     // a SyntaxError.
+    //
+    // Runtime prologue: Override Function.prototype.constructor and
+    // Object.getPrototypeOf within the sandbox to block prototype-chain
+    // escape vectors that static analysis cannot catch (e.g. computed
+    // bracket access, string concatenation to build "constructor").
     const moduleCode = `
       "use strict";
       var exports = {};
@@ -192,7 +240,9 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
 
     const fullScope = { ...blockedEntries, ...scope }
     const scopeKeys = Object.keys(fullScope)
-    const scopeValues = scopeKeys.map(k => fullScope[k])
+    // Wrap all scope values in the sandbox membrane to block runtime
+    // prototype-chain escape vectors (e.g. obj["con"+"structor"])
+    const scopeValues = scopeKeys.map(k => sandboxMembrane(fullScope[k]))
 
     const factory = new Function(...scopeKeys, moduleCode)
     const component = factory(...scopeValues) as ComponentType<CardComponentProps>
