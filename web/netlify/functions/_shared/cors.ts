@@ -23,6 +23,64 @@
 /** Production origin for the hosted console. */
 const PROD_ORIGIN = "https://console.kubestellar.io";
 
+export const DEFAULT_ALLOWED_ORIGIN = PROD_ORIGIN;
+export const ALLOWED_ORIGINS = new Set<string>([
+  DEFAULT_ALLOWED_ORIGIN,
+  "https://docs.kubestellar.io",
+  "https://kubestellar.io",
+]);
+
+const DEV_LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1"]);
+const DEV_LOCALHOST_PROTOCOL = "http:";
+
+function normalizeOrigin(origin: string | null | undefined): string | null {
+  if (!origin) return null;
+
+  try {
+    return new URL(origin).origin;
+  } catch {
+    return null;
+  }
+}
+
+function configuredStrictAllowedOrigins(): Set<string> {
+  const configuredOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ?.split(",")
+    .map((origin) => normalizeOrigin(origin.trim()))
+    .filter((origin): origin is string => Boolean(origin));
+
+  return configuredOrigins?.length ? new Set(configuredOrigins) : new Set(ALLOWED_ORIGINS);
+}
+
+function isStrictDevelopmentOrigin(origin: string): boolean {
+  if (process.env.NETLIFY_DEV !== "true") {
+    return false;
+  }
+
+  const parsedOrigin = new URL(origin);
+  return (
+    parsedOrigin.protocol === DEV_LOCALHOST_PROTOCOL
+    && DEV_LOCALHOST_HOSTS.has(parsedOrigin.hostname.toLowerCase())
+  );
+}
+
+export function corsOrigin(origin: string | null | undefined): string {
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (!normalizedOrigin) {
+    return DEFAULT_ALLOWED_ORIGIN;
+  }
+
+  if (configuredStrictAllowedOrigins().has(normalizedOrigin)) {
+    return normalizedOrigin;
+  }
+
+  if (isStrictDevelopmentOrigin(normalizedOrigin)) {
+    return normalizedOrigin;
+  }
+
+  return DEFAULT_ALLOWED_ORIGIN;
+}
+
 /**
  * KubeStellar docs site origins. These are first-party sites in the same
  * org that legitimately call Netlify Functions (e.g. the leaderboard page

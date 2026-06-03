@@ -22,17 +22,32 @@ const EXPECTED_CORS_HEADER_KEYS = [
 ];
 
 describe("corsOrigin", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("returns allowlisted origins unchanged", () => {
     expect(corsOrigin(DEFAULT_ALLOWED_ORIGIN)).toBe(DEFAULT_ALLOWED_ORIGIN);
     expect(corsOrigin("https://docs.kubestellar.io")).toBe("https://docs.kubestellar.io");
-    expect(ALLOWED_ORIGINS.has("https://www.kubestellar.io")).toBe(true);
+    expect(ALLOWED_ORIGINS.has("https://kubestellar.io")).toBe(true);
   });
 
-  it("allows localhost but rejects unknown kubestellar subdomains", () => {
-    expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
+  it("rejects localhost outside netlify dev", () => {
+    expect(corsOrigin("http://localhost:5174")).toBe(DEFAULT_ALLOWED_ORIGIN);
     expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(
       DEFAULT_ALLOWED_ORIGIN,
     );
+  });
+
+  it("allows localhost during netlify dev", () => {
+    vi.stubEnv("NETLIFY_DEV", "true");
+    expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
+  });
+
+  it("honors env overrides for exact origins", () => {
+    vi.stubEnv("CORS_ALLOWED_ORIGINS", "https://preview.kubestellar.io");
+    expect(corsOrigin("https://preview.kubestellar.io")).toBe("https://preview.kubestellar.io");
+    expect(corsOrigin(DEFAULT_ALLOWED_ORIGIN)).toBe(DEFAULT_ALLOWED_ORIGIN);
   });
 
   it("falls back to the default origin for unknown or missing origins", () => {

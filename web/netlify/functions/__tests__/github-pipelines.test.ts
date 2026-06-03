@@ -93,6 +93,7 @@ describe("github-pipelines", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     if (originalToken === undefined) {
       delete process.env.GITHUB_TOKEN;
     } else {
@@ -120,7 +121,9 @@ describe("github-pipelines", () => {
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://console.kubestellar.io");
   });
 
-  it("preserves localhost origins for development", async () => {
+  it("preserves localhost origins only during netlify dev", async () => {
+    vi.stubEnv("NETLIFY_DEV", "true");
+
     const res = await handler(new Request("https://console.kubestellar.io/api/github-pipelines?view=pulse", {
       method: "GET",
       headers: {

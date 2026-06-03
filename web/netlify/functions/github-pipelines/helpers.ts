@@ -2,25 +2,11 @@
  * Helper utilities for GitHub Pipelines Dashboard
  */
 import type { getStore } from "@netlify/blobs";
+import { corsOrigin } from "../_shared/cors";
 import type { CachedView } from "./types";
-import {
-  ALLOWED_ORIGINS,
-  CACHE_TTL_MS,
-  DEFAULT_ALLOWED_ORIGIN,
-  VALID_REPO_PATTERN,
-} from "./constants";
+import { CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
 
-export function corsOrigin(origin: string | null): string {
-  if (!origin) return DEFAULT_ALLOWED_ORIGIN;
-  if (ALLOWED_ORIGINS.has(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-  } catch {
-    // Malformed origin — fall through to default
-  }
-  return DEFAULT_ALLOWED_ORIGIN;
-}
+export { corsOrigin };
 
 export function jsonResponse(
   body: unknown,

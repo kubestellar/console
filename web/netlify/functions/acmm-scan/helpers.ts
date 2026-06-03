@@ -2,6 +2,7 @@
  * ACMM Scan — Types and helper utilities
  */
 
+import { corsOrigin } from "../_shared/cors";
 import type { DetectionHint } from "./criteria";
 
 // ---------------------------------------------------------------------------
@@ -19,14 +20,8 @@ export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
 export const UNKNOWN_REPO = "unknown/repo";
-/** Allowed CORS origins (exact match) */
-export const DEFAULT_ALLOWED_ORIGIN = "https://console.kubestellar.io";
-export const ALLOWED_ORIGINS = new Set<string>([
-  DEFAULT_ALLOWED_ORIGIN,
-  "https://docs.kubestellar.io",
-  "https://kubestellar.io",
-  "https://www.kubestellar.io",
-]);
+export { ALLOWED_ORIGINS, DEFAULT_ALLOWED_ORIGIN } from "../_shared/cors";
+export { corsOrigin };
 /** AI-generated label used to classify AI contributions */
 export const AI_LABEL = "ai-generated";
 /** Known AI authors (shared logins + bots) */
@@ -68,19 +63,6 @@ export interface GitTreeEntry {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Validate CORS origin via exact allowlist plus localhost development support */
-export function corsOrigin(origin: string | null): string {
-  if (!origin) return DEFAULT_ALLOWED_ORIGIN;
-  if (ALLOWED_ORIGINS.has(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-  } catch {
-    // Invalid URL — fall through to default
-  }
-  return DEFAULT_ALLOWED_ORIGIN;
-}
 
 export function corsHeaders(origin: string | null): Record<string, string> {
   return {

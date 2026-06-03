@@ -2,15 +2,45 @@
  * Unit tests for cors.ts (#16109).
  * Tests CORS origin validation, header building, and preflight handling.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  isAllowedOrigin,
+  ALLOWED_ORIGINS,
+  DEFAULT_ALLOWED_ORIGIN,
   buildCorsHeaders,
+  corsOrigin,
   handlePreflight,
+  isAllowedOrigin,
   type CorsOptions,
 } from "../cors";
 
 describe("cors", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  describe("corsOrigin", () => {
+    it("should allow exact production origins", () => {
+      expect(corsOrigin(DEFAULT_ALLOWED_ORIGIN)).toBe(DEFAULT_ALLOWED_ORIGIN);
+      expect(corsOrigin("https://docs.kubestellar.io")).toBe("https://docs.kubestellar.io");
+      expect(ALLOWED_ORIGINS.has("https://kubestellar.io")).toBe(true);
+    });
+
+    it("should reject non-allowlisted subdomains", () => {
+      expect(corsOrigin("https://preview.kubestellar.io")).toBe(DEFAULT_ALLOWED_ORIGIN);
+    });
+
+    it("should allow localhost only in netlify dev", () => {
+      expect(corsOrigin("http://localhost:5174")).toBe(DEFAULT_ALLOWED_ORIGIN);
+      vi.stubEnv("NETLIFY_DEV", "true");
+      expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
+    });
+
+    it("should honor env overrides", () => {
+      vi.stubEnv("CORS_ALLOWED_ORIGINS", "https://preview.kubestellar.io");
+      expect(corsOrigin("https://preview.kubestellar.io")).toBe("https://preview.kubestellar.io");
+    });
+  });
+
   describe("isAllowedOrigin", () => {
     it("should allow production origin", () => {
       expect(isAllowedOrigin("https://console.kubestellar.io")).toBe(true);
