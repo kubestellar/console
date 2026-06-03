@@ -54,17 +54,156 @@ func TestListFeatureRequests(t *testing.T) {
 }
 
 func TestCheckPreviewStatus(t *testing.T) {
-	app := fiber.New()
-	mockStore := new(test.MockStore)
-	// Set a token so it doesn't return "unavailable"
-	handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token"})
-
-	app.Get("/api/feedback/requests/preview/:pr_number", handler.CheckPreviewStatus)
-
 	t.Run("InvalidPRNumber", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/feedback/requests/preview/abc", nil)
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token", RepoOwner: "kubestellar", RepoName: "console"})
+		app.Get("/api/feedback/requests/preview/:pr_number", handler.CheckPreviewStatus)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/abc", nil)
 		resp, _ := app.Test(req)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("RejectsUnauthenticatedUser", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token", RepoOwner: "kubestellar", RepoName: "console"})
+		app.Get("/api/feedback/requests/preview/:pr_number", handler.CheckPreviewStatus)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("RejectsNonAuthorWithoutLinkedRequest", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{ID: userID, GitHubLogin: "alice", Role: models.UserRoleViewer}, nil).Once()
+		mockStore.On("GetFeatureRequestByPRNumber", 123).Return(nil, nil).Once()
+
+		handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token", RepoOwner: "kubestellar", RepoName: "console"})
+		handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+			switch req.URL.Path {
+			case "/repos/kubestellar/console/pulls/123":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"number":123,"user":{"login":"bob"}}`)), Header: make(http.Header)}
+			default:
+				t.Fatalf("unexpected GitHub request: %s", req.URL.String())
+				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}
+			}
+		})}
+
+		app.Get("/api/feedback/requests/preview/:pr_number", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.CheckPreviewStatus(c)
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		mockStore.AssertExpectations(t)
+	})
+
+	t.Run("AllowsPRAuthor", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{ID: userID, GitHubLogin: "alice", Role: models.UserRoleViewer}, nil).Once()
+		mockStore.On("GetFeatureRequestByPRNumber", 123).Return(nil, nil).Once()
+
+		handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token", RepoOwner: "kubestellar", RepoName: "console"})
+		handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+			switch req.URL.Path {
+			case "/repos/kubestellar/console/pulls/123":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"number":123,"user":{"login":"alice"}}`)), Header: make(http.Header)}
+			case "/repos/kubestellar/console/deployments":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[{"id":1}]`)), Header: make(http.Header)}
+			case "/repos/kubestellar/console/deployments/1/statuses":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[{"state":"success","target_url":"https://preview.example","created_at":"2025-01-01T00:00:00Z"}]`)), Header: make(http.Header)}
+			default:
+				t.Fatalf("unexpected GitHub request: %s", req.URL.String())
+				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}
+			}
+		})}
+
+		app.Get("/api/feedback/requests/preview/:pr_number", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.CheckPreviewStatus(c)
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var result map[string]string
+		assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.Equal(t, "ready", result["status"])
+		assert.Equal(t, "https://preview.example", result["preview_url"])
+		mockStore.AssertExpectations(t)
+	})
+
+	t.Run("AllowsLinkedRequestOwner", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{ID: userID, GitHubLogin: "alice", Role: models.UserRoleViewer}, nil).Once()
+		mockStore.On("GetFeatureRequestByPRNumber", 123).Return(&models.FeatureRequest{ID: uuid.New(), UserID: userID, PRNumber: func() *int { n := 123; return &n }()}, nil).Once()
+
+		handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token", RepoOwner: "kubestellar", RepoName: "console"})
+		handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+			switch req.URL.Path {
+			case "/repos/kubestellar/console/pulls/123":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"number":123,"user":{"login":"bob"}}`)), Header: make(http.Header)}
+			case "/repos/kubestellar/console/deployments":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[{"id":1}]`)), Header: make(http.Header)}
+			case "/repos/kubestellar/console/deployments/1/statuses":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[{"state":"success","target_url":"https://preview.example","created_at":"2025-01-01T00:00:00Z"}]`)), Header: make(http.Header)}
+			default:
+				t.Fatalf("unexpected GitHub request: %s", req.URL.String())
+				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}
+			}
+		})}
+
+		app.Get("/api/feedback/requests/preview/:pr_number", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.CheckPreviewStatus(c)
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		mockStore.AssertExpectations(t)
+	})
+
+	t.Run("AllowsAdmin", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{ID: userID, GitHubLogin: "admin", Role: models.UserRoleAdmin}, nil).Once()
+
+		handler := NewFeedbackHandler(mockStore, FeedbackConfig{GitHubToken: "token", RepoOwner: "kubestellar", RepoName: "console"})
+		handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+			switch req.URL.Path {
+			case "/repos/kubestellar/console/deployments":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[{"id":1}]`)), Header: make(http.Header)}
+			case "/repos/kubestellar/console/deployments/1/statuses":
+				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[{"state":"success","target_url":"https://preview.example","created_at":"2025-01-01T00:00:00Z"}]`)), Header: make(http.Header)}
+			default:
+				t.Fatalf("unexpected GitHub request: %s", req.URL.String())
+				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}
+			}
+		})}
+
+		app.Get("/api/feedback/requests/preview/:pr_number", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.CheckPreviewStatus(c)
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/api/feedback/requests/preview/123", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		mockStore.AssertExpectations(t)
 	})
 }
 

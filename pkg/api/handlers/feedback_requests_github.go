@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	httpclient "github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/models"
 )
@@ -35,6 +37,9 @@ type GitHubPR struct {
 	Draft    bool       `json:"draft"`
 	Merged   bool       `json:"merged"`
 	MergedAt *time.Time `json:"merged_at"`
+	User     struct {
+		Login string `json:"login"`
+	} `json:"user"`
 }
 
 // notifyUpstream creates the GitHub issue and returns issue details.
@@ -58,36 +63,9 @@ func (h *FeedbackHandler) verifyGitHubIssueOwnership(ctx context.Context, issueN
 		return fiber.NewError(fiber.StatusForbidden, "GitHub login not available — cannot verify ownership")
 	}
 
-	if h.getEffectiveToken() == "" {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "GitHub not configured")
-	}
-
-	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d",
-		resolveGitHubAPIBase(), h.repoOwner, repoName, issueNumber)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	issue, err := h.fetchGitHubIssue(ctx, issueNumber, repoName)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create ownership check request")
-	}
-	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-
-	resp, err := h.httpClient.Do(req)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadGateway, "Failed to reach GitHub API for ownership check")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return fiber.NewError(fiber.StatusNotFound, "GitHub issue not found")
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("GitHub API returned %d during ownership check", resp.StatusCode))
-	}
-
-	var issue GitHubIssue
-	if err := json.NewDecoder(resp.Body).Decode(&issue); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to parse GitHub issue for ownership check")
+		return err
 	}
 
 	if !strings.EqualFold(issue.User.Login, currentLogin) {
@@ -95,6 +73,76 @@ func (h *FeedbackHandler) verifyGitHubIssueOwnership(ctx context.Context, issueN
 	}
 
 	return nil
+}
+
+func (h *FeedbackHandler) fetchGitHubIssue(ctx context.Context, issueNumber int, repoName string) (*GitHubIssue, error) {
+	if h.getEffectiveToken() == "" {
+		return nil, fiber.NewError(fiber.StatusServiceUnavailable, "GitHub not configured")
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d",
+		resolveGitHubAPIBase(), h.repoOwner, repoName, issueNumber)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to create ownership check request")
+	}
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadGateway, "Failed to reach GitHub API for ownership check")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fiber.NewError(fiber.StatusNotFound, "GitHub issue not found")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("GitHub API returned %d during ownership check", resp.StatusCode))
+	}
+
+	var issue GitHubIssue
+	if err := json.NewDecoder(resp.Body).Decode(&issue); err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to parse GitHub issue for ownership check")
+	}
+	return &issue, nil
+}
+
+func (h *FeedbackHandler) fetchGitHubPR(ctx context.Context, prNumber int) (*GitHubPR, error) {
+	if h.getEffectiveToken() == "" {
+		return nil, fiber.NewError(fiber.StatusServiceUnavailable, "GitHub not configured")
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/%s/pulls/%d",
+		resolveGitHubAPIBase(), h.repoOwner, h.repoName, prNumber)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to create pull request lookup")
+	}
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadGateway, "Failed to reach GitHub API for pull request lookup")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Pull request not found")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("GitHub API returned %d during pull request lookup", resp.StatusCode))
+	}
+
+	var pr GitHubPR
+	if err := json.NewDecoder(resp.Body).Decode(&pr); err != nil {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to parse pull request lookup")
+	}
+	return &pr, nil
 }
 
 type feedbackProxyIssueAction struct {
@@ -539,8 +587,46 @@ func (h *FeedbackHandler) CheckPreviewStatus(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid PR number")
 	}
 
+	userID := middleware.GetUserID(c)
+	if userID == uuid.Nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
+	}
+
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify preview access")
+	}
+	if currentUser == nil {
+		return fiber.NewError(fiber.StatusForbidden, "Access denied")
+	}
+
 	if h.getEffectiveToken() == "" {
 		return c.JSON(fiber.Map{"status": "unavailable", "message": "GitHub not configured"})
+	}
+
+	if currentUser.Role != models.UserRoleAdmin {
+		pr, err := h.fetchGitHubPR(c.UserContext(), prNumber)
+		if err != nil {
+			return err
+		}
+
+		currentLogin := strings.TrimSpace(currentUser.GitHubLogin)
+		if currentLogin == "" {
+			currentLogin = strings.TrimSpace(middleware.GetGitHubLogin(c))
+		}
+
+		ownsLinkedRequest := false
+		linkedRequest, err := h.store.GetFeatureRequestByPRNumber(c.UserContext(), prNumber)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify preview access")
+		}
+		if linkedRequest != nil && linkedRequest.UserID == userID {
+			ownsLinkedRequest = true
+		}
+
+		if !strings.EqualFold(pr.User.Login, currentLogin) && !ownsLinkedRequest {
+			return fiber.NewError(fiber.StatusForbidden, "Access denied: preview URLs are limited to the PR author or linked request owner")
+		}
 	}
 
 	// Reuse the shared package-level client (connection pooling, keep-alive).
