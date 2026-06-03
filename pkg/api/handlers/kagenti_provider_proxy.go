@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
 	"github.com/kubestellar/console/pkg/store"
@@ -359,7 +360,8 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
 
 	for _, cluster := range clusters {
-		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
+		sanitizedClusterName := agent.SanitizeK8sStringForPrompt(cluster.Name)
+		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", sanitizedClusterName))
 		if cluster.Healthy {
 			contextBuilder.WriteString("  Status: Healthy\n")
 		} else {
