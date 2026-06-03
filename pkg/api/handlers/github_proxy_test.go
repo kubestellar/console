@@ -98,3 +98,35 @@ func TestShouldUseServerGitHubToken(t *testing.T) {
 		})
 	}
 }
+
+func TestProxy_AllowsAllowlistedRepoRequest(t *testing.T) {
+	app := fiber.New()
+	h := NewGitHubProxyHandler("test-token", nil)
+	h.allowedRepos = map[string]struct{}{"kubestellar/console": {}}
+
+	originalClient := githubProxyClient
+	githubProxyClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+		if req.URL.Path != "/repos/kubestellar/console/releases" {
+			t.Fatalf("upstream path = %q, want %q", req.URL.Path, "/repos/kubestellar/console/releases")
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Fatalf("Authorization header = %q, want %q", got, "Bearer test-token")
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"ok":true}`)), Header: make(http.Header)}
+	})}
+	defer func() { githubProxyClient = originalClient }()
+
+	app.Get("/api/github/*", func(c *fiber.Ctx) error {
+		c.Locals("userID", uuid.New())
+		return h.Proxy(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/github/repos/kubestellar/console/releases", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("proxy request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for allowlisted repo, got %d", resp.StatusCode)
+	}
+}
