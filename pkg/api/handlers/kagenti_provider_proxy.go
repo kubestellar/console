@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -30,14 +31,16 @@ type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
 }
 
@@ -431,8 +434,13 @@ type kagentiDirectToolRequest struct {
 	Args map[string]any `json:"args"`
 }
 
-// CallToolDirect routes tool calls to the appropriate console handlers
+// CallToolDirect routes tool calls to the appropriate console handlers.
+// SECURITY: direct cluster and namespace enumeration runs with the backend's
+// Kubernetes identity, so only console admins may access it.
 func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not available"})
 	}
