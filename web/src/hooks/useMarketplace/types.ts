@@ -22,7 +22,7 @@ export interface MarketplaceItem {
   version: string
   screenshot?: string
   downloadUrl: string
-  sha256?: string
+  sha256: string
   tags: string[]
   cardCount: number
   type: MarketplaceItemType

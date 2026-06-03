@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeSha256, verifyIntegrity, IntegrityError } from '../integrity'
+import { computeSha256, verifyIntegrity, IntegrityError, MissingIntegrityError } from '../integrity'
 
 describe('marketplace integrity verification', () => {
   it('computes correct sha256 for known input', async () => {
@@ -28,8 +28,8 @@ describe('marketplace integrity verification', () => {
     await expect(verifyIntegrity(content, wrongHash)).rejects.toThrow(IntegrityError)
   })
 
-  it('verifyIntegrity skips check when expectedHash is undefined', async () => {
-    await expect(verifyIntegrity('anything', undefined)).resolves.toBeUndefined()
+  it('verifyIntegrity rejects when expectedHash is undefined', async () => {
+    await expect(verifyIntegrity('anything', undefined)).rejects.toThrow(MissingIntegrityError)
   })
 
   it('verifyIntegrity normalizes hash to lowercase', async () => {
