@@ -167,23 +167,3 @@ func TestKagentProxyHandler_Authorization(t *testing.T) {
 		})
 	}
 }
-			wantStatus: http.StatusServiceUnavailable,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
-			app.Use(func(c *fiber.Ctx) error {
-				c.Locals("userID", tt.userID)
-				return c.Next()
-			})
-			h := NewKagentProxyHandler(nil, tt.store)
-			tt.register(app, h)
-
-			resp, err := app.Test(tt.request)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.wantStatus, resp.StatusCode)
-		})
-	}
-}

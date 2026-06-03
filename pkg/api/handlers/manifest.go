@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -10,7 +9,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -277,7 +275,6 @@ func (h *ManifestHandler) pruneExpiredStatesLocked(now time.Time) {
 			delete(h.pendingStates, state)
 		}
 	}
-}
 }
 
 func randomHex(n int) (string, error) {
