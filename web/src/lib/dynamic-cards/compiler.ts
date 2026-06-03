@@ -150,9 +150,9 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // #16505: Expanded coverage — bracket-access with string concatenation,
     // template literals, or computed property names are also blocked.
     const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
+      { re: /\b__proto__\b/, label: '__proto__' },
       { re: /\.constructor\b/, label: '.constructor' },
       { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
-      { re: /\b__proto__\b/, label: '__proto__' },
       { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
       { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
       // Block getPrototypeOf / setPrototypeOf to prevent prototype walking

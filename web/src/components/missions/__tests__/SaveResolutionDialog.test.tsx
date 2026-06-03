@@ -206,9 +206,11 @@ async function renderDialogAndWaitForError(props = DEFAULT_PROPS) {
   global.WebSocket = MockWebSocket as unknown as typeof WebSocket
   const result = render(<SaveResolutionDialog {...props} />)
 
+  await waitFor(() => {
+    expect(MockWebSocket.lastInstance).not.toBeNull()
+  })
+
   await act(async () => {
-    await Promise.resolve() // let getWsAuthParams resolve
-    await Promise.resolve() // let new WebSocket(url, protocols) be created
     MockWebSocket.lastInstance?.simulateError()
     await Promise.resolve() // let catch + state updates propagate
   })
@@ -300,7 +302,9 @@ describe('SaveResolutionDialog', () => {
     await act(async () => {
       fireEvent.click(retryBtn)
     })
-    expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('enables form fields after AI error', async () => {
@@ -478,6 +482,8 @@ describe('SaveResolutionDialog', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Regenerate/i }))
     })
-    expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    })
   })
 })

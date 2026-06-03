@@ -58,6 +58,7 @@ async function flushPendingConnection() {
   await act(async () => {
     await Promise.resolve()
     await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
   })
 }
 
