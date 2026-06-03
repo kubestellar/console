@@ -86,7 +86,6 @@ const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
 const AUTH_COOKIE_NAME = "kc_auth";
 const JWT_PART_COUNT = 3;
-const MIN_SESSION_TOKEN_LENGTH = 16;
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -145,29 +144,24 @@ function isLikelyJWT(value: string): boolean {
   return parts.length === JWT_PART_COUNT && parts.every((part) => part.length > 0);
 }
 
-function isNonTrivialSessionValue(value: string): boolean {
-  return value.length >= MIN_SESSION_TOKEN_LENGTH && !/\s/.test(value);
-}
-
 async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): Promise<boolean> {
   const sessionValue = getCookieValue(cookieHeader, AUTH_COOKIE_NAME);
   if (!sessionValue) {
     return false;
   }
 
-  if (isLikelyJWT(sessionValue)) {
-    const validation = await validateJWT(sessionValue, jwtSecret);
-    if (!validation.valid) {
-      console.warn(`kc_auth cookie validation failed: ${validation.error}`);
-    }
-    return validation.valid;
+  // SECURITY: Only accept JWT-format cookies with proper signature verification.
+  // Opaque session values cannot be validated without a session store (CWE-347, #16659).
+  if (!isLikelyJWT(sessionValue)) {
+    console.warn("kc_auth cookie rejected: only JWT-format cookies are accepted");
+    return false;
   }
 
-  const validOpaqueSession = isNonTrivialSessionValue(sessionValue);
-  if (!validOpaqueSession) {
-    console.warn("kc_auth cookie rejected: value is empty or too short");
+  const validation = await validateJWT(sessionValue, jwtSecret);
+  if (!validation.valid) {
+    console.warn(`kc_auth cookie validation failed: ${validation.error}`);
   }
-  return validOpaqueSession;
+  return validation.valid;
 }
 
 async function readResponseBodyWithCap(response: Response): Promise<Uint8Array | null> {

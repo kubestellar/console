@@ -2,8 +2,6 @@ import { jwtVerify, type JWTPayload as JoseJWTPayload } from "jose";
 
 const JWT_PART_COUNT = 3;
 const JWT_HMAC_ALGORITHM = "HS256";
-const JWT_SECRET_FALLBACK_WARNING =
-  "JWT_SECRET is not configured; falling back to non-cryptographic JWT validation.";
 
 export interface JWTPayload extends JoseJWTPayload {
   [key: string]: unknown;
@@ -107,10 +105,9 @@ export async function validateJWT(
 
   const normalizedSecret = jwtSecret?.trim();
   if (!normalizedSecret) {
-    // WARNING: Keep this fallback for demo/dev mode only. Without JWT_SECRET,
-    // this path checks structure and expiry but cannot verify authenticity.
-    console.warn(JWT_SECRET_FALLBACK_WARNING);
-    return structuralValidation;
+    // SECURITY: Without JWT_SECRET, signature verification is impossible.
+    // Reject the token — structure-only validation is insufficient (CWE-347, #16659).
+    return { valid: false, error: "JWT_SECRET not configured — cannot verify token signature" };
   }
 
   try {
