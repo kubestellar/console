@@ -124,7 +124,7 @@ func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivi
 		slog.Warn("stellar: LogActivity failed", "error", err)
 		return
 	}
-	h.broadcastToClients(SSEEvent{Type: "activity", Data: a})
+	h.broadcastToClients(SSEEvent{Type: "activity", Data: a, TargetUserID: a.UserID})
 }
 
 // ListActivity is the GET /api/stellar/activity handler — returns recent

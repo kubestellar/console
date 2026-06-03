@@ -133,7 +133,7 @@ func (h *StellarHandler) updateNotificationState(c *fiber.Ctx, status, note stri
 	}
 
 	h.logNotificationStateChange(c.UserContext(), userID, notification, &updated, note)
-	h.broadcastToClients(SSEEvent{Type: "notification_replace", Data: updated, UserID: userID})
+	h.broadcastToClients(SSEEvent{Type: "notification_replace", Data: updated, TargetUserID: userID})
 	return c.JSON(updated)
 }
 
@@ -178,7 +178,7 @@ func (h *StellarHandler) logNotificationStateChange(ctx context.Context, userID 
 		Severity:  after.Severity,
 	}
 	_ = full.LogActivity(ctx, activityEntry)
-	h.broadcastToClients(SSEEvent{Type: "activity", Data: activityEntry, UserID: userID})
+	h.broadcastToClients(SSEEvent{Type: "activity", Data: activityEntry, TargetUserID: userID})
 }
 
 func describeNotificationStateChange(notification *store.StellarNotification, note string) (title string, detail string, kind string) {

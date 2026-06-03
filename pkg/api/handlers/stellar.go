@@ -204,11 +204,16 @@ func shouldDeliverStellarSSEEvent(client stellarSSEClient, event SSEEvent) bool 
 	return client.userID == event.UserID || client.isAdmin
 }
 
+// broadcastToClients sends an event to SSE clients scoped by the resolved
+// audience metadata and optionally narrowed to a specific user connection set.
 func (h *StellarHandler) broadcastToClients(event SSEEvent) {
 	resolvedEvent := h.resolveSSEEventAudience(event)
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
 	for _, client := range h.sseClients {
+		if resolvedEvent.TargetUserID != "" && client.userID != resolvedEvent.TargetUserID {
+			continue
+		}
 		if !shouldDeliverStellarSSEEvent(client, resolvedEvent) {
 			continue
 		}
@@ -228,13 +233,17 @@ type SSEBroadcaster interface {
 }
 
 type SSEEvent struct {
-	Type      string      `json:"type"`
-	Data      interface{} `json:"data"`
-	UserID    string      `json:"userId,omitempty"`
-	AdminOnly bool        `json:"adminOnly,omitempty"`
+	Type         string      `json:"type"`
+	Data         interface{} `json:"data"`
+	UserID       string      `json:"userId,omitempty"`
+	AdminOnly    bool        `json:"adminOnly,omitempty"`
+	TargetUserID string      `json:"-"`
 }
 
 func (h *StellarHandler) resolveSSEEventAudience(event SSEEvent) SSEEvent {
+	if event.TargetUserID != "" && event.UserID == "" {
+		event.UserID = event.TargetUserID
+	}
 	if event.AdminOnly || event.UserID != "" {
 		return event
 	}
@@ -407,7 +416,7 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 			DedupeKey: dedupeKey,
 		}
 		_ = h.store.CreateStellarNotification(ctx, dueNotif)
-		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif, UserID: t.UserID})
+		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif, TargetUserID: t.UserID})
 		if h.broadcaster != nil {
 			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
 				"userId": dueNotif.UserID,
