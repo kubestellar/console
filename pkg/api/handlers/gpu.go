@@ -72,6 +72,10 @@ func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sC
 
 // CreateReservation creates a new GPU reservation
 func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	userID := middleware.GetUserID(c)
 
 	var input models.CreateGPUReservationInput
@@ -275,6 +279,10 @@ func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 // UpdateReservation updates an existing GPU reservation.
 // Only the owner or an admin may modify a reservation (#5416).
 func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	user, uerr := h.getCallerUser(c)
 	if uerr != nil {
 		return uerr
@@ -433,6 +441,10 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 // DeleteReservation deletes a GPU reservation.
 // Only the owner or an admin may delete a reservation (#5417).
 func (h *GPUHandler) DeleteReservation(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	user, uerr := h.getCallerUser(c)
 	if uerr != nil {
 		return uerr
