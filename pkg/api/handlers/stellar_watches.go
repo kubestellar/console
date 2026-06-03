@@ -151,7 +151,7 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
 func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
-	if _, err := h.requireUser(c); err != nil {
+	if err := requireAdmin(c, h.userStore); err != nil {
 		return err
 	}
 	limit := readListLimit(c)

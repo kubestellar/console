@@ -49,7 +49,7 @@ func newStellarActionExecuteTestApp(t *testing.T, role models.UserRole) *fiber.A
 		return c.Next()
 	})
 
-	handler := NewStellarHandler(sqlStore, nil)
+	handler := NewStellarHandler(sqlStore, nil, nil)
 	app.Post("/api/stellar/actions/execute", handler.ExecuteAction)
 
 	return app

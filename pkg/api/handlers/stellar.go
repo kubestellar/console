@@ -168,6 +168,7 @@ type StellarStore interface {
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
 type StellarHandler struct {
 	store            StellarStore
+	userStore        store.Store
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
@@ -214,9 +215,10 @@ type SSEEvent struct {
 	Data interface{} `json:"data"`
 }
 
-func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
+func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient, userStore store.Store) *StellarHandler {
 	return &StellarHandler{
 		store:            s,
+		userStore:        userStore,
 		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
 	}

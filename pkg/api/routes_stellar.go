@@ -18,7 +18,7 @@ func (s *Server) setupStellarRoutes(routes *routeSetupContext) {
 
 	api := routes.api
 
-	stellar := handlers.NewStellarHandler(stelStore, s.k8sClient)
+	stellar := handlers.NewStellarHandler(stelStore, s.k8sClient, s.store)
 
 	// Derive a context that is cancelled when the server shuts down.
 	ctx, cancel := context.WithCancel(context.Background())

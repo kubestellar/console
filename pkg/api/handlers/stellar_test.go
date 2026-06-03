@@ -63,7 +63,7 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 		return c.Next()
 	})
 
-	h := NewStellarHandler(sqlStore, nil)
+	h := NewStellarHandler(sqlStore, nil, nil)
 	app.Get("/api/stellar/preferences", h.GetPreferences)
 	app.Put("/api/stellar/preferences", h.UpdatePreferences)
 	app.Get("/api/stellar/missions", h.ListMissions)
