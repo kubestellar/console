@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -269,8 +270,67 @@ func (s *SQLiteStore) WithTransaction(ctx context.Context, fn func(tx *sql.Tx) e
 	return tx.Commit()
 }
 
+// dbDirPerms restricts the database directory to owner-only access.
+const dbDirPerms = 0700
+
+// dbFilePerms restricts the database file to owner-only read/write.
+const dbFilePerms = 0600
+
+// ensureSecureDBPath creates the parent directory (owner-only) and pre-creates
+// the database file with 0600 permissions if it does not already exist. This
+// prevents the SQLite driver from creating files with a permissive umask on
+// shared hosts (CWE-276).
+func ensureSecureDBPath(dbPath string) error {
+	if dbPath == ":memory:" || dbPath == "" {
+		return nil
+	}
+
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, dbDirPerms); err != nil {
+		return fmt.Errorf("create db directory: %w", err)
+	}
+	// Tighten directory permissions in case MkdirAll inherited a wider umask.
+	if err := os.Chmod(dir, dbDirPerms); err != nil {
+		return fmt.Errorf("chmod db directory: %w", err)
+	}
+
+	// Pre-create the file with restricted permissions so the driver doesn't
+	// rely on umask.
+	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
+		f, createErr := os.OpenFile(dbPath, os.O_CREATE|os.O_WRONLY, dbFilePerms)
+		if createErr != nil {
+			return fmt.Errorf("pre-create db file: %w", createErr)
+		}
+		f.Close()
+	} else if err == nil {
+		// Existing file — tighten permissions if they are too wide.
+		if chErr := os.Chmod(dbPath, dbFilePerms); chErr != nil {
+			slog.Warn("could not tighten db file permissions", "path", dbPath, "error", chErr)
+		}
+	}
+	return nil
+}
+
+// tightenSidecarPerms ensures WAL and SHM files have owner-only permissions.
+func tightenSidecarPerms(dbPath string) {
+	if dbPath == ":memory:" || dbPath == "" {
+		return
+	}
+	for _, suffix := range []string{"-wal", "-shm"} {
+		p := dbPath + suffix
+		if _, err := os.Stat(p); err == nil {
+			if chErr := os.Chmod(p, dbFilePerms); chErr != nil {
+				slog.Warn("could not tighten sidecar permissions", "path", p, "error", chErr)
+			}
+		}
+	}
+}
+
 // NewSQLiteStore creates a new SQLite store
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
+	if err := ensureSecureDBPath(dbPath); err != nil {
+		return nil, err
+	}
 	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key(value)):
 	//  - journal_mode=WAL enables Write-Ahead Logging so readers don't
 	//    block writers.
@@ -301,6 +361,9 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		db.Close()
 		return nil, fmt.Errorf("failed to migrate: %w", err)
 	}
+
+	// Tighten WAL and SHM sidecar files created by the driver.
+	tightenSidecarPerms(dbPath)
 
 	return store, nil
 }

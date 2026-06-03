@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -72,6 +73,35 @@ func TestNewSQLiteStore(t *testing.T) {
 			require.NotNil(t, store)
 			store.Close()
 		})
+	}
+}
+
+func TestNewSQLiteStore_FilePermissions(t *testing.T) {
+	dir := t.TempDir()
+	subDir := filepath.Join(dir, "data")
+	dbPath := filepath.Join(subDir, "console.db")
+
+	store, err := NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { store.Close() })
+
+	// Verify directory permissions are owner-only.
+	dirInfo, err := os.Stat(subDir)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(dbDirPerms), dirInfo.Mode().Perm(),
+		"database directory should have 0700 permissions")
+
+	// Verify DB file permissions are owner-only read/write.
+	fileInfo, err := os.Stat(dbPath)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(dbFilePerms), fileInfo.Mode().Perm(),
+		"database file should have 0600 permissions")
+
+	// Verify WAL sidecar (created by WAL mode) also has restricted permissions.
+	walPath := dbPath + "-wal"
+	if walInfo, walErr := os.Stat(walPath); walErr == nil {
+		require.Equal(t, os.FileMode(dbFilePerms), walInfo.Mode().Perm(),
+			"WAL file should have 0600 permissions")
 	}
 }
 
