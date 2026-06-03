@@ -80,21 +80,27 @@ export async function enforceSimpleRateLimit(
       await cleanupExpiredBucket(store, getBucketPrefix(options.prefix, subjectKey, cleanupBucket));
     }
 
-    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
-
+    // SECURITY: Count BEFORE writing to prevent storage amplification (CWE-400, #16818).
+    // Previous implementation wrote a token first then checked the count, allowing
+    // over-limit requests to still create persistent blob entries.
     const currentWindowCount = await countBucketEntries(
       store,
       getBucketPrefix(options.prefix, subjectKey, bucket),
     );
 
-    if (currentWindowCount > options.maxRequests) {
+    if (currentWindowCount >= options.maxRequests) {
       return {
         limited: true,
         retryAfterSeconds: retryAfterSeconds((bucket + 1) * options.windowMs),
       };
     }
+
+    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
   } catch {
-    return { limited: false, retryAfterSeconds: 0 };
+    // SECURITY: Fail closed — deny request when rate-limit store is unavailable (#16818).
+    // Previous implementation returned limited: false on errors, completely
+    // disabling rate limiting during store outages.
+    return { limited: true, retryAfterSeconds: 60 };
   }
 
   return { limited: false, retryAfterSeconds: 0 };
