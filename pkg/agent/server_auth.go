@@ -48,7 +48,7 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 // validateToken checks the authentication token (if configured).
 // Tokens are accepted via the Authorization header for HTTP requests.
 // WebSocket endpoints authenticate after upgrade using a first-message auth
-// frame, with a deprecated query-parameter fallback for legacy clients (#16508).
+// frame, so the kc-agent token never appears in the upgrade URL (#16508).
 //
 // When KC_AGENT_TOKEN is auto-generated, trusted browser origins may bypass the
 // Bearer token requirement only on a tiny allow-list of safe read-only paths.
@@ -85,13 +85,8 @@ func (s *Server) validateToken(r *http.Request) bool {
 	return false
 }
 
-func (s *Server) authenticateWebSocket(conn *websocket.Conn, r *http.Request) error {
+func (s *Server) authenticateWebSocket(conn *websocket.Conn, _ *http.Request) error {
 	if s.agentToken == "" {
-		return nil
-	}
-
-	if queryToken := r.URL.Query().Get("token"); queryToken != "" && subtle.ConstantTimeCompare([]byte(queryToken), []byte(s.agentToken)) == 1 {
-		slog.Warn("SECURITY: accepted deprecated WebSocket query token authentication", "path", r.URL.Path)
 		return nil
 	}
 

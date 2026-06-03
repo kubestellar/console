@@ -118,18 +118,12 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 	}
 }
 
-func TestServer_HandleWebSocket_QueryTokenFallback(t *testing.T) {
-	mockProxy := &KubectlProxy{
-		config: &clientcmdapi.Config{
-			Contexts: map[string]*clientcmdapi.Context{"c1": {Cluster: "c1"}},
-		},
-	}
+func TestServer_HandleWebSocket_RejectsQueryTokenFallback(t *testing.T) {
 	s := &Server{
 		agentToken:     "secret",
 		allowedOrigins: []string{"*"},
 		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
 		clients:        make(map[*websocket.Conn]*wsClient),
-		kubectl:        mockProxy,
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(s.handleWebSocket))
@@ -142,11 +136,7 @@ func TestServer_HandleWebSocket_QueryTokenFallback(t *testing.T) {
 	}
 	defer conn.Close()
 
-	healthMsg := protocol.Message{
-		ID:   "h1",
-		Type: protocol.TypeHealth,
-	}
-	if err := conn.WriteJSON(healthMsg); err != nil {
+	if err := conn.WriteJSON(protocol.Message{ID: "h1", Type: protocol.TypeHealth}); err != nil {
 		t.Fatalf("WriteJSON failed: %v", err)
 	}
 
@@ -154,8 +144,8 @@ func TestServer_HandleWebSocket_QueryTokenFallback(t *testing.T) {
 	if err := conn.ReadJSON(&resp); err != nil {
 		t.Fatalf("ReadJSON failed: %v", err)
 	}
-	if resp.ID != "h1" || resp.Type != protocol.TypeResult {
-		t.Fatalf("unexpected response via query fallback: %+v", resp)
+	if resp.Type != protocol.TypeError {
+		t.Fatalf("expected auth error response, got %+v", resp)
 	}
 }
 

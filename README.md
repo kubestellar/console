@@ -70,7 +70,7 @@ go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
 
 ### kc-agent authentication (`KC_AGENT_TOKEN`)
 
-`kc-agent` accepts a shared secret via `KC_AGENT_TOKEN`. When it is set, browser and WebSocket requests to the agent must present `Authorization: Bearer <token>` (or `?token=<token>` for a real WebSocket upgrade). This is recommended when you want an extra layer of protection against other local processes reaching `127.0.0.1:8585`.
+`kc-agent` accepts a shared secret via `KC_AGENT_TOKEN`. When it is set, browser HTTP requests to the agent must present `Authorization: Bearer <token>`, and WebSocket clients must send `{"type":"auth","token":"<token>"}` as the first message after the connection opens. This keeps the token out of the WebSocket upgrade URL while still protecting `127.0.0.1:8585` from other local processes.
 
 - `start-dev.sh` and `startup-oauth.sh` auto-generate a random `KC_AGENT_TOKEN` for each session if you do not set one.
 - Set `KC_AGENT_TOKEN` yourself if you want a stable secret across restarts or if you launch `kc-agent` manually.
