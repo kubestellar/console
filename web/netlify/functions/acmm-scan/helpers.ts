@@ -67,15 +67,19 @@ export interface GitTreeEntry {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Validate CORS origin via URL-parsed hostname check */
+/** Validate CORS origin via strict allowlist — no wildcard subdomain matching (CWE-942 mitigation) */
 export function corsOrigin(origin: string | null): string {
+  // Import the shared CORS utility for centralized, secure origin validation
+  // This replaces the previous wildcard subdomain pattern (*.kubestellar.io)
+  // with an explicit allowlist to prevent subdomain takeover attacks
   if (!origin) return ALLOWED_ORIGINS[0];
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
-  } catch { /* invalid URL */ }
+  
+  // Check against the shared allowlist (includes localhost for dev)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { isAllowedOrigin } = require("../_shared/cors");
+  if (isAllowedOrigin(origin)) return origin;
+  
   return ALLOWED_ORIGINS[0];
 }
 

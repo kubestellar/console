@@ -10,6 +10,7 @@
 // contexts, replacing the incomplete regex-based HTML sanitization that
 // could miss multi-character sequences (js/incomplete-multi-character-sanitization).
 import DOMPurify from "isomorphic-dompurify";
+import { isAllowedOrigin } from "./_shared/cors";
 
 const MEDIUM_FEED_URL = "https://medium.com/feed/@kubestellar";
 const MEDIUM_CHANNEL_URL = "https://medium.com/@kubestellar";
@@ -26,40 +27,17 @@ const PREVIEW_MAX_LEN = 200;
 /** Maximum upstream response size (512 KB) — reject unexpectedly large feeds */
 export const MAX_RESPONSE_BYTES = 512 * 1024;
 
-const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://console-deploy-preview.kubestellar.io",
-];
-
-const ALLOWED_ORIGIN_SET = new Set(ALLOWED_ORIGINS);
-const ALLOWED_HOSTS = new Set(ALLOWED_ORIGINS.map((origin) => new URL(origin).hostname));
-
-function isAllowedOrigin(origin: string): boolean {
-  let parsedOrigin: URL;
-
-  try {
-    parsedOrigin = new URL(origin);
-  } catch {
-    return false;
-  }
-
-  if (parsedOrigin.protocol !== "https:") {
-    return false;
-  }
-
-  if (ALLOWED_ORIGIN_SET.has(parsedOrigin.origin) || ALLOWED_HOSTS.has(parsedOrigin.hostname)) {
-    return true;
-  }
-
-  return parsedOrigin.hostname === "kubestellar.io" || parsedOrigin.hostname.endsWith(".kubestellar.io");
-}
-
+/**
+ * Get allowed CORS origin using the shared security utility.
+ * This replaces the previous wildcard subdomain pattern (*.kubestellar.io)
+ * with an explicit allowlist to prevent subdomain takeover attacks (CWE-942).
+ */
 function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
+  if (!origin) return "https://console.kubestellar.io";
   if (isAllowedOrigin(origin)) {
     return origin;
   }
-  return ALLOWED_ORIGINS[0];
+  return "https://console.kubestellar.io";
 }
 
 interface MediumPost {
