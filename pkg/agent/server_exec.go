@@ -24,7 +24,8 @@ package agent
 // kc-agent does not need any of that:
 //
 //   - Auth uses a first-message WebSocket handshake so the bearer token never
-//     appears in the URL or handshake query string.
+//     appears in the URL or handshake query string. A temporary query-token
+//     fallback remains for older clients while they roll forward.
 //   - RBAC is enforced natively by the target apiserver when we open the
 //     SPDY exec stream using the user's kubeconfig context. A deny becomes a
 //     synchronous stream-open error which we translate into a websocket
@@ -227,7 +228,8 @@ func (q *agentTerminalSizeQueue) Next() *remotecommand.TerminalSize {
 // HandleExec (pkg/api/handlers/exec.go) minus the pod-SA-specific layers:
 //
 //  1. WebSocket upgrade via s.upgrader (gorilla).
-//  2. Authenticate the connection from the first JSON auth frame.
+//  2. Authenticate the connection from the first JSON auth frame (with a
+//     temporary query-token fallback for older clients).
 //  3. Read and parse the agentExecInitMessage JSON frame.
 //  4. Resolve the clientset and REST config for the target cluster from the
 //     user's kubeconfig. The apiserver will enforce RBAC against the user

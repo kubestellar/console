@@ -118,7 +118,7 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 	}
 }
 
-func TestServer_HandleWebSocket_RejectsQueryTokenFallback(t *testing.T) {
+func TestServer_HandleWebSocket_AllowsQueryTokenFallback(t *testing.T) {
 	s := &Server{
 		agentToken:     "secret",
 		allowedOrigins: []string{"*"},
@@ -144,8 +144,8 @@ func TestServer_HandleWebSocket_RejectsQueryTokenFallback(t *testing.T) {
 	if err := conn.ReadJSON(&resp); err != nil {
 		t.Fatalf("ReadJSON failed: %v", err)
 	}
-	if resp.Type != protocol.TypeError {
-		t.Fatalf("expected auth error response, got %+v", resp)
+	if resp.ID != "h1" || resp.Type != protocol.TypeResult {
+		t.Fatalf("expected health response, got %+v", resp)
 	}
 }
 
