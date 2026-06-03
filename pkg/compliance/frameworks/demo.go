@@ -1,14 +1,21 @@
 package frameworks
 
 import (
+	"hash/fnv"
 	"math/rand/v2"
 	"time"
 )
 
 // DemoEvaluation returns a synthetic evaluation result for demo mode
 // when no live cluster prober is available.
+// The RNG is seeded deterministically from the cluster name so that
+// demo reports are reproducible across runs (fixes flaky tests when
+// the framework under test has only a few checks).
 func DemoEvaluation(fw Framework, cluster string) *EvaluationResult {
-	rng := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())) // #nosec G404 -- demo data, not security-critical
+	h := fnv.New64a()
+	h.Write([]byte(cluster)) //nolint:errcheck // hash.Hash.Write never returns an error
+	seed := h.Sum64()
+	rng := rand.New(rand.NewPCG(seed, seed^0xdeadbeefcafebabe)) // #nosec G404 -- demo data, not security-critical
 	result := &EvaluationResult{
 		FrameworkID:   fw.ID,
 		FrameworkName: fw.Name,
