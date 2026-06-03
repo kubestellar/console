@@ -12,7 +12,8 @@
  */
 
 import { getStore } from "@netlify/blobs";
-import { buildCorsHeaders, handlePreflight, readCappedBody, BodyTooLargeError } from "./_shared";
+import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { isBodyTooLargeError, readCappedBodyJson } from "./_shared/read-capped-body";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -35,6 +36,12 @@ interface NPSResponse {
 
 interface NPSData {
   responses: NPSResponse[];
+}
+
+interface NPSSubmissionBody {
+  score?: unknown;
+  feedback?: unknown;
+  sessionId?: unknown;
 }
 
 interface NPSAggregation {
@@ -230,28 +237,26 @@ export default async (req: Request) => {
         );
       }
 
-      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-      if (contentLength > MAX_BODY_BYTES) {
-        return new Response(
-          JSON.stringify({ error: "Payload too large" }),
-          { status: 413, headers }
-        );
-      }
-
-      let bodyText: string;
+      let body: NPSSubmissionBody;
       try {
-        bodyText = await readCappedBody(req, MAX_BODY_BYTES);
-      } catch (e) {
-        if (e instanceof BodyTooLargeError) {
+        body = await readCappedBodyJson<NPSSubmissionBody>(req, MAX_BODY_BYTES, "request");
+      } catch (error) {
+        if (isBodyTooLargeError(error)) {
           return new Response(
             JSON.stringify({ error: "Payload too large" }),
             { status: 413, headers }
           );
         }
-        throw e;
+        return new Response(
+          JSON.stringify({ error: "Invalid JSON body" }),
+          { status: 400, headers }
+        );
       }
-      const body = JSON.parse(bodyText);
-      const score = parseInt(body.score, 10);
+
+      const scoreValue = typeof body.score === "string" || typeof body.score === "number"
+        ? String(body.score)
+        : "";
+      const score = parseInt(scoreValue, 10);
 
       // Validate — 4-emoji widget uses scores 1-4
       if (isNaN(score) || score < SCORE_MIN || score > SCORE_MAX) {

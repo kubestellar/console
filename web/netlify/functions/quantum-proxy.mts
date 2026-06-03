@@ -1,7 +1,7 @@
 import type { Context } from "@netlify/functions";
+import { isBodyTooLargeError, readCappedBodyText } from "./_shared/read-capped-body";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
-import { readCappedBody, BodyTooLargeError } from "./_shared/readCappedBody";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -84,6 +84,7 @@ const PROXY_TIMEOUT_MS = 15_000;
 const MAX_PROXY_BODY_BYTES = 1_048_576;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
+const OVERSIZED_REQUEST_ERROR = "Request body too large";
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
 const AUTH_COOKIE_NAME = "kc_auth";
 
@@ -376,29 +377,9 @@ export default async (req: Request, context: Context): Promise<Response> => {
     }
 
     const targetURL = new URL(path, quantumServiceURL).toString();
-    if (req.method !== "GET") {
-      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-      if (contentLength > MAX_PROXY_BODY_BYTES) {
-        return new Response(JSON.stringify({ error: "Request body too large" }), {
-          status: 413,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-    }
-    let requestBody: string | undefined;
-    if (req.method !== "GET") {
-      try {
-        requestBody = await readCappedBody(req, MAX_PROXY_BODY_BYTES);
-      } catch (e) {
-        if (e instanceof BodyTooLargeError) {
-          return new Response(JSON.stringify({ error: "Request body too large" }), {
-            status: 413,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        throw e;
-      }
-    }
+    const requestBody = req.method === "GET"
+      ? undefined
+      : await readCappedBodyText(req, MAX_PROXY_BODY_BYTES, "request");
     if (req.method === "POST" && requestBody !== undefined) {
       const validationError = validatePostBody(requestBody);
       if (validationError) {
@@ -439,6 +420,12 @@ export default async (req: Request, context: Context): Promise<Response> => {
       headers: safeHeaders,
     });
   } catch (error) {
+    if (isBodyTooLargeError(error)) {
+      return new Response(JSON.stringify({ error: OVERSIZED_REQUEST_ERROR }), {
+        status: 413,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     if (error instanceof Error && error.message === OVERSIZED_RESPONSE_ERROR) {
       return new Response(JSON.stringify({ error: OVERSIZED_RESPONSE_ERROR }), {
         status: 502,

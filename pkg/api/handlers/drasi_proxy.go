@@ -180,21 +180,8 @@ func (h *MCPHandlers) ProxyDrasi(c *fiber.Ctx) error {
 	if target != "server" && target != "platform" {
 		return fiber.NewError(fiber.StatusBadRequest, "target must be 'server' or 'platform'")
 	}
-	if target == "server" {
-		if err := requireEditorOrAdmin(c, h.store); err != nil {
-			return err
-		}
-	} else {
-		// Platform target: readers can GET, but mutations require editor+ (CWE-285, #16660)
-		if c.Method() != fiber.MethodGet {
-			if err := requireEditorOrAdmin(c, h.store); err != nil {
-				return err
-			}
-		} else {
-			if err := requireViewerOrAbove(c, h.store); err != nil {
-				return err
-			}
-		}
+	if err := h.authorizeDrasiProxy(c, target); err != nil {
+		return err
 	}
 
 	// The fiber wildcard captures everything after `/api/drasi/proxy/`.
@@ -215,6 +202,16 @@ func (h *MCPHandlers) ProxyDrasi(c *fiber.Ctx) error {
 		return h.proxyDrasiPlatform(c, upstreamPath, upstreamQuery)
 	}
 	return fiber.NewError(fiber.StatusBadRequest, "unreachable")
+}
+
+func (h *MCPHandlers) authorizeDrasiProxy(c *fiber.Ctx, target string) error {
+	if target == "server" {
+		return requireEditorOrAdmin(c, h.store)
+	}
+	if c.Method() == fiber.MethodGet {
+		return requireViewerOrAbove(c, h.store)
+	}
+	return requireEditorOrAdmin(c, h.store)
 }
 
 // proxyDrasiServer forwards to a drasi-server REST URL configured via ?url=…
