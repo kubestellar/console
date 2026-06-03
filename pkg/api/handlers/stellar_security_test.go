@@ -98,14 +98,14 @@ func TestStellarBroadcastToClientsFiltersByAudience(t *testing.T) {
 	assertNoQueuedSSEEvent(t, h.sseClients["other"].ch)
 }
 
-func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
+func TestStellarIngestEventRequiresAdmin(t *testing.T) {
 	tests := []struct {
 		name       string
 		role       models.UserRole
 		wantStatus int
 	}{
 		{name: "viewer forbidden", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
-		{name: "editor allowed", role: models.UserRoleEditor, wantStatus: http.StatusBadRequest},
+		{name: "editor forbidden", role: models.UserRoleEditor, wantStatus: http.StatusForbidden},
 		{name: "admin allowed", role: models.UserRoleAdmin, wantStatus: http.StatusBadRequest},
 	}
 
@@ -147,7 +147,7 @@ func newStellarIngestEventTestHandler(t *testing.T, role models.UserRole) (*Stel
 		_ = sqlStore.Close()
 	}
 
-	return NewStellarHandler(sqlStore, nil), userID, cleanup
+	return NewStellarHandler(sqlStore, nil, WithUserStore(sqlStore)), userID, cleanup
 }
 
 func readQueuedSSEEvent(t *testing.T, ch <-chan SSEEvent) SSEEvent {

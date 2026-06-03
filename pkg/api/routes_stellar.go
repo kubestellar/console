@@ -15,5 +15,5 @@ func (s *Server) setupStellarRoutes(routes *routeSetupContext) {
 		return
 	}
 
-	newStellarRouteGroup(stelStore, s.store, s.k8sClient, s.lifecycle.done).Register(routes.api)
+	newStellarRouteGroup(stelStore, s.k8sClient, s.lifecycle.done, s.store).Register(routes.api)
 }

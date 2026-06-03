@@ -507,12 +507,11 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 }
 
 // IngestEvent receives k8s events from the agent and forwards them to ProcessEvent.
-// Admin access is enforced by RequireAdminMiddleware on this route (CWE-285, #16709).
+// This is the HTTP bridge that connects the agent process to Stellar's notification system.
+// Only admin users may inject events to prevent forged system events (CWE-285, #16709).
 func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
-	if userStore, ok := h.store.(store.Store); ok {
-		if err := requireEditorOrAdmin(c, userStore); err != nil {
-			return err
-		}
+	if err := requireAdmin(c, h.userStore); err != nil {
+		return err
 	}
 
 	var event IncomingEvent

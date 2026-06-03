@@ -40,7 +40,8 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 	})
 }
 
-// GetSecrets returns Secrets from clusters
+// GetSecrets returns Secrets from clusters.
+// Requires editor or admin role — Secrets contain sensitive data (CWE-862, #16731).
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err

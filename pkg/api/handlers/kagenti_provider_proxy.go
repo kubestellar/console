@@ -45,6 +45,7 @@ func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, confi
 }
 
 // GetStatus returns the kagenti controller availability status.
+// Only editors and admins may view LLM provider configuration (CWE-200, #16730).
 func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
 	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err

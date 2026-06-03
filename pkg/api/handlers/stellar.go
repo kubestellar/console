@@ -168,6 +168,7 @@ type StellarStore interface {
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
 type StellarHandler struct {
 	store            StellarStore
+	userStore        store.Store // for admin role checks on sensitive endpoints
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
@@ -316,11 +317,25 @@ func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
 	return trimmedUserID, false, true
 }
 
-func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
-	return &StellarHandler{
+func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient, opts ...StellarHandlerOption) *StellarHandler {
+	h := &StellarHandler{
 		store:            s,
 		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
+	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
+}
+
+// StellarHandlerOption configures optional dependencies for StellarHandler.
+type StellarHandlerOption func(*StellarHandler)
+
+// WithUserStore sets the user store for admin role checks on sensitive endpoints.
+func WithUserStore(us store.Store) StellarHandlerOption {
+	return func(h *StellarHandler) {
+		h.userStore = us
 	}
 }
 

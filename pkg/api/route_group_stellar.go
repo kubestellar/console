@@ -14,23 +14,23 @@ import (
 // stellarRouteGroup wires the Stellar handler with only the dependencies its
 // routes and background workers need.
 type stellarRouteGroup struct {
-	store      handlers.StellarStore
-	adminStore store.Store // full store for admin role checks on restricted routes
-	k8sClient  *k8s.MultiClusterClient
-	done       <-chan struct{}
+	store     handlers.StellarStore
+	userStore store.Store
+	k8sClient *k8s.MultiClusterClient
+	done      <-chan struct{}
 }
 
-func newStellarRouteGroup(s handlers.StellarStore, adminStore store.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *stellarRouteGroup {
+func newStellarRouteGroup(stelStore handlers.StellarStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
 	return &stellarRouteGroup{
-		store:      s,
-		adminStore: adminStore,
-		k8sClient:  k8sClient,
-		done:       done,
+		store:     stelStore,
+		userStore: userStore,
+		k8sClient: k8sClient,
+		done:      done,
 	}
 }
 
 func (g *stellarRouteGroup) Register(api fiber.Router) {
-	stellar := handlers.NewStellarHandler(g.store, g.k8sClient)
+	stellar := handlers.NewStellarHandler(g.store, g.k8sClient, handlers.WithUserStore(g.userStore))
 	g.startWorkers(stellar)
 
 	api.Get("/stellar/preferences", stellar.GetPreferences)
