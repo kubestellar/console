@@ -205,17 +205,30 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// first to prevent orphaned goroutines (#9619).
 	// The conn reference is stored alongside the cancel function so that
 	// handleCancelChat can verify the requester owns the session (#9712).
+	// A cancelSecret is generated so the HTTP cancel path can verify ownership
+	// without relying solely on session ID knowledge (#16758).
+	cancelSecret := uuid.New().String()
 	s.activeChatCtxsMu.Lock()
 	if prev, exists := s.activeChatCtxs[req.SessionID]; exists {
 		prev.cancel()
 	}
-	s.activeChatCtxs[req.SessionID] = activeChatEntry{cancel: cancel, conn: conn}
+	s.activeChatCtxs[req.SessionID] = activeChatEntry{cancel: cancel, conn: conn, cancelSecret: cancelSecret}
 	s.activeChatCtxsMu.Unlock()
 	defer func() {
 		s.activeChatCtxsMu.Lock()
 		delete(s.activeChatCtxs, req.SessionID)
 		s.activeChatCtxsMu.Unlock()
 	}()
+
+	// Send the cancel secret to the client so it can use the HTTP cancel fallback.
+	safeWrite(connCtx, protocol.Message{
+		ID:   msg.ID,
+		Type: protocol.TypeChatStarted,
+		Payload: map[string]string{
+			"sessionId":    req.SessionID,
+			"cancelSecret": cancelSecret,
+		},
+	})
 
 	// Server-enforced dry-run gate (#6442): when the frontend sends
 	// dryRun=true, register the session so the kubectl proxy rejects
@@ -655,20 +668,27 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 	var req struct {
-		SessionID string `json:"sessionId"`
+		SessionID    string `json:"sessionId"`
+		CancelSecret string `json:"cancelSecret"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.SessionID == "" {
 		http.Error(w, `{"error":"sessionId is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	// #7432 — Same deadlock fix as handleCancelChat: extract cancelFn under
-	// the lock but invoke it after releasing the mutex.
-	// The HTTP path is already guarded by validateToken, so no additional
-	// ownership check is needed here (#9712).
+	// SECURITY (#16758): Verify the caller knows the cancel secret issued when
+	// the session started. This prevents any authenticated user from cancelling
+	// another user's chat by guessing/enumerating session IDs.
 	s.activeChatCtxsMu.Lock()
 	entry, ok := s.activeChatCtxs[req.SessionID]
 	if ok {
+		if entry.cancelSecret != "" && req.CancelSecret != entry.cancelSecret {
+			s.activeChatCtxsMu.Unlock()
+			slog.Warn("[Chat] SECURITY: rejected HTTP cancel with invalid cancelSecret",
+				"sessionID", req.SessionID, "remoteAddr", r.RemoteAddr)
+			http.Error(w, `{"error":"forbidden: invalid cancel secret"}`, http.StatusForbidden)
+			return
+		}
 		delete(s.activeChatCtxs, req.SessionID)
 	}
 	s.activeChatCtxsMu.Unlock()

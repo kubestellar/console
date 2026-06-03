@@ -38,8 +38,13 @@ type activeChatEntry struct {
 	// conn is the WebSocket connection that registered this session.
 	// It is used as an ownership key: only the originating connection may
 	// cancel the session via the WebSocket cancel path. The HTTP cancel path
-	// (handleCancelChatHTTP) is separately guarded by validateToken.
+	// (handleCancelChatHTTP) is separately guarded by validateToken and
+	// cancelSecret verification (#16758).
 	conn *websocket.Conn
+	// cancelSecret is a server-generated nonce required for HTTP-based
+	// cancellation. This prevents authenticated users who guess/enumerate
+	// session IDs from cancelling other users' sessions (#16758).
+	cancelSecret string
 }
 
 // cmdPrefixRe matches lines like "CMD: ...", "CMD:...", "Command: ...", or "command: ..."

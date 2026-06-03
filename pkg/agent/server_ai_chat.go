@@ -207,6 +207,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
 	}
 
+	// SECURITY (#16759): Enforce the same prompt size cap as the streaming path
+	// to prevent resource exhaustion via unbounded prompts.
+	if len(req.Prompt) > maxPromptChars {
+		return s.errorResponse(msg.ID, "prompt_too_large",
+			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars))
+	}
+
 	// SECURITY: Reject new prompts when the session token quota is exhausted
 	// to prevent unbounded AI API spend (#9438).
 	if s.isSessionQuotaExceeded() {
@@ -248,8 +255,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 	}
 
 	// Convert protocol history to provider history
+	// SECURITY (#16756): Drop messages with disallowed roles (e.g. "system")
+	// to prevent prompt injection via system-role messages.
 	var history []ChatMessage
 	for _, msg := range req.History {
+		if !allowedClientRoles[msg.Role] {
+			continue
+		}
 		history = append(history, ChatMessage{
 			Role:    msg.Role,
 			Content: msg.Content,

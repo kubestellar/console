@@ -24,6 +24,7 @@ const (
 	TypeProgress      MessageType = "progress"       // Tool activity/progress events
 	TypeAgentSelected MessageType = "agent_selected" // Agent selection confirmed
 	TypeAgentsList    MessageType = "agents_list"    // List of available agents
+	TypeChatStarted   MessageType = "chat_started"   // Session started with cancel secret (#16758)
 
 	// Mixed-mode chat types
 	TypeMixedModeThinking  MessageType = "mixed_mode_thinking"  // Thinking agent phase indicator
