@@ -611,6 +611,13 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "event not found"})
 	}
 
+	// SECURITY: Verify the authenticated user owns this notification to prevent
+	// IDOR — an attacker who guesses another user's notification UUID must not
+	// be able to trigger AI remediation against the victim's resources (CWE-639, #16969).
+	if notif.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
+	}
+
 	// Idempotent return for an already-running solve.
 	active, _ := full.GetActiveSolveForEvent(ctx, eventID)
 	if active != nil {

@@ -144,6 +144,67 @@ func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
 	}
 }
 
+// TestStartSolveRejectsIDOR verifies that a user cannot start a solve for
+// a notification they do not own (CWE-639, #16969).
+func TestStartSolveRejectsIDOR(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-idor.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	ctx := context.Background()
+
+	// Create two users.
+	ownerID := uuid.New()
+	attackerID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: ownerID, GitHubID: "100", GitHubLogin: "owner", Role: models.UserRoleAdmin}))
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: attackerID, GitHubID: "200", GitHubLogin: "attacker", Role: models.UserRoleAdmin}))
+
+	// Create a notification owned by ownerID.
+	notifID := uuid.New().String()
+	notif := &store.StellarNotification{
+		ID:       notifID,
+		UserID:   ownerID.String(),
+		Type:     "alert",
+		Severity: "critical",
+		Title:    "Pod crashloop",
+		Body:     "nginx-abc123 is crashing",
+		Cluster:  "prod-cluster",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(ctx, notif))
+
+	h := NewStellarHandler(sqlStore, nil, WithUserStore(sqlStore))
+
+	// Attacker tries to start solve on owner's notification.
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", attackerID)
+		return c.Next()
+	})
+	app.Post("/api/stellar/solve/:id", h.StartSolve)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/stellar/solve/"+notifID, strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode, "attacker must not start solve on another user's notification")
+
+	// Owner should be allowed (will fail for other reasons like no k8s client, but not 403).
+	ownerApp := fiber.New()
+	ownerApp.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", ownerID)
+		return c.Next()
+	})
+	ownerApp.Post("/api/stellar/solve/:id", h.StartSolve)
+
+	ownerReq := httptest.NewRequest(http.MethodPost, "/api/stellar/solve/"+notifID, strings.NewReader(`{}`))
+	ownerReq.Header.Set("Content-Type", "application/json")
+	ownerResp, err := ownerApp.Test(ownerReq, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	// Owner passes auth check — may get 412 (no k8s client) or 202, but NOT 403.
+	assert.NotEqual(t, http.StatusForbidden, ownerResp.StatusCode, "owner must pass IDOR check")
+}
+
 func readQueuedSSEEvent(t *testing.T, ch <-chan SSEEvent) SSEEvent {
 	t.Helper()
 	select {
