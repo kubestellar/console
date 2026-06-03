@@ -23,46 +23,35 @@ import (
 )
 
 func TestServer_HandleHealth(t *testing.T) {
-	// 1. Setup mock kubectl proxy
-	config := &api.Config{
-		Contexts: map[string]*api.Context{
-			"ctx-1": {Cluster: "c1"},
-			"ctx-2": {Cluster: "c2"},
-		},
-	}
-	mockProxy := &KubectlProxy{config: config}
-
-	// 2. Setup server with mock dependencies
 	server := &Server{
-		kubectl:        mockProxy,
 		allowedOrigins: []string{"http://allowed.com"},
 		registry:       &Registry{providers: make(map[string]AIProvider)},
 	}
 
-	// 3. Create request
 	req := httptest.NewRequest("GET", "/health", nil)
-	req.Header.Set("Origin", "http://allowed.com") // Match allowed origin
+	req.Header.Set("Origin", "http://allowed.com")
 	w := httptest.NewRecorder()
 
-	// 4. Invoke handler
 	server.handleHealth(w, req)
 
-	// 5. Verify response
 	resp := w.Result()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	var payload protocol.HealthPayload
+	var payload map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if payload.Status != "ok" {
-		t.Errorf("Expected status 'ok', got %q", payload.Status)
+	if payload["status"] != "ok" {
+		t.Errorf("Expected status 'ok', got %q", payload["status"])
 	}
-	if payload.Clusters != 2 {
-		t.Errorf("Expected 2 clusters, got %d", payload.Clusters)
+	if payload["version"] != Version {
+		t.Errorf("Expected version %q, got %q", Version, payload["version"])
+	}
+	if len(payload) != 2 {
+		t.Errorf("Expected only status and version, got %#v", payload)
 	}
 }
 
@@ -122,6 +111,10 @@ func TestServer_HandleStatus(t *testing.T) {
 	})
 
 	t.Run("returns status with valid token", func(t *testing.T) {
+		server.registry = &Registry{providers: map[string]AIProvider{
+			"test-provider": &ServerMockProvider{name: "Test Provider"},
+		}}
+
 		req := httptest.NewRequest(http.MethodGet, "/status", nil)
 		req.Header.Set("Origin", "http://allowed.com")
 		req.Header.Set("Authorization", "Bearer test-token")
@@ -133,11 +126,7 @@ func TestServer_HandleStatus(t *testing.T) {
 			t.Fatalf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
 		}
 
-		var payload struct {
-			Status   string `json:"status"`
-			Version  string `json:"version"`
-			Clusters int    `json:"clusters"`
-		}
+		var payload protocol.HealthPayload
 		if err := json.NewDecoder(w.Body).Decode(&payload); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
@@ -149,6 +138,51 @@ func TestServer_HandleStatus(t *testing.T) {
 		}
 		if payload.Clusters != 2 {
 			t.Fatalf("expected 2 clusters, got %d", payload.Clusters)
+		}
+		if payload.GoVersion == "" || payload.OS == "" || payload.Arch == "" {
+			t.Fatalf("expected runtime metadata in authenticated status response, got %+v", payload)
+		}
+		if len(payload.AvailableProviders) != 1 {
+			t.Fatalf("expected 1 provider summary, got %d", len(payload.AvailableProviders))
+		}
+	})
+}
+
+func TestServer_HandleMetrics(t *testing.T) {
+	server := &Server{
+		allowedOrigins: []string{"http://allowed.com"},
+		agentToken:     "test-token",
+		tokenExplicit:  true,
+	}
+
+	t.Run("requires auth", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		req.Header.Set("Origin", "http://allowed.com")
+		w := httptest.NewRecorder()
+
+		server.handleMetrics(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+	})
+
+	t.Run("returns metrics with valid token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+		req.Header.Set("Origin", "http://allowed.com")
+		req.Header.Set("Authorization", "Bearer test-token")
+		w := httptest.NewRecorder()
+
+		server.handleMetrics(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/plain") {
+			t.Fatalf("expected Prometheus text response, got %q", got)
+		}
+		if w.Body.Len() == 0 {
+			t.Fatal("expected metrics body")
 		}
 	})
 }
