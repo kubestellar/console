@@ -37,6 +37,21 @@ func normalizeMessageRole(role string) string {
 	}
 }
 
+func totalChatPromptChars(req protocol.ChatRequest) int {
+	totalChars := len(req.Prompt)
+	for _, histMsg := range req.History {
+		totalChars += len(histMsg.Content)
+	}
+	return totalChars
+}
+
+func validateChatPromptSize(req protocol.ChatRequest) error {
+	if totalChatPromptChars(req) <= maxPromptChars {
+		return nil
+	}
+	return fmt.Errorf("Prompt exceeds maximum combined prompt/history length of %d characters", maxPromptChars)
+}
+
 type kagentiClusterSnapshot struct {
 	Name          string             `json:"name"`
 	Context       string             `json:"context"`
@@ -228,9 +243,8 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 	}
 
 	// SECURITY: Enforce prompt size limit matching the streaming path (CWE-770, #16759).
-	if len(req.Prompt) > maxPromptChars {
-		return s.errorResponse(msg.ID, "prompt_too_large",
-			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars))
+	if err := validateChatPromptSize(req); err != nil {
+		return s.errorResponse(msg.ID, "prompt_too_large", err.Error())
 	}
 
 	// SECURITY: Reject new prompts when the session token quota is exhausted

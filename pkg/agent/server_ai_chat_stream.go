@@ -160,9 +160,8 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		return
 	}
 
-	if len(req.Prompt) > maxPromptChars {
-		safeWrite(connCtx, s.errorResponse(msg.ID, "prompt_too_large",
-			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars)))
+	if err := validateChatPromptSize(req); err != nil {
+		safeWrite(connCtx, s.errorResponse(msg.ID, "prompt_too_large", err.Error()))
 		return
 	}
 
