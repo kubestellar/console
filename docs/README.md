@@ -9,6 +9,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 - [Contribution guide](../CONTRIBUTING.md) — contribution workflow, review expectations, and repo conventions
 - [Architecture overview](ARCHITECTURE.md) — console architecture summary
 - [Deployment guide](deploy.md) — `deploy.sh` reference and deployment flags
+- [Stellar guide](stellar/README.md) — operator-facing guide to the persistent AI runtime, configuration, and usage
 - [Troubleshooting](troubleshooting.md) — operational troubleshooting reference
 - [Release process](RELEASING.md) — release workflow and packaging notes
 
@@ -53,6 +54,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
 | [security/SECURITY-MODEL.md](security/SECURITY-MODEL.md) | Explains the security model, air-gapped deployment posture, and local/self-hosted LLM paths. |
+| [stellar/README.md](stellar/README.md) | Operator guide for Stellar, including what it does today, how to enable it, and how to use the `/stellar` UI. |
 | [stellar/architecture.md](stellar/architecture.md) | Architecture notes for the Stellar persistent AI operations assistant. |
 | [stellar/crds-v1alpha1.yaml](stellar/crds-v1alpha1.yaml) | Reference CRD manifest for Stellar v1alpha1 resources. |
 | [troubleshooting.md](troubleshooting.md) | Common troubleshooting steps for install, auth, and runtime issues. |

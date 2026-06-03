@@ -1,5 +1,7 @@
 # Stellar Architecture v0.1 (Persistent AI Operations Assistant)
 
+> **Alpha / design-in-progress**: this document mixes the currently shipped console implementation with the longer-term Stellar architecture target. Use [`README.md`](README.md) in this directory for the operator-facing guide, current enablement steps, and links into the live code paths.
+
 Stellar extends KubeStellar Console from request/response AI into a **persistent operational runtime** with mission continuity, memory, and proactive execution.
 
 ## 1. Runtime topology
