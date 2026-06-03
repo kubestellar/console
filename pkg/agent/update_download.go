@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -152,8 +154,7 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	}
 	extractCtx, extractCancel := context.WithTimeout(parentCtx, extractTimeout)
 	defer extractCancel()
-	extractCmd := exec.CommandContext(extractCtx, "tar", "xzf", tmpFile, "-C", stagingDir)
-	if err := extractCmd.Run(); err != nil {
+	if err := safeTarExtract(extractCtx, tmpFile, stagingDir); err != nil {
 		// If cancelled by the user, report as cancellation rather than failure (#7440)
 		if uc.isCancelled() {
 			uc.broadcast("update_progress", UpdateProgressPayload{
@@ -338,6 +339,91 @@ func downloadFile(url, dest string) error {
 	}
 	if n > maxDownloadBytes {
 		return fmt.Errorf("download exceeds maximum allowed size (%d bytes)", maxDownloadBytes)
+	}
+	return nil
+}
+
+// safeTarExtract extracts a .tar.gz archive to destDir with path traversal
+// protection (CWE-22 / zip-slip). Each entry's cleaned path is validated to
+// remain within destDir before extraction proceeds.
+func safeTarExtract(ctx context.Context, archivePath, destDir string) error {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("open archive: %w", err)
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return fmt.Errorf("gzip reader: %w", err)
+	}
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+
+	// maxExtractEntries prevents resource exhaustion from archive bombs.
+	const maxExtractEntries = 10000
+	entries := 0
+
+	for {
+		// Respect context cancellation between entries.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("read tar header: %w", err)
+		}
+
+		entries++
+		if entries > maxExtractEntries {
+			return fmt.Errorf("archive exceeds maximum entry count (%d)", maxExtractEntries)
+		}
+
+		// Clean the entry name and reject absolute paths or traversal.
+		clean := filepath.Clean(hdr.Name)
+		if filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") {
+			return fmt.Errorf("illegal tar entry path: %s", hdr.Name)
+		}
+
+		target := filepath.Join(destDir, clean)
+
+		// Double-check the resolved path is still under destDir (belt-and-suspenders).
+		if !strings.HasPrefix(filepath.Clean(target)+string(filepath.Separator), filepath.Clean(destDir)+string(filepath.Separator)) &&
+			filepath.Clean(target) != filepath.Clean(destDir) {
+			return fmt.Errorf("tar entry escapes destination: %s", hdr.Name)
+		}
+
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0750); err != nil {
+				return fmt.Errorf("create dir %s: %w", clean, err)
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0750); err != nil {
+				return fmt.Errorf("create parent dir for %s: %w", clean, err)
+			}
+			// Limit individual file size to maxDownloadBytes.
+			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode)&0755)
+			if err != nil {
+				return fmt.Errorf("create file %s: %w", clean, err)
+			}
+			if _, err := io.Copy(outFile, io.LimitReader(tr, maxDownloadBytes)); err != nil {
+				outFile.Close()
+				return fmt.Errorf("write file %s: %w", clean, err)
+			}
+			outFile.Close()
+		case tar.TypeSymlink:
+			// Reject symlinks — they can be used to escape the destination directory.
+			return fmt.Errorf("symlinks not allowed in update archive: %s", hdr.Name)
+		default:
+			// Skip other entry types (block devices, char devices, etc.)
+			continue
+		}
 	}
 	return nil
 }
