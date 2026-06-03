@@ -153,9 +153,27 @@ function getJwtVerificationSecret(context: Context): string | undefined {
   return typeof envSecret === "string" ? envSecret.trim() || undefined : undefined;
 }
 
+
+/** A JWT has exactly 3 dot-separated non-empty base64url parts */
+const JWT_PART_COUNT = 3;
+
+function isLikelyJWT(value: string): boolean {
+  const parts = value.split(".");
+  return parts.length === JWT_PART_COUNT && parts.every((part) => part.length > 0);
+}
+
 async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): Promise<boolean> {
   const sessionValue = getCookieValue(cookieHeader, AUTH_COOKIE_NAME);
   if (!sessionValue) {
+    return false;
+  }
+
+  // Only accept JWT-format session cookies with cryptographic verification.
+  // Opaque session tokens cannot be validated without a server-side session
+  // store, which is unavailable in serverless. Rejecting them here prevents
+  // auth bypass via arbitrary cookie values (CWE-347).
+  if (!isLikelyJWT(sessionValue)) {
+    console.warn("kc_auth cookie rejected: only JWT-format tokens are accepted in serverless");
     return false;
   }
 

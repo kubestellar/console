@@ -167,6 +167,7 @@ func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kube
 // GetStatus returns the self-upgrade availability status.
 // GET /api/self-upgrade/status
 func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
+	// Require admin to prevent topology information disclosure (CWE-200)
 	if err := RequireAdmin(c, h.store); err != nil {
 		return err
 	}
