@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -191,6 +192,210 @@ func TestDrasiProxyDialContext_AllowlistedHostStillBlocksResolvedLoopback(t *tes
 	_, err := dialCtx(t.Context(), "tcp", "localhost:443")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "blocked: non-public IP")
+}
+
+func newDrasiProxyAppForRole(t *testing.T, role models.UserRole) (*fiber.App, *testEnv) {
+	t.Helper()
+
+	env := setupTestEnv(t)
+	mockStore := new(test.MockStore)
+	userID := uuid.New()
+	mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: role}, nil).Maybe()
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.All("/api/drasi/proxy/*", NewMCPHandlers(nil, env.K8sClient, mockStore).ProxyDrasi)
+
+	return app, env
+}
+
+func TestProxyDrasi_Platform_Post_ViewerForbidden(t *testing.T) {
+	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+
+	req := httptest.NewRequest(fiber.MethodPost, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestProxyDrasi_Platform_Post_EditorAllowed(t *testing.T) {
+	app, env := newDrasiProxyAppForRole(t, models.UserRoleEditor)
+	var upstreamCalled atomic.Bool
+
+	k8sServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalled.Store(true)
+		assert.Contains(t, r.URL.Path, "/services/http:drasi-api:8080/proxy/v1/sources")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"platform":"ok"}`))
+	}))
+	defer k8sServer.Close()
+
+	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
+
+	req := httptest.NewRequest(fiber.MethodPost, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, upstreamCalled.Load(), "editor platform POST should reach the upstream proxy")
+}
+
+func TestProxyDrasi_Platform_Get_ViewerAllowed(t *testing.T) {
+	app, env := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+	var upstreamCalled atomic.Bool
+
+	k8sServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalled.Store(true)
+		assert.Contains(t, r.URL.Path, "/services/http:drasi-api:8080/proxy/v1/sources")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"platform":"ok"}`))
+	}))
+	defer k8sServer.Close()
+
+	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
+
+	req := httptest.NewRequest(fiber.MethodGet, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", nil)
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, upstreamCalled.Load(), "viewer platform GET should reach the upstream proxy")
+}
+
+func TestProxyDrasi_Platform_Put_ViewerForbidden(t *testing.T) {
+	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+
+	req := httptest.NewRequest(fiber.MethodPut, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestProxyDrasi_Platform_Put_EditorAllowed(t *testing.T) {
+	app, env := newDrasiProxyAppForRole(t, models.UserRoleEditor)
+	var upstreamCalled atomic.Bool
+
+	k8sServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalled.Store(true)
+		assert.Contains(t, r.URL.Path, "/services/http:drasi-api:8080/proxy/v1/sources")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"updated":true}`))
+	}))
+	defer k8sServer.Close()
+
+	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
+
+	req := httptest.NewRequest(fiber.MethodPut, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, upstreamCalled.Load(), "editor platform PUT should reach the upstream proxy")
+}
+
+func TestProxyDrasi_Platform_Delete_ViewerForbidden(t *testing.T) {
+	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+
+	req := httptest.NewRequest(fiber.MethodDelete, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", nil)
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestProxyDrasi_Platform_Delete_EditorAllowed(t *testing.T) {
+	app, env := newDrasiProxyAppForRole(t, models.UserRoleEditor)
+	var upstreamCalled atomic.Bool
+
+	k8sServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalled.Store(true)
+		assert.Contains(t, r.URL.Path, "/services/http:drasi-api:8080/proxy/v1/sources")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer k8sServer.Close()
+
+	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
+
+	req := httptest.NewRequest(fiber.MethodDelete, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", nil)
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, upstreamCalled.Load(), "editor platform DELETE should reach the upstream proxy")
+}
+
+func TestProxyDrasi_Platform_Patch_ViewerForbidden(t *testing.T) {
+	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+
+	req := httptest.NewRequest(fiber.MethodPatch, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestProxyDrasi_Platform_Patch_EditorAllowed(t *testing.T) {
+	app, env := newDrasiProxyAppForRole(t, models.UserRoleEditor)
+	var upstreamCalled atomic.Bool
+
+	k8sServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalled.Store(true)
+		assert.Contains(t, r.URL.Path, "/services/http:drasi-api:8080/proxy/v1/sources")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"patched":true}`))
+	}))
+	defer k8sServer.Close()
+
+	env.K8sClient.SetInClusterConfig(&rest.Config{Host: k8sServer.URL})
+
+	req := httptest.NewRequest(fiber.MethodPatch, "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.True(t, upstreamCalled.Load(), "editor platform PATCH should reach the upstream proxy")
+}
+
+func TestProxyDrasi_Server_Post_ViewerForbidden(t *testing.T) {
+	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+
+	req := httptest.NewRequest(fiber.MethodPost, "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server", bytes.NewReader([]byte(`{"name":"demo"}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func TestDrasiProxyDialContext_EmptyDNSResult(t *testing.T) {
