@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -67,6 +69,174 @@ func renameOrCopy(src, dst string) error {
 	// Best-effort cleanup of the source file.
 	os.Remove(src)
 	return nil
+}
+
+func extractTarGz(ctx context.Context, archivePath, destDir string) error {
+	archiveFile, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("open archive: %w", err)
+	}
+	defer archiveFile.Close()
+
+	gzipReader, err := gzip.NewReader(archiveFile)
+	if err != nil {
+		return fmt.Errorf("open gzip stream: %w", err)
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+	cleanDestDir := filepath.Clean(destDir)
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("read tar entry: %w", err)
+		}
+
+		targetPath, err := validateTarExtractionPath(cleanDestDir, header.Name)
+		if err != nil {
+			return fmt.Errorf("invalid archive path %q: %w", header.Name, err)
+		}
+
+		if targetPath == cleanDestDir && header.Typeflag != tar.TypeDir {
+			return fmt.Errorf("invalid archive path %q: resolves to extraction root", header.Name)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(targetPath, archiveModeOrDefault(header.FileInfo().Mode(), archiveDirMode)); err != nil {
+				return fmt.Errorf("create directory %q: %w", targetPath, err)
+			}
+		case tar.TypeReg, tar.TypeRegA:
+			if err := os.MkdirAll(filepath.Dir(targetPath), archiveDirMode); err != nil {
+				return fmt.Errorf("create parent directory for %q: %w", targetPath, err)
+			}
+			if err := writeTarFile(ctx, tarReader, targetPath, archiveModeOrDefault(header.FileInfo().Mode(), archiveFileMode)); err != nil {
+				return fmt.Errorf("extract file %q: %w", targetPath, err)
+			}
+		case tar.TypeSymlink:
+			if _, err := validateTarLinkTarget(cleanDestDir, targetPath, header.Linkname); err != nil {
+				return fmt.Errorf("invalid symlink target %q for %q: %w", header.Linkname, header.Name, err)
+			}
+			if err := os.MkdirAll(filepath.Dir(targetPath), archiveDirMode); err != nil {
+				return fmt.Errorf("create parent directory for symlink %q: %w", targetPath, err)
+			}
+			if err := os.Symlink(header.Linkname, targetPath); err != nil {
+				return fmt.Errorf("create symlink %q: %w", targetPath, err)
+			}
+		case tar.TypeLink:
+			linkTarget, err := validateTarLinkTarget(cleanDestDir, targetPath, header.Linkname)
+			if err != nil {
+				return fmt.Errorf("invalid hard link target %q for %q: %w", header.Linkname, header.Name, err)
+			}
+			if err := os.MkdirAll(filepath.Dir(targetPath), archiveDirMode); err != nil {
+				return fmt.Errorf("create parent directory for hard link %q: %w", targetPath, err)
+			}
+			if err := os.Link(linkTarget, targetPath); err != nil {
+				return fmt.Errorf("create hard link %q: %w", targetPath, err)
+			}
+		default:
+			return fmt.Errorf("unsupported tar entry type %d for %q", header.Typeflag, header.Name)
+		}
+	}
+}
+
+const (
+	archiveDirMode         os.FileMode = 0o755
+	archiveFileMode        os.FileMode = 0o644
+	archiveCopyBufferBytes             = 32 * 1024
+)
+
+func archiveModeOrDefault(mode, fallback os.FileMode) os.FileMode {
+	if mode.Perm() == 0 {
+		return fallback
+	}
+	return mode.Perm()
+}
+
+func validateTarExtractionPath(destDir, archivePath string) (string, error) {
+	cleanPath := filepath.Clean(archivePath)
+	if filepath.IsAbs(archivePath) || filepath.IsAbs(cleanPath) {
+		return "", fmt.Errorf("absolute paths are not allowed")
+	}
+	if strings.Contains(cleanPath, "..") {
+		return "", fmt.Errorf("parent traversal is not allowed")
+	}
+	return ensurePathWithinBase(destDir, filepath.Join(destDir, cleanPath))
+}
+
+func validateTarLinkTarget(destDir, targetPath, linkName string) (string, error) {
+	cleanLink := filepath.Clean(linkName)
+	if filepath.IsAbs(linkName) || filepath.IsAbs(cleanLink) {
+		return "", fmt.Errorf("absolute link targets are not allowed")
+	}
+	linkTarget := filepath.Join(filepath.Dir(targetPath), cleanLink)
+	return ensurePathWithinBase(destDir, linkTarget)
+}
+
+func ensurePathWithinBase(baseDir, candidatePath string) (string, error) {
+	cleanBase := filepath.Clean(baseDir)
+	cleanCandidate := filepath.Clean(candidatePath)
+	relPath, err := filepath.Rel(cleanBase, cleanCandidate)
+	if err != nil {
+		return "", fmt.Errorf("resolve relative path: %w", err)
+	}
+	if relPath == ".." || strings.HasPrefix(relPath, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path escapes extraction directory")
+	}
+	return cleanCandidate, nil
+}
+
+func writeTarFile(ctx context.Context, src io.Reader, targetPath string, mode os.FileMode) error {
+	file, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+
+	if _, err := copyWithContext(ctx, file, src); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func copyWithContext(ctx context.Context, dst io.Writer, src io.Reader) (int64, error) {
+	buffer := make([]byte, archiveCopyBufferBytes)
+	var written int64
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return written, err
+		}
+
+		readCount, readErr := src.Read(buffer)
+		if readCount > 0 {
+			writeCount, writeErr := dst.Write(buffer[:readCount])
+			written += int64(writeCount)
+			if writeErr != nil {
+				return written, writeErr
+			}
+			if writeCount != readCount {
+				return written, io.ErrShortWrite
+			}
+		}
+		if readErr != nil {
+			if readErr == io.EOF {
+				return written, nil
+			}
+			return written, readErr
+		}
+	}
 }
 
 func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
@@ -152,8 +322,7 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	}
 	extractCtx, extractCancel := context.WithTimeout(parentCtx, extractTimeout)
 	defer extractCancel()
-	extractCmd := exec.CommandContext(extractCtx, "tar", "xzf", tmpFile, "-C", stagingDir)
-	if err := extractCmd.Run(); err != nil {
+	if err := extractTarGz(extractCtx, tmpFile, stagingDir); err != nil {
 		// If cancelled by the user, report as cancellation rather than failure (#7440)
 		if uc.isCancelled() {
 			uc.broadcast("update_progress", UpdateProgressPayload{
