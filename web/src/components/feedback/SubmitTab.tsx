@@ -169,7 +169,7 @@ export function SubmitForm({
     ;(async () => {
       try {
         const { getClientCtx } = await import('../../lib/clientCtx')
-        const ctx = getClientCtx()
+        const ctx = await getClientCtx()
         if (!ctx) {
           if (isCurrent) setCanLinkParentIssue(false)
           return
