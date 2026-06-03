@@ -27,6 +27,7 @@ import { FeedItemsList } from './FeedItemsList'
 import { SourceFilterDropdown } from './SourceFilterDropdown'
 import { RSS_DEMO_FEEDS, getDemoRSSItems } from './demoData'
 import { RSS_UI_STRINGS } from './strings'
+import { validateFeedUrl } from './validateFeedUrl'
 
 const MIN_VALID_FEED_LENGTH = 50
 
@@ -230,6 +231,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   // Helper: Fetch a single RSS feed URL
   const fetchSingleFeed = useCallback(async (feedUrl: string): Promise<FeedItem[]> => {
     const FETCH_TIMEOUT_MS = 10000
+
+    // Validate URL before sending to CORS proxy to prevent SSRF
+    const validation = validateFeedUrl(feedUrl)
+    if (!validation.valid) {
+      throw new Error(validation.error || 'Invalid feed URL')
+    }
 
     for (const proxy of CORS_PROXIES) {
       try {
@@ -599,6 +606,14 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     if (newFeedUrl.trim()) {
       const rawUrl = newFeedUrl.trim()
       const url = normalizeUrl(rawUrl)
+
+      // Validate URL before storing to prevent SSRF via CORS proxy
+      const validation = validateFeedUrl(url)
+      if (!validation.valid) {
+        setError(validation.error || 'Invalid feed URL')
+        return
+      }
+
       let defaultName: string
       const subredditMatch = rawUrl.match(/^r\/(\w+)$/i) || url.match(/reddit\.com\/r\/(\w+)/)
       if (subredditMatch) {
