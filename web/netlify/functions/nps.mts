@@ -13,8 +13,8 @@
 
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared";
-import { isBodyTooLargeError, readCappedBodyJson } from "./_shared/read-capped-body";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+import { readCappedRequestJson } from "./_shared/read-capped-request";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -36,12 +36,6 @@ interface NPSResponse {
 
 interface NPSData {
   responses: NPSResponse[];
-}
-
-interface NPSSubmissionBody {
-  score?: unknown;
-  feedback?: unknown;
-  sessionId?: unknown;
 }
 
 interface NPSAggregation {
@@ -237,26 +231,24 @@ export default async (req: Request) => {
         );
       }
 
-      let body: NPSSubmissionBody;
+      // SECURITY: Enforce body size on actual bytes read, not Content-Length header.
+      // Chunked encoding can bypass Content-Length checks (CWE-400).
+      let body: { score: unknown; feedback?: unknown; sessionId?: unknown };
       try {
-        body = await readCappedBodyJson<NPSSubmissionBody>(req, MAX_BODY_BYTES, "request");
+        body = await readCappedRequestJson<{ score: unknown; feedback?: unknown; sessionId?: unknown }>(
+          req,
+          MAX_BODY_BYTES,
+          "NPS request"
+        );
       } catch (error) {
-        if (isBodyTooLargeError(error)) {
-          return new Response(
-            JSON.stringify({ error: "Payload too large" }),
-            { status: 413, headers }
-          );
-        }
+        const message = error instanceof Error ? error.message : "Failed to read request body";
         return new Response(
-          JSON.stringify({ error: "Invalid JSON body" }),
-          { status: 400, headers }
+          JSON.stringify({ error: message }),
+          { status: 413, headers }
         );
       }
 
-      const scoreValue = typeof body.score === "string" || typeof body.score === "number"
-        ? String(body.score)
-        : "";
-      const score = parseInt(scoreValue, 10);
+      const score = parseInt(body.score as string, 10);
 
       // Validate — 4-emoji widget uses scores 1-4
       if (isNaN(score) || score < SCORE_MIN || score > SCORE_MAX) {

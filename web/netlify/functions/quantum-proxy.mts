@@ -1,7 +1,7 @@
 import type { Context } from "@netlify/functions";
-import { isBodyTooLargeError, readCappedBodyText } from "./_shared/read-capped-body";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
+import { readCappedRequestText } from "./_shared/read-capped-request";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -155,27 +155,9 @@ function getJwtVerificationSecret(context: Context): string | undefined {
   return typeof envSecret === "string" ? envSecret.trim() || undefined : undefined;
 }
 
-
-/** A JWT has exactly 3 dot-separated non-empty base64url parts */
-const JWT_PART_COUNT = 3;
-
-function isLikelyJWT(value: string): boolean {
-  const parts = value.split(".");
-  return parts.length === JWT_PART_COUNT && parts.every((part) => part.length > 0);
-}
-
 async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): Promise<boolean> {
   const sessionValue = getCookieValue(cookieHeader, AUTH_COOKIE_NAME);
   if (!sessionValue) {
-    return false;
-  }
-
-  // Only accept JWT-format session cookies with cryptographic verification.
-  // Opaque session tokens cannot be validated without a server-side session
-  // store, which is unavailable in serverless. Rejecting them here prevents
-  // auth bypass via arbitrary cookie values (CWE-347).
-  if (!isLikelyJWT(sessionValue)) {
-    console.warn("kc_auth cookie rejected: only JWT-format tokens are accepted in serverless");
     return false;
   }
 
@@ -377,9 +359,26 @@ export default async (req: Request, context: Context): Promise<Response> => {
     }
 
     const targetURL = new URL(path, quantumServiceURL).toString();
-    const requestBody = req.method === "GET"
-      ? undefined
-      : await readCappedBodyText(req, MAX_PROXY_BODY_BYTES, "request");
+    
+    // SECURITY: Enforce body size on actual bytes read, not Content-Length header.
+    // Chunked encoding can bypass Content-Length checks (CWE-400).
+    let requestBody: string | undefined;
+    if (req.method !== "GET") {
+      try {
+        requestBody = await readCappedRequestText(
+          req,
+          MAX_PROXY_BODY_BYTES,
+          "quantum-proxy request"
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Request body too large";
+        return new Response(JSON.stringify({ error: message }), {
+          status: 413,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+    
     if (req.method === "POST" && requestBody !== undefined) {
       const validationError = validatePostBody(requestBody);
       if (validationError) {
