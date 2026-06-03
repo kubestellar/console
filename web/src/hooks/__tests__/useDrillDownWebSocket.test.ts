@@ -8,6 +8,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: vi.fn(async (url: string) => url),
+  sendWsAuthMessage: vi.fn(() => true),
 }))
 
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
@@ -290,13 +291,13 @@ describe('useDrillDownWebSocket', () => {
   })
 
   describe('openTrackedWs', () => {
-    it('appends auth token to WS URL', async () => {
-      mockAppendWsAuthToken.mockResolvedValueOnce('ws://localhost:8585?token=abc123')
+    it('keeps auth tokens out of the WS URL', async () => {
+      mockAppendWsAuthToken.mockResolvedValueOnce('ws://localhost:8585')
       const { result } = renderHook(() => useDrillDownWebSocket('prod'))
 
       await expect(result.current.openTrackedWs()).resolves.toBeDefined()
       expect(mockAppendWsAuthToken).toHaveBeenCalledWith('ws://localhost:8585')
-      expect(wsInstances[0].url).toBe('ws://localhost:8585?token=abc123')
+      expect(wsInstances[0].url).toBe('ws://localhost:8585')
     })
 
     it('tracks the WebSocket in the active set', async () => {

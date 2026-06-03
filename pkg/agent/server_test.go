@@ -677,38 +677,31 @@ func TestServer_SettingsAll(t *testing.T) {
 
 func TestServer_ValidateToken(t *testing.T) {
 	tests := []struct {
-		name             string
-		path             string
-		agentToken       string   // configured token
-		tokenExplicit    bool     // true when KC_AGENT_TOKEN came from an explicit user setting
-		allowedOrigins   []string // origins eligible for the browser-only bypass
-		authHeader       string
-		queryToken       string
-		upgradeHeader    string // set to "websocket" for WebSocket upgrade requests
-		connectionHeader string // "upgrade" for real WebSocket handshakes
-		secWebSocketKey  string // base64 nonce sent by browsers
-		origin           string // Origin header — browser requests always include this
-		expectResult     bool
+		name           string
+		path           string
+		agentToken     string   // configured token
+		tokenExplicit  bool     // true when KC_AGENT_TOKEN came from an explicit user setting
+		allowedOrigins []string // origins eligible for the browser-only bypass
+		authHeader     string
+		origin         string // Origin header — browser requests always include this
+		expectResult   bool
 	}{
 		{
 			name:         "No token configured - skip validation",
 			agentToken:   "",
 			authHeader:   "",
-			queryToken:   "",
 			expectResult: true,
 		},
 		{
 			name:         "GET without token rejected even without Origin",
 			agentToken:   "secret123",
 			authHeader:   "",
-			queryToken:   "",
 			expectResult: false, // all requests require token when configured
 		},
 		{
 			name:         "GET with Origin header still requires token",
 			agentToken:   "secret123",
 			authHeader:   "",
-			queryToken:   "",
 			origin:       "http://localhost:8080",
 			expectResult: false, // browser requests include Origin — CSRF protection
 		},
@@ -734,51 +727,19 @@ func TestServer_ValidateToken(t *testing.T) {
 			name:         "Valid Bearer token",
 			agentToken:   "secret123",
 			authHeader:   "Bearer secret123",
-			queryToken:   "",
 			expectResult: true,
 		},
 		{
 			name:         "Invalid Bearer token",
 			agentToken:   "secret123",
 			authHeader:   "Bearer wrongtoken",
-			queryToken:   "",
 			origin:       "http://localhost:8080",
 			expectResult: false,
-		},
-		{
-			name:             "Valid query parameter token on genuine WebSocket upgrade",
-			agentToken:       "secret123",
-			authHeader:       "",
-			queryToken:       "secret123",
-			upgradeHeader:    "websocket",
-			connectionHeader: "Upgrade",
-			secWebSocketKey:  "dGhlIHNhbXBsZSBub25jZQ==",
-			expectResult:     true,
-		},
-		{
-			name:         "Query parameter token rejected on non-upgrade request",
-			agentToken:   "secret123",
-			authHeader:   "",
-			queryToken:   "secret123",
-			origin:       "http://localhost:8080",
-			expectResult: false, // query tokens only accepted for WebSocket upgrades
-		},
-		{
-			name:             "Invalid query parameter token on WebSocket upgrade",
-			agentToken:       "secret123",
-			authHeader:       "",
-			queryToken:       "wrongtoken",
-			upgradeHeader:    "websocket",
-			connectionHeader: "Upgrade",
-			secWebSocketKey:  "dGhlIHNhbXBsZSBub25jZQ==",
-			origin:           "http://localhost:8080",
-			expectResult:     false,
 		},
 		{
 			name:         "Missing token when required",
 			agentToken:   "secret123",
 			authHeader:   "",
-			queryToken:   "",
 			origin:       "http://localhost:8080",
 			expectResult: false,
 		},
@@ -786,43 +747,8 @@ func TestServer_ValidateToken(t *testing.T) {
 			name:         "Malformed auth header - no Bearer prefix",
 			agentToken:   "secret123",
 			authHeader:   "Basic secret123",
-			queryToken:   "",
 			origin:       "http://localhost:8080",
 			expectResult: false,
-		},
-		{
-			// #4264: spoofed Upgrade header without Connection header
-			name:          "Spoofed Upgrade header only - missing Connection",
-			agentToken:    "secret123",
-			authHeader:    "",
-			queryToken:    "secret123",
-			upgradeHeader: "websocket",
-			// connectionHeader deliberately empty
-			secWebSocketKey: "dGhlIHNhbXBsZSBub25jZQ==",
-			origin:          "http://localhost:8080",
-			expectResult:    false,
-		},
-		{
-			// #4264: spoofed Upgrade+Connection but missing Sec-WebSocket-Key
-			name:             "Spoofed Upgrade+Connection - missing Sec-WebSocket-Key",
-			agentToken:       "secret123",
-			authHeader:       "",
-			queryToken:       "secret123",
-			upgradeHeader:    "websocket",
-			connectionHeader: "Upgrade",
-			// secWebSocketKey deliberately empty
-			origin:       "http://localhost:8080",
-			expectResult: false,
-		},
-		{
-			// #4264: only Upgrade header, nothing else
-			name:          "Spoofed Upgrade header alone",
-			agentToken:    "secret123",
-			authHeader:    "",
-			queryToken:    "secret123",
-			upgradeHeader: "websocket",
-			origin:        "http://localhost:8080",
-			expectResult:  false,
 		},
 	}
 
@@ -838,21 +764,9 @@ func TestServer_ValidateToken(t *testing.T) {
 			if url == "" {
 				url = "/test"
 			}
-			if tt.queryToken != "" {
-				url += "?token=" + tt.queryToken
-			}
 			req := httptest.NewRequest("GET", url, nil)
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
-			}
-			if tt.upgradeHeader != "" {
-				req.Header.Set("Upgrade", tt.upgradeHeader)
-			}
-			if tt.connectionHeader != "" {
-				req.Header.Set("Connection", tt.connectionHeader)
-			}
-			if tt.secWebSocketKey != "" {
-				req.Header.Set("Sec-WebSocket-Key", tt.secWebSocketKey)
 			}
 			if tt.origin != "" {
 				req.Header.Set("Origin", tt.origin)

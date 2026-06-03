@@ -69,9 +69,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// SECURITY: Validate token if configured
-	if !s.validateToken(r) {
-		slog.Warn("SECURITY: Rejected WebSocket connection - invalid or missing token")
+	if !isRealWebSocketUpgrade(r) && !s.validateToken(r) {
+		slog.Warn("SECURITY: Rejected non-upgrade WebSocket request - invalid or missing token")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -84,6 +83,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// NOTE: conn.Close() is called explicitly at the end of this function
 	// AFTER draining goroutines (#11878). Do not use defer conn.Close() here.
 	conn.SetReadLimit(wsMaxMessageBytes)
+	if err := s.authenticateWebSocket(conn, r); err != nil {
+		slog.Warn("SECURITY: Rejected WebSocket connection - invalid auth frame", "error", err)
+		_ = conn.Close()
+		return
+	}
 
 	wsc := &wsClient{}
 	s.clientsMux.Lock()

@@ -1,7 +1,7 @@
 /**
  * Tests for useMissions.connection — createMissionConnectionApi
  *
- * Covers WebSocket lifecycle: demo rejection, auth URL injection, reconnect
+ * Covers WebSocket lifecycle: demo rejection, auth preamble handling, reconnect
  * age guards, wsSend retry timer cleanup, unmount safety, and close handling.
  * Part of #4189 / #16017.
  */
@@ -40,7 +40,11 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => `${url}?token=test-auth`),
+  appendWsAuthToken: vi.fn(async (url: string) => url),
+  sendWsAuthMessage: vi.fn((ws: { send: (data: string) => void }) => {
+    ws.send(JSON.stringify({ type: 'auth', token: 'test-auth' }))
+    return true
+  }),
 }))
 
 vi.mock('../../lib/logger', () => ({
@@ -86,7 +90,7 @@ interface MockWs {
   _triggerClose: () => void
 }
 
-function createMockWs(url = 'ws://localhost:8585/ws?token=test-auth'): MockWs {
+function createMockWs(url = 'ws://localhost:8585/ws'): MockWs {
   const ws: MockWs = {
     onopen: null,
     onmessage: null,
@@ -217,7 +221,7 @@ beforeEach(() => {
   latestWs = null
   vi.useFakeTimers()
   vi.mocked(getDemoMode).mockReturnValue(false)
-  vi.mocked(appendWsAuthToken).mockImplementation(async (url: string) => `${url}?token=test-auth`)
+  vi.mocked(appendWsAuthToken).mockImplementation(async (url: string) => url)
 
   const MockWebSocket = vi.fn(function(this: unknown, url: string) {
     const ws = createMockWs(url)
@@ -319,7 +323,7 @@ describe('createMissionConnectionApi', () => {
     )
   })
 
-  it('appends auth token to the WebSocket URL before connecting', async () => {
+  it('keeps the WebSocket URL free of auth tokens before connecting', async () => {
     const state = makeState()
     const api = createMissionConnectionApi(state, createMissionStateUtils(state))
 
@@ -327,7 +331,7 @@ describe('createMissionConnectionApi', () => {
     await flushMicrotasks()
 
     expect(appendWsAuthToken).toHaveBeenCalledWith('ws://localhost:8585/ws')
-    expect(latestWs?.url).toContain('token=test-auth')
+    expect(latestWs?.url).toBe('ws://localhost:8585/ws')
 
     latestWs!._triggerOpen()
     await connectPromise

@@ -25,7 +25,7 @@ import { useResolutions, detectIssueSignature, type IssueSignature, type Resolut
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import * as wsAuth from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 
@@ -211,7 +211,7 @@ function extractLastJsonObject(content: string): string | null {
  * Request AI to generate a resolution summary from the mission conversation
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
-  const wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+  const wsUrl = await wsAuth.appendWsAuthToken(LOCAL_AGENT_WS_URL)
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl)
 
@@ -240,6 +240,7 @@ async function generateAISummary(mission: Mission): Promise<AISummary> {
     }, AI_SUMMARY_TIMEOUT_MS)
 
     ws.onopen = () => {
+      if (typeof wsAuth.sendWsAuthMessage === 'function' && !wsAuth.sendWsAuthMessage(ws)) return
       didOpen = true
       try {
         // #9162 — Build conversation context with size caps so the assembled

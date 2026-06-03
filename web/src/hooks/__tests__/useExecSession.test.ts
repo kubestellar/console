@@ -3,6 +3,10 @@ import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: (url: string) => Promise.resolve(url),
+  sendWsAuthMessage: (ws: { send: (data: string) => void }) => {
+    ws.send(JSON.stringify({ type: 'auth', token: 'test-auth' }))
+    return true
+  },
 }))
 
 import { useExecSession } from '../useExecSession'
@@ -143,16 +147,14 @@ describe('useExecSession', () => {
     expect(result.current.status).toBe('connecting')
   })
 
-  it('sends exec_init as the first WebSocket message on open', async () => {
-    // #7993 Phase 3d: kc-agent validates the token on the HTTP upgrade
-    // (Authorization header or ?token= query param), so the first JSON
-    // frame we send is exec_init directly — no auth preamble.
+  it('sends auth before exec_init on open', async () => {
     const { result } = renderHook(() => useExecSession())
     await connectSession(result)
     act(() => { mockWs.triggerOpen() })
 
-    expect(mockWs.sentMessages.length).toBe(1)
-    const init = JSON.parse(mockWs.sentMessages[0])
+    expect(mockWs.sentMessages.length).toBe(2)
+    expect(JSON.parse(mockWs.sentMessages[0])).toEqual({ type: 'auth', token: 'test-auth' })
+    const init = JSON.parse(mockWs.sentMessages[1])
     expect(init.type).toBe('exec_init')
     expect(init.cluster).toBe('prod')
     expect(init.pod).toBe('my-pod')
@@ -174,8 +176,7 @@ describe('useExecSession', () => {
     await connectSession(result, config)
     act(() => { mockWs.triggerOpen() })
 
-    // #7993 Phase 3d: exec_init is the first (and only) pre-stream frame.
-    const init = JSON.parse(mockWs.sentMessages[0])
+    const init = JSON.parse(mockWs.sentMessages[1])
     expect(init.command).toEqual(['/bin/bash'])
     expect(init.tty).toBe(false)
     expect(init.cols).toBe(120)
@@ -266,12 +267,8 @@ describe('useExecSession', () => {
     expect(result.current.error).toBe('Unknown server error')
   })
 
-  // #7993 Phase 3d: the old "no auth token on connect" test was removed.
-  // kc-agent validates tokens on the HTTP upgrade path (Authorization
-  // header or ?token= query param), not via a first-message dance, so the
-  // absence of a JWT no longer produces a frontend-side error — it produces
-  // a 401 on upgrade, which is already covered by the "WebSocket constructor
-  // throwing" test below.
+  // Missing-token behavior is covered in wsAuth tests. This hook test suite
+  // focuses on the post-open exec protocol once the auth preamble succeeds.
 
   // --- WebSocket creation failure ---
   it('handles WebSocket constructor throwing', async () => {

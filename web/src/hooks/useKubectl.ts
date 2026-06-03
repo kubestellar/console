@@ -11,7 +11,7 @@
 import { getDemoMode } from './useDemoMode'
 import { isInClusterMode } from './useBackendHealth'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import * as wsAuth from '../lib/utils/wsAuth'
 const RECONNECT_DELAY = 1000
 const REQUEST_TIMEOUT = 30000
 
@@ -59,9 +59,10 @@ class KubectlService {
 
     this.isConnecting = true
     try {
-      this.ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+      this.ws = new WebSocket(await wsAuth.appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
       this.ws.onopen = () => {
+        if (typeof wsAuth.sendWsAuthMessage === 'function' && !wsAuth.sendWsAuthMessage(this.ws!)) return
         this.isConnecting = false
         // Process queued requests
         while (this.requestQueue.length > 0) {
