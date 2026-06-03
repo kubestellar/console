@@ -331,3 +331,84 @@ func TestStellarResolveWatchReturnsJSON(t *testing.T) {
 	assert.Equal(t, "resolved", resolved["status"])
 	assert.NotNil(t, resolved["inactivityTimeoutMs"])
 }
+
+func TestStellarAuditLogScopesNonAdminsToOwnEntries(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-audit-non-admin.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	viewerID := uuid.New()
+	otherUserID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{ID: viewerID, GitHubID: "viewer-id", GitHubLogin: "viewer", Role: models.UserRoleViewer}))
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{ID: otherUserID, GitHubID: "other-id", GitHubLogin: "other", Role: models.UserRoleViewer}))
+
+	now := time.Now().UTC().Truncate(time.Second)
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{ID: "viewer-new", Ts: now, UserID: viewerID.String(), Action: "view", EntityType: "watch", EntityID: "1", Cluster: "prod-a", Detail: "viewer"}))
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{ID: "viewer-old", Ts: now.Add(-time.Minute), UserID: viewerID.String(), Action: "update", EntityType: "watch", EntityID: "2", Cluster: "prod-a", Detail: "viewer"}))
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{ID: "other-new", Ts: now.Add(time.Minute), UserID: otherUserID.String(), Action: "delete", EntityType: "watch", EntityID: "3", Cluster: "prod-b", Detail: "other"}))
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", viewerID)
+		c.Locals("githubLogin", "viewer")
+		return c.Next()
+	})
+	h := NewStellarHandler(sqlStore, nil)
+	app.Get("/api/stellar/audit", h.ListAuditLog)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/audit", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload struct {
+		Items []store.StellarAuditEntry `json:"items"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	require.Len(t, payload.Items, 2)
+	assert.Equal(t, []string{"viewer-new", "viewer-old"}, []string{payload.Items[0].ID, payload.Items[1].ID})
+	for _, entry := range payload.Items {
+		assert.Equal(t, viewerID.String(), entry.UserID)
+	}
+}
+
+func TestStellarAuditLogAllowsAdminsToViewAllEntries(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-audit-admin.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	adminID := uuid.New()
+	otherUserID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{ID: adminID, GitHubID: "admin-id", GitHubLogin: "admin", Role: models.UserRoleAdmin}))
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{ID: otherUserID, GitHubID: "other-id", GitHubLogin: "other", Role: models.UserRoleViewer}))
+
+	now := time.Now().UTC().Truncate(time.Second)
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{ID: "admin-entry", Ts: now, UserID: adminID.String(), Action: "view", EntityType: "watch", EntityID: "1", Cluster: "prod-a", Detail: "admin"}))
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{ID: "other-entry", Ts: now.Add(time.Minute), UserID: otherUserID.String(), Action: "delete", EntityType: "watch", EntityID: "2", Cluster: "prod-b", Detail: "other"}))
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", adminID)
+		c.Locals("githubLogin", "admin")
+		return c.Next()
+	})
+	h := NewStellarHandler(sqlStore, nil)
+	app.Get("/api/stellar/audit", h.ListAuditLog)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/audit", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload struct {
+		Items []store.StellarAuditEntry `json:"items"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	require.Len(t, payload.Items, 2)
+	assert.Equal(t, []string{"other-entry", "admin-entry"}, []string{payload.Items[0].ID, payload.Items[1].ID})
+	assert.ElementsMatch(t, []string{adminID.String(), otherUserID.String()}, []string{payload.Items[0].UserID, payload.Items[1].UserID})
+}

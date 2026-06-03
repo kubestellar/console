@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
@@ -151,11 +154,26 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
 func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
-	if _, err := h.requireUser(c); err != nil {
+	userID, err := h.requireUser(c)
+	if err != nil {
 		return err
 	}
+
+	auditUserID := userID
+	if currentUserID := middleware.GetUserID(c); currentUserID != uuid.Nil {
+		user, err := h.store.(interface {
+			GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
+		}).GetUser(c.UserContext(), currentUserID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to verify audit log access"})
+		}
+		if user != nil && user.Role == models.UserRoleAdmin {
+			auditUserID = ""
+		}
+	}
+
 	limit := readListLimit(c)
-	entries, err := h.store.ListStellarAuditLog(c.UserContext(), limit)
+	entries, err := h.store.ListStellarAuditLog(c.UserContext(), auditUserID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load audit log"})
 	}
