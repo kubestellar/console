@@ -14,6 +14,7 @@
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+import { readCappedRequestJson, RequestBodyTooLargeError } from "./_shared/read-capped-request";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -230,16 +231,23 @@ export default async (req: Request) => {
         );
       }
 
-      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-      if (contentLength > MAX_BODY_BYTES) {
+      // SECURITY: Enforce body size on actual bytes, not Content-Length (CWE-400, #16666).
+      let body: Record<string, unknown>;
+      try {
+        body = await readCappedRequestJson<Record<string, unknown>>(req, MAX_BODY_BYTES);
+      } catch (err) {
+        if (err instanceof RequestBodyTooLargeError) {
+          return new Response(
+            JSON.stringify({ error: "Payload too large" }),
+            { status: 413, headers }
+          );
+        }
         return new Response(
-          JSON.stringify({ error: "Payload too large" }),
-          { status: 413, headers }
+          JSON.stringify({ error: "Invalid JSON body" }),
+          { status: 400, headers }
         );
       }
-
-      const body = await req.json();
-      const score = parseInt(body.score, 10);
+      const score = parseInt(String(body.score ?? ""), 10);
 
       // Validate — 4-emoji widget uses scores 1-4
       if (isNaN(score) || score < SCORE_MIN || score > SCORE_MAX) {
