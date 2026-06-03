@@ -163,3 +163,85 @@ func assertNoQueuedSSEEvent(t *testing.T, ch <-chan SSEEvent) {
 	default:
 	}
 }
+
+// TestStartSolve_IDOR_RejectsForeignNotification verifies that a user cannot
+// trigger a solve against a notification owned by a different user (CWE-639).
+func TestStartSolve_IDOR_RejectsForeignNotification(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-idor.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	// Create a notification owned by "victim-user".
+	victimUserID := "victim-user-" + uuid.New().String()
+	notif := &store.StellarNotification{
+		UserID:    victimUserID,
+		Type:      "Alert",
+		Severity:  "warning",
+		Title:     "Pod CrashLoopBackOff",
+		Body:      "pod api-server-xyz is crashing",
+		Cluster:   "prod-east",
+		Namespace: "default",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), notif))
+	require.NotEmpty(t, notif.ID)
+
+	// Set up the handler with a different authenticated user (the attacker).
+	attackerUserID := uuid.New()
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", attackerUserID)
+		return c.Next()
+	})
+
+	h := NewStellarHandler(sqlStore, nil)
+	app.Post("/api/stellar/solve/:id", h.StartSolve)
+
+	// Attempt to start a solve for the victim's notification.
+	req := httptest.NewRequest(http.MethodPost, "/api/stellar/solve/"+notif.ID, nil)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode, "should reject solve for foreign notification")
+}
+
+// TestStartSolve_OwnerAllowed verifies that the notification owner CAN trigger a solve
+// (the ownership check does not accidentally block the legitimate owner).
+func TestStartSolve_OwnerAllowed(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-owner-ok.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	ownerUUID := uuid.New()
+	notif := &store.StellarNotification{
+		UserID:    ownerUUID.String(),
+		Type:      "Alert",
+		Severity:  "warning",
+		Title:     "Pod CrashLoopBackOff",
+		Body:      "pod api-server-xyz is crashing",
+		Cluster:   "prod-east",
+		Namespace: "default",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), notif))
+	require.NotEmpty(t, notif.ID)
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", ownerUUID)
+		return c.Next()
+	})
+
+	h := NewStellarHandler(sqlStore, nil)
+	app.Post("/api/stellar/solve/:id", h.StartSolve)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/stellar/solve/"+notif.ID, nil)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, stellarMockedHandlerTestTimeoutMs)
+	require.NoError(t, err)
+	// Owner should NOT get 403 — they may get 412 (no k8s client) which is correct behavior.
+	assert.NotEqual(t, http.StatusForbidden, resp.StatusCode, "owner should not be rejected")
+	assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode, "owner should be authenticated")
+}
