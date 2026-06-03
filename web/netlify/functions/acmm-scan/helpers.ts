@@ -67,14 +67,17 @@ export interface GitTreeEntry {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Validate CORS origin via URL-parsed hostname check */
+/** Validate CORS origin via strict allowlist (no wildcard subdomains) */
 export function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
+    // Allow localhost for local development only
+    if (host === "localhost" || host === "127.0.0.1") return origin;
+    // Allow Netlify preview/deploy URLs for the console site
+    if (/^[a-z0-9-]+--kubestellar-console\.netlify\.app$/.test(host)) return origin;
+    if (/^deploy-preview-\d+--kubestellar-console\.netlify\.app$/.test(host)) return origin;
   } catch { /* invalid URL */ }
   return ALLOWED_ORIGINS[0];
 }

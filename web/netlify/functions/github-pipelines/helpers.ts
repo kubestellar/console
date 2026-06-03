@@ -10,10 +10,11 @@ export function corsOrigin(origin: string | null): string {
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
-    if (host === "localhost") return origin;
+    // Allow localhost for local development only
+    if (host === "localhost" || host === "127.0.0.1") return origin;
+    // Allow Netlify preview/deploy URLs for the console site
+    if (/^[a-z0-9-]+--kubestellar-console\.netlify\.app$/.test(host)) return origin;
+    if (/^deploy-preview-\d+--kubestellar-console\.netlify\.app$/.test(host)) return origin;
   } catch {
     // Malformed origin — fall through to default
   }

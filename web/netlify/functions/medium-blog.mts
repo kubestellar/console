@@ -51,7 +51,15 @@ function isAllowedOrigin(origin: string): boolean {
     return true;
   }
 
-  return parsedOrigin.hostname === "kubestellar.io" || parsedOrigin.hostname.endsWith(".kubestellar.io");
+  // Allow Netlify preview/deploy URLs for the console site
+  if (/^[a-z0-9-]+--kubestellar-console\.netlify\.app$/.test(parsedOrigin.hostname)) {
+    return true;
+  }
+  if (/^deploy-preview-\d+--kubestellar-console\.netlify\.app$/.test(parsedOrigin.hostname)) {
+    return true;
+  }
+
+  return false;
 }
 
 function corsOrigin(origin: string | null): string {
