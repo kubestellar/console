@@ -158,8 +158,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   // session token exfiltration to attacker-controlled servers.
   const isSafeEndpoint = (() => {
     if (!apiEndpoint) return false
-    // Relative paths (e.g. "/api/...") are always safe
-    if (apiEndpoint.startsWith('/')) return true
+    // Root-relative paths (e.g. "/api/...") are safe, but protocol-relative
+    // URLs ("//evil.com") must be rejected because the browser resolves them
+    // to an external origin.
+    if (apiEndpoint.startsWith('/')) return !apiEndpoint.startsWith('//')
     // Absolute URLs must match current origin
     try {
       const parsed = new URL(apiEndpoint)
