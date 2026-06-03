@@ -212,6 +212,84 @@ func newDrasiProxyAppForRole(t *testing.T, role models.UserRole) (*fiber.App, *t
 	return app, env
 }
 
+func TestProxyDrasi_MutatingEndpoints_ViewerForbidden(t *testing.T) {
+	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
+
+	tests := []struct {
+		name   string
+		method string
+		url    string
+		body   []byte
+	}{
+		{
+			name:   "platform POST",
+			method: fiber.MethodPost,
+			url:    "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "platform PUT",
+			method: fiber.MethodPut,
+			url:    "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "platform PATCH",
+			method: fiber.MethodPatch,
+			url:    "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "platform DELETE",
+			method: fiber.MethodDelete,
+			url:    "/api/drasi/proxy/v1/sources?target=platform&cluster=in-cluster",
+		},
+		{
+			name:   "server POST",
+			method: fiber.MethodPost,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "server PUT",
+			method: fiber.MethodPut,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "server PATCH",
+			method: fiber.MethodPatch,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "server DELETE",
+			method: fiber.MethodDelete,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body io.Reader
+			if tt.body != nil {
+				body = bytes.NewReader(tt.body)
+			}
+
+			req := httptest.NewRequest(tt.method, tt.url, body)
+			if tt.body != nil {
+				req.Header.Set("Content-Type", "application/json")
+			}
+
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+		})
+	}
+}
+
 func TestProxyDrasi_Platform_Post_ViewerForbidden(t *testing.T) {
 	app, _ := newDrasiProxyAppForRole(t, models.UserRoleViewer)
 

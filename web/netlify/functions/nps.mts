@@ -13,6 +13,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { isBodyTooLargeError, readCappedBodyJson } from "./_shared/read-capped-body";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -35,6 +36,12 @@ interface NPSResponse {
 
 interface NPSData {
   responses: NPSResponse[];
+}
+
+interface NPSSubmissionBody {
+  score?: unknown;
+  feedback?: unknown;
+  sessionId?: unknown;
 }
 
 interface NPSAggregation {
@@ -234,6 +241,26 @@ export default async (req: Request) => {
 
       const body = await req.json();
       const score = parseInt(body.score, 10);
+      let body: NPSSubmissionBody;
+      try {
+        body = await readCappedBodyJson<NPSSubmissionBody>(req, MAX_BODY_BYTES, "request");
+      } catch (error) {
+        if (isBodyTooLargeError(error)) {
+          return new Response(
+            JSON.stringify({ error: "Payload too large" }),
+            { status: 413, headers }
+          );
+        }
+        return new Response(
+          JSON.stringify({ error: "Invalid JSON body" }),
+          { status: 400, headers }
+        );
+      }
+
+      const scoreValue = typeof body.score === "string" || typeof body.score === "number"
+        ? String(body.score)
+        : "";
+      const score = parseInt(scoreValue, 10);
 
       // Validate — 4-emoji widget uses scores 1-4
       if (isNaN(score) || score < SCORE_MIN || score > SCORE_MAX) {
