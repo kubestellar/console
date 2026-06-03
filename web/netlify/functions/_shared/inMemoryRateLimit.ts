@@ -1,4 +1,4 @@
-const DEFAULT_SUBJECT = "unknown";
+const DEFAULT_SUBJECT = "untrusted-client";
 const MAX_TRACKED_SUBJECTS = 1_000;
 const MS_PER_SECOND = 1_000;
 
@@ -17,9 +17,7 @@ export interface CheckInMemoryRateLimitOptions {
 }
 
 export function getClientIp(request: Request): string {
-  return request.headers.get("x-nf-client-connection-ip")
-    ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? DEFAULT_SUBJECT;
+  return request.headers.get("x-nf-client-connection-ip") ?? DEFAULT_SUBJECT;
 }
 
 function pruneExpiredEntries(

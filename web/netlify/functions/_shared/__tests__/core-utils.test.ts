@@ -131,8 +131,8 @@ describe("shared core utilities", () => {
     }));
     const unknownIp = getClientIp(new Request(TEST_URL));
     expect(directIp).toBe("10.0.0.1");
-    expect(forwardedIp).toBe("192.168.0.4");
-    expect(unknownIp).toBe("unknown");
+    expect(forwardedIp).toBe("untrusted-client");
+    expect(unknownIp).toBe("untrusted-client");
 
     const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
     expect(checkInMemoryRateLimit("client-a", rateLimitMap, MAX_REQUESTS, TEN_SECONDS_MS)).toEqual({

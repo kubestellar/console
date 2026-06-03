@@ -21,33 +21,27 @@ describe("inMemoryRateLimit", () => {
       expect(getClientIp(request)).toBe("203.0.113.1");
     });
 
-    it("should extract IP from x-forwarded-for header when Netlify header is absent", () => {
+    it("should ignore x-forwarded-for when Netlify header is absent", () => {
       const request = new Request("http://example.com", {
         headers: { "x-forwarded-for": "198.51.100.1, 192.0.2.1" },
       });
-      expect(getClientIp(request)).toBe("198.51.100.1");
+      expect(getClientIp(request)).toBe("untrusted-client");
     });
 
-    it("should trim whitespace from x-forwarded-for IP", () => {
-      const request = new Request("http://example.com", {
-        headers: { "x-forwarded-for": "  198.51.100.1  , 192.0.2.1" },
-      });
-      expect(getClientIp(request)).toBe("198.51.100.1");
-    });
-
-    it("should prefer Netlify header over x-forwarded-for", () => {
+    it("should prefer Netlify header over spoofable forwarded headers", () => {
       const request = new Request("http://example.com", {
         headers: {
           "x-nf-client-connection-ip": "203.0.113.1",
           "x-forwarded-for": "198.51.100.1",
+          "x-real-ip": "192.0.2.25",
         },
       });
       expect(getClientIp(request)).toBe("203.0.113.1");
     });
 
-    it("should return default subject when no IP headers present", () => {
+    it("should return the untrusted sentinel when no trusted IP header is present", () => {
       const request = new Request("http://example.com");
-      expect(getClientIp(request)).toBe("unknown");
+      expect(getClientIp(request)).toBe("untrusted-client");
     });
   });
 
@@ -133,7 +127,7 @@ describe("inMemoryRateLimit", () => {
     it("should normalize empty subject to default", () => {
       const result = checkInMemoryRateLimit("", rateLimitMap, MAX_REQUESTS, WINDOW_MS);
       expect(result.allowed).toBe(true);
-      expect(rateLimitMap.has("unknown")).toBe(true);
+      expect(rateLimitMap.has("untrusted-client")).toBe(true);
     });
 
     it("should inspect limits without consuming a request", () => {
