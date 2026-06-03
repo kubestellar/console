@@ -43,6 +43,11 @@ func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *ha
 
 func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
+
+	// Ping requires authentication to prevent abuse as an outbound request
+	// primitive (CWE-918, #16948).
+	api.Get("/ping", handlers.PingHandler)
+
 	agentToken := g.config.AgentToken
 	api.Get("/agent/token", func(c *fiber.Ctx) error {
 		if err := handlers.RequireAdmin(c, g.store); err != nil {

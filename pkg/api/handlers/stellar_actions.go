@@ -310,7 +310,14 @@ func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
 	}
 
 	// If it's a dispatchable K8s action and we have a k8s client, execute directly
+	// Destructive actions require the create→approve flow with a different approver
+	// to enforce four-eyes control (CWE-285, #16949).
 	if knownDispatchableActions[body.ActionType] && h.k8sClient != nil {
+		if isDestructiveAction(body.ActionType) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "destructive actions require approval — use POST /stellar/actions to create, then approve via a different user",
+			})
+		}
 		return h.executeDirectAction(c, userID, body, params)
 	}
 
