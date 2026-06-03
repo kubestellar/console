@@ -40,7 +40,6 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => `${url}?token=test-auth`),
   getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
@@ -54,7 +53,7 @@ vi.mock('../../lib/logger', () => ({
 }))
 
 import { getDemoMode } from '../useDemoMode'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { getWsAuthParams } from '../../lib/utils/wsAuth'
 import { createMissionConnectionApi } from '../useMissions.connection'
 import { createMissionStateUtils } from '../useMissions.state'
 import {
@@ -83,11 +82,12 @@ interface MockWs {
   close: ReturnType<typeof vi.fn>
   readyState: number
   url: string
+  protocols: string[]
   _triggerOpen: () => void
   _triggerClose: () => void
 }
 
-function createMockWs(url = 'ws://localhost:8585/ws?token=test-auth'): MockWs {
+function createMockWs(url = 'ws://localhost:8585/ws', protocols: string[] = []): MockWs {
   const ws: MockWs = {
     onopen: null,
     onmessage: null,
@@ -100,6 +100,7 @@ function createMockWs(url = 'ws://localhost:8585/ws?token=test-auth'): MockWs {
     }),
     readyState: WS_CONNECTING,
     url,
+    protocols,
     _triggerOpen() {
       this.readyState = WS_OPEN
       this.onopen?.(new Event('open'))
@@ -218,10 +219,16 @@ beforeEach(() => {
   latestWs = null
   vi.useFakeTimers()
   vi.mocked(getDemoMode).mockReturnValue(false)
-  vi.mocked(appendWsAuthToken).mockImplementation(async (url: string) => `${url}?token=test-auth`)
+  vi.mocked(getWsAuthParams).mockImplementation(async (url: string) => ({
+    url,
+    protocols: [],
+  }))
 
-  const MockWebSocket = vi.fn(function(this: unknown, url: string) {
-    const ws = createMockWs(url)
+  const MockWebSocket = vi.fn(function(this: unknown, url: string, protocols?: string | string[]) {
+    const normalizedProtocols = Array.isArray(protocols)
+      ? protocols
+      : protocols ? [protocols] : []
+    const ws = createMockWs(url, normalizedProtocols)
     wsInstances.push(ws)
     latestWs = ws
     return ws
@@ -320,15 +327,20 @@ describe('createMissionConnectionApi', () => {
     )
   })
 
-  it('appends auth token to the WebSocket URL before connecting', async () => {
+  it('uses getWsAuthParams before connecting and forwards protocols to WebSocket', async () => {
+    vi.mocked(getWsAuthParams).mockResolvedValueOnce({
+      url: 'ws://localhost:8585/ws',
+      protocols: ['bearer.test-auth'],
+    })
     const state = makeState()
     const api = createMissionConnectionApi(state, createMissionStateUtils(state))
 
     const connectPromise = api.ensureConnection()
     await flushMicrotasks()
 
-    expect(appendWsAuthToken).toHaveBeenCalledWith('ws://localhost:8585/ws')
-    expect(latestWs?.url).toContain('token=test-auth')
+    expect(getWsAuthParams).toHaveBeenCalledWith('ws://localhost:8585/ws')
+    expect(latestWs?.url).toBe('ws://localhost:8585/ws')
+    expect(latestWs?.protocols).toEqual(['bearer.test-auth'])
 
     latestWs!._triggerOpen()
     await connectPromise

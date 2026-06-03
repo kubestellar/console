@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const mockEmitWsAuthMissing = vi.fn()
 const mockGetAgentToken = vi.fn(async () => '')
+const mockGetStoredAgentToken = vi.fn(() => '')
 
 vi.mock('../../analytics', () => ({
   emitWsAuthMissing: mockEmitWsAuthMissing,
@@ -9,62 +10,68 @@ vi.mock('../../analytics', () => ({
 
 vi.mock('../../../hooks/mcp/agentFetch', () => ({
   getAgentToken: mockGetAgentToken,
-  getStoredAgentToken: () => sessionStorage.getItem('kc-agent-token') || '',
+  getStoredAgentToken: mockGetStoredAgentToken,
 }))
 
-describe('appendWsAuthToken', () => {
-  let appendWsAuthToken: (url: string) => Promise<string>
+describe('getWsAuthParams', () => {
+  let getWsAuthParams: (url: string) => Promise<{ url: string; protocols: string[] }>
 
   beforeEach(async () => {
-    localStorage.clear()
     sessionStorage.clear()
     mockEmitWsAuthMissing.mockClear()
     mockGetAgentToken.mockReset()
-    mockGetAgentToken.mockImplementation(async () => sessionStorage.getItem('kc-agent-token') || '')
-    // Reset module to clear the wsAuthMissingEmitted flag
+    mockGetStoredAgentToken.mockReset()
+    mockGetAgentToken.mockImplementation(async () => undefined)
+    mockGetStoredAgentToken.mockImplementation(() => sessionStorage.getItem('kc-agent-token') || '')
     vi.resetModules()
     const mod = await import('../wsAuth')
-    appendWsAuthToken = mod.appendWsAuthToken
+    getWsAuthParams = mod.getWsAuthParams
   })
 
-  it('appends token as query parameter when token exists', async () => {
+  it('returns bearer auth protocol when a stored token exists', async () => {
     sessionStorage.setItem('kc-agent-token', 'my-secret-token')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toBe('ws://localhost:8585/ws?token=my-secret-token')
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+    expect(result).toEqual({
+      url: 'ws://localhost:8585/ws',
+      protocols: ['bearer.my-secret-token'],
+    })
   })
 
-  it('uses & separator when URL already has query params', async () => {
-    sessionStorage.setItem('kc-agent-token', 'my-token')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws?foo=bar')
-    expect(result).toBe('ws://localhost:8585/ws?foo=bar&token=my-token')
+  it('returns the original URL with no protocols when token is missing', async () => {
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+    expect(result).toEqual({
+      url: 'ws://localhost:8585/ws',
+      protocols: [],
+    })
   })
 
-  it('returns original URL when no token in storage', async () => {
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toBe('ws://localhost:8585/ws')
-  })
+  it('awaits token refresh before reading stored auth state', async () => {
+    mockGetAgentToken.mockImplementation(async () => {
+      sessionStorage.setItem('kc-agent-token', 'fresh-token')
+      return 'fresh-token'
+    })
 
-  it('URL-encodes special characters in token', async () => {
-    sessionStorage.setItem('kc-agent-token', 'token with spaces&special=chars')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toContain('token=token%20with%20spaces%26special%3Dchars')
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+
+    expect(mockGetAgentToken).toHaveBeenCalledTimes(1)
+    expect(result.protocols).toEqual(['bearer.fresh-token'])
   })
 
   it('does not emit when token is present', async () => {
     sessionStorage.setItem('kc-agent-token', 'valid-token')
-    await appendWsAuthToken('ws://localhost:8585/ws')
+    await getWsAuthParams('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).not.toHaveBeenCalled()
   })
 
   it('emits emitWsAuthMissing when token is missing', async () => {
-    await appendWsAuthToken('ws://localhost:8585/ws')
+    await getWsAuthParams('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledWith('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledTimes(1)
   })
 
   it('throttles emit to once per module lifecycle', async () => {
-    await appendWsAuthToken('ws://localhost:8585/ws')
-    await appendWsAuthToken('ws://localhost:8585/ws/other')
+    await getWsAuthParams('ws://localhost:8585/ws')
+    await getWsAuthParams('ws://localhost:8585/ws/other')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledTimes(1)
   })
 })
