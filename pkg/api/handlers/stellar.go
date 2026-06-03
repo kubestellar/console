@@ -168,7 +168,11 @@ type StellarStore interface {
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
 type StellarHandler struct {
 	store            StellarStore
+<<<<<<< HEAD
 	userStore        store.Store // for admin role checks on sensitive endpoints
+=======
+	userStore        store.UserStore // optional; enables role checks (#16709)
+>>>>>>> c1b3f7f78 (🐛 Fix DOM nesting violations — buttons, anchors, paragraphs, forms)
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
@@ -352,7 +356,11 @@ func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 // SetUserStore wires user role lookups for authorization checks on mutating
 // endpoints (e.g., IngestEvent #16709). Optional — if unset, role checks are
 // skipped for backward compatibility in tests.
+<<<<<<< HEAD
 func (h *StellarHandler) SetUserStore(us store.Store) {
+=======
+func (h *StellarHandler) SetUserStore(us store.UserStore) {
+>>>>>>> c1b3f7f78 (🐛 Fix DOM nesting violations — buttons, anchors, paragraphs, forms)
 	h.userStore = us
 }
 

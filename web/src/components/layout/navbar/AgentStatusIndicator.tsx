@@ -377,7 +377,11 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
       {/* Agent status dropdown */}
       {showAgentStatus && (
         <div
+<<<<<<< HEAD
           ref={containerRef as RefObject<HTMLDivElement | null>}
+=======
+          ref={containerRef}
+>>>>>>> c1b3f7f78 (🐛 Fix DOM nesting violations — buttons, anchors, paragraphs, forms)
           onKeyDown={handleKeyDown}
           role="menu"
           data-testid="navbar-agent-status-dropdown"
