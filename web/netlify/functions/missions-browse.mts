@@ -30,6 +30,25 @@ const MAX_RETRIES = 2;
 /** Base delay between retries in milliseconds */
 const RETRY_BASE_DELAY_MS = 500;
 
+/** Negative-cache TTL: cache 404/invalid responses briefly to prevent amplification (#16817) */
+const NEGATIVE_CACHE_TTL_MS = 60_000;
+
+/**
+ * Allowlist of valid top-level path prefixes for mission browsing.
+ * Requests outside these prefixes are rejected immediately to prevent
+ * unbounded cache-miss amplification via arbitrary paths (CWE-400, #16817).
+ */
+const ALLOWED_PATH_PREFIXES = [
+  "fixes",
+  "tutorials",
+  "operations",
+  "troubleshooting",
+  "scenarios",
+  "onboarding",
+  "advanced",
+  "integrations",
+];
+
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
   methods: "GET, OPTIONS",
@@ -65,6 +84,16 @@ export default async (request: Request): Promise<Response> => {
   if (path && hasInvalidPathInput(path)) {
     return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
   }
+
+  // SECURITY: Reject paths that don't match known mission directory prefixes
+  // to prevent cache-miss amplification with arbitrary attacker-controlled paths (CWE-400, #16817).
+  if (path) {
+    const topLevel = path.split("/")[0].toLowerCase();
+    if (!ALLOWED_PATH_PREFIXES.includes(topLevel)) {
+      return jsonResponse(corsHeaders, { error: "invalid path prefix" }, 400);
+    }
+  }
+
   const cacheKey = `browse:${path}`;
 
   try {
@@ -104,6 +133,13 @@ export default async (request: Request): Promise<Response> => {
     }
 
     if (!resp.ok) {
+      // SECURITY: Negative-cache 404 responses to prevent repeated lookups of
+      // the same invalid path from consuming GitHub API quota (CWE-400, #16817).
+      if (resp.status === 404) {
+        const negEntry: BrowseCacheEntry = { body: "[]", fetchedAt: Date.now() };
+        store.setJSON(cacheKey, negEntry).catch((err) => { console.warn("[missions-browse] negative cache write failed:", err instanceof Error ? err.message : err) });
+      }
+
       // If GitHub fails but we have stale cache, serve it
       if (cached) {
         return new Response(cached.body, {
