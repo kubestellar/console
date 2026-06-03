@@ -263,8 +263,17 @@ load_watcher_runtime() {
     if [ ! -f "$WATCHDOG_RUNTIME_FILE" ]; then
         return 1
     fi
-    # shellcheck disable=SC1090
-    . "$WATCHDOG_RUNTIME_FILE"
+    # Parse as key=value data instead of sourcing as shell to prevent
+    # code injection via TOCTOU race (CWE-367, #16577).
+    while IFS='=' read -r key value; do
+        # Strip potential carriage returns
+        value="${value%$'\r'}"
+        case "$key" in
+            WATCHDOG_RUNTIME_DIR) WATCHDOG_RUNTIME_DIR="$value" ;;
+            WATCHDOG_PID_FILE) WATCHDOG_PID_FILE="$value" ;;
+            STAGE_FILE) STAGE_FILE="$value" ;;
+        esac
+    done < "$WATCHDOG_RUNTIME_FILE"
     [ -n "${WATCHDOG_PID_FILE:-}" ] && [ -n "${STAGE_FILE:-}" ]
 }
 

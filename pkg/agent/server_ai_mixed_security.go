@@ -97,6 +97,37 @@ var mixedModeBlockedStreamingFlags = map[string]bool{
 	"-w":       true,
 }
 
+// mixedModeBlockedTransportFlags blocks kubectl flags that redirect traffic to
+// attacker-controlled API servers, inject credentials, or alter TLS trust.
+// Addresses CWE-88 (#16574).
+var mixedModeBlockedTransportFlags = map[string]bool{
+	"--server":                   true,
+	"-s":                         true,
+	"--token":                    true,
+	"--client-key":               true,
+	"--client-certificate":       true,
+	"--certificate-authority":    true,
+	"--insecure-skip-tls-verify": true,
+	"--tls-server-name":          true,
+}
+
+// mixedModeBlockedIdentityFlags blocks kubectl impersonation and identity
+// selection flags that enable privilege escalation. Addresses CWE-269 (#16581).
+var mixedModeBlockedIdentityFlags = map[string]bool{
+	"--as":       true,
+	"--as-group": true,
+	"--as-uid":   true,
+	"--user":     true,
+	"--cluster":  true,
+}
+
+// mixedModeBlockedDataAccessFlags blocks flags that bypass resource-type gating
+// in kubectl (e.g., --raw enables direct API path access). Addresses CWE-200/CWE-918 (#16575).
+var mixedModeBlockedDataAccessFlags = map[string]bool{
+	"--raw":      true,
+	"--filename": true,
+}
+
 func validateMixedModeCommands(commands []string) mixedModeCommandValidation {
 	validation := mixedModeCommandValidation{
 		Approved: make([]string, 0, len(commands)),
@@ -290,11 +321,39 @@ func normalizeMixedModeOutputFormat(value string) string {
 func hasMixedModeContextOverride(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
+		// Context override flags
 		if lower == "--context" || lower == "--kube-context" || lower == "--kubeconfig" {
 			return true
 		}
 		if strings.HasPrefix(lower, "--context=") || strings.HasPrefix(lower, "--kube-context=") || strings.HasPrefix(lower, "--kubeconfig=") {
 			return true
+		}
+		// Transport/auth redirect flags (CWE-88, #16574)
+		if mixedModeBlockedTransportFlags[lower] {
+			return true
+		}
+		for prefix := range mixedModeBlockedTransportFlags {
+			if strings.HasPrefix(prefix, "--") && strings.HasPrefix(lower, prefix+"=") {
+				return true
+			}
+		}
+		// Identity/impersonation flags (CWE-269, #16581)
+		if mixedModeBlockedIdentityFlags[lower] {
+			return true
+		}
+		for prefix := range mixedModeBlockedIdentityFlags {
+			if strings.HasPrefix(prefix, "--") && strings.HasPrefix(lower, prefix+"=") {
+				return true
+			}
+		}
+		// Data access bypass flags (CWE-200/CWE-918, #16575)
+		if mixedModeBlockedDataAccessFlags[lower] {
+			return true
+		}
+		for prefix := range mixedModeBlockedDataAccessFlags {
+			if strings.HasPrefix(prefix, "--") && strings.HasPrefix(lower, prefix+"=") {
+				return true
+			}
 		}
 	}
 	return false
@@ -304,6 +363,10 @@ func hasMixedModeStreamingFlag(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
 		if mixedModeBlockedStreamingFlags[lower] {
+			return true
+		}
+		// Catch --watch=true, --watch-only, --follow=true variants (CWE-20, #16576)
+		if strings.HasPrefix(lower, "--watch") || strings.HasPrefix(lower, "--follow") {
 			return true
 		}
 	}
