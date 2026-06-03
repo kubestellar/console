@@ -31,17 +31,27 @@ const SAMPLE_MATRIX = {
   workflows: [{ repo: "kubestellar/console", name: "CI", cells: [] }],
 };
 
-const { mockGet, mockSet, mockEnforceSimpleRateLimit, mockBuildPulse, mockBuildMatrix, mockBuildFlow, mockBuildFailures, mockBuildLog } =
-  vi.hoisted(() => ({
-    mockGet: vi.fn(),
-    mockSet: vi.fn(),
-    mockEnforceSimpleRateLimit: vi.fn(),
-    mockBuildPulse: vi.fn(),
-    mockBuildMatrix: vi.fn(),
-    mockBuildFlow: vi.fn(),
-    mockBuildFailures: vi.fn(),
-    mockBuildLog: vi.fn(),
-  }));
+const {
+  mockGet,
+  mockSet,
+  mockEnforceSimpleRateLimit,
+  mockBuildPulse,
+  mockBuildMatrix,
+  mockBuildFlow,
+  mockBuildFailures,
+  mockBuildLog,
+  RepoNotPermittedError,
+} = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockSet: vi.fn(),
+  mockEnforceSimpleRateLimit: vi.fn(),
+  mockBuildPulse: vi.fn(),
+  mockBuildMatrix: vi.fn(),
+  mockBuildFlow: vi.fn(),
+  mockBuildFailures: vi.fn(),
+  mockBuildLog: vi.fn(),
+  RepoNotPermittedError: class RepoNotPermittedError extends Error {},
+}));
 
 vi.mock("@netlify/blobs", () => ({
   getStore: () => ({ get: mockGet, set: mockSet }),
@@ -57,6 +67,7 @@ vi.mock("../github-pipelines/views", () => ({
   buildFlow: mockBuildFlow,
   buildFailures: mockBuildFailures,
   buildLog: mockBuildLog,
+  RepoNotPermittedError,
 }));
 
 import handler from "../github-pipelines.mts";
@@ -116,6 +127,24 @@ describe("github-pipelines", () => {
     assertResponseHasNoSecrets(JSON.stringify(body), [FAKE_GITHUB_TOKEN]);
   });
 
+  it("returns 400 for invalid repo format", async () => {
+    const res = await handler(makeRequest("view=pulse&repo=not-valid!!!"));
+    expect(res.status).toBe(400);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Invalid repo format");
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(mockBuildPulse).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for repos outside the allowlist before cache lookup", async () => {
+    const res = await handler(makeRequest("view=pulse&repo=octocat/hello-world"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("repo not permitted");
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(mockBuildPulse).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for unknown view", async () => {
     const res = await handler(makeRequest("view=not-a-real-view"));
     expect(res.status).toBe(400);
@@ -153,6 +182,14 @@ describe("github-pipelines", () => {
     expect(mockBuildPulse).not.toHaveBeenCalled();
     const body = await readJson(res);
     expect(body).toMatchObject({ streak: SAMPLE_PULSE.streak, repos: ["kubestellar/console"] });
+  });
+
+  it("returns 403 when a view builder rejects a repo outside the allowlist", async () => {
+    mockBuildPulse.mockRejectedValue(new RepoNotPermittedError("repo not permitted"));
+    const res = await handler(makeRequest("view=pulse&repo=kubestellar/console"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("repo not permitted");
   });
 
   it("returns 500 with repos when buildPulse throws (upstream error)", async () => {

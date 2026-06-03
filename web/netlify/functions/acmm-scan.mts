@@ -1,7 +1,7 @@
 /**
  * Netlify Function: ACMM Scan
  *
- * Scans any GitHub repo and returns detected criteria from the multi-source
+ * Scans allowed KubeStellar GitHub repos and returns detected criteria from the multi-source
  * ACMM registry plus weekly AI-vs-human contribution activity. Powers the
  * /acmm dashboard's four cards.
  *
@@ -43,6 +43,7 @@ import {
 import type { CacheEntry, ScanResult } from "./acmm-scan/helpers";
 import { fetchTreePaths, fetchWeeklyActivity } from "./acmm-scan/fetchers";
 import { demoScan } from "./acmm-scan/demo";
+import { isAllowedGitHubRepo } from "./_shared/allowed-github-repos";
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -64,10 +65,11 @@ export default async (req: Request) => {
   }
 
   const url = new URL(req.url);
-  const repo = url.searchParams.get("repo") || "";
+  const requestedRepo = url.searchParams.get("repo") || "";
+  const repo = requestedRepo.toLowerCase();
   const force = url.searchParams.get("force") === "true";
 
-  if (!REPO_RE.test(repo)) {
+  if (!REPO_RE.test(requestedRepo)) {
     return new Response(
       JSON.stringify({ error: "Invalid repo — must be owner/name" }),
       {
@@ -75,6 +77,13 @@ export default async (req: Request) => {
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );
+  }
+
+  if (!isAllowedGitHubRepo(repo)) {
+    return new Response(JSON.stringify({ error: "repo not permitted" }), {
+      status: 403,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
   }
 
   const token =
