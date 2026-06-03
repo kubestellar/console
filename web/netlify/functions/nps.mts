@@ -12,7 +12,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
-import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { buildCorsHeaders, handlePreflight, readCappedBody, BodyTooLargeError } from "./_shared";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -238,7 +238,19 @@ export default async (req: Request) => {
         );
       }
 
-      const body = await req.json();
+      let bodyText: string;
+      try {
+        bodyText = await readCappedBody(req, MAX_BODY_BYTES);
+      } catch (e) {
+        if (e instanceof BodyTooLargeError) {
+          return new Response(
+            JSON.stringify({ error: "Payload too large" }),
+            { status: 413, headers }
+          );
+        }
+        throw e;
+      }
+      const body = JSON.parse(bodyText);
       const score = parseInt(body.score, 10);
 
       // Validate — 4-emoji widget uses scores 1-4

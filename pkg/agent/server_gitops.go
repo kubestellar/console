@@ -168,7 +168,15 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 		return "", fmt.Errorf("invalid branch name: %w", err)
 	}
 
-	tempDir := fmt.Sprintf("%s%d", gitOpsTempDirPrefix, time.Now().UnixNano())
+	tempDir, err := os.MkdirTemp("", "gitops-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	// Verify the created dir passes the cleanup safety check
+	if !strings.HasPrefix(tempDir, filepath.Join(os.TempDir(), "gitops-")) {
+		os.RemoveAll(tempDir)
+		return "", fmt.Errorf("temp dir in unexpected location: %s", tempDir)
+	}
 
 	// repoURL and branch are validated by validateGitopsRepoURL/validateGitopsBranchName
 	// above before reaching this point. exec.CommandContext with a discrete arg list
@@ -214,7 +222,8 @@ func gitopsIsKustomizeDir(path string) bool {
 
 // gitopsCleanupTempDir mirrors the backend cleanupTempDir helper.
 func gitopsCleanupTempDir(dir string) {
-	if !strings.HasPrefix(dir, gitOpsTempDirPrefix) {
+	tempPrefix := filepath.Join(os.TempDir(), "gitops-")
+	if !strings.HasPrefix(dir, gitOpsTempDirPrefix) && !strings.HasPrefix(dir, tempPrefix) {
 		slog.Warn("[agent] SECURITY: refused to delete directory outside gitops temp prefix", "dir", dir)
 		return
 	}

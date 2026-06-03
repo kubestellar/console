@@ -29,6 +29,8 @@ export type {
 export { fetchWithTimeout } from "./fetchWithTimeout";
 export type { FetchWithTimeoutOptions } from "./fetchWithTimeout";
 
+export { readCappedBody, BodyTooLargeError } from "./readCappedBody";
+
 export { fetchWithRetry } from "./fetchWithRetry";
 export type { FetchWithRetryOptions } from "./fetchWithRetry";
 

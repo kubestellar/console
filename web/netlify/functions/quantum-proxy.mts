@@ -1,6 +1,7 @@
 import type { Context } from "@netlify/functions";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
+import { readCappedBody, BodyTooLargeError } from "./_shared/readCappedBody";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -366,7 +367,20 @@ export default async (req: Request, context: Context): Promise<Response> => {
         });
       }
     }
-    const requestBody = req.method === "GET" ? undefined : await req.text();
+    let requestBody: string | undefined;
+    if (req.method !== "GET") {
+      try {
+        requestBody = await readCappedBody(req, MAX_PROXY_BODY_BYTES);
+      } catch (e) {
+        if (e instanceof BodyTooLargeError) {
+          return new Response(JSON.stringify({ error: "Request body too large" }), {
+            status: 413,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        throw e;
+      }
+    }
     if (req.method === "POST" && requestBody !== undefined) {
       const validationError = validatePostBody(requestBody);
       if (validationError) {
