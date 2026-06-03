@@ -359,7 +359,13 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
 
 	for _, cluster := range clusters {
-		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
+		// Sanitize cluster name to prevent prompt injection via malicious
+		// kubeconfig context names (CWE-74). Only allow safe characters.
+		safeName := sanitizeClusterName(cluster.Name)
+		if safeName == "" {
+			continue
+		}
+		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", safeName))
 		if cluster.Healthy {
 			contextBuilder.WriteString("  Status: Healthy\n")
 		} else {
@@ -378,6 +384,28 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString(message)
 
 	return contextBuilder.String()
+}
+
+// sanitizeClusterName strips characters that could be used for prompt injection.
+// Valid cluster names contain only alphanumerics, hyphens, dots, underscores,
+// colons, and forward slashes (common in kubeconfig context names like
+// "arn:aws:eks:us-east-1:123456:cluster/my-cluster").
+// Names exceeding 253 characters (k8s limit) are truncated.
+func sanitizeClusterName(name string) string {
+	const maxLen = 253
+	var b strings.Builder
+	b.Grow(len(name))
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '-' || r == '_' || r == '.' || r == ':' || r == '/' || r == '@' {
+			b.WriteRune(r)
+		}
+	}
+	s := b.String()
+	if len(s) > maxLen {
+		s = s[:maxLen]
+	}
+	return s
 }
 
 // GetTools returns available console tools for kagenti agents
