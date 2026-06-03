@@ -2,7 +2,7 @@
 
 import { isDemoToken } from '../../lib/demoMode'
 import { isBackendUnavailable } from '../../lib/api'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { openAuthenticatedWebSocket } from '../../lib/utils/wsAuth'
 import { isLikelyWsError, isWebDriverAutomation, resolveAgentWsUrl } from './wsDetect'
 import { AGENT_TOKEN_STORAGE_KEY } from './agentFetch'
 import { MAX_RECONNECT_ATTEMPTS, RECONNECT_BASE_DELAY_MS, WS_BACKEND_RECHECK_INTERVAL } from './sharedImpl.constants'
@@ -87,7 +87,7 @@ export async function connectSharedWebSocket() {
   }
 
   try {
-    const ws = new WebSocket(await appendWsAuthToken(resolveAgentWsUrl()))
+    const ws = await openAuthenticatedWebSocket(resolveAgentWsUrl())
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen

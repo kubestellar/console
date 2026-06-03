@@ -11,7 +11,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 
 // ── Hoisted mock refs ────────────────────────────────────────────────────
 
-const { mockSaveResolution, mockDetectIssueSignature, mockAppendWsAuthToken } = vi.hoisted(() => ({
+const { mockSaveResolution, mockDetectIssueSignature, mockAppendWsAuthToken, mockOpenAuthenticatedWebSocket } = vi.hoisted(() => ({
   mockSaveResolution: vi.fn(),
   mockDetectIssueSignature: vi.fn(() => ({
     type: 'CrashLoopBackOff',
@@ -20,6 +20,7 @@ const { mockSaveResolution, mockDetectIssueSignature, mockAppendWsAuthToken } = 
     namespace: 'default',
   })),
   mockAppendWsAuthToken: vi.fn().mockResolvedValue('ws://mock/ws'),
+  mockOpenAuthenticatedWebSocket: vi.fn(async (url: string) => new WebSocket(await mockAppendWsAuthToken(url))),
 }))
 
 // ── Module mocks ─────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ vi.mock('../../../hooks/useResolutions', () => ({
 
 vi.mock('../../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: mockAppendWsAuthToken,
+  openAuthenticatedWebSocket: mockOpenAuthenticatedWebSocket,
 }))
 
 vi.mock('../../../lib/constants', () => ({

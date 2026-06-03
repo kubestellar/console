@@ -1,46 +1,73 @@
 /**
- * Append the kc-agent authentication token to a WebSocket URL.
+ * Prepare kc-agent authentication for a WebSocket handshake.
  *
- * Browsers cannot set custom headers on WebSocket handshake requests,
- * so we pass the token as a query parameter instead.
+ * Browsers cannot set arbitrary headers on WebSocket requests, so the token is
+ * encoded into a Sec-WebSocket-Protocol value instead of being exposed in the
+ * URL.
  *
- * Fix for #13034: This function is now async and awaits the token fetch
- * to prevent the race condition where WebSocket connections opened before
- * the token was available, causing correlated ws_auth_missing and
- * agent_token_failure spikes in GA4.
+ * Fix for #13034: token fetch remains async so callers wait for the token
+ * before opening the socket, preventing the original auth race.
  */
 import { emitWsAuthMissing } from '../analytics'
 import { isLocalAgentSuppressed } from '../constants/network'
 import { isDemoMode } from '../demoMode'
 import { getAgentToken, AGENT_TOKEN_STORAGE_KEY } from '../../hooks/mcp/agentFetch'
 
-/** Query-string key used to pass the auth token on WebSocket URLs */
-const WS_AUTH_QUERY_PARAM = 'token'
+/** Base protocol echoed by kc-agent so browser handshakes succeed. */
+const KC_AGENT_WS_PROTOCOL = 'kc-agent.v1'
+
+/** Prefix for the encoded auth token carried in Sec-WebSocket-Protocol. */
+const KC_AGENT_WS_TOKEN_PROTOCOL_PREFIX = 'kc-agent-token.'
 
 /** Throttle: only emit once per session to avoid spamming GA4 */
 let wsAuthMissingEmitted = false
 
+function encodeWebSocketProtocolToken(token: string): string {
+  const tokenBytes = new TextEncoder().encode(token)
+  let binary = ''
+  for (const byte of tokenBytes) {
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/u, '')
+}
+
 /**
- * Fetch the kc-agent token if needed, then append it to `url` as
- * `?token=<value>` (or `&token=<value>` when other params are present).
- * Returns the original URL unchanged when no token is available.
- *
- * This function ensures the token fetch completes before opening a
- * WebSocket connection, preventing the race condition in #13034.
+ * Fetch the kc-agent token if needed, then return the WebSocket subprotocols
+ * required for authentication. Returns undefined when no token is available.
  */
-export async function appendWsAuthToken(url: string): Promise<string> {
-  // Ensure token fetch has completed (or immediately resolve if demo mode)
+export async function getAuthenticatedWebSocketProtocols(url: string): Promise<string[] | undefined> {
   await getAgentToken()
-  
+
   const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   if (!token) {
     if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
       wsAuthMissingEmitted = true
       emitWsAuthMissing(url)
     }
-    return url
+    return undefined
   }
 
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}${WS_AUTH_QUERY_PARAM}=${encodeURIComponent(token)}`
+  return [
+    KC_AGENT_WS_PROTOCOL,
+    `${KC_AGENT_WS_TOKEN_PROTOCOL_PREFIX}${encodeWebSocketProtocolToken(token)}`,
+  ]
+}
+
+/**
+ * Legacy helper retained for callers/tests that only need token prefetch and
+ * analytics. The URL is returned unchanged because auth no longer travels in
+ * the query string.
+ */
+export async function appendWsAuthToken(url: string): Promise<string> {
+  await getAuthenticatedWebSocketProtocols(url)
+  return url
+}
+
+/** Open an authenticated WebSocket without exposing the token in the URL. */
+export async function openAuthenticatedWebSocket(url: string): Promise<WebSocket> {
+  const protocols = await getAuthenticatedWebSocketProtocols(url)
+  return protocols ? new WebSocket(url, protocols) : new WebSocket(url)
 }

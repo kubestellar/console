@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: (url: string) => Promise.resolve(url),
+  openAuthenticatedWebSocket: (url: string) => Promise.resolve(new WebSocket(url)),
 }))
 
 import { useExecSession } from '../useExecSession'

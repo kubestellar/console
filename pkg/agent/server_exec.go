@@ -24,9 +24,7 @@ package agent
 // kc-agent does not need any of that:
 //
 //   - Auth uses the existing s.validateToken(r) path (Authorization header
-//     or the ?token= query param fallback that kc-agent's regular WebSocket
-//     routes use; see server.go validateToken for why query param is
-//     restricted to genuine WebSocket upgrades).
+//     for HTTP or the Sec-WebSocket-Protocol token for WebSocket upgrades).
 //   - RBAC is enforced natively by the target apiserver when we open the
 //     SPDY exec stream using the user's kubeconfig context. A deny becomes a
 //     synchronous stream-open error which we translate into a websocket
@@ -228,8 +226,8 @@ func (q *agentTerminalSizeQueue) Next() *remotecommand.TerminalSize {
 // handleExec handles GET /ws/exec. The flow mirrors the backend handler's
 // HandleExec (pkg/api/handlers/exec.go) minus the pod-SA-specific layers:
 //
-//  1. Token validation via the standard Authorization header or ?token=
-//     query param fallback, the same way kc-agent's /ws route validates.
+//  1. Token validation via the standard Authorization header or the
+//     Sec-WebSocket-Protocol token, the same way kc-agent's /ws route validates.
 //  2. WebSocket upgrade via s.upgrader (gorilla).
 //  3. Read and parse the agentExecInitMessage JSON frame.
 //  4. Resolve the clientset and REST config for the target cluster from the

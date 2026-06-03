@@ -3,6 +3,7 @@ package agent
 import (
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -13,6 +14,11 @@ import (
 var originBypassAllowedPaths = map[string]struct{}{
 	"/status": {},
 }
+
+const (
+	kcAgentWebSocketProtocol            = "kc-agent.v1"
+	kcAgentWebSocketTokenProtocolPrefix = "kc-agent-token."
+)
 
 // checkOrigin validates the Origin header against allowed origins
 // SECURITY: This prevents malicious websites from connecting to the local agent.
@@ -41,13 +47,10 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 
 // validateToken checks the authentication token (if configured).
 // Tokens are accepted via the Authorization header for HTTP requests.
-// For WebSocket upgrades, tokens are also accepted via the ?token= query
-// parameter since browsers cannot set custom headers on WebSocket handshakes.
-// Query parameter tokens are restricted to genuine WebSocket upgrade requests
-// to keep secrets out of server logs, browser history, and proxy access logs
-// (#3895). To prevent spoofed Upgrade headers from enabling the query-param
-// fallback (#4264), we verify all three headers that browsers always send for
-// real WebSocket handshakes: Upgrade, Connection, and Sec-WebSocket-Key.
+// For genuine WebSocket upgrades, browser clients send the token in the
+// Sec-WebSocket-Protocol handshake header as an encoded subprotocol value.
+// This keeps the token out of URLs, access logs, and browser history while
+// still authenticating the request before the upgrade completes (#16508).
 //
 // When KC_AGENT_TOKEN is auto-generated, trusted browser origins may bypass the
 // Bearer token requirement only on a tiny allow-list of safe read-only paths.
@@ -81,12 +84,11 @@ func (s *Server) validateToken(r *http.Request) bool {
 		}
 	}
 
-	// Fall back to query parameter ONLY for genuine WebSocket upgrade requests.
-	// Browsers always send all three headers; a plain HTTP client spoofing just
-	// the Upgrade header will be missing Connection and/or Sec-WebSocket-Key.
+	// Browser WebSocket clients cannot set Authorization, so they send the
+	// token in Sec-WebSocket-Protocol on a genuine upgrade request.
 	if isRealWebSocketUpgrade(r) {
-		if queryToken := r.URL.Query().Get("token"); queryToken != "" {
-			return subtle.ConstantTimeCompare([]byte(queryToken), []byte(s.agentToken)) == 1
+		if protocolToken := extractWebSocketProtocolToken(r); protocolToken != "" {
+			return subtle.ConstantTimeCompare([]byte(protocolToken), []byte(s.agentToken)) == 1
 		}
 	}
 
@@ -125,6 +127,27 @@ func isRealWebSocketUpgrade(r *http.Request) bool {
 	}
 
 	return true
+}
+
+func extractWebSocketProtocolToken(r *http.Request) string {
+	for _, rawProtocol := range strings.Split(r.Header.Get("Sec-WebSocket-Protocol"), ",") {
+		protocol := strings.TrimSpace(rawProtocol)
+		if !strings.HasPrefix(protocol, kcAgentWebSocketTokenProtocolPrefix) {
+			continue
+		}
+
+		encodedToken := strings.TrimPrefix(protocol, kcAgentWebSocketTokenProtocolPrefix)
+		if encodedToken == "" {
+			continue
+		}
+
+		tokenBytes, err := base64.RawURLEncoding.DecodeString(encodedToken)
+		if err != nil {
+			continue
+		}
+		return string(tokenBytes)
+	}
+	return ""
 }
 
 // isAllowedOrigin checks if the origin is in the allowed list.

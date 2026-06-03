@@ -7,7 +7,7 @@
 
 import { getDemoMode } from '../hooks/useDemoMode'
 import { LOCAL_AGENT_WS_URL } from './constants'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { openAuthenticatedWebSocket } from '../lib/utils/wsAuth'
 
 const ICON_SUGGESTION_TIMEOUT_MS = 5_000
 
@@ -94,9 +94,9 @@ async function askAgentForIcon(name: string): Promise<string | null> {
     return Promise.resolve(null)
   }
 
-  let wsUrl: string
+  let ws: WebSocket
   try {
-    wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+    ws = await openAuthenticatedWebSocket(LOCAL_AGENT_WS_URL)
   } catch {
     return null
   }
@@ -107,7 +107,6 @@ async function askAgentForIcon(name: string): Promise<string | null> {
     }, ICON_SUGGESTION_TIMEOUT_MS)
 
     try {
-      const ws = new WebSocket(wsUrl)
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 

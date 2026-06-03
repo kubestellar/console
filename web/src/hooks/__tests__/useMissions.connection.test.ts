@@ -39,8 +39,11 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   return { ...actual, LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws' }
 })
 
+const mockAppendWsAuthTokenImpl = vi.fn(async (url: string) => `${url}?token=test-auth`)
+
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => `${url}?token=test-auth`),
+  appendWsAuthToken: mockAppendWsAuthTokenImpl,
+  openAuthenticatedWebSocket: vi.fn(async (url: string) => new WebSocket(await mockAppendWsAuthTokenImpl(url))),
 }))
 
 vi.mock('../../lib/logger', () => ({

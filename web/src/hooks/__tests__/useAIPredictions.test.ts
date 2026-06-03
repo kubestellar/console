@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache, mockAppendWsAuthToken } = vi.hoisted(() => ({
+const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache, mockAppendWsAuthToken, mockOpenAuthenticatedWebSocket } = vi.hoisted(() => ({
   mockGetPredictionSettings: vi.fn(() => ({ aiEnabled: true, minConfidence: 50 })),
   mockGetDemoMode: vi.fn(() => true),
   mockIsAgentUnavailable: vi.fn(() => true),
@@ -13,6 +13,7 @@ const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mock
   mockFullFetchClusters: vi.fn(),
   mockClusterCache: { consecutiveFailures: 0, isFailed: false },
   mockAppendWsAuthToken: vi.fn((url: string) => url),
+  mockOpenAuthenticatedWebSocket: vi.fn(async (url: string) => new WebSocket(await mockAppendWsAuthToken(url))),
 }))
 
 vi.mock('../usePredictionSettings', () => ({
@@ -43,6 +44,7 @@ vi.mock('../mcp/shared', () => ({
 
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: mockAppendWsAuthToken,
+  openAuthenticatedWebSocket: mockOpenAuthenticatedWebSocket,
 }))
 
 vi.mock('../../lib/constants', async (importOriginal) => {

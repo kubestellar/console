@@ -12,6 +12,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 
 vi.mock('../../lib/utils/wsAuth', () => ({
   appendWsAuthToken: async (url: string) => url,
+  openAuthenticatedWebSocket: async (url: string) => new WebSocket(url),
 }))
 
 import { useKubectl, kubectlService } from '../useKubectl'

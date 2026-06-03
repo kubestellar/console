@@ -19,7 +19,7 @@
 
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { openAuthenticatedWebSocket } from '../lib/utils/wsAuth'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 import { reportAgentActivity } from './useLocalAgent'
 
@@ -260,7 +260,7 @@ export function useExecSession(): UseExecSessionResult {
 
     let ws: WebSocket
     try {
-      ws = new WebSocket(await appendWsAuthToken(wsUrl))
+      ws = await openAuthenticatedWebSocket(wsUrl)
     } catch (err: unknown) {
       staleDetection.stop()
       const message = err instanceof Error ? err.message : 'Failed to create WebSocket connection'

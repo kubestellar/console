@@ -11,7 +11,7 @@ import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsag
 import { fullFetchClusters, clusterCache, agentFetch } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { openAuthenticatedWebSocket } from '../lib/utils/wsAuth'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
@@ -332,7 +332,7 @@ async function connectWebSocket(): Promise<void> {
   if (getDemoMode() || ws) return
 
   try {
-    ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    ws = await openAuthenticatedWebSocket(LOCAL_AGENT_WS_URL)
 
     ws.onopen = () => {
       wsConnected = true

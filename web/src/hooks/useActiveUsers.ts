@@ -28,7 +28,7 @@ const HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_INTERVAL
 const STALE_PRESENCE_TIMEOUT_MS = 45_000
 
 import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { openAuthenticatedWebSocket } from '../lib/utils/wsAuth'
 
 const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
 /** Timeout for fetch() call to the active-users endpoint */
@@ -258,7 +258,7 @@ function startPresenceConnection() {
 
   async function connect() {
     try {
-      presenceWs = new WebSocket(await appendWsAuthToken(wsUrl))
+      presenceWs = await openAuthenticatedWebSocket(wsUrl)
     } catch {
       presenceStarted = false
       return

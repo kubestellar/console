@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,7 +17,7 @@ import (
 func TestServer_HandleWebSocket_Upgrade(t *testing.T) {
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
+		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }, Subprotocols: []string{kcAgentWebSocketProtocol}},
 		clients:        make(map[*websocket.Conn]*wsClient),
 	}
 
@@ -61,7 +62,7 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 	s := &Server{
 		agentToken:     "secret",
 		allowedOrigins: []string{"*"},
-		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
+		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }, Subprotocols: []string{kcAgentWebSocketProtocol}},
 		clients:        make(map[*websocket.Conn]*wsClient),
 	}
 
@@ -83,9 +84,12 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 		t.Errorf("Expected 401 Unauthorized, got %d", resp.StatusCode)
 	}
 
-	// Case 2: Valid token in query
-	wsURLWithToken := wsURL + "?token=secret"
-	conn, resp, err := dialer.Dial(wsURLWithToken, nil)
+	// Case 2: Valid token in Sec-WebSocket-Protocol
+	dialer.Subprotocols = []string{
+		kcAgentWebSocketProtocol,
+		kcAgentWebSocketTokenProtocolPrefix + base64.RawURLEncoding.EncodeToString([]byte("secret")),
+	}
+	conn, resp, err := dialer.Dial(wsURL, nil)
 	if err != nil {
 		t.Fatalf("WebSocket dial with token failed: %v", err)
 	}
@@ -106,7 +110,7 @@ func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
 	}
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
+		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }, Subprotocols: []string{kcAgentWebSocketProtocol}},
 		clients:        make(map[*websocket.Conn]*wsClient),
 		kubectl:        mockProxy,
 	}
@@ -139,7 +143,7 @@ func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
 	if resp.ID != "h1" || resp.Type != protocol.TypeResult {
 		t.Errorf("Unexpected response: %+v", resp)
 	}
-	
+
 	// 2. Test Clusters Message
 	clustersMsg := protocol.Message{
 		ID:   "c1",

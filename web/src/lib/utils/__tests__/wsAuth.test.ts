@@ -12,46 +12,60 @@ vi.mock('../../../hooks/mcp/agentFetch', () => ({
   getAgentToken: mockGetAgentToken,
 }))
 
-describe('appendWsAuthToken', () => {
+describe('wsAuth helpers', () => {
   let appendWsAuthToken: (url: string) => Promise<string>
+  let getAuthenticatedWebSocketProtocols: (url: string) => Promise<string[] | undefined>
+  let openAuthenticatedWebSocket: (url: string) => Promise<WebSocket>
 
   beforeEach(async () => {
     localStorage.clear()
     mockEmitWsAuthMissing.mockClear()
     mockGetAgentToken.mockReset()
     mockGetAgentToken.mockImplementation(async () => localStorage.getItem('kc-agent-token') || '')
-    // Reset module to clear the wsAuthMissingEmitted flag
     vi.resetModules()
     const mod = await import('../wsAuth')
     appendWsAuthToken = mod.appendWsAuthToken
+    getAuthenticatedWebSocketProtocols = mod.getAuthenticatedWebSocketProtocols
+    openAuthenticatedWebSocket = mod.openAuthenticatedWebSocket
   })
 
-  it('appends token as query parameter when token exists', async () => {
+  it('returns the original URL when token exists', async () => {
     localStorage.setItem('kc-agent-token', 'my-secret-token')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toBe('ws://localhost:8585/ws?token=my-secret-token')
-  })
-
-  it('uses & separator when URL already has query params', async () => {
-    localStorage.setItem('kc-agent-token', 'my-token')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws?foo=bar')
-    expect(result).toBe('ws://localhost:8585/ws?foo=bar&token=my-token')
-  })
-
-  it('returns original URL when no token in storage', async () => {
     const result = await appendWsAuthToken('ws://localhost:8585/ws')
     expect(result).toBe('ws://localhost:8585/ws')
   })
 
-  it('URL-encodes special characters in token', async () => {
-    localStorage.setItem('kc-agent-token', 'token with spaces&special=chars')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toContain('token=token%20with%20spaces%26special%3Dchars')
+  it('returns encoded protocol headers when token exists', async () => {
+    localStorage.setItem('kc-agent-token', 'my-secret-token')
+    const protocols = await getAuthenticatedWebSocketProtocols('ws://localhost:8585/ws')
+
+    expect(protocols?.[0]).toBe('kc-agent.v1')
+    expect(protocols?.[1]).toMatch(/^kc-agent-token\.[A-Za-z0-9_-]+$/)
+  })
+
+  it('returns undefined protocols when no token in storage', async () => {
+    const protocols = await getAuthenticatedWebSocketProtocols('ws://localhost:8585/ws')
+    expect(protocols).toBeUndefined()
+  })
+
+  it('opens the socket with auth protocols when token exists', async () => {
+    localStorage.setItem('kc-agent-token', 'valid-token')
+    const webSocketSpy = vi.fn(function MockWebSocket(this: WebSocket, _url: string, _protocols?: string | string[]) {
+      return this
+    })
+    vi.stubGlobal('WebSocket', webSocketSpy)
+
+    await openAuthenticatedWebSocket('ws://localhost:8585/ws')
+
+    expect(webSocketSpy).toHaveBeenCalledWith(
+      'ws://localhost:8585/ws',
+      expect.arrayContaining(['kc-agent.v1', expect.stringMatching(/^kc-agent-token\./)]),
+    )
   })
 
   it('does not emit when token is present', async () => {
     localStorage.setItem('kc-agent-token', 'valid-token')
-    await appendWsAuthToken('ws://localhost:8585/ws')
+    await getAuthenticatedWebSocketProtocols('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).not.toHaveBeenCalled()
   })
 

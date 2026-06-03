@@ -355,7 +355,8 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	server.upgrader = websocket.Upgrader{
-		CheckOrigin: server.checkOrigin,
+		CheckOrigin:  server.checkOrigin,
+		Subprotocols: []string{kcAgentWebSocketProtocol},
 	}
 
 	// Load persisted token usage from disk
