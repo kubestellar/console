@@ -265,7 +265,7 @@ async function setupMockRoutes(page: Page, state: MockState) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ id: '1', github_id: '12345', github_login: 'testuser', email: 'test@test.com', onboarded: true }),
+      body: JSON.stringify({ id: '1', github_id: '12345', github_login: 'testuser', email: 'test@test.com', role: 'viewer', onboarded: true }),
     })
   })
 
