@@ -139,7 +139,7 @@ describe("quantum-proxy", () => {
       expect(res.status).toBe(HTTP_STATUS_OK);
     });
 
-    it("accepts structurally valid JWTs when JWT_SECRET is not configured", async () => {
+    it("rejects JWTs when no verification secret is configured", async () => {
       const bearerToken = await createSignedJwt("fallback-only-secret");
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
@@ -151,7 +151,7 @@ describe("quantum-proxy", () => {
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
       const res = await handler(req, makeContext());
-      expect(res.status).toBe(HTTP_STATUS_OK);
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
     it("accepts kc_auth Cookie for POST request", async () => {
@@ -183,6 +183,35 @@ describe("quantum-proxy", () => {
       expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
+    it("accepts Bearer tokens signed with SESSION_SECRET", async () => {
+      const bearerToken = await createSignedJwt();
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          authorization: `Bearer ${bearerToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ SESSION_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_OK);
+    });
+
+    it("rejects fakekc_auth cookie names", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: `fakekc_auth=${VALID_OPAQUE_SESSION}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
     it("accepts non-trivial opaque kc_auth Cookie values", async () => {
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
@@ -195,6 +224,20 @@ describe("quantum-proxy", () => {
       });
       const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_OK);
+    });
+
+    it("rejects empty kc_auth Cookie values", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "kc_auth=",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
     it("returns 429 when simple rate limit is exceeded on POST", async () => {

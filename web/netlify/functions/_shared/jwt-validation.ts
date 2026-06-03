@@ -2,8 +2,8 @@ import { jwtVerify, type JWTPayload as JoseJWTPayload } from "jose";
 
 const JWT_PART_COUNT = 3;
 const JWT_HMAC_ALGORITHM = "HS256";
-const JWT_SECRET_FALLBACK_WARNING =
-  "JWT_SECRET is not configured; falling back to non-cryptographic JWT validation.";
+const MISSING_JWT_SECRET_ERROR =
+  "JWT verification secret is not configured; set JWT_SECRET or SESSION_SECRET.";
 
 export interface JWTPayload extends JoseJWTPayload {
   [key: string]: unknown;
@@ -107,10 +107,10 @@ export async function validateJWT(
 
   const normalizedSecret = jwtSecret?.trim();
   if (!normalizedSecret) {
-    // WARNING: Keep this fallback for demo/dev mode only. Without JWT_SECRET,
-    // this path checks structure and expiry but cannot verify authenticity.
-    console.warn(JWT_SECRET_FALLBACK_WARNING);
-    return structuralValidation;
+    return {
+      valid: false,
+      error: MISSING_JWT_SECRET_ERROR,
+    };
   }
 
   try {

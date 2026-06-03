@@ -129,11 +129,21 @@ function getCookieValue(cookieHeader: string, cookieName: string): string | null
   const cookies = cookieHeader.split(";");
   for (const cookie of cookies) {
     const trimmedCookie = cookie.trim();
-    if (!trimmedCookie.startsWith(`${cookieName}=`)) {
+    if (!trimmedCookie) {
       continue;
     }
 
-    const cookieValue = trimmedCookie.slice(cookieName.length + 1).trim();
+    const separatorIndex = trimmedCookie.indexOf("=");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const name = trimmedCookie.slice(0, separatorIndex).trim();
+    if (name !== cookieName) {
+      continue;
+    }
+
+    const cookieValue = trimmedCookie.slice(separatorIndex + 1).trim();
     return cookieValue || null;
   }
 
@@ -147,6 +157,11 @@ function isLikelyJWT(value: string): boolean {
 
 function isNonTrivialSessionValue(value: string): boolean {
   return value.length >= MIN_SESSION_TOKEN_LENGTH && !/\s/.test(value);
+}
+
+function getJwtVerificationSecret(context: Context): string | undefined {
+  const envSecret = context.env?.JWT_SECRET ?? context.env?.SESSION_SECRET;
+  return typeof envSecret === "string" ? envSecret.trim() || undefined : undefined;
 }
 
 async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): Promise<boolean> {
@@ -245,8 +260,7 @@ export default async (req: Request, context: Context): Promise<Response> => {
   if (req.method === "POST") {
     const authHeader = req.headers.get("authorization") || "";
     const cookieHeader = req.headers.get("cookie") || "";
-    const rawJwtSecret = context.env?.JWT_SECRET;
-    const jwtSecret = typeof rawJwtSecret === "string" ? rawJwtSecret : undefined;
+    const jwtSecret = getJwtVerificationSecret(context);
 
     let hasValidBearer = false;
     if (authHeader.startsWith("Bearer ")) {
