@@ -27,11 +27,40 @@ let agentTokenFailureEmitted = false
 /** Timestamp of last negative result (empty/error) — used for short-TTL in-memory cache. */
 let agentTokenNegativeCacheUntil = 0
 
+// Best-effort migration cleanup for legacy plaintext tokens left in localStorage.
 function removeLegacyAgentToken(): void {
   try {
     localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
   } catch {
     // localStorage may be unavailable in some embedded contexts — ignore.
+  }
+}
+
+function getSessionAgentToken(): string {
+  try {
+    return sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
+function setSessionAgentToken(token: string): void {
+  try {
+    if (token) {
+      sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+    } else {
+      sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    }
+  } catch {
+    // sessionStorage may be unavailable in some embedded contexts — ignore.
+  }
+}
+
+function clearSessionAgentToken(): void {
+  try {
+    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+  } catch {
+    // sessionStorage may be unavailable in some embedded contexts — ignore.
   }
 }
 
@@ -42,15 +71,11 @@ export function getStoredAgentToken(): string {
 
   removeLegacyAgentToken()
 
-  try {
-    const sessionToken = sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY) || ''
-    if (sessionToken) {
-      inMemoryAgentToken = sessionToken
-    }
-    return sessionToken
-  } catch {
-    return ''
+  const sessionToken = getSessionAgentToken()
+  if (sessionToken) {
+    inMemoryAgentToken = sessionToken
   }
+  return sessionToken
 }
 
 export function setAgentToken(token: string): void {
@@ -63,15 +88,7 @@ export function setAgentToken(token: string): void {
     resetAuthFailed()
   }
 
-  try {
-    if (token) {
-      sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
-    } else {
-      sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
-    }
-  } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
-  }
+  setSessionAgentToken(token)
 }
 
 export function clearAgentToken(): void {
@@ -79,12 +96,7 @@ export function clearAgentToken(): void {
   agentTokenPromise = null
   agentTokenNegativeCacheUntil = 0
   removeLegacyAgentToken()
-
-  try {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
-  } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
-  }
+  clearSessionAgentToken()
 }
 
 /** Reset internal getAgentToken state — exposed for tests only. */
