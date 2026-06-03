@@ -11,14 +11,24 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
+      - '.github/go-coverage-ratchet.txt'
+      - '.github/go-package-coverage-ratchet.txt'
       - '.github/workflows/go-test.yml'
+      - 'scripts/check-go-coverage-ratchet.sh'
+      - 'scripts/__tests__/check-go-coverage-ratchet.test.sh'
+      - 'scripts/testdata/check-go-coverage-ratchet/**'
   push:
     branches: [main]
     paths:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
+      - '.github/go-coverage-ratchet.txt'
+      - '.github/go-package-coverage-ratchet.txt'
       - '.github/workflows/go-test.yml'
+      - 'scripts/check-go-coverage-ratchet.sh'
+      - 'scripts/__tests__/check-go-coverage-ratchet.test.sh'
+      - 'scripts/testdata/check-go-coverage-ratchet/**'
   workflow_dispatch:
 
 # Cancel superseded runs on the same PR/branch so we don't queue stale work.
@@ -28,6 +38,12 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  GO_COVERAGE_RATCHET_FILE: .github/go-coverage-ratchet.txt
+  GO_PACKAGE_COVERAGE_RATCHET_FILE: .github/go-package-coverage-ratchet.txt
+  GO_COVERAGE_REPORT_FILE: go-coverage-summary.md
+  GO_COVERAGE_FUNCTIONS_FILE: go-coverage-functions.txt
 
 jobs:
   test:
@@ -53,12 +69,23 @@ jobs:
       - name: Run full Go test suite
         run: go test -race -coverprofile=coverage.out -covermode=atomic -timeout 10m ./...
 
-      - name: Check Go coverage threshold
+      - name: Check Go coverage ratchet
         run: |
-          THRESHOLD=60
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
-          echo "Total Go coverage: ${COVERAGE}%"
-          if awk -v coverage="$COVERAGE" -v threshold="$THRESHOLD" 'BEGIN { exit !(coverage + 0 < threshold + 0) }'; then
-            echo "::error::Go coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
-            exit 1
-          fi
+          chmod +x scripts/check-go-coverage-ratchet.sh
+          ./scripts/check-go-coverage-ratchet.sh \
+            coverage.out \
+            "$GO_COVERAGE_RATCHET_FILE" \
+            "$GO_PACKAGE_COVERAGE_RATCHET_FILE" \
+            "$GO_COVERAGE_REPORT_FILE"
+          go tool cover -func=coverage.out | tee "$GO_COVERAGE_FUNCTIONS_FILE" | tail -1
+
+      - name: Upload Go coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: go-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          path: |
+            coverage.out
+            ${{ env.GO_COVERAGE_FUNCTIONS_FILE }}
+            ${{ env.GO_COVERAGE_REPORT_FILE }}
