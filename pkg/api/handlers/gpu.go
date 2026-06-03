@@ -223,15 +223,27 @@ func requireOwnerOrAdmin(c *fiber.Ctx, user *models.User, reservationOwnerID uui
 }
 
 // ListReservations lists GPU reservations.
-// All authenticated users see all reservations. ?mine=true filters to caller's own.
+// Non-admin users see only their own reservations (CWE-862, #16711).
+// Admin users see all reservations. ?mine=true is a no-op hint (non-admins always get filtered).
 func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 	user, err := h.getCallerUser(c)
 	if err != nil {
 		return err
 	}
 
-	// All authenticated users see all reservations.
-	// ?mine=true filter returns only the caller's reservations.
+	// SECURITY: Non-admin users can only see their own reservations (#16711).
+	if user.Role != models.UserRoleAdmin {
+		reservations, err := h.store.ListUserGPUReservations(c.UserContext(), user.ID)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to list reservations")
+		}
+		if reservations == nil {
+			reservations = []models.GPUReservation{}
+		}
+		return c.JSON(reservations)
+	}
+
+	// Admin: return all reservations, or filter with ?mine=true
 	mine := c.Query("mine") == "true"
 	if mine {
 		reservations, err := h.store.ListUserGPUReservations(c.UserContext(), user.ID)
@@ -255,9 +267,10 @@ func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 }
 
 // GetReservation gets a single GPU reservation by ID.
-// All authenticated users may view any reservation.
+// Non-admin users may only view their own reservations (CWE-862, #16711).
 func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
-	if _, uerr := h.getCallerUser(c); uerr != nil {
+	user, uerr := h.getCallerUser(c)
+	if uerr != nil {
 		return uerr
 	}
 
@@ -272,6 +285,11 @@ func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 	}
 	if reservation == nil {
 		return fiber.NewError(fiber.StatusNotFound, "Reservation not found")
+	}
+
+	// SECURITY: Non-admin users can only view their own reservations (#16711).
+	if err := requireOwnerOrAdmin(c, user, reservation.UserID); err != nil {
+		return err
 	}
 
 	return c.JSON(reservation)
