@@ -265,4 +265,68 @@ describe('createCardComponent', () => {
       expect(result.error).toBeNull()
     })
   })
+
+  // Security regression tests (#16898 — sandbox escape via computed constructor)
+  describe('Sandbox escape via encoding APIs (#16898)', () => {
+    it('blocks String.fromCharCode used to compute constructor', () => {
+      const code = `
+        var s = String.fromCharCode(99,111,110,115,116,114,117,99,116,111,114);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/fromCharCode/)
+    })
+
+    it('blocks String.fromCodePoint', () => {
+      const code = `
+        var s = String.fromCodePoint(99,111,110,115,116,114,117,99,116,111,114);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/fromCodePoint/)
+    })
+
+    it('blocks charCodeAt (information leak for building escape strings)', () => {
+      const code = `
+        var x = "c".charCodeAt(0);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/charCodeAt/)
+    })
+
+    it('blocks codePointAt', () => {
+      const code = `
+        var x = "c".codePointAt(0);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/codePointAt/)
+    })
+
+    it('blocks atob used to decode constructor string', () => {
+      const code = `
+        var s = atob('Y29uc3RydWN0b3I=');
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      // atob is blocked as a global (shadowed to undefined), not via pattern
+      expect(result.error).toBeTruthy()
+    })
+
+    it('blocks String.raw template tag', () => {
+      const code = `
+        var s = String.raw\`constructor\`;
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/String\.raw/)
+    })
+  })
 })

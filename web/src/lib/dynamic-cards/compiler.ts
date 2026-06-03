@@ -22,6 +22,8 @@ const BLOCKED_GLOBALS = [
   'postMessage', 'crypto',
   // #16505: Block Reflect/Proxy to prevent sandbox escape via prototype walking
   'Reflect', 'Proxy',
+  // #16898: Block encoding APIs that can compute blocked identifiers at runtime
+  'atob', 'btoa',
 ] as const
 
 /**
@@ -164,6 +166,13 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
       // Block prototype property access
       { re: /\bprototype\b/, label: 'prototype' },
+      // #16898: Block character-code APIs that can compute blocked identifiers
+      { re: /\bfromCharCode\b/, label: 'fromCharCode' },
+      { re: /\bfromCodePoint\b/, label: 'fromCodePoint' },
+      { re: /\bcharCodeAt\b/, label: 'charCodeAt' },
+      { re: /\bcodePointAt\b/, label: 'codePointAt' },
+      // #16898: Block String.raw template tag (can assemble arbitrary strings)
+      { re: /\bString\s*\.\s*raw\b/, label: 'String.raw' },
     ]
     for (const { re, label } of FORBIDDEN_PATTERNS) {
       if (re.test(compiledCode)) {
