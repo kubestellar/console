@@ -86,7 +86,7 @@ export async function enforceSimpleRateLimit(
     const currentWindowCount = await countBucketEntries(
       store,
       getBucketPrefix(options.prefix, subjectKey, bucket),
-      options.maxRequests,
+      options.maxRequests + 1,
     );
 
     if (currentWindowCount >= options.maxRequests) {
