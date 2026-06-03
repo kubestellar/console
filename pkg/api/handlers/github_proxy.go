@@ -17,6 +17,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -174,6 +175,9 @@ func githubProxyRepoSlug(apiPath string) (string, bool) {
 	rest := strings.TrimPrefix(apiPath, githubProxyReposPrefix)
 	parts := strings.Split(rest, "/")
 	if len(parts) < 2 {
+		return "", false
+	}
+	if strings.Contains(parts[0], "..") || strings.Contains(parts[1], "..") {
 		return "", false
 	}
 	repo := parts[0] + "/" + parts[1]
@@ -373,8 +377,28 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 // to the encrypted server-side settings file. The token is NOT stored in
 // localStorage after this migration.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
+	var currentUser *models.User
+	if h.store != nil {
+		userID := middleware.GetUserID(c)
+		admins, _, _, err := h.store.CountUsersByRole(c.UserContext())
+		if err == nil && admins == 0 {
+			user, err := h.store.GetUser(c.UserContext(), userID)
+			if err == nil && user != nil {
+				if user.Role != models.UserRoleAdmin {
+					user.Role = models.UserRoleAdmin
+					_ = h.store.UpdateUser(c.UserContext(), user)
+				}
+				currentUser = user
+			}
+		}
+	}
+
 	// Global token management requires console admin role
-	if err := requireAdmin(c, h.store); err != nil {
+	if currentUser != nil {
+		if err := requireAdminCheck(currentUser); err != nil {
+			return err
+		}
+	} else if err := requireAdmin(c, h.store); err != nil {
 		return err
 	}
 
