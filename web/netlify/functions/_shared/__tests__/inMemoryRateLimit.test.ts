@@ -136,6 +136,27 @@ describe("inMemoryRateLimit", () => {
       expect(rateLimitMap.has("unknown")).toBe(true);
     });
 
+    it("should inspect limits without consuming a request", () => {
+      const result = checkInMemoryRateLimit("user1", rateLimitMap, MAX_REQUESTS, WINDOW_MS, {
+        consume: false,
+      });
+      expect(result).toEqual({ allowed: true, retryAfterSeconds: 0 });
+      expect(rateLimitMap.has("user1")).toBe(false);
+    });
+
+    it("should report a blocked subject without incrementing when consume is false", () => {
+      rateLimitMap.set("user1", {
+        count: MAX_REQUESTS,
+        resetAt: Date.now() + WINDOW_MS,
+      });
+
+      const result = checkInMemoryRateLimit("user1", rateLimitMap, MAX_REQUESTS, WINDOW_MS, {
+        consume: false,
+      });
+      expect(result.allowed).toBe(false);
+      expect(rateLimitMap.get("user1")?.count).toBe(MAX_REQUESTS);
+    });
+
     it("should prune expired entries when map exceeds 1000 subjects", () => {
       const now = Date.now();
       vi.setSystemTime(now);

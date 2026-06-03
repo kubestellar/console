@@ -13,7 +13,11 @@ export { enforceSimpleRateLimit } from "./rate-limit";
 export type { SimpleRateLimitOptions, SimpleRateLimitResult } from "./rate-limit";
 
 export { checkInMemoryRateLimit, getClientIp } from "./inMemoryRateLimit";
-export type { InMemoryRateLimitEntry, InMemoryRateLimitResult } from "./inMemoryRateLimit";
+export type {
+  CheckInMemoryRateLimitOptions,
+  InMemoryRateLimitEntry,
+  InMemoryRateLimitResult,
+} from "./inMemoryRateLimit";
 
 export { fetchWithTimeout } from "./fetchWithTimeout";
 export type { FetchWithTimeoutOptions } from "./fetchWithTimeout";

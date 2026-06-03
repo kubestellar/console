@@ -17,11 +17,20 @@
  */
 
 import { handlePreflight } from "./_shared/cors";
+import {
+  checkInMemoryRateLimit,
+  getClientIp,
+  type InMemoryRateLimitEntry,
+} from "./_shared/inMemoryRateLimit";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import {
   ALLOWED_REPOS,
   CLIENT_AUTH_HEADER,
   CORS_OPTS,
+  FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+  FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+  FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_MAX_REQUESTS,
+  FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_WINDOW_MS,
   FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS,
   FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
   GITHUB_API,
@@ -41,7 +50,28 @@ import type { FeedbackAppAction, IssueRequest } from "./_shared/feedback-helpers
 const MAX_FEEDBACK_BODY_BYTES = 102_400;
 /** Maximum response body size for GitHub API responses (512 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
+const HTTP_STATUS_RATE_LIMITED = 429;
 const FEEDBACK_MUTATION_PERMISSION_ERROR = "Push access required for feedback mutations";
+
+const preAuthRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
+const authFailureRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
+
+function rateLimitResponse(request: Request, retryAfterSeconds: number): Response {
+  return jsonResponse(
+    request,
+    HTTP_STATUS_RATE_LIMITED,
+    {
+      error: "Rate limit exceeded",
+      retryAfter: retryAfterSeconds,
+    },
+    { "Retry-After": String(retryAfterSeconds) },
+  );
+}
+
+export function resetFeedbackAppRateLimitsForTests(): void {
+  preAuthRateLimitMap.clear();
+  authFailureRateLimitMap.clear();
+}
 
 async function readCappedJson<T>(response: Response): Promise<T> {
   const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
@@ -65,8 +95,36 @@ export default async function handler(request: Request): Promise<Response> {
     return jsonResponse(request, 405, { error: "Method not allowed" });
   }
 
+  const clientIp = getClientIp(request);
+  const preAuthRate = checkInMemoryRateLimit(
+    clientIp,
+    preAuthRateLimitMap,
+    FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_MAX_REQUESTS,
+    FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_WINDOW_MS,
+  );
+  if (!preAuthRate.allowed) {
+    return rateLimitResponse(request, preAuthRate.retryAfterSeconds);
+  }
+
+  const authFailureRate = checkInMemoryRateLimit(
+    clientIp,
+    authFailureRateLimitMap,
+    FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+    FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+    { consume: false },
+  );
+  if (!authFailureRate.allowed) {
+    return rateLimitResponse(request, authFailureRate.retryAfterSeconds);
+  }
+
   const clientAuth = request.headers.get(CLIENT_AUTH_HEADER);
   if (!clientAuth) {
+    checkInMemoryRateLimit(
+      clientIp,
+      authFailureRateLimitMap,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+    );
     return jsonResponse(request, 401, { error: "Missing client credential" });
   }
 
@@ -115,16 +173,21 @@ export default async function handler(request: Request): Promise<Response> {
   try {
     user = await verifyClientAuth(clientAuth);
   } catch (err) {
+    const failedAuthRate = checkInMemoryRateLimit(
+      clientIp,
+      authFailureRateLimitMap,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+    );
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[feedback-app] Client auth failed:", msg);
+    if (!failedAuthRate.allowed) {
+      return rateLimitResponse(request, failedAuthRate.retryAfterSeconds);
+    }
     return jsonResponse(request, 401, { error: "Client authentication failed" });
   }
 
   if (request.method === "POST") {
-    const clientIp =
-      request.headers.get("x-nf-client-connection-ip") ??
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      "unknown";
     const rate = await enforceSimpleRateLimit({
       storeName: RATE_LIMIT_STORE_NAME,
       prefix: "feedback-app:",
@@ -133,10 +196,7 @@ export default async function handler(request: Request): Promise<Response> {
       windowMs: FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
     });
     if (rate.limited) {
-      return jsonResponse(request, 429, {
-        error: "Rate limit exceeded",
-        retryAfter: rate.retryAfterSeconds,
-      });
+      return rateLimitResponse(request, rate.retryAfterSeconds);
     }
   }
 

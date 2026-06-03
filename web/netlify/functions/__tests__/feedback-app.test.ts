@@ -53,11 +53,12 @@ vi.mock("../_shared/rate-limit", () => ({
   enforceSimpleRateLimit: mockEnforceSimpleRateLimit,
 }));
 
-import handler from "../feedback-app.mts";
+import handler, { resetFeedbackAppRateLimitsForTests } from "../feedback-app.mts";
 
 describe("feedback-app", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetFeedbackAppRateLimitsForTests();
     mockEnforceSimpleRateLimit.mockResolvedValue({ limited: false });
   });
 
@@ -255,6 +256,65 @@ describe("feedback-app", () => {
     const body = await readJson<{ error: string; retryAfter: number }>(res);
     expect(body.error).toBe("Rate limit exceeded");
     expect(body.retryAfter).toBe(300);
+  });
+
+  it("blocks pre-auth floods before calling verifyClientAuth", async () => {
+    mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await handler(makeNetlifyRequest("/feedback-app", {
+        method: "GET",
+        headers: {
+          "x-kc-client-auth": "valid_token",
+          "x-nf-client-connection-ip": "203.0.113.10",
+        },
+        search: "repoOwner=kubestellar&repoName=console",
+      }));
+      expect(response.status).toBe(HTTP_STATUS_OK);
+    }
+
+    const blocked = await handler(makeNetlifyRequest("/feedback-app", {
+      method: "GET",
+      headers: {
+        "x-kc-client-auth": "valid_token",
+        "x-nf-client-connection-ip": "203.0.113.10",
+      },
+      search: "repoOwner=kubestellar&repoName=console",
+    }));
+
+    expect(blocked.status).toBe(HTTP_STATUS_RATE_LIMITED);
+    expect(blocked.headers.get("retry-after")).toBe("60");
+    expect(mockVerifyClientAuth).toHaveBeenCalledTimes(10);
+  });
+
+  it("blocks repeated auth failures before calling GitHub again", async () => {
+    mockVerifyClientAuth.mockRejectedValue(new Error("Invalid token"));
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await handler(makeNetlifyRequest("/feedback-app", {
+        method: "GET",
+        headers: {
+          "x-kc-client-auth": "invalid_auth_token",
+          "x-nf-client-connection-ip": "203.0.113.20",
+        },
+        search: "repoOwner=kubestellar&repoName=console",
+      }));
+      expect(response.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    }
+
+    const blocked = await handler(makeNetlifyRequest("/feedback-app", {
+      method: "GET",
+      headers: {
+        "x-kc-client-auth": "invalid_auth_token",
+        "x-nf-client-connection-ip": "203.0.113.20",
+      },
+      search: "repoOwner=kubestellar&repoName=console",
+    }));
+
+    expect(blocked.status).toBe(HTTP_STATUS_RATE_LIMITED);
+    expect(blocked.headers.get("retry-after")).toBe("60");
+    expect(mockVerifyClientAuth).toHaveBeenCalledTimes(5);
   });
 
   // Valid Action scenarios: create_issue

@@ -12,6 +12,10 @@ export interface InMemoryRateLimitResult {
   retryAfterSeconds: number;
 }
 
+export interface CheckInMemoryRateLimitOptions {
+  consume?: boolean;
+}
+
 export function getClientIp(request: Request): string {
   return request.headers.get("x-nf-client-connection-ip")
     ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
@@ -38,17 +42,32 @@ export function checkInMemoryRateLimit(
   rateLimitMap: Map<string, InMemoryRateLimitEntry>,
   maxRequests: number,
   windowMs: number,
+  options: CheckInMemoryRateLimitOptions = {},
 ): InMemoryRateLimitResult {
+  const { consume = true } = options;
   const normalizedSubject = subject || DEFAULT_SUBJECT;
   const now = Date.now();
   pruneExpiredEntries(rateLimitMap, now);
 
   const entry = rateLimitMap.get(normalizedSubject);
-  if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(normalizedSubject, {
-      count: 1,
-      resetAt: now + windowMs,
-    });
+  if (!entry) {
+    if (consume) {
+      rateLimitMap.set(normalizedSubject, {
+        count: 1,
+        resetAt: now + windowMs,
+      });
+    }
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  if (now >= entry.resetAt) {
+    rateLimitMap.delete(normalizedSubject);
+    if (consume) {
+      rateLimitMap.set(normalizedSubject, {
+        count: 1,
+        resetAt: now + windowMs,
+      });
+    }
     return { allowed: true, retryAfterSeconds: 0 };
   }
 
@@ -59,6 +78,8 @@ export function checkInMemoryRateLimit(
     };
   }
 
-  entry.count += 1;
+  if (consume) {
+    entry.count += 1;
+  }
   return { allowed: true, retryAfterSeconds: 0 };
 }
