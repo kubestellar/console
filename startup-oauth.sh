@@ -260,12 +260,62 @@ STAGE_FILE=""
 WATCHDOG_PID_FILE=""
 
 load_watcher_runtime() {
+    local line=""
+    local key=""
+    local value=""
+    local parsed_runtime_dir=""
+    local parsed_stage_file=""
+    local parsed_pid_file=""
+
     if [ ! -f "$WATCHDOG_RUNTIME_FILE" ]; then
         return 1
     fi
-    # shellcheck disable=SC1090
-    . "$WATCHDOG_RUNTIME_FILE"
-    [ -n "${WATCHDOG_PID_FILE:-}" ] && [ -n "${STAGE_FILE:-}" ]
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        [ -z "$line" ] && continue
+
+        case "$line" in
+            *=*)
+                key=${line%%=*}
+                value=${line#*=}
+                ;;
+            *)
+                return 1
+                ;;
+        esac
+
+        case "$key" in
+            WATCHDOG_RUNTIME_DIR|WATCHDOG_PID_FILE|STAGE_FILE)
+                value=${value%$'\r'}
+                value="${value%\"}"
+                value="${value#\"}"
+                value="${value%\'}"
+                value="${value#\'}"
+                ;;
+            *)
+                return 1
+                ;;
+        esac
+
+        case "$key" in
+            WATCHDOG_RUNTIME_DIR)
+                parsed_runtime_dir="$value"
+                ;;
+            WATCHDOG_PID_FILE)
+                parsed_pid_file="$value"
+                ;;
+            STAGE_FILE)
+                parsed_stage_file="$value"
+                ;;
+        esac
+    done < "$WATCHDOG_RUNTIME_FILE"
+
+    [ -n "$parsed_pid_file" ] && [ -n "$parsed_stage_file" ] || return 1
+
+    WATCHDOG_RUNTIME_DIR="$parsed_runtime_dir"
+    WATCHDOG_PID_FILE="$parsed_pid_file"
+    STAGE_FILE="$parsed_stage_file"
+    return 0
 }
 
 wait_for_watcher_runtime() {
