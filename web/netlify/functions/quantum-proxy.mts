@@ -1,6 +1,6 @@
 import type { Context } from "@netlify/functions";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
-import { validateBearerToken } from "./_shared/jwt-validation";
+import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -84,6 +84,18 @@ const MAX_PROXY_BODY_BYTES = 1_048_576;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
+const AUTH_COOKIE_NAME = "kc_auth";
+
+function parseCookies(cookieHeader: string): Record<string, string> {
+  return cookieHeader.split(";").reduce<Record<string, string>>((cookies, part) => {
+    const [rawName, ...rawValue] = part.trim().split("=");
+    if (!rawName || rawValue.length === 0) {
+      return cookies;
+    }
+    cookies[rawName] = rawValue.join("=").trim();
+    return cookies;
+  }, {});
+}
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -192,19 +204,32 @@ export default async (req: Request, context: Context): Promise<Response> => {
   // Auth check for POST mutation endpoints (parity with Go backend requireBearerToken)
   if (req.method === "POST") {
     const authHeader = req.headers.get("authorization") || "";
-    const cookie = req.headers.get("cookie") || "";
-    const hasCookie = cookie.includes("kc_auth=");
-    
+    const cookies = parseCookies(req.headers.get("cookie") || "");
+    const jwtValidationOptions = {
+      verifySignature: true,
+      secret: context.env.QUANTUM_JWT_SECRET,
+    };
+
     let hasValidBearer = false;
     if (authHeader.startsWith("Bearer ")) {
-      const bearerValidation = validateBearerToken(authHeader);
+      const bearerValidation = await validateBearerToken(authHeader, jwtValidationOptions);
       hasValidBearer = bearerValidation.valid;
       if (!hasValidBearer) {
         console.warn(`Bearer token validation failed: ${bearerValidation.error}`);
       }
     }
-    
-    if (!hasValidBearer && !hasCookie) {
+
+    let hasValidCookie = false;
+    const authCookie = cookies[AUTH_COOKIE_NAME] || "";
+    if (authCookie) {
+      const cookieValidation = await validateJWT(authCookie, jwtValidationOptions);
+      hasValidCookie = cookieValidation.valid;
+      if (!hasValidCookie) {
+        console.warn(`Auth cookie validation failed: ${cookieValidation.error}`);
+      }
+    }
+
+    if (!hasValidBearer && !hasValidCookie) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         {

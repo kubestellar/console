@@ -1,8 +1,16 @@
 /**
  * Minimal JWT validation utility for quantum-proxy.
- * Validates JWT structure, expiry, and basic claims.
- * Does NOT perform signature verification (would require the issuer's public key).
+ * Validates JWT structure, expiry, and optionally verifies HS256 signatures.
  */
+
+const BASE64_CHUNK_SIZE = 4;
+const MILLISECONDS_PER_SECOND = 1000;
+
+interface JWTHeader {
+  alg?: string;
+  typ?: string;
+  [key: string]: unknown;
+}
 
 export interface JWTPayload {
   exp?: number;
@@ -18,96 +26,149 @@ export interface ValidationResult {
   payload?: JWTPayload;
 }
 
+export interface JWTValidationOptions {
+  verifySignature?: boolean;
+  secret?: string;
+}
+
+function restoreBase64Padding(str: string): string {
+  const paddingLength = BASE64_CHUNK_SIZE - (str.length % BASE64_CHUNK_SIZE);
+  if (paddingLength > 0 && paddingLength < BASE64_CHUNK_SIZE) {
+    return str + "=".repeat(paddingLength);
+  }
+  return str;
+}
+
 /**
  * Decodes a base64url-encoded string.
  * Handles padding restoration for proper base64 decoding.
  */
 function base64urlDecode(str: string): string {
   try {
-    // Add padding if necessary
-    const paddingLength = 4 - (str.length % 4);
-    let padded = str;
-    if (paddingLength > 0 && paddingLength < 4) {
-      padded = str + "=".repeat(paddingLength);
-    }
-    // Convert base64url to standard base64
-    const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
-    // Decode and convert to string
-    const binary = atob(base64);
-    return new TextDecoder().decode(
-      Uint8Array.from(binary, (c) => c.charCodeAt(0))
-    );
+    const binary = atob(restoreBase64Padding(str).replace(/-/g, "+").replace(/_/g, "/"));
+    return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
   } catch {
     throw new Error("Invalid base64url encoding");
   }
 }
 
+function base64urlToBytes(str: string): Uint8Array {
+  try {
+    const binary = atob(restoreBase64Padding(str).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  } catch {
+    throw new Error("Invalid base64url encoding");
+  }
+}
+
+async function verifyHS256Signature(token: string, secret: string): Promise<boolean> {
+  const [headerB64, payloadB64, signatureB64] = token.split(".");
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    base64urlToBytes(signatureB64),
+    encoder.encode(`${headerB64}.${payloadB64}`)
+  );
+}
+
+function getSignatureSecret(options?: JWTValidationOptions): string {
+  return options?.secret?.trim() || process.env.QUANTUM_JWT_SECRET?.trim() || "";
+}
+
 /**
- * Validates a Bearer token (JWT) without signature verification.
+ * Validates a JWT and optionally verifies its HS256 signature.
  *
  * Checks:
  * 1. Token has valid JWT structure (3 base64url-encoded parts separated by dots)
- * 2. Payload can be decoded and parsed as JSON
+ * 2. Header and payload can be decoded and parsed as JSON
  * 3. Token is not expired (if exp claim exists)
+ * 4. HS256 signature matches when signature verification is enabled and a secret is configured
  *
  * @param token - The raw token string (without "Bearer " prefix)
  * @returns ValidationResult with valid flag and optional error/payload
  */
-export function validateJWT(token: string): ValidationResult {
+export async function validateJWT(token: string, options?: JWTValidationOptions): Promise<ValidationResult> {
   if (!token || typeof token !== "string") {
     return { valid: false, error: "Token is required" };
   }
 
   const trimmed = token.trim();
-
-  // Check JWT structure: must have 3 parts separated by dots
   const parts = trimmed.split(".");
   if (parts.length !== 3) {
     return { valid: false, error: "Invalid JWT structure: expected 3 parts" };
   }
 
   const [headerB64, payloadB64, signatureB64] = parts;
-
-  // Validate that all parts are non-empty
   if (!headerB64 || !payloadB64 || !signatureB64) {
     return { valid: false, error: "Invalid JWT: empty parts" };
   }
 
-  // Attempt to decode header (basic validation that it's base64url)
+  const signatureSecret = getSignatureSecret(options);
+  const shouldVerifySignature = Boolean(options?.verifySignature && signatureSecret);
+
+  let header: JWTHeader;
   try {
-    base64urlDecode(headerB64);
-  } catch {
-    return { valid: false, error: "Invalid JWT: header is not valid base64url" };
+    const headerJson = base64urlDecode(headerB64);
+    header = JSON.parse(headerJson) as JWTHeader;
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Invalid JWT: header is not valid JSON (${error instanceof Error ? error.message : "unknown error"})`,
+    };
   }
 
-  // Decode and validate payload
+  if (shouldVerifySignature && header.alg !== "HS256") {
+    return { valid: false, error: "Invalid JWT: unsupported signing algorithm" };
+  }
+
   let payload: JWTPayload;
   try {
     const payloadJson = base64urlDecode(payloadB64);
     payload = JSON.parse(payloadJson) as JWTPayload;
-  } catch (e) {
+  } catch (error) {
     return {
       valid: false,
-      error: `Invalid JWT: payload is not valid JSON (${e instanceof Error ? e.message : "unknown error"})`,
+      error: `Invalid JWT: payload is not valid JSON (${error instanceof Error ? error.message : "unknown error"})`,
     };
   }
 
-  // Validate signature part is base64url (just structure, not cryptographic verification)
   try {
-    base64urlDecode(signatureB64);
+    base64urlToBytes(signatureB64);
   } catch {
     return { valid: false, error: "Invalid JWT: signature is not valid base64url" };
   }
 
-  // Check expiry if exp claim exists
   if (payload.exp !== undefined) {
     if (typeof payload.exp !== "number") {
       return { valid: false, error: "Invalid JWT: exp claim must be a number (UNIX timestamp)" };
     }
 
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / MILLISECONDS_PER_SECOND);
     if (now >= payload.exp) {
       return { valid: false, error: "JWT token has expired" };
+    }
+  }
+
+  if (shouldVerifySignature) {
+    try {
+      const signatureValid = await verifyHS256Signature(trimmed, signatureSecret);
+      if (!signatureValid) {
+        return { valid: false, error: "Invalid JWT: signature verification failed" };
+      }
+    } catch (error) {
+      return {
+        valid: false,
+        error: `Invalid JWT: signature verification failed (${error instanceof Error ? error.message : "unknown error"})`,
+      };
     }
   }
 
@@ -120,7 +181,7 @@ export function validateJWT(token: string): ValidationResult {
  * @param authHeader - The Authorization header value (e.g., "Bearer eyJ...")
  * @returns ValidationResult
  */
-export function validateBearerToken(authHeader: string): ValidationResult {
+export async function validateBearerToken(authHeader: string, options?: JWTValidationOptions): Promise<ValidationResult> {
   if (!authHeader || typeof authHeader !== "string") {
     return { valid: false, error: "Authorization header is required" };
   }
@@ -138,5 +199,5 @@ export function validateBearerToken(authHeader: string): ValidationResult {
     return { valid: false, error: "Bearer token is empty" };
   }
 
-  return validateJWT(token);
+  return validateJWT(token, options);
 }

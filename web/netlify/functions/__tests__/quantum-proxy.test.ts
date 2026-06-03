@@ -1,6 +1,7 @@
 /**
  * Vitest unit tests for quantum-proxy.mts Netlify function (#15626, Part of #4189).
  */
+import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@netlify/functions";
 import {
@@ -23,6 +24,31 @@ const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
 // Match the internal limit defined in quantum-proxy.mts (1MB)
 const MAX_PROXY_BODY_BYTES = 1_048_576;
+const TEST_JWT_EXPIRY_SECONDS = 3600;
+const TEST_QUANTUM_JWT_SECRET = "quantum-proxy-test-secret";
+
+type TestJwtPayload = {
+  exp: number;
+  sub: string;
+};
+
+function encodeBase64Url(value: string): string {
+  return Buffer.from(value, "utf8").toString("base64url");
+}
+
+function makeTestJwt(secret = TEST_QUANTUM_JWT_SECRET, payloadOverrides: Partial<TestJwtPayload> = {}): string {
+  const payload: TestJwtPayload = {
+    exp: Math.floor(Date.now() / 1000) + TEST_JWT_EXPIRY_SECONDS,
+    sub: "quantum-test-user",
+    ...payloadOverrides,
+  };
+  const encodedHeader = encodeBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const encodedPayload = encodeBase64Url(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+  const signature = createHmac("sha256", secret).update(signingInput).digest("base64url");
+
+  return `${signingInput}.${signature}`;
+}
 
 // Hoisted mock functions for rate limit
 const { mockEnforceSimpleRateLimit } = vi.hoisted(() => ({
@@ -96,12 +122,11 @@ describe("quantum-proxy", () => {
     });
 
     it("accepts Bearer Authorization token for POST request", async () => {
-      // In demo mode, it won't crash when QUANTUM_SERVICE_URL is absent
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer valid-token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -110,18 +135,64 @@ describe("quantum-proxy", () => {
       expect(res.status).toBe(HTTP_STATUS_OK);
     });
 
-    it("accepts kc_auth Cookie for POST request", async () => {
+    it("accepts kc_auth Cookie when the cookie contains a JWT", async () => {
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          cookie: "kc_auth=active-session",
+          cookie: `kc_auth=${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
       const res = await handler(req, { env: {} } as unknown as Context);
       expect(res.status).toBe(HTTP_STATUS_OK);
+    });
+
+    it("returns 401 when kc_auth Cookie is present but not a JWT", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "kc_auth=short",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, { env: {} } as unknown as Context);
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("returns 401 when QUANTUM_JWT_SECRET is set and the Bearer signature is invalid", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          authorization: `Bearer ${makeTestJwt("wrong-secret")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, {
+        env: { QUANTUM_JWT_SECRET: TEST_QUANTUM_JWT_SECRET },
+      } as unknown as Context);
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("returns 401 when QUANTUM_JWT_SECRET is set and the kc_auth signature is invalid", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: `kc_auth=${makeTestJwt("wrong-secret")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, {
+        env: { QUANTUM_JWT_SECRET: TEST_QUANTUM_JWT_SECRET },
+      } as unknown as Context);
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
     it("returns 429 when simple rate limit is exceeded on POST", async () => {
@@ -130,7 +201,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer valid-token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -167,7 +238,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -184,7 +255,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -201,7 +272,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({}),
@@ -288,7 +359,7 @@ describe("quantum-proxy", () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
-          authorization: "Bearer valid-token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "content-length": String(hugeBodyLength),
         },
       });
@@ -303,7 +374,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: "invalid-json-body-string{",
@@ -319,7 +390,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(["not-an-object"]),
@@ -343,7 +414,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ backend: "aer_simulator", shots: 1024, qasm_file: "bell.qasm" }),
@@ -375,7 +446,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${makeTestJwt()}`,
           "Content-Type": "application/json",
         },
       });
