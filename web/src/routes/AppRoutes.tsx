@@ -33,7 +33,7 @@ import { InitialInfrastructureGate } from '../components/InitialInfrastructureGa
 import { StellarProvider } from '../hooks/useStellar'
 import { ROUTES } from '../config/routes'
 import { getStoredAuthToken } from '../lib/constants'
-import { safeGet, safeSet } from '../lib/safeLocalStorage'
+import { safeSet } from '../lib/safeLocalStorage'
 import {
   OrbitAutoRunner, SettingsSyncInit, PageViewTracker, DataPrefetchInit,
   LoadingFallback,
