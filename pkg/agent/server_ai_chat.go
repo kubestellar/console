@@ -371,6 +371,9 @@ func (s *Server) handleListAgentsMessage(msg protocol.Message) protocol.Message 
 }
 
 // handleSelectAgentMessage handles agent selection for a session
+// CWE-362 fix: Store agent selection per-session instead of mutating global state.
+// Only SetSelectedAgent is called now (not SetDefault), ensuring one user's
+// agent selection does not affect other users' sessions.
 func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message {
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
@@ -386,15 +389,21 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 		return s.errorResponse(msg.ID, "empty_agent", "Agent name cannot be empty")
 	}
 
-	// For session-based selection, we'd need a session ID from the request
-	// For now, update the default agent
-	previousAgent := s.registry.GetDefaultName()
-	if err := s.registry.SetDefault(req.Agent); err != nil {
-		slog.Error("set default agent error", "error", err)
+	// Use provided SessionID, or generate a unique one if not provided.
+	// This ensures agent selection is per-session and doesn't mutate global state.
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = msg.ID // Use message ID as fallback session identifier
+	}
+
+	// Store the agent selection per-session (not globally)
+	previousAgent := s.registry.GetSelectedAgent(sessionID)
+	if err := s.registry.SetSelectedAgent(sessionID, req.Agent); err != nil {
+		slog.Error("set selected agent error", "error", err, "sessionID", sessionID)
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
-	slog.Info("agent selected", "agent", req.Agent, "previous", previousAgent)
+	slog.Info("agent selected", "agent", req.Agent, "sessionID", sessionID, "previous", previousAgent)
 
 	return protocol.Message{
 		ID:   msg.ID,
