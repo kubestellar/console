@@ -10,8 +10,9 @@
  * Addresses CodeQL alerts #591 and #592 (js/xss, high severity).
  * Supersedes the blocklist version from #9029.
  *
- * Allowed schemes: https, http, mailto, tel, protocol-relative (//).
- * Relative paths (no scheme) are also allowed.
+ * Allowed schemes: https, http, mailto, tel.
+ * Relative paths (single slash or dot-relative, no scheme) are also allowed.
+ * Protocol-relative URLs (//) are rejected — they navigate to external domains.
  *
  * Returns SAFE_FALLBACK_URL ('about:blank') for everything else.
  */
@@ -31,9 +32,10 @@ export function sanitizeUrl(url: string | null | undefined): string {
   const trimmed = String(url).replace(/[\u0000-\u001F\u007F]/g, '').trim()
   if (!trimmed) return SAFE_FALLBACK_URL
 
-  // Protocol-relative URLs (//example.com/...) are safe — the browser inherits
-  // the page scheme (always https: in production).
-  if (trimmed.startsWith('//')) return trimmed
+  // Protocol-relative URLs (//example.com/...) navigate to an external domain —
+  // reject them to prevent open-redirect attacks (CWE-601). Only single-slash
+  // relative paths are allowed below.
+  if (trimmed.startsWith('//')) return SAFE_FALLBACK_URL
 
   // Relative paths (no scheme component) are safe.
   if (trimmed.startsWith('/') || trimmed.startsWith('.') || !trimmed.includes(':')) {
