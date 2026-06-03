@@ -48,13 +48,13 @@ export const FLOW_MAX_RUNS_PER_REPO = 8;
 
 /** Default repos when PIPELINE_REPOS env var is not set */
 export const DEFAULT_REPOS = [
+  "kubestellar/kubestellar",
   "kubestellar/console",
   "kubestellar/docs",
-  "kubestellar/console-kb",
-  "kubestellar/kubestellar-mcp",
-  "kubestellar/console-marketplace",
-  "kubestellar/homebrew-tap",
-];
+  "kubestellar/ocm-transport-plugin",
+  "kubestellar/galaxy",
+  "kubestellar/ui",
+] as const;
 
 /** The nightly release workflow on kubestellar/console — drives the Pulse card */
 export const NIGHTLY_RELEASE_REPO = "kubestellar/console";
@@ -76,8 +76,7 @@ export const MS_PER_DAY = 86_400_000;
 export const GH_RETRY_MAX_ATTEMPTS = 3;
 export const GH_RETRY_BASE_DELAY_MS = 1_000;
 
-/** Matches `owner/repo` format — allows any valid GitHub repo, not just
- * preconfigured PIPELINE_REPOS. The token's access controls what's fetchable. */
+/** Matches `owner/repo` format before allowlist checks are applied. */
 export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
 /**
@@ -90,6 +89,12 @@ export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
  */
 export function getRepos(): string[] {
   const env = process.env.PIPELINE_REPOS;
-  if (!env) return DEFAULT_REPOS;
-  return env.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!env) return [...DEFAULT_REPOS];
+
+  const repos = env
+    .split(",")
+    .map((repo) => repo.trim().toLowerCase())
+    .filter((repo) => repo.length > 0 && VALID_REPO_PATTERN.test(repo));
+
+  return repos.length > 0 ? repos : [...DEFAULT_REPOS];
 }

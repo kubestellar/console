@@ -1,17 +1,18 @@
 /**
  * Netlify Function: Issue Activity Stats
  *
- * Returns daily issue opened/closed counts and PR merge counts for a
- * given GitHub repository over a configurable lookback period.
+ * Returns daily issue opened/closed counts and PR merge counts for an
+ * allowlisted GitHub repository over a configurable lookback period.
  *
  * Query params:
- *   repo  — owner/repo (default: kubestellar/console)
+ *   repo  — owner/repo from the configured allowlist (default: kubestellar/console)
  *   days  — lookback in days (default: 90, max: 365)
  *
  * GITHUB_TOKEN must be set as a Netlify environment variable.
  */
 
 import { getStore } from "@netlify/blobs";
+import { getRepos } from "./github-pipelines/constants";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_API = "https://api.github.com";
@@ -33,6 +34,7 @@ const MS_PER_DAY = 86_400_000;
 const DEFAULT_DAYS = 90;
 /** Maximum lookback in days */
 const MAX_DAYS = 365;
+const ALLOWED_REPOS = new Set(getRepos().map((repo) => repo.toLowerCase()));
 
 // ---------------------------------------------------------------------------
 // Types
@@ -130,8 +132,9 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   const url = new URL(request.url);
-  const repo = url.searchParams.get("repo") || "kubestellar/console";
-  if (!REPO_RE.test(repo)) {
+  const requestedRepo = url.searchParams.get("repo") || "kubestellar/console";
+  const repo = requestedRepo.toLowerCase();
+  if (!REPO_RE.test(requestedRepo)) {
     return new Response(
       JSON.stringify({ error: "Invalid repo format" }),
       {
@@ -139,6 +142,12 @@ export default async function handler(request: Request): Promise<Response> {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
+  }
+  if (!ALLOWED_REPOS.has(repo)) {
+    return new Response(JSON.stringify({ error: "repo not permitted" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
   const daysParam = parseInt(url.searchParams.get("days") || String(DEFAULT_DAYS), 10);
   const days = Math.min(Math.max(1, daysParam), MAX_DAYS);
