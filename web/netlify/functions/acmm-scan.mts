@@ -1,9 +1,9 @@
 /**
  * Netlify Function: ACMM Scan
  *
- * Scans any GitHub repo and returns detected criteria from the multi-source
- * ACMM registry plus weekly AI-vs-human contribution activity. Powers the
- * /acmm dashboard's four cards.
+ * Scans an allowlisted GitHub repo and returns detected criteria from the
+ * multi-source ACMM registry plus weekly AI-vs-human contribution activity.
+ * Powers the /acmm dashboard's four cards.
  *
  * Input:  ?repo=owner/repo&force=true
  *         (`force` bypasses cache *reads*; on a successful live scan the
@@ -23,15 +23,18 @@
  *     { repo, scannedAt, detectedIds, weeklyActivity, demoFallback: true, error }
  *
  *   400 invalid repo slug:   { error: "Invalid repo — must be owner/name" }
+ *   403 repo not allowlisted:{ error: "Repo not allowlisted" }
  *   404 repo not found:      { error: "Repo not found" }
  *   405 non-GET method:      { error: "Method not allowed" }
  *   204 OPTIONS preflight:   (no body — CORS only)
  *
- * Optional env var:
+ * Optional env vars:
  *   GITHUB_TOKEN — enables higher rate limits (5000 req/hr vs 60)
+ *   ACMM_REPOS  — comma-separated repo allowlist override
  */
 
 import { getStore } from "@netlify/blobs";
+import { isAllowedACMMRepo } from "./_shared/acmm-allowed-repos";
 import { CRITERIA } from "./acmm-scan/criteria";
 import {
   CACHE_STORE,
@@ -72,6 +75,20 @@ export default async (req: Request) => {
       JSON.stringify({ error: "Invalid repo — must be owner/name" }),
       {
         status: 400,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const acmmReposEnv =
+    typeof Netlify !== "undefined"
+      ? Netlify.env.get("ACMM_REPOS") || process.env.ACMM_REPOS
+      : process.env.ACMM_REPOS;
+  if (!isAllowedACMMRepo(repo, acmmReposEnv)) {
+    return new Response(
+      JSON.stringify({ error: "Repo not allowlisted" }),
+      {
+        status: 403,
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );

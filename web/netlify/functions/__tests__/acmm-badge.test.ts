@@ -52,6 +52,9 @@ async function json(res: Response) {
   return res.json();
 }
 
+const ALLOWED_REPO = "kubestellar/console";
+const BLOCKED_REPO = "owner/repo";
+
 function freshBlobEntry(detectedIds: string[] = ["acmm:claude-md", "acmm:ci-matrix"]) {
   return {
     scannedAt: new Date().toISOString(),
@@ -82,7 +85,7 @@ describe("acmm-badge", () => {
   it("returns valid shields.io JSON with schemaVersion, label, message, color", async () => {
     mockGet.mockResolvedValue(freshBlobEntry(["acmm:claude-md", "acmm:ci-matrix"]));
 
-    const res = await handler(makeRequest("owner/repo"));
+    const res = await handler(makeRequest(ALLOWED_REPO));
     expect(res.status).toBe(200);
 
     const body = await json(res);
@@ -101,13 +104,25 @@ describe("acmm-badge", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
-    const res = await handler(makeRequest("owner/repo"));
+    const res = await handler(makeRequest(ALLOWED_REPO));
     expect(res.status).toBe(200);
     // fetch should never have been called — Blobs were fresh
     expect(fetchSpy).not.toHaveBeenCalled();
 
     const body = await json(res);
     expect(body.schemaVersion).toBe(1);
+  });
+
+  it("returns 403 for repos outside the allowlist before any fetch", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const res = await handler(makeRequest(BLOCKED_REPO));
+
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: "Repo not allowlisted" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(mockGet).not.toHaveBeenCalled();
   });
 
   // 3. Blobs miss + scan success — calls scan, returns badge, stores in Blobs
@@ -126,7 +141,7 @@ describe("acmm-badge", () => {
       ),
     );
 
-    const res = await handler(makeRequest("owner/repo"));
+    const res = await handler(makeRequest(ALLOWED_REPO));
     expect(res.status).toBe(200);
 
     const body = await json(res);
@@ -163,7 +178,7 @@ describe("acmm-badge", () => {
       });
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await handler(makeRequest("owner/repo"));
+    const res = await handler(makeRequest(ALLOWED_REPO));
     expect(res.status).toBe(200);
 
     const body = await json(res);
@@ -178,7 +193,7 @@ describe("acmm-badge", () => {
     mockGet.mockResolvedValue(null);
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
 
-    const res = await handler(makeRequest("owner/repo"));
+    const res = await handler(makeRequest(ALLOWED_REPO));
     expect(res.status).toBe(200);
 
     const body = await json(res);
@@ -194,14 +209,14 @@ describe("acmm-badge", () => {
   it("uses cacheSeconds=900 for success and 300 for errors", async () => {
     // Success path
     mockGet.mockResolvedValue(freshBlobEntry());
-    const successRes = await handler(makeRequest("owner/repo"));
+    const successRes = await handler(makeRequest(ALLOWED_REPO));
     const successBody = await json(successRes);
     expect(successBody.cacheSeconds).toBe(900);
 
     // Error path (all fail → unavailable)
     mockGet.mockResolvedValue(null);
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
-    const errorRes = await handler(makeRequest("other/repo"));
+    const errorRes = await handler(makeRequest(ALLOWED_REPO));
     const errorBody = await json(errorRes);
     expect(errorBody.cacheSeconds).toBe(300);
   });
@@ -209,12 +224,12 @@ describe("acmm-badge", () => {
   // 7. CORS headers — Access-Control-Allow-Origin: * present
   it("includes CORS Access-Control-Allow-Origin header", async () => {
     mockGet.mockResolvedValue(freshBlobEntry());
-    const res = await handler(makeRequest("owner/repo"));
+    const res = await handler(makeRequest(ALLOWED_REPO));
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
 
     // Also check with a kubestellar origin
     const res2 = await handler(
-      makeRequest("owner/repo", { origin: "https://console.kubestellar.io" }),
+      makeRequest(ALLOWED_REPO, { origin: "https://console.kubestellar.io" }),
     );
     expect(res2.headers.get("Access-Control-Allow-Origin")).toBe(
       "https://console.kubestellar.io",

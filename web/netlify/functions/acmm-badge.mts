@@ -10,10 +10,14 @@
  *
  * Input:  ?repo=owner/repo
  * Output: { schemaVersion, label, message, color, namedLogo } per shields.io spec
+ *
+ * Optional env var:
+ *   ACMM_REPOS — comma-separated repo allowlist override
  */
 
 import { getStore } from "@netlify/blobs";
 import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATHS } from "../../src/lib/acmm/scannableIdsByLevel";
+import { isAllowedACMMRepo } from "./_shared/acmm-allowed-repos";
 import { readCappedJson } from "./_shared/read-capped-json";
 
 const GITHUB_API = "https://api.github.com";
@@ -268,6 +272,21 @@ export default async (req: Request) => {
       }),
       {
         status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const acmmReposEnv =
+    typeof Netlify !== "undefined"
+      ? Netlify.env.get("ACMM_REPOS") || process.env.ACMM_REPOS
+      : process.env.ACMM_REPOS;
+  if (!isAllowedACMMRepo(repo, acmmReposEnv)) {
+    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
+    return new Response(
+      JSON.stringify({ error: "Repo not allowlisted" }),
+      {
+        status: 403,
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );
