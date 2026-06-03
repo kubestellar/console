@@ -258,8 +258,8 @@ function startPresenceConnection() {
 
   async function connect() {
     try {
-      const { url: authUrl, protocols } = await getWsAuthParams(wsUrl)
-      presenceWs = new WebSocket(authUrl, protocols)
+      const { url, protocols } = await getWsAuthParams(wsUrl)
+      presenceWs = new WebSocket(url, protocols)
     } catch {
       presenceStarted = false
       return

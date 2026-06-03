@@ -95,8 +95,8 @@ export function createMissionConnectionApi(
 
       try {
         state.connectionEstablished.current = false
-        const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-        state.wsRef.current = new WebSocket(authUrl, protocols)
+        const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+        state.wsRef.current = new WebSocket(url, protocols)
 
         state.wsRef.current.onopen = () => {
           clearTimeout(timeout)

@@ -59,8 +59,8 @@ class KubectlService {
 
     this.isConnecting = true
     try {
-      const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-      this.ws = new WebSocket(authUrl, protocols)
+      const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+      this.ws = new WebSocket(url, protocols)
 
       this.ws.onopen = () => {
         this.isConnecting = false

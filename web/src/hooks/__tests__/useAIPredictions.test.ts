@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache, mockAppendWsAuthToken } = vi.hoisted(() => ({
+const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache, mockGetWsAuthParams } = vi.hoisted(() => ({
   mockGetPredictionSettings: vi.fn(() => ({ aiEnabled: true, minConfidence: 50 })),
   mockGetDemoMode: vi.fn(() => true),
   mockIsAgentUnavailable: vi.fn(() => true),
@@ -12,7 +12,7 @@ const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mock
   mockClearActiveTokenCategory: vi.fn(),
   mockFullFetchClusters: vi.fn(),
   mockClusterCache: { consecutiveFailures: 0, isFailed: false },
-  mockAppendWsAuthToken: vi.fn((url: string) => url),
+  mockGetWsAuthParams: vi.fn((url: string) => Promise.resolve({ url, protocols: [] })),
 }))
 
 vi.mock('../usePredictionSettings', () => ({
@@ -42,8 +42,7 @@ vi.mock('../mcp/shared', () => ({
 }))
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: mockAppendWsAuthToken,
-  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
+  getWsAuthParams: mockGetWsAuthParams,
 }))
 
 vi.mock('../../lib/constants', async (importOriginal) => {

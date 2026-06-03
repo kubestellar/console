@@ -7,8 +7,6 @@
  *
  * The server validates the token from the subprotocol header and echoes it
  * back during the upgrade handshake.
- *
- * Falls back to query parameter for backwards compatibility with older agents.
  */
 import { emitWsAuthMissing } from '../analytics'
 import { isLocalAgentSuppressed } from '../constants/network'

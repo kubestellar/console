@@ -369,7 +369,7 @@ jobs:
                   'WebSocket connections to kc-agent are being opened WITHOUT the auth token — drilldowns and live data will silently fail',
                   'Check that localStorage has kc-agent-token set (populated by /api/agent/token after login)',
                   'If the token is missing, the OAuth callback or refreshUser flow may not be fetching /api/agent/token',
-                  'Verify appendWsAuthToken() in lib/utils/wsAuth.ts is called for all new WebSocket() sites',
+                  'Verify getWsAuthParams() in lib/utils/wsAuth.ts is called for all new WebSocket() sites',
                 ],
                 sse_auth_failure: [
                   'SSE streaming connections got 401 Unauthorized — dashboard cards will render blank with no error shown',

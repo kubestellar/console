@@ -31,8 +31,8 @@ export async function localAgentChat(prompt: string, options: LocalAgentChatOpti
   }
 
   try {
-    const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-    ws = new WebSocket(authUrl, protocols)
+    const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+    ws = new WebSocket(url, protocols)
   } catch {
     options.onError('Could not connect to local agent.')
     return

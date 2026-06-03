@@ -119,7 +119,7 @@ export function _resetAgentTokenState(): void {
  * Negative results (empty token or fetch error) are cached in memory for
  * AGENT_TOKEN_NEGATIVE_CACHE_MS to avoid repeated 5s timeouts (#11120).
  *
- * Exported for use by getWsAuthParams() to prevent race condition where
+ * Exported for use by WebSocket auth helpers to prevent race condition where
  * WebSocket connections open before token fetch completes (#13034).
  */
 export function getAgentToken(): Promise<string> {

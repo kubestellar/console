@@ -315,15 +315,16 @@ jobs:
           echo "Auth login smoke test PASSED"
 
       # ── 13. Test kc-agent WebSocket rejects without token ─────────
-      # Covers gap #3: appendWsAuthToken returns bare URL when token
-      # is missing from localStorage. Without the token query param,
-      # the WebSocket upgrade must be rejected. If it's accepted,
-      # unauthenticated users can stream live data.
+      # Covers gap #3: getWsAuthParams returns no auth subprotocol when
+      # the token is missing from localStorage. Without the bearer
+      # subprotocol, the WebSocket upgrade must be rejected. If it's
+      # accepted, unauthenticated users can stream live data.
       - name: Test kc-agent WebSocket rejects unauthenticated upgrade
         run: |
           echo "Testing WebSocket upgrade without token..."
-          # kc-agent listens for WS upgrades on /ws. Without ?token=...,
-          # the upgrade handshake should be rejected (HTTP 401 or 403).
+          # kc-agent listens for WS upgrades on /ws. Without the auth
+          # subprotocol, the upgrade handshake should be rejected
+          # (HTTP 401 or 403).
           WS_CODE=$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' \
             -H "Connection: Upgrade" \
             -H "Upgrade: websocket" \
@@ -350,7 +351,8 @@ jobs:
             -H "Upgrade: websocket" \
             -H "Sec-WebSocket-Version: 13" \
             -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-            "http://127.0.0.1:8585/ws?token=${KC_AGENT_TOKEN}" 2>/dev/null)
+            -H "Sec-WebSocket-Protocol: bearer.${KC_AGENT_TOKEN}" \
+            http://127.0.0.1:8585/ws 2>/dev/null)
           WS_CURL_RC=$?
           set -e
           echo "curl exit=$WS_CURL_RC http_code=$WS_CODE_AUTH"
@@ -460,14 +462,14 @@ jobs:
           echo "No raw fetch() calls to agent URLs found (correct)"
 
       # ── 17. Static analysis: no raw WebSocket to agent URL ─────
-      # Catches WebSocket connections that bypass appendWsAuthToken.
-      # Without the token query param, kc-agent rejects the upgrade.
+      # Catches WebSocket connections that bypass getWsAuthParams.
+      # Without the auth subprotocol, kc-agent rejects the upgrade.
       - name: Check for raw WebSocket to agent URLs
         run: |
-          echo "Scanning for WebSocket connections that bypass appendWsAuthToken..."
+          echo "Scanning for WebSocket connections that bypass getWsAuthParams..."
 
           # Match: new WebSocket( with agent URL patterns, excluding
-          # appendWsAuthToken calls and test files.
+          # getWsAuthParams calls and test files.
           # useActiveUsers.ts is excluded — it connects to the backend
           # (not kc-agent) and authenticates via post-open message.
           WS_VIOLATIONS=$(grep -rn \
@@ -475,7 +477,7 @@ jobs:
             web/src/ \
             --include='*.ts' --include='*.tsx' \
             | grep -i -e 'LOCAL_AGENT' -e 'agent' -e '8585' \
-            | grep -v 'appendWsAuthToken' \
+            | grep -v 'getWsAuthParams' \
             | grep -v '__tests__' \
             | grep -v '\.test\.' \
             | grep -v '\.spec\.' \
@@ -484,13 +486,13 @@ jobs:
             || true)
 
           if [ -n "$WS_VIOLATIONS" ]; then
-            echo "::error::Found WebSocket connections to kc-agent that bypass appendWsAuthToken()."
-            echo "These will be rejected by kc-agent because they don't include the ?token= param."
+            echo "::error::Found WebSocket connections to kc-agent that bypass getWsAuthParams()."
+            echo "These will be rejected by kc-agent because they don't include the auth subprotocol."
             echo ""
             echo "Violations:"
             echo "$WS_VIOLATIONS"
             echo ""
-            echo "Fix: wrap the URL with appendWsAuthToken() from lib/utils/wsAuth.ts"
+            echo "Fix: call getWsAuthParams() from lib/utils/wsAuth.ts and pass its protocols to new WebSocket()"
             exit 1
           fi
           echo "No raw WebSocket connections to agent URLs found (correct)"
@@ -542,7 +544,7 @@ jobs:
               '2. If **agent token**: verify `KC_AGENT_TOKEN` env var flows from startup-oauth.sh → backend → `/api/agent/token` → frontend → kc-agent',
               '3. If **raw fetch**: replace `fetch()` with `agentFetch()` from `hooks/mcp/shared.ts`',
               '4. If **OAuth login**: verify `/auth/refresh` contract (see #6590)',
-              '5. If **WebSocket auth**: verify `appendWsAuthToken()` is called and kc-agent validates the `?token=` param',
+              '5. If **WebSocket auth**: verify `getWsAuthParams()` is called and kc-agent validates the bearer subprotocol',
               '6. If **agent token leak**: verify `/api/agent/token` middleware requires a valid session cookie',
             ].join('\n');
 

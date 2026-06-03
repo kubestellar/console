@@ -162,8 +162,8 @@ async function connectWebSocket(): Promise<void> {
 
   try {
     // LOCAL_AGENT_WS_URL already includes /ws — don't append it again
-    const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-    wsConnection = new WebSocket(authUrl, protocols)
+    const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+    wsConnection = new WebSocket(url, protocols)
 
     wsConnection.onopen = () => {
       // Reset backoff on successful connection

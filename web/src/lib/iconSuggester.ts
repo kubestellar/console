@@ -94,12 +94,12 @@ async function askAgentForIcon(name: string): Promise<string | null> {
     return Promise.resolve(null)
   }
 
-  let authUrl: string
-  let protocols: string[]
+  let wsUrl: string
+  let wsProtocols: string[] = []
   try {
-    const params = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-    authUrl = params.url
-    protocols = params.protocols
+    const authParams = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+    wsUrl = authParams.url
+    wsProtocols = authParams.protocols
   } catch {
     return null
   }
@@ -110,7 +110,7 @@ async function askAgentForIcon(name: string): Promise<string | null> {
     }, ICON_SUGGESTION_TIMEOUT_MS)
 
     try {
-      const ws = new WebSocket(authUrl, protocols)
+      const ws = new WebSocket(wsUrl, wsProtocols)
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 

@@ -11,8 +11,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn((url: string) => url),
-  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
+  getWsAuthParams: vi.fn((url: string) => Promise.resolve({ url, protocols: [] })),
 }))
 
 const mod = await import('../useAIPredictions')

@@ -12,8 +12,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 let mockIsNetlify = false
 
 vi.mock('../utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => url,
-  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
+  getWsAuthParams: (url: string) => Promise.resolve({ url, protocols: [] }),
 }))
 
 vi.mock('../demoMode', () => ({

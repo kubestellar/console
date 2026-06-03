@@ -87,8 +87,8 @@ export async function connectSharedWebSocket() {
   }
 
   try {
-    const { url: authUrl, protocols } = await getWsAuthParams(resolveAgentWsUrl())
-    const ws = new WebSocket(authUrl, protocols)
+    const { url, protocols } = await getWsAuthParams(resolveAgentWsUrl())
+    const ws = new WebSocket(url, protocols)
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen

@@ -112,8 +112,8 @@ export class KubectlProxyConnection {
           cb()
         }
         try {
-          const { url: authUrl, protocols } = await getWsAuthParams(wsURL)
-          this.ws = new WebSocket(authUrl, protocols)
+          const { url, protocols } = await getWsAuthParams(wsURL)
+          this.ws = new WebSocket(url, protocols)
           connectTimeout = setTimeout(() => {
             try {
               this.ws?.close()

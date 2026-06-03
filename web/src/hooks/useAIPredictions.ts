@@ -332,8 +332,8 @@ async function connectWebSocket(): Promise<void> {
   if (getDemoMode() || ws) return
 
   try {
-    const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-    ws = new WebSocket(authUrl, protocols)
+    const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+    ws = new WebSocket(url, protocols)
 
     ws.onopen = () => {
       wsConnected = true
