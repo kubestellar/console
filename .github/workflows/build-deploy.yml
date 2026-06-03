@@ -297,6 +297,7 @@ jobs:
             --set rbac.namespaceCreationEnabled=true \
             --set securityContext.runAsUser=null \
             --set securityContext.runAsGroup=null \
+            --set podLabels.team=kubestellar \
             --atomic \
             --wait \
             --timeout 15m
@@ -567,6 +568,35 @@ jobs:
           done
           echo "Cleanup complete"
 
+      - name: Wait for volume detachment
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          MAX_WAIT=120
+          WAITED=0
+
+          # Ensure no pods are currently using the PVCs before deploying
+          RUNNING_PODS=$(kubectl get pods -n kubestellar-console -l "$RELEASE_SELECTOR" -o name 2>/dev/null | wc -l)
+          if [ "$RUNNING_PODS" -eq 0 ]; then
+            echo "No running pods — checking VolumeAttachments..."
+            PVC_PVS=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null \
+              | jq -r '.items[].spec.volumeName // empty' 2>/dev/null)
+            
+            for pv in $PVC_PVS; do
+              while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+                ATTACHED=$(kubectl get volumeattachments -o json 2>/dev/null \
+                  | jq -r --arg pv "$pv" '.items[] | select(.spec.source.persistentVolumeName == $pv) | .metadata.name' 2>/dev/null)
+                if [ -z "$ATTACHED" ]; then
+                  echo "PV '$pv' is fully detached."
+                  break
+                fi
+                echo "PV '$pv' still attached (attachment: $ATTACHED). Waiting..."
+                sleep 10
+                WAITED=$((WAITED + 10))
+              done
+            done
+          fi
+          echo "Volume detachment check complete (waited ${WAITED}s)"
+
       # #6344 / #6353: OpenShift SCC — see comment on the vllm-d Deploy
       # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
       # SCC admission controller can assign a namespace-appropriate UID.
@@ -621,6 +651,7 @@ jobs:
               --set rbac.namespaceCreationEnabled=true \
               --set securityContext.runAsUser=null \
               --set securityContext.runAsGroup=null \
+              --set podLabels.team=kubestellar \
               --atomic \
               --cleanup-on-fail \
               --wait \
