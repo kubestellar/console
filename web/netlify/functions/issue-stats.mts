@@ -13,6 +13,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import { enforceSimpleRateLimit, rateLimitResponse } from "./_shared";
 import { getAllowedRepoSlugs, isAllowedRepoSlug } from "./_shared/repo-allowlist";
 
 const GITHUB_API = "https://api.github.com";
@@ -35,6 +36,13 @@ const DEFAULT_DAYS = 90;
 /** Maximum lookback in days */
 const MAX_DAYS = 365;
 const ALLOWED_REPOS = getAllowedRepoSlugs(["ISSUE_STATS_REPOS", "PIPELINE_REPOS"]);
+
+/** Rate limit: max requests per window per IP (CWE-770, #16873) */
+const RATE_LIMIT_MAX_REQUESTS = 30;
+/** Rate limit window: 1 minute */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+/** Rate limit blob store name */
+const RATE_LIMIT_STORE = "issue-stats-rl";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -118,6 +126,19 @@ export default async function handler(request: Request): Promise<Response> {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  // SECURITY: Per-IP rate limiting to prevent GitHub token quota exhaustion (CWE-770, #16873).
+  const clientIP = request.headers.get("x-nf-client-connection-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateResult = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE,
+    prefix: "issue-stats:",
+    subject: clientIP,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rateResult.limited) {
+    return rateLimitResponse(rateResult.retryAfterSeconds, corsHeaders);
   }
 
   const url = new URL(request.url);
