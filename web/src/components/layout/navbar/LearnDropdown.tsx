@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
+import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { BookOpen, Play, ExternalLink, GraduationCap, Video, Loader2, Newspaper } from 'lucide-react'
 import { useTour } from '../../../hooks/useTour'
 import { LogoWithStar } from '../../ui/LogoWithStar'
@@ -57,6 +58,11 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
   const { isOpen, close, toggle } = useModalState()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { containerRef, handleKeyDown } = useKeyboardNav({
+    selector: '[role="menuitem"]:not([disabled])',
+    orientation: 'vertical',
+    onEscape: close,
+  })
   const { startTour, hasCompletedTour } = useTour()
   const location = useLocation()
   const { t } = useTranslation()
