@@ -1,5 +1,13 @@
 // Barrel exports for shared Netlify function utilities
-export { isAllowedOrigin, buildCorsHeaders, handlePreflight } from "./cors";
+export {
+  isAllowedOrigin,
+  isAllowedAnalyticsOrigin,
+  isAllowedOriginOrReferer,
+  buildCorsHeaders,
+  buildAnalyticsCorsHeaders,
+  handlePreflight,
+  handleAnalyticsPreflight,
+} from "./cors";
 export type { CorsOptions } from "./cors";
 
 export { enforceSimpleRateLimit } from "./rate-limit";

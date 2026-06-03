@@ -16,12 +16,20 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { isAllowedOriginOrReferer } from "./_shared"
 
 const GTAG_BASE_URL = "https://www.googletagmanager.com/gtag/js"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
 const MAX_RESPONSE_BYTES = 512_000 // 512 KB — gtag.js is ~90 KB
 
 export default async (req: Request) => {
+  if (!isAllowedOriginOrReferer(req)) {
+    return new Response("Forbidden", {
+      status: 403,
+      headers: { "X-Content-Type-Options": "nosniff" },
+    })
+  }
+
   const url = new URL(req.url)
   const queryString = url.search || ""
 

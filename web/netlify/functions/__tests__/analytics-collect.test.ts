@@ -41,6 +41,18 @@ describe("analytics-collect", () => {
     vi.stubGlobal("Netlify", { env: { get: vi.fn(() => "") } });
   });
 
+  it("rejects disallowed origins", async () => {
+    const response = await analyticsHandler(new Request("https://console.kubestellar.io/api/m", {
+      method: "POST",
+      headers: { Origin: "https://evil.com" },
+      body: "ok",
+    }));
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("Forbidden");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("rejects requests whose declared body exceeds 64KB", async () => {
     const response = await analyticsHandler(makeAnalyticsRequest({
       method: "POST",

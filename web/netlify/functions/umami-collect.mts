@@ -9,7 +9,7 @@
  */
 
 import type { Config } from "@netlify/functions"
-import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
+import { buildAnalyticsCorsHeaders, handleAnalyticsPreflight, isAllowedOriginOrReferer } from "./_shared/cors"
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
@@ -20,39 +20,6 @@ const UMAMI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 const MAX_BODY_BYTES = 65_536
 const MAX_UPSTREAM_TEXT_BYTES = 1_048_576
 
-/**
- * Hosts allowed via Referer fallback when Origin is absent. Keep
- * separate from the CORS allowlist because Referer is a weaker signal
- * (can be stripped by Referrer-Policy) — only used when Origin is
- * entirely missing (e.g. beacon sendBeacon() without CORS).
- */
-const REFERER_FALLBACK_HOSTS = new Set([
-  "console.kubestellar.io",
-  "localhost",
-  "127.0.0.1",
-])
-
-function isRequestAllowed(req: Request): boolean {
-  // Prefer the CORS allowlist via the Origin header.
-  if (isAllowedOrigin(req.headers.get("origin"))) return true
-
-  // Fall back to Referer for requests where Origin is not sent.
-  const referer = req.headers.get("referer")
-  if (referer) {
-    try {
-      const hostname = new URL(referer).hostname
-      if (REFERER_FALLBACK_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
-        return true
-      }
-    } catch {
-      /* ignore parse errors */
-    }
-  }
-
-  // Allow if neither Origin nor Referer is present (rare, same-origin POST with strict Referrer-Policy).
-  return !req.headers.get("origin") && !referer
-}
-
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
   methods: "POST, OPTIONS",
@@ -60,13 +27,13 @@ const CORS_OPTS = {
 } as const
 
 export default async (req: Request) => {
-  const corsHeaders: Record<string, string> = buildCorsHeaders(req, CORS_OPTS)
+  const corsHeaders: Record<string, string> = buildAnalyticsCorsHeaders(req, CORS_OPTS)
 
   if (req.method === "OPTIONS") {
-    return handlePreflight(req, CORS_OPTS)
+    return handleAnalyticsPreflight(req, CORS_OPTS)
   }
 
-  if (!isRequestAllowed(req)) {
+  if (!isAllowedOriginOrReferer(req)) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
   }
 

@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isAllowedOrigin,
+  isAllowedOriginOrReferer,
   buildCorsHeaders,
   handlePreflight,
   type CorsOptions,
@@ -78,6 +79,54 @@ describe("cors", () => {
     it("should be case-insensitive for Netlify patterns", () => {
       expect(isAllowedOrigin("https://MAIN--kubestellar-console.netlify.app")).toBe(true);
       expect(isAllowedOrigin("https://Fix-123--KUBESTELLAR-CONSOLE.NETLIFY.APP")).toBe(true);
+    });
+  });
+
+  describe("isAllowedOriginOrReferer", () => {
+    it("should allow requests with an allowed origin", () => {
+      const request = new Request("http://example.com", {
+        headers: { origin: "https://console.kubestellar.io" },
+      });
+
+      expect(isAllowedOriginOrReferer(request)).toBe(true);
+    });
+
+    it("should allow requests with an allowed referer when origin is absent", () => {
+      const request = new Request("http://example.com", {
+        headers: { referer: "https://console.kubestellar.io/dashboard" },
+      });
+
+      expect(isAllowedOriginOrReferer(request)).toBe(true);
+    });
+
+    it("should allow requests when both origin and referer are absent", () => {
+      const request = new Request("http://example.com");
+
+      expect(isAllowedOriginOrReferer(request)).toBe(true);
+    });
+
+    it("should reject requests with a disallowed origin", () => {
+      const request = new Request("http://example.com", {
+        headers: { origin: "https://evil.com" },
+      });
+
+      expect(isAllowedOriginOrReferer(request)).toBe(false);
+    });
+
+    it("should reject requests with a disallowed referer when origin is absent", () => {
+      const request = new Request("http://example.com", {
+        headers: { referer: "https://evil.com/dashboard" },
+      });
+
+      expect(isAllowedOriginOrReferer(request)).toBe(false);
+    });
+
+    it("should reject preview origins outside the analytics allowlist", () => {
+      const request = new Request("http://example.com", {
+        headers: { origin: "https://main--kubestellar-console.netlify.app" },
+      });
+
+      expect(isAllowedOriginOrReferer(request)).toBe(false);
     });
   });
 

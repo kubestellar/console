@@ -12,7 +12,7 @@
  */
 
 import type { Config } from "@netlify/functions"
-import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared";
+import { buildAnalyticsCorsHeaders, handleAnalyticsPreflight, isAllowedOriginOrReferer } from "./_shared";
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
@@ -22,36 +22,20 @@ const ANALYTICS_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const MAX_BODY_BYTES = 65_536;
 const MAX_UPSTREAM_TEXT_BYTES = 1_048_576;
 
-function normalizeOrigin(header: string | null): string | null {
-  if (!header) return null;
-  try {
-    return new URL(header).origin;
-  } catch {
-    return header;
-  }
-}
-
-function isAllowedAnalyticsClient(req: Request): boolean {
-  const origin = normalizeOrigin(req.headers.get("origin"));
-  const referer = normalizeOrigin(req.headers.get("referer"));
-
-  return [origin, referer].some((header) => isAllowedOrigin(header));
-}
-
 export default async (req: Request) => {
-  const corsHeaders = buildCorsHeaders(req, {
+  const corsHeaders = buildAnalyticsCorsHeaders(req, {
     methods: "GET, POST, OPTIONS",
     headers: "Content-Type",
   });
 
   if (req.method === "OPTIONS") {
-    return handlePreflight(req, {
+    return handleAnalyticsPreflight(req, {
       methods: "GET, POST, OPTIONS",
       headers: "Content-Type",
     });
   }
 
-  if (!isAllowedAnalyticsClient(req)) {
+  if (!isAllowedOriginOrReferer(req)) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders });
   }
 

@@ -33,6 +33,18 @@ describe("umami-collect", () => {
     vi.stubGlobal("fetch", vi.fn());
   });
 
+  it("rejects disallowed referers when origin is absent", async () => {
+    const response = await umamiHandler(new Request("https://console.kubestellar.io/api/send", {
+      method: "POST",
+      headers: { Referer: "https://evil.com/dashboard", "Content-Type": "application/json" },
+      body: "{}",
+    }));
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("Forbidden");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("rejects requests whose declared body exceeds 64KB", async () => {
     const response = await umamiHandler(makeRequest({
       contentLength: "65537",
