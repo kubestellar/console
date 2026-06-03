@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -166,6 +167,16 @@ var allowedGitHubPrefixes = []string{
 	"/notifications", // notification badge (if used by frontend)
 }
 
+var githubProxyDefaultRepos = []string{
+	"kubestellar/console",
+	"kubestellar/docs",
+	"kubestellar/console-kb",
+	"kubestellar/kubestellar-mcp",
+	"kubestellar/console-marketplace",
+	"kubestellar/homebrew-tap",
+	"kubestellar/kubestellar",
+}
+
 // isAllowedGitHubPath checks whether apiPath (which must start with "/")
 // matches one of the allowedGitHubPrefixes.
 //
@@ -191,6 +202,46 @@ func isAllowedGitHubPath(apiPath string) bool {
 	return false
 }
 
+func getGitHubProxyAllowedRepos() []string {
+	env := os.Getenv("GITHUB_PROXY_ALLOWED_REPOS")
+	if env == "" {
+		return append([]string(nil), githubProxyDefaultRepos...)
+	}
+
+	repos := make([]string, 0)
+	for _, s := range strings.Split(env, ",") {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if !ghpValidRepoPattern.MatchString(s) {
+			slog.Warn("[GitHubProxy] invalid repo slug in GITHUB_PROXY_ALLOWED_REPOS, skipping", "repo", s)
+			continue
+		}
+		repos = append(repos, s)
+	}
+	if len(repos) == 0 {
+		return append([]string(nil), githubProxyDefaultRepos...)
+	}
+	return repos
+}
+
+func extractGitHubRepoSlug(apiPath string) (string, bool) {
+	remainder, ok := strings.CutPrefix(apiPath, "/repos/")
+	if !ok {
+		return "", false
+	}
+	parts := strings.SplitN(remainder, "/", 3)
+	if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+		return "", false
+	}
+	repo := parts[0] + "/" + parts[1]
+	if !ghpValidRepoPattern.MatchString(repo) {
+		return "", false
+	}
+	return repo, true
+}
+
 // GitHubProxyHandler proxies read-only GitHub API requests through the backend,
 // keeping the GitHub PAT server-side. The frontend sends requests to
 // /api/github/* and this handler forwards them to api.github.com/* with
@@ -200,13 +251,23 @@ type GitHubProxyHandler struct {
 	serverToken string
 	// store is used for admin role checks on token management endpoints
 	store store.Store
+	// repoAllowlist restricts which /repos/{owner}/{repo} paths may be proxied.
+	repoAllowlist map[string]struct{}
 }
 
 // NewGitHubProxyHandler creates a new GitHub API proxy handler.
-func NewGitHubProxyHandler(serverToken string, s store.Store) *GitHubProxyHandler {
+func NewGitHubProxyHandler(serverToken string, s store.Store, repoAllowlist []string) *GitHubProxyHandler {
+	if len(repoAllowlist) == 0 {
+		repoAllowlist = getGitHubProxyAllowedRepos()
+	}
+	allowlist := make(map[string]struct{}, len(repoAllowlist))
+	for _, repo := range repoAllowlist {
+		allowlist[repo] = struct{}{}
+	}
 	return &GitHubProxyHandler{
-		serverToken: serverToken,
-		store:       s,
+		serverToken:   serverToken,
+		store:         s,
+		repoAllowlist: allowlist,
 	}
 }
 
@@ -278,6 +339,20 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "GitHub API path not allowed",
 		})
+	}
+	if strings.HasPrefix(apiPath, "/repos/") {
+		repo, ok := extractGitHubRepoSlug(apiPath)
+		if !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid GitHub repository path",
+			})
+		}
+		if _, allowed := h.repoAllowlist[repo]; !allowed {
+			slog.Info("[GitHubProxy] blocked repo outside allowlist", "repo", repo, "path", apiPath)
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "GitHub repository not allowed",
+			})
+		}
 	}
 
 	// Build target URL with query params
@@ -358,14 +433,14 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check admin status")
 		}
-		
+
 		// Get the current user
 		userID := middleware.GetUserID(c)
 		user, err = h.store.GetUser(c.UserContext(), userID)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
 		}
-		
+
 		// If no admins exist, promote the current user to admin
 		if admins == 0 && user != nil && user.Role != models.UserRoleAdmin {
 			user.Role = models.UserRoleAdmin

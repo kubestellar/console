@@ -86,7 +86,7 @@ func (s *Server) setupAPICoreRoutes(routes *routeSetupContext) {
 		return c.Status(resp.StatusCode).Send(body)
 	})
 
-	githubProxy := handlers.NewGitHubProxyHandler(s.config.GitHubToken, s.store)
+	githubProxy := handlers.NewGitHubProxyHandler(s.config.GitHubToken, s.store, nil)
 	api.Get("/github/token/status", githubProxy.HasToken)
 	api.Post("/github/token", githubProxy.SaveToken)
 	api.Delete("/github/token", githubProxy.DeleteToken)
