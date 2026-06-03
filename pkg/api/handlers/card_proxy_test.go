@@ -299,7 +299,12 @@ func TestCardProxyRateLimit_WindowExpiryResetsUserQuota(t *testing.T) {
 	assert.Equal(t, fiber.StatusTooManyRequests, limitedResp.StatusCode)
 
 	handler.limiter.mu.Lock()
-	handler.limiter.buckets[bucketKey].window = time.Now().Add(-(cardProxyRateWindow + cardProxyTestWindowSkew))
+	bucket := handler.limiter.buckets[bucketKey]
+	if bucket == nil {
+		handler.limiter.mu.Unlock()
+		t.Fatal("expected rate-limit bucket to exist for user after exceeding limit")
+	}
+	bucket.window = time.Now().Add(-(cardProxyRateWindow + cardProxyTestWindowSkew))
 	handler.limiter.mu.Unlock()
 
 	resetResp := performCardProxyRequest(t, app, userID)
