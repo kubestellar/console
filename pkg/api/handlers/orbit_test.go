@@ -400,6 +400,218 @@ func TestCreateMissionRejectsOtherUsersMissionID(t *testing.T) {
 	}
 }
 
+func TestCreateMissionOwnerCanReuseOwnID(t *testing.T) {
+	userID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: {ID: userID, Role: models.UserRoleEditor},
+	}})
+	h.missions["orbit-mine"] = &OrbitMission{
+		ID:      "orbit-mine",
+		OwnerID: userID.String(),
+		Title:   "Original Title",
+		History: []OrbitRunRecord{},
+	}
+	app := setupOrbitScopedApp(userID, h)
+
+	payload, err := json.Marshal(map[string]any{
+		"id":        "orbit-mine",
+		"title":     "Updated Title",
+		"orbitType": "health-check",
+		"cadence":   "daily",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/missions", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusCreated, string(body))
+	}
+
+	var got OrbitMission
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Title != "Updated Title" {
+		t.Fatalf("title = %q, want %q", got.Title, "Updated Title")
+	}
+	if got.OwnerID != userID.String() {
+		t.Fatalf("ownerId = %q, want %q", got.OwnerID, userID.String())
+	}
+}
+
+func TestCreateMissionAllowsClaimingUnownedMission(t *testing.T) {
+	userID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: {ID: userID, Role: models.UserRoleEditor},
+	}})
+	h.missions["orbit-unowned"] = &OrbitMission{
+		ID:      "orbit-unowned",
+		OwnerID: "",
+		Title:   "Unowned Mission",
+		History: []OrbitRunRecord{},
+	}
+	app := setupOrbitScopedApp(userID, h)
+
+	payload, err := json.Marshal(map[string]any{
+		"id":        "orbit-unowned",
+		"title":     "Claimed Mission",
+		"orbitType": "health-check",
+		"cadence":   "daily",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/missions", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusCreated, string(body))
+	}
+
+	var got OrbitMission
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.OwnerID != userID.String() {
+		t.Fatalf("ownerId = %q, want %q (should claim unowned mission)", got.OwnerID, userID.String())
+	}
+}
+
+func TestCreateMissionIDORErrorMessage(t *testing.T) {
+	userID := uuid.New()
+	otherID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: {ID: userID, Role: models.UserRoleEditor},
+	}})
+	h.missions["orbit-conflict"] = &OrbitMission{
+		ID:      "orbit-conflict",
+		OwnerID: otherID.String(),
+		History: []OrbitRunRecord{},
+	}
+	app := setupOrbitScopedApp(userID, h)
+
+	payload, err := json.Marshal(map[string]any{
+		"id":        "orbit-conflict",
+		"title":     "Conflict Test",
+		"orbitType": "health-check",
+		"cadence":   "daily",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/missions", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusConflict)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+
+	var errResp map[string]string
+	if err := json.Unmarshal(body, &errResp); err != nil {
+		t.Fatalf("unmarshal error response: %v", err)
+	}
+
+	const wantError = "A mission with this ID already exists"
+	if errResp["error"] != wantError {
+		t.Fatalf("error = %q, want %q", errResp["error"], wantError)
+	}
+}
+
+func TestCreateMissionPreservesOriginalMissionOnIDORAttempt(t *testing.T) {
+	userID := uuid.New()
+	otherID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		userID: {ID: userID, Role: models.UserRoleEditor},
+	}})
+
+	originalTitle := "Original Mission"
+	h.missions["orbit-preserve"] = &OrbitMission{
+		ID:        "orbit-preserve",
+		OwnerID:   otherID.String(),
+		Title:     originalTitle,
+		OrbitType: "security-scan",
+		Cadence:   "weekly",
+		History:   []OrbitRunRecord{},
+	}
+	app := setupOrbitScopedApp(userID, h)
+
+	payload, err := json.Marshal(map[string]any{
+		"id":        "orbit-preserve",
+		"title":     "Malicious Override",
+		"orbitType": "health-check",
+		"cadence":   "daily",
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/missions", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusConflict)
+	}
+
+	preserved := h.missions["orbit-preserve"]
+	if preserved.Title != originalTitle {
+		t.Fatalf("title = %q, want %q (mission should be preserved)", preserved.Title, originalTitle)
+	}
+	if preserved.OwnerID != otherID.String() {
+		t.Fatalf("ownerId = %q, want %q (owner should be preserved)", preserved.OwnerID, otherID.String())
+	}
+	if preserved.OrbitType != "security-scan" {
+		t.Fatalf("orbitType = %q, want %q (orbitType should be preserved)", preserved.OrbitType, "security-scan")
+	}
+}
+
 func TestRunMissionRejectsOtherUsersMission(t *testing.T) {
 	userID := uuid.New()
 	otherID := uuid.New()
