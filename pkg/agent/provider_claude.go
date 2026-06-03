@@ -84,6 +84,7 @@ func (c *ClaudeProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 	}
 
 	c.setHeaders(httpReq)
+	pinResolvedProviderRequestHost(httpReq)
 
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
@@ -152,6 +153,7 @@ func (c *ClaudeProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 	}
 
 	c.setHeaders(httpReq)
+	pinResolvedProviderRequestHost(httpReq)
 
 	resp, err := c.client.Do(httpReq)
 	if err != nil {

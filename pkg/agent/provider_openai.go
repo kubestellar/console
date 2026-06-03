@@ -83,6 +83,7 @@ func (o *OpenAIProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 	}
 
 	o.setHeaders(httpReq)
+	pinResolvedProviderRequestHost(httpReq)
 
 	resp, err := o.client.Do(httpReq)
 	if err != nil {
@@ -148,6 +149,7 @@ func (o *OpenAIProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 	}
 
 	o.setHeaders(httpReq)
+	pinResolvedProviderRequestHost(httpReq)
 
 	resp, err := o.client.Do(httpReq)
 	if err != nil {

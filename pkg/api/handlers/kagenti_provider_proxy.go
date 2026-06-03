@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -22,22 +23,64 @@ import (
 const kagentiSSELineBufferBytes = 256 * 1024
 
 const (
-	clusterContextTimeout = 10 * time.Second
+	clusterContextTimeout         = 10 * time.Second
+	kagentiDirectToolDefaultLimit = 50
+	kagentiDirectToolMaxItems     = 50
 )
+
+type kagentiDirectClusterInfo struct {
+	Name      string `json:"name"`
+	Healthy   bool   `json:"healthy"`
+	NodeCount int    `json:"nodeCount,omitempty"`
+	PodCount  int    `json:"podCount,omitempty"`
+}
+
+type kagentiDirectContainerInfo struct {
+	Name   string `json:"name"`
+	Image  string `json:"image"`
+	Ready  bool   `json:"ready"`
+	State  string `json:"state"`
+	Reason string `json:"reason,omitempty"`
+}
+
+type kagentiDirectPodInfo struct {
+	Name       string                       `json:"name"`
+	Namespace  string                       `json:"namespace"`
+	Cluster    string                       `json:"cluster,omitempty"`
+	Status     string                       `json:"status"`
+	Ready      string                       `json:"ready"`
+	Restarts   int                          `json:"restarts"`
+	Age        string                       `json:"age"`
+	Containers []kagentiDirectContainerInfo `json:"containers,omitempty"`
+}
+
+type kagentiDirectEventInfo struct {
+	Type      string `json:"type"`
+	Reason    string `json:"reason"`
+	Message   string `json:"message"`
+	Object    string `json:"object"`
+	Namespace string `json:"namespace"`
+	Cluster   string `json:"cluster,omitempty"`
+	Count     int32  `json:"count"`
+	Age       string `json:"age,omitempty"`
+	LastSeen  string `json:"lastSeen,omitempty"`
+}
 
 // KagentiProviderProxyHandler proxies requests to the kagenti A2A endpoint.
 type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
 }
 
@@ -356,9 +399,9 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	}
 
 	contextBuilder.WriteString("You can use the following tools to query cluster state:\n")
-	contextBuilder.WriteString("- get_cluster_list: Returns detailed cluster information\n")
-	contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns pods in a namespace\n")
-	contextBuilder.WriteString("- get_events(cluster, namespace): Returns recent warning events\n")
+	contextBuilder.WriteString("- get_cluster_list: Returns cluster names with health and counts\n")
+	contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns a limited safe subset of pod status data\n")
+	contextBuilder.WriteString("- get_events(cluster, namespace): Returns a limited safe subset of recent warning events\n")
 	contextBuilder.WriteString("\n--- END CONTEXT ---\n\n")
 	contextBuilder.WriteString(message)
 
@@ -380,26 +423,7 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 
 	tools = append(tools, map[string]any{
 		"name":        "get_pod_list",
-		"description": "Returns a list of pods in a specific cluster and namespace",
-		"inputSchema": map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"cluster": map[string]any{
-					"type":        "string",
-					"description": "Cluster name",
-				},
-				"namespace": map[string]any{
-					"type":        "string",
-					"description": "Kubernetes namespace (leave empty for all namespaces)",
-				},
-			},
-			"required": []string{"cluster"},
-		},
-	})
-
-	tools = append(tools, map[string]any{
-		"name":        "get_events",
-		"description": "Returns recent warning events from a specific cluster and namespace",
+		"description": "Returns a limited safe subset of pod status data for a specific cluster and namespace",
 		"inputSchema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -413,7 +437,30 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 				},
 				"limit": map[string]any{
 					"type":        "number",
-					"description": "Maximum number of events to return (default: 50)",
+					"description": "Maximum number of pods to return (default: 50, max: 50)",
+				},
+			},
+			"required": []string{"cluster"},
+		},
+	})
+
+	tools = append(tools, map[string]any{
+		"name":        "get_events",
+		"description": "Returns a limited safe subset of recent warning events from a specific cluster and namespace",
+		"inputSchema": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"cluster": map[string]any{
+					"type":        "string",
+					"description": "Cluster name",
+				},
+				"namespace": map[string]any{
+					"type":        "string",
+					"description": "Kubernetes namespace (leave empty for all namespaces)",
+				},
+				"limit": map[string]any{
+					"type":        "number",
+					"description": "Maximum number of events to return (default: 50, max: 50)",
 				},
 			},
 			"required": []string{"cluster"},
@@ -431,8 +478,86 @@ type kagentiDirectToolRequest struct {
 	Args map[string]any `json:"args"`
 }
 
+func extractKagentiDirectToolLimit(args map[string]any) int {
+	limit := kagentiDirectToolDefaultLimit
+	if raw, ok := args["limit"].(float64); ok && raw > 0 {
+		limit = int(raw)
+	}
+	if limit > kagentiDirectToolMaxItems {
+		return kagentiDirectToolMaxItems
+	}
+	return limit
+}
+
+func sanitizeKagentiDirectClusters(clusters []k8s.ClusterInfo) []kagentiDirectClusterInfo {
+	result := make([]kagentiDirectClusterInfo, 0, len(clusters))
+	for _, cluster := range clusters {
+		result = append(result, kagentiDirectClusterInfo{
+			Name:      cluster.Name,
+			Healthy:   cluster.Healthy,
+			NodeCount: cluster.NodeCount,
+			PodCount:  cluster.PodCount,
+		})
+	}
+	return result
+}
+
+func sanitizeKagentiDirectPods(pods []k8s.PodInfo, limit int) []kagentiDirectPodInfo {
+	if limit > len(pods) {
+		limit = len(pods)
+	}
+	result := make([]kagentiDirectPodInfo, 0, limit)
+	for _, pod := range pods[:limit] {
+		containers := make([]kagentiDirectContainerInfo, 0, len(pod.Containers))
+		for _, container := range pod.Containers {
+			containers = append(containers, kagentiDirectContainerInfo{
+				Name:   container.Name,
+				Image:  container.Image,
+				Ready:  container.Ready,
+				State:  container.State,
+				Reason: container.Reason,
+			})
+		}
+		result = append(result, kagentiDirectPodInfo{
+			Name:       pod.Name,
+			Namespace:  pod.Namespace,
+			Cluster:    pod.Cluster,
+			Status:     pod.Status,
+			Ready:      pod.Ready,
+			Restarts:   pod.Restarts,
+			Age:        pod.Age,
+			Containers: containers,
+		})
+	}
+	return result
+}
+
+func sanitizeKagentiDirectEvents(events []k8s.Event, limit int) []kagentiDirectEventInfo {
+	if limit > len(events) {
+		limit = len(events)
+	}
+	result := make([]kagentiDirectEventInfo, 0, limit)
+	for _, event := range events[:limit] {
+		result = append(result, kagentiDirectEventInfo{
+			Type:      event.Type,
+			Reason:    event.Reason,
+			Message:   event.Message,
+			Object:    event.Object,
+			Namespace: event.Namespace,
+			Cluster:   event.Cluster,
+			Count:     event.Count,
+			Age:       event.Age,
+			LastSeen:  event.LastSeen,
+		})
+	}
+	return result
+}
+
 // CallToolDirect routes tool calls to the appropriate console handlers
 func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not available"})
 	}
@@ -471,7 +596,7 @@ func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"tool":   "get_cluster_list",
-		"result": clusters,
+		"result": sanitizeKagentiDirectClusters(clusters),
 	})
 }
 
@@ -486,6 +611,7 @@ func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[st
 	if ns, ok := args["namespace"].(string); ok {
 		namespace = ns
 	}
+	limit := extractKagentiDirectToolLimit(args)
 
 	ctx, cancel := context.WithTimeout(c.Context(), clusterContextTimeout)
 	defer cancel()
@@ -498,7 +624,7 @@ func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[st
 
 	return c.JSON(fiber.Map{
 		"tool":   "get_pod_list",
-		"result": pods,
+		"result": sanitizeKagentiDirectPods(pods, limit),
 	})
 }
 
@@ -513,12 +639,7 @@ func (h *KagentiProviderProxyHandler) handleGetEvents(c *fiber.Ctx, args map[str
 	if ns, ok := args["namespace"].(string); ok {
 		namespace = ns
 	}
-
-	const defaultEventLimit = 50
-	limit := defaultEventLimit
-	if l, ok := args["limit"].(float64); ok && l > 0 {
-		limit = int(l)
-	}
+	limit := extractKagentiDirectToolLimit(args)
 
 	ctx, cancel := context.WithTimeout(c.Context(), clusterContextTimeout)
 	defer cancel()
@@ -531,6 +652,6 @@ func (h *KagentiProviderProxyHandler) handleGetEvents(c *fiber.Ctx, args map[str
 
 	return c.JSON(fiber.Map{
 		"tool":   "get_events",
-		"result": events,
+		"result": sanitizeKagentiDirectEvents(events, limit),
 	})
 }

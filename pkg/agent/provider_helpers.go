@@ -15,8 +15,9 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 const cliProviderExecutionTimeout = 5 * time.Minute
 
 // aiProviderHTTPClient is reused across AI provider API calls to enable
-// connection pooling and reduce per-request allocation overhead.
-var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+// connection pooling and reduce per-request allocation overhead while pinning
+// DNS resolution at connection time to block rebinding to private IPs.
+var aiProviderHTTPClient = newSafeAIProviderHTTPClient(aiProviderHTTPTimeout)
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),

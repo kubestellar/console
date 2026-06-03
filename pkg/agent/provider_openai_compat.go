@@ -57,6 +57,7 @@ func chatViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest, p
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	pinResolvedProviderRequestHost(httpReq)
 	for k, v := range extraHeaders {
 		if k == "" || v == "" {
 			continue
@@ -150,6 +151,7 @@ func streamViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest,
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	pinResolvedProviderRequestHost(httpReq)
 	for k, v := range extraHeaders {
 		if k == "" || v == "" {
 			continue

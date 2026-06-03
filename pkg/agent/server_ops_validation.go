@@ -69,19 +69,18 @@ func validateBaseURL(raw string) error {
 	}
 	host := u.Hostname()
 
-	const baseURLDNSLookupTimeout = 3 * time.Second
-	lookupCtx, cancel := context.WithTimeout(context.Background(), baseURLDNSLookupTimeout)
+	lookupCtx, cancel := context.WithTimeout(context.Background(), providerDNSLookupTimeout)
 	defer cancel()
 
-	ips, err := net.DefaultResolver.LookupHost(lookupCtx, host)
+	ips, err := lookupProviderIPAddr(lookupCtx, host)
 	if err != nil {
 		if ip := net.ParseIP(host); ip != nil && isPrivateIP(ip) {
 			return fmt.Errorf("base URL resolves to a private/internal IP address")
 		}
 		return nil
 	}
-	for _, ipStr := range ips {
-		if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
+	for _, ip := range ips {
+		if isPrivateIP(ip.IP) {
 			return fmt.Errorf("base URL resolves to a private/internal IP address")
 		}
 	}
@@ -125,7 +124,7 @@ func (s *Server) validateAPIKeyValue(provider, apiKey string) (bool, error) {
 
 const perKeyValidationTimeout = 15 * time.Second
 
-var apiKeyValidationClient = &http.Client{Timeout: 30 * time.Second}
+var apiKeyValidationClient = newSafeAIProviderHTTPClient(30 * time.Second)
 
 const maxConcurrentValidations = 5
 
@@ -187,6 +186,7 @@ func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", apiKey)
 	req.Header.Set("anthropic-version", claudeAPIVersion)
+	pinResolvedProviderRequestHost(req)
 
 	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
@@ -217,6 +217,7 @@ func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
 		return false, err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+	pinResolvedProviderRequestHost(req)
 
 	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
@@ -252,6 +253,7 @@ func validateOpenRouterKey(ctx context.Context, apiKey string) (bool, error) {
 		return false, err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+	pinResolvedProviderRequestHost(req)
 
 	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
@@ -278,6 +280,7 @@ func validateGroqKey(ctx context.Context, apiKey string) (bool, error) {
 		return false, err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+	pinResolvedProviderRequestHost(req)
 
 	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
@@ -304,6 +307,7 @@ func validateGeminiKey(ctx context.Context, apiKey string) (bool, error) {
 		return false, err
 	}
 	req.Header.Set("x-goog-api-key", apiKey)
+	pinResolvedProviderRequestHost(req)
 
 	resp, err := apiKeyValidationClient.Do(req)
 	if err != nil {
