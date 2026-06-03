@@ -33,10 +33,15 @@ const REFERER_FALLBACK_HOSTS = new Set([
 ])
 
 function isRequestAllowed(req: Request): boolean {
-  // Prefer the CORS allowlist via the Origin header.
-  if (isAllowedOrigin(req.headers.get("origin"))) return true
+  // Require the CORS allowlist via the Origin header.
+  // Origin header is the authoritative signal from the browser and cannot be omitted
+  // without violating CORS spec for credentialed or cross-origin requests.
+  const origin = req.headers.get("origin")
+  if (isAllowedOrigin(origin)) return true
 
   // Fall back to Referer for requests where Origin is not sent.
+  // Referer is weaker (can be stripped by Referrer-Policy) but still validated against
+  // explicit fallback hosts. We no longer allow both headers to be absent.
   const referer = req.headers.get("referer")
   if (referer) {
     try {
@@ -49,8 +54,9 @@ function isRequestAllowed(req: Request): boolean {
     }
   }
 
-  // Allow if neither Origin nor Referer is present (rare, same-origin POST with strict Referrer-Policy).
-  return !req.headers.get("origin") && !referer
+  // Reject if neither Origin nor Referer is present.
+  // This prevents unauthenticated server-to-server requests from abusing the proxy.
+  return false
 }
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).

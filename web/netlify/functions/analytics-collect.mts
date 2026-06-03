@@ -32,10 +32,23 @@ function normalizeOrigin(header: string | null): string | null {
 }
 
 function isAllowedAnalyticsClient(req: Request): boolean {
+  // Require the Origin header to be present and allowed.
+  // Origin is the authoritative CORS header and is always sent by browsers for cross-origin requests.
+  // This prevents spoofed requests from non-browser HTTP clients.
   const origin = normalizeOrigin(req.headers.get("origin"));
-  const referer = normalizeOrigin(req.headers.get("referer"));
+  if (origin && isAllowedOrigin(origin)) {
+    return true;
+  }
 
-  return [origin, referer].some((header) => isAllowedOrigin(header));
+  // Fall back to Referer validation for same-origin or Referrer-Policy-stripped requests.
+  // Referer is weaker (can be stripped) but still validated against the allowlist.
+  const referer = normalizeOrigin(req.headers.get("referer"));
+  if (referer && isAllowedOrigin(referer)) {
+    return true;
+  }
+
+  // Reject if neither header is present or allowed.
+  return false;
 }
 
 export default async (req: Request) => {
