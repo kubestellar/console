@@ -480,4 +480,15 @@ describe('ListVisualization', () => {
       expect(items[2].textContent).toBe('[count:]')
     })
   })
+
+  // -------------------------------------------------------------------------
+  // Semantic theme token classes (dark-mode migration)
+  // -------------------------------------------------------------------------
+  describe('semantic theme token classes', () => {
+    it('uses divide-border for row dividers, not light-only divide-gray-800', () => {
+      const { container } = renderList({}, { data: SAMPLE_DATA })
+      expect(container.querySelector('.divide-border')).not.toBeNull()
+      expect(container.querySelector('.divide-gray-800')).toBeNull()
+    })
+  })
 })
