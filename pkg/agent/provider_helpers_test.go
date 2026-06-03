@@ -148,3 +148,46 @@ func TestSafeProviderPreallocationSize(t *testing.T) {
 		})
 	}
 }
+
+func TestSSRFDialControl_BlocksPrivateIPs(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "")
+
+	cases := []struct {
+		name    string
+		address string
+		blocked bool
+	}{
+		{name: "public IP allowed", address: "8.8.8.8:443", blocked: false},
+		{name: "loopback blocked", address: "127.0.0.1:80", blocked: true},
+		{name: "private 10.x blocked", address: "10.0.0.1:443", blocked: true},
+		{name: "private 172.16.x blocked", address: "172.16.0.1:443", blocked: true},
+		{name: "private 192.168.x blocked", address: "192.168.1.1:443", blocked: true},
+		{name: "link-local blocked", address: "169.254.169.254:80", blocked: true},
+		{name: "IPv6 loopback blocked", address: "[::1]:443", blocked: true},
+		{name: "public IPv6 allowed", address: "[2607:f8b0:4004:800::200e]:443", blocked: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ssrfDialControl("tcp", tc.address, nil)
+			if tc.blocked {
+				if err == nil {
+					t.Errorf("expected connection to %s to be blocked", tc.address)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected connection to %s to be allowed, got: %v", tc.address, err)
+				}
+			}
+		})
+	}
+}
+
+func TestSSRFDialControl_AllowLocalProviders(t *testing.T) {
+	t.Setenv("ALLOW_LOCAL_PROVIDERS", "true")
+
+	err := ssrfDialControl("tcp", "127.0.0.1:80", nil)
+	if err != nil {
+		t.Errorf("expected loopback to be allowed with ALLOW_LOCAL_PROVIDERS=true, got: %v", err)
+	}
+}

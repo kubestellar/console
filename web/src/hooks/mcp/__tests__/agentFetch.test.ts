@@ -36,7 +36,7 @@ vi.mock('../../../lib/constants/network', async (importOriginal) => {
   }
 })
 
-import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState, getStoredAgentToken } from '../agentFetch'
+import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState, getStoredAgentToken, setAgentToken } from '../agentFetch'
 
 const TOKEN_VALUE = 'test-agent-token-abc123'
 const FRESH_TOKEN = 'fresh-agent-token-xyz789'
@@ -87,18 +87,27 @@ describe('getAgentToken — demo mode bypass', () => {
   })
 })
 
-describe('getAgentToken — sessionStorage cache', () => {
-  it('uses cached token from sessionStorage', async () => {
+describe('getAgentToken — sessionStorage migration (#16903)', () => {
+  it('does NOT use token from sessionStorage (security fix: memory-only)', async () => {
+    // Legacy behavior stored tokens in sessionStorage. After #16903,
+    // tokens are only kept in memory — sessionStorage tokens are cleaned up.
     sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
-    const mockResp = new Response('{}', { status: 200 })
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
+    const tokenResp = new Response(JSON.stringify({ token: 'fresh-from-backend' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const dataResp = new Response('{}', { status: 200 })
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(tokenResp)
+      .mockResolvedValueOnce(dataResp)
 
     await agentFetch('http://127.0.0.1:8585/pods')
     const calls = (globalThis.fetch as Mock).mock.calls
-    // Only the agentFetch call, no /api/agent/token call
-    expect(calls).toHaveLength(1)
-    const headers = calls[0][1].headers as Headers
-    expect(headers.get('Authorization')).toBe(`Bearer ${TOKEN_VALUE}`)
+    // Should fetch from backend since sessionStorage is no longer trusted
+    expect(calls).toHaveLength(2)
+    expect(calls[0][0]).toContain('/api/agent/token')
+    // Legacy token should have been removed from sessionStorage
+    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
   })
 })
 
@@ -211,7 +220,7 @@ describe('getAgentToken — fetch token from backend', () => {
 
 describe('agentFetch — headers', () => {
   it('injects Authorization header with token', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -223,7 +232,7 @@ describe('agentFetch — headers', () => {
   })
 
   it('does not overwrite existing Authorization header', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -281,7 +290,7 @@ describe('agentFetch — headers', () => {
 
 describe('agentFetch — 401 retry', () => {
   it('clears cached token and retries on 401', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const tokenResp = new Response(JSON.stringify({ token: FRESH_TOKEN }), {
       status: 200,
@@ -301,7 +310,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('does not retry 401 if caller provided Authorization header', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     globalThis.fetch = vi.fn().mockResolvedValue(resp401)
 
@@ -315,7 +324,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('returns 401 if fresh token is same as stale token', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const tokenResp = new Response(JSON.stringify({ token: TOKEN_VALUE }), {
       status: 200,
@@ -332,7 +341,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('returns 401 if fresh token fetch returns empty', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const emptyTokenResp = new Response(JSON.stringify({ token: '' }), {
       status: 200,

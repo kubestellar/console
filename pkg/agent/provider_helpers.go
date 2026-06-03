@@ -1,10 +1,14 @@
 package agent
 
 import (
+	"context"
+	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -14,9 +18,87 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 // caller has not already attached a deadline.
 const cliProviderExecutionTimeout = 5 * time.Minute
 
+// ssrfSafeDialer is a net.Dialer that rejects connections to private/link-local
+// IP addresses at connect time. This prevents DNS rebinding attacks where a
+// hostname resolves to a public IP at validation time but re-resolves to an
+// internal IP at request time (CWE-918, #16902).
+var ssrfSafeDialer = &net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+	Control:   ssrfDialControl,
+}
+
+// ssrfDialControl is a socket control function that inspects the resolved
+// address before the connection is established and rejects private IPs.
+func ssrfDialControl(network, address string, _ syscall.RawConn) error {
+	if allowLocalProviders() {
+		return nil
+	}
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("SSRF guard: cannot parse address %q: %w", address, err)
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return fmt.Errorf("SSRF guard: invalid IP %q", host)
+	}
+	if isPrivateIP(ip) {
+		return fmt.Errorf("SSRF guard: connection to private IP %s blocked (CWE-918)", ip)
+	}
+	return nil
+}
+
+// ssrfSafeTransport is an http.Transport that uses ssrfSafeDialer to block
+// connections to internal/private networks and disables automatic redirects
+// validation (handled at the client level).
+var ssrfSafeTransport = &http.Transport{
+	DialContext:         ssrfSafeDialer.DialContext,
+	MaxIdleConns:        100,
+	IdleConnTimeout:     90 * time.Second,
+	TLSHandshakeTimeout: 10 * time.Second,
+}
+
+// ssrfCheckRedirect validates that redirect targets do not point to private IPs.
+func ssrfCheckRedirect(req *http.Request, via []*http.Request) error {
+	const maxRedirects = 10
+	if len(via) >= maxRedirects {
+		return fmt.Errorf("stopped after %d redirects", maxRedirects)
+	}
+	if allowLocalProviders() {
+		return nil
+	}
+	host := req.URL.Hostname()
+	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
+	defer cancel()
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	if err != nil {
+		// If it's a literal IP, check directly
+		if ip := net.ParseIP(host); ip != nil {
+			if isPrivateIP(ip) {
+				return fmt.Errorf("SSRF guard: redirect to private IP %s blocked", ip)
+			}
+			return nil
+		}
+		// DNS failed — fail closed
+		return fmt.Errorf("SSRF guard: cannot resolve redirect target %q: %w", host, err)
+	}
+	for _, ipStr := range ips {
+		if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
+			return fmt.Errorf("SSRF guard: redirect to private IP %s blocked", ip)
+		}
+	}
+	return nil
+}
+
 // aiProviderHTTPClient is reused across AI provider API calls to enable
-// connection pooling and reduce per-request allocation overhead.
-var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+// connection pooling and reduce per-request allocation overhead. It uses an
+// SSRF-safe transport that rejects connections to private/internal IPs at
+// dial time, preventing DNS rebinding attacks (CWE-918, #16902).
+var aiProviderHTTPClient = &http.Client{
+	Timeout:       aiProviderHTTPTimeout,
+	Transport:     ssrfSafeTransport,
+	CheckRedirect: ssrfCheckRedirect,
+}
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
