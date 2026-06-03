@@ -216,6 +216,27 @@ describe('createCardComponent', () => {
       expect(result.error).toMatch(/constructor/)
     })
 
+    it("blocks bracket-access ['prototype'] pattern", () => {
+      const code = `
+        var f = ({})['prototype'];
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/prototype/)
+    })
+
+    it('blocks computed alias access to dangerous keys', () => {
+      const code = `
+        const key = 'constructor';
+        var f = ({})[key];
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/computed bracket access|\[key\] -> constructor/)
+    })
+
     it('blocks AsyncFunction references', () => {
       const code = `
         var AF = AsyncFunction;
@@ -227,7 +248,29 @@ describe('createCardComponent', () => {
     })
   })
 
-  // Security regression tests (#6677 — deep-freeze injected scope)
+  // Security regression tests (#16505 — Proxy membrane hardening)
+  describe('Proxy membrane hardening (#16505)', () => {
+    it('blocks prototype traversal on sandbox scope values at runtime', () => {
+      const code = `
+        var proto = Object.getPrototypeOf(React);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/prototype traversal/)
+    })
+
+    it('blocks prototype traversal on sandbox module state at runtime', () => {
+      const code = `
+        var proto = Object.getPrototypeOf(module.exports);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/prototype traversal/)
+    })
+  })
+
   describe('Deep-frozen scope (#6677)', () => {
     it('injected scope values are deeply frozen', () => {
       // Try to mutate commonComparators (a plain object on the scope).
