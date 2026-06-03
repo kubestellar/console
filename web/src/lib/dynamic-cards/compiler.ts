@@ -138,22 +138,30 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // Freeze the scope map itself (preserves the previous shallow-freeze behavior).
     Object.freeze(scope)
 
-    // #6676: Static analysis — reject compiled code that references the
+    // #16505: Static analysis — reject compiled code that references the
     // constructor-escape patterns or dynamic function constructors. This
-    // is a defense-in-depth layer on top of identifier shadowing: without
-    // it, `(function(){}).constructor('code')()` or `(1).__proto__.constructor`
-    // could bypass the BLOCKED_GLOBALS param shadowing because they reach
-    // Function via the prototype chain rather than the global binding.
+    // is a defense-in-depth layer on top of identifier shadowing.
     //
-    // We intentionally match on the raw compiled output (post-Sucrase), so
-    // renaming, string concatenation, or bracket access `obj['constructor']`
-    // still bypasses this — but combined with Function/AsyncFunction/
-    // GeneratorFunction param shadowing and the runtime throw injected
-    // below, the common escape routes are closed.
+    // Block ALL forms of prototype chain access including:
+    // - Direct access: .constructor, .prototype, .__proto__
+    // - Bracket access: ["constructor"], ['constructor'], [`constructor`]
+    // - Chain traversal: []["filter"]["constructor"]
+    // - Property access to dangerous built-ins
     const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
-      { re: /\.constructor\s*\(/, label: '.constructor(' },
-      { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
+      // Dot notation access to dangerous properties
+      { re: /\.constructor\b/, label: '.constructor' },
+      { re: /\.prototype\b/, label: '.prototype' },
+      { re: /\.__proto__\b/, label: '.__proto__' },
+      
+      // Bracket notation access to dangerous properties (all quote styles)
+      { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
+      { re: /\[\s*(['"`])prototype\1\s*\]/, label: "['prototype']" },
+      { re: /\[\s*(['"`])__proto__\1\s*\]/, label: "['__proto__']" },
+      
+      // Word boundary matches for __proto__ (catches standalone references)
       { re: /\b__proto__\b/, label: '__proto__' },
+      
+      // Function constructor references
       { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
       { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
     ]

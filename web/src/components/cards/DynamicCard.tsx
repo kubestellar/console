@@ -20,6 +20,42 @@ const DEFAULT_DYNAMIC_CARD_EXPANDABLE_COLUMN_WIDTH = 'minmax(0, 1fr)'
 const DEFAULT_DYNAMIC_CARD_BADGE_COLUMN_WIDTH = 'fit-content(8rem)'
 const DEFAULT_DYNAMIC_CARD_COMPACT_COLUMN_WIDTH = 'fit-content(10rem)'
 
+/**
+ * #16506: Validate apiEndpoint URL to prevent token exfiltration.
+ * Only same-origin URLs (starting with /) are allowed to receive auth tokens.
+ * External URLs are rejected to prevent session hijacking.
+ */
+function validateApiEndpoint(endpoint: string): { isValid: boolean; isSameOrigin: boolean; error?: string } {
+  if (!endpoint) {
+    return { isValid: false, isSameOrigin: false, error: 'Empty endpoint' }
+  }
+
+  // Allow relative URLs (same-origin)
+  if (endpoint.startsWith('/')) {
+    return { isValid: true, isSameOrigin: true }
+  }
+
+  // Parse absolute URLs
+  try {
+    const url = new URL(endpoint)
+    const currentOrigin = window.location.origin
+
+    // Only allow same-origin absolute URLs
+    if (url.origin === currentOrigin) {
+      return { isValid: true, isSameOrigin: true }
+    }
+
+    // Reject external URLs to prevent token exfiltration
+    return {
+      isValid: false,
+      isSameOrigin: false,
+      error: `External URLs not allowed (attempted: ${url.origin}, expected: ${currentOrigin} or relative path)`,
+    }
+  } catch {
+    return { isValid: false, isSameOrigin: false, error: 'Invalid URL format' }
+  }
+}
+
 function getDynamicCardColumnWidth(column: NonNullable<DynamicCardDefinition_T1['columns']>[number]): string {
   const explicitWidth = column.width?.trim()
   if (explicitWidth) return explicitWidth
@@ -154,6 +190,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
   const apiEndpoint = cardDefinition?.apiEndpoint || ''
 
+  // #16506: Validate apiEndpoint to prevent token exfiltration
+  const endpointValidation = apiEndpoint ? validateApiEndpoint(apiEndpoint) : { isValid: false, isSameOrigin: false }
+  const isInvalidEndpoint = isApiSource && apiEndpoint && !endpointValidation.isValid
+
   // API data via useCache (persists across navigation, SWR pattern, demo fallback)
   const {
     data: apiData,
@@ -168,9 +208,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     initialData: [],
     demoData: [{ id: 'demo-1', name: 'Demo Item', status: 'active' }],
     persist: true,
-    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
+    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !isInvalidEndpoint && !!apiEndpoint,
     fetcher: async () => {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      // Only attach auth token if endpoint is same-origin (validated above)
+      const token = endpointValidation.isSameOrigin ? localStorage.getItem(STORAGE_KEY_TOKEN) : null
       const res = await fetch(apiEndpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
@@ -242,6 +283,18 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
         <p className="text-sm text-yellow-400">{t('dynamicCard.missingEndpoint')}</p>
         <p className="text-xs text-muted-foreground mt-1">
           {t('dynamicCard.missingEndpointHint')}
+        </p>
+      </div>
+    )
+  }
+
+  if (isInvalidEndpoint) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+        <AlertTriangle className="w-6 h-6 text-red-400 mb-2" />
+        <p className="text-sm text-red-400">Security: Invalid API Endpoint</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {endpointValidation.error || 'Only same-origin URLs are allowed'}
         </p>
       </div>
     )
