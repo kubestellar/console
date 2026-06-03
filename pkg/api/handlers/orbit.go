@@ -211,11 +211,9 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 	// Set owner to current user.
 	m.Owner = userID
 
-	if m.ID == "" {
-		// Use millisecond-precision timestamp plus a random suffix to avoid
-		// collisions when two missions are created in the same second (#7800).
-		m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
-	}
+	// SECURITY: Always generate server-side IDs to prevent IDOR attacks where
+	// a client-supplied ID overwrites another user's mission (CWE-639, #16698).
+	m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
 	if userID != uuid.Nil {
 		m.OwnerID = userID.String()
 	} else {

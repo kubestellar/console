@@ -110,7 +110,43 @@ var (
 	// initOnce ensures InitTokenRevocation is idempotent (#6586). Calling it a
 	// second time would otherwise spawn additional cleanupLoop goroutines.
 	initOnce sync.Once
+
+	// revokedUsers tracks user IDs whose sessions have been invalidated.
+	// When a user is deleted or demoted, their ID is added here with a
+	// timestamp. JWTs issued before that timestamp are rejected (#16669).
+	revokedUsers = &revokedUserCache{
+		users: make(map[uuid.UUID]time.Time),
+	}
 )
+
+// revokedUserCache is an in-memory cache of user IDs whose tokens should be
+// rejected if issued before the revocation timestamp. This closes the gap
+// where a deleted/demoted user retains API access until JWT expiry (CWE-863).
+type revokedUserCache struct {
+	sync.RWMutex
+	users map[uuid.UUID]time.Time // userID -> tokens issued before this time are invalid
+}
+
+// RevokeUser invalidates all tokens for a user issued before now.
+// Call this when a user is deleted or demoted (#16669).
+func RevokeUser(userID uuid.UUID) {
+	revokedUsers.Lock()
+	revokedUsers.users[userID] = time.Now()
+	revokedUsers.Unlock()
+	slog.Info("[Auth] revoked all tokens for user", "userID", userID)
+}
+
+// isUserRevoked checks whether a token issued at the given time should be
+// rejected for the given user.
+func isUserRevoked(userID uuid.UUID, issuedAt time.Time) bool {
+	revokedUsers.RLock()
+	revokedAt, ok := revokedUsers.users[userID]
+	revokedUsers.RUnlock()
+	if !ok {
+		return false
+	}
+	return issuedAt.Before(revokedAt)
+}
 
 // InitTokenRevocation wires the persistent store into the revocation layer.
 // It loads all currently-revoked tokens from the database into the in-memory
@@ -580,6 +616,15 @@ func JWTAuth(secret string, agentToken ...string) fiber.Handler {
 				audit.Log(c, audit.ActionAuthFailed, "endpoint", c.Path(), "revoked_token")
 				return fiber.NewError(fiber.StatusUnauthorized, "Token has been revoked")
 			}
+		}
+
+		// Check if the user's tokens have been invalidated (user deleted or
+		// demoted). Tokens issued before the revocation timestamp are rejected
+		// (#16669, CWE-863).
+		if claims.IssuedAt != nil && isUserRevoked(claims.UserID, claims.IssuedAt.Time) {
+			slog.Info("[Auth] token for revoked user", "path", c.Path(), "userID", claims.UserID)
+			audit.Log(c, audit.ActionAuthFailed, "endpoint", c.Path(), "revoked_user")
+			return fiber.NewError(fiber.StatusUnauthorized, "User session has been invalidated")
 		}
 
 		// Store user info in context

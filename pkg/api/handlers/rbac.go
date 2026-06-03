@@ -115,6 +115,14 @@ func (h *RBACHandler) UpdateUserRole(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update user role")
 	}
 
+	// If the user was demoted (role reduced), invalidate their active tokens
+	// so stale JWTs cannot access endpoints above their new privilege level
+	// (#16669, CWE-863). Admin endpoints already do a fresh DB check, but
+	// this ensures immediate revocation for defense-in-depth.
+	if isRoleDemotion(models.UserRole(oldRole), req.Role) {
+		middleware.RevokeUser(targetID)
+	}
+
 	audit.Log(c, audit.ActionUpdateRole, "user", targetUserID,
 		fmt.Sprintf("%s->%s", oldRole, string(req.Role)))
 
@@ -149,9 +157,31 @@ func (h *RBACHandler) DeleteConsoleUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to delete user")
 	}
 
+	// Invalidate all active tokens for the deleted user (#16669, CWE-863).
+	middleware.RevokeUser(targetID)
+
 	audit.Log(c, audit.ActionDeleteUser, "user", targetUserID)
 
 	return c.JSON(fiber.Map{"success": true})
+}
+
+// roleWeight returns a numeric weight for role comparison. Higher = more privilege.
+func roleWeight(r models.UserRole) int {
+	switch r {
+	case models.UserRoleAdmin:
+		return 3
+	case models.UserRoleEditor:
+		return 2
+	case models.UserRoleViewer:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// isRoleDemotion returns true if newRole has fewer privileges than oldRole.
+func isRoleDemotion(oldRole, newRole models.UserRole) bool {
+	return roleWeight(newRole) < roleWeight(oldRole)
 }
 
 // GetUserManagementSummary returns an overview of users.
