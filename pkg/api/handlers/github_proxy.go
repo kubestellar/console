@@ -464,8 +464,8 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 // to the encrypted server-side settings file. The token is NOT stored in
 // localStorage after this migration.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
-	// Saving the shared GitHub token updates global console settings, so require
-	// an existing admin and rely on the centralized bootstrap guard.
+	// Verify admin role — no auto-promotion (CWE-269, #16653).
+	// Bootstrap only happens during OAuth login flow, gated by BOOTSTRAP_ADMIN_ALLOWED.
 	if err := requireAdmin(c, h.store); err != nil {
 		return err
 	}

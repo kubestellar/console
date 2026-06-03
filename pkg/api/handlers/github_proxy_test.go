@@ -37,7 +37,7 @@ func setupGitHubProxyTestSettings(t *testing.T) {
 	}
 }
 
-func TestSaveToken_RejectsNonAdminWhenNoAdminsExist(t *testing.T) {
+func TestSaveToken_RejectsNonAdmin(t *testing.T) {
 	setupGitHubProxyTestSettings(t)
 
 	app := fiber.New()
@@ -59,8 +59,9 @@ func TestSaveToken_RejectsNonAdminWhenNoAdminsExist(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveToken request failed: %v", err)
 	}
+	// Fix for CWE-269 (#16653): viewers must NOT be auto-promoted to admin
 	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected 403 for non-admin save attempt, got %d", resp.StatusCode)
+		t.Fatalf("expected 403 Forbidden for non-admin user, got %d", resp.StatusCode)
 	}
 	if viewer.Role != models.UserRoleViewer {
 		t.Fatalf("expected viewer role to remain unchanged, got %q", viewer.Role)
