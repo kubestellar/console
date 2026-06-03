@@ -386,15 +386,21 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 		return s.errorResponse(msg.ID, "empty_agent", "Agent name cannot be empty")
 	}
 
-	// For session-based selection, we'd need a session ID from the request
-	// For now, update the default agent
-	previousAgent := s.registry.GetDefaultName()
-	if err := s.registry.SetDefault(req.Agent); err != nil {
-		slog.Error("set default agent error", "error", err)
+	// SECURITY (#16757): Scope agent selection to the caller's session rather
+	// than mutating the global default for all users. If no sessionId is
+	// provided, generate a transient one so the change is still scoped.
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = "__anon__"
+	}
+
+	previousAgent := s.registry.GetSelectedAgent(sessionID)
+	if err := s.registry.SetSelectedAgent(sessionID, req.Agent); err != nil {
+		slog.Error("set selected agent error", "error", err, "sessionID", sessionID)
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
-	slog.Info("agent selected", "agent", req.Agent, "previous", previousAgent)
+	slog.Info("agent selected (session-scoped)", "agent", req.Agent, "previous", previousAgent, "sessionID", sessionID)
 
 	return protocol.Message{
 		ID:   msg.ID,

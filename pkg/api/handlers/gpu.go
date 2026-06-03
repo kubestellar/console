@@ -223,16 +223,16 @@ func requireOwnerOrAdmin(c *fiber.Ctx, user *models.User, reservationOwnerID uui
 }
 
 // ListReservations lists GPU reservations.
-// All authenticated users see all reservations. ?mine=true filters to caller's own.
+// Non-admin users see only their own reservations (CWE-862, #16711).
+// Admins see all reservations. ?mine=true always filters to caller's own.
 func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 	user, err := h.getCallerUser(c)
 	if err != nil {
 		return err
 	}
 
-	// All authenticated users see all reservations.
-	// ?mine=true filter returns only the caller's reservations.
-	mine := c.Query("mine") == "true"
+	// Non-admins are restricted to their own reservations regardless of query params.
+	mine := c.Query("mine") == "true" || user.Role != models.UserRoleAdmin
 	if mine {
 		reservations, err := h.store.ListUserGPUReservations(c.UserContext(), user.ID)
 		if err != nil {
@@ -255,9 +255,10 @@ func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 }
 
 // GetReservation gets a single GPU reservation by ID.
-// All authenticated users may view any reservation.
+// Non-admin users may only view their own reservations (CWE-862, #16711).
 func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
-	if _, uerr := h.getCallerUser(c); uerr != nil {
+	user, uerr := h.getCallerUser(c)
+	if uerr != nil {
 		return uerr
 	}
 
@@ -272,6 +273,10 @@ func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 	}
 	if reservation == nil {
 		return fiber.NewError(fiber.StatusNotFound, "Reservation not found")
+	}
+
+	if err := requireOwnerOrAdmin(c, user, reservation.UserID); err != nil {
+		return err
 	}
 
 	return c.JSON(reservation)

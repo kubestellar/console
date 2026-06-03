@@ -33,22 +33,43 @@ func decodeOptionalBool(value any) (bool, bool) {
 	return boolValue, ok
 }
 
+// allowedClientRoles is the set of message roles that clients may supply in
+// chat history. The "system" role is server-only — accepting it from clients
+// would allow prompt-injection attacks that override backend safety policies
+// (CWE-20, #16756).
+var allowedClientRoles = map[string]bool{
+	"user":      true,
+	"assistant": true,
+}
+
 func decodeChatHistory(value any) ([]protocol.ChatMessage, bool) {
 	switch history := value.(type) {
 	case nil:
 		return nil, true
 	case []protocol.ChatMessage:
-		return history, true
+		sanitized := make([]protocol.ChatMessage, 0, len(history))
+		for _, msg := range history {
+			if allowedClientRoles[msg.Role] {
+				sanitized = append(sanitized, msg)
+			}
+		}
+		return sanitized, true
 	case []any:
 		decodedHistory := make([]protocol.ChatMessage, 0, len(history))
 		for _, item := range history {
 			switch message := item.(type) {
 			case protocol.ChatMessage:
-				decodedHistory = append(decodedHistory, message)
+				if allowedClientRoles[message.Role] {
+					decodedHistory = append(decodedHistory, message)
+				}
 			case map[string]any:
 				role, ok := message["role"].(string)
 				if !ok {
 					return nil, false
+				}
+				if !allowedClientRoles[role] {
+					// Silently drop disallowed roles (e.g. "system").
+					continue
 				}
 				content, ok := message["content"].(string)
 				if !ok {

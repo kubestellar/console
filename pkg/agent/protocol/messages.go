@@ -174,6 +174,7 @@ type AgentsListPayload struct {
 // SelectAgentRequest is the payload for selecting an AI agent
 type SelectAgentRequest struct {
 	Agent           string `json:"agent"`
+	SessionID       string `json:"sessionId,omitempty"`
 	PreserveHistory bool   `json:"preserveHistory,omitempty"`
 }
 
