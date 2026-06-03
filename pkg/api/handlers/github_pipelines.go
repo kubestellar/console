@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -483,14 +485,14 @@ func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 }
 
 func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
+	if middleware.GetUserID(c) == uuid.Nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
+	}
 	if err := RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.mutationToken == "" {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Workflow mutations disabled on this deployment"})
-	}
-	if err := requireAdmin(c, h.store); err != nil {
-		return err
 	}
 	op := c.Query("op")
 	repo := c.Query("repo")

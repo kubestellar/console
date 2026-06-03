@@ -87,6 +87,27 @@ func TestJWTAuth(t *testing.T) {
 		assert.Equal(t, 401, restrictedResp.StatusCode)
 	})
 
+	t.Run("GitHub Pipelines Widget Bypass Is Read Only", func(t *testing.T) {
+		widgetApp := fiber.New()
+		handler := JWTAuth("test-secret")
+		widgetApp.Get("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
+			return c.SendString("ok")
+		})
+		widgetApp.Post("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
+			return c.SendString("should-not-reach")
+		})
+
+		getReq := httptest.NewRequest("GET", "/api/github-pipelines?source=ubersicht-widget&view=pulse", nil)
+		getResp, err := widgetApp.Test(getReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, getResp.StatusCode)
+
+		mutateReq := httptest.NewRequest("POST", "/api/github-pipelines?source=ubersicht-widget&view=mutate", nil)
+		mutateResp, err := widgetApp.Test(mutateReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, mutateResp.StatusCode)
+	})
+
 	t.Run("Query Param Fallback Rejected On Non-Allowlisted Stream Path (#6585)", func(t *testing.T) {
 		// #6585 — _token query param is no longer accepted on arbitrary
 		// paths just because they end in /stream. The endpoint must be
