@@ -10,7 +10,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../..
 import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps, RSSItemRaw } from './types'
-import { PRESET_FEEDS, CORS_PROXIES } from './constants'
+import { PRESET_FEEDS, CORS_PROXIES, validateFeedUrl } from './constants'
 import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
@@ -229,6 +229,13 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
   // Helper: Fetch a single RSS feed URL
   const fetchSingleFeed = useCallback(async (feedUrl: string): Promise<FeedItem[]> => {
+    // Validate URL before proxying to prevent SSRF (defense-in-depth)
+    const validation = validateFeedUrl(feedUrl)
+    if (!validation.valid) {
+      console.warn(`[RSS] Feed fetch blocked: ${validation.error}`)
+      return []
+    }
+
     const FETCH_TIMEOUT_MS = 10000
 
     for (const proxy of CORS_PROXIES) {
@@ -599,6 +606,15 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     if (newFeedUrl.trim()) {
       const rawUrl = newFeedUrl.trim()
       const url = normalizeUrl(rawUrl)
+
+      // Validate URL before proxying to prevent SSRF
+      const validation = validateFeedUrl(url)
+      if (!validation.valid) {
+        // Show validation error via existing error state or silently reject
+        console.warn(`[RSS] Feed URL rejected: ${validation.error}`)
+        return
+      }
+
       let defaultName: string
       const subredditMatch = rawUrl.match(/^r\/(\w+)$/i) || url.match(/reddit\.com\/r\/(\w+)/)
       if (subredditMatch) {

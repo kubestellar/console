@@ -6,6 +6,65 @@ export const FEEDS_STORAGE_KEY = 'rss_feed_configs'
 export const CACHE_KEY_PREFIX = 'rss_feed_cache_'
 export const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes
 
+/**
+ * Validate a feed URL before proxying. Rejects non-HTTPS schemes,
+ * private/reserved IP ranges, and URLs with embedded credentials.
+ * Prevents SSRF via public CORS proxies (CWE-918).
+ */
+export function validateFeedUrl(url: string): { valid: boolean; error?: string } {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return { valid: false, error: 'Invalid URL format' }
+  }
+
+  // Only allow https (and http for localhost dev feeds)
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return { valid: false, error: 'Only HTTP/HTTPS feeds are allowed' }
+  }
+
+  // Block embedded credentials
+  if (parsed.username || parsed.password) {
+    return { valid: false, error: 'URLs with embedded credentials are not allowed' }
+  }
+
+  // Block private/reserved IP ranges
+  const hostname = parsed.hostname.toLowerCase()
+  if (isPrivateHost(hostname)) {
+    return { valid: false, error: 'URLs pointing to private/internal networks are not allowed' }
+  }
+
+  return { valid: true }
+}
+
+/** Check if a hostname resolves to a private/reserved address range. */
+function isPrivateHost(hostname: string): boolean {
+  // IPv4 private ranges
+  const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (ipv4Match) {
+    const [, a, b] = ipv4Match.map(Number)
+    if (a === 10) return true                          // 10.0.0.0/8
+    if (a === 172 && b >= 16 && b <= 31) return true   // 172.16.0.0/12
+    if (a === 192 && b === 168) return true             // 192.168.0.0/16
+    if (a === 127) return true                         // 127.0.0.0/8
+    if (a === 169 && b === 254) return true             // 169.254.0.0/16 (link-local)
+    if (a === 0) return true                           // 0.0.0.0/8
+  }
+
+  // IPv6 loopback and private
+  if (hostname === '[::1]' || hostname === '[::ffff:127.0.0.1]') return true
+  if (hostname.startsWith('[fc') || hostname.startsWith('[fd')) return true // fc00::/7
+  if (hostname.startsWith('[fe80:')) return true // link-local
+
+  // Common private hostnames
+  if (hostname === 'localhost') return true
+  if (hostname.endsWith('.local')) return true
+  if (hostname.endsWith('.internal')) return true
+
+  return false
+}
+
 // Popular feed presets organized by category.
 // Each entry carries an explicit `category` field so the UI can group presets
 // without URL substring checks (which CodeQL flags as js/incomplete-url-substring-sanitization, #9119).
