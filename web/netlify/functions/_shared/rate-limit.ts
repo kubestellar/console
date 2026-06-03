@@ -9,6 +9,7 @@ interface RateLimitBlobPage {
 const UNKNOWN_SUBJECT = "unknown";
 const CLEANUP_BUCKET_OFFSET = 2;
 const CLEANUP_DELETE_LIMIT = 25;
+const STORE_ERROR_RETRY_AFTER_SECONDS = 60;
 
 export interface SimpleRateLimitOptions {
   storeName: string;
@@ -100,7 +101,7 @@ export async function enforceSimpleRateLimit(
     await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
   } catch {
     // Fail CLOSED on store errors — deny by default (CWE-400)
-    return { limited: true, retryAfterSeconds: 60 };
+    return { limited: true, retryAfterSeconds: STORE_ERROR_RETRY_AFTER_SECONDS };
   }
 
   return { limited: false, retryAfterSeconds: 0 };
