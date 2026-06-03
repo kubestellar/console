@@ -30,6 +30,34 @@ const MAX_RETRIES = 2;
 /** Base delay between retries in milliseconds */
 const RETRY_BASE_DELAY_MS = 500;
 
+/** Negative cache TTL: cache 404/error responses for 60 seconds to prevent repeated lookups (#16817) */
+const NEGATIVE_CACHE_TTL_MS = 60_000;
+
+/**
+ * Allowed path prefixes for mission browsing (#16817).
+ * Only these top-level directories are valid mission content.
+ * Requests for paths outside this allowlist are rejected.
+ */
+const ALLOWED_PATH_PREFIXES = [
+  "",            // root listing
+  "fixes",
+  "tutorials",
+  "solutions",
+  "operations",
+  "observability",
+  "security",
+  "networking",
+  "storage",
+  "compute",
+  "governance",
+  "gitops",
+  "ai",
+  "multicluster",
+  "platform",
+  "getting-started",
+  "advanced",
+];
+
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
   methods: "GET, OPTIONS",
@@ -53,6 +81,13 @@ function hasInvalidPathInput(value: string): boolean {
   return value.length > 1000 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
 }
 
+/** Check if path starts with an allowed prefix (#16817). */
+function isAllowedPath(path: string): boolean {
+  if (path === "") return true;
+  const topLevel = path.split("/")[0];
+  return ALLOWED_PATH_PREFIXES.includes(topLevel);
+}
+
 export default async (request: Request): Promise<Response> => {
   if (request.method === "OPTIONS") {
     return handlePreflight(request, CORS_OPTS);
@@ -65,22 +100,34 @@ export default async (request: Request): Promise<Response> => {
   if (path && hasInvalidPathInput(path)) {
     return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
   }
+  if (!isAllowedPath(path)) {
+    return jsonResponse(corsHeaders, { error: "path not allowed" }, 400);
+  }
   const cacheKey = `browse:${path}`;
 
   try {
     // Check Netlify Blobs cache first
     const store = getStore("missions-cache");
     const cached = await store.get(cacheKey, { type: "json" }) as BrowseCacheEntry | null;
-    if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-      return new Response(cached.body, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
-          "X-Cache": "HIT",
-          ...corsHeaders,
-        },
-      });
+    if (cached) {
+      const age = Date.now() - cached.fetchedAt;
+      const isNegative = cached.body.includes('"error"');
+      const ttl = isNegative ? NEGATIVE_CACHE_TTL_MS : CACHE_TTL_MS;
+      if (age < ttl) {
+        // Serve negative cache entries as 404
+        if (isNegative) {
+          return jsonResponse(corsHeaders, { error: "not_found" }, 404);
+        }
+        return new Response(cached.body, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
+            "X-Cache": "HIT",
+            ...corsHeaders,
+          },
+        });
+      }
     }
 
     // Fetch from GitHub Contents API with retry for transient errors (#10966)
@@ -115,8 +162,11 @@ export default async (request: Request): Promise<Response> => {
           },
         });
       }
+      // Negative-cache the error briefly to prevent repeated lookups of invalid paths (#16817)
+      const negativeEntry: BrowseCacheEntry = { body: JSON.stringify({ error: "not_found" }), fetchedAt: Date.now() };
+      store.setJSON(cacheKey, negativeEntry).catch(() => { /* best-effort */ });
       const code = resp.status === 403 || resp.status === 429 ? "rate_limited" : "github_error";
-      return jsonResponse(corsHeaders, { error: "upstream request failed", code }, 502);
+      return jsonResponse(corsHeaders, { error: "upstream request failed", code }, resp.status === 404 ? 404 : 502);
     }
 
     // Guard against oversized upstream responses
