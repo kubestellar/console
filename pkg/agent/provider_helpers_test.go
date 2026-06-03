@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"context"
 	"math"
+	"net"
 	"strings"
 	"testing"
 )
@@ -146,5 +148,66 @@ func TestSafeProviderPreallocationSize(t *testing.T) {
 				t.Fatalf("safeProviderPreallocationSize(%d, %d) = %d, want %d", tc.base, tc.extra, got, tc.want)
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SSRF protection tests (#16902)
+// ---------------------------------------------------------------------------
+
+func TestSSRFSafeDialContext_BlocksPrivateIPs(t *testing.T) {
+	privateIPs := []string{
+		"127.0.0.1",
+		"10.0.0.1",
+		"172.16.0.1",
+		"192.168.1.1",
+		"169.254.169.254",
+	}
+	for _, ip := range privateIPs {
+		parsed := net.ParseIP(ip)
+		if parsed == nil {
+			t.Fatalf("failed to parse test IP: %s", ip)
+		}
+		if !isPrivateIP(parsed) {
+			t.Errorf("expected isPrivateIP(%s) = true, got false", ip)
+		}
+	}
+
+	publicIPs := []string{
+		"8.8.8.8",
+		"1.1.1.1",
+		"203.0.113.1",
+	}
+	for _, ip := range publicIPs {
+		parsed := net.ParseIP(ip)
+		if parsed == nil {
+			t.Fatalf("failed to parse test IP: %s", ip)
+		}
+		if isPrivateIP(parsed) {
+			t.Errorf("expected isPrivateIP(%s) = false, got true", ip)
+		}
+	}
+}
+
+func TestSSRFSafeDialContext_RejectsInvalidAddress(t *testing.T) {
+	ctx := context.Background()
+	_, err := ssrfSafeDialContext(ctx, "tcp", "example.com")
+	if err == nil {
+		t.Error("expected error for address without port, got nil")
+	}
+}
+
+func TestSSRFSafeTransport_IsConfigured(t *testing.T) {
+	if ssrfSafeTransport == nil {
+		t.Fatal("ssrfSafeTransport is nil")
+	}
+	if ssrfSafeTransport.DialContext == nil {
+		t.Fatal("ssrfSafeTransport.DialContext is nil")
+	}
+	if aiProviderHTTPClient.Transport != ssrfSafeTransport {
+		t.Fatal("aiProviderHTTPClient does not use ssrfSafeTransport")
+	}
+	if aiProviderHTTPClient.CheckRedirect == nil {
+		t.Fatal("aiProviderHTTPClient.CheckRedirect is nil — redirects are unrestricted")
 	}
 }

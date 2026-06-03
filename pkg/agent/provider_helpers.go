@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"context"
+	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -14,9 +17,73 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 // caller has not already attached a deadline.
 const cliProviderExecutionTimeout = 5 * time.Minute
 
+// ssrfSafeDialer rejects connections to private/link-local IP addresses after
+// DNS resolution, preventing DNS rebinding attacks (CWE-918). The dialer
+// validates every resolved IP before establishing a TCP connection.
+var ssrfSafeDialer = &net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
+
+// ssrfSafeDialContext resolves the address and rejects connections to private
+// IPs unless ALLOW_LOCAL_PROVIDERS is set. This runs on every connection
+// attempt, not just at save time, closing the DNS rebinding window.
+func ssrfSafeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	if allowLocalProviders() {
+		return ssrfSafeDialer.DialContext(ctx, network, addr)
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid address %q: %w", addr, err)
+	}
+
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	if err != nil {
+		return nil, fmt.Errorf("DNS resolution failed for %q: %w", host, err)
+	}
+
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		if isPrivateIP(ip) {
+			return nil, fmt.Errorf("connection to private IP %s (host %q) blocked — potential SSRF", ipStr, host)
+		}
+	}
+
+	// Connect to the first resolved public IP to avoid TOCTOU with system resolver.
+	return ssrfSafeDialer.DialContext(ctx, network, net.JoinHostPort(ips[0], port))
+}
+
+// ssrfSafeTransport is an HTTP transport that uses ssrfSafeDialContext to
+// reject connections to private IPs and limits redirects to prevent SSRF.
+var ssrfSafeTransport = &http.Transport{
+	DialContext:           ssrfSafeDialContext,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
+
+// maxSSRFRedirects limits the number of redirects followed by the AI provider
+// HTTP client. Each redirect target is validated by ssrfSafeDialContext.
+const maxSSRFRedirects = 5
+
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
-var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+// It uses ssrfSafeTransport to prevent SSRF via DNS rebinding (CWE-918, #16902).
+var aiProviderHTTPClient = &http.Client{
+	Timeout:   aiProviderHTTPTimeout,
+	Transport: ssrfSafeTransport,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if len(via) >= maxSSRFRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxSSRFRedirects)
+		}
+		return nil
+	},
+}
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
