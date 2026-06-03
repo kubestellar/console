@@ -3,7 +3,7 @@ import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
 import { fetchSSE } from '../../lib/sseClient'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, SHORT_DELAY_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
@@ -171,7 +171,7 @@ export function useHelmReleases(cluster?: string) {
       const url = `/api/gitops/helm-releases?${params}`
 
       // Skip API calls when using demo token — provide demo releases
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       if (isDemoMode()) {
         const demoReleases = getDemoHelmReleases()
         if (!cluster) {
@@ -396,7 +396,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       const url = `/api/gitops/helm-history?${params}`
 
       // Skip API calls when using demo token — provide demo history
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       if (isDemoMode()) {
         const demoHistory = getDemoHelmHistory()
         setHistory(demoHistory)
@@ -546,7 +546,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       const url = `/api/gitops/helm-values?${params}`
 
       // Skip API calls when using demo token — provide demo values
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       if (isDemoMode()) {
         const demoValues = getDemoHelmValues()
         setValues(demoValues)
@@ -650,7 +650,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       // No cache - fetch fresh data using direct fetch (bypasses circuit breaker)
       const doFetch = async () => {
         // Skip API calls when using demo token — provide demo values
-        const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+        const token = getStoredAuthToken()
         if (isDemoMode()) {
           const demoValues = getDemoHelmValues()
           setValues(demoValues)

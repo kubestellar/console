@@ -9,7 +9,19 @@ import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { clearAgentToken, setAgentToken } from '../hooks/mcp/agentFetch'
-import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
+import {
+  AUTH_TOKEN_SYNC_KEY,
+  clearStoredAuthToken,
+  DEMO_TOKEN_VALUE,
+  FETCH_DEFAULT_TIMEOUT_MS,
+  getStoredAuthToken,
+  parseAuthTokenSyncEvent,
+  setStoredAuthToken,
+  STORAGE_KEY_DEMO_MODE,
+  STORAGE_KEY_HAS_SESSION,
+  STORAGE_KEY_ONBOARDED,
+  STORAGE_KEY_USER_CACHE,
+} from './constants'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
@@ -167,14 +179,12 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getCachedUser)
-  const [token, setTokenState] = useState<string | null>(() =>
-    localStorage.getItem(STORAGE_KEY_TOKEN)
-  )
+  const [token, setTokenState] = useState<string | null>(getStoredAuthToken)
   // Start loading until refreshUser() resolves — this prevents a flash of the login
   // page while we check whether to auto-enable demo mode (Helm installs / from-lens).
   // Exception: if we already have a token AND cached user, skip loading (stale-while-revalidate).
   const [isLoading, setIsLoading] = useState(() => {
-    const hasToken = !!localStorage.getItem(STORAGE_KEY_TOKEN)
+    const hasToken = !!getStoredAuthToken()
     const hasCachedUser = !!getCachedUser()
     // No token: still loading — refreshUser() will check OAuth and may auto-demo
     // Has token + no cache: loading — refreshUser() will fetch user
@@ -188,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Invalidate the server-side session before clearing client state (#4751).
     // Fire-and-forget: even if the backend call fails, we still clear local state
     // so the user is logged out on the client side.
-    const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const currentToken = getStoredAuthToken()
     if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
       fetch('/auth/logout', {
         method: 'POST',
@@ -205,12 +215,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear every place a token or cached user could live. The kc-agent token
     // now lives in memory with sessionStorage fallback, so explicitly wipe both
     // session-scoped stores on logout to avoid leaking into the next session.
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    clearStoredAuthToken()
     clearAgentToken()
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
     localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
     try {
-      sessionStorage.removeItem(STORAGE_KEY_TOKEN)
       sessionStorage.removeItem(AUTH_USER_CACHE_KEY)
       // Rotate the presence session ID so the next login is tracked as a
       // brand-new session instead of inheriting the logged-out user's.
@@ -246,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.hostname.includes('netlify.app') ||
       window.location.hostname.includes('deploy-preview-')
     const demoOnboarded = isNetlifyPreview || localStorage.getItem(STORAGE_KEY_ONBOARDED) === 'true'
-    localStorage.setItem(STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE)
+    setStoredAuthToken(DEMO_TOKEN_VALUE)
     setTokenState(DEMO_TOKEN_VALUE)
     const demoUser: User = {
       id: 'demo-user',
@@ -267,7 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
-    const effectiveToken = overrideToken || localStorage.getItem(STORAGE_KEY_TOKEN)
+    const effectiveToken = overrideToken || getStoredAuthToken()
     if (!effectiveToken) {
       // #6055 — Retry the OAuth-configured probe during backend startup so we
       // don't race the backend into demo mode when the server is still coming
@@ -382,7 +391,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // /api/me with it (which will just 401). Clear it and recurse so the
     // no-token branch above can try restoring from the HttpOnly cookie.
     if (effectiveToken !== DEMO_TOKEN_VALUE && isJWTExpired(effectiveToken)) {
-      localStorage.removeItem(STORAGE_KEY_TOKEN)
+      clearStoredAuthToken()
       localStorage.removeItem(AUTH_USER_CACHE_KEY)
       localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
       setTokenState(null)
@@ -409,7 +418,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return
           }
           // OAuth configured — clear demo token so login page appears
-          localStorage.removeItem(STORAGE_KEY_TOKEN)
+          clearStoredAuthToken()
           cacheUser(null)
           setTokenState(null)
           setUser(null)
@@ -516,7 +525,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // The hint is cleared authoritatively when /auth/refresh returns
       // 401/403 (definitive proof the server session is gone).
       console.error('Failed to fetch user (cache stale or missing), dropping to login:', error)
-      localStorage.removeItem(STORAGE_KEY_TOKEN)
+      clearStoredAuthToken()
       localStorage.removeItem(AUTH_USER_CACHE_KEY)
       localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
       setTokenState(null)
@@ -560,7 +569,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setDemoMode])
 
   const setToken = useCallback((newToken: string, onboarded: boolean) => {
-    localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
+    setStoredAuthToken(newToken)
     setTokenState(newToken)
     // Clear stale cached user — refreshUser() will fetch and cache real data.
     // Do NOT cache the temp user: if refreshUser fails, the empty-field temp
@@ -575,7 +584,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token || token === DEMO_TOKEN_VALUE) return
 
     const checkExpiry = () => {
-      const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const currentToken = getStoredAuthToken()
       if (!currentToken || currentToken === DEMO_TOKEN_VALUE) return
 
       const expiryMs = getJwtExpiryMs(currentToken)
@@ -600,7 +609,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Re-read the token at click time instead of using the stale closure
         // value — the token may have been silently refreshed since the banner
         // was shown (#3909).
-        const freshToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+        const freshToken = getStoredAuthToken()
         if (!freshToken || freshToken === DEMO_TOKEN_VALUE) return
         try {
           // #8108 — Do NOT send Authorization to /auth/refresh. Backend
@@ -648,39 +657,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(intervalId)
   }, [token, logout])
 
-  // Listen for token updates from silentRefresh() (dispatched via StorageEvent)
-  // so the AuthProvider state stays in sync without a full page reload.
+  // Listen for auth sync events so logouts propagate across tabs even though
+  // real session tokens no longer live in localStorage.
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY_TOKEN) return
-      // #6065 — cross-tab logout: when another tab removes the token,
-      // `e.newValue` is null. Immediately clear local auth state and
-      // redirect to /login so both tabs end up logged out. Without this
-      // branch, the other tab silently keeps stale auth until the user
-      // triggers an API call that 401s.
-      if (e.newValue === null) {
+      if (e.key !== AUTH_TOKEN_SYNC_KEY) return
+      const syncState = parseAuthTokenSyncEvent(e.newValue)
+      if (syncState === 'cleared') {
         setTokenState(null)
         setUser(null)
         cacheUser(null)
         try {
           localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
-        } catch (e: unknown) { console.error('[auth] failed to clear cached user validation key:', e) }
+        } catch (error: unknown) {
+          console.error('[auth] failed to clear cached user validation key:', error)
+        }
         document.getElementById('session-expiry-warning')?.remove()
-        // Only redirect if we're not already on the login page to avoid a loop
         if (!window.location.pathname.startsWith(ROUTES.LOGIN)) {
           window.location.href = ROUTES.LOGIN
         }
         return
       }
-      if (e.newValue && e.newValue !== DEMO_TOKEN_VALUE) {
-        setTokenState(e.newValue)
-        // Remove the expiry warning banner since the token was just refreshed
+      if (syncState === 'demo') {
+        setTokenState(DEMO_TOKEN_VALUE)
         document.getElementById('session-expiry-warning')?.remove()
+        return
+      }
+      if (syncState === 'session') {
+        const syncedToken = getStoredAuthToken()
+        if (syncedToken) {
+          setTokenState(syncedToken)
+          document.getElementById('session-expiry-warning')?.remove()
+          return
+        }
+        void refreshUser()
       }
     }
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
+  }, [refreshUser])
 
   // #6067 — When the backend is unreachable, re-validate the cached user
   // periodically. If validation continues to fail past MAX_CACHED_USER_AGE_MS,

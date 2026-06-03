@@ -7,14 +7,14 @@
 
 import { useState } from 'react'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, getStoredAuthToken } from '../lib/constants'
 
 // #7993 Phase 4: helm rollback/uninstall/upgrade moved from the backend to
 // kc-agent. The agent runs `helm` under the user's own kubeconfig instead of
 // the backend pod ServiceAccount. The request bodies are identical — only
 // the URL changes.
 function helmAgentAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

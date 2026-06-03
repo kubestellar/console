@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { api, isBackendUnavailable } from '../lib/api'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, getStoredAuthToken } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, RBAC_QUERY_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
@@ -25,7 +25,7 @@ import type {
 // Authorization header when no token is configured. Mirrors authHeaders() in
 // useWorkloads.ts.
 function agentAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

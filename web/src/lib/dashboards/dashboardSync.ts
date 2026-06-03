@@ -1,5 +1,5 @@
 import { api } from '../api'
-import { STORAGE_KEY_TOKEN } from '../constants'
+import { getStoredAuthToken } from '../constants'
 import { DashboardCard } from './types'
 
 // ============================================================================
@@ -74,7 +74,7 @@ class DashboardSyncService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!localStorage.getItem(STORAGE_KEY_TOKEN)
+    return !!getStoredAuthToken()
   }
 
   /**

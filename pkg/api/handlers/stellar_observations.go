@@ -12,6 +12,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
@@ -285,7 +287,9 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 				watchID = id
 				if h.broadcaster != nil {
 					h.broadcaster.Broadcast(SSEEvent{Type: "watch_created", Data: map[string]string{
-						"id": id, "cluster": watch.Cluster,
+						"userId":  userID,
+						"id":      id,
+						"cluster": watch.Cluster,
 					}})
 				}
 			}
@@ -390,7 +394,12 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 		defer streamCancel()
 		connID := fmt.Sprintf("%s-%d", userID, time.Now().UnixNano())
 		clientCh := make(chan SSEEvent, 32)
-		h.registerSSEClient(connID, clientCh)
+		isAdmin := false
+		if userStore, ok := h.store.(store.Store); ok {
+			resolvedUser, resolveErr := userStore.GetUser(streamCtx, middleware.GetUserID(c))
+			isAdmin = resolveErr == nil && resolvedUser != nil && resolvedUser.Role == models.UserRoleAdmin
+		}
+		h.registerSSEClient(connID, userID, isAdmin, clientCh)
 		defer h.unregisterSSEClient(connID)
 
 		// Send initial batch of unread notifications and state
@@ -500,6 +509,12 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 // IngestEvent receives k8s events from the agent and forwards them to ProcessEvent.
 // Admin access is enforced by RequireAdminMiddleware on this route (CWE-285, #16709).
 func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
+	if userStore, ok := h.store.(store.Store); ok {
+		if err := requireEditorOrAdmin(c, userStore); err != nil {
+			return err
+		}
+	}
+
 	var event IncomingEvent
 	if err := c.BodyParser(&event); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid event"})

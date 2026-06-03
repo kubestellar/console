@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/constants'
 import { useDemoMode } from './useDemoMode'
 
 // ============================================================================
@@ -339,7 +339,7 @@ const FEDERATION_POLL_INTERVAL_MS = 30_000
 const FEDERATION_DETECT_CACHE_TTL_MS = 300_000
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

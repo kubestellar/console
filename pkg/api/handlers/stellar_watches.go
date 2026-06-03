@@ -614,6 +614,7 @@ func (h *StellarHandler) autoExecuteAction(ctx context.Context, e IncomingEvent,
 
 	if h.broadcaster != nil {
 		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"userId": action.UserID,
 			"id":     action.ID,
 			"status": status,
 		}})
@@ -682,6 +683,7 @@ func (h *StellarHandler) queueAutoTendAction(ctx context.Context, e IncomingEven
 
 	if h.broadcaster != nil {
 		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"userId": action.UserID,
 			"id":     action.ID,
 			"status": "pending_approval",
 		}})

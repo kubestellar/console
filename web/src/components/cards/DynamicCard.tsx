@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Loader2, Database } from 'lucide-react'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
@@ -187,7 +187,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     persist: true,
     enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint && isSafeEndpoint,
     fetcher: async () => {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       const res = await fetch(apiEndpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),

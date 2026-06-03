@@ -1,4 +1,4 @@
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/constants'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** HTTP status codes that indicate authentication/authorization failure */
@@ -89,7 +89,7 @@ export function isTerminalStatus(s: DeployMissionStatus): boolean {
 }
 
 export function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

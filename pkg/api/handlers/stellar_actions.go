@@ -181,7 +181,7 @@ func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
 	if h.broadcaster != nil {
 		h.broadcaster.Broadcast(SSEEvent{
 			Type: "action_updated",
-			Data: map[string]string{"id": actionID, "status": "approved"},
+			Data: map[string]string{"userId": item.UserID, "id": actionID, "status": "approved"},
 		})
 	}
 	_ = h.processDueActions(c.UserContext(), userID)
@@ -422,7 +422,10 @@ func (h *StellarHandler) executeDirectAction(c *fiber.Ctx, userID string, body e
 	// Broadcast via SSE
 	if h.broadcaster != nil {
 		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
-			"id": action.ID, "status": status, "outcome": outcome,
+			"userId":  userID,
+			"id":      action.ID,
+			"status":  status,
+			"outcome": outcome,
 		}})
 	}
 

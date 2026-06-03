@@ -13,7 +13,7 @@
  * - Auto-reconnect with exponential backoff on connection drop (#2654)
  */
 
-import { STORAGE_KEY_TOKEN } from './constants'
+import { getStoredAuthToken } from './constants'
 import { emitSseAuthFailure } from './analytics'
 import { isDemoMode } from './demoMode'
 
@@ -146,7 +146,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   // SECURITY: Include the current auth token in the cache key so that data
   // fetched under one user session is never served to a different user within
   // the cache TTL window (#4712).
-  const currentTokenForKey = localStorage.getItem(STORAGE_KEY_TOKEN) || ''
+  const currentTokenForKey = getStoredAuthToken() || ''
   const cacheKey = `${fullUrl}::${currentTokenForKey}`
 
   // Check result cache — if fresh, replay cached data via callbacks and resolve
@@ -247,7 +247,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
       const headers: Record<string, string> = {
         Accept: 'text/event-stream',
       }
-      const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const currentToken = getStoredAuthToken()
       if (currentToken) {
         headers.Authorization = `Bearer ${currentToken}`
       }

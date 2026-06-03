@@ -2,11 +2,12 @@
 import {
   MCP_HOOK_TIMEOUT_MS,
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
-  STORAGE_KEY_TOKEN,
+  clearStoredAuthToken,
   STORAGE_KEY_USER_CACHE,
   STORAGE_KEY_HAS_SESSION,
   DEMO_TOKEN_VALUE,
   FETCH_DEFAULT_TIMEOUT_MS,
+  getStoredAuthToken,
 } from './constants'
 import { emitSessionExpired, emitHttpError } from './analytics'
 import {
@@ -172,7 +173,7 @@ function performSessionExpiry(): void {
   // We pass credentials:'include' so the browser sends the cookie. We don't
   // await the response and we ignore failures — the client-side clear below
   // is the source of truth for logout.
-  const expiredToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const expiredToken = getStoredAuthToken()
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (expiredToken && expiredToken !== DEMO_TOKEN_VALUE) {
@@ -201,7 +202,7 @@ function performSessionExpiry(): void {
   }
 
   // Clear auth state
-  localStorage.removeItem(STORAGE_KEY_TOKEN)
+  clearStoredAuthToken()
   localStorage.removeItem(STORAGE_KEY_USER_CACHE)
   localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
 
@@ -585,7 +586,7 @@ class ApiClient {
       // (POST/PUT/DELETE/PATCH) without this header. Harmless on GET.
       'X-Requested-With': 'XMLHttpRequest',
     }
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const token = getStoredAuthToken()
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
@@ -593,7 +594,7 @@ class ApiClient {
   }
 
   private hasToken(): boolean {
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const token = getStoredAuthToken()
     if (token && token !== DEMO_TOKEN_VALUE) return true
     // #6590 / #8087 — A cookie-only session has no JS-readable token, only
     // the HttpOnly kc_auth cookie. The kc-has-session marker is set after
@@ -959,7 +960,7 @@ export async function safeJson<T = unknown>(response: Response): Promise<T> {
 }
 
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   const headers = new Headers(init?.headers)
 
   if (token && token !== DEMO_TOKEN_VALUE && !headers.has('Authorization')) {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Check, X, ExternalLink, Loader2, Server } from 'lucide-react'
 import { Github } from '@/lib/icons'
-import { STORAGE_KEY_TOKEN, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { getStoredAuthToken, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_DISMISSED, FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { emitGitHubTokenConfigured, emitGitHubTokenRemoved, emitConversionStep } from '../../../lib/analytics'
 import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constants/network'
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_CLASSIC_URL } from '../../../lib/constants/github-token'
@@ -74,7 +74,7 @@ export function buildGitHubTokenSaveError(status: number, detail?: string | null
 
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
-  const token = safeGetItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

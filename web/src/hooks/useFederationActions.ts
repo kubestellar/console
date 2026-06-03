@@ -11,7 +11,7 @@
 
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/constants'
 import type { FederationProviderName } from './useFederation'
 
 /** Describes a single imperative action a provider supports. */
@@ -51,7 +51,7 @@ export interface ActionResult {
  * this for destructive actions (ActionDescriptor.destructive === true).
  */
 export async function executeFederationAction(req: ActionRequest): Promise<ActionResult> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
 

@@ -2,7 +2,7 @@ import { useEffect, useReducer, type ReactNode } from 'react'
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../lib/cn'
-import { STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { clearStoredAuthToken, STORAGE_KEY_HAS_SESSION } from '../lib/constants'
 import { isDemoMode } from '../lib/demoMode'
 import { fetchKagentStatus } from '../lib/kagentBackend'
 import { getUserSafeErrorMessage } from '../lib/errors/handleError'
@@ -76,7 +76,7 @@ const gateReducer = (state: GateState, action: GateAction): GateState => {
 const clearStaleSessionAndRedirectToLogin = (): void => {
   try {
     localStorage.removeItem(LEGACY_STORAGE_KEY_KC_TOKEN)
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    clearStoredAuthToken()
     localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
   } catch {
     // ignore localStorage access failures and continue to login

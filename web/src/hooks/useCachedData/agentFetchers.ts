@@ -12,7 +12,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { clusterCacheRef, agentFetch } from '../mcp/shared'
 import { deduplicateClustersByServer } from '../mcp/dedup'
 import { isAgentUnavailable } from '../useLocalAgent'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, getStoredAuthToken, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { AGENT_HTTP_TIMEOUT_MS } from '../../lib/cache/fetcherUtils'
 import type { PodIssue, Deployment } from '../useMCP'
@@ -183,7 +183,7 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
 export async function fetchCiliumStatus(): Promise<CiliumStatus | null> {
   if (isAgentUnavailable()) return null
 
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   if (!token || token === 'demo-token') return null
 
   try {
@@ -213,7 +213,7 @@ export async function fetchJaegerStatus(): Promise<any | null> {
   if (isAgentUnavailable()) return null
 
   // Rule: Authorization via bearer token
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   if (!token || token === 'demo-token') return null
 
   try {

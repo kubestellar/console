@@ -171,17 +171,23 @@ type StellarHandler struct {
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
-	sseClients       map[string]chan SSEEvent
+	sseClients       map[string]stellarSSEClient
 	sseClientsMu     sync.RWMutex
 }
 
-func (h *StellarHandler) registerSSEClient(connID string, ch chan SSEEvent) {
+type stellarSSEClient struct {
+	userID  string
+	isAdmin bool
+	ch      chan SSEEvent
+}
+
+func (h *StellarHandler) registerSSEClient(connID, userID string, isAdmin bool, ch chan SSEEvent) {
 	h.sseClientsMu.Lock()
 	defer h.sseClientsMu.Unlock()
 	if h.sseClients == nil {
-		h.sseClients = make(map[string]chan SSEEvent)
+		h.sseClients = make(map[string]stellarSSEClient)
 	}
-	h.sseClients[connID] = ch
+	h.sseClients[connID] = stellarSSEClient{userID: userID, isAdmin: isAdmin, ch: ch}
 }
 
 func (h *StellarHandler) unregisterSSEClient(connID string) {
@@ -190,12 +196,23 @@ func (h *StellarHandler) unregisterSSEClient(connID string) {
 	delete(h.sseClients, connID)
 }
 
+func shouldDeliverStellarSSEEvent(client stellarSSEClient, event SSEEvent) bool {
+	if event.AdminOnly || event.UserID == "system" || event.UserID == "" {
+		return client.isAdmin
+	}
+	return client.userID == event.UserID || client.isAdmin
+}
+
 func (h *StellarHandler) broadcastToClients(event SSEEvent) {
+	resolvedEvent := h.resolveSSEEventAudience(event)
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
-	for _, ch := range h.sseClients {
+	for _, client := range h.sseClients {
+		if !shouldDeliverStellarSSEEvent(client, resolvedEvent) {
+			continue
+		}
 		select {
-		case ch <- event:
+		case client.ch <- resolvedEvent:
 		default: // client too slow, skip
 		}
 	}
@@ -210,8 +227,93 @@ type SSEBroadcaster interface {
 }
 
 type SSEEvent struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type      string      `json:"type"`
+	Data      interface{} `json:"data"`
+	UserID    string      `json:"userId,omitempty"`
+	AdminOnly bool        `json:"adminOnly,omitempty"`
+}
+
+func (h *StellarHandler) resolveSSEEventAudience(event SSEEvent) SSEEvent {
+	if event.AdminOnly || event.UserID != "" {
+		return event
+	}
+	if userID, adminOnly, ok := stellarSSEAudienceFromData(event.Data); ok {
+		event.UserID = userID
+		event.AdminOnly = adminOnly
+		return event
+	}
+	event.AdminOnly = true
+	return event
+}
+
+func stellarSSEAudienceFromData(data interface{}) (string, bool, bool) {
+	switch item := data.(type) {
+	case store.StellarNotification:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarNotification:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarActivity:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarActivity:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarAction:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarAction:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarWatch:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarWatch:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarSolve:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarSolve:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case map[string]string:
+		if userID, ok := item["userId"]; ok {
+			return stellarSSEAudienceFromUserID(userID)
+		}
+		if userID, ok := item["userID"]; ok {
+			return stellarSSEAudienceFromUserID(userID)
+		}
+	case map[string]interface{}:
+		if raw, ok := item["userId"]; ok {
+			if userID, ok := raw.(string); ok {
+				return stellarSSEAudienceFromUserID(userID)
+			}
+		}
+		if raw, ok := item["userID"]; ok {
+			if userID, ok := raw.(string); ok {
+				return stellarSSEAudienceFromUserID(userID)
+			}
+		}
+	}
+	return "", false, false
+}
+
+func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return "", false, false
+	}
+	if trimmedUserID == "system" {
+		return "", true, true
+	}
+	return trimmedUserID, false, true
 }
 
 func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
@@ -286,6 +388,7 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif})
 		if h.broadcaster != nil {
 			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
+				"userId": dueNotif.UserID,
 				"taskId": t.ID,
 				"title":  t.Title,
 			}})

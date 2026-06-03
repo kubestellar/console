@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { isNetlifyDeployment, isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
@@ -182,7 +182,7 @@ export function useBuildpackImages(cluster?: string) {
           return
         }
 
-        const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+        const token = getStoredAuthToken()
         const headers: Record<string, string> = {
           'Content-Type': 'application/json' }
         if (token) {

@@ -5,7 +5,7 @@ import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/constants'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, getLocalAgentURL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_FAST_MS, LOADING_TIMEOUT_MS } from '../../lib/constants/network'
@@ -141,7 +141,7 @@ export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
 // Fetch GPU nodes (shared across all consumers)
 let gpuFetchInProgress = false
 async function fetchGPUNodes(cluster?: string, _source?: string) {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   // GPU data is always live — try real sources first, fall back to demo only if all fail
 
   if (gpuFetchInProgress) return
@@ -638,7 +638,7 @@ export function useNVIDIAOperators(cluster?: string) {
       }
 
       // Try SSE streaming first
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       if ((token && token !== 'demo-token') || isInClusterMode()) {
         try {
           const accumulated: NVIDIAOperatorStatus[] = []

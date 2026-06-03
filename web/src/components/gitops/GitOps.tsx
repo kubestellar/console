@@ -7,7 +7,7 @@ import { useToast } from '../ui/Toast'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, getStoredAuthToken } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
@@ -196,7 +196,7 @@ export function GitOps() {
       // sequential requests, reducing total latency significantly.
       // #7993 Phase 4: drift detection moved to kc-agent — calls go to the
       // local agent process running under the user's kubeconfig.
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       const agentAuthHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',

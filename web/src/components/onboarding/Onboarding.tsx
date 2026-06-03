@@ -5,8 +5,8 @@ import { ChevronRight, ChevronLeft, Check, GripVertical, ArrowUp, ArrowDown } fr
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
-import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
-import { safeGetItem, safeSetItem, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
+import { getStoredAuthToken, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
+import { safeSetItem, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 import { Button } from '../ui/Button'
 
 interface Question {
@@ -135,7 +135,7 @@ export function Onboarding() {
     const fallbackErrorMessage = t('onboarding.errorFallback', {
       defaultValue: 'Failed to complete onboarding. Please try again.',
     })
-    const token = safeGetItem(STORAGE_KEY_TOKEN)
+    const token = getStoredAuthToken()
     const isDemoMode = token === DEMO_TOKEN_VALUE
 
     setIsSubmitting(true)

@@ -9,7 +9,7 @@ import { isBackendUnavailable } from '../api'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { fetchSSE } from '../sseClient'
 import { clusterCacheRef } from '../../hooks/mcp/clusterCacheRef'
-import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../constants'
+import { LOCAL_AGENT_HTTP_URL, getStoredAuthToken } from '../constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../constants/network'
 import { settledWithConcurrency } from '../utils/concurrency'
 import {
@@ -54,7 +54,7 @@ export function getClusterModeBaseUrl(): string {
 // Token helper
 // ============================================================================
 
-export const getToken = () => localStorage.getItem(STORAGE_KEY_TOKEN)
+export const getToken = () => getStoredAuthToken()
 
 // ============================================================================
 // Constants

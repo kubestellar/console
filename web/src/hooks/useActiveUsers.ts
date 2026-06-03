@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/constants'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /**
@@ -247,7 +247,7 @@ function stopPresenceConnection() {
 function startPresenceConnection() {
   if (presenceStarted) return
 
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   if (!token) return
 
   // Set flag AFTER token check so a missing token doesn't permanently block
@@ -272,7 +272,7 @@ function startPresenceConnection() {
       getPresenceStaleDetection().start()
       notifySubscribers({ stale: false })
       // Read token fresh to avoid stale closure on reconnects
-      const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const currentToken = getStoredAuthToken()
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
       // Clear any existing ping interval before starting a new one (prevents zombie intervals on reconnect)
       if (presencePingInterval) clearInterval(presencePingInterval)
@@ -317,7 +317,7 @@ function startPresenceConnection() {
       presenceReconnectTimer = setTimeout(() => {
         presenceReconnectTimer = null
         presenceReconnectAttempts++
-        if (presenceStarted && localStorage.getItem(STORAGE_KEY_TOKEN)) connect()
+        if (presenceStarted && getStoredAuthToken()) connect()
       }, delay)
     }
 

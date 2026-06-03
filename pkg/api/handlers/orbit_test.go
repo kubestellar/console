@@ -292,7 +292,7 @@ func TestListMissionsScopesToCurrentUser(t *testing.T) {
 	ownerID := uuid.New()
 	otherID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
-		ownerID: &models.User{ID: ownerID, Role: models.UserRoleViewer},
+		ownerID: {ID: ownerID, Role: models.UserRoleViewer},
 	}})
 	h.missions["mine"] = &OrbitMission{ID: "mine", OwnerID: ownerID.String(), History: []OrbitRunRecord{}}
 	h.missions["theirs"] = &OrbitMission{ID: "theirs", OwnerID: otherID.String(), History: []OrbitRunRecord{}}
@@ -322,10 +322,10 @@ func TestGetScheduleScopesToCurrentUser(t *testing.T) {
 	ownerID := uuid.New()
 	otherID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
-		ownerID: &models.User{ID: ownerID, Role: models.UserRoleViewer},
+		ownerID: {ID: ownerID, Role: models.UserRoleViewer},
 	}})
-	h.missions["mine"] = &OrbitMission{ID: "mine", Title: "mine", Cadence: "daily", OwnerID: ownerID.String(), History: []OrbitRunRecord{}}
-	h.missions["theirs"] = &OrbitMission{ID: "theirs", Title: "theirs", Cadence: "daily", OwnerID: otherID.String(), History: []OrbitRunRecord{}}
+	h.missions["mine"] = &OrbitMission{ID: "mine", Title: "mine", OwnerID: ownerID.String(), Cadence: "daily", History: []OrbitRunRecord{}}
+	h.missions["theirs"] = &OrbitMission{ID: "theirs", Title: "theirs", OwnerID: otherID.String(), Cadence: "daily", History: []OrbitRunRecord{}}
 
 	app := setupOrbitScopedApp(ownerID, h)
 	req, err := http.NewRequest(http.MethodGet, "/schedule", nil)
