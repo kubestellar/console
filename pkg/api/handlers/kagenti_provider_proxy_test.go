@@ -10,7 +10,10 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -102,6 +105,47 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&payload)
 	assert.Equal(t, "anthropic", payload["llm_provider"])
 	assert.Equal(t, true, payload["api_key_configured"])
+}
+
+func TestKagentiProviderProxyHandler_CallToolDirectRequiresAdmin(t *testing.T) {
+	tests := []struct {
+		name       string
+		role       models.UserRole
+		wantStatus int
+	}{
+		{name: "viewer user is forbidden", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
+		{name: "editor user is forbidden", role: models.UserRoleEditor, wantStatus: http.StatusForbidden},
+		{name: "admin user can access the endpoint", role: models.UserRoleAdmin, wantStatus: http.StatusServiceUnavailable},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			mockStore := new(test.MockStore)
+			userID := uuid.New()
+			handler := NewKagentiProviderProxyHandler(nil, nil, nil)
+
+			mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: tt.role}, nil).Once()
+			if tt.role != models.UserRoleAdmin {
+				mockStore.On("CountUsersByRole").Return(1, 1, 1, nil).Once()
+			}
+
+			app.Post("/tools/call-direct", func(c *fiber.Ctx) error {
+				c.Locals("userID", userID)
+				if err := RequireAdmin(c, mockStore); err != nil {
+					return err
+				}
+				return handler.CallToolDirect(c)
+			})
+
+			req := httptest.NewRequest(http.MethodPost, "/tools/call-direct", bytes.NewBufferString(`{"tool":"get_cluster_list"}`))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+			mockStore.AssertExpectations(t)
+		})
+	}
 }
 
 func TestWriteSSEDataEvent_PreservesMultilinePayloads(t *testing.T) {
