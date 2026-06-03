@@ -105,6 +105,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Wire up persistent token revocation so revoked JWTs survive restarts.
 	middleware.InitTokenRevocation(db)
+	middleware.InitUserValidation(db)
 
 	// Create Fiber app
 	// trustedProxyCIDRs are the RFC-1918 and link-local ranges typical of

@@ -148,6 +148,7 @@ func (h *AuthHandler) generateJWT(user *models.User) (string, error) {
 	claims := middleware.UserClaims{
 		UserID:      user.ID,
 		GitHubLogin: user.GitHubLogin,
+		Role:        user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.New().String(), // jti — unique token identifier for revocation
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(jwtExpiration)),
