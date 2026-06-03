@@ -448,6 +448,7 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 			if updateErr := h.store.UpdateNotificationBody(ctx, dedupKey, resp.Content); updateErr == nil {
 				// Push updated narration to SSE clients so they see the richer body
 				h.broadcastToClients(SSEEvent{Type: "notification_update", Data: map[string]string{
+					"userId":   "system",
 					"dedupKey": dedupKey,
 					"body":     resp.Content,
 				}})
@@ -780,7 +781,9 @@ func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
 	if err == nil {
 		slog.Info("stellar: auto-created watch", "id", id, "resource", e.Name, "cluster", e.Cluster)
 		h.broadcastToClients(SSEEvent{Type: "watch_created", Data: map[string]string{
-			"id": id, "cluster": e.Cluster,
+			"userId":  "system",
+			"id":      id,
+			"cluster": e.Cluster,
 		}})
 	}
 }
