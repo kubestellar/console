@@ -121,6 +121,7 @@ func SolveLoop(
 			return
 		}
 		broadcaster.Broadcast(SSEEvent{Type: "solve_progress", Data: map[string]interface{}{
+			"userId":       input.UserID,
 			"solveId":      input.SolveID,
 			"eventId":      input.EventID,
 			"step":         step,
@@ -327,6 +328,7 @@ func terminate(
 	}
 	if broadcaster != nil {
 		broadcaster.Broadcast(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+			"userId":  input.UserID,
 			"solveId": solveID,
 			"eventId": input.EventID,
 			"status":  status,

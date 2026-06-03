@@ -42,6 +42,7 @@ const (
 	stellarRecentEventLookbackMin = 10
 	stellarStreamInterval         = 10 * time.Second
 	stellarWatchInactivityTimeout = 30 * time.Minute
+	stellarSystemUserID           = "system"
 
 	stellarOllamaAllowedCIDRsEnv = "STELLAR_OLLAMA_ALLOWED_CIDRS"
 )
@@ -204,7 +205,7 @@ func (h *StellarHandler) unregisterSSEClient(connID string) {
 }
 
 func shouldDeliverStellarSSEEvent(client stellarSSEClient, event SSEEvent) bool {
-	if event.AdminOnly || event.UserID == "system" || event.UserID == "" {
+	if event.AdminOnly || event.UserID == stellarSystemUserID || event.UserID == "" {
 		return client.isAdmin
 	}
 	return client.userID == event.UserID || client.isAdmin
@@ -217,7 +218,7 @@ func (h *StellarHandler) broadcastToClients(event SSEEvent) {
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
 	for _, client := range h.sseClients {
-		if resolvedEvent.TargetUserID != "" && client.userID != resolvedEvent.TargetUserID {
+		if resolvedEvent.TargetUserID != "" && client.userID != resolvedEvent.TargetUserID && !client.isAdmin {
 			continue
 		}
 		if !shouldDeliverStellarSSEEvent(client, resolvedEvent) {
@@ -244,6 +245,16 @@ type SSEEvent struct {
 	UserID       string      `json:"userId,omitempty"`
 	AdminOnly    bool        `json:"adminOnly,omitempty"`
 	TargetUserID string      `json:"-"`
+}
+
+func newUserScopedSSEEvent(userID, eventType string, data interface{}) SSEEvent {
+	trimmedUserID := strings.TrimSpace(userID)
+	return SSEEvent{
+		Type:         eventType,
+		Data:         data,
+		UserID:       trimmedUserID,
+		TargetUserID: trimmedUserID,
+	}
 }
 
 func (h *StellarHandler) resolveSSEEventAudience(event SSEEvent) SSEEvent {
@@ -326,7 +337,7 @@ func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
 	if trimmedUserID == "" {
 		return "", false, false
 	}
-	if trimmedUserID == "system" {
+	if trimmedUserID == stellarSystemUserID {
 		return "", true, true
 	}
 	return trimmedUserID, false, true
