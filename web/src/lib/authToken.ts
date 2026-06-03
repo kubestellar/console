@@ -1,4 +1,5 @@
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_TOKEN } from './constants/storage'
+import { clearToken, getToken, setToken } from './secureTokenStore'
 
 export const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
 
@@ -9,22 +10,49 @@ interface AuthTokenSyncEvent {
   ts: number
 }
 
-let inMemoryAuthToken: string | null = null
+let inMemorySessionToken: string | null = null
+let inMemoryDemoToken: string | null = null
 
 function readSessionAuthToken(): string | null {
   try {
-    return sessionStorage.getItem(STORAGE_KEY_TOKEN)
+    return getToken(STORAGE_KEY_TOKEN, sessionStorage)
   } catch {
-    return null
+    return inMemorySessionToken
   }
 }
 
 function readLocalAuthToken(): string | null {
   try {
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const token = getToken(STORAGE_KEY_TOKEN, localStorage)
     return token === DEMO_TOKEN_VALUE ? token : null
   } catch {
-    return null
+    return inMemoryDemoToken
+  }
+}
+
+function writeSessionAuthToken(token: string | null): void {
+  try {
+    if (token && token !== DEMO_TOKEN_VALUE) {
+      setToken(STORAGE_KEY_TOKEN, token, undefined, sessionStorage)
+    } else {
+      clearToken(STORAGE_KEY_TOKEN, sessionStorage)
+    }
+    inMemorySessionToken = null
+  } catch {
+    inMemorySessionToken = token && token !== DEMO_TOKEN_VALUE ? token : null
+  }
+}
+
+function writeLocalAuthToken(token: string | null): void {
+  try {
+    if (token === DEMO_TOKEN_VALUE) {
+      setToken(STORAGE_KEY_TOKEN, token, undefined, localStorage)
+    } else {
+      clearToken(STORAGE_KEY_TOKEN, localStorage)
+    }
+    inMemoryDemoToken = null
+  } catch {
+    inMemoryDemoToken = token === DEMO_TOKEN_VALUE ? token : null
   }
 }
 
@@ -37,19 +65,13 @@ function writeAuthTokenSyncEvent(state: AuthTokenSyncState): void {
 }
 
 export function getStoredAuthToken(): string | null {
-  if (inMemoryAuthToken !== null) {
-    return inMemoryAuthToken
-  }
-
   const sessionToken = readSessionAuthToken()
   if (sessionToken) {
-    inMemoryAuthToken = sessionToken
     return sessionToken
   }
 
   const localToken = readLocalAuthToken()
   if (localToken) {
-    inMemoryAuthToken = localToken
     return localToken
   }
 
@@ -57,27 +79,8 @@ export function getStoredAuthToken(): string | null {
 }
 
 export function setStoredAuthToken(token: string | null): void {
-  inMemoryAuthToken = token
-
-  try {
-    if (token && token !== DEMO_TOKEN_VALUE) {
-      sessionStorage.setItem(STORAGE_KEY_TOKEN, token)
-    } else {
-      sessionStorage.removeItem(STORAGE_KEY_TOKEN)
-    }
-  } catch {
-    // sessionStorage may be unavailable in embedded contexts.
-  }
-
-  try {
-    if (token === DEMO_TOKEN_VALUE) {
-      localStorage.setItem(STORAGE_KEY_TOKEN, token)
-    } else {
-      localStorage.removeItem(STORAGE_KEY_TOKEN)
-    }
-  } catch {
-    // localStorage may be unavailable in embedded contexts.
-  }
+  writeSessionAuthToken(token)
+  writeLocalAuthToken(token)
 
   if (token === DEMO_TOKEN_VALUE) {
     writeAuthTokenSyncEvent('demo')

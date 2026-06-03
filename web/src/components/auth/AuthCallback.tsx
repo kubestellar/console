@@ -100,7 +100,8 @@ export function AuthCallback() {
         tokenExchangeSucceeded = true
 
         // Fetch the kc-agent shared secret so agentFetch() and WebSocket
-        // connections can authenticate with the local agent.
+        // connections can authenticate with the local agent via expiring
+        // session-scoped token storage.
         const agentController = new AbortController()
         const agentTimeoutId = setTimeout(() => agentController.abort(), AUTH_REFRESH_TIMEOUT_MS)
         return fetch('/api/agent/token', {

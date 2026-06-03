@@ -213,8 +213,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Clear every place a token or cached user could live. The kc-agent token
-    // now lives in memory with sessionStorage fallback, so explicitly wipe both
-    // session-scoped stores on logout to avoid leaking into the next session.
+    // now lives in memory with expiring sessionStorage fallback, so explicitly
+    // wipe both session-scoped stores on logout to avoid leaking into the next
+    // session.
     clearStoredAuthToken()
     clearAgentToken()
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
@@ -658,7 +659,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, logout])
 
   // Listen for auth sync events so logouts propagate across tabs even though
-  // real session tokens no longer live in localStorage.
+  // real session tokens now live in expiring browser storage wrappers instead
+  // of plain localStorage entries.
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key !== AUTH_TOKEN_SYNC_KEY) return

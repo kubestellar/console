@@ -5,6 +5,7 @@ import {
   MCP_HOOK_TIMEOUT_MS,
 } from '../../lib/constants'
 import { isLocalAgentSuppressed } from '../../lib/constants/network'
+import { clearToken, getToken, setToken } from '../../lib/secureTokenStore'
 import { resetAuthFailed } from './sharedImpl.connection'
 
 // Re-export as a live getter. LOCAL_AGENT_HTTP_URL is a mutable `let` that
@@ -30,7 +31,7 @@ let agentTokenNegativeCacheUntil = 0
 // Best-effort migration cleanup for legacy plaintext tokens left in localStorage.
 function removeLegacyAgentToken(): void {
   try {
-    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearToken(AGENT_TOKEN_STORAGE_KEY, localStorage)
   } catch {
     // localStorage may be unavailable in some embedded contexts — ignore.
   }
@@ -38,7 +39,7 @@ function removeLegacyAgentToken(): void {
 
 function getSessionAgentToken(): string {
   try {
-    return sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY) || ''
+    return getToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage) || ''
   } catch {
     return ''
   }
@@ -47,9 +48,9 @@ function getSessionAgentToken(): string {
 function setSessionAgentToken(token: string): void {
   try {
     if (token) {
-      sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+      setToken(AGENT_TOKEN_STORAGE_KEY, token, undefined, sessionStorage)
     } else {
-      sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+      clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
     }
   } catch {
     // sessionStorage may be unavailable in some embedded contexts — ignore.
@@ -58,7 +59,7 @@ function setSessionAgentToken(token: string): void {
 
 function clearSessionAgentToken(): void {
   try {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
   } catch {
     // sessionStorage may be unavailable in some embedded contexts — ignore.
   }
@@ -109,7 +110,7 @@ export function _resetAgentTokenState(): void {
 
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
- * in memory and mirrored to sessionStorage for same-tab reloads.
+ * in memory and mirrored to expiring sessionStorage for same-tab reloads.
  *
  * On Netlify / demo mode there is no kc-agent backend, so we skip the
  * fetch entirely to avoid 404 → HTML parse errors that pollute GA4

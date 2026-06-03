@@ -123,6 +123,7 @@ import {
   sharedWebSocket,
   cleanupSharedWebSocket,
 } from '../shared'
+import { getStoredAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -259,8 +260,8 @@ describe('agentFetch — 401 retry with stale token', () => {
     // Fresh token should have been used in the retry request
     const retryHeaders = mockFetch.mock.calls[2][1]?.headers as Headers
     expect(retryHeaders.get('Authorization')).toBe('Bearer fresh-token')
-    // Fresh token should now be cached in localStorage
-    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe('fresh-token')
+    // Fresh token should now be cached in session storage
+    expect(getStoredAgentToken()).toBe('fresh-token')
   })
 
   it('does NOT retry when caller supplied their own Authorization header', async () => {
@@ -277,7 +278,7 @@ describe('agentFetch — 401 retry with stale token', () => {
     // fetch should only be called once (no retry)
     expect(mockFetch).toHaveBeenCalledTimes(1)
     // Agent token should not have been cleared
-    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe('agent-token')
+    expect(getStoredAgentToken()).toBe('agent-token')
   })
 
   it('does NOT retry on 401 when there was no token to inject', async () => {

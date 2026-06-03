@@ -36,7 +36,7 @@ vi.mock('../../../lib/constants/network', async (importOriginal) => {
   }
 })
 
-import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState } from '../agentFetch'
+import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState, getStoredAgentToken } from '../agentFetch'
 
 const TOKEN_VALUE = 'test-agent-token-abc123'
 const FRESH_TOKEN = 'fresh-agent-token-xyz789'
@@ -117,7 +117,7 @@ describe('getAgentToken — fetch token from backend', () => {
 
     // First call: /api/agent/token, second call: actual request
     expect((globalThis.fetch as Mock)).toHaveBeenCalledTimes(2)
-    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe(TOKEN_VALUE)
+    expect(getStoredAgentToken()).toBe(TOKEN_VALUE)
   })
 
   it('emits failure and caches negative result when token is empty', async () => {
@@ -133,7 +133,7 @@ describe('getAgentToken — fetch token from backend', () => {
     await agentFetch('http://127.0.0.1:8585/pods')
 
     expect(mockEmitAgentTokenFailure).toHaveBeenCalledWith('empty token from /api/agent/token')
-    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
+    expect(getStoredAgentToken()).toBe('')
   })
 
   it('emits failure only once per session', async () => {
@@ -170,7 +170,7 @@ describe('getAgentToken — fetch token from backend', () => {
     await agentFetch('http://127.0.0.1:8585/pods')
 
     // Non-OK returns { token: '' } internally
-    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
+    expect(getStoredAgentToken()).toBe('')
   })
 
   it('handles network error during token fetch', async () => {
@@ -296,7 +296,7 @@ describe('agentFetch — 401 retry', () => {
     const result = await agentFetch('http://127.0.0.1:8585/pods')
 
     expect(result.status).toBe(200)
-    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe(FRESH_TOKEN)
+    expect(getStoredAgentToken()).toBe(FRESH_TOKEN)
     expect((globalThis.fetch as Mock)).toHaveBeenCalledTimes(3)
   })
 
