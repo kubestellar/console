@@ -21,9 +21,9 @@ import (
 const gitopsDefaultTimeout = 30 * time.Second
 
 // gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
-// in kc-agent. Matches the backend's prefix exactly so cleanup sweeps and
-// diagnostic logs behave identically.
-const gitOpsTempDirPrefix = "/tmp/gitops-"
+// in kc-agent. Used for cleanup validation to prevent deleting directories
+// outside the temp area.
+var gitOpsTempDirPrefix = filepath.Join(os.TempDir(), "gitops-")
 
 // agentDriftedResource mirrors pkg/api/handlers/gitops.go#DriftedResource.
 // Kept local to pkg/agent because the agent cannot import pkg/api/handlers
@@ -170,9 +170,8 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 
 	tempDir, err := os.MkdirTemp("", "gitops-")
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp dir: %w", err)
+		return "", fmt.Errorf("create temp directory: %w", err)
 	}
-	// Verify the created dir passes the cleanup safety check
 	if !strings.HasPrefix(tempDir, filepath.Join(os.TempDir(), "gitops-")) {
 		os.RemoveAll(tempDir)
 		return "", fmt.Errorf("temp dir in unexpected location: %s", tempDir)
