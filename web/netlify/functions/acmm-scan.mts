@@ -1,9 +1,9 @@
 /**
  * Netlify Function: ACMM Scan
  *
- * Scans any GitHub repo and returns detected criteria from the multi-source
- * ACMM registry plus weekly AI-vs-human contribution activity. Powers the
- * /acmm dashboard's four cards.
+ * Scans allowlisted GitHub repos and returns detected criteria from the
+ * multi-source ACMM registry plus weekly AI-vs-human contribution activity.
+ * Powers the /acmm dashboard's four cards.
  *
  * Input:  ?repo=owner/repo&force=true
  *         (`force` bypasses cache *reads*; on a successful live scan the
@@ -23,6 +23,7 @@
  *     { repo, scannedAt, detectedIds, weeklyActivity, demoFallback: true, error }
  *
  *   400 invalid repo slug:   { error: "Invalid repo — must be owner/name" }
+ *   403 disallowed repo:     { error: "repo not permitted" }
  *   404 repo not found:      { error: "Repo not found" }
  *   405 non-GET method:      { error: "Method not allowed" }
  *   204 OPTIONS preflight:   (no body — CORS only)
@@ -38,6 +39,7 @@ import {
   CACHE_STORE,
   CACHE_TTL_MS,
   REPO_RE,
+  isAllowedRepo,
   matchesHint,
 } from "./acmm-scan/helpers";
 import type { CacheEntry, ScanResult } from "./acmm-scan/helpers";
@@ -78,6 +80,13 @@ export default async (req: Request) => {
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );
+  }
+
+  if (!isAllowedRepo(repo)) {
+    return new Response(JSON.stringify({ error: "repo not permitted" }), {
+      status: 403,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
   }
 
   const token =
