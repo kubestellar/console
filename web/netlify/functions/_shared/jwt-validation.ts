@@ -2,8 +2,14 @@ import { jwtVerify, type JWTPayload as JoseJWTPayload } from "jose";
 
 const JWT_PART_COUNT = 3;
 const JWT_HMAC_ALGORITHM = "HS256";
+const JWT_NONE_ALGORITHM = "none";
 const MISSING_JWT_SECRET_ERROR =
-  "JWT verification secret is not configured; set JWT_SECRET or SESSION_SECRET.";
+  "JWT verification secret is not configured; set JWT_SECRET or VITE_JWT_SECRET.";
+
+interface JWTHeader {
+  alg?: unknown;
+  [key: string]: unknown;
+}
 
 export interface JWTPayload extends JoseJWTPayload {
   [key: string]: unknown;
@@ -51,15 +57,32 @@ function validateStructureAndExpiry(token: string): ValidationResult {
   }
 
   const [headerB64, payloadB64, signatureB64] = parts;
-  if (!headerB64 || !payloadB64 || !signatureB64) {
-    return { valid: false, error: "Invalid JWT: empty parts" };
+  if (!headerB64 || !payloadB64) {
+    return { valid: false, error: "Invalid JWT: empty header or payload" };
   }
 
+  let header: JWTHeader;
   try {
     const headerJson = base64urlDecode(headerB64);
-    JSON.parse(headerJson) as Record<string, unknown>;
+    header = JSON.parse(headerJson) as JWTHeader;
   } catch {
     return { valid: false, error: "Invalid JWT: header is not valid JSON" };
+  }
+
+  if (typeof header.alg !== "string") {
+    return { valid: false, error: "Invalid JWT: alg header must be a string" };
+  }
+
+  if (header.alg === JWT_NONE_ALGORITHM) {
+    return { valid: false, error: 'Invalid JWT: unsigned tokens (alg "none") are not allowed' };
+  }
+
+  if (header.alg !== JWT_HMAC_ALGORITHM) {
+    return { valid: false, error: `Invalid JWT: unsupported alg ${header.alg}` };
+  }
+
+  if (!signatureB64) {
+    return { valid: false, error: "Invalid JWT: signature is required" };
   }
 
   let payload: JWTPayload;

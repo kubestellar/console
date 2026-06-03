@@ -26,13 +26,20 @@ const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 const MAX_PROXY_BODY_BYTES = 1_048_576;
 const TEST_JWT_SECRET = "test-quantum-proxy-secret";
 const JWT_EXPIRATION_WINDOW = "1h";
-const VALID_OPAQUE_SESSION = "opaque-session-token-12345";
+const JWT_NONE_HEADER = { alg: "none", typ: "JWT" };
+const JWT_NONE_PAYLOAD = { sub: "quantum-proxy-test", exp: 4_102_444_800 };
 
 async function createSignedJwt(secret: string = TEST_JWT_SECRET): Promise<string> {
   return new SignJWT({ sub: "quantum-proxy-test" })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setExpirationTime(JWT_EXPIRATION_WINDOW)
     .sign(new TextEncoder().encode(secret));
+}
+
+function createUnsignedJwt(): string {
+  const header = Buffer.from(JSON.stringify(JWT_NONE_HEADER)).toString("base64url");
+  const payload = Buffer.from(JSON.stringify(JWT_NONE_PAYLOAD)).toString("base64url");
+  return `${header}.${payload}.`;
 }
 
 function makeContext(env: Record<string, string> = {}): Context {
@@ -183,7 +190,7 @@ describe("quantum-proxy", () => {
       expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
-    it("accepts Bearer tokens signed with SESSION_SECRET", async () => {
+    it("accepts Bearer tokens signed with VITE_JWT_SECRET", async () => {
       const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
@@ -194,7 +201,7 @@ describe("quantum-proxy", () => {
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, makeContext({ SESSION_SECRET: TEST_JWT_SECRET }));
+      const res = await handler(req, makeContext({ VITE_JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
     });
 
@@ -203,7 +210,7 @@ describe("quantum-proxy", () => {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          cookie: `fakekc_auth=${VALID_OPAQUE_SESSION}`,
+          cookie: "fakekc_auth=opaque-session-token-12345",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
@@ -212,18 +219,32 @@ describe("quantum-proxy", () => {
       expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
-    it("accepts non-trivial opaque kc_auth Cookie values", async () => {
+    it("rejects unsigned Bearer tokens with alg none", async () => {
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          cookie: `kc_auth=${VALID_OPAQUE_SESSION}`,
+          authorization: `Bearer ${createUnsignedJwt()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, makeContext());
-      expect(res.status).toBe(HTTP_STATUS_OK);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("rejects opaque kc_auth Cookie values", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "kc_auth=opaque-session-token-12345",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
     it("rejects empty kc_auth Cookie values", async () => {

@@ -85,8 +85,6 @@ const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
 const AUTH_COOKIE_NAME = "kc_auth";
-const JWT_PART_COUNT = 3;
-const MIN_SESSION_TOKEN_LENGTH = 16;
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -150,17 +148,8 @@ function getCookieValue(cookieHeader: string, cookieName: string): string | null
   return null;
 }
 
-function isLikelyJWT(value: string): boolean {
-  const parts = value.split(".");
-  return parts.length === JWT_PART_COUNT && parts.every((part) => part.length > 0);
-}
-
-function isNonTrivialSessionValue(value: string): boolean {
-  return value.length >= MIN_SESSION_TOKEN_LENGTH && !/\s/.test(value);
-}
-
 function getJwtVerificationSecret(context: Context): string | undefined {
-  const envSecret = context.env?.JWT_SECRET ?? context.env?.SESSION_SECRET;
+  const envSecret = context.env?.JWT_SECRET ?? context.env?.VITE_JWT_SECRET;
   return typeof envSecret === "string" ? envSecret.trim() || undefined : undefined;
 }
 
@@ -170,19 +159,11 @@ async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): 
     return false;
   }
 
-  if (isLikelyJWT(sessionValue)) {
-    const validation = await validateJWT(sessionValue, jwtSecret);
-    if (!validation.valid) {
-      console.warn(`kc_auth cookie validation failed: ${validation.error}`);
-    }
-    return validation.valid;
+  const validation = await validateJWT(sessionValue, jwtSecret);
+  if (!validation.valid) {
+    console.warn(`kc_auth cookie validation failed: ${validation.error}`);
   }
-
-  const validOpaqueSession = isNonTrivialSessionValue(sessionValue);
-  if (!validOpaqueSession) {
-    console.warn("kc_auth cookie rejected: value is empty or too short");
-  }
-  return validOpaqueSession;
+  return validation.valid;
 }
 
 async function readResponseBodyWithCap(response: Response): Promise<Uint8Array | null> {
