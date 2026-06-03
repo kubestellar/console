@@ -42,6 +42,58 @@ func TestSaveToken_BootstrapsFirstAdmin(t *testing.T) {
 	}
 }
 
+func TestResolveProxyToken(t *testing.T) {
+	tests := []struct {
+		name       string
+		apiPath    string
+		clientAuth string
+		want       string
+	}{
+		{
+			name:       "uses client token for repo requests",
+			apiPath:    "/repos/kubestellar/console/releases",
+			clientAuth: "user-oauth-token",
+			want:       "user-oauth-token",
+		},
+		{
+			name:    "does not fall back to server token for repo requests",
+			apiPath: "/repos/kubestellar/private/issues",
+			want:    "",
+		},
+		{
+			name:    "allows configured token for rate limit",
+			apiPath: "/rate_limit",
+			want:    "server-token",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			h := NewGitHubProxyHandler("server-token", nil)
+			app.Get("/", func(c *fiber.Ctx) error {
+				got := h.resolveProxyToken(c, tt.apiPath)
+				if got != tt.want {
+					t.Fatalf("resolveProxyToken(%q) = %q, want %q", tt.apiPath, got, tt.want)
+				}
+				return c.SendStatus(http.StatusNoContent)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tt.clientAuth != "" {
+				req.Header.Set(githubProxyClientAuthHeader, tt.clientAuth)
+			}
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("app.Test: %v", err)
+			}
+			if resp.StatusCode != http.StatusNoContent {
+				t.Fatalf("unexpected status %d", resp.StatusCode)
+			}
+		})
+	}
+}
+
 func TestIsAllowedGitHubPath(t *testing.T) {
 	tests := []struct {
 		name    string

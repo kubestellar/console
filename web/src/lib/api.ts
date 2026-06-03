@@ -8,6 +8,7 @@ import {
   DEMO_TOKEN_VALUE,
   FETCH_DEFAULT_TIMEOUT_MS,
 } from './constants'
+import { getClientCtx } from './clientCtx'
 import { emitSessionExpired, emitHttpError } from './analytics'
 import {
   reportBackendAvailable,
@@ -31,6 +32,8 @@ const SESSION_EXPIRY_REDIRECT_MS = 3_000
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
 /** Endpoint used to invalidate the HttpOnly auth cookie on the server side (#6061). */
 const AUTH_LOGOUT_ENDPOINT = '/auth/logout'
+const GITHUB_PROXY_PREFIX = '/api/github/'
+const GITHUB_PROXY_CLIENT_AUTH_HEADER = 'X-KC-Client-Auth'
 
 // Public API paths that don't require authentication (served without JWT on the backend)
 const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file', '/api/compliance/']
@@ -634,7 +637,7 @@ class ApiClient {
       throw new BackendUnavailableError()
     }
 
-    const headers = { ...this.getHeaders(), ...options?.headers }
+    const headers = withGitHubProxyClientAuth(path, { ...this.getHeaders(), ...options?.headers })
     const { controller, timeoutId } = this.createAbortController(options?.timeout ?? DEFAULT_TIMEOUT)
     const signal = options?.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal
 
@@ -699,7 +702,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'POST',
-        headers: { ...this.getHeaders(), ...options?.headers },
+        headers: withGitHubProxyClientAuth(path, { ...this.getHeaders(), ...options?.headers }),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -754,7 +757,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'PATCH',
-        headers: { ...this.getHeaders(), ...options?.headers },
+        headers: withGitHubProxyClientAuth(path, { ...this.getHeaders(), ...options?.headers }),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -805,7 +808,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'PUT',
-        headers: this.getHeaders(),
+        headers: withGitHubProxyClientAuth(path, this.getHeaders()),
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -860,7 +863,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
+        headers: withGitHubProxyClientAuth(path, this.getHeaders()),
         signal: controller.signal,
       })
       clearTimeout(timeoutId)
@@ -928,6 +931,19 @@ function shouldTreatAsBackendOutage(input: RequestInfo | URL, status: number): b
   return !BACKEND_OUTAGE_EXEMPT_PREFIXES.some(prefix => path.startsWith(prefix))
 }
 
+function withGitHubProxyClientAuth(path: string, headersInit?: HeadersInit): Headers {
+  const headers = new Headers(headersInit)
+  if (!path.startsWith(GITHUB_PROXY_PREFIX) || headers.has(GITHUB_PROXY_CLIENT_AUTH_HEADER)) {
+    return headers
+  }
+
+  const clientCtx = getClientCtx()
+  if (clientCtx) {
+    headers.set(GITHUB_PROXY_CLIENT_AUTH_HEADER, clientCtx)
+  }
+  return headers
+}
+
 export const api = new ApiClient()
 
 /**
@@ -960,7 +976,8 @@ export async function safeJson<T = unknown>(response: Response): Promise<T> {
 
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers = new Headers(init?.headers)
+  const path = extractRequestPath(input)
+  const headers = withGitHubProxyClientAuth(path, init?.headers)
 
   if (token && token !== DEMO_TOKEN_VALUE && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)

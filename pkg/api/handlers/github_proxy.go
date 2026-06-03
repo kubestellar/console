@@ -27,6 +27,9 @@ const (
 	githubProxyAPIBaseDefault = "https://api.github.com"
 	// maxGitHubProxyPathLen is the maximum allowed path length to prevent abuse.
 	maxGitHubProxyPathLen = 512
+	// githubProxyClientAuthHeader carries the user's GitHub OAuth token captured
+	// at login and stored client-side for user-attributed GitHub actions.
+	githubProxyClientAuthHeader = "X-KC-Client-Auth"
 	// githubProxyMaxRequestsPerMinute caps outbound GitHub API calls to protect
 	// the shared server-side PAT from being exhausted by runaway clients.
 	githubProxyMaxRequestsPerMinute = 60
@@ -191,10 +194,11 @@ func isAllowedGitHubPath(apiPath string) bool {
 	return false
 }
 
-// GitHubProxyHandler proxies read-only GitHub API requests through the backend,
-// keeping the GitHub PAT server-side. The frontend sends requests to
-// /api/github/* and this handler forwards them to api.github.com/* with
-// the server-side token in the Authorization header.
+// GitHubProxyHandler proxies read-only GitHub API requests through the backend.
+// User-initiated repository requests must use the caller's own GitHub OAuth
+// token from X-KC-Client-Auth to avoid a confused deputy. The configured
+// server-side token is reserved for non-repository utility calls such as the
+// settings page's /rate_limit validation.
 type GitHubProxyHandler struct {
 	// serverToken is the configured FEEDBACK_GITHUB_TOKEN (or GITHUB_TOKEN alias) from env
 	serverToken string
@@ -210,17 +214,33 @@ func NewGitHubProxyHandler(serverToken string, s store.Store) *GitHubProxyHandle
 	}
 }
 
-// resolveToken returns the best available GitHub token:
-// 1. User-saved token from encrypted settings file
-// 2. Server-configured FEEDBACK_GITHUB_TOKEN (or GITHUB_TOKEN alias) from env
-func (h *GitHubProxyHandler) resolveToken() string {
-	// Check user-saved settings first (may have a user-specific PAT)
+// resolveConfiguredToken returns the configured GitHub token used for
+// server-owned operations such as validating the admin-configured PAT.
+func (h *GitHubProxyHandler) resolveConfiguredToken() string {
 	if sm := settings.GetSettingsManager(); sm != nil {
 		if all, err := sm.GetAll(); err == nil && all.FeedbackGitHubToken != "" {
 			return all.FeedbackGitHubToken
 		}
 	}
 	return h.serverToken
+}
+
+func isConfiguredTokenAllowedForPath(apiPath string) bool {
+	return apiPath == "/rate_limit"
+}
+
+// resolveProxyToken picks the credential used for a proxied GitHub request.
+// Repository and search requests must use the caller's own GitHub OAuth token
+// supplied by the frontend; otherwise they run anonymously. The configured
+// server token is only allowed for narrowly scoped utility endpoints.
+func (h *GitHubProxyHandler) resolveProxyToken(c *fiber.Ctx, apiPath string) string {
+	if clientToken := strings.TrimSpace(c.Get(githubProxyClientAuthHeader)); clientToken != "" {
+		return clientToken
+	}
+	if isConfiguredTokenAllowedForPath(apiPath) {
+		return h.resolveConfiguredToken()
+	}
+	return ""
 }
 
 // Proxy handles GET /api/github/* by forwarding to api.github.com/*.
@@ -295,8 +315,11 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 		})
 	}
 
-	// Add GitHub token from server-side storage
-	token := h.resolveToken()
+	// Use the caller's GitHub OAuth token for user-initiated proxy requests.
+	// Only narrowly scoped utility endpoints may fall back to the configured
+	// server token; all other requests run anonymously if the caller did not
+	// supply X-KC-Client-Auth.
+	token := h.resolveProxyToken(c, apiPath)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -358,14 +381,14 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to check admin status")
 		}
-		
+
 		// Get the current user
 		userID := middleware.GetUserID(c)
 		user, err = h.store.GetUser(c.UserContext(), userID)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
 		}
-		
+
 		// If no admins exist, promote the current user to admin
 		if admins == 0 && user != nil && user.Role != models.UserRoleAdmin {
 			user.Role = models.UserRoleAdmin
@@ -465,7 +488,7 @@ func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 // HasToken handles GET /api/github/token/status — returns whether a GitHub
 // token is configured (without exposing the token itself).
 func (h *GitHubProxyHandler) HasToken(c *fiber.Ctx) error {
-	token := h.resolveToken()
+	token := h.resolveConfiguredToken()
 	source := "none"
 	if h.serverToken != "" {
 		source = "env"

@@ -1,5 +1,6 @@
 import { MILLICORES_PER_CORE, MIB_PER_GIB, KIB_PER_MIB, GB_TO_MIB, MB_TO_MIB, BYTES_PER_MIB } from './constants/units'
 import { MS_PER_MINUTE } from './constants/time'
+import { authFetch } from './api'
 
 /**
  * Kubara catalog utilities for Mission Control integration.
@@ -122,7 +123,7 @@ export async function fetchKubaraCatalog(): Promise<KubaraChartEntry[]> {
 
   try {
     const url = `/api/github/repos/${resolvedRepo}/contents/${encodeURIComponent(resolvedPath)}`
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
     })
 
@@ -175,7 +176,7 @@ export async function fetchKubaraValues(
     await ensureConfig()
     const url = valuesUrl
       ?? `/api/github/repos/${resolvedRepo}/contents/${encodeURIComponent(`${resolvedPath}/${chartName}/values.yaml`)}`
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       signal: AbortSignal.timeout(KUBARA_VALUES_FETCH_TIMEOUT_MS),
     })
 

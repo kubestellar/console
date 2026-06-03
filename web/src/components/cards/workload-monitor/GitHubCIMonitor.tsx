@@ -24,6 +24,7 @@ import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 import { usePipelineFilter } from '../pipelines/PipelineFilterContext'
 import { RepoSubtitle } from '../pipelines/RepoSubtitle'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
+import { authFetch } from '../../../lib/api'
 
 const THIRTY_SECONDS_MS = 30 * MS_PER_SECOND
 const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
@@ -136,7 +137,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
       const allRuns: WorkflowRun[] = []
       for (const repo of repos) {
         try {
-          const response = await fetch(`/api/github/repos/${repo}/actions/runs?per_page=10`, {
+          const response = await authFetch(`/api/github/repos/${repo}/actions/runs?per_page=10`, {
             headers: { Accept: 'application/vnd.github.v3+json' },
             signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
           if (response.status === 401 || response.status === 403) {

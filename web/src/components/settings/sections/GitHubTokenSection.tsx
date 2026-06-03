@@ -9,6 +9,7 @@ import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_CLASSIC_URL } from '../../../lib/
 import { ConfirmDialog } from '../../../lib/modals'
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../../../lib/utils/localStorage'
 import { useToast } from '../../ui/Toast'
+import { authFetch } from '../../../lib/api'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -178,7 +179,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     setTokenTesting(true)
     setTokenError(null)
     try {
-      const response = await fetch('/api/github/rate_limit', {
+      const response = await authFetch('/api/github/rate_limit', {
         headers: {
           ...authHeaders(),
           'Accept': 'application/vnd.github.v3+json',

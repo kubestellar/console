@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
+import { authFetch } from '../../lib/api'
 
 import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor, GitHubRepo, GitHubActivityConfig, ViewMode, SortByOption, GitHubItem, GitHubItemUnknown } from './GitHubActivity.types'
 import { PRItem, IssueItem, ReleaseItem, ContributorItem } from './GitHubActivityItems'
@@ -82,15 +83,15 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const fetchOptions = { headers }
 
       // Fetch repository info
-      const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const repoResponse = await authFetch(`/api/github/repos/${targetRepo}`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!repoResponse.ok) throw await githubFetchError(repoResponse, 'Failed to fetch repo')
       const repoData = await repoResponse.json().catch(() => null)
       if (!repoData) throw new Error('Failed to parse GitHub repo response: invalid JSON')
 
       // Fetch open PRs and closed/merged PRs separately
       const [openPRsResponse, closedPRsResponse] = await Promise.all([
-        fetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
-        fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+        authFetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
+        authFetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       ])
 
       if (!openPRsResponse.ok) throw await githubFetchError(openPRsResponse, 'Failed to fetch open PRs')
@@ -106,8 +107,8 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
 
       // Fetch open Issues count and recent issues
       const [openIssuesResponse, recentIssuesResponse] = await Promise.all([
-        fetch(`/api/github/repos/${targetRepo}/issues?state=open&per_page=1`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
-        fetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+        authFetch(`/api/github/repos/${targetRepo}/issues?state=open&per_page=1`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
+        authFetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       ])
 
       let calculatedOpenIssueCount = 0
@@ -127,13 +128,13 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
 
       // Fetch Releases
-      const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const releasesResponse = await authFetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!releasesResponse.ok) throw await githubFetchError(releasesResponse, 'Failed to fetch releases')
       const releasesData = await releasesResponse.json().catch(() => null)
       if (!releasesData) throw new Error('Failed to parse GitHub releases response: invalid JSON')
 
       // Fetch Contributors
-      const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      const contributorsResponse = await authFetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!contributorsResponse.ok) throw await githubFetchError(contributorsResponse, 'Failed to fetch contributors')
       const contributorsData = await contributorsResponse.json().catch(() => null)
       if (!contributorsData) throw new Error('Failed to parse GitHub contributors response: invalid JSON')
