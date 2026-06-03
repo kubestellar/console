@@ -80,21 +80,24 @@ export async function enforceSimpleRateLimit(
       await cleanupExpiredBucket(store, getBucketPrefix(options.prefix, subjectKey, cleanupBucket));
     }
 
-    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
-
+    // Check count BEFORE writing to prevent storage amplification (#16818)
     const currentWindowCount = await countBucketEntries(
       store,
       getBucketPrefix(options.prefix, subjectKey, bucket),
     );
 
-    if (currentWindowCount > options.maxRequests) {
+    if (currentWindowCount >= options.maxRequests) {
       return {
         limited: true,
         retryAfterSeconds: retryAfterSeconds((bucket + 1) * options.windowMs),
       };
     }
+
+    // Only write token after confirming under the limit
+    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
   } catch {
-    return { limited: false, retryAfterSeconds: 0 };
+    // Fail closed: if the store is unavailable, deny the request (#16818)
+    return { limited: true, retryAfterSeconds: 1 };
   }
 
   return { limited: false, retryAfterSeconds: 0 };

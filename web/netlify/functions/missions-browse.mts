@@ -8,6 +8,7 @@
  */
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const GITHUB_API_URL = "https://api.github.com";
 const KB_REPO = "kubestellar/console-kb";
@@ -30,6 +31,10 @@ const MAX_RETRIES = 2;
 /** Base delay between retries in milliseconds */
 const RETRY_BASE_DELAY_MS = 500;
 
+/** Rate limit: max requests per IP per window to prevent cache-miss amplification (#16817) */
+const RATE_LIMIT_MAX_REQUESTS = 60;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
   methods: "GET, OPTIONS",
@@ -48,9 +53,26 @@ interface BrowseCacheEntry {
   fetchedAt: number;
 }
 
-/** Reject path traversal patterns, URL control characters, and excessively long inputs (#13230, #14500). */
+/** Maximum path depth to prevent unbounded cache-key proliferation (#16817). */
+const MAX_PATH_SEGMENTS = 5;
+
+/** Allowlist pattern: only alphanumeric, hyphens, underscores, dots, forward slashes (#16817). */
+const VALID_PATH_CHARS = /^[a-zA-Z0-9\-_./]+$/;
+
+/** Reject path traversal patterns, URL control characters, and excessively long inputs (#13230, #14500, #16817). */
 function hasInvalidPathInput(value: string): boolean {
-  return value.length > 1000 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  if (value.length > 200 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?")) {
+    return true;
+  }
+  // Only allow safe characters to prevent arbitrary cache-key creation
+  if (!VALID_PATH_CHARS.test(value)) {
+    return true;
+  }
+  // Cap directory depth to prevent unbounded cache-miss amplification
+  if (value.split("/").length > MAX_PATH_SEGMENTS) {
+    return true;
+  }
+  return false;
 }
 
 export default async (request: Request): Promise<Response> => {
@@ -59,6 +81,26 @@ export default async (request: Request): Promise<Response> => {
   }
 
   const corsHeaders = buildCorsHeaders(request, CORS_OPTS);
+
+  // Rate limit per IP to prevent cache-miss amplification (#16817)
+  const clientIP = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateLimitResult = await enforceSimpleRateLimit({
+    storeName: "missions-rate-limit",
+    prefix: "browse:",
+    subject: clientIP,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rateLimitResult.limited) {
+    return new Response(JSON.stringify({ error: "rate_limited" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(rateLimitResult.retryAfterSeconds),
+        ...corsHeaders,
+      },
+    });
+  }
 
   const url = new URL(request.url);
   const path = url.searchParams.get("path") || "";
