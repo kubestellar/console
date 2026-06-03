@@ -74,7 +74,6 @@ func (s *SQLiteStore) GetOverdueOpenTasks(ctx context.Context, asOf time.Time) (
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) GetOpenTasks(ctx context.Context, userID string) ([]StellarTask, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
 		FROM stellar_tasks
@@ -95,7 +94,6 @@ func (s *SQLiteStore) GetOpenTasks(ctx context.Context, userID string) ([]Stella
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) UpdateTaskStatus(ctx context.Context, id, status, userID string) error {
 	normalized := strings.TrimSpace(strings.ToLower(status))
 	completedAt := interface{}(nil)
@@ -106,7 +104,6 @@ func (s *SQLiteStore) UpdateTaskStatus(ctx context.Context, id, status, userID s
 		normalized, completedAt, id, userID)
 	return err
 }
-
 
 func (s *SQLiteStore) GetTasksForCluster(ctx context.Context, cluster string, limit int) ([]StellarTask, error) {
 	lim := resolvePageLimit(limit, 50)
@@ -130,15 +127,15 @@ func (s *SQLiteStore) GetTasksForCluster(ctx context.Context, cluster string, li
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObservation) (string, error) {
 	if obs.ID == "" {
 		obs.ID = uuid.NewString()
 	}
 	if _, err := s.db.ExecContext(ctx, `INSERT INTO stellar_observations (
-		id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
+		id, user_id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
 		obs.ID,
+		obs.UserID,
 		obs.Cluster,
 		obs.Kind,
 		obs.Summary,
@@ -153,14 +150,15 @@ func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObserva
 	return obs.ID, nil
 }
 
-
-func (s *SQLiteStore) GetRecentObservations(ctx context.Context, cluster string, limit int) ([]StellarObservation, error) {
+func (s *SQLiteStore) GetRecentObservations(ctx context.Context, userID, cluster string, limit int) ([]StellarObservation, error) {
 	lim := resolvePageLimit(limit, 20)
-	query := `SELECT id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
-		FROM stellar_observations`
-	args := make([]interface{}, 0, 2)
+	query := `SELECT id, user_id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
+		FROM stellar_observations
+		WHERE user_id = ?`
+	args := make([]interface{}, 0, 3)
+	args = append(args, userID)
 	if strings.TrimSpace(cluster) != "" {
-		query += ` WHERE cluster = ?`
+		query += ` AND cluster = ?`
 		args = append(args, cluster)
 	}
 	query += ` ORDER BY created_at DESC LIMIT ?`
@@ -181,12 +179,11 @@ func (s *SQLiteStore) GetRecentObservations(ctx context.Context, cluster string,
 	return out, rows.Err()
 }
 
-
-func (s *SQLiteStore) GetUnshownObservations(ctx context.Context) ([]StellarObservation, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
+func (s *SQLiteStore) GetUnshownObservations(ctx context.Context, userID string) ([]StellarObservation, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
 		FROM stellar_observations
-		WHERE shown_to_user = 0
-		ORDER BY created_at ASC`)
+		WHERE user_id = ? AND shown_to_user = 0
+		ORDER BY created_at ASC`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +199,8 @@ func (s *SQLiteStore) GetUnshownObservations(ctx context.Context) ([]StellarObse
 	return out, rows.Err()
 }
 
-
-func (s *SQLiteStore) MarkObservationShown(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE stellar_observations SET shown_to_user = 1 WHERE id = ?`, id)
+func (s *SQLiteStore) MarkObservationShown(ctx context.Context, id, userID string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_observations SET shown_to_user = 1 WHERE id = ? AND user_id = ?`, id, userID)
 	return err
 }
 
@@ -276,12 +272,12 @@ func scanStellarTaskRow(rows *sql.Rows) (*StellarTask, error) {
 	return &item, nil
 }
 
-
 func scanStellarObservationRow(rows *sql.Rows) (*StellarObservation, error) {
 	var item StellarObservation
 	var shownInt int
 	if err := rows.Scan(
 		&item.ID,
+		&item.UserID,
 		&item.Cluster,
 		&item.Kind,
 		&item.Summary,
@@ -296,4 +292,3 @@ func scanStellarObservationRow(rows *sql.Rows) (*StellarObservation, error) {
 	item.ShownToUser = shownInt == 1
 	return &item, nil
 }
-

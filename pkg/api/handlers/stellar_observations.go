@@ -362,10 +362,9 @@ func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	_ = userID
 	cluster := strings.TrimSpace(c.Query("cluster"))
 	limit := readListLimit(c)
-	items, err := h.store.GetRecentObservations(c.UserContext(), cluster, limit)
+	items, err := h.store.GetRecentObservations(c.UserContext(), userID, cluster, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load observations"})
 	}
@@ -446,7 +445,8 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 					return false
 				}
 			}
-			observations, err := h.store.GetUnshownObservationsForUser(streamCtx, userID)
+<<<<<<< HEAD
+			observations, err := h.store.GetUnshownObservations(streamCtx, userID)
 			if err == nil && len(observations) > 0 {
 				next := observations[0]
 				payload := fiber.Map{
@@ -459,7 +459,8 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				if writeSSE(w, "observation", payload) != nil {
 					return false
 				}
-				if err := h.store.MarkObservationShownForUser(streamCtx, userID, next.ID); err != nil {
+<<<<<<< HEAD
+				if err := h.store.MarkObservationShown(streamCtx, next.ID, userID); err != nil {
 					slog.Warn("stellar: mark observation shown failed", "observationID", next.ID, "error", err)
 				}
 			}

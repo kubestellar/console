@@ -105,11 +105,9 @@ type StellarWatchStore interface {
 // StellarObservationStore manages observation journal entries.
 type StellarObservationStore interface {
 	CreateObservation(ctx context.Context, obs *StellarObservation) (string, error)
-	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]StellarObservation, error)
-	GetUnshownObservations(ctx context.Context) ([]StellarObservation, error)
-	GetUnshownObservationsForUser(ctx context.Context, userID string) ([]StellarObservation, error)
-	MarkObservationShown(ctx context.Context, id string) error
-	MarkObservationShownForUser(ctx context.Context, userID, observationID string) error
+	GetRecentObservations(ctx context.Context, userID, cluster string, limit int) ([]StellarObservation, error)
+	GetUnshownObservations(ctx context.Context, userID string) ([]StellarObservation, error)
+	MarkObservationShown(ctx context.Context, id, userID string) error
 }
 
 // StellarSolveStore manages solve attempts.

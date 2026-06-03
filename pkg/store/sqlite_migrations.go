@@ -433,6 +433,7 @@ func (s *SQLiteStore) migrate() error {
 	-- Stellar observer journal.
 	CREATE TABLE IF NOT EXISTS stellar_observations (
 		id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+		user_id       TEXT NOT NULL DEFAULT '',
 		cluster       TEXT NOT NULL DEFAULT '',
 		kind          TEXT NOT NULL,
 		summary       TEXT NOT NULL,
@@ -442,6 +443,7 @@ func (s *SQLiteStore) migrate() error {
 		shown_to_user INTEGER NOT NULL DEFAULT 0,
 		created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
+	CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_ts ON stellar_observations(user_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_stellar_obs_cluster_ts ON stellar_observations(cluster, created_at DESC);
 
 	-- OAuth credentials persisted by the GitHub App Manifest one-click flow.
@@ -579,6 +581,7 @@ func (s *SQLiteStore) migrate() error {
 		"CREATE INDEX IF NOT EXISTS idx_stellar_tasks_user_status ON stellar_tasks(user_id, status, priority)",
 		`CREATE TABLE IF NOT EXISTS stellar_observations (
 			id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			user_id       TEXT NOT NULL DEFAULT '',
 			cluster       TEXT NOT NULL DEFAULT '',
 			kind          TEXT NOT NULL,
 			summary       TEXT NOT NULL,
@@ -588,6 +591,7 @@ func (s *SQLiteStore) migrate() error {
 			shown_to_user INTEGER NOT NULL DEFAULT 0,
 			created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_ts ON stellar_observations(user_id, created_at DESC)",
 		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_cluster_ts ON stellar_observations(cluster, created_at DESC)",
 		`CREATE TABLE IF NOT EXISTS stellar_watches (
 			id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -616,6 +620,13 @@ func (s *SQLiteStore) migrate() error {
 
 		// Sprint 5: reasoning column on stellar_observations for trust layer
 		"ALTER TABLE stellar_observations ADD COLUMN reasoning TEXT NOT NULL DEFAULT ''",
+		"ALTER TABLE stellar_observations ADD COLUMN user_id TEXT NOT NULL DEFAULT ''",
+		`UPDATE stellar_observations
+			SET user_id = COALESCE((
+				SELECT user_id FROM stellar_watches WHERE stellar_watches.id = stellar_observations.ref_id
+			), '')
+			WHERE user_id = '' AND ref_type = 'watch' AND ref_id <> ''`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_ts ON stellar_observations(user_id, created_at DESC)",
 
 		// Sprint 5: snooze support — last_checked already exists on stellar_watches
 

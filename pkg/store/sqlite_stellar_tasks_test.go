@@ -231,6 +231,7 @@ func TestGetTasksForCluster_LimitRespected(t *testing.T) {
 func TestCreateObservation_RoundTrip(t *testing.T) {
 	s := newTestStore(t)
 	obs := &StellarObservation{
+		UserID:  "user-1",
 		Cluster: "prod-a",
 		Kind:    "PodCrash",
 		Summary: "Pod nginx-abc crashed",
@@ -241,50 +242,69 @@ func TestCreateObservation_RoundTrip(t *testing.T) {
 	id, err := s.CreateObservation(ctx, obs)
 	require.NoError(t, err)
 	require.NotEmpty(t, id)
+
+	results, err := s.GetRecentObservations(ctx, "user-1", "prod-a", 20)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "user-1", results[0].UserID)
 }
 
-func TestGetRecentObservations_FiltersByCluster(t *testing.T) {
+func TestGetRecentObservations_FiltersByUserAndCluster(t *testing.T) {
 	s := newTestStore(t)
-	obs1 := &StellarObservation{Cluster: "prod-a", Kind: "PodCrash", Summary: "crash in prod"}
-	obs2 := &StellarObservation{Cluster: "staging", Kind: "PodCrash", Summary: "crash in staging"}
+	obs1 := &StellarObservation{UserID: "user-1", Cluster: "prod-a", Kind: "PodCrash", Summary: "crash in prod"}
+	obs2 := &StellarObservation{UserID: "user-1", Cluster: "staging", Kind: "PodCrash", Summary: "crash in staging"}
+	obs3 := &StellarObservation{UserID: "user-2", Cluster: "prod-a", Kind: "PodCrash", Summary: "other user"}
 
 	_, err := s.CreateObservation(ctx, obs1)
 	require.NoError(t, err)
 	_, err = s.CreateObservation(ctx, obs2)
 	require.NoError(t, err)
+	_, err = s.CreateObservation(ctx, obs3)
+	require.NoError(t, err)
 
-	results, err := s.GetRecentObservations(ctx, "prod-a", 20)
+	results, err := s.GetRecentObservations(ctx, "user-1", "prod-a", 20)
 	require.NoError(t, err)
 	require.Len(t, results, 1)
 	assert.Equal(t, "crash in prod", results[0].Summary)
 }
 
-func TestGetRecentObservations_NoClusterReturnsAll(t *testing.T) {
+func TestGetRecentObservations_NoClusterReturnsAllForUser(t *testing.T) {
 	s := newTestStore(t)
 	for _, cluster := range []string{"prod-a", "staging", "dev"} {
-		obs := &StellarObservation{Cluster: cluster, Kind: "Info", Summary: "obs-" + cluster}
+		obs := &StellarObservation{UserID: "user-1", Cluster: cluster, Kind: "Info", Summary: "obs-" + cluster}
 		_, err := s.CreateObservation(ctx, obs)
 		require.NoError(t, err)
 	}
+	_, err := s.CreateObservation(ctx, &StellarObservation{UserID: "user-2", Cluster: "prod-a", Kind: "Info", Summary: "other-user"})
+	require.NoError(t, err)
 
-	results, err := s.GetRecentObservations(ctx, "", 20)
+	results, err := s.GetRecentObservations(ctx, "user-1", "", 20)
 	require.NoError(t, err)
 	assert.Len(t, results, 3)
 }
 
-func TestGetUnshownObservations_AndMarkShown(t *testing.T) {
+func TestGetUnshownObservations_AndMarkShown_AreUserScoped(t *testing.T) {
 	s := newTestStore(t)
-	obs := &StellarObservation{Cluster: "prod-a", Kind: "Alert", Summary: "new alert", ShownToUser: false}
-	id, err := s.CreateObservation(ctx, obs)
+	obs1 := &StellarObservation{UserID: "user-1", Cluster: "prod-a", Kind: "Alert", Summary: "user-1 alert", ShownToUser: false}
+	obs2 := &StellarObservation{UserID: "user-2", Cluster: "prod-a", Kind: "Alert", Summary: "user-2 alert", ShownToUser: false}
+	id, err := s.CreateObservation(ctx, obs1)
+	require.NoError(t, err)
+	_, err = s.CreateObservation(ctx, obs2)
 	require.NoError(t, err)
 
-	unshown, err := s.GetUnshownObservations(ctx)
+	unshown, err := s.GetUnshownObservations(ctx, "user-1")
 	require.NoError(t, err)
 	require.Len(t, unshown, 1)
+	assert.Equal(t, "user-1 alert", unshown[0].Summary)
 
-	require.NoError(t, s.MarkObservationShown(ctx, id))
+	require.NoError(t, s.MarkObservationShown(ctx, id, "user-1"))
 
-	unshown, err = s.GetUnshownObservations(ctx)
+	unshown, err = s.GetUnshownObservations(ctx, "user-1")
 	require.NoError(t, err)
 	assert.Empty(t, unshown)
+
+	unshown, err = s.GetUnshownObservations(ctx, "user-2")
+	require.NoError(t, err)
+	require.Len(t, unshown, 1)
+	assert.Equal(t, "user-2 alert", unshown[0].Summary)
 }
