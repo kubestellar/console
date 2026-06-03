@@ -263,8 +263,22 @@ load_watcher_runtime() {
     if [ ! -f "$WATCHDOG_RUNTIME_FILE" ]; then
         return 1
     fi
-    # shellcheck disable=SC1090
-    . "$WATCHDOG_RUNTIME_FILE"
+    # Parse as key=value data instead of sourcing as shell code to prevent
+    # shell injection (CWE-367: TOCTOU, arbitrary code execution).
+    # Only allow safe variable names matching the expected keys.
+    while IFS='=' read -r key value; do
+        # Strip leading/trailing whitespace
+        key=$(echo "$key" | xargs)
+        value=$(echo "$value" | xargs)
+        # Only set expected variables
+        case "$key" in
+            WATCHDOG_RUNTIME_DIR|WATCHDOG_PID_FILE|STAGE_FILE)
+                # Export the variable (using eval for the assignment, but with validated key)
+                eval "$key=\"\$value\""
+                ;;
+            # Ignore unknown keys
+        esac
+    done < "$WATCHDOG_RUNTIME_FILE"
     [ -n "${WATCHDOG_PID_FILE:-}" ] && [ -n "${STAGE_FILE:-}" ]
 }
 

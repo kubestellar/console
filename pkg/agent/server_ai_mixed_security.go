@@ -97,6 +97,33 @@ var mixedModeBlockedStreamingFlags = map[string]bool{
 	"-w":       true,
 }
 
+// mixedModeBlockedTransportFlags blocks kubectl transport and authentication flags
+// that can redirect traffic to attacker-controlled servers or inject credentials.
+// CWE-88: Improper Neutralization of Argument Delimiters.
+var mixedModeBlockedTransportFlags = map[string]bool{
+	"--server":                  true,
+	"-s":                        true,
+	"--token":                   true,
+	"--user":                    true,
+	"--cluster":                 true,
+	"--client-key":              true,
+	"--client-certificate":      true,
+	"--certificate-authority":   true,
+	"--insecure-skip-tls-verify": true,
+	"--tls-server-name":         true,
+	"--as":                      true,
+	"--as-group":                true,
+	"--as-uid":                  true,
+}
+
+// mixedModeBlockedDataFlags blocks flags that bypass resource-level access controls
+// or enable SSRF/arbitrary file reads. CWE-200: Information Exposure, CWE-918: SSRF.
+var mixedModeBlockedDataFlags = map[string]bool{
+	"--raw":       true,
+	"--filename":  true,
+	"--kustomize": true,
+}
+
 func validateMixedModeCommands(commands []string) mixedModeCommandValidation {
 	validation := mixedModeCommandValidation{
 		Approved: make([]string, 0, len(commands)),
@@ -134,12 +161,24 @@ func validateMixedModeCommand(command string) (bool, string) {
 	}
 
 	commandName := strings.ToLower(tokens[0])
+	
+	// Block kubectl plugins (kubectl-* binaries) — CWE-78: OS Command Injection
+	if strings.HasPrefix(commandName, "kubectl-") {
+		return false, "kubectl plugins are blocked in mixed mode"
+	}
+	
 	args := tokens[1:]
 	if hasMixedModeContextOverride(args) {
 		return false, "cluster context overrides are blocked in mixed mode"
 	}
 	if hasMixedModeStreamingFlag(args) {
 		return false, "streaming or watch flags are blocked in mixed mode"
+	}
+	if hasMixedModeTransportOverride(args) {
+		return false, "transport and authentication flags are blocked in mixed mode"
+	}
+	if hasMixedModeDataFlag(args) {
+		return false, "raw API access and file input flags are blocked in mixed mode"
 	}
 
 	switch commandName {
@@ -303,8 +342,53 @@ func hasMixedModeContextOverride(args []string) bool {
 func hasMixedModeStreamingFlag(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if mixedModeBlockedStreamingFlags[lower] {
+		// Use prefix matching to catch --watch=true, --watch-only, --follow=true, etc.
+		// CWE-20: Improper Input Validation — prevents bypass via flag variants
+		if strings.HasPrefix(lower, "--watch") || strings.HasPrefix(lower, "--follow") {
 			return true
+		}
+		// Short forms need exact match
+		if lower == "-w" || lower == "-f" {
+			return true
+		}
+	}
+	return false
+}
+
+// hasMixedModeTransportOverride checks for kubectl transport and authentication flags
+// that can redirect traffic to attacker-controlled servers or inject credentials.
+// CWE-88: Improper Neutralization of Argument Delimiters.
+func hasMixedModeTransportOverride(args []string) bool {
+	for _, arg := range args {
+		lower := strings.ToLower(arg)
+		// Check exact flag match
+		if mixedModeBlockedTransportFlags[lower] {
+			return true
+		}
+		// Check --flag=value form via prefix matching
+		for flag := range mixedModeBlockedTransportFlags {
+			if strings.HasPrefix(lower, flag+"=") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// hasMixedModeDataFlag checks for flags that bypass resource-level access controls
+// or enable SSRF/arbitrary file reads. CWE-200: Information Exposure, CWE-918: SSRF.
+func hasMixedModeDataFlag(args []string) bool {
+	for _, arg := range args {
+		lower := strings.ToLower(arg)
+		// Check exact flag match
+		if mixedModeBlockedDataFlags[lower] {
+			return true
+		}
+		// Check --flag=value form via prefix matching
+		for flag := range mixedModeBlockedDataFlags {
+			if strings.HasPrefix(lower, flag+"=") {
+				return true
+			}
 		}
 	}
 	return false
