@@ -1,3 +1,4 @@
+import { parse } from '@babel/parser'
 import type { CompileResult, DynamicComponentResult } from './types'
 import { createElement, type ComponentType } from 'react'
 import type { CardComponentProps } from '../../components/cards/cardRegistry'
@@ -33,6 +34,87 @@ const BLOCKED_GLOBALS = [
  * object that refers to the outer call (scopeValues), shadowing any global.
  */
 const STRICT_RESERVED_BLOCKED = new Set<string>(['arguments'])
+
+const BLOCKED_PROTOTYPE_PROPERTIES = new Set<string>(['constructor', '__proto__', 'prototype'])
+const BLOCKED_COMPUTED_GLOBALS = new Set<string>(['window', 'document', 'globalThis', 'Function', 'eval'])
+
+type AstNode = {
+  type: string
+  [key: string]: unknown
+}
+
+function isAstNode(value: unknown): value is AstNode {
+  return typeof value === 'object' && value !== null && typeof (value as { type?: unknown }).type === 'string'
+}
+
+function getMemberPropertyName(property: unknown, computed: boolean): string | null {
+  if (!isAstNode(property)) return null
+  if (!computed && property.type === 'Identifier' && typeof property.name === 'string') {
+    return property.name
+  }
+  if (property.type === 'StringLiteral' && typeof property.value === 'string') {
+    return property.value
+  }
+  if (property.type === 'NumericLiteral' && typeof property.value === 'number') {
+    return String(property.value)
+  }
+  if (property.type === 'TemplateLiteral' && Array.isArray(property.expressions) && property.expressions.length === 0) {
+    const [quasi] = Array.isArray(property.quasis) ? property.quasis : []
+    if (
+      isAstNode(quasi)
+      && typeof quasi.value === 'object'
+      && quasi.value !== null
+      && typeof (quasi.value as { cooked?: unknown }).cooked === 'string'
+    ) {
+      return (quasi.value as { cooked: string }).cooked
+    }
+  }
+  return null
+}
+
+function findSandboxViolation(node: unknown): string | null {
+  if (!isAstNode(node)) return null
+
+  if (node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression') {
+    const computed = node.computed === true
+    const propertyName = getMemberPropertyName(node.property, computed)
+
+    if (propertyName !== null) {
+      if (BLOCKED_PROTOTYPE_PROPERTIES.has(propertyName)) {
+        return `forbidden property access: ${propertyName}`
+      }
+      if (computed && BLOCKED_COMPUTED_GLOBALS.has(propertyName)) {
+        return `forbidden computed global access: ${propertyName}`
+      }
+    }
+
+    if (computed && propertyName === null) {
+      return 'dynamic computed property access'
+    }
+  }
+
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        const violation = findSandboxViolation(child)
+        if (violation) return violation
+      }
+      continue
+    }
+    const violation = findSandboxViolation(value)
+    if (violation) return violation
+  }
+
+  return null
+}
+
+function validateSandboxAst(compiledCode: string): string | null {
+  const ast = parse(compiledCode, {
+    sourceType: 'unambiguous',
+    errorRecovery: false,
+  })
+  return findSandboxViolation(ast.program)
+}
 
 /**
  * Deep-freeze an object graph so dynamic card code cannot mutate shared
@@ -138,22 +220,19 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // Freeze the scope map itself (preserves the previous shallow-freeze behavior).
     Object.freeze(scope)
 
-    // #6676: Static analysis — reject compiled code that references the
-    // constructor-escape patterns or dynamic function constructors. This
-    // is a defense-in-depth layer on top of identifier shadowing: without
-    // it, `(function(){}).constructor('code')()` or `(1).__proto__.constructor`
-    // could bypass the BLOCKED_GLOBALS param shadowing because they reach
-    // Function via the prototype chain rather than the global binding.
-    //
-    // We intentionally match on the raw compiled output (post-Sucrase), so
-    // renaming, string concatenation, or bracket access `obj['constructor']`
-    // still bypasses this — but combined with Function/AsyncFunction/
-    // GeneratorFunction param shadowing and the runtime throw injected
-    // below, the common escape routes are closed.
+    // #16505 / #6676: reject prototype-chain escapes and unsafe bracket
+    // access before evaluating user code. Dot access to constructor-like
+    // properties and computed access such as obj['constructor'] or obj[key]
+    // can recover dangerous globals via the prototype chain.
+    const astViolation = validateSandboxAst(compiledCode)
+    if (astViolation) {
+      return {
+        component: null,
+        error: `Runtime error: sandbox blocked ${astViolation}`,
+      }
+    }
+
     const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
-      { re: /\.constructor\s*\(/, label: '.constructor(' },
-      { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
-      { re: /\b__proto__\b/, label: '__proto__' },
       { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
       { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
     ]

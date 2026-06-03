@@ -193,7 +193,7 @@ describe('createCardComponent', () => {
       `
       const result = createCardComponent(code)
       expect(result.component).toBeNull()
-      expect(result.error).toMatch(/forbidden pattern.*\.constructor/)
+      expect(result.error).toMatch(/constructor/)
     })
 
     it('blocks __proto__ access patterns', () => {
@@ -214,6 +214,47 @@ describe('createCardComponent', () => {
       const result = createCardComponent(code)
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/constructor/)
+    })
+
+    it('blocks bracket-access to prototype properties', () => {
+      const code = `
+        var proto = ({ ok: true })['prototype'];
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/prototype/)
+    })
+
+    it('blocks dynamic computed property access', () => {
+      const code = `
+        var key = 'constructor';
+        var value = ({})[key];
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/computed property access/)
+    })
+
+    it('allows numeric array indexing', () => {
+      const code = `
+        var first = [1, 2, 3][0];
+        module.exports.default = function() { return first; };
+      `
+      const result = createCardComponent(code)
+      expect(result.error).toBeNull()
+      expect(typeof result.component).toBe('function')
+    })
+
+    it('allows safe static string property access', () => {
+      const code = `
+        var value = ({ safe: 1 })['safe'];
+        module.exports.default = function() { return value; };
+      `
+      const result = createCardComponent(code)
+      expect(result.error).toBeNull()
+      expect(typeof result.component).toBe('function')
     })
 
     it('blocks AsyncFunction references', () => {
