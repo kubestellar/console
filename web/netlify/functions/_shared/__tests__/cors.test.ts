@@ -2,7 +2,7 @@
  * Unit tests for cors.ts (#16109).
  * Tests CORS origin validation, header building, and preflight handling.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isAllowedOrigin,
   buildCorsHeaders,
@@ -11,12 +11,17 @@ import {
 } from "../cors";
 
 describe("cors", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   describe("isAllowedOrigin", () => {
     it("should allow production origin", () => {
       expect(isAllowedOrigin("https://console.kubestellar.io")).toBe(true);
     });
 
     it("should allow docs origins", () => {
+      expect(isAllowedOrigin("https://docs.kubestellar.io")).toBe(true);
       expect(isAllowedOrigin("https://kubestellar.io")).toBe(true);
       expect(isAllowedOrigin("https://www.kubestellar.io")).toBe(true);
     });
@@ -36,7 +41,9 @@ describe("cors", () => {
       expect(isAllowedOrigin("https://fix-docs--kubestellar-docs.netlify.app")).toBe(true);
     });
 
-    it("should allow localhost development origins", () => {
+    it("should allow localhost development origins outside production", () => {
+      vi.stubEnv("NODE_ENV", "development");
+
       expect(isAllowedOrigin("http://localhost:5173")).toBe(true);
       expect(isAllowedOrigin("http://localhost:5174")).toBe(true);
       expect(isAllowedOrigin("http://localhost:8080")).toBe(true);
@@ -66,7 +73,10 @@ describe("cors", () => {
       expect(isAllowedOrigin("http://console.kubestellar.io")).toBe(false);
     });
 
-    it("should reject localhost with wrong port", () => {
+    it("should reject localhost origins in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NETLIFY_DEV", "false");
+
       expect(isAllowedOrigin("http://localhost:3000")).toBe(false);
       expect(isAllowedOrigin("http://localhost:9999")).toBe(false);
     });

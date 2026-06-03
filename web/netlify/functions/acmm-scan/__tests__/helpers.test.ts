@@ -33,24 +33,28 @@ describe("getStrictKubestellarCorsOrigin", () => {
     expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[1])).toBe(
       STRICT_KUBESTELLAR_ORIGINS[1],
     );
-    expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[2])).toBe(
-      STRICT_KUBESTELLAR_ORIGINS[2],
-    );
   });
 
-  it("rejects unknown kubestellar subdomains", () => {
+  it("rejects non-allowlisted kubestellar origins", () => {
     expect(
       getStrictKubestellarCorsOrigin("https://console-preview.kubestellar.io"),
     ).toBeNull();
+    expect(getStrictKubestellarCorsOrigin("https://kubestellar.io")).toBeNull();
   });
 
-  it("allows localhost only outside production", () => {
+  it("allows localhost only for development runtimes", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBe(
       "http://localhost:5174",
     );
 
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NETLIFY_DEV", "true");
+    expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBe(
+      "http://localhost:5174",
+    );
+
+    vi.stubEnv("NETLIFY_DEV", "false");
     expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBeNull();
   });
 });

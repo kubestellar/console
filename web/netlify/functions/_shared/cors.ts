@@ -31,6 +31,7 @@ const PROD_ORIGIN = "https://console.kubestellar.io";
  * docs PRs can test against the staging console API.
  */
 const DOCS_ORIGINS = new Set<string>([
+  "https://docs.kubestellar.io",
   "https://kubestellar.io",
   "https://www.kubestellar.io",
 ]);
@@ -56,7 +57,6 @@ const ALLOWED_EXACT = new Set<string>([PROD_ORIGIN, ...DOCS_ORIGINS]);
 export const STRICT_KUBESTELLAR_ORIGINS = [
   "https://console.kubestellar.io",
   "https://docs.kubestellar.io",
-  "https://kubestellar.io",
 ] as const;
 
 const STRICT_KUBESTELLAR_ORIGIN_SET = new Set<string>(STRICT_KUBESTELLAR_ORIGINS);
@@ -71,7 +71,7 @@ export function isAllowedOrigin(origin: string | null | undefined): boolean {
   if (NETLIFY_PREVIEW_RE.test(origin)) return true;
   if (NETLIFY_DEPLOY_RE.test(origin)) return true;
   if (NETLIFY_DOCS_RE.test(origin)) return true;
-  if (LOCALHOST_RE.test(origin)) return true;
+  if (isNonProductionCorsRuntime() && LOCALHOST_RE.test(origin)) return true;
   return false;
 }
 
