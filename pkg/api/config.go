@@ -138,16 +138,18 @@ func LoadConfigFromEnv() Config {
 	devModeEnv := os.Getenv("DEV_MODE")
 	devMode := devModeEnv == "true"
 
-	// Defense-in-depth: auto-activate dev mode when OAuth is unconfigured (#10925).
-	// Without this, a missing DEV_MODE export (e.g. older start.sh) causes the
-	// auth-retry cascade: JWTAuth rejects every request → frontend retries → 429.
-	// Skip auto-activation when DEV_MODE is explicitly "false" — the one-click
-	// manifest flow intentionally starts with no OAuth credentials (#10931).
+	// SECURITY (#16615): Dev mode must be explicitly opted-in via DEV_MODE=true.
+	// Previously, missing OAuth credentials auto-activated dev mode, granting
+	// unauthenticated admin access on misconfigured deployments (CWE-489).
+	// Now: if OAuth is unconfigured and DEV_MODE is not "true", the server
+	// starts in OAuth mode and the manifest setup flow guides the user.
 	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
 	githubSecret := os.Getenv("GITHUB_CLIENT_SECRET")
-	if !devMode && devModeEnv != "false" && githubClientID == "" && githubSecret == "" {
-		slog.Warn("[Config] No GitHub OAuth credentials and DEV_MODE not set — auto-activating dev mode")
-		devMode = true
+	if !devMode && githubClientID == "" && githubSecret == "" && devModeEnv != "false" {
+		slog.Error("[Config] SECURITY: No OAuth credentials configured and DEV_MODE is not set. "+
+			"The console will start in OAuth mode (manifest setup flow). "+
+			"Set DEV_MODE=true explicitly if you intend to run without authentication.",
+			"solution", "Either configure GITHUB_CLIENT_ID/GITHUB_CLIENT_SECRET, or set DEV_MODE=true for development.")
 	}
 
 	// Validate OAuth credentials when OAuth mode is active (#14850).
