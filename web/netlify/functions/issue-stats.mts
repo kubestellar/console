@@ -34,7 +34,7 @@ const MS_PER_DAY = 86_400_000;
 /** Default lookback in days */
 const DEFAULT_DAYS = 90;
 /** Allowed discrete lookback values to prevent cache-miss amplification */
-const ALLOWED_DAYS = [7, 14, 30, 60, 90, 180, 365];
+const ALLOWED_DAYS = [7, 14, 30, 90];
 /** Rate limit: max requests per IP per window */
 const RATE_LIMIT_MAX_REQUESTS = 30;
 /** Rate limit window (5 minutes) */
