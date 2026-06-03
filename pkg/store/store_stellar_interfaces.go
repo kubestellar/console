@@ -152,6 +152,7 @@ type StellarUserSessionStore interface {
 type StellarAuditStore interface {
 	CreateAuditEntry(ctx context.Context, e *StellarAuditEntry) error
 	ListStellarAuditLog(ctx context.Context, limit int) ([]StellarAuditEntry, error)
+	ListStellarAuditLogForUser(ctx context.Context, userID string, limit int) ([]StellarAuditEntry, error)
 }
 
 // StellarStore keeps the legacy aggregate contract while exposing focused

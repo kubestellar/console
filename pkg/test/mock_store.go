@@ -842,4 +842,8 @@ func (m *MockStore) ListStellarAuditLog(_ context.Context, _ int) ([]store.Stell
 	return nil, nil
 }
 
+func (m *MockStore) ListStellarAuditLogForUser(_ context.Context, _ string, _ int) ([]store.StellarAuditEntry, error) {
+	return nil, nil
+}
+
 func (m *MockStore) Close() error { return nil }

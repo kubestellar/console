@@ -159,6 +159,7 @@ type StellarStore interface {
 	SnoozeWatch(ctx context.Context, id, userID string, until time.Time) error
 	GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]store.StellarWatch, error)
 	ListStellarAuditLog(ctx context.Context, limit int) ([]store.StellarAuditEntry, error)
+	ListStellarAuditLogForUser(ctx context.Context, userID string, limit int) ([]store.StellarAuditEntry, error)
 
 	// Event pipeline — recurring detection and async narration enrichment
 	CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error)

@@ -207,3 +207,37 @@ func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, limit int) ([]Ste
 	}
 	return out, rows.Err()
 }
+
+func (s *SQLiteStore) ListStellarAuditLogForUser(ctx context.Context, userID string, limit int) ([]StellarAuditEntry, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, ts, user_id, action, entity_type, entity_id, cluster, detail
+		 FROM stellar_audit_log
+		 WHERE user_id = ?
+		 ORDER BY ts DESC
+		 LIMIT ?`, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarAuditEntry, 0)
+	for rows.Next() {
+		var e StellarAuditEntry
+		var tsRaw string
+		if err := rows.Scan(&e.ID, &tsRaw, &e.UserID, &e.Action, &e.EntityType, &e.EntityID, &e.Cluster, &e.Detail); err != nil {
+			return nil, err
+		}
+		t, err := time.Parse("2006-01-02T15:04:05Z", tsRaw)
+		if err != nil {
+			t, err = time.Parse("2006-01-02 15:04:05", tsRaw)
+			if err != nil {
+				slog.Warn("[StellarStore] unparseable timestamp in events row", "id", e.ID, "raw", tsRaw)
+			}
+		}
+		e.Ts = t.UTC()
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
