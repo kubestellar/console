@@ -1,5 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+
+const mockCreateDashboard = vi.fn()
+const mockAddItem = vi.fn()
+const mockUseDashboards = vi.fn()
+const mockUseSidebarConfig = vi.fn()
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -38,11 +43,11 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('../../../../hooks/useDashboards', () => ({
-  useDashboards: () => ({ dashboards: [], createDashboard: vi.fn() }),
+  useDashboards: () => mockUseDashboards(),
 }))
 
 vi.mock('../../../../hooks/useSidebarConfig', () => ({
-  useSidebarConfig: () => ({ addItem: vi.fn() }),
+  useSidebarConfig: () => mockUseSidebarConfig(),
 }))
 
 vi.mock('../../../../lib/iconSuggester', () => ({
@@ -50,13 +55,23 @@ vi.mock('../../../../lib/iconSuggester', () => ({
 }))
 
 vi.mock('../DashboardCustomizerSidebar', () => ({
-  DashboardCustomizerSidebar: ({ activeSection, onSectionChange, ...rest }: { activeSection: string; onSectionChange?: (s: string) => void; [key: string]: unknown }) =>
-    <div data-testid="sidebar" data-section={activeSection} data-disabled={(rest as any).disabled} data-loading={(rest as any).loading}>
-      <button data-testid="sidebar-go-widgets" onClick={() => onSectionChange?.('widgets')} disabled={(rest as any).disabled}>widgets</button>
-      <button data-testid="sidebar-go-collections" onClick={() => onSectionChange?.('collections')} disabled={(rest as any).disabled}>collections</button>
-      <button data-testid="sidebar-go-card-factory" onClick={() => onSectionChange?.('card-factory')} disabled={(rest as any).disabled}>card-factory</button>
-      <button data-testid="sidebar-go-stat-factory" onClick={() => onSectionChange?.('stat-factory')} disabled={(rest as any).disabled}>stat-factory</button>
-      <button data-testid="sidebar-go-create-dashboard" onClick={() => onSectionChange?.('create-dashboard')} disabled={(rest as any).disabled}>create-dashboard</button>
+  DashboardCustomizerSidebar: ({
+    activeSection,
+    onSectionChange,
+    disabled,
+    loading,
+  }: {
+    activeSection: string
+    onSectionChange?: (s: string) => void
+    disabled?: boolean
+    loading?: boolean
+  }) =>
+    <div data-testid="sidebar" data-section={activeSection} data-disabled={disabled} data-loading={loading}>
+      <button data-testid="sidebar-go-widgets" onClick={() => onSectionChange?.('widgets')} disabled={disabled}>widgets</button>
+      <button data-testid="sidebar-go-collections" onClick={() => onSectionChange?.('collections')} disabled={disabled}>collections</button>
+      <button data-testid="sidebar-go-card-factory" onClick={() => onSectionChange?.('card-factory')} disabled={disabled}>card-factory</button>
+      <button data-testid="sidebar-go-stat-factory" onClick={() => onSectionChange?.('stat-factory')} disabled={disabled}>stat-factory</button>
+      <button data-testid="sidebar-go-create-dashboard" onClick={() => onSectionChange?.('create-dashboard')} disabled={disabled}>create-dashboard</button>
     </div>,
 }))
 
@@ -135,7 +150,9 @@ vi.mock('../../StatBlockFactoryModal', () => ({
 }))
 
 vi.mock('../../CreateDashboardModal', () => ({
-  CreateDashboardModal: () => <div data-testid="create-dashboard" />,
+  CreateDashboardModal: ({ existingNames }: { existingNames?: string[] }) => (
+    <div data-testid="create-dashboard" data-existing-names={(existingNames || []).join('|')} />
+  ),
 }))
 
 vi.mock('../../../widgets/WidgetExportModal', () => ({
@@ -163,6 +180,23 @@ const DEFAULT_PROPS = {
 }
 
 describe('DashboardCustomizer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseDashboards.mockReturnValue({ dashboards: [], createDashboard: mockCreateDashboard })
+    mockUseSidebarConfig.mockReturnValue({
+      addItem: mockAddItem,
+      config: {
+        primaryNav: [
+          { id: 'dashboard', name: 'Dashboard', href: '/', type: 'link' },
+          { id: 'team-ops', name: 'Team Ops', href: '/custom-dashboard/team-ops', type: 'link' },
+        ],
+        secondaryNav: [
+          { id: 'settings', name: 'Settings', href: '/settings', type: 'link' },
+        ],
+      },
+    })
+  })
+
   it('exports DashboardCustomizer as a function component', async () => {
     const mod = await import('../DashboardCustomizer')
     expect(typeof mod.DashboardCustomizer).toBe('function')
@@ -225,6 +259,23 @@ describe('DashboardCustomizer', () => {
     const { DashboardCustomizer } = await import('../DashboardCustomizer')
     render(<DashboardCustomizer {...DEFAULT_PROPS} initialSection="create-dashboard" />)
     expect(screen.getByTestId('create-dashboard')).toBeTruthy()
+  })
+
+  it('falls back to sidebar dashboard names when backend dashboards are unavailable', async () => {
+    const { DashboardCustomizer } = await import('../DashboardCustomizer')
+    render(<DashboardCustomizer {...DEFAULT_PROPS} initialSection="create-dashboard" />)
+    expect(screen.getByTestId('create-dashboard').getAttribute('data-existing-names')).toBe('Dashboard|Team Ops')
+  })
+
+  it('prefers backend dashboard names when they are available', async () => {
+    mockUseDashboards.mockReturnValue({
+      dashboards: [{ id: 'backend-1', name: 'Backend Dashboard' }],
+      createDashboard: mockCreateDashboard,
+    })
+
+    const { DashboardCustomizer } = await import('../DashboardCustomizer')
+    render(<DashboardCustomizer {...DEFAULT_PROPS} initialSection="create-dashboard" />)
+    expect(screen.getByTestId('create-dashboard').getAttribute('data-existing-names')).toBe('Backend Dashboard')
   })
 
   it('renders CardFactoryModal when initialSection=card-factory', async () => {
