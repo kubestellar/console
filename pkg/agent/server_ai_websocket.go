@@ -461,7 +461,12 @@ func isReadOnlyKubectlCommand(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
-	return readOnlyKubectlVerbs[strings.ToLower(args[0])]
+
+	verb := strings.ToLower(args[0])
+	if verb == "cluster-info" {
+		return firstMixedModePositionalArg(args[1:]) == ""
+	}
+	return readOnlyKubectlVerbs[verb]
 }
 
 // destructiveKubectlVerbs are kubectl subcommands that modify or destroy resources

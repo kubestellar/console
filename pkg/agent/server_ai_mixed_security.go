@@ -170,6 +170,9 @@ func validateMixedModeCommand(command string) (bool, string) {
 		if hasMixedModeTransportOverride(args) {
 			return false, "transport, authentication, and context override flags are blocked in mixed mode"
 		}
+		if approvalReason := mixedModeKubectlApprovalReason(args); approvalReason != "" {
+			return true, approvalReason
+		}
 		if hasMixedModeBlockedDataFlag(args) {
 			return false, "kubectl --raw and --filename flags are blocked in mixed mode"
 		}
@@ -239,20 +242,44 @@ func isMixedModeSafeKubectlCommand(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
+
+	verb := strings.ToLower(args[0])
+	if verb == "cluster-info" {
+		return firstMixedModePositionalArg(args[1:]) == ""
+	}
 	if isReadOnlyKubectlCommand(args) {
 		return true
 	}
 
-	switch strings.ToLower(args[0]) {
+	switch verb {
 	case "config":
 		subcommand := firstMixedModePositionalArg(args[1:])
-		return mixedModeConfigReadOnlySubcommands[subcommand]
+		return mixedModeConfigReadOnlySubcommands[subcommand] && !hasMixedModeBlockedFlag(args[1:], map[string]bool{"--raw": true})
 	case "rollout":
 		subcommand := firstMixedModePositionalArg(args[1:])
 		return allowedRolloutSubcommands[subcommand]
 	default:
 		return false
 	}
+}
+
+func mixedModeKubectlApprovalReason(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+
+	switch strings.ToLower(args[0]) {
+	case "config":
+		if firstMixedModePositionalArg(args[1:]) == "view" && hasMixedModeBlockedFlag(args[1:], map[string]bool{"--raw": true}) {
+			return "kubectl config view --raw requires explicit user approval"
+		}
+	case "cluster-info":
+		if subcommand := firstMixedModePositionalArg(args[1:]); subcommand != "" {
+			return fmt.Sprintf("kubectl cluster-info %s requires explicit user approval", subcommand)
+		}
+	}
+
+	return ""
 }
 
 func touchesMixedModeSensitiveKubectlResource(args []string) bool {

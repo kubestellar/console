@@ -560,6 +560,12 @@ func TestValidateMixedModeCommands(t *testing.T) {
 			wantReason: "transport, authentication, and context override flags are blocked",
 		},
 		{
+			name:              "require approval for config view raw",
+			command:           "kubectl config view --raw",
+			wantApprovalBlock: true,
+			wantReason:        "requires explicit user approval",
+		},
+		{
 			name:       "reject raw access",
 			command:    "kubectl get --raw=/api/v1/namespaces/kube-system/secrets",
 			wantReason: "kubectl --raw and --filename flags are blocked",
@@ -613,6 +619,17 @@ func TestValidateMixedModeCommands(t *testing.T) {
 			name:       "reject --follow=true bypass variant",
 			command:    "kubectl logs pod-1 --follow=true",
 			wantReason: "streaming",
+		},
+		{
+			name:         "allow bare cluster info",
+			command:      "kubectl cluster-info",
+			wantApproved: true,
+		},
+		{
+			name:              "require approval for cluster info dump",
+			command:           "kubectl cluster-info dump",
+			wantApprovalBlock: true,
+			wantReason:        "requires explicit user approval",
 		},
 		{
 			name:              "require approval for helm install",
