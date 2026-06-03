@@ -3,6 +3,7 @@ import { safeLazy } from '../../lib/safeLazy'
 import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { User, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -54,6 +55,11 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     backendUp: false,
   })
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { containerRef, handleKeyDown } = useKeyboardNav({
+    selector: '[role="menuitem"]:not([disabled])',
+    orientation: 'vertical',
+    onEscape: closeDropdown,
+  })
   const { totalCoins, githubPoints, localCoins, bonusPoints, awardCoins } = useRewards()
   const { channel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
@@ -232,6 +238,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </div>
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 closeDropdown()
                 setShowRewards(true)
@@ -271,6 +278,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   {languages.map((lang) => (
                     <button
                       type="button"
+                      role="menuitem"
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors ${
@@ -348,6 +356,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   <div className="flex flex-col gap-1 pt-1">
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={() => {
                         closeDropdown()
                         if (installMethod === 'dev') {
@@ -401,6 +410,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           <div className="p-2 space-y-1">
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 closeDropdown()
                 openFeedbackModal()
@@ -413,6 +423,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </button>
             <button
               type="button"
+              role="menuitem"
               onClick={handleLinkedInShare}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
@@ -422,6 +433,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </button>
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 closeDropdown()
                 onPreferences?.()
@@ -433,6 +445,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             </button>
             <button
               type="button"
+              role="menuitem"
               onClick={() => {
                 closeDropdown()
                 if (isDemoModeForced) {
