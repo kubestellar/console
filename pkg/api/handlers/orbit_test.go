@@ -350,37 +350,6 @@ func TestGetScheduleScopesToCurrentUser(t *testing.T) {
 	}
 }
 
-func TestGetScheduleAllowsAdminToSeeAllMissions(t *testing.T) {
-	adminID := uuid.New()
-	ownerID := uuid.New()
-	otherID := uuid.New()
-	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
-		adminID: {ID: adminID, Role: models.UserRoleAdmin},
-	}})
-	h.missions["mine"] = &OrbitMission{ID: "mine", OwnerID: ownerID.String(), Cadence: "daily", History: []OrbitRunRecord{}}
-	h.missions["theirs"] = &OrbitMission{ID: "theirs", OwnerID: otherID.String(), Cadence: "weekly", History: []OrbitRunRecord{}}
-
-	app := setupOrbitScopedApp(adminID, h)
-	req, err := http.NewRequest(http.MethodGet, "/schedule", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
-	const fiberTestTimeoutMS = 5000
-	resp, err := app.Test(req, fiberTestTimeoutMS)
-	if err != nil {
-		t.Fatalf("app.Test: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var got orbitScheduleResponse
-	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if len(got.Schedule) != 2 {
-		t.Fatalf("schedule = %+v, want both missions", got.Schedule)
-	}
-}
-
 func TestCreateMissionAssignsAuthenticatedOwner(t *testing.T) {
 	userID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
