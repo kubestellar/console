@@ -85,6 +85,7 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	app.Get("/api/stellar/watches", h.ListWatches)
 	app.Post("/api/stellar/watches", h.CreateWatch)
 	app.Post("/api/stellar/watches/:id/resolve", h.ResolveWatch)
+	app.Get("/api/stellar/audit", h.ListAuditLog)
 
 	return app, sqlStore
 }
@@ -170,6 +171,91 @@ func TestStellarMissionAndActionFlow(t *testing.T) {
 	approveResp, err := app.Test(approveReq, stellarTestFiberTimeoutMs)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, approveResp.StatusCode)
+}
+
+func TestStellarAuditLogScopedToRequestUser(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "stellar-audit.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	adminID := uuid.New()
+	viewerID := uuid.New()
+	otherUserID := uuid.New()
+	for _, user := range []*models.User{
+		{ID: adminID, GitHubID: "stellar-admin-id", GitHubLogin: "stellar-admin", Role: models.UserRoleAdmin},
+		{ID: viewerID, GitHubID: "stellar-viewer-id", GitHubLogin: "stellar-viewer", Role: models.UserRoleViewer},
+		{ID: otherUserID, GitHubID: "stellar-other-id", GitHubLogin: "stellar-other", Role: models.UserRoleViewer},
+	} {
+		require.NoError(t, sqlStore.CreateUser(context.Background(), user))
+	}
+
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{
+		UserID:     viewerID.String(),
+		Action:     "viewer_action",
+		EntityType: "watch",
+		EntityID:   "watch-1",
+		Cluster:    "cluster-a",
+		Detail:     `{"scope":"viewer"}`,
+	}))
+	require.NoError(t, sqlStore.CreateAuditEntry(context.Background(), &store.StellarAuditEntry{
+		UserID:     otherUserID.String(),
+		Action:     "other_action",
+		EntityType: "watch",
+		EntityID:   "watch-2",
+		Cluster:    "cluster-b",
+		Detail:     `{"scope":"other"}`,
+	}))
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		if rawID := c.Get("X-User-ID"); rawID != "" {
+			userID, parseErr := uuid.Parse(rawID)
+			require.NoError(t, parseErr)
+			c.Locals("userID", userID)
+		}
+		return c.Next()
+	})
+
+	h := NewStellarHandler(sqlStore, nil)
+	app.Get("/api/stellar/audit", h.ListAuditLog)
+
+	t.Run("viewer only sees own audit entries", func(t *testing.T) {
+		req, reqErr := http.NewRequest(http.MethodGet, "/api/stellar/audit", nil)
+		require.NoError(t, reqErr)
+		req.Header.Set("X-User-ID", viewerID.String())
+		resp, respErr := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, respErr)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var payload struct {
+			Items []store.StellarAuditEntry `json:"items"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+		require.Len(t, payload.Items, 1)
+		assert.Equal(t, viewerID.String(), payload.Items[0].UserID)
+		assert.Equal(t, "viewer_action", payload.Items[0].Action)
+	})
+
+	t.Run("admin can see all audit entries", func(t *testing.T) {
+		req, reqErr := http.NewRequest(http.MethodGet, "/api/stellar/audit", nil)
+		require.NoError(t, reqErr)
+		req.Header.Set("X-User-ID", adminID.String())
+		resp, respErr := app.Test(req, stellarTestFiberTimeoutMs)
+		require.NoError(t, respErr)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var payload struct {
+			Items []store.StellarAuditEntry `json:"items"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+		require.Len(t, payload.Items, 2)
+		userIDs := make([]string, 0, len(payload.Items))
+		for _, item := range payload.Items {
+			userIDs = append(userIDs, item.UserID)
+		}
+		assert.ElementsMatch(t, []string{viewerID.String(), otherUserID.String()}, userIDs)
+	})
 }
 
 func TestStellarAskStateDigestAndNotifications(t *testing.T) {

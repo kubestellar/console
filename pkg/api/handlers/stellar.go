@@ -17,6 +17,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
@@ -158,7 +159,8 @@ type StellarStore interface {
 	GetWatchByResource(ctx context.Context, userID, cluster, namespace, kind, name string) (*store.StellarWatch, error)
 	SnoozeWatch(ctx context.Context, id, userID string, until time.Time) error
 	GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]store.StellarWatch, error)
-	ListStellarAuditLog(ctx context.Context, limit int) ([]store.StellarAuditEntry, error)
+	ListStellarAuditLog(ctx context.Context, limit int, userID string) ([]store.StellarAuditEntry, error)
+	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 
 	// Event pipeline — recurring detection and async narration enrichment
 	CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error)
