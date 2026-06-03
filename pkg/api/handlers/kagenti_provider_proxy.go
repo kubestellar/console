@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -27,17 +28,21 @@ const (
 
 // KagentiProviderProxyHandler proxies requests to the kagenti A2A endpoint.
 type KagentiProviderProxyHandler struct {
-	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
-	configManager kagentiprovider.ConfigManager
-	k8sClient     *k8s.MultiClusterClient
+	client              *kagentiprovider.KagentiClient // can be nil if kagenti not detected
+	configManager       kagentiprovider.ConfigManager
+	k8sClient           *k8s.MultiClusterClient
+	disableClusterCtx   bool // when true, cluster inventory is not injected into LLM prompts
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
+// Set KAGENTI_DISABLE_CLUSTER_CONTEXT=true to prevent cluster inventory
+// from being injected into LLM prompts (addresses CWE-201 data leakage).
 func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
-		client:        client,
-		configManager: configManager,
-		k8sClient:     k8sClient,
+		client:            client,
+		configManager:     configManager,
+		k8sClient:         k8sClient,
+		disableClusterCtx: os.Getenv("KAGENTI_DISABLE_CLUSTER_CONTEXT") == "true",
 	}
 }
 
@@ -320,9 +325,11 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 	})
 }
 
-// enrichMessageWithClusterContext prepends cluster context to the user's message
+// enrichMessageWithClusterContext prepends cluster context to the user's message.
+// Disabled when KAGENTI_DISABLE_CLUSTER_CONTEXT=true to prevent inventory leakage
+// to external LLM providers (CWE-201).
 func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx context.Context, message string) string {
-	if h.k8sClient == nil {
+	if h.k8sClient == nil || h.disableClusterCtx {
 		return message
 	}
 
@@ -350,8 +357,9 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 		} else {
 			contextBuilder.WriteString("  Status: Unhealthy\n")
 		}
-		contextBuilder.WriteString(fmt.Sprintf("  Nodes: %d\n", cluster.NodeCount))
-		contextBuilder.WriteString(fmt.Sprintf("  Pods: %d\n", cluster.PodCount))
+		// Node/pod counts intentionally omitted to minimize data exposure
+		// to external LLM providers (CWE-201). Use get_cluster_list tool
+		// for detailed info which stays server-side.
 		contextBuilder.WriteString("\n")
 	}
 
