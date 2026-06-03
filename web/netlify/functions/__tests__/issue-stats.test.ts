@@ -94,6 +94,14 @@ describe("issue-stats", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("returns 403 for repos outside the allowlist", async () => {
+    const res = await handler(makeRequest("repo=evil/private-repo&days=7"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Repository not allowed");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("returns 500 when GITHUB_TOKEN is not configured", async () => {
     delete process.env.GITHUB_TOKEN;
     const res = await handler(makeRequest());

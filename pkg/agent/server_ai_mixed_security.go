@@ -90,6 +90,38 @@ var mixedModeFlagsWithValues = map[string]bool{
 	"-o":               true,
 }
 
+var mixedModeBlockedTransportFlags = map[string]bool{
+	"--as":                       true,
+	"--as-group":                 true,
+	"--certificate-authority":    true,
+	"--client-certificate":       true,
+	"--client-key":               true,
+	"--cluster":                  true,
+	"--context":                  true,
+	"--insecure-skip-tls-verify": true,
+	"--kube-context":             true,
+	"--kubeconfig":               true,
+	"--password":                 true,
+	"--server":                   true,
+	"--tls-server-name":          true,
+	"--token":                    true,
+	"--user":                     true,
+	"--username":                 true,
+	"-s":                         true,
+}
+
+var mixedModeBlockedDataFlags = map[string]bool{
+	"--filename": true,
+	"--raw":      true,
+	"-f":         true,
+}
+
+var mixedModeBlockedStreamingFlags = map[string]bool{
+	"--follow": true,
+	"--watch":  true,
+	"-f":       true,
+	"-w":       true,
+}
 
 func validateMixedModeCommands(commands []string) mixedModeCommandValidation {
 	validation := mixedModeCommandValidation{
@@ -129,15 +161,21 @@ func validateMixedModeCommand(command string) (bool, string) {
 
 	commandName := strings.ToLower(tokens[0])
 	args := tokens[1:]
-	if hasMixedModeContextOverride(args) {
-		return false, "cluster context overrides are blocked in mixed mode"
-	}
 	if hasMixedModeStreamingFlag(args) {
 		return false, "streaming or watch flags are blocked in mixed mode"
 	}
 
 	switch commandName {
 	case "kubectl", "oc":
+		if hasMixedModeTransportOverride(args) {
+			return false, "transport, authentication, and context override flags are blocked in mixed mode"
+		}
+		if hasMixedModeBlockedDataFlag(args) {
+			return false, "kubectl --raw and --filename flags are blocked in mixed mode"
+		}
+		if hasMixedModeKubectlPathTraversal(args) {
+			return false, "kubectl path traversal patterns are blocked in mixed mode"
+		}
 		return validateMixedModeKubectlCommand(args)
 	case "helm":
 		return validateMixedModeHelmCommand(args)
@@ -281,13 +319,21 @@ func normalizeMixedModeOutputFormat(value string) string {
 	}
 }
 
-func hasMixedModeContextOverride(args []string) bool {
+func hasMixedModeTransportOverride(args []string) bool {
+	return hasMixedModeBlockedFlag(args, mixedModeBlockedTransportFlags)
+}
+
+func hasMixedModeBlockedDataFlag(args []string) bool {
+	return hasMixedModeBlockedFlag(args, mixedModeBlockedDataFlags)
+}
+
+func hasMixedModeBlockedFlag(args []string, blockedFlags map[string]bool) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if lower == "--context" || lower == "--kube-context" || lower == "--kubeconfig" {
+		if blockedFlags[lower] {
 			return true
 		}
-		if strings.HasPrefix(lower, "--context=") || strings.HasPrefix(lower, "--kube-context=") || strings.HasPrefix(lower, "--kubeconfig=") {
+		if flag, _, found := strings.Cut(lower, "="); found && blockedFlags[flag] {
 			return true
 		}
 	}
@@ -303,6 +349,58 @@ func hasMixedModeStreamingFlag(args []string) bool {
 		}
 		// Prefix match for long flags to catch --watch=true, --watch-only, --follow=true, etc.
 		if strings.HasPrefix(lower, "--watch") || strings.HasPrefix(lower, "--follow") {
+			return true
+		}
+		if strings.HasPrefix(lower, "--follow=") || strings.HasPrefix(lower, "--watch") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMixedModeKubectlPathTraversal(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+
+	switch strings.ToLower(args[0]) {
+	case "cp":
+		for _, arg := range args[1:] {
+			if hasMixedModePathTraversalSegment(mixedModeTraversalTarget(arg)) {
+				return true
+			}
+		}
+	case "exec":
+		for i, arg := range args[1:] {
+			if arg != "--" {
+				continue
+			}
+			for _, execArg := range args[i+2:] {
+				if hasMixedModePathTraversalSegment(execArg) {
+					return true
+				}
+			}
+			break
+		}
+	}
+
+	return false
+}
+
+func mixedModeTraversalTarget(arg string) string {
+	if separator := strings.Index(arg, ":"); separator >= 0 {
+		return arg[separator+1:]
+	}
+	return arg
+}
+
+func hasMixedModePathTraversalSegment(value string) bool {
+	normalized := strings.ReplaceAll(strings.TrimSpace(strings.ToLower(value)), "\\", "/")
+	if normalized == "" {
+		return false
+	}
+	for _, segment := range strings.Split(normalized, "/") {
+		if segment == ".." {
 			return true
 		}
 	}

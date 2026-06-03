@@ -123,6 +123,14 @@ describe("github-pipelines", () => {
     expect(body.error).toBe("unknown view");
   });
 
+  it("returns 403 for repos outside the allowlist", async () => {
+    const res = await handler(makeRequest("view=flow&repo=evil/private-repo"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Repository not allowed");
+    expect(mockBuildFlow).not.toHaveBeenCalled();
+  });
+
   it("returns 429 when read rate limit is exceeded", async () => {
     mockEnforceSimpleRateLimit.mockResolvedValue({ limited: true, retryAfterSeconds: 60 });
     const res = await handler(makeRequest());
@@ -188,6 +196,14 @@ describe("github-pipelines", () => {
     expect(res.status).toBe(400);
     const body = await readJson<{ error: string }>(res);
     expect(body.error).toContain("job");
+    expect(mockBuildLog).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for log view with a non-allowlisted repo", async () => {
+    const res = await handler(makeRequest("view=log&repo=evil/private-repo&job=123"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Repository not allowed");
     expect(mockBuildLog).not.toHaveBeenCalled();
   });
 

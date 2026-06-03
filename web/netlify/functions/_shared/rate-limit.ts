@@ -80,6 +80,7 @@ export async function enforceSimpleRateLimit(
       await cleanupExpiredBucket(store, getBucketPrefix(options.prefix, subjectKey, cleanupBucket));
     }
 
+<<<<<<< HEAD
     await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
 
     const currentWindowCount = await countBucketEntries(
@@ -92,6 +93,18 @@ export async function enforceSimpleRateLimit(
         limited: true,
         retryAfterSeconds: retryAfterSeconds((bucket + 1) * options.windowMs),
       };
+=======
+        // Best-effort only: Netlify Blobs does not provide an atomic increment
+        // or compare-and-swap primitive, so concurrent requests can race on this
+        // read-modify-write path and undercount. Keep this as defense-in-depth;
+        // use an atomic store if strict rate-limit guarantees become necessary.
+        await store.set(key, JSON.stringify({
+          count: record.count + 1,
+          windowStartedAt: record.windowStartedAt,
+        } satisfies SimpleRateLimitRecord));
+        return { limited: false, retryAfterSeconds: 0 };
+      }
+>>>>>>> 571d12b28 (🔒 Restrict Netlify endpoints to allowlisted repositories)
     }
   } catch {
     return { limited: false, retryAfterSeconds: 0 };

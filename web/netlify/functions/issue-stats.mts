@@ -13,6 +13,7 @@
 
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import { getAllowedRepoSlugs, isAllowedRepoSlug } from "./_shared/repo-allowlist";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
@@ -33,6 +34,7 @@ const MS_PER_DAY = 86_400_000;
 const DEFAULT_DAYS = 90;
 /** Maximum lookback in days */
 const MAX_DAYS = 365;
+const ALLOWED_REPOS = getAllowedRepoSlugs(["ISSUE_STATS_REPOS", "PIPELINE_REPOS"]);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -118,17 +120,6 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
-  const token = process.env.GITHUB_TOKEN || "";
-  if (!token) {
-    return new Response(
-      JSON.stringify({ error: "GITHUB_TOKEN not configured" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
   const url = new URL(request.url);
   const repo = url.searchParams.get("repo") || "kubestellar/console";
   if (!REPO_RE.test(repo)) {
@@ -140,6 +131,27 @@ export default async function handler(request: Request): Promise<Response> {
       },
     );
   }
+  if (!isAllowedRepoSlug(repo, ALLOWED_REPOS)) {
+    return new Response(
+      JSON.stringify({ error: "Repository not allowed" }),
+      {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const token = process.env.GITHUB_TOKEN || "";
+  if (!token) {
+    return new Response(
+      JSON.stringify({ error: "GITHUB_TOKEN not configured" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
   const daysParam = parseInt(url.searchParams.get("days") || String(DEFAULT_DAYS), 10);
   const days = Math.min(Math.max(1, daysParam), MAX_DAYS);
 

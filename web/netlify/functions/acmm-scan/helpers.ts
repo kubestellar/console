@@ -2,7 +2,7 @@
  * ACMM Scan — Types and helper utilities
  */
 
-import { DEFAULT_REPOS as DEFAULT_ACMM_REPOS } from "../github-pipelines/constants";
+import { getAllowedRepoSlugs } from "../_shared/repo-allowlist";
 import type { DetectionHint } from "./criteria";
 
 // ---------------------------------------------------------------------------
@@ -91,36 +91,12 @@ export function corsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-type NetlifyRuntime = {
-  Netlify?: {
-    env?: {
-      get?: (name: string) => string | undefined;
-    };
-  };
-};
-
-function getRuntimeEnv(name: string): string | undefined {
-  return (globalThis as NetlifyRuntime).Netlify?.env?.get?.(name) ?? process.env[name];
-}
-
-function parseRepoList(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((repo) => repo.trim())
-    .filter((repo) => REPO_RE.test(repo));
-}
-
 export function getAllowedRepos(): Set<string> {
-  const configuredRepos = parseRepoList(
-    getRuntimeEnv("ACMM_REPOS") ?? getRuntimeEnv("PIPELINE_REPOS"),
-  );
-  const repos = configuredRepos.length > 0 ? configuredRepos : DEFAULT_ACMM_REPOS;
-  return new Set(repos);
+  return new Set(getAllowedRepoSlugs(["ACMM_REPOS", "PIPELINE_REPOS"]));
 }
 
 export function isAllowedRepo(repo: string): boolean {
-  return getAllowedRepos().has(repo);
+  return getAllowedRepos().has(repo.toLowerCase());
 }
 
 export function isoWeek(date: Date): string {

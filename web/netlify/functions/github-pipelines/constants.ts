@@ -2,6 +2,8 @@
  * Constants for GitHub Pipelines Dashboard
  */
 
+import { DEFAULT_ALLOWED_REPOS, getAllowedRepoSlugs } from "../_shared/repo-allowlist";
+
 export const GITHUB_API = "https://api.github.com";
 
 /** Netlify Blobs store for all cached pipeline views */
@@ -47,14 +49,7 @@ export const MATRIX_RUNS_PER_REPO = 200;
 export const FLOW_MAX_RUNS_PER_REPO = 8;
 
 /** Default repos when PIPELINE_REPOS env var is not set */
-export const DEFAULT_REPOS = [
-  "kubestellar/kubestellar",
-  "kubestellar/console",
-  "kubestellar/docs",
-  "kubestellar/ocm-transport-plugin",
-  "kubestellar/galaxy",
-  "kubestellar/ui",
-];
+export const DEFAULT_REPOS = DEFAULT_ALLOWED_REPOS;
 
 /** The nightly release workflow on kubestellar/console — drives the Pulse card */
 export const NIGHTLY_RELEASE_REPO = "kubestellar/console";
@@ -84,17 +79,9 @@ export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
  * PIPELINE_REPOS env var to a comma-separated list of owner/repo strings
  * to override (e.g. "myorg/myrepo" for a single-repo install, or
  * "org/a,org/b,org/c" for multi-repo). If unset, defaults to the
- * KubeStellar repos above. The repo list is returned in every API
+ * shared KubeStellar allowlist above. The repo list is returned in every API
  * response so the frontend never hardcodes it.
  */
 export function getRepos(): string[] {
-  const env = process.env.PIPELINE_REPOS;
-  if (!env) return DEFAULT_REPOS;
-
-  const repos = env
-    .split(",")
-    .map((repo) => repo.trim())
-    .filter((repo) => repo.length > 0 && VALID_REPO_PATTERN.test(repo));
-
-  return repos.length > 0 ? repos : DEFAULT_REPOS;
+  return getAllowedRepoSlugs(["PIPELINE_REPOS"]);
 }

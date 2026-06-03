@@ -12,6 +12,13 @@ export type { CorsOptions, StrictCorsOptions } from "./cors";
 export { enforceSimpleRateLimit } from "./rate-limit";
 export type { SimpleRateLimitOptions, SimpleRateLimitResult } from "./rate-limit";
 
+export {
+  DEFAULT_ALLOWED_REPOS,
+  getAllowedRepoSlugs,
+  isAllowedRepo,
+  isAllowedRepoSlug,
+} from "./repo-allowlist";
+
 export { checkInMemoryRateLimit, getClientIp } from "./inMemoryRateLimit";
 export type { InMemoryRateLimitEntry, InMemoryRateLimitResult } from "./inMemoryRateLimit";
 
