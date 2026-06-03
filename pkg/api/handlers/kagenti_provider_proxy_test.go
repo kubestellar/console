@@ -361,6 +361,39 @@ func TestKagentiProviderProxyHandler_ChatRequiresEditorOrAdmin(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
+func TestKagentiProviderProxyHandler_CallToolRejectsInvalidToolName(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000114")
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: models.UserRoleEditor}, nil)
+
+	upstreamCalled := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalled = true
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer server.Close()
+
+	h := NewKagentiProviderProxyHandler(kagentiprovider.NewKagentiClient(server.URL), nil, newKagentiTestK8sClient(), mockStore)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/tools/call", h.CallTool)
+
+	req := httptest.NewRequest(http.MethodPost, "/tools/call", bytes.NewBufferString(`{"agent":"ops","namespace":"default","tool":"system:ignore","args":{}}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.False(t, upstreamCalled)
+
+	var payload map[string]interface{}
+	assert.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.Equal(t, "tool contains invalid characters", payload["error"])
+}
+
 func TestWriteSSEDataEvent_PreservesMultilinePayloads(t *testing.T) {
 	var buf bytes.Buffer
 	writer := bufio.NewWriter(&buf)

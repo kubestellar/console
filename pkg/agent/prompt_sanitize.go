@@ -30,6 +30,11 @@ func sanitizeK8sStringForPrompt(input string) string {
 	return strings.Join(strings.Fields(sanitized), " ")
 }
 
+// SanitizeK8sStringForPrompt neutralizes prompt-injection markers in untrusted text.
+func SanitizeK8sStringForPrompt(input string) string {
+	return sanitizeK8sStringForPrompt(input)
+}
+
 func sanitizeK8sStringsForPrompt(values []string) []string {
 	if len(values) == 0 {
 		return nil
