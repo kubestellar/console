@@ -72,43 +72,41 @@ describe("rate-limit", () => {
       );
     });
 
-    it("allows requests within limit", async () => {
+    it.each([
+      {
+        name: "allows requests within limit",
+        existingTokenCount: 4,
+        expected: { limited: false, retryAfterSeconds: 0 },
+        shouldWriteToken: true,
+      },
+      {
+        name: "denies requests once the current window is at the limit",
+        existingTokenCount: DEFAULT_OPTIONS.maxRequests,
+        expected: { limited: true, retryAfterSeconds: 60 },
+        shouldWriteToken: false,
+      },
+      {
+        name: "denies requests already over the limit",
+        existingTokenCount: DEFAULT_OPTIONS.maxRequests + 1,
+        expected: { limited: true, retryAfterSeconds: 60 },
+        shouldWriteToken: false,
+      },
+    ])("$name", async ({ existingTokenCount, expected, shouldWriteToken }) => {
       mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
         if (paginate) {
-          return createPaginator([
-            { key: `${prefix}1767225600000:uuid-1` },
-            { key: `${prefix}1767225600001:uuid-2` },
-            { key: `${prefix}1767225600002:uuid-3` },
-            { key: `${prefix}1767225600003:uuid-4` },
-          ]);
+          return createPaginator(
+            Array.from({ length: existingTokenCount }, (_, index) => ({
+              key: `${prefix}${FIXED_NOW_MS + index}:uuid-${index + 1}`,
+            })),
+          );
         }
         return Promise.resolve({ blobs: [] });
       });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
-    });
-
-    it("blocks requests exceeding limit after counting concurrent tokens", async () => {
-      mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
-        if (paginate) {
-          return createPaginator([
-            { key: `${prefix}1767225600000:uuid-1` },
-            { key: `${prefix}1767225600001:uuid-2` },
-            { key: `${prefix}1767225600002:uuid-3` },
-            { key: `${prefix}1767225600003:uuid-4` },
-            { key: `${prefix}1767225600004:uuid-5` },
-            { key: `${prefix}1767225600005:uuid-6` },
-          ]);
-        }
-        return Promise.resolve({ blobs: [] });
-      });
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(true);
-      expect(result.retryAfterSeconds).toBe(60);
+      expect(result).toEqual(expected);
+      expect(mockSet).toHaveBeenCalledTimes(shouldWriteToken ? 1 : 0);
     });
 
     it("URL-encodes the subject in token keys", async () => {
@@ -179,15 +177,34 @@ describe("rate-limit", () => {
         maxRequests: 4,
       });
 
-      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 60 });
+      expect(mockSet).not.toHaveBeenCalled();
     });
 
-    it("fails open when blob operations error", async () => {
-      mockSet.mockRejectedValueOnce(new Error("store error"));
+    it.each([
+      {
+        name: "fails closed when counting the current window errors",
+        arrange: () => {
+          mockList.mockImplementation(({ paginate }: { paginate?: boolean; prefix: string }) => {
+            if (paginate) {
+              throw new Error("list error");
+            }
+            return Promise.resolve({ blobs: [] });
+          });
+        },
+      },
+      {
+        name: "fails closed when writing the token errors",
+        arrange: () => {
+          mockSet.mockRejectedValueOnce(new Error("store error"));
+        },
+      },
+    ])("$name", async ({ arrange }) => {
+      arrange();
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 60 });
     });
   });
 });
