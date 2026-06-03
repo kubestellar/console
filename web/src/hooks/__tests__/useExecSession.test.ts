@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => Promise.resolve(url),
+  getWsAuthParams: (url: string) => Promise.resolve({ url, protocols: [] }),
 }))
 
 import { useExecSession } from '../useExecSession'

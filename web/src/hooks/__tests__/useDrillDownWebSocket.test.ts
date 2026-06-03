@@ -7,13 +7,13 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => url),
+  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { getWsAuthParams } from '../../lib/utils/wsAuth'
 import { useDrillDownWebSocket } from '../useDrillDownWebSocket'
 
-const mockAppendWsAuthToken = vi.mocked(appendWsAuthToken)
+const mockGetWsAuthParams = vi.mocked(getWsAuthParams)
 const WS_CONNECTING = 0
 const WS_OPEN = 1
 const WS_CLOSING = 2
@@ -94,7 +94,7 @@ beforeEach(() => {
   })
 
   vi.stubGlobal('WebSocket', mockWebSocket)
-  mockAppendWsAuthToken.mockImplementation(async (url: string) => url)
+  mockGetWsAuthParams.mockImplementation(async (url: string) => ({ url, protocols: [] }))
 })
 
 afterEach(() => {
@@ -192,7 +192,7 @@ describe('useDrillDownWebSocket', () => {
     })
 
     it('returns empty string when openTrackedWs fails', async () => {
-      mockAppendWsAuthToken.mockRejectedValueOnce(new Error('token error'))
+      mockGetWsAuthParams.mockRejectedValueOnce(new Error('token error'))
       const { result } = renderHook(() => useDrillDownWebSocket('prod'))
 
       await expect(result.current.runKubectl(['get', 'pods'])).resolves.toBe('')
@@ -291,12 +291,12 @@ describe('useDrillDownWebSocket', () => {
 
   describe('openTrackedWs', () => {
     it('appends auth token to WS URL', async () => {
-      mockAppendWsAuthToken.mockResolvedValueOnce('ws://localhost:8585?token=abc123')
+      mockGetWsAuthParams.mockResolvedValueOnce({ url: 'ws://localhost:8585', protocols: ['bearer.abc123'] })
       const { result } = renderHook(() => useDrillDownWebSocket('prod'))
 
       await expect(result.current.openTrackedWs()).resolves.toBeDefined()
-      expect(mockAppendWsAuthToken).toHaveBeenCalledWith('ws://localhost:8585')
-      expect(wsInstances[0].url).toBe('ws://localhost:8585?token=abc123')
+      expect(mockGetWsAuthParams).toHaveBeenCalledWith('ws://localhost:8585')
+      expect(wsInstances[0].url).toBe('ws://localhost:8585')
     })
 
     it('tracks the WebSocket in the active set', async () => {

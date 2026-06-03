@@ -185,7 +185,6 @@ function EnterpriseLayoutContent() {
     window.dispatchEvent(new StorageEvent('storage', {
       key: activeStorageKey,
       newValue: serialized,
-      storageArea: localStorage,
     }))
   }, [activeStorageKey])
 

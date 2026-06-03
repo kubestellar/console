@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => Promise.resolve(url),
+  getWsAuthParams: (url: string) => Promise.resolve({ url, protocols: [] }),
 }))
 
 import { useExecSession } from '../useExecSession'
@@ -218,7 +218,7 @@ describe('useExecSession — expanded edge cases', () => {
       await connectSession(result)
       // Build expected URL from the same constant the source uses, so the
       // assertion tracks any future change to LOCAL_AGENT_WS_URL.
-      expect(constructorSpy).toHaveBeenCalledWith(EXPECTED_EXEC_WS_URL)
+      expect(constructorSpy).toHaveBeenCalledWith(EXPECTED_EXEC_WS_URL, [])
     } finally {
       // Always restore window.location so subsequent tests see the real object.
       Object.defineProperty(window, 'location', {

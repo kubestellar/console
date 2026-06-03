@@ -61,7 +61,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => Promise.resolve(url),
+  getWsAuthParams: (url: string) => Promise.resolve({ url, protocols: [] }),
 }))
 
 // Assign mock to global before importing the hook
