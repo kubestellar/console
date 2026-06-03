@@ -1,9 +1,14 @@
 import { getStore } from "@netlify/blobs";
 
-interface SimpleRateLimitRecord {
-  count: number;
-  windowStartedAt: number;
+interface RateLimitBlobPage {
+  blobs: Array<{
+    key: string;
+  }>;
 }
+
+const UNKNOWN_SUBJECT = "unknown";
+const CLEANUP_BUCKET_OFFSET = 2;
+const CLEANUP_DELETE_LIMIT = 25;
 
 export interface SimpleRateLimitOptions {
   storeName: string;
@@ -18,45 +23,79 @@ export interface SimpleRateLimitResult {
   retryAfterSeconds: number;
 }
 
-function retryAfterSeconds(windowStartedAt: number, windowMs: number): number {
-  return Math.max(1, Math.ceil((windowStartedAt + windowMs - Date.now()) / 1000));
+function retryAfterSeconds(windowEndsAt: number): number {
+  return Math.max(1, Math.ceil((windowEndsAt - Date.now()) / 1000));
+}
+
+function getSubjectKey(subject: string): string {
+  return encodeURIComponent(subject || UNKNOWN_SUBJECT);
+}
+
+function getWindowBucket(now: number, windowMs: number): number {
+  return Math.floor(now / windowMs);
+}
+
+function getBucketPrefix(prefix: string, subjectKey: string, bucket: number): string {
+  return `${prefix}${subjectKey}:${bucket}:`;
+}
+
+function createTokenKey(prefix: string, subjectKey: string, bucket: number, now: number): string {
+  return `${getBucketPrefix(prefix, subjectKey, bucket)}${now}:${crypto.randomUUID()}`;
+}
+
+async function countBucketEntries(store: ReturnType<typeof getStore>, prefix: string): Promise<number> {
+  let count = 0;
+  const paginator = store.list({ prefix, paginate: true }) as AsyncIterable<RateLimitBlobPage>;
+
+  for await (const page of paginator) {
+    count += page.blobs.length;
+  }
+
+  return count;
+}
+
+async function cleanupExpiredBucket(
+  store: ReturnType<typeof getStore>,
+  prefix: string,
+): Promise<void> {
+  const page = await store.list({ prefix }) as RateLimitBlobPage;
+  const deletes = page.blobs
+    .slice(0, CLEANUP_DELETE_LIMIT)
+    .map(({ key }) => store.delete(key));
+
+  await Promise.allSettled(deletes);
 }
 
 export async function enforceSimpleRateLimit(
   options: SimpleRateLimitOptions,
 ): Promise<SimpleRateLimitResult> {
   const store = getStore(options.storeName);
-  const key = `${options.prefix}${encodeURIComponent(options.subject || "unknown")}`;
   const now = Date.now();
+  const subjectKey = getSubjectKey(options.subject);
+  const bucket = getWindowBucket(now, options.windowMs);
+  const cleanupBucket = bucket - CLEANUP_BUCKET_OFFSET;
 
   try {
-    const raw = await store.get(key);
-    if (raw) {
-      const record = JSON.parse(raw) as SimpleRateLimitRecord;
-      const inWindow = now - record.windowStartedAt < options.windowMs;
-      if (Number.isFinite(record.count) && Number.isFinite(record.windowStartedAt) && inWindow) {
-        if (record.count >= options.maxRequests) {
-          return {
-            limited: true,
-            retryAfterSeconds: retryAfterSeconds(record.windowStartedAt, options.windowMs),
-          };
-        }
+    if (cleanupBucket >= 0) {
+      await cleanupExpiredBucket(store, getBucketPrefix(options.prefix, subjectKey, cleanupBucket));
+    }
 
-        await store.set(key, JSON.stringify({
-          count: record.count + 1,
-          windowStartedAt: record.windowStartedAt,
-        } satisfies SimpleRateLimitRecord));
-        return { limited: false, retryAfterSeconds: 0 };
-      }
+    await store.set(createTokenKey(options.prefix, subjectKey, bucket, now), String(now));
+
+    const currentWindowCount = await countBucketEntries(
+      store,
+      getBucketPrefix(options.prefix, subjectKey, bucket),
+    );
+
+    if (currentWindowCount > options.maxRequests) {
+      return {
+        limited: true,
+        retryAfterSeconds: retryAfterSeconds((bucket + 1) * options.windowMs),
+      };
     }
   } catch {
-    // Reset malformed or unreadable entries by overwriting below.
+    return { limited: false, retryAfterSeconds: 0 };
   }
-
-  await store.set(key, JSON.stringify({
-    count: 1,
-    windowStartedAt: now,
-  } satisfies SimpleRateLimitRecord));
 
   return { limited: false, retryAfterSeconds: 0 };
 }

@@ -1,17 +1,20 @@
 /**
  * Unit tests for rate-limit.ts (#16109).
- * Tests blob-based rate limiting with window management.
+ * Tests blob-based rate limiting with append-only window tokens.
  */
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enforceSimpleRateLimit, type SimpleRateLimitOptions } from "../rate-limit";
 
-// Mock @netlify/blobs
-const mockGet = vi.fn();
-const mockSet = vi.fn();
+const { mockDelete, mockList, mockSet } = vi.hoisted(() => ({
+  mockDelete: vi.fn(),
+  mockList: vi.fn(),
+  mockSet: vi.fn(),
+}));
 
 vi.mock("@netlify/blobs", () => ({
   getStore: vi.fn(() => ({
-    get: mockGet,
+    delete: mockDelete,
+    list: mockList,
     set: mockSet,
   })),
 }));
@@ -21,266 +24,170 @@ const DEFAULT_OPTIONS: SimpleRateLimitOptions = {
   prefix: "rl:",
   subject: "user123",
   maxRequests: 5,
-  windowMs: 60000,
+  windowMs: 60_000,
 };
+const FIXED_NOW_MS = Date.parse("2026-01-01T00:00:00.000Z");
+const DEFAULT_WINDOW_BUCKET = Math.floor(FIXED_NOW_MS / DEFAULT_OPTIONS.windowMs);
+const CLEANUP_NOW_MS = Date.parse("2026-01-01T00:02:10.000Z");
+const CLEANUP_BUCKET = Math.floor(CLEANUP_NOW_MS / DEFAULT_OPTIONS.windowMs) - 2;
+
+function createPaginator(blobs: Array<{ key: string }>): AsyncIterable<{ blobs: Array<{ key: string }> }> {
+  return {
+    async *[Symbol.asyncIterator]() {
+      yield { blobs };
+    },
+  };
+}
 
 describe("rate-limit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW_MS);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("uuid-1");
+
+    mockDelete.mockResolvedValue(undefined);
+    mockSet.mockResolvedValue(undefined);
+    mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+      if (paginate) {
+        return createPaginator([{ key: `${prefix}1767225600000:uuid-1` }]);
+      }
+      return Promise.resolve({ blobs: [] });
+    });
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
   describe("enforceSimpleRateLimit", () => {
-    it("should allow first request and create new entry", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
-
+    it("allows first request and creates a unique token entry", async () => {
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
-      expect(result.retryAfterSeconds).toBe(0);
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
       expect(mockSet).toHaveBeenCalledWith(
-        "rl:user123",
-        expect.stringContaining('"count":1')
+        `rl:user123:${DEFAULT_WINDOW_BUCKET}:${FIXED_NOW_MS}:uuid-1`,
+        String(FIXED_NOW_MS),
       );
     });
 
-    it("should allow requests within limit", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 3,
-        windowStartedAt: now - 1000,
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
+    it("allows requests within limit", async () => {
+      mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+        if (paginate) {
+          return createPaginator([
+            { key: `${prefix}1767225600000:uuid-1` },
+            { key: `${prefix}1767225600001:uuid-2` },
+            { key: `${prefix}1767225600002:uuid-3` },
+            { key: `${prefix}1767225600003:uuid-4` },
+          ]);
+        }
+        return Promise.resolve({ blobs: [] });
+      });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalledWith(
-        "rl:user123",
-        expect.stringContaining('"count":4')
-      );
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
     });
 
-    it("should block requests exceeding limit", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 5,
-        windowStartedAt: now - 1000,
-      }));
+    it("blocks requests exceeding limit after counting concurrent tokens", async () => {
+      mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+        if (paginate) {
+          return createPaginator([
+            { key: `${prefix}1767225600000:uuid-1` },
+            { key: `${prefix}1767225600001:uuid-2` },
+            { key: `${prefix}1767225600002:uuid-3` },
+            { key: `${prefix}1767225600003:uuid-4` },
+            { key: `${prefix}1767225600004:uuid-5` },
+            { key: `${prefix}1767225600005:uuid-6` },
+          ]);
+        }
+        return Promise.resolve({ blobs: [] });
+      });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
       expect(result.limited).toBe(true);
-      expect(result.retryAfterSeconds).toBeGreaterThan(0);
-      expect(mockSet).not.toHaveBeenCalled();
+      expect(result.retryAfterSeconds).toBe(60);
     });
 
-    it("should calculate correct retry-after seconds", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 5,
-        windowStartedAt: now - 30000, // 30 seconds ago
-      }));
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        windowMs: 60000, // 60 second window
-      });
-
-      expect(result.limited).toBe(true);
-      expect(result.retryAfterSeconds).toBe(30); // 60 - 30 = 30 seconds remaining
-    });
-
-    it("should reset counter after window expires", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 5,
-        windowStartedAt: now - 61000, // 61 seconds ago
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        windowMs: 60000,
-      });
-
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalledWith(
-        "rl:user123",
-        expect.stringContaining('"count":1')
-      );
-    });
-
-    it("should handle malformed blob data by resetting", async () => {
-      mockGet.mockResolvedValueOnce("invalid json");
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalledWith(
-        "rl:user123",
-        expect.stringContaining('"count":1')
-      );
-    });
-
-    it("should handle missing blob by creating new entry", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalled();
-    });
-
-    it("should handle blob store errors gracefully", async () => {
-      mockGet.mockRejectedValueOnce(new Error("Store error"));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalled();
-    });
-
-    it("should URL-encode subject in key", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
-
+    it("URL-encodes the subject in token keys", async () => {
       await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
         subject: "user@example.com",
       });
 
-      expect(mockGet).toHaveBeenCalledWith("rl:user%40example.com");
+      expect(mockSet).toHaveBeenCalledWith(
+        `rl:user%40example.com:${DEFAULT_WINDOW_BUCKET}:${FIXED_NOW_MS}:uuid-1`,
+        String(FIXED_NOW_MS),
+      );
     });
 
-    it("should use 'unknown' for empty subject", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
-
+    it("uses unknown for empty subjects", async () => {
       await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
         subject: "",
       });
 
-      expect(mockGet).toHaveBeenCalledWith("rl:unknown");
+      expect(mockSet).toHaveBeenCalledWith(
+        `rl:unknown:${DEFAULT_WINDOW_BUCKET}:${FIXED_NOW_MS}:uuid-1`,
+        String(FIXED_NOW_MS),
+      );
     });
 
-    it("should handle custom prefix", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
+    it("cleans up an expired bucket before counting the current window", async () => {
+      vi.setSystemTime(CLEANUP_NOW_MS);
 
-      await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        prefix: "custom:",
+      mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+        if (paginate) {
+          return createPaginator([{ key: `${prefix}1767225730000:uuid-1` }]);
+        }
+
+        if (prefix === `rl:user123:${CLEANUP_BUCKET}:`) {
+          return Promise.resolve({
+            blobs: [
+              { key: `rl:user123:${CLEANUP_BUCKET}:1767225600000:uuid-a` },
+              { key: `rl:user123:${CLEANUP_BUCKET}:1767225600001:uuid-b` },
+            ],
+          });
+        }
+
+        return Promise.resolve({ blobs: [] });
       });
 
-      expect(mockGet).toHaveBeenCalledWith("custom:user123");
+      await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(mockDelete).toHaveBeenCalledWith(`rl:user123:${CLEANUP_BUCKET}:1767225600000:uuid-a`);
+      expect(mockDelete).toHaveBeenCalledWith(`rl:user123:${CLEANUP_BUCKET}:1767225600001:uuid-b`);
     });
 
-    it("should handle custom store name", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
-
-      await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        storeName: "custom-store",
+    it("counts paginated blob results across pages", async () => {
+      mockList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+        if (paginate) {
+          return {
+            async *[Symbol.asyncIterator]() {
+              yield { blobs: [{ key: `${prefix}1:a` }, { key: `${prefix}2:b` }] };
+              yield { blobs: [{ key: `${prefix}3:c` }, { key: `${prefix}4:d` }] };
+            },
+          } satisfies AsyncIterable<{ blobs: Array<{ key: string }> }>;
+        }
+        return Promise.resolve({ blobs: [] });
       });
-
-      // getStore should have been called with custom-store
-      expect(mockSet).toHaveBeenCalled();
-    });
-
-    it("should return minimum retry-after of 1 second", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 5,
-        windowStartedAt: now - 59900, // 100ms remaining
-      }));
 
       const result = await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
-        windowMs: 60000,
+        maxRequests: 4,
       });
 
-      expect(result.limited).toBe(true);
-      expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
     });
 
-    it("should handle non-finite count by resetting", async () => {
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: Infinity,
-        windowStartedAt: Date.now(),
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
+    it("fails open when blob operations error", async () => {
+      mockSet.mockRejectedValueOnce(new Error("store error"));
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
-    });
-
-    it("should handle non-finite windowStartedAt by resetting", async () => {
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 1,
-        windowStartedAt: NaN,
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(false);
-    });
-
-    it("should allow exactly maxRequests requests", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 4,
-        windowStartedAt: now - 1000,
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        maxRequests: 5,
-      });
-
-      expect(result.limited).toBe(false);
-    });
-
-    it("should block on maxRequests + 1", async () => {
-      const now = Date.now();
-      vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 5,
-        windowStartedAt: now - 1000,
-      }));
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        maxRequests: 5,
-      });
-
-      expect(result.limited).toBe(true);
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
     });
   });
 });

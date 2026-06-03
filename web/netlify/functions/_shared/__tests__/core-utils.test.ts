@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockStoreGet, mockStoreSet } = vi.hoisted(() => ({
-  mockStoreGet: vi.fn(),
+const { mockStoreDelete, mockStoreList, mockStoreSet } = vi.hoisted(() => ({
+  mockStoreDelete: vi.fn(),
+  mockStoreList: vi.fn(),
   mockStoreSet: vi.fn(),
 }));
 
 vi.mock("@netlify/blobs", () => ({
-  getStore: vi.fn(() => ({ get: mockStoreGet, set: mockStoreSet })),
+  getStore: vi.fn(() => ({ delete: mockStoreDelete, list: mockStoreList, set: mockStoreSet })),
 }));
 
 import * as barrel from "../index";
@@ -49,6 +50,7 @@ const EXPOSE_HEADERS = "X-Test-Header";
 const METHOD_LIST = "GET, OPTIONS";
 const RATE_LIMIT_WINDOW_MS = 30_000;
 const FIXED_NOW_MS = Date.parse("2026-01-01T00:00:00.000Z");
+const RATE_LIMIT_BUCKET = Math.floor(FIXED_NOW_MS / RATE_LIMIT_WINDOW_MS);
 const LARGE_CONTENT_LENGTH = "6";
 const SMALL_BUFFER_LIMIT = 3;
 const OVERSIZED_LABEL = "artifact";
@@ -173,12 +175,23 @@ describe("shared core utilities", () => {
     });
   });
 
-  it("persists simple blob-backed rate limits and returns retry-after when limited", async () => {
+  it("persists append-only blob-backed rate limits and returns retry-after when limited", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW_MS);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("uuid-1");
 
-    mockStoreGet.mockResolvedValueOnce(null);
     mockStoreSet.mockResolvedValue(undefined);
+    mockStoreList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+      if (paginate) {
+        return {
+          async *[Symbol.asyncIterator]() {
+            yield { blobs: [{ key: `${prefix}1767225600000:uuid-1` }] };
+          },
+        } satisfies AsyncIterable<{ blobs: Array<{ key: string }> }>;
+      }
+
+      return Promise.resolve({ blobs: [] });
+    });
 
     const initial = await enforceSimpleRateLimit({
       storeName: "shared-rate-limit",
@@ -189,14 +202,28 @@ describe("shared core utilities", () => {
     });
     expect(initial).toEqual({ limited: false, retryAfterSeconds: 0 });
     expect(mockStoreSet).toHaveBeenCalledWith(
-      "rl:user%40example.com",
-      JSON.stringify({ count: 1, windowStartedAt: FIXED_NOW_MS }),
+      `rl:user%40example.com:${RATE_LIMIT_BUCKET}:${FIXED_NOW_MS}:uuid-1`,
+      String(FIXED_NOW_MS),
     );
 
-    mockStoreGet.mockResolvedValueOnce(JSON.stringify({
-      count: 3,
-      windowStartedAt: FIXED_NOW_MS,
-    }));
+    mockStoreList.mockImplementation(({ paginate, prefix }: { paginate?: boolean; prefix: string }) => {
+      if (paginate) {
+        return {
+          async *[Symbol.asyncIterator]() {
+            yield {
+              blobs: [
+                { key: `${prefix}1767225600000:uuid-1` },
+                { key: `${prefix}1767225600001:uuid-2` },
+                { key: `${prefix}1767225600002:uuid-3` },
+                { key: `${prefix}1767225600003:uuid-4` },
+              ],
+            };
+          },
+        } satisfies AsyncIterable<{ blobs: Array<{ key: string }> }>;
+      }
+
+      return Promise.resolve({ blobs: [] });
+    });
 
     vi.setSystemTime(FIXED_NOW_MS + ONE_SECOND_MS);
     const limited = await enforceSimpleRateLimit({
@@ -210,12 +237,12 @@ describe("shared core utilities", () => {
     expect(limited.retryAfterSeconds).toBe(29);
   });
 
-  it("resets malformed blob-backed rate limit records", async () => {
+  it("fails open when append-only blob-backed rate limit operations error", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW_MS);
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("uuid-1");
 
-    mockStoreGet.mockResolvedValueOnce("{not-json");
-    mockStoreSet.mockResolvedValue(undefined);
+    mockStoreSet.mockRejectedValueOnce(new Error("store failure"));
 
     const result = await enforceSimpleRateLimit({
       storeName: "shared-rate-limit",
@@ -226,10 +253,6 @@ describe("shared core utilities", () => {
     });
 
     expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
-    expect(mockStoreSet).toHaveBeenCalledWith(
-      "rl:unknown",
-      JSON.stringify({ count: 1, windowStartedAt: FIXED_NOW_MS }),
-    );
   });
 
   it("passes AbortSignal timeouts through fetchWithTimeout", async () => {
