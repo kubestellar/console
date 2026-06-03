@@ -107,8 +107,14 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	})
 
 	githubProxy := handlers.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
+	githubTokenAdminOnly := func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, g.store); err != nil {
+			return err
+		}
+		return c.Next()
+	}
 	api.Get("/github/token/status", githubProxy.HasToken)
-	api.Post("/github/token", githubProxy.SaveToken)
+	api.Post("/github/token", githubTokenAdminOnly, githubProxy.SaveToken)
 	api.Delete("/github/token", githubProxy.DeleteToken)
 
 	githubPipelines := handlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)

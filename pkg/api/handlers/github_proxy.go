@@ -462,14 +462,9 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 
 // SaveToken handles POST /api/github/token — saves a user-provided GitHub PAT
 // to the encrypted server-side settings file. The token is NOT stored in
-// localStorage after this migration.
+// localStorage after this migration. Admin authorization is enforced by the
+// route-level middleware in setupRoutes.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
-	// Verify admin role — no auto-promotion (CWE-269, #16653).
-	// Bootstrap only happens during OAuth login flow, gated by BOOTSTRAP_ADMIN_ALLOWED.
-	if err := requireAdmin(c, h.store); err != nil {
-		return err
-	}
-
 	var body struct {
 		Token string `json:"token"`
 	}
