@@ -176,6 +176,23 @@ func TestProxyDrasi_Platform(t *testing.T) {
 	assert.JSONEq(t, `{"platform":"ok"}`, string(body))
 }
 
+func TestDrasiProxyDialContext_AllowlistedHostStillBlocksResolvedLoopback(t *testing.T) {
+	transport, ok := drasiProxyClient.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("drasiProxyClient.Transport is not *http.Transport")
+	}
+	dialCtx := transport.DialContext
+	if dialCtx == nil {
+		t.Fatal("drasiProxyClient has no custom DialContext")
+	}
+
+	t.Setenv(drasiAllowedHostsEnv, "localhost")
+
+	_, err := dialCtx(t.Context(), "tcp", "localhost:443")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "blocked: non-public IP")
+}
+
 func TestDrasiProxyDialContext_EmptyDNSResult(t *testing.T) {
 	// Extract the DialContext from the drasiProxyClient transport.
 	transport, ok := drasiProxyClient.Transport.(*http.Transport)

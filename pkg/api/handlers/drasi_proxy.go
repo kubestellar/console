@@ -74,8 +74,8 @@ var (
 )
 
 // isDrasiBlockedIP returns true if the IP is in a non-public range that the
-// Drasi proxy should not connect to unless the operator explicitly allowlists
-// that host via KC_DRASI_SERVER_ALLOWED_HOSTS.
+// Drasi proxy must never connect to, including when the hostname itself is
+// explicitly allowlisted.
 func isDrasiBlockedIP(ip net.IP) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
 		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
@@ -113,9 +113,10 @@ func isLocalhostDrasiHost(host string) bool {
 }
 
 // drasiProxyClient is an HTTP client hardened against SSRF for Drasi proxy
-// requests. It uses a custom DialContext that resolves DNS and validates
-// resolved IPs against blocked CIDRs before connecting, and disables
-// redirect-following to prevent redirect-based SSRF bypass.
+// requests. It uses a custom DialContext that resolves DNS, validates every
+// resolved IP against blocked CIDRs before connecting, then dials the selected
+// resolved IP directly for the lifetime of that connection. Redirect following
+// is disabled to prevent redirect-based SSRF bypass.
 var drasiProxyClient = &http.Client{
 	Timeout: drasiProxyDefaultTimeout,
 	CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
@@ -134,11 +135,9 @@ var drasiProxyClient = &http.Client{
 			if len(ips) == 0 {
 				return nil, fmt.Errorf("no IPs resolved for host %s", host)
 			}
-			if !isAllowedDrasiHost(host) {
-				for _, ip := range ips {
-					if isDrasiBlockedIP(ip.IP) {
-						return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
-					}
+			for _, ip := range ips {
+				if isDrasiBlockedIP(ip.IP) {
+					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
 				}
 			}
 			dialer := &net.Dialer{Timeout: drasiProxyDefaultTimeout}
