@@ -250,6 +250,23 @@ func TestProxyDrasi_MutatingEndpoints_ViewerForbidden(t *testing.T) {
 			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
 			body:   []byte(`{"name":"demo"}`),
 		},
+		{
+			name:   "server PUT",
+			method: fiber.MethodPut,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "server PATCH",
+			method: fiber.MethodPatch,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+			body:   []byte(`{"name":"demo"}`),
+		},
+		{
+			name:   "server DELETE",
+			method: fiber.MethodDelete,
+			url:    "/api/drasi/proxy/api/v1/sources?target=server&url=http://drasi-server",
+		},
 	}
 
 	for _, tt := range tests {
