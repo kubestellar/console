@@ -168,7 +168,13 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 		return "", fmt.Errorf("invalid branch name: %w", err)
 	}
 
-	tempDir := fmt.Sprintf("%s%d", gitOpsTempDirPrefix, time.Now().UnixNano())
+	// SECURITY (#16672): Use os.MkdirTemp for race-safe unique directory creation
+	// instead of predictable timestamp-based paths vulnerable to symlink attacks.
+	// We use "/tmp" explicitly to keep the cleanup prefix check working.
+	tempDir, err := os.MkdirTemp("/tmp", "gitops-")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
 
 	// repoURL and branch are validated by validateGitopsRepoURL/validateGitopsBranchName
 	// above before reaching this point. exec.CommandContext with a discrete arg list
