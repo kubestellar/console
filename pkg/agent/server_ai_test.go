@@ -550,6 +550,18 @@ func TestValidateMixedModeCommands(t *testing.T) {
 			wantReason: "cluster context overrides are blocked",
 		},
 		{
+			name:              "require approval for --raw flag",
+			command:           "kubectl get --raw /api/v1/namespaces/kube-system/secrets",
+			wantApprovalBlock: true,
+			wantReason:        "--raw and --filename flags require explicit user approval",
+		},
+		{
+			name:              "require approval for --filename flag",
+			command:           "kubectl get --filename=https://example.com/manifest.yaml",
+			wantApprovalBlock: true,
+			wantReason:        "--raw and --filename flags require explicit user approval",
+		},
+		{
 			name:              "require approval for helm install",
 			command:           "helm install demo chart/demo",
 			wantApprovalBlock: true,

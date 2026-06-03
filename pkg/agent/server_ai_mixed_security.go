@@ -141,6 +141,9 @@ func validateMixedModeCommand(command string) (bool, string) {
 	if hasMixedModeStreamingFlag(args) {
 		return false, "streaming or watch flags are blocked in mixed mode"
 	}
+	if hasMixedModeDataExfilFlag(args) {
+		return true, "--raw and --filename flags require explicit user approval in mixed mode"
+	}
 
 	switch commandName {
 	case "kubectl", "oc":
@@ -304,6 +307,16 @@ func hasMixedModeStreamingFlag(args []string) bool {
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
 		if mixedModeBlockedStreamingFlags[lower] {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMixedModeDataExfilFlag(args []string) bool {
+	for _, arg := range args {
+		lower := strings.ToLower(arg)
+		if strings.HasPrefix(lower, "--raw") || strings.HasPrefix(lower, "--filename") {
 			return true
 		}
 	}
