@@ -245,7 +245,7 @@ function StatsConfigModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false}>
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false} closeOnEscape={true}>
       <BaseModal.Header title={title} onClose={onClose} showBack={false} />
       <BaseModal.Content className="space-y-6">
         <div className="space-y-2">
