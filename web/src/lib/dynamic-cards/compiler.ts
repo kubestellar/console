@@ -11,6 +11,7 @@ const BLOCKED_GLOBALS = [
   'window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames',
   'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource',
   'eval', 'Function', 'AsyncFunction', 'GeneratorFunction',
+  'atob', 'btoa',
   'importScripts',
   'localStorage', 'sessionStorage', 'indexedDB', 'caches',
   'navigator', 'location', 'history',
@@ -35,6 +36,24 @@ const BLOCKED_GLOBALS = [
  * object that refers to the outer call (scopeValues), shadowing any global.
  */
 const STRICT_RESERVED_BLOCKED = new Set<string>(['arguments'])
+
+const FORBIDDEN_SANDBOX_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /\b__proto__\b/, label: '__proto__' },
+  { re: /\.constructor\b/, label: '.constructor' },
+  { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
+  { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
+  { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+  { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
+  { re: /\bsetPrototypeOf\b/, label: 'setPrototypeOf' },
+  { re: /\bReflect\b/, label: 'Reflect' },
+  { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
+  { re: /\bprototype\b/, label: 'prototype' },
+  { re: /\bfromCharCode\b/, label: 'fromCharCode' },
+  { re: /\bfromCodePoint\b/, label: 'fromCodePoint' },
+  { re: /\bcharCodeAt\b/, label: 'charCodeAt' },
+  { re: /\bcodePointAt\b/, label: 'codePointAt' },
+  { re: /\bString\.raw\b/, label: 'String.raw' },
+]
 
 /**
  * Deep-freeze an object graph so dynamic card code cannot mutate shared
@@ -149,23 +168,9 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     //
     // #16505: Expanded coverage — bracket-access with string concatenation,
     // template literals, or computed property names are also blocked.
-    const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
-      { re: /\b__proto__\b/, label: '__proto__' },
-      { re: /\.constructor\b/, label: '.constructor' },
-      { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
-      { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
-      { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
-      // Block getPrototypeOf / setPrototypeOf to prevent prototype walking
-      { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
-      { re: /\bsetPrototypeOf\b/, label: 'setPrototypeOf' },
-      // Block Reflect which provides alternative access to constructors
-      { re: /\bReflect\b/, label: 'Reflect' },
-      // Block bracket access to "constructor" via string concat or variables
-      { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
-      // Block prototype property access
-      { re: /\bprototype\b/, label: 'prototype' },
-    ]
-    for (const { re, label } of FORBIDDEN_PATTERNS) {
+    // #16898: Block string-decoding helpers that can reassemble "constructor"
+    // at runtime before a computed-property lookup.
+    for (const { re, label } of FORBIDDEN_SANDBOX_PATTERNS) {
       if (re.test(compiledCode)) {
         return {
           component: null,
