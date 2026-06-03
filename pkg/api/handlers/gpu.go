@@ -255,11 +255,7 @@ func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 }
 
 // GetReservation gets a single GPU reservation by ID.
-<<<<<<< HEAD
 // Only the reservation owner or an admin may view it.
-=======
-// Non-admin users may only view their own reservations (CWE-862, #16711).
->>>>>>> 8644c842e (🔒 Scope GPU reservation listing to owner or admin (CWE-862))
 func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 	user, uerr := h.getCallerUser(c)
 	if uerr != nil {
