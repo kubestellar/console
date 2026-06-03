@@ -476,10 +476,11 @@ func safeTarExtract(ctx context.Context, archivePath, destDir string) error {
 		}
 
 		cleanName := filepath.Clean(header.Name)
-		if filepath.IsAbs(cleanName) {
-			return fmt.Errorf("absolute path in archive: %s", header.Name)
+		if strings.HasPrefix(cleanName, "..") || filepath.IsAbs(cleanName) {
+			return fmt.Errorf("path traversal in archive: %s", header.Name)
 		}
-		target := filepath.Clean(filepath.Join(cleanDestDir, header.Name))
+
+		target := filepath.Clean(filepath.Join(cleanDestDir, cleanName))
 		if target != cleanDestDir && !strings.HasPrefix(target, destDirPrefix) {
 			return fmt.Errorf("path traversal in archive: %s", header.Name)
 		}
