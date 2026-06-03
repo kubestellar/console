@@ -362,10 +362,9 @@ func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	_ = userID
 	cluster := strings.TrimSpace(c.Query("cluster"))
 	limit := readListLimit(c)
-	items, err := h.store.GetRecentObservations(c.UserContext(), cluster, limit)
+	items, err := h.store.GetRecentObservations(c.UserContext(), userID, cluster, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load observations"})
 	}
@@ -446,7 +445,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 					return false
 				}
 			}
-			observations, err := h.store.GetUnshownObservationsForUser(streamCtx, userID)
+			observations, err := h.store.GetUnshownObservations(streamCtx, userID)
 			if err == nil && len(observations) > 0 {
 				next := observations[0]
 				payload := fiber.Map{
@@ -459,7 +458,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				if writeSSE(w, "observation", payload) != nil {
 					return false
 				}
-				if err := h.store.MarkObservationShownForUser(streamCtx, userID, next.ID); err != nil {
+				if err := h.store.MarkObservationShown(streamCtx, userID, next.ID); err != nil {
 					slog.Warn("stellar: mark observation shown failed", "observationID", next.ID, "error", err)
 				}
 			}
@@ -508,9 +507,17 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 
 // IngestEvent receives k8s events from the agent and forwards them to ProcessEvent.
 // This is the HTTP bridge that connects the agent process to Stellar's notification system.
-// Only editor and admin users may inject events to prevent forged system events (CWE-285, #16709).
+// Only console admins may inject events, and processing concurrency is bounded.
 func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
+	userStore := h.userStore
+	if userStore == nil {
+		fallbackStore, ok := h.store.(store.Store)
+		if !ok {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+		}
+		userStore = fallbackStore
+	}
+	if err := requireAdmin(c, userStore); err != nil {
 		return err
 	}
 
@@ -524,8 +531,17 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing required fields"})
 	}
 
+	select {
+	case stellarEventProcessorSemaphore <- struct{}{}:
+	default:
+		return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "too many stellar events in progress"})
+	}
+
 	// Process event asynchronously (non-blocking) with a bounded lifetime.
 	safego.GoWith("stellar-process-event", func() {
+		defer func() {
+			<-stellarEventProcessorSemaphore
+		}()
 		processCtx, cancel := context.WithTimeout(context.Background(), stellarProcessEventTimeout)
 		defer cancel()
 		h.ProcessEvent(processCtx, event)
@@ -574,12 +590,15 @@ func (h *StellarHandler) Health(c *fiber.Ctx) error {
 // ─── Sprint 5: Catch-up summary ───────────────────────────────────────────────
 
 const (
-	catchUpStreamEstablishDelay  = 2 * time.Second
-	catchUpMemoryLookbackLimit   = 5
-	catchUpMaxEventHighlights    = 3
-	catchUpMaxResolvedHighlights = 2
-	stellarProcessEventTimeout   = 2 * time.Minute
+	catchUpStreamEstablishDelay         = 2 * time.Second
+	catchUpMemoryLookbackLimit          = 5
+	catchUpMaxEventHighlights           = 3
+	catchUpMaxResolvedHighlights        = 2
+	stellarMaxConcurrentEventProcessors = 20
+	stellarProcessEventTimeout          = 2 * time.Minute
 )
+
+var stellarEventProcessorSemaphore = make(chan struct{}, stellarMaxConcurrentEventProcessors)
 
 type catchUpPayload struct {
 	Summary    string   `json:"summary"`

@@ -98,14 +98,14 @@ func TestStellarBroadcastToClientsFiltersByAudience(t *testing.T) {
 	assertNoQueuedSSEEvent(t, h.sseClients["other"].ch)
 }
 
-func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
+func TestStellarIngestEventRequiresAdmin(t *testing.T) {
 	tests := []struct {
 		name       string
 		role       models.UserRole
 		wantStatus int
 	}{
 		{name: "viewer forbidden", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
-		{name: "editor allowed", role: models.UserRoleEditor, wantStatus: http.StatusBadRequest},
+		{name: "editor forbidden", role: models.UserRoleEditor, wantStatus: http.StatusForbidden},
 		{name: "admin allowed", role: models.UserRoleAdmin, wantStatus: http.StatusBadRequest},
 	}
 
@@ -127,6 +127,31 @@ func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
 	}
+}
+
+func TestStellarIngestEventRejectsWhenWorkerPoolIsFull(t *testing.T) {
+	fullSemaphore := make(chan struct{}, 1)
+	fullSemaphore <- struct{}{}
+	originalSemaphore := stellarEventProcessorSemaphore
+	stellarEventProcessorSemaphore = fullSemaphore
+	defer func() {
+		stellarEventProcessorSemaphore = originalSemaphore
+	}()
+
+	app := fiber.New()
+	h, userID, cleanup := newStellarIngestEventTestHandler(t, models.UserRoleAdmin)
+	defer cleanup()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/api/stellar/events", h.IngestEvent)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/stellar/events", strings.NewReader(`{"cluster":"prod","namespace":"default","name":"pod-a","type":"Warning"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 }
 
 func newStellarIngestEventTestHandler(t *testing.T, role models.UserRole) (*StellarHandler, uuid.UUID, func()) {

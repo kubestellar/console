@@ -18,11 +18,11 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockK8sClient struct {
-	listClustersFn       func(ctx context.Context) ([]k8s.ClusterInfo, error)
-	getWarningEventsFn   func(ctx context.Context, cluster, namespace string, limit int) ([]k8s.Event, error)
-	getPodsFn            func(ctx context.Context, cluster, namespace string) ([]k8s.PodInfo, error)
+	listClustersFn        func(ctx context.Context) ([]k8s.ClusterInfo, error)
+	getWarningEventsFn    func(ctx context.Context, cluster, namespace string, limit int) ([]k8s.Event, error)
+	getPodsFn             func(ctx context.Context, cluster, namespace string) ([]k8s.PodInfo, error)
 	listClustersCallCount int32
-	mu                   sync.Mutex
+	mu                    sync.Mutex
 }
 
 func (m *mockK8sClient) ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error) {
@@ -195,7 +195,13 @@ func TestPoll_SkipsWhenStoreNil(t *testing.T) {
 
 func TestPoll_ProcessesClustersInParallel(t *testing.T) {
 	var processedClusters sync.Map
-	const clusterCount = 10
+	var concurrentCount int32
+	var maxConcurrent int32
+	var mu sync.Mutex
+	const (
+		clusterCount     = 10
+		clusterWorkDelay = 10 * time.Millisecond
+	)
 
 	store := &mockNotificationStore{
 		listStellarUserIDsFn: func(ctx context.Context) ([]string, error) {
@@ -215,10 +221,15 @@ func TestPoll_ProcessesClustersInParallel(t *testing.T) {
 			return clusters, nil
 		},
 		getWarningEventsFn: func(ctx context.Context, cluster, namespace string, limit int) ([]k8s.Event, error) {
-			// Mark cluster as processed
 			processedClusters.Store(cluster, true)
-			// Simulate work
-			time.Sleep(10 * time.Millisecond)
+			current := atomic.AddInt32(&concurrentCount, 1)
+			mu.Lock()
+			if current > maxConcurrent {
+				maxConcurrent = current
+			}
+			mu.Unlock()
+			time.Sleep(clusterWorkDelay)
+			atomic.AddInt32(&concurrentCount, -1)
 			return []k8s.Event{}, nil
 		},
 		getPodsFn: func(ctx context.Context, cluster, namespace string) ([]k8s.PodInfo, error) {
@@ -228,12 +239,8 @@ func TestPoll_ProcessesClustersInParallel(t *testing.T) {
 
 	w := New(store, client, 10*time.Second)
 	ctx := context.Background()
-
-	start := time.Now()
 	w.poll(ctx)
-	duration := time.Since(start)
 
-	// Verify all clusters were processed
 	count := 0
 	processedClusters.Range(func(key, value interface{}) bool {
 		count++
@@ -243,11 +250,8 @@ func TestPoll_ProcessesClustersInParallel(t *testing.T) {
 	if count != clusterCount {
 		t.Errorf("Expected %d clusters to be processed, got %d", clusterCount, count)
 	}
-
-	// Parallel execution should take ~10ms, sequential would take ~100ms
-	// Use 50ms as threshold to detect parallelism
-	if duration > 50*time.Millisecond {
-		t.Errorf("poll() took %v, expected parallel execution to be faster", duration)
+	if maxConcurrent <= 1 {
+		t.Fatalf("expected poll() to process clusters in parallel, max concurrency was %d", maxConcurrent)
 	}
 }
 
@@ -671,7 +675,7 @@ func TestPollCluster_HandlesNoUserIDs(t *testing.T) {
 
 	w := New(store, client, 10*time.Second)
 	ctx := context.Background()
-	
+
 	// Should return 0 without panicking
 	count := w.pollCluster(ctx, "test-cluster")
 	if count != 0 {

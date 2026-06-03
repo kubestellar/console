@@ -25,7 +25,7 @@ type ObserverStore interface {
 	ListStellarUserIDs(ctx context.Context) ([]string, error)
 	GetOpenTasks(ctx context.Context, userID string) ([]store.StellarTask, error)
 	ListStellarNotifications(ctx context.Context, userID string, limit int, unreadOnly bool) ([]store.StellarNotification, error)
-	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]store.StellarObservation, error)
+	GetRecentObservations(ctx context.Context, userID, cluster string, limit int) ([]store.StellarObservation, error)
 	CreateObservation(ctx context.Context, obs *store.StellarObservation) (string, error)
 	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]store.StellarMemoryEntry, error)
 	GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]store.StellarWatch, error)
@@ -144,7 +144,7 @@ func (o *Observer) observe(ctx context.Context) {
 		slog.Warn("stellar/observer: failed to list users", "error", err)
 		return
 	}
-	
+
 	// Log cluster count for visibility
 	clusterCount := 0
 	eventCount := 0
@@ -160,7 +160,7 @@ func (o *Observer) observe(ctx context.Context) {
 			}
 		}
 	}
-	
+
 	for _, userID := range userIDs {
 		if strings.TrimSpace(userID) == "" {
 			continue
@@ -171,10 +171,10 @@ func (o *Observer) observe(ctx context.Context) {
 		}
 		o.observeUser(ctx, userID)
 	}
-	
+
 	// Log tick with real data
 	slog.Info("stellar/observer: tick", "clusters", clusterCount, "events", eventCount, "watches", watchCount, "decision", "→ NOTHING")
-	
+
 	// Pass 2: follow through on active watches
 	o.followThroughWatches(ctx)
 
@@ -407,7 +407,7 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 	if err != nil {
 		return
 	}
-	observations, err := o.store.GetRecentObservations(ctx, "", observerMaxRecentFlags)
+	observations, err := o.store.GetRecentObservations(ctx, userID, "", observerMaxRecentFlags)
 	if err != nil {
 		return
 	}
@@ -466,7 +466,7 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 	}
 
 	contextPayload := buildObserverContext(tasks, events, observations) + liveEvents.String() + memoryContext.String()
-	
+
 	// Prefer the user's saved provider (set via the Stellar provider UI)
 	// before falling back to the global registry default. Without this, users
 	// who picked Anthropic in the UI saw "ollama connection refused" warnings
@@ -495,15 +495,16 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 		return
 	}
 	slog.Info("stellar/observer: SURFACE", "user", userID, "surface", surface, "model", resolved.Model)
-	
+
 	// Fix #5: Extract reasoning from response (text before SURFACE:)
 	reasoning := extractReasoning(resp.Content, surface)
-	
+
 	detail := ""
 	if suggest != "" {
 		detail = "SUGGEST: " + suggest
 	}
 	_, _ = o.store.CreateObservation(ctx, &store.StellarObservation{
+		UserID:      userID,
 		Cluster:     "",
 		Kind:        "noticed",
 		Summary:     surface,
@@ -565,7 +566,6 @@ func parseObserverResponse(raw string) (surface string, suggest string) {
 	return strings.TrimSpace(surface), strings.TrimSpace(suggest)
 }
 
-
 func (o *Observer) followThroughWatches(ctx context.Context) {
 	watches, err := o.store.GetActiveWatchesForCluster(ctx, "")
 	if err != nil || len(watches) == 0 {
@@ -598,7 +598,7 @@ func (o *Observer) checkWatch(ctx context.Context, w store.StellarWatch) {
 		Model:       resolved.Model,
 		MaxTokens:   150,
 		Temperature: 0.1,
-		Messages: []providers.Message{{Role: "user", Content: prompt}},
+		Messages:    []providers.Message{{Role: "user", Content: prompt}},
 	})
 	if err != nil {
 		slog.Warn("stellar/observer: watch check failed", "watchId", w.ID, "error", err)
@@ -656,6 +656,7 @@ func (o *Observer) checkWatch(ctx context.Context, w store.StellarWatch) {
 		}
 		_ = o.store.UpdateWatchStatus(ctx, w.ID, "active", msg)
 		_, _ = o.store.CreateObservation(ctx, &store.StellarObservation{
+			UserID:  w.UserID,
 			Cluster: w.Cluster,
 			Kind:    "noticed",
 			Summary: fmt.Sprintf("[%s] %s/%s update: %s", severity, w.Namespace, w.ResourceName, msg),
@@ -784,7 +785,6 @@ func isQuietWindow() bool {
 	// Overnight window: e.g. 22:00 → 07:00
 	return now >= start || now < end
 }
-
 
 // extractReasoning extracts the reasoning text that appears before "SURFACE:" in the LLM response.
 // This is the "why Stellar flagged this" explanation.

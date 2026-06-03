@@ -433,6 +433,7 @@ func (s *SQLiteStore) migrate() error {
 	-- Stellar observer journal.
 	CREATE TABLE IF NOT EXISTS stellar_observations (
 		id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+		user_id       TEXT NOT NULL DEFAULT '',
 		cluster       TEXT NOT NULL DEFAULT '',
 		kind          TEXT NOT NULL,
 		summary       TEXT NOT NULL,
@@ -443,6 +444,7 @@ func (s *SQLiteStore) migrate() error {
 		created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_stellar_obs_cluster_ts ON stellar_observations(cluster, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_shown_ts ON stellar_observations(user_id, shown_to_user, created_at DESC);
 
 	-- OAuth credentials persisted by the GitHub App Manifest one-click flow.
 	-- Single-row table (CHECK constraint) so only one app registration exists.
@@ -579,6 +581,7 @@ func (s *SQLiteStore) migrate() error {
 		"CREATE INDEX IF NOT EXISTS idx_stellar_tasks_user_status ON stellar_tasks(user_id, status, priority)",
 		`CREATE TABLE IF NOT EXISTS stellar_observations (
 			id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			user_id       TEXT NOT NULL DEFAULT '',
 			cluster       TEXT NOT NULL DEFAULT '',
 			kind          TEXT NOT NULL,
 			summary       TEXT NOT NULL,
@@ -589,6 +592,7 @@ func (s *SQLiteStore) migrate() error {
 			created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_cluster_ts ON stellar_observations(cluster, created_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_shown_ts ON stellar_observations(user_id, shown_to_user, created_at DESC)",
 		`CREATE TABLE IF NOT EXISTS stellar_watches (
 			id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
 			user_id       TEXT NOT NULL,
@@ -613,6 +617,10 @@ func (s *SQLiteStore) migrate() error {
 			last_seen_at    TEXT NOT NULL DEFAULT (datetime('now')),
 			last_digest_at  TEXT
 		)`,
+
+		// Scope stellar observations per user before surfacing them in SSE.
+		"ALTER TABLE stellar_observations ADD COLUMN user_id TEXT NOT NULL DEFAULT ''",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_user_shown_ts ON stellar_observations(user_id, shown_to_user, created_at DESC)",
 
 		// Sprint 5: reasoning column on stellar_observations for trust layer
 		"ALTER TABLE stellar_observations ADD COLUMN reasoning TEXT NOT NULL DEFAULT ''",

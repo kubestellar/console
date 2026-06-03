@@ -29,7 +29,7 @@ func (observerStoreStub) ListStellarNotifications(context.Context, string, int, 
 	return nil, nil
 }
 
-func (observerStoreStub) GetRecentObservations(context.Context, string, int) ([]store.StellarObservation, error) {
+func (observerStoreStub) GetRecentObservations(context.Context, string, string, int) ([]store.StellarObservation, error) {
 	return nil, nil
 }
 
