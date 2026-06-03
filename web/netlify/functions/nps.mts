@@ -12,7 +12,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
-import { buildCorsHeaders, handlePreflight, readCappedBody, BodyTooLargeError } from "./_shared";
+import { buildCorsHeaders, handlePreflight } from "./_shared";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ interface NPSAggregation {
   scoreMax: number;
   /** Monthly trend: { month: "2026-04", npsScore, count } */
   trend: Array<{ month: string; npsScore: number; count: number; avgScore: number }>;
-  /** Recent responses (last 20, no feedback or PII — requires admin endpoint to access feedback) */
+  /** Recent responses (last 20, no PII) */
   recent: Array<{ score: number; category: string; timestamp: string }>;
 }
 
@@ -141,9 +141,7 @@ function computeAggregation(data: NPSData): NPSAggregation {
       return { month, npsScore: monthNps, count, avgScore: Math.round(avgScore * 10) / 10 };
     });
 
-  // Recent responses (strip sessionId and feedback for privacy)
-  // Note: Feedback is user-submitted content that may contain PII and is not included in the public response.
-  // To view feedback comments, an admin endpoint should be implemented with proper authorization.
+  // Recent responses (strip sessionId for privacy)
   const recent = responses
     .slice(-RECENT_COUNT)
     .reverse()
@@ -190,10 +188,6 @@ export default async (req: Request) => {
   const store = getStore(STORE_NAME);
 
   // ── GET: return aggregated results ──
-  // SECURITY: Returns only aggregate metrics and anonymized recent responses (no user feedback or PII).
-  // User-submitted feedback comments may contain emails, incident details, or other sensitive information
-  // and are not exposed in this public response. An authenticated admin endpoint would be required to
-  // access raw feedback. See CWE-200 and CWE-862.
   if (req.method === "GET") {
     try {
       const raw = await store.get(DATA_KEY);
@@ -238,19 +232,7 @@ export default async (req: Request) => {
         );
       }
 
-      let bodyText: string;
-      try {
-        bodyText = await readCappedBody(req, MAX_BODY_BYTES);
-      } catch (e) {
-        if (e instanceof BodyTooLargeError) {
-          return new Response(
-            JSON.stringify({ error: "Payload too large" }),
-            { status: 413, headers }
-          );
-        }
-        throw e;
-      }
-      const body = JSON.parse(bodyText);
+      const body = await req.json();
       const score = parseInt(body.score, 10);
 
       // Validate — 4-emoji widget uses scores 1-4
