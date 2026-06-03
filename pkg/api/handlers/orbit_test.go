@@ -388,11 +388,11 @@ func TestCreateMissionAssignsAuthenticatedOwner(t *testing.T) {
 	}
 }
 
-func TestCreateMissionRejectsOtherUsersMissionID(t *testing.T) {
+func TestCreateMissionIgnoresConflictingClientSuppliedID(t *testing.T) {
 	userID := uuid.New()
 	otherID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
-		userID: &models.User{ID: userID, Role: models.UserRoleEditor},
+		userID: {ID: userID, Role: models.UserRoleEditor},
 	}})
 	h.missions["orbit-foreign"] = &OrbitMission{
 		ID:      "orbit-foreign",
@@ -423,12 +423,23 @@ func TestCreateMissionRejectsOtherUsersMissionID(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusConflict {
+	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusConflict, string(body))
+		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusCreated, string(body))
 	}
-	if got := h.missions["orbit-foreign"].OwnerID; got != otherID.String() {
-		t.Fatalf("ownerId = %q, want %q", got, otherID.String())
+
+	var got OrbitMission
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.ID == "orbit-foreign" {
+		t.Fatalf("id = %q, want server-generated ID", got.ID)
+	}
+	if got.OwnerID != userID.String() {
+		t.Fatalf("ownerId = %q, want %q", got.OwnerID, userID.String())
+	}
+	if preservedOwner := h.missions["orbit-foreign"].OwnerID; preservedOwner != otherID.String() {
+		t.Fatalf("existing mission ownerId = %q, want %q", preservedOwner, otherID.String())
 	}
 }
 
@@ -533,7 +544,7 @@ func TestCreateMissionAllowsClaimingUnownedMission(t *testing.T) {
 	}
 }
 
-func TestCreateMissionIDORErrorMessage(t *testing.T) {
+func TestCreateMissionDoesNotEchoConflictingClientSuppliedID(t *testing.T) {
 	userID := uuid.New()
 	otherID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
@@ -568,27 +579,21 @@ func TestCreateMissionIDORErrorMessage(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusConflict {
-		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusConflict)
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusCreated, string(body))
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("read body: %v", err)
+	var got OrbitMission
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
 	}
-
-	var errResp map[string]string
-	if err := json.Unmarshal(body, &errResp); err != nil {
-		t.Fatalf("unmarshal error response: %v", err)
-	}
-
-	const wantError = "A mission with this ID already exists"
-	if errResp["error"] != wantError {
-		t.Fatalf("error = %q, want %q", errResp["error"], wantError)
+	if got.ID == "orbit-conflict" {
+		t.Fatalf("id = %q, want server-generated ID distinct from client input", got.ID)
 	}
 }
 
-func TestCreateMissionPreservesOriginalMissionOnIDORAttempt(t *testing.T) {
+func TestCreateMissionPreservesOriginalMissionWhenClientSuppliesConflictingID(t *testing.T) {
 	userID := uuid.New()
 	otherID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
@@ -628,8 +633,17 @@ func TestCreateMissionPreservesOriginalMissionOnIDORAttempt(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusConflict {
-		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusConflict)
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d, want %d; body=%s", resp.StatusCode, http.StatusCreated, string(body))
+	}
+
+	var created OrbitMission
+	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if created.ID == "orbit-preserve" {
+		t.Fatalf("id = %q, want server-generated ID", created.ID)
 	}
 
 	preserved := h.missions["orbit-preserve"]
@@ -643,7 +657,6 @@ func TestCreateMissionPreservesOriginalMissionOnIDORAttempt(t *testing.T) {
 		t.Fatalf("orbitType = %q, want %q (orbitType should be preserved)", preserved.OrbitType, "security-scan")
 	}
 }
-
 func TestRunMissionRejectsOtherUsersMission(t *testing.T) {
 	userID := uuid.New()
 	otherID := uuid.New()

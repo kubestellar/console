@@ -352,7 +352,7 @@ func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 // SetUserStore wires user role lookups for authorization checks on mutating
 // endpoints (e.g., IngestEvent #16709). Optional — if unset, role checks are
 // skipped for backward compatibility in tests.
-func (h *StellarHandler) SetUserStore(us store.UserStore) {
+func (h *StellarHandler) SetUserStore(us store.Store) {
 	h.userStore = us
 }
 
