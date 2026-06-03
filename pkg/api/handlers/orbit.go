@@ -216,8 +216,8 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 		// collisions when two missions are created in the same second.
 		m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
 	} else {
-		// Prevent authenticated users from overwriting another user's mission by
-		// reusing its ID (CWE-639 / #16698).
+		// SECURITY: Reject client-supplied IDs that collide with an existing
+		// mission owned by a different user (CWE-639, #16698).
 		h.mu.RLock()
 		existing, exists := h.missions[m.ID]
 		h.mu.RUnlock()

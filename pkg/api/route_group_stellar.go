@@ -8,21 +8,24 @@ import (
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // stellarRouteGroup wires the Stellar handler with only the dependencies its
 // routes and background workers need.
 type stellarRouteGroup struct {
-	store     handlers.StellarStore
-	k8sClient *k8s.MultiClusterClient
-	done      <-chan struct{}
+	store      handlers.StellarStore
+	adminStore store.Store // full store for admin role checks on restricted routes
+	k8sClient  *k8s.MultiClusterClient
+	done       <-chan struct{}
 }
 
-func newStellarRouteGroup(store handlers.StellarStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *stellarRouteGroup {
+func newStellarRouteGroup(s handlers.StellarStore, adminStore store.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *stellarRouteGroup {
 	return &stellarRouteGroup{
-		store:     store,
-		k8sClient: k8sClient,
-		done:      done,
+		store:      s,
+		adminStore: adminStore,
+		k8sClient:  k8sClient,
+		done:       done,
 	}
 }
 

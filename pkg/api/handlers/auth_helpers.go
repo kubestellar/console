@@ -73,6 +73,17 @@ func RequireAdmin(c *fiber.Ctx, s store.Store) error {
 	return requireAdmin(c, s)
 }
 
+// RequireAdminMiddleware returns a Fiber middleware that rejects non-admin users.
+// Use as inline route middleware: api.Post("/path", RequireAdminMiddleware(s), handler).
+func RequireAdminMiddleware(s store.Store) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if err := requireAdmin(c, s); err != nil {
+			return err
+		}
+		return c.Next()
+	}
+}
+
 // requireAdmin verifies the current request's user has the admin role.
 // Unlike initial OAuth login flow, requireAdmin does NOT auto-promote users
 // to admin even if admin count is zero. This prevents privilege escalation
