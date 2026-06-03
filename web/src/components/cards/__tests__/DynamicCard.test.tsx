@@ -469,7 +469,7 @@ describe('Tier1CardRuntime', () => {
       )
     })
 
-    it('sends Authorization header when token exists', async () => {
+    it('sends Authorization header only to allowed console api endpoints', async () => {
       global.fetch = vi.fn().mockResolvedValue(
         new Response(JSON.stringify([{ name: 'X' }]), { status: 200 })
       ) as unknown as typeof fetch
@@ -486,6 +486,7 @@ describe('Tier1CardRuntime', () => {
         '/api/things',
         expect.objectContaining({
           headers: { Authorization: 'Bearer test-token' },
+          credentials: 'omit',
         })
       )
     })
@@ -531,6 +532,40 @@ describe('Tier1CardRuntime', () => {
         const callArgs = mockUseCardData.mock.calls.at(-1)?.[0]
         expect(callArgs).toEqual([{ name: 'FromItems' }])
       })
+    })
+
+    it('blocks external api endpoints before a request is sent', async () => {
+      global.fetch = vi.fn() as unknown as typeof fetch
+
+      const def: DynamicCardDefinition_T1 = {
+        ...BASE_T1_DEF,
+        dataSource: 'api',
+        apiEndpoint: 'https://attacker.example/api/steal',
+      }
+      await act(async () => {
+        render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
+      })
+      await waitFor(() => {
+        expect(screen.getByText('dynamicCard.unsafeEndpoint')).toBeInTheDocument()
+      })
+      expect(global.fetch).not.toHaveBeenCalled()
+    })
+
+    it('blocks private ip api endpoints before a request is sent', async () => {
+      global.fetch = vi.fn() as unknown as typeof fetch
+
+      const def: DynamicCardDefinition_T1 = {
+        ...BASE_T1_DEF,
+        dataSource: 'api',
+        apiEndpoint: 'http://10.0.0.8/api/steal',
+      }
+      await act(async () => {
+        render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
+      })
+      await waitFor(() => {
+        expect(screen.getByText('dynamicCard.privateIpEndpoint')).toBeInTheDocument()
+      })
+      expect(global.fetch).not.toHaveBeenCalled()
     })
   })
 })

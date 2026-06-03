@@ -4,6 +4,7 @@ import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
+import { buildDynamicCardApiRequest } from '../../lib/dynamic-cards/apiEndpointSecurity'
 import { Skeleton } from '../ui/Skeleton'
 import { Pagination } from '../ui/Pagination'
 import { useCardData } from '../../lib/cards/cardHooks'
@@ -171,8 +172,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
     fetcher: async () => {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      const res = await fetch(apiEndpoint, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const request = buildDynamicCardApiRequest(apiEndpoint, token)
+      const res = await fetch(request.requestUrl, {
+        headers: request.headers,
+        credentials: request.credentials,
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -262,7 +265,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-yellow-400 mb-2" />
         <p className="text-sm text-yellow-400">{t('dynamicCard.fetchFailed')}</p>
-        <p className="text-xs text-muted-foreground mt-1">{apiError}</p>
+        <p className="text-xs text-muted-foreground mt-1">{apiError?.startsWith('dynamicCard.') ? t(apiError) : apiError}</p>
       </div>
     )
   }
