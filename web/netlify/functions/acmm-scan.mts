@@ -37,7 +37,7 @@ import { CRITERIA } from "./acmm-scan/criteria";
 import {
   CACHE_STORE,
   CACHE_TTL_MS,
-  REPO_RE,
+  isAllowedRepo,
   matchesHint,
 } from "./acmm-scan/helpers";
 import type { CacheEntry, ScanResult } from "./acmm-scan/helpers";
@@ -70,7 +70,7 @@ export default async (req: Request) => {
   const repo = url.searchParams.get("repo") || "";
   const force = url.searchParams.get("force") === "true";
 
-  if (!REPO_RE.test(repo)) {
+  if (!isAllowedRepo(repo)) {
     return new Response(
       JSON.stringify({ error: "Invalid repo — must be owner/name" }),
       {

@@ -19,6 +19,27 @@ export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
 export const UNKNOWN_REPO = "unknown/repo";
+
+/** Repos allowed for ACMM scanning. Restrict to prevent the server token
+ *  from being used as a confused deputy to probe arbitrary private repos. */
+const ALLOWED_REPOS: readonly string[] = (() => {
+  const env = process.env.ACMM_SCAN_REPOS;
+  if (env) return env.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return [
+    "kubestellar/console",
+    "kubestellar/docs",
+    "kubestellar/console-kb",
+    "kubestellar/kubestellar-mcp",
+    "kubestellar/console-marketplace",
+    "kubestellar/homebrew-tap",
+    "kubestellar/kubestellar",
+  ];
+})();
+
+/** Check that a repo slug is both format-valid and in the configured allowlist. */
+export function isAllowedRepo(repo: string): boolean {
+  return REPO_RE.test(repo) && ALLOWED_REPOS.includes(repo.toLowerCase());
+}
 /** AI-generated label used to classify AI contributions */
 export const AI_LABEL = "ai-generated";
 /** Known AI authors (shared logins + bots) */

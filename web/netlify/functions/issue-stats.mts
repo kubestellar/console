@@ -17,6 +17,23 @@ import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+/** Repos allowed for issue-stats queries. */
+const ALLOWED_REPOS: readonly string[] = (() => {
+  const env = process.env.ISSUE_STATS_REPOS;
+  if (env) return env.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return [
+    "kubestellar/console",
+    "kubestellar/docs",
+    "kubestellar/console-kb",
+    "kubestellar/kubestellar-mcp",
+    "kubestellar/console-marketplace",
+    "kubestellar/homebrew-tap",
+    "kubestellar/kubestellar",
+  ];
+})();
+function isAllowedRepo(repo: string): boolean {
+  return REPO_RE.test(repo) && ALLOWED_REPOS.includes(repo.toLowerCase());
+}
 /** Server-side cache TTL (1 hour) */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 /** GitHub API results per page (max 100) */
@@ -131,7 +148,7 @@ export default async function handler(request: Request): Promise<Response> {
 
   const url = new URL(request.url);
   const repo = url.searchParams.get("repo") || "kubestellar/console";
-  if (!REPO_RE.test(repo)) {
+  if (!isAllowedRepo(repo)) {
     return new Response(
       JSON.stringify({ error: "Invalid repo format" }),
       {
