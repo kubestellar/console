@@ -1117,7 +1117,11 @@
     "noMatchingItems": "No matching items",
     "noItemsInFeed": "No items in feed",
     "addFeedsFirst": "Add feeds first to create an aggregate",
-    "failedToLoadFeed": "Failed to load feed"
+    "failedToLoadFeed": "Failed to load feed",
+    "invalidFeedUrl": "Enter a valid HTTPS RSS feed URL.",
+    "feedUrlHttpsOnly": "RSS feed URLs must use HTTPS.",
+    "feedUrlNoCredentials": "RSS feed URLs cannot include embedded credentials.",
+    "feedUrlPrivateHostBlocked": "RSS feed URLs cannot use private, loopback, or link-local hosts."
   },
   "workloadMonitor": {
     "workloads": "Workloads",

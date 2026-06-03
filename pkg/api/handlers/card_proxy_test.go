@@ -47,13 +47,61 @@ func TestIsBlockedIP(t *testing.T) {
 	}
 }
 
+func TestIsBlockedIP_KubernetesServiceCIDR(t *testing.T) {
+	t.Setenv("KUBERNETES_SERVICE_CIDR", "198.18.0.0/15")
+
+	blockedIP := net.ParseIP("198.18.0.10")
+	if blockedIP == nil {
+		t.Fatal("failed to parse test IP")
+	}
+	if !isBlockedIP(blockedIP) {
+		t.Fatal("expected service CIDR IP to be blocked")
+	}
+}
+
+func TestValidateProxyTarget_DomainAllowlist(t *testing.T) {
+	t.Setenv("CARD_PROXY_DOMAIN_ALLOWLIST", "example.com, api.github.com")
+
+	handler := NewCardProxyHandler(nil)
+	tests := []struct {
+		name      string
+		rawURL    string
+		wantError bool
+	}{
+		{name: "exact domain allowed", rawURL: "https://example.com/data", wantError: false},
+		{name: "subdomain allowed", rawURL: "https://api.example.com/data", wantError: false},
+		{name: "second exact domain allowed", rawURL: "https://api.github.com/repos", wantError: false},
+		{name: "other domain rejected", rawURL: "https://evil.example.net/data", wantError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := handler.validateProxyTarget(tt.rawURL)
+			if (err != nil) != tt.wantError {
+				t.Fatalf("validateProxyTarget(%q) error = %v, wantError %v", tt.rawURL, err, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestCardProxyRateLimiter(t *testing.T) {
+	limiter := getCardProxyLimiter("test-user-" + uuid.NewString())
+
+	for i := 0; i < cardProxyMaxRequestsPerMinute; i++ {
+		if !limiter.Allow() {
+			t.Fatalf("request %d should have been allowed", i+1)
+		}
+	}
+
+	if limiter.Allow() {
+		t.Fatal("expected request above per-minute budget to be rejected")
+	}
+}
+
 func TestCardProxyAuthorization_ViewerForbidden(t *testing.T) {
 	viewerID := uuid.New()
 	mockStore := new(test.MockStore)
-	mockStore.On("GetUser", viewerID).Return(&models.User{
-		ID:   viewerID,
-		Role: models.UserRoleViewer,
-	}, nil).Maybe()
+	mockStore.On("GetUser", viewerID).Return(&models.User{ID: viewerID, Role: models.UserRoleViewer}, nil).Maybe()
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -83,10 +131,7 @@ func TestCardProxyAuthorization_ViewerForbidden(t *testing.T) {
 func TestCardProxyAuthorization_EditorAllowed(t *testing.T) {
 	editorID := uuid.New()
 	mockStore := new(test.MockStore)
-	mockStore.On("GetUser", editorID).Return(&models.User{
-		ID:   editorID,
-		Role: models.UserRoleEditor,
-	}, nil).Maybe()
+	mockStore.On("GetUser", editorID).Return(&models.User{ID: editorID, Role: models.UserRoleEditor}, nil).Maybe()
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -97,7 +142,6 @@ func TestCardProxyAuthorization_EditorAllowed(t *testing.T) {
 	handler := NewCardProxyHandler(mockStore)
 	app.Get("/api/card-proxy", handler.Proxy)
 
-	// Use a missing url param so we get 400 (proves we passed the RBAC check)
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -109,7 +153,6 @@ func TestCardProxyAuthorization_EditorAllowed(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	// Editor passes RBAC check, gets 400 for missing url — not 403
 	if resp.StatusCode == fiber.StatusForbidden {
 		t.Errorf("editor should not be forbidden, got %d", resp.StatusCode)
 	}
@@ -125,7 +168,6 @@ func TestCardProxyAuthorization_NilStoreSkipsCheck(t *testing.T) {
 	handler := NewCardProxyHandler(nil)
 	app.Get("/api/card-proxy", handler.Proxy)
 
-	// nil store = dev/demo mode, RBAC skipped → expect 400 for missing url
 	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -146,7 +188,6 @@ func TestCardProxyAuthorization_NilStoreSkipsCheck(t *testing.T) {
 }
 
 func TestCardProxyDialContext_EmptyDNSResult(t *testing.T) {
-	// Extract the DialContext from the cardProxyClient transport.
 	transport, ok := cardProxyClient.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("cardProxyClient.Transport is not *http.Transport")
@@ -156,9 +197,6 @@ func TestCardProxyDialContext_EmptyDNSResult(t *testing.T) {
 		t.Fatal("cardProxyClient has no custom DialContext")
 	}
 
-	// Call DialContext with a host that will fail DNS resolution.
-	// The empty-DNS guard should return an error before reaching ips[0].
-	// Using .invalid TLD (RFC 6761) guarantees DNS failure in any environment.
 	_, err := dialCtx(t.Context(), "tcp", "empty-dns-test.invalid:443")
 	if err == nil {
 		t.Fatal("expected error for unresolvable host, got nil")

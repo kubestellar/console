@@ -29,6 +29,61 @@ import { RSS_DEMO_FEEDS, getDemoRSSItems } from './demoData'
 import { RSS_UI_STRINGS } from './strings'
 
 const MIN_VALID_FEED_LENGTH = 50
+const RSS_FETCH_TIMEOUT_MS = 10_000
+const IPV4_SEGMENT_PATTERN = /^\d+$/
+const IPV4_SEGMENT_COUNT = 4
+const PRIVATE_IPV4_CLASS_A_PREFIX = 10
+const PRIVATE_IPV4_CLASS_B_PREFIX = 172
+const PRIVATE_IPV4_CLASS_B_RANGE_START = 16
+const PRIVATE_IPV4_CLASS_B_RANGE_END = 31
+const PRIVATE_IPV4_CLASS_C_PREFIX_ONE = 192
+const PRIVATE_IPV4_CLASS_C_PREFIX_TWO = 168
+const LOOPBACK_IPV4_PREFIX = 127
+const LINK_LOCAL_IPV4_PREFIX_ONE = 169
+const LINK_LOCAL_IPV4_PREFIX_TWO = 254
+const IPV6_LOOPBACK_HOST = '::1'
+const IPV6_EXPANDED_LOOPBACK_HOST = '0:0:0:0:0:0:0:1'
+const IPV6_LINK_LOCAL_PREFIX = 'fe80:'
+const IPV6_UNIQUE_LOCAL_PREFIXES = ['fc', 'fd'] as const
+const URL_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:/i
+
+function isIPv4Literal(hostname: string): boolean {
+  const segments = hostname.split('.')
+  return segments.length === IPV4_SEGMENT_COUNT
+    && segments.every(segment => IPV4_SEGMENT_PATTERN.test(segment) && Number(segment) >= 0 && Number(segment) <= 255)
+}
+
+function isBlockedIPv4Literal(hostname: string): boolean {
+  if (!isIPv4Literal(hostname)) return false
+
+  const [firstOctet, secondOctet] = hostname.split('.').map(Number)
+  return firstOctet === PRIVATE_IPV4_CLASS_A_PREFIX
+    || firstOctet === LOOPBACK_IPV4_PREFIX
+    || (firstOctet === PRIVATE_IPV4_CLASS_B_PREFIX
+      && secondOctet >= PRIVATE_IPV4_CLASS_B_RANGE_START
+      && secondOctet <= PRIVATE_IPV4_CLASS_B_RANGE_END)
+    || (firstOctet === PRIVATE_IPV4_CLASS_C_PREFIX_ONE && secondOctet === PRIVATE_IPV4_CLASS_C_PREFIX_TWO)
+    || (firstOctet === LINK_LOCAL_IPV4_PREFIX_ONE && secondOctet === LINK_LOCAL_IPV4_PREFIX_TWO)
+}
+
+function isBlockedIPv6Literal(hostname: string): boolean {
+  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  if (!normalized.includes(':')) return false
+
+  return normalized === IPV6_LOOPBACK_HOST
+    || normalized === IPV6_EXPANDED_LOOPBACK_HOST
+    || normalized.startsWith(IPV6_LINK_LOCAL_PREFIX)
+    || IPV6_UNIQUE_LOCAL_PREFIXES.some(prefix => normalized.startsWith(prefix))
+}
+
+function isBlockedFeedHostname(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase()
+  if (!normalized) return true
+
+  return normalized === 'localhost'
+    || isBlockedIPv4Literal(normalized)
+    || isBlockedIPv6Literal(normalized)
+}
 
 type SortByOption = 'date' | 'title'
 
@@ -227,14 +282,50 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
   }, [])
 
+  const validateFeedUrl = useCallback((feedUrl: string): string | null => {
+    const trimmedUrl = feedUrl.trim()
+    if (!trimmedUrl) return t('rssFeed.invalidFeedUrl')
+
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(trimmedUrl)
+    } catch {
+      return t('rssFeed.invalidFeedUrl')
+    }
+
+    if (parsedUrl.protocol !== 'https:') {
+      return t('rssFeed.feedUrlHttpsOnly')
+    }
+
+    if (parsedUrl.username || parsedUrl.password) {
+      return t('rssFeed.feedUrlNoCredentials')
+    }
+
+    if (isBlockedFeedHostname(parsedUrl.hostname)) {
+      return t('rssFeed.feedUrlPrivateHostBlocked')
+    }
+
+    return null
+  }, [t])
+
+  const isRejectedFeedUrlError = useCallback((message: string): boolean => (
+    message === t('rssFeed.invalidFeedUrl')
+    || message === t('rssFeed.feedUrlHttpsOnly')
+    || message === t('rssFeed.feedUrlNoCredentials')
+    || message === t('rssFeed.feedUrlPrivateHostBlocked')
+  ), [t])
+
   // Helper: Fetch a single RSS feed URL
   const fetchSingleFeed = useCallback(async (feedUrl: string): Promise<FeedItem[]> => {
-    const FETCH_TIMEOUT_MS = 10000
+    const validationError = validateFeedUrl(feedUrl)
+    if (validationError) {
+      throw new Error(validationError)
+    }
 
     for (const proxy of CORS_PROXIES) {
       try {
         const proxyUrl = proxy.url + encodeURIComponent(feedUrl)
-        const response = await fetchWithTimeout(proxyUrl, FETCH_TIMEOUT_MS)
+        const response = await fetchWithTimeout(proxyUrl, RSS_FETCH_TIMEOUT_MS)
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`)
@@ -305,7 +396,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       }
     }
     return []
-  }, [fetchWithTimeout])
+  }, [fetchWithTimeout, validateFeedUrl])
 
   // Fetch RSS feed (or aggregate) — uses demo data in demo mode
   const fetchFeed = useCallback(async (isManualRefresh = false) => {
@@ -406,7 +497,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         setItems(cached.items)
         setItemsSourceUrl(cacheKey)
         setLastRefresh(new Date(cached.timestamp))
-        setError(null)
+        setError(isRejectedFeedUrlError(message) ? message : null)
       } else {
         setItems([])
         setItemsSourceUrl(cacheKey)
@@ -416,7 +507,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed])
+  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds, fetchSingleFeed, isRejectedFeedUrlError, t])
 
   // Fetch on mount — runs once. The fetch is async but the component is
   // long-lived (dashboard card), so stale-setState risk is minimal.
@@ -554,26 +645,22 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     let normalized = url.trim()
 
     if (normalized.match(/^r\/\w+$/i)) {
-      normalized = `https://www.reddit.com/${normalized}.rss`
-      return normalized
+      return `https://www.reddit.com/${normalized}.rss`
     }
     if (normalized.match(/^\/r\/\w+$/i)) {
-      normalized = `https://www.reddit.com${normalized}.rss`
+      return `https://www.reddit.com${normalized}.rss`
+    }
+
+    const hasExplicitScheme = URL_SCHEME_PATTERN.test(normalized)
+    const withScheme = hasExplicitScheme ? normalized : `https://${normalized}`
+    const isHttpUrl = withScheme.startsWith('http://') || withScheme.startsWith('https://')
+
+    if (isHttpUrl && hostnameEndsWith(withScheme, 'reddit.com') && !withScheme.endsWith('.rss')) {
+      normalized = withScheme.replace(/\/?$/, '.rss')
       return normalized
     }
 
-    const withScheme = normalized.startsWith('http://') || normalized.startsWith('https://')
-      ? normalized
-      : 'https://' + normalized
-    if (hostnameEndsWith(withScheme, 'reddit.com') && !normalized.endsWith('.rss')) {
-      normalized = withScheme.replace(/\/?$/, '.rss')
-    }
-
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      normalized = 'https://' + normalized
-    }
-
-    return normalized
+    return withScheme
   }, [])
 
   const addFeed = useCallback((feed: FeedConfig) => {
@@ -596,26 +683,34 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   }, [feeds, activeFeedIndex])
 
   const handleAddCustomFeed = useCallback(() => {
-    if (newFeedUrl.trim()) {
-      const rawUrl = newFeedUrl.trim()
-      const url = normalizeUrl(rawUrl)
-      let defaultName: string
-      const subredditMatch = rawUrl.match(/^r\/(\w+)$/i) || url.match(/reddit\.com\/r\/(\w+)/)
-      if (subredditMatch) {
-        defaultName = `r/${subredditMatch[1]}`
-      } else {
-        try {
-          defaultName = new URL(url).hostname
-        } catch {
-          defaultName = rawUrl
-        }
-      }
-      addFeed({
-        url,
-        name: newFeedName || defaultName,
-        icon: hostnameEndsWith(url, 'reddit.com') ? '🔴' : '📰' })
+    if (!newFeedUrl.trim()) return
+
+    const rawUrl = newFeedUrl.trim()
+    const url = normalizeUrl(rawUrl)
+    const validationError = validateFeedUrl(url)
+    if (validationError) {
+      setError(validationError)
+      setFetchSuccess(null)
+      return
     }
-  }, [newFeedUrl, newFeedName, normalizeUrl, addFeed])
+
+    let defaultName: string
+    const subredditMatch = rawUrl.match(/^r\/(\w+)$/i) || url.match(/reddit\.com\/r\/(\w+)/)
+    if (subredditMatch) {
+      defaultName = `r/${subredditMatch[1]}`
+    } else {
+      try {
+        defaultName = new URL(url).hostname
+      } catch {
+        defaultName = rawUrl
+      }
+    }
+
+    addFeed({
+      url,
+      name: newFeedName || defaultName,
+      icon: hostnameEndsWith(url, 'reddit.com') ? '🔴' : '📰' })
+  }, [newFeedUrl, newFeedName, normalizeUrl, validateFeedUrl, addFeed])
 
   const handleSelectFeedFromSettings = useCallback((idx: number) => {
     setActiveFeedIndex(idx)
