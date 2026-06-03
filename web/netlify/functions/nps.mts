@@ -53,7 +53,7 @@ interface NPSAggregation {
   /** Monthly trend: { month: "2026-04", npsScore, count } */
   trend: Array<{ month: string; npsScore: number; count: number; avgScore: number }>;
   /** Recent responses (last 20, no PII) */
-  recent: Array<{ score: number; category: string; feedback?: string; timestamp: string }>;
+  recent: Array<{ score: number; category: string; timestamp: string }>;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -148,7 +148,6 @@ function computeAggregation(data: NPSData): NPSAggregation {
     .map(({ score, category, feedback, timestamp }) => ({
       score,
       category,
-      ...(feedback ? { feedback } : {}),
       timestamp,
     }));
 
