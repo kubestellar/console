@@ -359,7 +359,6 @@ export default async (req: Request, context: Context): Promise<Response> => {
     }
 
     const targetURL = new URL(path, quantumServiceURL).toString();
-    
     // SECURITY: Enforce body size on actual bytes read, not Content-Length header.
     // Chunked encoding can bypass Content-Length checks (CWE-400).
     let requestBody: string | undefined;
@@ -378,7 +377,6 @@ export default async (req: Request, context: Context): Promise<Response> => {
         });
       }
     }
-    
     if (req.method === "POST" && requestBody !== undefined) {
       const validationError = validatePostBody(requestBody);
       if (validationError) {
