@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
@@ -335,6 +336,22 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 	})
 }
 
+// sanitizePromptString sanitizes untrusted strings before injecting into LLM prompts.
+// Prevents prompt injection via crafted kubeconfig context names (CWE-74, #16533).
+var kagentiPromptControlCharsRe = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]`)
+var kagentiPromptRoleMarkerRe = regexp.MustCompile(`(?i)\b(system|assistant|user|developer|tool)\s*:`)
+var kagentiPromptInjectionReplacer = strings.NewReplacer("\n", " ", "\r", " ", "\t", " ", "```", "'''")
+
+func sanitizePromptString(input string) string {
+	if input == "" {
+		return ""
+	}
+	s := kagentiPromptInjectionReplacer.Replace(input)
+	s = kagentiPromptControlCharsRe.ReplaceAllString(s, "")
+	s = kagentiPromptRoleMarkerRe.ReplaceAllString(s, "$1-")
+	return strings.Join(strings.Fields(s), " ")
+}
+
 // enrichMessageWithClusterContext prepends cluster context to the user's message
 func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx context.Context, message string) string {
 	if h.k8sClient == nil {
@@ -359,7 +376,7 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
 
 	for _, cluster := range clusters {
-		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
+		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", sanitizePromptString(cluster.Name)))
 		if cluster.Healthy {
 			contextBuilder.WriteString("  Status: Healthy\n")
 		} else {
