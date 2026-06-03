@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -25,19 +28,23 @@ const (
 	clusterContextTimeout = 10 * time.Second
 )
 
+var validClusterNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+
 // KagentiProviderProxyHandler proxies requests to the kagenti A2A endpoint.
 type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store // used for authorization checks
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
 }
 
@@ -344,7 +351,7 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
 
 	for _, cluster := range clusters {
-		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
+		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", agent.SanitizeK8sStringForPrompt(cluster.Name)))
 		if cluster.Healthy {
 			contextBuilder.WriteString("  Status: Healthy\n")
 		} else {
@@ -433,6 +440,10 @@ type kagentiDirectToolRequest struct {
 
 // CallToolDirect routes tool calls to the appropriate console handlers
 func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not available"})
 	}
@@ -458,6 +469,10 @@ func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
 	}
 }
 
+func isValidClusterName(name string) bool {
+	return validClusterNameRe.MatchString(name)
+}
+
 // handleGetClusterList implements the get_cluster_list tool
 func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), clusterContextTimeout)
@@ -480,6 +495,9 @@ func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[st
 	cluster, ok := args["cluster"].(string)
 	if !ok || cluster == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
+	}
+	if !isValidClusterName(cluster) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid cluster parameter"})
 	}
 
 	namespace := ""
@@ -507,6 +525,9 @@ func (h *KagentiProviderProxyHandler) handleGetEvents(c *fiber.Ctx, args map[str
 	cluster, ok := args["cluster"].(string)
 	if !ok || cluster == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
+	}
+	if !isValidClusterName(cluster) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid cluster parameter"})
 	}
 
 	namespace := ""

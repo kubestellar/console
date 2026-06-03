@@ -18,7 +18,7 @@ var promptInjectionReplacer = strings.NewReplacer(
 	"```", "'''",
 )
 
-func sanitizeK8sStringForPrompt(input string) string {
+func SanitizeK8sStringForPrompt(input string) string {
 	if input == "" {
 		return ""
 	}
@@ -28,6 +28,10 @@ func sanitizeK8sStringForPrompt(input string) string {
 	sanitized = html.EscapeString(sanitized)
 	sanitized = promptRoleMarkerRe.ReplaceAllString(sanitized, "$1-")
 	return strings.Join(strings.Fields(sanitized), " ")
+}
+
+func sanitizeK8sStringForPrompt(input string) string {
+	return SanitizeK8sStringForPrompt(input)
 }
 
 func sanitizeK8sStringsForPrompt(values []string) []string {

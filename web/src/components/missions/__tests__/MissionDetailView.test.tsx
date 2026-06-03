@@ -26,6 +26,11 @@ const mission: MissionExport = {
   description: 'Install a policy engine.',
   type: 'deploy',
   tags: ['security'],
+  metadata: {
+    sourceUrls: {
+      repo: 'https://github.com/kubestellar/console',
+    },
+  },
   steps: [
     {
       title: 'Install',
@@ -61,5 +66,35 @@ describe('MissionDetailView', () => {
     deferred.resolve()
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Import' })).not.toBeDisabled())
+  })
+
+  it('renders only http and https mission source URLs', () => {
+    const unsafeMission: MissionExport = {
+      ...mission,
+      metadata: {
+        sourceUrls: {
+          repo: 'javascript:alert(1)',
+          docs: 'data:text/html,<script>alert(1)</script>',
+          helm: 'https://charts.example.com',
+          issue: 'http://example.com/issues/1',
+        },
+      },
+    }
+
+    render(
+      <MissionDetailView
+        mission={unsafeMission}
+        rawContent={null}
+        showRaw={false}
+        onToggleRaw={vi.fn()}
+        onImport={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('link', { name: 'missions.detail.links.repository' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'missions.detail.links.documentation' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'missions.detail.links.helmChart' })).toHaveAttribute('href', 'https://charts.example.com')
+    expect(screen.getByRole('link', { name: 'missions.detail.links.issue' })).toHaveAttribute('href', 'http://example.com/issues/1')
   })
 })

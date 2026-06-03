@@ -43,6 +43,17 @@ const SECURITY_MODEL_DOC_URL = 'https://kubestellar.io/docs/console/main/console
  *  supply chain, agent drift). Only lives in the repo. */
 const SECURITY_AI_DOC_URL = 'https://github.com/kubestellar/console/blob/main/docs/security/SECURITY-AI.md'
 
+function sanitizeExternalUrl(url: string | undefined): string | null {
+  if (!url) return null
+
+  try {
+    const parsedUrl = new URL(url)
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:' ? url : null
+  } catch {
+    return null
+  }
+}
+
 interface TabDef {
   id: TabId
   label: string
@@ -293,6 +304,11 @@ export function MissionDetailView({
   const maturity = mission.metadata?.maturity
   const projectVersion = mission.metadata?.projectVersion
   const sourceUrls = mission.metadata?.sourceUrls
+  const repoSourceUrl = sanitizeExternalUrl(sourceUrls?.repo)
+  const docsSourceUrl = sanitizeExternalUrl(sourceUrls?.docs)
+  const helmSourceUrl = sanitizeExternalUrl(sourceUrls?.helm)
+  const issueSourceUrl = sanitizeExternalUrl(sourceUrls?.issue)
+  const prSourceUrl = sanitizeExternalUrl(sourceUrls?.pr)
 
   return (
     <div className="space-y-5">
@@ -478,9 +494,9 @@ export function MissionDetailView({
           {/* Source links */}
           {sourceUrls && (
             <div className="flex items-center gap-3 text-xs">
-              {sourceUrls.repo && (
+              {repoSourceUrl && (
                 <a
-                  href={sourceUrls.repo}
+                  href={repoSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -489,9 +505,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.repository')}
                 </a>
               )}
-              {sourceUrls.docs && sourceUrls.docs !== sourceUrls.repo && (
+              {docsSourceUrl && docsSourceUrl !== repoSourceUrl && (
                 <a
-                  href={sourceUrls.docs}
+                  href={docsSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -500,9 +516,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.documentation')}
                 </a>
               )}
-              {sourceUrls.helm && (
+              {helmSourceUrl && (
                 <a
-                  href={sourceUrls.helm}
+                  href={helmSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -511,9 +527,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.helmChart')}
                 </a>
               )}
-              {sourceUrls.issue && (
+              {issueSourceUrl && (
                 <a
-                  href={sourceUrls.issue}
+                  href={issueSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -522,9 +538,9 @@ export function MissionDetailView({
                   {t('missions.detail.links.issue')}
                 </a>
               )}
-              {sourceUrls.pr && (
+              {prSourceUrl && (
                 <a
-                  href={sourceUrls.pr}
+                  href={prSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"

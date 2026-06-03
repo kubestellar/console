@@ -10,7 +10,10 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +35,7 @@ func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagent
 
 func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 	t.Run("Nil Client", func(t *testing.T) {
-		h := NewKagentiProviderProxyHandler(nil, nil, nil)
+		h := NewKagentiProviderProxyHandler(nil, nil, nil, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -57,7 +60,7 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 			LLMProvider:         "openai",
 			APIKeyConfigured:    true,
 			ConfiguredProviders: []string{"openai"},
-		}}, nil)
+		}}, nil, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -87,7 +90,7 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 		},
 	}
 
-	h := NewKagentiProviderProxyHandler(nil, manager, nil)
+	h := NewKagentiProviderProxyHandler(nil, manager, nil, nil)
 	app := fiber.New()
 	app.Patch("/config", h.UpdateConfig)
 
@@ -112,4 +115,31 @@ func TestWriteSSEDataEvent_PreservesMultilinePayloads(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, writer.Flush())
 	assert.Equal(t, "data: line one\ndata: line two\n\n", buf.String())
+}
+
+func TestKagentiProviderProxyHandler_CallToolDirectRequiresEditorOrAdmin(t *testing.T) {
+	app := fiber.New()
+	mockStore := new(test.MockStore)
+	userID := uuid.New()
+	mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: models.UserRoleViewer}, nil).Once()
+
+	h := NewKagentiProviderProxyHandler(nil, nil, nil, mockStore)
+	app.Post("/call-direct", func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return h.CallToolDirect(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/call-direct", bytes.NewBufferString(`{"tool":"get_cluster_list"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	mockStore.AssertExpectations(t)
+}
+
+func TestIsValidClusterName(t *testing.T) {
+	assert.True(t, isValidClusterName("cluster-1.example"))
+	assert.True(t, isValidClusterName("cluster_name"))
+	assert.False(t, isValidClusterName("bad/name"))
+	assert.False(t, isValidClusterName("-leading-dash"))
 }
