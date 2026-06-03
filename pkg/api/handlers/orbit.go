@@ -211,22 +211,9 @@ func (h *OrbitHandler) CreateMission(c *fiber.Ctx) error {
 	// Set owner to current user.
 	m.Owner = userID
 
-	if m.ID == "" {
-		// Use millisecond-precision timestamp plus a random suffix to avoid
-		// collisions when two missions are created in the same second.
-		m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
-	} else {
-		// SECURITY: Reject client-supplied IDs that collide with an existing
-		// mission owned by a different user (CWE-639, #16698).
-		h.mu.RLock()
-		existing, exists := h.missions[m.ID]
-		h.mu.RUnlock()
-		if exists && existing.OwnerID != "" && existing.OwnerID != userID.String() {
-			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
-				"error": "A mission with this ID already exists",
-			})
-		}
-	}
+	// SECURITY: Always generate server-side IDs to prevent IDOR attacks where
+	// a client-supplied ID overwrites another user's mission (CWE-639, #16698).
+	m.ID = "orbit-" + time.Now().Format("20060102150405.000") + "-" + generateOrbitSuffix()
 	if userID != uuid.Nil {
 		m.OwnerID = userID.String()
 	} else {

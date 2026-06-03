@@ -1,38 +1,37 @@
 package api
 
 import (
-	"context"
+"context"
 
-	"github.com/gofiber/fiber/v2"
+"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
-	"github.com/kubestellar/console/pkg/k8s"
-	"github.com/kubestellar/console/pkg/safego"
-	"github.com/kubestellar/console/pkg/store"
+"github.com/kubestellar/console/pkg/api/handlers"
+"github.com/kubestellar/console/pkg/k8s"
+"github.com/kubestellar/console/pkg/safego"
+"github.com/kubestellar/console/pkg/store"
 )
 
 // stellarRouteGroup wires the Stellar handler with only the dependencies its
 // routes and background workers need.
 type stellarRouteGroup struct {
-	store     handlers.StellarStore
-	userStore store.Store
-	k8sClient *k8s.MultiClusterClient
-	done      <-chan struct{}
+store     handlers.StellarStore
+userStore store.Store
+k8sClient *k8s.MultiClusterClient
+done      <-chan struct{}
 }
 
 func newStellarRouteGroup(stelStore handlers.StellarStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
-	return &stellarRouteGroup{
-		store:     stelStore,
-		userStore: userStore,
-		k8sClient: k8sClient,
-		done:      done,
-	}
+return &stellarRouteGroup{
+    stelStore,
+userStore,
+t: k8sClient,
+e:      done,
+}
 }
 
 func (g *stellarRouteGroup) Register(api fiber.Router) {
-	stellar := handlers.NewStellarHandler(g.store, g.k8sClient, handlers.WithUserStore(g.userStore))
-	g.startWorkers(stellar)
-
+stellar := handlers.NewStellarHandler(g.store, g.k8sClient, handlers.WithUserStore(g.userStore))
+g.startWorkers(stellar)
 	api.Get("/stellar/preferences", stellar.GetPreferences)
 	api.Put("/stellar/preferences", stellar.UpdatePreferences)
 
