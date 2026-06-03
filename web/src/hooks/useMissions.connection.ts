@@ -1,6 +1,6 @@
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { getWsAuthParams } from '../lib/utils/wsAuth'
 import {
   MISSION_RECONNECT_DELAY_MS,
   MISSION_RECONNECT_MAX_AGE_MS,
@@ -95,7 +95,8 @@ export function createMissionConnectionApi(
 
       try {
         state.connectionEstablished.current = false
-        state.wsRef.current = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        const { url: authUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+        state.wsRef.current = new WebSocket(authUrl, protocols)
 
         state.wsRef.current.onopen = () => {
           clearTimeout(timeout)

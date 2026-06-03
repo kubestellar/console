@@ -40,7 +40,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => `${url}?token=test-auth`),
+  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
 vi.mock('../../lib/logger', () => ({
@@ -53,7 +53,7 @@ vi.mock('../../lib/logger', () => ({
 }))
 
 import { getDemoMode } from '../useDemoMode'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { getWsAuthParams } from '../../lib/utils/wsAuth'
 import { createMissionConnectionApi } from '../useMissions.connection'
 import { createMissionStateUtils } from '../useMissions.state'
 import {
@@ -217,7 +217,7 @@ beforeEach(() => {
   latestWs = null
   vi.useFakeTimers()
   vi.mocked(getDemoMode).mockReturnValue(false)
-  vi.mocked(appendWsAuthToken).mockImplementation(async (url: string) => `${url}?token=test-auth`)
+  vi.mocked(getWsAuthParams).mockImplementation(async (url: string) => ({ url, protocols: [] }))
 
   const MockWebSocket = vi.fn(function(this: unknown, url: string) {
     const ws = createMockWs(url)
@@ -326,8 +326,8 @@ describe('createMissionConnectionApi', () => {
     const connectPromise = api.ensureConnection()
     await flushMicrotasks()
 
-    expect(appendWsAuthToken).toHaveBeenCalledWith('ws://localhost:8585/ws')
-    expect(latestWs?.url).toContain('token=test-auth')
+    expect(getWsAuthParams).toHaveBeenCalledWith('ws://localhost:8585/ws')
+    expect(latestWs?.url).toBe('ws://localhost:8585/ws')
 
     latestWs!._triggerOpen()
     await connectPromise

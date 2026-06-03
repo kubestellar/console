@@ -43,24 +43,3 @@ export async function getWsAuthParams(url: string): Promise<{ url: string; proto
   // Use subprotocol-based auth (preferred — #16508)
   return { url, protocols: [`${WS_AUTH_PROTOCOL_PREFIX}${token}`] }
 }
-
-/**
- * @deprecated Use getWsAuthParams() instead. This function passes the token
- * in the URL query string which is logged by proxies (CWE-598).
- * Kept for backwards compatibility during migration.
- */
-export async function appendWsAuthToken(url: string): Promise<string> {
-  await getAgentToken()
-
-  const token = getStoredAgentToken()
-  if (!token) {
-    if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
-      wsAuthMissingEmitted = true
-      emitWsAuthMissing(url)
-    }
-    return url
-  }
-
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}token=${encodeURIComponent(token)}`
-}
