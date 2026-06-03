@@ -141,6 +141,18 @@ const statusPastRBAC = http.StatusBadRequest
 // console UserRole stored in the backend. DetectDrift viewer-allowed tests
 // were removed for the same reason.
 
+func TestGitOps_GetHelmValues_RBAC(t *testing.T) {
+	app, handler := newGitOpsRBACApp(t, models.UserRoleViewer)
+	app.Get("/api/gitops/helm/values", handler.GetHelmValues)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/values?release=my-rel", nil)
+	require.NoError(t, err)
+
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 func TestGitOps_ListHelmHistory_HelmErrorMapping(t *testing.T) {
 	_, argsFile := writeFakeHelm(t, "#!/bin/sh\necho \"$@\" > \"$HELM_ARGS_FILE\"\necho 'helm failed on purpose' 1>&2\nexit 1\n")
 

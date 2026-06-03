@@ -270,6 +270,10 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 // GetPodLogs returns logs from a pod
 func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	// Demo mode: return demo data immediately
 	if isDemoMode(c) {
 		return demoResponse(c, "logs", getDemoPodLogs())

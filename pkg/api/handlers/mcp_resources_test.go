@@ -21,6 +21,34 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 )
 
+func TestGetPodLogs_RBAC(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewMCPHandlers(nil, env.K8sClient, env.Store)
+
+	makeApp := func(userID uuid.UUID) *fiber.App {
+		app := fiber.New()
+		app.Get("/api/mcp/pods/logs", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.GetPodLogs(c)
+		})
+		return app
+	}
+
+	viewerID := uuid.New()
+	env.Store.(*test.MockStore).On("GetUser", viewerID).Return(&models.User{
+		ID:   viewerID,
+		Role: models.UserRoleViewer,
+	}, nil)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/mcp/pods/logs?cluster=test-cluster&namespace=default&pod=nginx", nil)
+	require.NoError(t, err)
+
+	resp, err := makeApp(viewerID).Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 func TestGetConfigMaps(t *testing.T) {
 	env := setupTestEnv(t)
 	handler := NewMCPHandlers(nil, env.K8sClient, env.Store)
