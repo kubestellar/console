@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ClusterInfo, ClusterHealth } from '../types'
+import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Constants used in tests (mirror source values to avoid magic numbers)
@@ -777,12 +778,12 @@ describe('fetchWithRetry', () => {
   beforeEach(() => {
     // Pre-seed agent token so agentFetch() does not call fetch('/api/agent/token')
     // which would interfere with call-count assertions.
-    sessionStorage.setItem('kc-agent-token', 'test-token')
+    setAgentToken('test-token')
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
-    sessionStorage.removeItem('kc-agent-token')
+    clearAgentToken()
     vi.restoreAllMocks()
   })
 

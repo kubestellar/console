@@ -5,7 +5,7 @@ import {
   MCP_HOOK_TIMEOUT_MS,
 } from '../../lib/constants'
 import { isLocalAgentSuppressed } from '../../lib/constants/network'
-import { clearToken, getToken, setToken } from '../../lib/secureTokenStore'
+import { clearToken } from '../../lib/secureTokenStore'
 import { resetAuthFailed } from './sharedImpl.connection'
 
 // Re-export as a live getter. LOCAL_AGENT_HTTP_URL is a mutable `let` that
@@ -21,7 +21,9 @@ const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
 /** How long to remember that the backend returned no token (avoids repeated 5s timeouts). */
 const AGENT_TOKEN_NEGATIVE_CACHE_MS = 300_000
 
+// Keep the kc-agent bearer token memory-only so XSS cannot exfiltrate it from Web Storage.
 let inMemoryAgentToken = ''
+let didClearSessionAgentToken = false
 let agentTokenPromise: Promise<string> | null = null
 /** Session-level dedup: only emit one agent_token_failure per page load */
 let agentTokenFailureEmitted = false
@@ -37,26 +39,6 @@ function removeLegacyAgentToken(): void {
   }
 }
 
-function getSessionAgentToken(): string {
-  try {
-    return getToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage) || ''
-  } catch {
-    return ''
-  }
-}
-
-function setSessionAgentToken(token: string): void {
-  try {
-    if (token) {
-      setToken(AGENT_TOKEN_STORAGE_KEY, token, undefined, sessionStorage)
-    } else {
-      clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
-    }
-  } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
-  }
-}
-
 function clearSessionAgentToken(): void {
   try {
     clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
@@ -66,17 +48,12 @@ function clearSessionAgentToken(): void {
 }
 
 export function getStoredAgentToken(): string {
-  if (inMemoryAgentToken) {
-    return inMemoryAgentToken
-  }
-
   removeLegacyAgentToken()
-
-  const sessionToken = getSessionAgentToken()
-  if (sessionToken) {
-    inMemoryAgentToken = sessionToken
+  if (!didClearSessionAgentToken) {
+    clearSessionAgentToken()
+    didClearSessionAgentToken = true
   }
-  return sessionToken
+  return inMemoryAgentToken
 }
 
 export function setAgentToken(token: string): void {
@@ -88,8 +65,6 @@ export function setAgentToken(token: string): void {
   if (token) {
     resetAuthFailed()
   }
-
-  setSessionAgentToken(token)
 }
 
 export function clearAgentToken(): void {
@@ -98,11 +73,13 @@ export function clearAgentToken(): void {
   agentTokenNegativeCacheUntil = 0
   removeLegacyAgentToken()
   clearSessionAgentToken()
+  didClearSessionAgentToken = true
 }
 
 /** Reset internal getAgentToken state — exposed for tests only. */
 export function _resetAgentTokenState(): void {
   inMemoryAgentToken = ''
+  didClearSessionAgentToken = false
   agentTokenPromise = null
   agentTokenFailureEmitted = false
   agentTokenNegativeCacheUntil = 0
@@ -110,7 +87,7 @@ export function _resetAgentTokenState(): void {
 
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
- * in memory and mirrored to expiring sessionStorage for same-tab reloads.
+ * only in memory so it is not readable from Web Storage by an XSS payload.
  *
  * On Netlify / demo mode there is no kc-agent backend, so we skip the
  * fetch entirely to avoid 404 → HTML parse errors that pollute GA4

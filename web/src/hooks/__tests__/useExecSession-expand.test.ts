@@ -7,6 +7,7 @@ vi.mock('../../lib/utils/wsAuth', () => ({
 
 import { useExecSession } from '../useExecSession'
 import type { ExecSessionConfig } from '../useExecSession'
+import { clearAgentToken, setAgentToken } from '../mcp/agentFetch'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants/network'
 
 // Expected exec WS URL built from the same constant the source uses
@@ -83,7 +84,7 @@ describe('useExecSession — expanded edge cases', () => {
   beforeEach(() => {
     localStorage.clear()
     sessionStorage.clear()
-    sessionStorage.setItem('kc-agent-token', 'test-jwt')
+    setAgentToken('test-jwt')
     vi.clearAllMocks()
     vi.useFakeTimers()
 
@@ -99,6 +100,7 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   afterEach(() => {
+    clearAgentToken()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })

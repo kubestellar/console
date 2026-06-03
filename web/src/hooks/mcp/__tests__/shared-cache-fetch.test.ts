@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ClusterInfo, ClusterHealth } from '../types'
+import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Constants used in tests (mirror source values to avoid magic numbers)
@@ -728,7 +729,7 @@ describe('fetchSingleClusterHealth', () => {
   it('uses kubectlContext for agent request when provided', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
     // Pre-seed agent token to prevent getAgentToken() from calling /api/agent/token
-    sessionStorage.setItem('kc-agent-token', 'test-token')
+    setAgentToken('test-token')
     const healthData: ClusterHealth = {
       cluster: 'test',
       healthy: true,

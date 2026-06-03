@@ -7,6 +7,7 @@ vi.mock('../../lib/utils/wsAuth', () => ({
 
 import { useExecSession } from '../useExecSession'
 import type { ExecSessionConfig } from '../useExecSession'
+import { clearAgentToken, setAgentToken } from '../mcp/agentFetch'
 
 // ---------- WebSocket mock ----------
 
@@ -72,7 +73,7 @@ describe('useExecSession', () => {
   beforeEach(() => {
     localStorage.clear()
     sessionStorage.clear()
-    sessionStorage.setItem('kc-agent-token', 'test-jwt')
+    setAgentToken('test-jwt')
     vi.clearAllMocks()
     vi.useFakeTimers()
 
@@ -93,6 +94,7 @@ describe('useExecSession', () => {
   })
 
   afterEach(() => {
+    clearAgentToken()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })

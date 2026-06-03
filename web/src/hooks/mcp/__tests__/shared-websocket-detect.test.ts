@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ClusterInfo, ClusterHealth } from '../types'
+import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Constants used in tests (mirror source values to avoid magic numbers)
@@ -480,7 +481,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('sends Authorization header when token exists', async () => {
     mockIsAgentUnavailable.mockReturnValue(true) // skip agent
-    sessionStorage.setItem('kc-agent-token', 'my-jwt')
+    setAgentToken('my-jwt')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -495,7 +496,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('omits Authorization header when no token', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    sessionStorage.removeItem('kc-agent-token')
+    clearAgentToken()
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

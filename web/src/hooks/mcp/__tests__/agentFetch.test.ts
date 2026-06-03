@@ -36,7 +36,7 @@ vi.mock('../../../lib/constants/network', async (importOriginal) => {
   }
 })
 
-import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState, getStoredAgentToken } from '../agentFetch'
+import { agentFetch, AGENT_TOKEN_STORAGE_KEY, _resetAgentTokenState, clearAgentToken, getStoredAgentToken, setAgentToken } from '../agentFetch'
 
 const TOKEN_VALUE = 'test-agent-token-abc123'
 const FRESH_TOKEN = 'fresh-agent-token-xyz789'
@@ -87,9 +87,9 @@ describe('getAgentToken — demo mode bypass', () => {
   })
 })
 
-describe('getAgentToken — sessionStorage cache', () => {
-  it('uses cached token from sessionStorage', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+describe('getAgentToken — memory cache', () => {
+  it('uses cached token from memory', async () => {
+    setAgentToken(TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -99,6 +99,15 @@ describe('getAgentToken — sessionStorage cache', () => {
     expect(calls).toHaveLength(1)
     const headers = calls[0][1].headers as Headers
     expect(headers.get('Authorization')).toBe(`Bearer ${TOKEN_VALUE}`)
+  })
+})
+
+describe('getStoredAgentToken — legacy storage cleanup', () => {
+  it('clears legacy sessionStorage token instead of reading it', () => {
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+
+    expect(getStoredAgentToken()).toBe('')
+    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
   })
 })
 
@@ -211,7 +220,7 @@ describe('getAgentToken — fetch token from backend', () => {
 
 describe('agentFetch — headers', () => {
   it('injects Authorization header with token', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -223,7 +232,7 @@ describe('agentFetch — headers', () => {
   })
 
   it('does not overwrite existing Authorization header', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -281,7 +290,7 @@ describe('agentFetch — headers', () => {
 
 describe('agentFetch — 401 retry', () => {
   it('clears cached token and retries on 401', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const tokenResp = new Response(JSON.stringify({ token: FRESH_TOKEN }), {
       status: 200,
@@ -301,7 +310,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('does not retry 401 if caller provided Authorization header', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     globalThis.fetch = vi.fn().mockResolvedValue(resp401)
 
@@ -315,7 +324,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('returns 401 if fresh token is same as stale token', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const tokenResp = new Response(JSON.stringify({ token: TOKEN_VALUE }), {
       status: 200,
@@ -332,7 +341,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('returns 401 if fresh token fetch returns empty', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    setAgentToken(TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const emptyTokenResp = new Response(JSON.stringify({ token: '' }), {
       status: 200,

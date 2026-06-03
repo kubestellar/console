@@ -24,7 +24,6 @@ import type { ClusterInfo } from '../types'
 // ---------------------------------------------------------------------------
 const CLUSTER_NOTIFY_DEBOUNCE_MS = 50
 const STORAGE_KEY_TOKEN = 'token'
-const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — same pattern as shared.test.ts
@@ -123,7 +122,7 @@ import {
   sharedWebSocket,
   cleanupSharedWebSocket,
 } from '../shared'
-import { getStoredAgentToken } from '../agentFetch'
+import { clearAgentToken, getStoredAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -157,7 +156,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('injects Authorization header when token exists in localStorage', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'my-agent-token')
+    setAgentToken('my-agent-token')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -169,7 +168,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('does NOT inject Authorization if header already present', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'my-agent-token')
+    setAgentToken('my-agent-token')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -183,7 +182,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('does NOT inject Authorization when no token in localStorage', async () => {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -197,7 +196,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('uses caller-provided signal instead of default timeout', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'skip-token-fetch')
+    setAgentToken('skip-token-fetch')
     const controller = new AbortController()
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
@@ -209,7 +208,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('falls back to AbortSignal.timeout when no signal provided', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'skip-token-fetch')
+    setAgentToken('skip-token-fetch')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -239,7 +238,7 @@ describe('agentFetch — 401 retry with stale token', () => {
   })
 
   it('clears cached token and retries with fresh token on 401', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'stale-token')
+    setAgentToken('stale-token')
     const mockFetch = vi.fn()
     // First call: 401 with stale token
     mockFetch.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
@@ -265,7 +264,7 @@ describe('agentFetch — 401 retry with stale token', () => {
   })
 
   it('does NOT retry when caller supplied their own Authorization header', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'agent-token')
+    setAgentToken('agent-token')
     const mockFetch = vi.fn().mockResolvedValue(new Response('Unauthorized', { status: 401 }))
     globalThis.fetch = mockFetch
 
@@ -282,7 +281,7 @@ describe('agentFetch — 401 retry with stale token', () => {
   })
 
   it('does NOT retry on 401 when there was no token to inject', async () => {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     const mockFetch = vi.fn()
     // /api/agent/token returns empty (no token available)
     mockFetch.mockResolvedValueOnce(new Response('{}', {
@@ -301,7 +300,7 @@ describe('agentFetch — 401 retry with stale token', () => {
   })
 
   it('returns 401 without infinite retry loop when retry also fails', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'stale-token')
+    setAgentToken('stale-token')
     const mockFetch = vi.fn()
     // First call: 401 with stale token
     mockFetch.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
@@ -325,7 +324,7 @@ describe('agentFetch — 401 retry with stale token', () => {
   })
 
   it('retry reuses original signal instead of creating a fresh timeout', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'stale-token')
+    setAgentToken('stale-token')
     const callerSignal = AbortSignal.timeout(12345)
     const mockFetch = vi.fn()
     // First call: 401
@@ -349,7 +348,7 @@ describe('agentFetch — 401 retry with stale token', () => {
   })
 
   it('returns the 401 when fresh token is the same as the stale one', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'same-token')
+    setAgentToken('same-token')
     const mockFetch = vi.fn()
     mockFetch.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
     // Token endpoint returns the same token
@@ -385,7 +384,7 @@ describe('getAgentToken — emits GA4 on failure', () => {
   })
 
   it('emits emitAgentTokenFailure when /api/agent/token returns non-OK', async () => {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     const mockFetch = vi.fn()
     mockFetch.mockResolvedValueOnce(new Response('error', { status: 500 }))
     mockFetch.mockResolvedValue(new Response('ok'))
@@ -397,7 +396,7 @@ describe('getAgentToken — emits GA4 on failure', () => {
   })
 
   it('emits emitAgentTokenFailure when fetch throws network error', async () => {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     const mockFetch = vi.fn()
     mockFetch.mockRejectedValueOnce(new Error('Network request failed'))
     mockFetch.mockResolvedValue(new Response('ok'))
@@ -409,7 +408,7 @@ describe('getAgentToken — emits GA4 on failure', () => {
   })
 
   it('does NOT emit when /api/agent/token returns a valid token', async () => {
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     const mockFetch = vi.fn()
     mockFetch.mockResolvedValueOnce(new Response(
       JSON.stringify({ token: 'valid-hex-token' }),
@@ -915,12 +914,12 @@ describe('fetchWithRetry — signal forwarding and cleanup', () => {
   beforeEach(() => {
     // Pre-seed agent token so agentFetch() skips the token-fetch call,
     // keeping globalThis.fetch call counts predictable.
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'test-token')
+    setAgentToken('test-token')
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     vi.restoreAllMocks()
   })
 
@@ -1319,7 +1318,7 @@ describe('agentFetch — passes additional RequestInit options', () => {
   })
 
   it('passes method and body through to fetch', async () => {
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'skip-token-fetch')
+    setAgentToken('skip-token-fetch')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -1342,12 +1341,12 @@ describe('fetchWithRetry — default parameter behavior', () => {
 
   beforeEach(() => {
     // Pre-seed agent token so agentFetch() skips the token-fetch call
-    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'test-token')
+    setAgentToken('test-token')
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
-    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
   })
 
   it('uses default maxRetries=2 and initialBackoffMs=500 when not specified', async () => {
