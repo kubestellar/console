@@ -46,11 +46,17 @@ const NETLIFY_DEPLOY_RE =
 const NETLIFY_DOCS_RE =
   /^https:\/\/[a-z0-9-]+--kubestellar-docs\.netlify\.app$/i;
 
-/** Local development (Vite default + project-standard port 5174). */
+/** Local development origins used by Netlify Functions that support docs integrations. */
 const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1):(5173|5174|8080|8888)$/;
+
+/** Analytics proxies only accept the console app and its preview deployments. */
+const CONSOLE_LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1):5174$/;
 
 /** Static allowlist of exact-match allowed origins. */
 const ALLOWED_EXACT = new Set<string>([PROD_ORIGIN, ...DOCS_ORIGINS]);
+
+/** Exact-match console origins allowed to call analytics proxy functions. */
+const ALLOWED_CONSOLE_EXACT = new Set<string>([PROD_ORIGIN]);
 
 /**
  * Return true if the given Origin header value is allowed to make CORS
@@ -66,6 +72,20 @@ export function isAllowedOrigin(origin: string | null | undefined): boolean {
   return false;
 }
 
+/**
+ * Return true only for origins that host the console application itself.
+ * Analytics proxy functions use this stricter allowlist to reject requests
+ * that do not originate from a console deployment.
+ */
+export function isAllowedConsoleOrigin(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  if (ALLOWED_CONSOLE_EXACT.has(origin)) return true;
+  if (NETLIFY_PREVIEW_RE.test(origin)) return true;
+  if (NETLIFY_DEPLOY_RE.test(origin)) return true;
+  if (CONSOLE_LOCALHOST_RE.test(origin)) return true;
+  return false;
+}
+
 export interface CorsOptions {
   /** Allowed HTTP methods, e.g. "GET, OPTIONS" or "POST, OPTIONS". */
   methods: string;
@@ -77,15 +97,10 @@ export interface CorsOptions {
   exposeHeaders?: string;
 }
 
-/**
- * Build a per-request CORS header set. Only echoes `Access-Control-Allow-Origin`
- * when the request Origin is on the allowlist; otherwise CORS headers are
- * omitted entirely. Always sets `X-Content-Type-Options: nosniff` (addresses
- * a separate low-severity ZAP finding on the same endpoints).
- */
-export function buildCorsHeaders(
+function buildCorsHeadersWithValidator(
   request: Request,
   opts: CorsOptions,
+  validator: (origin: string | null | undefined) => boolean,
 ): Record<string, string> {
   const headers: Record<string, string> = {
     "X-Content-Type-Options": "nosniff",
@@ -93,7 +108,7 @@ export function buildCorsHeaders(
   };
 
   const origin = request.headers.get("origin");
-  if (isAllowedOrigin(origin)) {
+  if (validator(origin)) {
     headers["Access-Control-Allow-Origin"] = origin as string;
     headers["Access-Control-Allow-Methods"] = opts.methods;
     if (opts.headers) {
@@ -107,6 +122,39 @@ export function buildCorsHeaders(
   return headers;
 }
 
+function handlePreflightWithValidator(
+  request: Request,
+  opts: CorsOptions,
+  validator: (origin: string | null | undefined) => boolean,
+): Response {
+  const origin = request.headers.get("origin");
+  const status = validator(origin) ? 204 : 403;
+  return new Response(null, { status, headers: buildCorsHeadersWithValidator(request, opts, validator) });
+}
+
+/**
+ * Build a per-request CORS header set. Only echoes `Access-Control-Allow-Origin`
+ * when the request Origin is on the allowlist; otherwise CORS headers are
+ * omitted entirely. Always sets `X-Content-Type-Options: nosniff` (addresses
+ * a separate low-severity ZAP finding on the same endpoints).
+ */
+export function buildCorsHeaders(
+  request: Request,
+  opts: CorsOptions,
+): Record<string, string> {
+  return buildCorsHeadersWithValidator(request, opts, isAllowedOrigin);
+}
+
+/**
+ * Analytics proxies use a stricter console-only Origin allowlist.
+ */
+export function buildConsoleCorsHeaders(
+  request: Request,
+  opts: CorsOptions,
+): Record<string, string> {
+  return buildCorsHeadersWithValidator(request, opts, isAllowedConsoleOrigin);
+}
+
 /**
  * Handle a preflight OPTIONS request. Returns a 204 with the CORS headers
  * if the origin is allowed, or 403 otherwise. Callers should invoke this
@@ -116,7 +164,15 @@ export function handlePreflight(
   request: Request,
   opts: CorsOptions,
 ): Response {
-  const origin = request.headers.get("origin");
-  const status = isAllowedOrigin(origin) ? 204 : 403;
-  return new Response(null, { status, headers: buildCorsHeaders(request, opts) });
+  return handlePreflightWithValidator(request, opts, isAllowedOrigin);
+}
+
+/**
+ * Handle analytics proxy preflights with the console-only Origin allowlist.
+ */
+export function handleConsolePreflight(
+  request: Request,
+  opts: CorsOptions,
+): Response {
+  return handlePreflightWithValidator(request, opts, isAllowedConsoleOrigin);
 }

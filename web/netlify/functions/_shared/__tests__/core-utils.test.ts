@@ -34,7 +34,7 @@ import {
   readCappedJson,
   readCappedText,
 } from "../read-capped-json";
-import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "../cors";
+import { buildCorsHeaders, handlePreflight, isAllowedOrigin, isAllowedConsoleOrigin } from "../cors";
 
 const TEST_URL = "https://example.test/api/shared";
 const ALLOWED_ORIGIN = "http://localhost:5174";
@@ -69,6 +69,8 @@ describe("shared core utilities", () => {
     expect(isAllowedOrigin("https://console.kubestellar.io")).toBe(true);
     expect(isAllowedOrigin("https://deploy-preview-42--kubestellar-console.netlify.app")).toBe(true);
     expect(isAllowedOrigin("https://feature-branch--kubestellar-docs.netlify.app")).toBe(true);
+    expect(isAllowedConsoleOrigin("https://feature-branch--kubestellar-docs.netlify.app")).toBe(false);
+    expect(isAllowedConsoleOrigin(ALLOWED_ORIGIN)).toBe(true);
     expect(isAllowedOrigin(BLOCKED_ORIGIN)).toBe(false);
 
     const allowedRequest = new Request(TEST_URL, { headers: { Origin: ALLOWED_ORIGIN } });

@@ -113,6 +113,7 @@ function loadGtagScript() {
 
   const script = document.createElement('script')
   script.async = true
+  script.crossOrigin = 'anonymous'
   script.src = `${GTAG_SCRIPT_PATH}?id=${mid}`
   script.onload = () => {
     setTimeout(() => {

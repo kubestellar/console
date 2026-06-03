@@ -5,8 +5,11 @@
 import { describe, expect, it } from "vitest";
 import {
   isAllowedOrigin,
+  isAllowedConsoleOrigin,
   buildCorsHeaders,
+  buildConsoleCorsHeaders,
   handlePreflight,
+  handleConsolePreflight,
   type CorsOptions,
 } from "../cors";
 
@@ -78,6 +81,45 @@ describe("cors", () => {
     it("should be case-insensitive for Netlify patterns", () => {
       expect(isAllowedOrigin("https://MAIN--kubestellar-console.netlify.app")).toBe(true);
       expect(isAllowedOrigin("https://Fix-123--KUBESTELLAR-CONSOLE.NETLIFY.APP")).toBe(true);
+    });
+  });
+
+  describe("isAllowedConsoleOrigin", () => {
+    it("should allow console production, previews, and local dev", () => {
+      expect(isAllowedConsoleOrigin("https://console.kubestellar.io")).toBe(true);
+      expect(isAllowedConsoleOrigin("https://main--kubestellar-console.netlify.app")).toBe(true);
+      expect(isAllowedConsoleOrigin("https://deploy-preview-42--kubestellar-console.netlify.app")).toBe(true);
+      expect(isAllowedConsoleOrigin("http://localhost:5174")).toBe(true);
+      expect(isAllowedConsoleOrigin("http://127.0.0.1:5174")).toBe(true);
+    });
+
+    it("should reject docs, alternate localhost ports, and missing origins", () => {
+      expect(isAllowedConsoleOrigin("https://kubestellar.io")).toBe(false);
+      expect(isAllowedConsoleOrigin("https://feature-branch--kubestellar-docs.netlify.app")).toBe(false);
+      expect(isAllowedConsoleOrigin("http://localhost:5173")).toBe(false);
+      expect(isAllowedConsoleOrigin(null)).toBe(false);
+      expect(isAllowedConsoleOrigin(undefined)).toBe(false);
+    });
+  });
+
+  describe("buildConsoleCorsHeaders", () => {
+    const defaultOpts: CorsOptions = {
+      methods: "POST, OPTIONS",
+      headers: "Content-Type",
+    };
+
+    it("should include CORS headers only for allowed console origins", () => {
+      const consoleRequest = new Request("http://example.com", {
+        headers: { origin: "https://console.kubestellar.io" },
+      });
+      const docsRequest = new Request("http://example.com", {
+        headers: { origin: "https://kubestellar.io" },
+      });
+
+      expect(buildConsoleCorsHeaders(consoleRequest, defaultOpts)["Access-Control-Allow-Origin"]).toBe(
+        "https://console.kubestellar.io",
+      );
+      expect(buildConsoleCorsHeaders(docsRequest, defaultOpts)["Access-Control-Allow-Origin"]).toBeUndefined();
     });
   });
 
@@ -178,6 +220,32 @@ describe("cors", () => {
       });
 
       expect(headers["Access-Control-Allow-Headers"]).toBe("Content-Type, Authorization, X-Requested-With");
+    });
+  });
+
+  describe("handleConsolePreflight", () => {
+    const defaultOpts: CorsOptions = {
+      methods: "POST, OPTIONS",
+      headers: "Content-Type",
+    };
+
+    it("should return 204 for allowed console origin", () => {
+      const request = new Request("http://example.com", {
+        headers: { origin: "https://console.kubestellar.io" },
+      });
+      const response = handleConsolePreflight(request, defaultOpts);
+
+      expect(response.status).toBe(204);
+    });
+
+    it("should return 403 for docs and missing origins", () => {
+      const docsRequest = new Request("http://example.com", {
+        headers: { origin: "https://kubestellar.io" },
+      });
+      const missingRequest = new Request("http://example.com");
+
+      expect(handleConsolePreflight(docsRequest, defaultOpts).status).toBe(403);
+      expect(handleConsolePreflight(missingRequest, defaultOpts).status).toBe(403);
     });
   });
 

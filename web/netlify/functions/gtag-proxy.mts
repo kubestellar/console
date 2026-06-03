@@ -16,12 +16,25 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { buildConsoleCorsHeaders, handleConsolePreflight, isAllowedConsoleOrigin } from "./_shared/cors"
 
 const GTAG_BASE_URL = "https://www.googletagmanager.com/gtag/js"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
 const MAX_RESPONSE_BYTES = 512_000 // 512 KB — gtag.js is ~90 KB
+const CORS_OPTS = {
+  methods: "GET, OPTIONS",
+} as const
 
 export default async (req: Request) => {
+  const corsHeaders = buildConsoleCorsHeaders(req, CORS_OPTS)
+
+  if (req.method === "OPTIONS") {
+    return handleConsolePreflight(req, CORS_OPTS)
+  }
+
+  if (!isAllowedConsoleOrigin(req.headers.get("origin"))) {
+    return new Response("Forbidden", { status: 403, headers: corsHeaders })
+  }
   const url = new URL(req.url)
   const queryString = url.search || ""
 
@@ -37,30 +50,31 @@ export default async (req: Request) => {
     })
 
     if (!resp.ok) {
-      return new Response(null, { status: resp.status })
+      return new Response(null, { status: resp.status, headers: corsHeaders })
     }
 
     const contentLength = parseInt(resp.headers.get("content-length") ?? "0", 10)
     if (contentLength > MAX_RESPONSE_BYTES) {
-      return new Response("Upstream response too large", { status: 502 })
+      return new Response("Upstream response too large", { status: 502, headers: corsHeaders })
     }
 
     const body = await resp.text()
 
     if (body.length > MAX_RESPONSE_BYTES) {
-      return new Response("Upstream response too large", { status: 502 })
+      return new Response("Upstream response too large", { status: 502, headers: corsHeaders })
     }
 
     return new Response(body, {
       status: 200,
       headers: {
+        ...corsHeaders,
         "Content-Type": "application/javascript; charset=utf-8",
         "Cache-Control": `public, max-age=${CACHE_MAX_AGE_SECS}`,
         "X-Content-Type-Options": "nosniff",
       },
     })
   } catch {
-    return new Response(null, { status: 502 })
+    return new Response(null, { status: 502, headers: corsHeaders })
   }
 }
 
