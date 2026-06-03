@@ -74,6 +74,9 @@ func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
 
 // ListAgents returns known kagenti agents.
 func (h *KagentiProviderProxyHandler) ListAgents(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.client == nil {
 		return c.JSON(fiber.Map{"agents": []interface{}{}})
 	}
@@ -108,7 +111,6 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
-
 	if h.client == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti not configured"})
 	}
@@ -122,8 +124,8 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "agent, namespace, and message are required"})
 	}
 
-	// Inject cluster context into the message
-	enrichedMessage := h.enrichMessageWithClusterContext(c.Context(), req.Message)
+	// Provide tool guidance without preloading cluster inventory into the LLM request.
+	enrichedMessage := h.enrichMessageWithClusterContext(req.Message)
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, enrichedMessage, req.ContextID, nil)
 	if err != nil {
@@ -285,10 +287,9 @@ func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
 
 // CallTool invokes a tool through a kagenti agent via A2A.
 func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
-	if err := requireAdmin(c, h.store); err != nil {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
-
 	if h.client == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti not configured"})
 	}
@@ -335,51 +336,20 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 	})
 }
 
-// enrichMessageWithClusterContext prepends cluster context to the user's message
-func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx context.Context, message string) string {
+// enrichMessageWithClusterContext prepends minimal tool guidance without leaking cluster inventory.
+func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(message string) string {
 	if h.k8sClient == nil {
-		return message
-	}
-
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, clusterContextTimeout)
-	defer cancel()
-
-	clusters, err := h.k8sClient.DeduplicatedClusters(ctxWithTimeout)
-	if err != nil {
-		slog.Warn("failed to fetch cluster list for kagenti context", "error", err)
-		return message
-	}
-
-	if len(clusters) == 0 {
 		return message
 	}
 
 	var contextBuilder strings.Builder
 	contextBuilder.WriteString("--- SYSTEM CONTEXT ---\n")
-	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
-
-	for _, cluster := range clusters {
-		// Sanitize cluster name to prevent prompt injection via malicious
-		// kubeconfig context names (CWE-74). Only allow safe characters.
-		safeName := sanitizeClusterName(cluster.Name)
-		if safeName == "" {
-			continue
-		}
-		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", safeName))
-		if cluster.Healthy {
-			contextBuilder.WriteString("  Status: Healthy\n")
-		} else {
-			contextBuilder.WriteString("  Status: Unhealthy\n")
-		}
-		contextBuilder.WriteString(fmt.Sprintf("  Nodes: %d\n", cluster.NodeCount))
-		contextBuilder.WriteString(fmt.Sprintf("  Pods: %d\n", cluster.PodCount))
-		contextBuilder.WriteString("\n")
-	}
-
-	contextBuilder.WriteString("You can use the following tools to query cluster state:\n")
-	contextBuilder.WriteString("- get_cluster_list: Returns detailed cluster information\n")
-	contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns pods in a namespace\n")
-	contextBuilder.WriteString("- get_events(cluster, namespace): Returns recent warning events\n")
+	contextBuilder.WriteString("Query Kubernetes state through the approved console tools instead of assuming any preloaded cluster inventory.\n")
+	contextBuilder.WriteString("Only rely on cluster or namespace details explicitly supplied by the user or returned from a tool call.\n")
+	contextBuilder.WriteString("Available tools:\n")
+	contextBuilder.WriteString("- get_cluster_list: Returns permitted cluster names only\n")
+	contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns pods for an explicitly requested namespace\n")
+	contextBuilder.WriteString("- get_events(cluster, namespace): Returns warning events for an explicitly requested namespace\n")
 	contextBuilder.WriteString("\n--- END CONTEXT ---\n\n")
 	contextBuilder.WriteString(message)
 
@@ -414,7 +384,7 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 
 	tools = append(tools, map[string]any{
 		"name":        "get_cluster_list",
-		"description": "Returns a list of all Kubernetes clusters with health status, node count, and pod count",
+		"description": "Returns the names of clusters available to the current request context",
 		"inputSchema": map[string]any{
 			"type":       "object",
 			"properties": map[string]any{},
@@ -423,7 +393,7 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 
 	tools = append(tools, map[string]any{
 		"name":        "get_pod_list",
-		"description": "Returns a list of pods in a specific cluster and namespace",
+		"description": "Returns a list of pods in a specific cluster and explicitly requested namespace",
 		"inputSchema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -433,16 +403,16 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 				},
 				"namespace": map[string]any{
 					"type":        "string",
-					"description": "Kubernetes namespace (leave empty for all namespaces)",
+					"description": "Kubernetes namespace",
 				},
 			},
-			"required": []string{"cluster"},
+			"required": []string{"cluster", "namespace"},
 		},
 	})
 
 	tools = append(tools, map[string]any{
 		"name":        "get_events",
-		"description": "Returns recent warning events from a specific cluster and namespace",
+		"description": "Returns recent warning events from a specific cluster and explicitly requested namespace",
 		"inputSchema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -452,14 +422,14 @@ func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
 				},
 				"namespace": map[string]any{
 					"type":        "string",
-					"description": "Kubernetes namespace (leave empty for all namespaces)",
+					"description": "Kubernetes namespace",
 				},
 				"limit": map[string]any{
 					"type":        "number",
 					"description": "Maximum number of events to return (default: 50)",
 				},
 			},
-			"required": []string{"cluster"},
+			"required": []string{"cluster", "namespace"},
 		},
 	})
 
@@ -479,7 +449,6 @@ func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
 	if err := requireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
-
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not available"})
 	}
@@ -505,6 +474,10 @@ func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
 	}
 }
 
+type kagentiClusterReference struct {
+	Name string `json:"name"`
+}
+
 // handleGetClusterList implements the get_cluster_list tool
 func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), clusterContextTimeout)
@@ -516,9 +489,14 @@ func (h *KagentiProviderProxyHandler) handleGetClusterList(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to fetch clusters"})
 	}
 
+	result := make([]kagentiClusterReference, 0, len(clusters))
+	for _, cluster := range clusters {
+		result = append(result, kagentiClusterReference{Name: cluster.Name})
+	}
+
 	return c.JSON(fiber.Map{
 		"tool":   "get_cluster_list",
-		"result": clusters,
+		"result": result,
 	})
 }
 
@@ -529,9 +507,9 @@ func (h *KagentiProviderProxyHandler) handleGetPodList(c *fiber.Ctx, args map[st
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
 	}
 
-	namespace := ""
-	if ns, ok := args["namespace"].(string); ok {
-		namespace = ns
+	namespace, ok := args["namespace"].(string)
+	if !ok || strings.TrimSpace(namespace) == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "namespace parameter is required"})
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), clusterContextTimeout)
@@ -556,9 +534,9 @@ func (h *KagentiProviderProxyHandler) handleGetEvents(c *fiber.Ctx, args map[str
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster parameter is required"})
 	}
 
-	namespace := ""
-	if ns, ok := args["namespace"].(string); ok {
-		namespace = ns
+	namespace, ok := args["namespace"].(string)
+	if !ok || strings.TrimSpace(namespace) == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "namespace parameter is required"})
 	}
 
 	const defaultEventLimit = 50

@@ -12,10 +12,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type stubKagentiConfigManager struct {
@@ -32,6 +34,26 @@ func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagent
 		return s.updateFn(update)
 	}
 	return s.status, nil
+}
+
+func newKagentiTestK8sClient() *k8s.MultiClusterClient {
+	client := &k8s.MultiClusterClient{}
+	client.SetRawConfig(&clientcmdapi.Config{
+		Clusters: map[string]*clientcmdapi.Cluster{
+			"prod-a":  {Server: "https://prod-a.example.com"},
+			"stage-b": {Server: "https://stage-b.example.com"},
+		},
+		Contexts: map[string]*clientcmdapi.Context{
+			"prod-a":  {Cluster: "prod-a", AuthInfo: "prod-user"},
+			"stage-b": {Cluster: "stage-b", AuthInfo: "stage-user"},
+		},
+		AuthInfos: map[string]*clientcmdapi.AuthInfo{
+			"prod-user":  {},
+			"stage-user": {},
+		},
+		CurrentContext: "prod-a",
+	})
+	return client
 }
 
 func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
@@ -134,8 +156,8 @@ func TestKagentiProviderProxyHandler_RoleAuthorization(t *testing.T) {
 			wantMessage: "Console admin access required",
 		},
 		{
-			name:   "CallTool rejects editor",
-			role:   models.UserRoleEditor,
+			name:   "CallTool rejects viewer",
+			role:   models.UserRoleViewer,
 			method: http.MethodPost,
 			path:   "/tools/call",
 			body:   `{"agent":"ops","namespace":"default","tool":"get_cluster_list"}`,
@@ -144,7 +166,7 @@ func TestKagentiProviderProxyHandler_RoleAuthorization(t *testing.T) {
 			},
 			handler:     NewKagentiProviderProxyHandler(nil, nil, nil, nil),
 			wantStatus:  http.StatusForbidden,
-			wantMessage: "Console admin access required",
+			wantMessage: "Editor or admin role required",
 		},
 		{
 			name:   "Chat rejects viewer",
@@ -234,6 +256,97 @@ func TestKagentiProviderProxyHandler_RoleAuthorization(t *testing.T) {
 			mockStore.AssertExpectations(t)
 		})
 	}
+}
+
+func TestKagentiProviderProxyHandler_ChatContextDoesNotLeakClusterInventory(t *testing.T) {
+	h := NewKagentiProviderProxyHandler(nil, nil, newKagentiTestK8sClient(), nil)
+
+	enriched := h.enrichMessageWithClusterContext("summarize the current issue")
+
+	assert.Contains(t, enriched, "get_cluster_list")
+	assert.Contains(t, enriched, "summarize the current issue")
+	assert.NotContains(t, enriched, "prod-a")
+	assert.NotContains(t, enriched, "stage-b")
+	assert.NotContains(t, enriched, "Cluster:")
+	assert.NotContains(t, enriched, "Nodes:")
+	assert.NotContains(t, enriched, "Pods:")
+}
+
+func TestKagentiProviderProxyHandler_CallToolDirectRedactsClusterInventory(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000111")
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: models.UserRoleEditor}, nil)
+
+	h := NewKagentiProviderProxyHandler(nil, nil, newKagentiTestK8sClient(), mockStore)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/tools/call-direct", h.CallToolDirect)
+
+	req := httptest.NewRequest(http.MethodPost, "/tools/call-direct", bytes.NewBufferString(`{"tool":"get_cluster_list","args":{}}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var payload struct {
+		Tool   string                   `json:"tool"`
+		Result []map[string]interface{} `json:"result"`
+	}
+	assert.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.Equal(t, "get_cluster_list", payload.Tool)
+	assert.Len(t, payload.Result, 2)
+	assert.Equal(t, "prod-a", payload.Result[0]["name"])
+	assert.NotContains(t, payload.Result[0], "server")
+	assert.NotContains(t, payload.Result[0], "context")
+	assert.NotContains(t, payload.Result[0], "user")
+	assert.NotContains(t, payload.Result[0], "namespace")
+}
+
+func TestKagentiProviderProxyHandler_CallToolDirectRequiresNamespace(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000112")
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: models.UserRoleEditor}, nil)
+
+	h := NewKagentiProviderProxyHandler(nil, nil, newKagentiTestK8sClient(), mockStore)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/tools/call-direct", h.CallToolDirect)
+
+	req := httptest.NewRequest(http.MethodPost, "/tools/call-direct", bytes.NewBufferString(`{"tool":"get_pod_list","args":{"cluster":"prod-a"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var payload map[string]interface{}
+	assert.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
+	assert.Equal(t, "namespace parameter is required", payload["error"])
+}
+
+func TestKagentiProviderProxyHandler_ChatRequiresEditorOrAdmin(t *testing.T) {
+	userID := uuid.MustParse("00000000-0000-0000-0000-000000000113")
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", userID).Return(&models.User{ID: userID, Role: models.UserRoleViewer}, nil)
+
+	h := NewKagentiProviderProxyHandler(nil, nil, newKagentiTestK8sClient(), mockStore)
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Post("/chat", h.Chat)
+
+	req := httptest.NewRequest(http.MethodPost, "/chat", bytes.NewBufferString(`{"agent":"ops","namespace":"default","message":"hello"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func TestWriteSSEDataEvent_PreservesMultilinePayloads(t *testing.T) {
