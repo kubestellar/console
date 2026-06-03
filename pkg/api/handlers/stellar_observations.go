@@ -510,7 +510,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 // This is the HTTP bridge that connects the agent process to Stellar's notification system.
 // Only editor and admin users may inject events to prevent forged system events (CWE-285, #16709).
 func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
 		return err
 	}
 
