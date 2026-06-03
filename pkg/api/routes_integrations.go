@@ -55,11 +55,26 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 		return total
 	})
 	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity, s.k8sClient)
-	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
+	api.Post("/gpu/reservations", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return gpuHandler.CreateReservation(c)
+	})
 	api.Get("/gpu/reservations", gpuHandler.ListReservations)
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
-	api.Put("/gpu/reservations/:id", gpuHandler.UpdateReservation)
-	api.Delete("/gpu/reservations/:id", gpuHandler.DeleteReservation)
+	api.Put("/gpu/reservations/:id", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return gpuHandler.UpdateReservation(c)
+	})
+	api.Delete("/gpu/reservations/:id", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return gpuHandler.DeleteReservation(c)
+	})
 	api.Get("/gpu/reservations/:id/utilization", gpuHandler.GetReservationUtilization)
 	api.Get("/gpu/utilizations", gpuHandler.GetBulkUtilizations)
 
