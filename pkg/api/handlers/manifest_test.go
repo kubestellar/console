@@ -14,7 +14,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,6 +47,21 @@ func extractHiddenInputValue(html, name string) string {
 		return ""
 	}
 	return html[start : start+end]
+}
+
+func extractManifestJSON(t *testing.T, html string) []byte {
+	t.Helper()
+	marker := "document.getElementById('manifest-input').value = atob('"
+	start := strings.Index(html, marker)
+	require.NotEqual(t, -1, start, "manifest atob script not found")
+	start += len(marker)
+	end := strings.Index(html[start:], "')")
+	require.NotEqual(t, -1, end, "manifest atob closing marker not found")
+	manifestB64 := html[start : start+end]
+
+	manifestJSON, err := base64.StdEncoding.DecodeString(manifestB64)
+	require.NoError(t, err)
+	return manifestJSON
 }
 
 func TestManifestSetup_RedirectsWhenAlreadyConfigured(t *testing.T) {
@@ -98,17 +112,7 @@ func TestManifestSetup_ManifestContainsExpectedFields(t *testing.T) {
 	assert.Contains(t, html, "atob(")
 	assert.NotEmpty(t, extractHiddenInputValue(html, "state"))
 
-	// Parse the manifest from the response
-	marker := fmt.Sprintf(`name="%s" value="`, "manifest")
-	start := strings.Index(html, marker)
-	require.NotEqual(t, -1, start, "manifest input not found")
-	start += len(marker)
-	end := strings.Index(html[start:], `"`)
-	require.NotEqual(t, -1, end, "manifest value closing quote not found")
-	manifestB64 := html[start : start+end]
-
-	manifestJSON, err := base64.StdEncoding.DecodeString(manifestB64)
-	require.NoError(t, err)
+	manifestJSON := extractManifestJSON(t, html)
 
 	var manifest map[string]any
 	require.NoError(t, json.Unmarshal(manifestJSON, &manifest))
@@ -291,10 +295,8 @@ func TestManifestCallback_HandlesMissingCredentials(t *testing.T) {
 
 func TestManifestSetup_GHEURLHandling(t *testing.T) {
 	app := fiber.New()
-	mockStore := &test.MockStore{}
-	mockStore.On("StoreOAuthState", mock.Anything, oauthStateExpiration).Return(nil).Once()
 	h := NewManifestHandler(
-		mockStore,
+		&test.MockStore{},
 		"http://localhost:8080",
 		"http://localhost:8080",
 		"https://github.example.com",
@@ -310,8 +312,9 @@ func TestManifestSetup_GHEURLHandling(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Contains(t, string(body), "github.example.com/settings/apps/new")
-	mockStore.AssertExpectations(t)
+	html := string(body)
+	assert.Contains(t, html, "github.example.com/settings/apps/new")
+	assert.NotEmpty(t, extractHiddenInputValue(html, "state"))
 }
 
 func TestManifestCallback_GHEAPIBase(t *testing.T) {
