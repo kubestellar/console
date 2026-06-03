@@ -777,12 +777,12 @@ describe('fetchWithRetry', () => {
   beforeEach(() => {
     // Pre-seed agent token so agentFetch() does not call fetch('/api/agent/token')
     // which would interfere with call-count assertions.
-    localStorage.setItem('kc-agent-token', 'test-token')
+    sessionStorage.setItem('kc-agent-token', 'test-token')
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
-    localStorage.removeItem('kc-agent-token')
+    sessionStorage.removeItem('kc-agent-token')
     vi.restoreAllMocks()
   })
 

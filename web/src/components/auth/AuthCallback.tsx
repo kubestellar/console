@@ -6,6 +6,7 @@ import { ROUTES, getLoginWithError } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem, safeSetItem } from '../../lib/utils/localStorage'
+import { setAgentToken } from '../../hooks/mcp/agentFetch'
 import { emitError, emitGitHubConnected } from '../../lib/analytics'
 import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants/storage'
 import { captureClientCtxFromFragment } from '../../lib/clientCtx'
@@ -115,7 +116,7 @@ export function AuthCallback() {
             return agentRes.ok ? agentRes.json() : null
           })
           .then((agentData: { token?: string } | null) => {
-            if (agentData?.token) safeSetItem('kc-agent-token', agentData.token)
+            if (agentData?.token) setAgentToken(agentData.token)
           })
           .catch((err: unknown) => {
             const error = err instanceof Error ? err : undefined

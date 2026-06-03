@@ -33,7 +33,7 @@ vi.mock('../wsDetect', () => ({
 }))
 
 vi.mock('../agentFetch', () => ({
-  AGENT_TOKEN_STORAGE_KEY: 'agent-token',
+  getStoredAgentToken: () => sessionStorage.getItem('agent-token') || '',
 }))
 
 vi.mock('../sharedImpl.constants', () => ({
@@ -128,7 +128,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   resetSharedWsState()
   localStorage.clear()
-  localStorage.setItem('agent-token', 'test-token-123')
+  sessionStorage.clear()
+  sessionStorage.setItem('agent-token', 'test-token-123')
 })
 
 afterEach(() => {
@@ -156,8 +157,8 @@ describe('ws.onopen — with valid token', () => {
 })
 
 describe('ws.onopen — missing token', () => {
-  it('calls ws.close() when no token in localStorage', async () => {
-    localStorage.clear() // remove the agent-token
+  it('calls ws.close() when no token in sessionStorage', async () => {
+    sessionStorage.clear() // remove the agent-token
     const ws = await connectAndGetWs()
     const closeSpy = vi.spyOn(ws, 'close')
     ws.triggerOpen()

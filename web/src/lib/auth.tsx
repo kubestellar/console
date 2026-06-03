@@ -7,10 +7,8 @@ import { clearPermissionsCache } from '../hooks/usePermissions'
 import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
-import { resetAuthFailed } from '../hooks/mcp/sharedImpl.connection'
+import { clearAgentToken, setAgentToken } from '../hooks/mcp/agentFetch'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
-/** localStorage key for the kc-agent shared secret (must match shared.ts) */
-const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
@@ -200,12 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
     }
 
-    // Clear every place a token or cached user could live. The token is
-    // written to localStorage today, but defensively wipe sessionStorage as
-    // well so that any past or future code path that parks a token there
-    // can't leak into the next session (#6004).
+    // Clear every place a token or cached user could live. The kc-agent token
+    // now lives in memory with sessionStorage fallback, so explicitly wipe both
+    // session-scoped stores on logout to avoid leaking into the next session.
     localStorage.removeItem(STORAGE_KEY_TOKEN)
-    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
     localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
     try {
@@ -329,8 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (agentRes.ok) {
                   const agentData = await agentRes.json()
                   if (agentData.token) {
-                    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, agentData.token)
-                    resetAuthFailed()
+                    setAgentToken(agentData.token)
                   }
                 }
               } catch {

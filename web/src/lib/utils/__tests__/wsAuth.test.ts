@@ -8,8 +8,8 @@ vi.mock('../../analytics', () => ({
 }))
 
 vi.mock('../../../hooks/mcp/agentFetch', () => ({
-  AGENT_TOKEN_STORAGE_KEY: 'kc-agent-token',
   getAgentToken: mockGetAgentToken,
+  getStoredAgentToken: () => sessionStorage.getItem('kc-agent-token') || '',
 }))
 
 describe('appendWsAuthToken', () => {
@@ -17,9 +17,10 @@ describe('appendWsAuthToken', () => {
 
   beforeEach(async () => {
     localStorage.clear()
+    sessionStorage.clear()
     mockEmitWsAuthMissing.mockClear()
     mockGetAgentToken.mockReset()
-    mockGetAgentToken.mockImplementation(async () => localStorage.getItem('kc-agent-token') || '')
+    mockGetAgentToken.mockImplementation(async () => sessionStorage.getItem('kc-agent-token') || '')
     // Reset module to clear the wsAuthMissingEmitted flag
     vi.resetModules()
     const mod = await import('../wsAuth')
@@ -27,13 +28,13 @@ describe('appendWsAuthToken', () => {
   })
 
   it('appends token as query parameter when token exists', async () => {
-    localStorage.setItem('kc-agent-token', 'my-secret-token')
+    sessionStorage.setItem('kc-agent-token', 'my-secret-token')
     const result = await appendWsAuthToken('ws://localhost:8585/ws')
     expect(result).toBe('ws://localhost:8585/ws?token=my-secret-token')
   })
 
   it('uses & separator when URL already has query params', async () => {
-    localStorage.setItem('kc-agent-token', 'my-token')
+    sessionStorage.setItem('kc-agent-token', 'my-token')
     const result = await appendWsAuthToken('ws://localhost:8585/ws?foo=bar')
     expect(result).toBe('ws://localhost:8585/ws?foo=bar&token=my-token')
   })
@@ -44,13 +45,13 @@ describe('appendWsAuthToken', () => {
   })
 
   it('URL-encodes special characters in token', async () => {
-    localStorage.setItem('kc-agent-token', 'token with spaces&special=chars')
+    sessionStorage.setItem('kc-agent-token', 'token with spaces&special=chars')
     const result = await appendWsAuthToken('ws://localhost:8585/ws')
     expect(result).toContain('token=token%20with%20spaces%26special%3Dchars')
   })
 
   it('does not emit when token is present', async () => {
-    localStorage.setItem('kc-agent-token', 'valid-token')
+    sessionStorage.setItem('kc-agent-token', 'valid-token')
     await appendWsAuthToken('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).not.toHaveBeenCalled()
   })

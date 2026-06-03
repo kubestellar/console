@@ -35,7 +35,7 @@ vi.mock('../wsDetect', () => ({
 }))
 
 vi.mock('../agentFetch', () => ({
-  AGENT_TOKEN_STORAGE_KEY: 'agent-token',
+  getStoredAgentToken: () => sessionStorage.getItem('agent-token') || '',
 }))
 
 vi.mock('../sharedImpl.constants', () => ({

@@ -20,14 +20,76 @@ const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
 /** How long to remember that the backend returned no token (avoids repeated 5s timeouts). */
 const AGENT_TOKEN_NEGATIVE_CACHE_MS = 300_000
 
+let inMemoryAgentToken = ''
 let agentTokenPromise: Promise<string> | null = null
 /** Session-level dedup: only emit one agent_token_failure per page load */
 let agentTokenFailureEmitted = false
 /** Timestamp of last negative result (empty/error) — used for short-TTL in-memory cache. */
 let agentTokenNegativeCacheUntil = 0
 
+function removeLegacyAgentToken(): void {
+  try {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+  } catch {
+    // localStorage may be unavailable in some embedded contexts — ignore.
+  }
+}
+
+export function getStoredAgentToken(): string {
+  if (inMemoryAgentToken) {
+    return inMemoryAgentToken
+  }
+
+  removeLegacyAgentToken()
+
+  try {
+    const sessionToken = sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY) || ''
+    if (sessionToken) {
+      inMemoryAgentToken = sessionToken
+    }
+    return sessionToken
+  } catch {
+    return ''
+  }
+}
+
+export function setAgentToken(token: string): void {
+  inMemoryAgentToken = token
+  agentTokenPromise = null
+  agentTokenNegativeCacheUntil = 0
+  removeLegacyAgentToken()
+
+  if (token) {
+    resetAuthFailed()
+  }
+
+  try {
+    if (token) {
+      sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+    } else {
+      sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    }
+  } catch {
+    // sessionStorage may be unavailable in some embedded contexts — ignore.
+  }
+}
+
+export function clearAgentToken(): void {
+  inMemoryAgentToken = ''
+  agentTokenPromise = null
+  agentTokenNegativeCacheUntil = 0
+  removeLegacyAgentToken()
+
+  try {
+    sessionStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+  } catch {
+    // sessionStorage may be unavailable in some embedded contexts — ignore.
+  }
+}
+
 /** Reset internal getAgentToken state — exposed for tests only. */
 export function _resetAgentTokenState(): void {
+  inMemoryAgentToken = ''
   agentTokenPromise = null
   agentTokenFailureEmitted = false
   agentTokenNegativeCacheUntil = 0
@@ -35,7 +97,7 @@ export function _resetAgentTokenState(): void {
 
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
- * in localStorage so subsequent calls (and page reloads) don't re-fetch.
+ * in memory and mirrored to sessionStorage for same-tab reloads.
  *
  * On Netlify / demo mode there is no kc-agent backend, so we skip the
  * fetch entirely to avoid 404 → HTML parse errors that pollute GA4
@@ -50,11 +112,11 @@ export function _resetAgentTokenState(): void {
 export function getAgentToken(): Promise<string> {
   if (isDemoMode() || isNetlifyDeployment || isLocalAgentSuppressed()) {
     // Remove stale cached token so it doesn't leak into SSE/WS auth headers
-    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    clearAgentToken()
     return Promise.resolve('')
   }
 
-  const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const cached = getStoredAgentToken()
   if (cached) return Promise.resolve(cached)
 
   // Short-circuit if we recently got an empty/failed result
@@ -69,8 +131,7 @@ export function getAgentToken(): Promise<string> {
       .then((data: { token?: string }) => {
         const token = data.token || ''
         if (token) {
-          localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
-          resetAuthFailed()
+          setAgentToken(token)
         } else {
           agentTokenNegativeCacheUntil = Date.now() + AGENT_TOKEN_NEGATIVE_CACHE_MS
           if (!agentTokenFailureEmitted) {
@@ -121,9 +182,7 @@ export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): 
   // header), clear the cached token and retry once with a fresh one.
   const weInjectedToken = token && !new Headers(init?.headers).has('Authorization')
   if (response.status === 401 && weInjectedToken) {
-    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
-    agentTokenPromise = null
-    agentTokenNegativeCacheUntil = 0
+    clearAgentToken()
     const freshToken = await getAgentToken()
     if (freshToken && freshToken !== token) {
       const retryHeaders = new Headers(init?.headers)

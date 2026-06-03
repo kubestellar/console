@@ -13,7 +13,7 @@
 import { emitWsAuthMissing } from '../analytics'
 import { isLocalAgentSuppressed } from '../constants/network'
 import { isDemoMode } from '../demoMode'
-import { getAgentToken, AGENT_TOKEN_STORAGE_KEY } from '../../hooks/mcp/agentFetch'
+import { getAgentToken, getStoredAgentToken } from '../../hooks/mcp/agentFetch'
 
 /** Subprotocol prefix for bearer token authentication */
 const WS_AUTH_PROTOCOL_PREFIX = 'bearer.'
@@ -31,7 +31,7 @@ let wsAuthMissingEmitted = false
 export async function getWsAuthParams(url: string): Promise<{ url: string; protocols: string[] }> {
   await getAgentToken()
 
-  const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const token = getStoredAgentToken()
   if (!token) {
     if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
       wsAuthMissingEmitted = true
@@ -52,7 +52,7 @@ export async function getWsAuthParams(url: string): Promise<{ url: string; proto
 export async function appendWsAuthToken(url: string): Promise<string> {
   await getAgentToken()
 
-  const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const token = getStoredAgentToken()
   if (!token) {
     if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
       wsAuthMissingEmitted = true

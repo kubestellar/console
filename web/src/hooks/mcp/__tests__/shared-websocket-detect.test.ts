@@ -194,6 +194,7 @@ describe('updateSingleClusterInCache — distribution update', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
     updateClusterCache({
       clusters: [makeCluster({ name: 'dist-update', server: 'https://dist.example.com' })],
@@ -225,6 +226,7 @@ describe('fullFetchClusters — agent success path', () => {
 
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
     mockIsDemoMode.mockReturnValue(false)
     mockIsDemoToken.mockReturnValue(false)
@@ -352,6 +354,7 @@ describe('refreshSingleCluster — transient failure preserves data', () => {
     vi.useFakeTimers()
     clusterSubscribers.clear()
     localStorage.clear()
+    sessionStorage.clear()
     mockIsAgentUnavailable.mockReturnValue(true)
     mockIsDemoToken.mockReturnValue(false)
     setHealthCheckFailures(0)
@@ -477,7 +480,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('sends Authorization header when token exists', async () => {
     mockIsAgentUnavailable.mockReturnValue(true) // skip agent
-    localStorage.setItem('kc-agent-token', 'my-jwt')
+    sessionStorage.setItem('kc-agent-token', 'my-jwt')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -492,7 +495,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('omits Authorization header when no token', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    localStorage.removeItem('kc-agent-token')
+    sessionStorage.removeItem('kc-agent-token')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -509,6 +512,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 describe('mergeWithStoredClusters — edge cases (via updateClusterCache)', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
   })
 
@@ -598,6 +602,7 @@ describe('updateSingleClusterInCache — memoryUsageGB and metricsAvailable shar
     vi.useFakeTimers()
     clusterSubscribers.clear()
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   afterEach(() => {
@@ -644,6 +649,7 @@ describe('updateSingleClusterInCache — multiple metrics keys protection', () =
     vi.useFakeTimers()
     clusterSubscribers.clear()
     localStorage.clear()
+    sessionStorage.clear()
     updateClusterCache({
       clusters: [makeCluster({
         name: 'metrics-protect',
@@ -804,6 +810,7 @@ describe('loadClusterCacheFromStorage — filtering (via module init and updateC
 describe('GKE detection from .gke.io URL', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
   })
 
@@ -823,6 +830,7 @@ describe('GKE detection from .gke.io URL', () => {
 describe('AKS detection from .hcp. URL', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
   })
 
@@ -842,6 +850,7 @@ describe('AKS detection from .hcp. URL', () => {
 describe('OCI detection from .oci. URL', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
   })
 
@@ -861,6 +870,7 @@ describe('OCI detection from .oci. URL', () => {
 describe('OpenShift detection from generic api pattern with :6443', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     clusterSubscribers.clear()
   })
 

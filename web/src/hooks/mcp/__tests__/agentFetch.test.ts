@@ -47,6 +47,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   _resetAgentTokenState()
   localStorage.clear()
+  sessionStorage.clear()
   originalFetch = globalThis.fetch
   mockIsDemoMode.mockReturnValue(false)
   mockIsLocalAgentSuppressed.mockReturnValue(false)
@@ -86,9 +87,9 @@ describe('getAgentToken — demo mode bypass', () => {
   })
 })
 
-describe('getAgentToken — localStorage cache', () => {
-  it('uses cached token from localStorage', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+describe('getAgentToken — sessionStorage cache', () => {
+  it('uses cached token from sessionStorage', async () => {
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -116,7 +117,7 @@ describe('getAgentToken — fetch token from backend', () => {
 
     // First call: /api/agent/token, second call: actual request
     expect((globalThis.fetch as Mock)).toHaveBeenCalledTimes(2)
-    expect(localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe(TOKEN_VALUE)
+    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe(TOKEN_VALUE)
   })
 
   it('emits failure and caches negative result when token is empty', async () => {
@@ -132,7 +133,7 @@ describe('getAgentToken — fetch token from backend', () => {
     await agentFetch('http://127.0.0.1:8585/pods')
 
     expect(mockEmitAgentTokenFailure).toHaveBeenCalledWith('empty token from /api/agent/token')
-    expect(localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
+    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
   })
 
   it('emits failure only once per session', async () => {
@@ -169,7 +170,7 @@ describe('getAgentToken — fetch token from backend', () => {
     await agentFetch('http://127.0.0.1:8585/pods')
 
     // Non-OK returns { token: '' } internally
-    expect(localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
+    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
   })
 
   it('handles network error during token fetch', async () => {
@@ -210,7 +211,7 @@ describe('getAgentToken — fetch token from backend', () => {
 
 describe('agentFetch — headers', () => {
   it('injects Authorization header with token', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -222,7 +223,7 @@ describe('agentFetch — headers', () => {
   })
 
   it('does not overwrite existing Authorization header', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const mockResp = new Response('{}', { status: 200 })
     globalThis.fetch = vi.fn().mockResolvedValue(mockResp)
 
@@ -280,7 +281,7 @@ describe('agentFetch — headers', () => {
 
 describe('agentFetch — 401 retry', () => {
   it('clears cached token and retries on 401', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const tokenResp = new Response(JSON.stringify({ token: FRESH_TOKEN }), {
       status: 200,
@@ -295,12 +296,12 @@ describe('agentFetch — 401 retry', () => {
     const result = await agentFetch('http://127.0.0.1:8585/pods')
 
     expect(result.status).toBe(200)
-    expect(localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe(FRESH_TOKEN)
+    expect(sessionStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe(FRESH_TOKEN)
     expect((globalThis.fetch as Mock)).toHaveBeenCalledTimes(3)
   })
 
   it('does not retry 401 if caller provided Authorization header', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     globalThis.fetch = vi.fn().mockResolvedValue(resp401)
 
@@ -314,7 +315,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('returns 401 if fresh token is same as stale token', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const tokenResp = new Response(JSON.stringify({ token: TOKEN_VALUE }), {
       status: 200,
@@ -331,7 +332,7 @@ describe('agentFetch — 401 retry', () => {
   })
 
   it('returns 401 if fresh token fetch returns empty', async () => {
-    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
+    sessionStorage.setItem(AGENT_TOKEN_STORAGE_KEY, TOKEN_VALUE)
     const resp401 = new Response('Unauthorized', { status: 401 })
     const emptyTokenResp = new Response(JSON.stringify({ token: '' }), {
       status: 200,

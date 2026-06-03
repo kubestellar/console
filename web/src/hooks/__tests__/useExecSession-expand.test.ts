@@ -81,7 +81,8 @@ describe('useExecSession — expanded edge cases', () => {
 
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('kc-agent-token', 'test-jwt')
+    sessionStorage.clear()
+    sessionStorage.setItem('kc-agent-token', 'test-jwt')
     vi.clearAllMocks()
     vi.useFakeTimers()
 

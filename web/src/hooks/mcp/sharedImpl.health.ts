@@ -12,7 +12,7 @@ import {
   LOCAL_AGENT_HTTP_URL,
 } from '../../lib/constants'
 import { KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
-import { getLocalAgentURL, agentFetch, AGENT_TOKEN_STORAGE_KEY } from './agentFetch'
+import { getLocalAgentURL, agentFetch, getStoredAgentToken } from './agentFetch'
 import { detectDistributionFromNamespaces } from './clusterUtils'
 import { updateSingleClusterInCache } from './sharedImpl.state'
 import { HEALTH_CHECK_CONCURRENCY, MAX_HEALTH_CHECK_FAILURES, MAX_DISTRIBUTION_FAILURES } from './sharedImpl.constants'
@@ -112,7 +112,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   }
 
   // Fall back to backend API
-  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const agentToken = getStoredAgentToken()
   try {
     const response = await fetch(
       `${LOCAL_AGENT_HTTP_URL}/clusters/${encodeURIComponent(clusterName)}/health`,
@@ -183,7 +183,7 @@ export async function detectClusterDistribution(clusterName: string, kubectlCont
     return {}
   }
 
-  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const agentToken = getStoredAgentToken()
   const headers: Record<string, string> = agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {}
 
   // Helper to extract namespaces from API response
