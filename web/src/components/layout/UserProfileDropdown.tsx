@@ -3,7 +3,6 @@ import { safeLazy } from '../../lib/safeLazy'
 import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
-import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 import { User, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
@@ -55,11 +54,6 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     backendUp: false,
   })
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { containerRef, handleKeyDown } = useKeyboardNav({
-    selector: '[role="menuitem"]:not([disabled])',
-    orientation: 'vertical',
-    onEscape: closeDropdown,
-  })
   const { totalCoins, githubPoints, localCoins, bonusPoints, awardCoins } = useRewards()
   const { channel, installMethod } = useVersionCheck()
   const { t, i18n } = useTranslation()
