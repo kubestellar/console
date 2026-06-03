@@ -151,7 +151,9 @@ type StellarUserSessionStore interface {
 // StellarAuditStore manages the Stellar audit trail.
 type StellarAuditStore interface {
 	CreateAuditEntry(ctx context.Context, e *StellarAuditEntry) error
-	ListStellarAuditLog(ctx context.Context, limit int) ([]StellarAuditEntry, error)
+	// ListStellarAuditLog returns audit entries. If userID is non-empty, only
+	// that user's entries are returned; otherwise all entries are returned (admin).
+	ListStellarAuditLog(ctx context.Context, userID string, limit int) ([]StellarAuditEntry, error)
 }
 
 // StellarStore keeps the legacy aggregate contract while exposing focused

@@ -838,7 +838,7 @@ func (m *MockStore) ListStellarUserIDs(_ context.Context) ([]string, error) {
 }
 
 func (m *MockStore) CreateAuditEntry(_ context.Context, _ *store.StellarAuditEntry) error { return nil }
-func (m *MockStore) ListStellarAuditLog(_ context.Context, _ int) ([]store.StellarAuditEntry, error) {
+func (m *MockStore) ListStellarAuditLog(_ context.Context, _ string, _ int) ([]store.StellarAuditEntry, error) {
 	return nil, nil
 }
 

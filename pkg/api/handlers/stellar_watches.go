@@ -151,11 +151,15 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
 func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
-	if _, err := h.requireUser(c); err != nil {
+	userID, err := h.requireUser(c)
+	if err != nil {
 		return err
 	}
 	limit := readListLimit(c)
-	entries, err := h.store.ListStellarAuditLog(c.UserContext(), limit)
+
+	// Scope audit log to the requesting user's own entries (CWE-862, #16517).
+	// Users can only see their own audit history.
+	entries, err := h.store.ListStellarAuditLog(c.UserContext(), userID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load audit log"})
 	}
