@@ -247,7 +247,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
             // Auto-QA #9036 — loading state for the PR fallback fetch
             <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>{t('updates.loadingPullRequests')}</span>
+              <span>{t('updates.loadingRecentPullRequests')}</span>
             </div>
           ) : prsError ? (
             // Auto-QA #9036 — error state replaces the old silent failure
@@ -418,11 +418,11 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
               className="px-4 py-1.5 text-sm font-medium bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-2"
             >
               {updating ? (
-                <>{t('common.updatingEllipsis')}</>
+                <>{t('status.updatingEllipsis')}</>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Update now
+                  {t('updates.updateNow')}
                 </>
               )}
             </button>

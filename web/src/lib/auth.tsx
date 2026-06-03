@@ -131,11 +131,11 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
     </svg>
-    <span><strong>${i18n.t('auth.sessionExpiresSoon')}</strong></span>
+    <span><strong>${i18n.t('session.expiresSoon')}</strong></span>
   `
 
   const btn = document.createElement('button')
-  btn.textContent = i18n.t('auth.refreshNow')
+  btn.textContent = i18n.t('session.refreshNow')
   btn.style.cssText = `
     margin-left: ${BTN_MARGIN_LEFT_PX}; padding: ${BTN_PAD_V_PX} ${BTN_PAD_H_PX}; border-radius: ${BANNER_RADIUS_PX};
     background: rgba(234,179,8,0.3); border: 1px solid rgba(234,179,8,0.5);

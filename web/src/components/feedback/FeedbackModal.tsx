@@ -496,7 +496,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               {/* Draft restore notice */}
               {(title || description) && (
                 <div className="flex items-center gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-muted-foreground">
-                  <span>{t('drafts.draftRestored')}</span>
+                  <span>{t('feedback.draftRestored')}</span>
                 </div>
               )}
 
