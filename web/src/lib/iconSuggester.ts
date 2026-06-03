@@ -7,7 +7,7 @@
 
 import { getDemoMode } from '../hooks/useDemoMode'
 import { LOCAL_AGENT_WS_URL } from './constants'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import * as wsAuth from '../lib/utils/wsAuth'
 
 const ICON_SUGGESTION_TIMEOUT_MS = 5_000
 
@@ -96,7 +96,7 @@ async function askAgentForIcon(name: string): Promise<string | null> {
 
   let wsUrl: string
   try {
-    wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+    wsUrl = await wsAuth.appendWsAuthToken(LOCAL_AGENT_WS_URL)
   } catch {
     return null
   }
@@ -112,6 +112,7 @@ async function askAgentForIcon(name: string): Promise<string | null> {
       const requestId = `icon-suggest-${Date.now()}`
 
       ws.onopen = () => {
+        if (typeof wsAuth.sendWsAuthMessage === 'function' && !wsAuth.sendWsAuthMessage(ws)) return
         ws.send(JSON.stringify({
           id: requestId,
           type: 'chat',

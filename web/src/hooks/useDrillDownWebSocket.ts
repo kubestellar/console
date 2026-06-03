@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { LOCAL_AGENT_WS_URL, KUBECTL_MEDIUM_TIMEOUT_MS } from '../lib/constants'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import * as wsAuth from '../lib/utils/wsAuth'
 
 const DEFAULT_TIMEOUT_MS = 10000
 const DEFAULT_HELM_TIMEOUT_MS = KUBECTL_MEDIUM_TIMEOUT_MS
@@ -40,7 +40,7 @@ export function useDrillDownWebSocket(cluster: string) {
    * Create a tracked WebSocket — automatically removed from the set when closed.
    */
   const openTrackedWs = useCallback(async (): Promise<WebSocket> => {
-    const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    const ws = new WebSocket(await wsAuth.appendWsAuthToken(LOCAL_AGENT_WS_URL))
     activeWsRef.current.add(ws)
     const origClose = ws.close.bind(ws)
     ws.close = (...args: Parameters<WebSocket['close']>) => {
@@ -97,6 +97,7 @@ export function useDrillDownWebSocket(cluster: string) {
       }, timeoutMs)
 
       ws.onopen = () => {
+        if (typeof wsAuth.sendWsAuthMessage === 'function' && !wsAuth.sendWsAuthMessage(ws)) return
         ws.send(JSON.stringify({
           id: requestId,
           type: commandType,

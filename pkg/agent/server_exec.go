@@ -23,10 +23,8 @@ package agent
 //
 // kc-agent does not need any of that:
 //
-//   - Auth uses the existing s.validateToken(r) path (Authorization header
-//     or the ?token= query param fallback that kc-agent's regular WebSocket
-//     routes use; see server.go validateToken for why query param is
-//     restricted to genuine WebSocket upgrades).
+//   - Auth uses a first-message WebSocket handshake so the bearer token never
+//     appears in the URL or handshake query string.
 //   - RBAC is enforced natively by the target apiserver when we open the
 //     SPDY exec stream using the user's kubeconfig context. A deny becomes a
 //     synchronous stream-open error which we translate into a websocket
@@ -228,9 +226,8 @@ func (q *agentTerminalSizeQueue) Next() *remotecommand.TerminalSize {
 // handleExec handles GET /ws/exec. The flow mirrors the backend handler's
 // HandleExec (pkg/api/handlers/exec.go) minus the pod-SA-specific layers:
 //
-//  1. Token validation via the standard Authorization header or ?token=
-//     query param fallback, the same way kc-agent's /ws route validates.
-//  2. WebSocket upgrade via s.upgrader (gorilla).
+//  1. WebSocket upgrade via s.upgrader (gorilla).
+//  2. Authenticate the connection from the first JSON auth frame.
 //  3. Read and parse the agentExecInitMessage JSON frame.
 //  4. Resolve the clientset and REST config for the target cluster from the
 //     user's kubeconfig. The apiserver will enforce RBAC against the user
@@ -251,8 +248,8 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !s.validateToken(r) {
-		slog.Warn("[AgentExec] SECURITY: rejected WebSocket — invalid or missing token")
+	if !isRealWebSocketUpgrade(r) && !s.validateToken(r) {
+		slog.Warn("[AgentExec] SECURITY: rejected non-upgrade request — invalid or missing token")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -269,6 +266,10 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	}
 	conn.SetReadLimit(agentExecMaxReadBytes)
 	defer conn.Close()
+	if err := s.authenticateWebSocket(conn); err != nil {
+		slog.Warn("[AgentExec] SECURITY: rejected WebSocket — invalid auth frame", "error", err)
+		return
+	}
 
 	// Keepalive — mirrors the backend handler's ping/pong scheme (#6891).
 	// Each successful pong resets the read deadline; a half-open peer's
@@ -285,9 +286,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	execCtx, execCancel := context.WithCancel(r.Context())
 	defer execCancel()
 
-	// Read the init message. The backend handler reads this AFTER the JWT
-	// handshake; kc-agent reads it right after the upgrade since auth is
-	// already verified above.
+	// Read the init message after the WebSocket auth frame succeeds.
 	_, rawInit, err := conn.ReadMessage()
 	if err != nil {
 		slog.Error("[AgentExec] failed to read init message", "error", err)

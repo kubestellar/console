@@ -1130,8 +1130,8 @@ func TestHandleExec_OPTIONSPreflight_UnknownOrigin(t *testing.T) {
 	}
 }
 
-// TestHandleExec_Unauthorized verifies that a request without a valid token
-// is rejected with 401 when token auth is enabled.
+// TestHandleExec_Unauthorized verifies that a non-upgrade request without a valid token
+// is still rejected with 401 when token auth is enabled.
 func TestHandleExec_Unauthorized(t *testing.T) {
 	s := &Server{
 		agentToken:     "test-secret-token",
@@ -1141,6 +1141,7 @@ func TestHandleExec_Unauthorized(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/ws/exec", nil)
 	req.Header.Set("Origin", "http://localhost:5174")
+	req.Header.Set("Authorization", "Bearer wrong-token")
 	w := httptest.NewRecorder()
 
 	s.handleExec(w, req)

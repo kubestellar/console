@@ -8,11 +8,17 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/agent/protocol"
 )
 
 var originBypassAllowedPaths = map[string]struct{}{
 	"/status": {},
 }
+
+const wsAuthTimeout = 5 * time.Second
 
 // checkOrigin validates the Origin header against allowed origins
 // SECURITY: This prevents malicious websites from connecting to the local agent.
@@ -41,13 +47,8 @@ func (s *Server) checkOrigin(r *http.Request) bool {
 
 // validateToken checks the authentication token (if configured).
 // Tokens are accepted via the Authorization header for HTTP requests.
-// For WebSocket upgrades, tokens are also accepted via the ?token= query
-// parameter since browsers cannot set custom headers on WebSocket handshakes.
-// Query parameter tokens are restricted to genuine WebSocket upgrade requests
-// to keep secrets out of server logs, browser history, and proxy access logs
-// (#3895). To prevent spoofed Upgrade headers from enabling the query-param
-// fallback (#4264), we verify all three headers that browsers always send for
-// real WebSocket handshakes: Upgrade, Connection, and Sec-WebSocket-Key.
+// WebSocket endpoints authenticate after upgrade using an auth frame so bearer
+// tokens never appear in URL query parameters (#16508).
 //
 // When KC_AGENT_TOKEN is auto-generated, trusted browser origins may bypass the
 // Bearer token requirement only on a tiny allow-list of safe read-only paths.
@@ -81,16 +82,60 @@ func (s *Server) validateToken(r *http.Request) bool {
 		}
 	}
 
-	// Fall back to query parameter ONLY for genuine WebSocket upgrade requests.
-	// Browsers always send all three headers; a plain HTTP client spoofing just
-	// the Upgrade header will be missing Connection and/or Sec-WebSocket-Key.
-	if isRealWebSocketUpgrade(r) {
-		if queryToken := r.URL.Query().Get("token"); queryToken != "" {
-			return subtle.ConstantTimeCompare([]byte(queryToken), []byte(s.agentToken)) == 1
-		}
+	return false
+}
+
+func (s *Server) authenticateWebSocket(conn *websocket.Conn) error {
+	if s.agentToken == "" {
+		return nil
 	}
 
-	return false
+	if err := conn.SetReadDeadline(time.Now().Add(wsAuthTimeout)); err != nil {
+		return fmt.Errorf("set auth deadline: %w", err)
+	}
+	defer func() {
+		_ = conn.SetReadDeadline(time.Time{})
+	}()
+
+	var authMessage struct {
+		Type  string `json:"type"`
+		Token string `json:"token"`
+	}
+	if err := conn.ReadJSON(&authMessage); err != nil {
+		_ = conn.WriteJSON(protocol.Message{
+			Type: protocol.TypeError,
+			Payload: protocol.ErrorPayload{
+				Code:    "unauthorized",
+				Message: "authentication required",
+			},
+		})
+		return fmt.Errorf("read auth message: %w", err)
+	}
+	if authMessage.Type != "auth" {
+		_ = conn.WriteJSON(protocol.Message{
+			Type: protocol.TypeError,
+			Payload: protocol.ErrorPayload{
+				Code:    "unauthorized",
+				Message: "expected auth message",
+			},
+		})
+		return fmt.Errorf("unexpected auth message type %q", authMessage.Type)
+	}
+	if subtle.ConstantTimeCompare([]byte(authMessage.Token), []byte(s.agentToken)) != 1 {
+		_ = conn.WriteJSON(protocol.Message{
+			Type: protocol.TypeError,
+			Payload: protocol.ErrorPayload{
+				Code:    "unauthorized",
+				Message: "invalid token",
+			},
+		})
+		return fmt.Errorf("invalid websocket token")
+	}
+	if err := conn.WriteJSON(protocol.Message{Type: "authenticated"}); err != nil {
+		return fmt.Errorf("write auth acknowledgement: %w", err)
+	}
+
+	return nil
 }
 
 // isRealWebSocketUpgrade returns true only when the request carries all

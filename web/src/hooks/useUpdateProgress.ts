@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { UpdateProgress, UpdateStepEntry } from '../types/updates'
 import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay, POLL_INTERVAL_FAST_MS } from '../lib/constants/network'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import * as wsAuth from '../lib/utils/wsAuth'
 import { MS_PER_SECOND } from '../lib/constants/time'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
@@ -222,11 +222,12 @@ export function useUpdateProgress() {
 
     async function connect(attemptNumber = 0) {
       try {
-        const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        const ws = new WebSocket(await wsAuth.appendWsAuthToken(LOCAL_AGENT_WS_URL))
         wsRef.current = ws
         reconnectAttemptsRef.current = attemptNumber
 
         ws.onopen = () => {
+          if (typeof wsAuth.sendWsAuthMessage === 'function' && !wsAuth.sendWsAuthMessage(ws)) return
           reconnectAttemptsRef.current = 0
           staleDetection.markMessageReceived()
 

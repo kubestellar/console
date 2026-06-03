@@ -1,6 +1,6 @@
 import { isNetlifyDeployment } from './demoMode'
 import { isInClusterMode } from '../hooks/useBackendHealth'
-import { appendWsAuthToken } from './utils/wsAuth'
+import * as wsAuth from './utils/wsAuth'
 import {
   LOCAL_AGENT_WS_URL,
   WS_CONNECT_TIMEOUT_MS,
@@ -112,7 +112,7 @@ export class KubectlProxyConnection {
           cb()
         }
         try {
-          this.ws = new WebSocket(await appendWsAuthToken(wsURL))
+          this.ws = new WebSocket(await wsAuth.appendWsAuthToken(wsURL))
           connectTimeout = setTimeout(() => {
             try {
               this.ws?.close()
@@ -132,6 +132,7 @@ export class KubectlProxyConnection {
           }, WS_CONNECT_TIMEOUT_MS)
 
           this.ws.onopen = () => {
+            if (typeof wsAuth.sendWsAuthMessage === 'function' && !wsAuth.sendWsAuthMessage(this.ws!)) return
             this.isConnecting = false
             this.lastConnectionFailureAt = 0
             this.wsMode = wsURL === LOCAL_AGENT_WS_URL ? 'local' : 'backend'

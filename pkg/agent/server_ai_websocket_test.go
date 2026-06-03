@@ -69,23 +69,33 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 	defer ts.Close()
 
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http")
-
-	// Case 1: No token
 	dialer := websocket.Dialer{}
-	_, resp, err := dialer.Dial(wsURL, nil)
-	if err == nil {
-		t.Fatal("Expected dial to fail without token")
+
+	conn, resp, err := dialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("WebSocket dial failed: %v", err)
 	}
 	if resp == nil {
-		t.Fatalf("WebSocket dial failed with error: %v (response was nil)", err)
+		t.Fatalf("WebSocket dial succeeded but response was nil")
 	}
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Errorf("Expected 401 Unauthorized, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Errorf("Expected status 101, got %d", resp.StatusCode)
 	}
 
-	// Case 2: Valid token in query
-	wsURLWithToken := wsURL + "?token=secret"
-	conn, resp, err := dialer.Dial(wsURLWithToken, nil)
+	if err := conn.WriteJSON(map[string]string{"type": "auth", "token": "wrong"}); err != nil {
+		t.Fatalf("WriteJSON failed: %v", err)
+	}
+
+	var respMsg protocol.Message
+	if err := conn.ReadJSON(&respMsg); err != nil {
+		t.Fatalf("ReadJSON failed: %v", err)
+	}
+	if respMsg.Type != protocol.TypeError {
+		t.Fatalf("expected error response, got %+v", respMsg)
+	}
+	conn.Close()
+
+	validConn, resp, err := dialer.Dial(wsURL, nil)
 	if err != nil {
 		t.Fatalf("WebSocket dial with token failed: %v", err)
 	}
@@ -95,7 +105,17 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 	if resp.StatusCode != http.StatusSwitchingProtocols {
 		t.Errorf("Expected status 101, got %d", resp.StatusCode)
 	}
-	conn.Close()
+	defer validConn.Close()
+
+	if err := validConn.WriteJSON(map[string]string{"type": "auth", "token": "secret"}); err != nil {
+		t.Fatalf("WriteJSON auth failed: %v", err)
+	}
+	if err := validConn.ReadJSON(&respMsg); err != nil {
+		t.Fatalf("ReadJSON auth ack failed: %v", err)
+	}
+	if respMsg.Type != "authenticated" {
+		t.Fatalf("expected authenticated response, got %+v", respMsg)
+	}
 }
 
 func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
@@ -105,6 +125,7 @@ func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
 		},
 	}
 	s := &Server{
+		agentToken:     "secret",
 		allowedOrigins: []string{"*"},
 		upgrader:       websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }},
 		clients:        make(map[*websocket.Conn]*wsClient),
@@ -121,6 +142,17 @@ func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
 		t.Fatalf("Dial failed: %v", err)
 	}
 	defer conn.Close()
+	if err := conn.WriteJSON(map[string]string{"type": "auth", "token": "secret"}); err != nil {
+		t.Fatalf("WriteJSON auth failed: %v", err)
+	}
+
+	var authResp protocol.Message
+	if err := conn.ReadJSON(&authResp); err != nil {
+		t.Fatalf("ReadJSON auth ack failed: %v", err)
+	}
+	if authResp.Type != "authenticated" {
+		t.Fatalf("expected authenticated response, got %+v", authResp)
+	}
 
 	// 1. Test Health Message
 	healthMsg := protocol.Message{
@@ -139,7 +171,7 @@ func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
 	if resp.ID != "h1" || resp.Type != protocol.TypeResult {
 		t.Errorf("Unexpected response: %+v", resp)
 	}
-	
+
 	// 2. Test Clusters Message
 	clustersMsg := protocol.Message{
 		ID:   "c1",

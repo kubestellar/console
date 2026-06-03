@@ -14,6 +14,7 @@ vi.mock('../../../hooks/mcp/agentFetch', () => ({
 
 describe('appendWsAuthToken', () => {
   let appendWsAuthToken: (url: string) => Promise<string>
+  let sendWsAuthMessage: (ws: Pick<WebSocket, 'send' | 'close' | 'url'>, url?: string) => boolean
 
   beforeEach(async () => {
     localStorage.clear()
@@ -24,18 +25,19 @@ describe('appendWsAuthToken', () => {
     vi.resetModules()
     const mod = await import('../wsAuth')
     appendWsAuthToken = mod.appendWsAuthToken
+    sendWsAuthMessage = mod.sendWsAuthMessage
   })
 
-  it('appends token as query parameter when token exists', async () => {
+  it('returns the original URL when token exists', async () => {
     localStorage.setItem('kc-agent-token', 'my-secret-token')
     const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toBe('ws://localhost:8585/ws?token=my-secret-token')
+    expect(result).toBe('ws://localhost:8585/ws')
   })
 
-  it('uses & separator when URL already has query params', async () => {
+  it('preserves existing query params without appending the token', async () => {
     localStorage.setItem('kc-agent-token', 'my-token')
     const result = await appendWsAuthToken('ws://localhost:8585/ws?foo=bar')
-    expect(result).toBe('ws://localhost:8585/ws?foo=bar&token=my-token')
+    expect(result).toBe('ws://localhost:8585/ws?foo=bar')
   })
 
   it('returns original URL when no token in storage', async () => {
@@ -43,10 +45,27 @@ describe('appendWsAuthToken', () => {
     expect(result).toBe('ws://localhost:8585/ws')
   })
 
-  it('URL-encodes special characters in token', async () => {
+  it('sends the auth token as the first WebSocket message', () => {
     localStorage.setItem('kc-agent-token', 'token with spaces&special=chars')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toContain('token=token%20with%20spaces%26special%3Dchars')
+    const send = vi.fn()
+    const close = vi.fn()
+
+    const result = sendWsAuthMessage({ send, close, url: 'ws://localhost:8585/ws' })
+
+    expect(result).toBe(true)
+    expect(send).toHaveBeenCalledWith(JSON.stringify({ type: 'auth', token: 'token with spaces&special=chars' }))
+    expect(close).not.toHaveBeenCalled()
+  })
+
+  it('closes the socket when the auth token is missing', () => {
+    const send = vi.fn()
+    const close = vi.fn()
+
+    const result = sendWsAuthMessage({ send, close, url: 'ws://localhost:8585/ws' })
+
+    expect(result).toBe(false)
+    expect(send).not.toHaveBeenCalled()
+    expect(close).toHaveBeenCalledTimes(1)
   })
 
   it('does not emit when token is present', async () => {

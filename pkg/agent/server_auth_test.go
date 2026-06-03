@@ -53,48 +53,13 @@ func TestValidateToken_ConstantTimeComparison(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "no auth header",
-			setup: func(r *http.Request) {},
+			name:   "no auth header",
+			setup:  func(r *http.Request) {},
 			expect: false,
 		},
 		{
-			name: "valid query token on real WebSocket upgrade",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=" + validToken
-				r.Header.Set("Upgrade", "websocket")
-				r.Header.Set("Connection", "Upgrade")
-				r.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
-			},
-			expect: true,
-		},
-		{
-			name: "invalid query token on real WebSocket upgrade",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=wrong-token"
-				r.Header.Set("Upgrade", "websocket")
-				r.Header.Set("Connection", "Upgrade")
-				r.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
-			},
-			expect: false,
-		},
-		{
-			name: "valid query token but no WebSocket upgrade headers",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=" + validToken
-			},
-			expect: false,
-		},
-		{
-			name: "valid query token with only Upgrade header (spoofed)",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=" + validToken
-				r.Header.Set("Upgrade", "websocket")
-			},
-			expect: false,
-		},
-		{
-			name: "no token configured allows all",
-			setup: func(r *http.Request) {},
+			name:   "no token configured allows all",
+			setup:  func(r *http.Request) {},
 			expect: true,
 		},
 	}
@@ -187,8 +152,8 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "all three headers present",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Connection":       "Upgrade",
+				"Upgrade":           "websocket",
+				"Connection":        "Upgrade",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: true,
@@ -204,7 +169,7 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "missing Connection header",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
+				"Upgrade":           "websocket",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: false,
@@ -212,7 +177,7 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "missing Upgrade header",
 			headers: map[string]string{
-				"Connection":       "Upgrade",
+				"Connection":        "Upgrade",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: false,
@@ -225,8 +190,8 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "Connection has upgrade in comma list",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Connection":       "keep-alive, Upgrade",
+				"Upgrade":           "websocket",
+				"Connection":        "keep-alive, Upgrade",
 				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
 			},
 			expect: true,
