@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockStoreGet, mockStoreSet } = vi.hoisted(() => ({
-  mockStoreGet: vi.fn(),
+const { mockStoreGetWithMetadata, mockStoreSet } = vi.hoisted(() => ({
+  mockStoreGetWithMetadata: vi.fn(),
   mockStoreSet: vi.fn(),
 }));
 
 vi.mock("@netlify/blobs", () => ({
-  getStore: vi.fn(() => ({ get: mockStoreGet, set: mockStoreSet })),
+  getStore: vi.fn(() => ({ getWithMetadata: mockStoreGetWithMetadata, set: mockStoreSet })),
 }));
 
 import * as barrel from "../index";
@@ -177,8 +177,8 @@ describe("shared core utilities", () => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW_MS);
 
-    mockStoreGet.mockResolvedValueOnce(null);
-    mockStoreSet.mockResolvedValue(undefined);
+    mockStoreGetWithMetadata.mockResolvedValueOnce(null);
+    mockStoreSet.mockResolvedValue({ modified: true, etag: '"etag-new"' });
 
     const initial = await enforceSimpleRateLimit({
       storeName: "shared-rate-limit",
@@ -191,12 +191,17 @@ describe("shared core utilities", () => {
     expect(mockStoreSet).toHaveBeenCalledWith(
       "rl:user%40example.com",
       JSON.stringify({ count: 1, windowStartedAt: FIXED_NOW_MS }),
+      { onlyIfNew: true },
     );
 
-    mockStoreGet.mockResolvedValueOnce(JSON.stringify({
-      count: 3,
-      windowStartedAt: FIXED_NOW_MS,
-    }));
+    mockStoreGetWithMetadata.mockResolvedValueOnce({
+      data: JSON.stringify({
+        count: 3,
+        windowStartedAt: FIXED_NOW_MS,
+      }),
+      etag: '"etag-1"',
+      metadata: null,
+    });
 
     vi.setSystemTime(FIXED_NOW_MS + ONE_SECOND_MS);
     const limited = await enforceSimpleRateLimit({
@@ -214,8 +219,12 @@ describe("shared core utilities", () => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW_MS);
 
-    mockStoreGet.mockResolvedValueOnce("{not-json");
-    mockStoreSet.mockResolvedValue(undefined);
+    mockStoreGetWithMetadata.mockResolvedValueOnce({
+      data: "{not-json",
+      etag: '"etag-bad"',
+      metadata: null,
+    });
+    mockStoreSet.mockResolvedValue({ modified: true, etag: '"etag-reset"' });
 
     const result = await enforceSimpleRateLimit({
       storeName: "shared-rate-limit",
@@ -229,6 +238,7 @@ describe("shared core utilities", () => {
     expect(mockStoreSet).toHaveBeenCalledWith(
       "rl:unknown",
       JSON.stringify({ count: 1, windowStartedAt: FIXED_NOW_MS }),
+      { onlyIfMatch: '"etag-bad"' },
     );
   });
 

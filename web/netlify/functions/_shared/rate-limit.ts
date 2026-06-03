@@ -18,8 +18,72 @@ export interface SimpleRateLimitResult {
   retryAfterSeconds: number;
 }
 
+const MIN_RETRY_AFTER_SECONDS = 1;
+const BLOB_STRONG_CONSISTENCY = "strong";
+
 function retryAfterSeconds(windowStartedAt: number, windowMs: number): number {
-  return Math.max(1, Math.ceil((windowStartedAt + windowMs - Date.now()) / 1000));
+  return Math.max(MIN_RETRY_AFTER_SECONDS, Math.ceil((windowStartedAt + windowMs - Date.now()) / 1000));
+}
+
+function isValidRecord(record: SimpleRateLimitRecord): boolean {
+  return Number.isFinite(record.count) && Number.isFinite(record.windowStartedAt);
+}
+
+function limitedOnConflict(
+  windowStartedAt: number | null,
+  windowMs: number,
+): SimpleRateLimitResult {
+  return {
+    limited: true,
+    retryAfterSeconds: windowStartedAt === null
+      ? MIN_RETRY_AFTER_SECONDS
+      : retryAfterSeconds(windowStartedAt, windowMs),
+  };
+}
+
+function isConditionalWriteConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const maybeError = error as {
+    cause?: unknown;
+    status?: number;
+    statusCode?: number;
+  };
+
+  if (
+    maybeError.status === 409
+    || maybeError.status === 412
+    || maybeError.statusCode === 409
+    || maybeError.statusCode === 412
+  ) {
+    return true;
+  }
+
+  return isConditionalWriteConflict(maybeError.cause);
+}
+
+async function writeRateLimitRecord(
+  store: ReturnType<typeof getStore>,
+  key: string,
+  record: SimpleRateLimitRecord,
+  etag?: string,
+): Promise<boolean> {
+  try {
+    const result = await store.set(
+      key,
+      JSON.stringify(record),
+      etag ? { onlyIfMatch: etag } : { onlyIfNew: true },
+    );
+    return result.modified;
+  } catch (error) {
+    if (isConditionalWriteConflict(error)) {
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 export async function enforceSimpleRateLimit(
@@ -28,35 +92,56 @@ export async function enforceSimpleRateLimit(
   const store = getStore(options.storeName);
   const key = `${options.prefix}${encodeURIComponent(options.subject || "unknown")}`;
   const now = Date.now();
+  const initialRecord: SimpleRateLimitRecord = {
+    count: 1,
+    windowStartedAt: now,
+  };
+
+  let nextRecord = initialRecord;
+  let expectedEtag: string | undefined;
+  let conflictWindowStartedAt: number | null = null;
 
   try {
-    const raw = await store.get(key);
-    if (raw) {
-      const record = JSON.parse(raw) as SimpleRateLimitRecord;
-      const inWindow = now - record.windowStartedAt < options.windowMs;
-      if (Number.isFinite(record.count) && Number.isFinite(record.windowStartedAt) && inWindow) {
-        if (record.count >= options.maxRequests) {
-          return {
-            limited: true,
-            retryAfterSeconds: retryAfterSeconds(record.windowStartedAt, options.windowMs),
-          };
-        }
+    const blob = await store.getWithMetadata(key, {
+      consistency: BLOB_STRONG_CONSISTENCY,
+      type: "text",
+    });
 
-        await store.set(key, JSON.stringify({
-          count: record.count + 1,
-          windowStartedAt: record.windowStartedAt,
-        } satisfies SimpleRateLimitRecord));
-        return { limited: false, retryAfterSeconds: 0 };
+    if (blob) {
+      expectedEtag = blob.etag;
+
+      if (blob.data) {
+        try {
+          const record = JSON.parse(blob.data) as SimpleRateLimitRecord;
+          const inWindow = isValidRecord(record) && now - record.windowStartedAt < options.windowMs;
+
+          if (inWindow) {
+            if (record.count >= options.maxRequests) {
+              return {
+                limited: true,
+                retryAfterSeconds: retryAfterSeconds(record.windowStartedAt, options.windowMs),
+              };
+            }
+
+            nextRecord = {
+              count: record.count + 1,
+              windowStartedAt: record.windowStartedAt,
+            };
+            conflictWindowStartedAt = record.windowStartedAt;
+          }
+        } catch {
+          // Reset malformed entries below using the last seen ETag.
+        }
       }
     }
   } catch {
-    // Reset malformed or unreadable entries by overwriting below.
+    expectedEtag = undefined;
   }
 
-  await store.set(key, JSON.stringify({
-    count: 1,
-    windowStartedAt: now,
-  } satisfies SimpleRateLimitRecord));
+  const modified = await writeRateLimitRecord(store, key, nextRecord, expectedEtag);
+  if (!modified) {
+    return limitedOnConflict(conflictWindowStartedAt, options.windowMs);
+  }
 
   return { limited: false, retryAfterSeconds: 0 };
 }

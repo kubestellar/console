@@ -2,16 +2,15 @@
  * Unit tests for rate-limit.ts (#16109).
  * Tests blob-based rate limiting with window management.
  */
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enforceSimpleRateLimit, type SimpleRateLimitOptions } from "../rate-limit";
 
-// Mock @netlify/blobs
-const mockGet = vi.fn();
+const mockGetWithMetadata = vi.fn();
 const mockSet = vi.fn();
 
 vi.mock("@netlify/blobs", () => ({
   getStore: vi.fn(() => ({
-    get: mockGet,
+    getWithMetadata: mockGetWithMetadata,
     set: mockSet,
   })),
 }));
@@ -21,8 +20,18 @@ const DEFAULT_OPTIONS: SimpleRateLimitOptions = {
   prefix: "rl:",
   subject: "user123",
   maxRequests: 5,
-  windowMs: 60000,
+  windowMs: 60_000,
 };
+
+const DEFAULT_ETAG = '"etag-1"';
+
+function mockBlobRecord(record: { count: number; windowStartedAt: number }, etag = DEFAULT_ETAG): void {
+  mockGetWithMetadata.mockResolvedValueOnce({
+    data: JSON.stringify(record),
+    etag,
+    metadata: null,
+  });
+}
 
 describe("rate-limit", () => {
   beforeEach(() => {
@@ -35,47 +44,50 @@ describe("rate-limit", () => {
   });
 
   describe("enforceSimpleRateLimit", () => {
-    it("should allow first request and create new entry", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
+    it("allows first request and creates a new entry atomically", async () => {
+      mockGetWithMetadata.mockResolvedValueOnce(null);
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-new"' });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
-      expect(result.retryAfterSeconds).toBe(0);
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(mockGetWithMetadata).toHaveBeenCalledWith("rl:user123", {
+        consistency: "strong",
+        type: "text",
+      });
       expect(mockSet).toHaveBeenCalledWith(
         "rl:user123",
-        expect.stringContaining('"count":1')
+        JSON.stringify({ count: 1, windowStartedAt: Date.now() }),
+        { onlyIfNew: true },
       );
     });
 
-    it("should allow requests within limit", async () => {
+    it("allows requests within limit with ETag-based compare-and-set", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      mockBlobRecord({
         count: 3,
-        windowStartedAt: now - 1000,
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
+        windowStartedAt: now - 1_000,
+      });
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-2"' });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
       expect(mockSet).toHaveBeenCalledWith(
         "rl:user123",
-        expect.stringContaining('"count":4')
+        JSON.stringify({ count: 4, windowStartedAt: now - 1_000 }),
+        { onlyIfMatch: DEFAULT_ETAG },
       );
     });
 
-    it("should block requests exceeding limit", async () => {
+    it("blocks requests exceeding limit", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      mockBlobRecord({
         count: 5,
-        windowStartedAt: now - 1000,
-      }));
+        windowStartedAt: now - 1_000,
+      });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
@@ -84,201 +96,228 @@ describe("rate-limit", () => {
       expect(mockSet).not.toHaveBeenCalled();
     });
 
-    it("should calculate correct retry-after seconds", async () => {
+    it("calculates correct retry-after seconds", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      mockBlobRecord({
         count: 5,
-        windowStartedAt: now - 30000, // 30 seconds ago
-      }));
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        windowMs: 60000, // 60 second window
+        windowStartedAt: now - 30_000,
       });
 
-      expect(result.limited).toBe(true);
-      expect(result.retryAfterSeconds).toBe(30); // 60 - 30 = 30 seconds remaining
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 30 });
     });
 
-    it("should reset counter after window expires", async () => {
+    it("resets expired counters with conditional writes", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      mockBlobRecord({
         count: 5,
-        windowStartedAt: now - 61000, // 61 seconds ago
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        windowMs: 60000,
+        windowStartedAt: now - 61_000,
       });
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-reset"' });
 
-      expect(result.limited).toBe(false);
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
       expect(mockSet).toHaveBeenCalledWith(
         "rl:user123",
-        expect.stringContaining('"count":1')
+        JSON.stringify({ count: 1, windowStartedAt: now }),
+        { onlyIfMatch: DEFAULT_ETAG },
       );
     });
 
-    it("should handle malformed blob data by resetting", async () => {
-      mockGet.mockResolvedValueOnce("invalid json");
-      mockSet.mockResolvedValueOnce(undefined);
+    it("resets malformed blob data using the last seen ETag", async () => {
+      mockGetWithMetadata.mockResolvedValueOnce({
+        data: "invalid json",
+        etag: DEFAULT_ETAG,
+        metadata: null,
+      });
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-reset"' });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
       expect(mockSet).toHaveBeenCalledWith(
         "rl:user123",
-        expect.stringContaining('"count":1')
+        JSON.stringify({ count: 1, windowStartedAt: Date.now() }),
+        { onlyIfMatch: DEFAULT_ETAG },
       );
     });
 
-    it("should handle missing blob by creating new entry", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
+    it("fails closed when a create race loses only-if-new", async () => {
+      mockGetWithMetadata.mockResolvedValueOnce(null);
+      mockSet.mockResolvedValueOnce({ modified: false });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalled();
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 1 });
     });
 
-    it("should handle blob store errors gracefully", async () => {
-      mockGet.mockRejectedValueOnce(new Error("Store error"));
-      mockSet.mockResolvedValueOnce(undefined);
+    it("fails closed when an update race loses only-if-match", async () => {
+      const now = Date.now();
+      vi.setSystemTime(now);
+      mockBlobRecord({
+        count: 3,
+        windowStartedAt: now - 1_000,
+      });
+      mockSet.mockResolvedValueOnce({ modified: false });
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result.limited).toBe(false);
-      expect(mockSet).toHaveBeenCalled();
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 59 });
     });
 
-    it("should URL-encode subject in key", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
+    it("treats conditional write conflict errors as rate-limited", async () => {
+      const now = Date.now();
+      vi.setSystemTime(now);
+      mockBlobRecord({
+        count: 3,
+        windowStartedAt: now - 1_000,
+      });
+      mockSet.mockRejectedValueOnce({ status: 409 });
+
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 59 });
+    });
+
+    it("falls back to only-if-new after blob read errors", async () => {
+      mockGetWithMetadata.mockRejectedValueOnce(new Error("Store error"));
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-new"' });
+
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(mockSet).toHaveBeenCalledWith(
+        "rl:user123",
+        JSON.stringify({ count: 1, windowStartedAt: Date.now() }),
+        { onlyIfNew: true },
+      );
+    });
+
+    it("URL-encodes subject in key", async () => {
+      mockGetWithMetadata.mockResolvedValueOnce(null);
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-new"' });
 
       await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
         subject: "user@example.com",
       });
 
-      expect(mockGet).toHaveBeenCalledWith("rl:user%40example.com");
+      expect(mockGetWithMetadata).toHaveBeenCalledWith("rl:user%40example.com", {
+        consistency: "strong",
+        type: "text",
+      });
     });
 
-    it("should use 'unknown' for empty subject", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
+    it("uses unknown for empty subject", async () => {
+      mockGetWithMetadata.mockResolvedValueOnce(null);
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-new"' });
 
       await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
         subject: "",
       });
 
-      expect(mockGet).toHaveBeenCalledWith("rl:unknown");
+      expect(mockGetWithMetadata).toHaveBeenCalledWith("rl:unknown", {
+        consistency: "strong",
+        type: "text",
+      });
     });
 
-    it("should handle custom prefix", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
+    it("handles custom prefix", async () => {
+      mockGetWithMetadata.mockResolvedValueOnce(null);
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-new"' });
 
       await enforceSimpleRateLimit({
         ...DEFAULT_OPTIONS,
         prefix: "custom:",
       });
 
-      expect(mockGet).toHaveBeenCalledWith("custom:user123");
-    });
-
-    it("should handle custom store name", async () => {
-      mockGet.mockResolvedValueOnce(null);
-      mockSet.mockResolvedValueOnce(undefined);
-
-      await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        storeName: "custom-store",
+      expect(mockGetWithMetadata).toHaveBeenCalledWith("custom:user123", {
+        consistency: "strong",
+        type: "text",
       });
-
-      // getStore should have been called with custom-store
-      expect(mockSet).toHaveBeenCalled();
     });
 
-    it("should return minimum retry-after of 1 second", async () => {
+    it("returns minimum retry-after of one second", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      mockBlobRecord({
         count: 5,
-        windowStartedAt: now - 59900, // 100ms remaining
-      }));
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        windowMs: 60000,
+        windowStartedAt: now - 59_900,
       });
+
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
       expect(result.limited).toBe(true);
       expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(1);
     });
 
-    it("should handle non-finite count by resetting", async () => {
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: Infinity,
-        windowStartedAt: Date.now(),
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(false);
-    });
-
-    it("should handle non-finite windowStartedAt by resetting", async () => {
-      mockGet.mockResolvedValueOnce(JSON.stringify({
-        count: 1,
-        windowStartedAt: NaN,
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
-
-      expect(result.limited).toBe(false);
-    });
-
-    it("should allow exactly maxRequests requests", async () => {
+    it("resets non-finite count values", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
+      mockBlobRecord({
+        count: Number.POSITIVE_INFINITY,
+        windowStartedAt: now,
+      });
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-reset"' });
 
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(mockSet).toHaveBeenCalledWith(
+        "rl:user123",
+        JSON.stringify({ count: 1, windowStartedAt: now }),
+        { onlyIfMatch: DEFAULT_ETAG },
+      );
+    });
+
+    it("resets non-finite window start values", async () => {
+      const now = Date.now();
+      vi.setSystemTime(now);
+      mockGetWithMetadata.mockResolvedValueOnce({
+        data: JSON.stringify({ count: 1, windowStartedAt: Number.NaN }),
+        etag: DEFAULT_ETAG,
+        metadata: null,
+      });
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-reset"' });
+
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(mockSet).toHaveBeenCalledWith(
+        "rl:user123",
+        JSON.stringify({ count: 1, windowStartedAt: now }),
+        { onlyIfMatch: DEFAULT_ETAG },
+      );
+    });
+
+    it("allows exactly maxRequests requests", async () => {
+      const now = Date.now();
+      vi.setSystemTime(now);
+      mockBlobRecord({
         count: 4,
-        windowStartedAt: now - 1000,
-      }));
-      mockSet.mockResolvedValueOnce(undefined);
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        maxRequests: 5,
+        windowStartedAt: now - 1_000,
       });
+      mockSet.mockResolvedValueOnce({ modified: true, etag: '"etag-2"' });
 
-      expect(result.limited).toBe(false);
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
+
+      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
     });
 
-    it("should block on maxRequests + 1", async () => {
+    it("blocks on maxRequests plus one", async () => {
       const now = Date.now();
       vi.setSystemTime(now);
-
-      mockGet.mockResolvedValueOnce(JSON.stringify({
+      mockBlobRecord({
         count: 5,
-        windowStartedAt: now - 1000,
-      }));
-
-      const result = await enforceSimpleRateLimit({
-        ...DEFAULT_OPTIONS,
-        maxRequests: 5,
+        windowStartedAt: now - 1_000,
       });
+
+      const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
       expect(result.limited).toBe(true);
     });
