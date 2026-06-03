@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"context"
+	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -14,9 +17,86 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 // caller has not already attached a deadline.
 const cliProviderExecutionTimeout = 5 * time.Minute
 
+// ssrfSafeDialer rejects connections to private/link-local IP addresses after
+// DNS resolution to prevent SSRF via DNS rebinding (CWE-918, #16902).
+var ssrfSafeDialer = &net.Dialer{
+	Timeout:   30 * time.Second,
+	KeepAlive: 30 * time.Second,
+}
+
+// ssrfSafeDialContext resolves the address and rejects private IPs before
+// establishing the connection. This guards against DNS rebinding attacks where
+// a hostname resolves to a public IP at validation time but rebinds to an
+// internal IP at request time.
+func ssrfSafeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	// When ALLOW_LOCAL_PROVIDERS is set, skip SSRF checks (dev/local mode).
+	if allowLocalProviders() {
+		return ssrfSafeDialer.DialContext(ctx, network, addr)
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("ssrf guard: invalid address %q: %w", addr, err)
+	}
+
+	// Resolve the hostname to IPs.
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	if err != nil {
+		// If it's a literal IP, check it directly.
+		if ip := net.ParseIP(host); ip != nil {
+			if isPrivateIP(ip) {
+				return nil, fmt.Errorf("ssrf guard: connection to private IP %s blocked", ip)
+			}
+			return ssrfSafeDialer.DialContext(ctx, network, addr)
+		}
+		return nil, fmt.Errorf("ssrf guard: DNS resolution failed for %q: %w", host, err)
+	}
+
+	// Reject if ALL resolved IPs are private (fail closed).
+	var safeIP string
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		if isPrivateIP(ip) {
+			continue
+		}
+		safeIP = ipStr
+		break
+	}
+	if safeIP == "" {
+		return nil, fmt.Errorf("ssrf guard: all resolved IPs for %q are private/internal", host)
+	}
+
+	// Connect to the first safe IP directly (bypasses any further rebinding).
+	safeAddr := net.JoinHostPort(safeIP, port)
+	return ssrfSafeDialer.DialContext(ctx, network, safeAddr)
+}
+
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
-var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+// It uses ssrfSafeDialContext to prevent DNS rebinding SSRF attacks.
+var aiProviderHTTPClient = &http.Client{
+	Timeout: aiProviderHTTPTimeout,
+	Transport: &http.Transport{
+		DialContext:           ssrfSafeDialContext,
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   10,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	},
+	// Do not follow redirects automatically — redirect targets could point to
+	// internal IPs (SSRF via open redirect). Callers that need redirects must
+	// validate the Location header themselves.
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 1 {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	},
+}
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
