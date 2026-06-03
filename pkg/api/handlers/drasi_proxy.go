@@ -185,8 +185,15 @@ func (h *MCPHandlers) ProxyDrasi(c *fiber.Ctx) error {
 			return err
 		}
 	} else {
-		if err := requireViewerOrAbove(c, h.store); err != nil {
-			return err
+		// Platform target: readers can GET, but mutations require editor+ (CWE-285, #16660)
+		if c.Method() != fiber.MethodGet {
+			if err := requireEditorOrAdmin(c, h.store); err != nil {
+				return err
+			}
+		} else {
+			if err := requireViewerOrAbove(c, h.store); err != nil {
+				return err
+			}
 		}
 	}
 
