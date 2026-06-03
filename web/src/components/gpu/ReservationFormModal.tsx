@@ -102,6 +102,7 @@ export function ReservationFormModal({
   user,
   prefillDate,
   forceLive,
+  closeOnBackdrop = false,
   knownNamespacesByCluster,
   onSave,
   onActivate,
@@ -116,6 +117,7 @@ export function ReservationFormModal({
   prefillDate?: string | null
   /** When true, skip demo mode fallback for namespace list */
   forceLive?: boolean
+  closeOnBackdrop?: boolean
   /**
    * Map of cluster name → namespaces known to have existing reservations.
    * Union'd with the `useNamespaces()` result as a fallback when the fetch
@@ -413,7 +415,7 @@ export function ReservationFormModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true}>
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={closeOnBackdrop} closeOnEscape={true}>
       <ConfirmDialog
         isOpen={showDiscardConfirm}
         onClose={() => setShowDiscardConfirm(false)}

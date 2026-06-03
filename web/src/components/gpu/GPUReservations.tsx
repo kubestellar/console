@@ -632,6 +632,7 @@ export function GPUReservations() {
         user={user}
         prefillDate={prefillDate}
         forceLive={gpuLiveMode}
+        closeOnBackdrop={false}
         knownNamespacesByCluster={knownNamespacesByCluster}
         onSave={async (input) => {
           if (editingReservation) {

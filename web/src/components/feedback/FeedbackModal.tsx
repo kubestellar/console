@@ -9,7 +9,7 @@
  * in the created issue as markdown images.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
@@ -73,6 +73,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const titleId = useId()
 
   const handleScreenshotFiles = (files: FileList | null) => {
     if (!files) return
@@ -378,20 +379,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
   const submitShortcutLabel = `${isMacPlatform ? '⌘' : 'Ctrl'}+↵`
 
-  // Close on backdrop click — only when the click target is the backdrop
-  // itself, not any child element (so clicks inside the modal content do
-  // not dismiss it). Routes through handleClose() so the unsaved-changes
-  // confirmation flow runs if the user has typed anything. (Fixes #9159)
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      handleClose()
-    }
-  }
-
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
-      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-label="Submit Feedback"
@@ -420,7 +410,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               )}
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">{t('feedback.submitFeedback', 'Submit Feedback')}</h2>
+              <h2 id={titleId} className="font-semibold text-foreground">{t('feedback.submitFeedback', 'Submit Feedback')}</h2>
               <p className="text-xs text-muted-foreground">
                 Earn <span className="text-yellow-400">{REWARD_ACTIONS.bug_report.coins}</span> coins for bugs, <span className="text-yellow-400">{REWARD_ACTIONS.feature_suggestion.coins}</span> for features
               </p>
