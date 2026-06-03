@@ -378,20 +378,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
   const submitShortcutLabel = `${isMacPlatform ? '⌘' : 'Ctrl'}+↵`
 
-  // Close on backdrop click — only when the click target is the backdrop
-  // itself, not any child element (so clicks inside the modal content do
-  // not dismiss it). Routes through handleClose() so the unsaved-changes
-  // confirmation flow runs if the user has typed anything. (Fixes #9159)
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      handleClose()
-    }
-  }
-
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
-      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-label="Submit Feedback"
