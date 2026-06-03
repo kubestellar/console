@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -152,8 +154,7 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	}
 	extractCtx, extractCancel := context.WithTimeout(parentCtx, extractTimeout)
 	defer extractCancel()
-	extractCmd := exec.CommandContext(extractCtx, "tar", "xzf", tmpFile, "-C", stagingDir)
-	if err := extractCmd.Run(); err != nil {
+	if err := safeTarExtract(extractCtx, tmpFile, stagingDir); err != nil {
 		// If cancelled by the user, report as cancellation rather than failure (#7440)
 		if uc.isCancelled() {
 			uc.broadcast("update_progress", UpdateProgressPayload{
@@ -338,6 +339,104 @@ func downloadFile(url, dest string) error {
 	}
 	if n > maxDownloadBytes {
 		return fmt.Errorf("download exceeds maximum allowed size (%d bytes)", maxDownloadBytes)
+	}
+	return nil
+}
+
+// maxExtractFileSize is the maximum size of a single extracted file (256 MB).
+const maxExtractFileSize = 256 << 20
+
+// maxExtractFiles is the maximum number of files allowed in an archive.
+const maxExtractFiles = 1000
+
+// safeTarExtract extracts a .tar.gz archive into destDir with path traversal
+// protection (zip-slip prevention, CWE-22). Every extracted path is validated
+// to stay within destDir. Symlinks pointing outside destDir are rejected.
+func safeTarExtract(ctx context.Context, archivePath, destDir string) error {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("open archive: %w", err)
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return fmt.Errorf("gzip reader: %w", err)
+	}
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+	absDestDir, err := filepath.Abs(destDir)
+	if err != nil {
+		return fmt.Errorf("resolve dest dir: %w", err)
+	}
+
+	fileCount := 0
+	for {
+		// Respect context cancellation between entries
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("read tar header: %w", err)
+		}
+
+		// Resolve the target path and ensure it stays within destDir
+		target := filepath.Join(absDestDir, filepath.Clean(header.Name))
+		if !strings.HasPrefix(target, absDestDir+string(filepath.Separator)) && target != absDestDir {
+			return fmt.Errorf("path traversal in archive: %s", header.Name)
+		}
+
+		fileCount++
+		if fileCount > maxExtractFiles {
+			return fmt.Errorf("archive contains too many files (limit %d)", maxExtractFiles)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return fmt.Errorf("mkdir %s: %w", header.Name, err)
+			}
+		case tar.TypeReg:
+			if header.Size > maxExtractFileSize {
+				return fmt.Errorf("file %s exceeds max size (%d bytes)", header.Name, maxExtractFileSize)
+			}
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return fmt.Errorf("mkdir parent for %s: %w", header.Name, err)
+			}
+			mode := header.FileInfo().Mode()
+			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+			if err != nil {
+				return fmt.Errorf("create %s: %w", header.Name, err)
+			}
+			// Copy with size limit to prevent decompression bombs
+			if _, err := io.Copy(outFile, io.LimitReader(tr, maxExtractFileSize+1)); err != nil {
+				outFile.Close()
+				return fmt.Errorf("write %s: %w", header.Name, err)
+			}
+			outFile.Close()
+		case tar.TypeSymlink:
+			// Validate symlink target stays within destDir
+			linkTarget := header.Linkname
+			if !filepath.IsAbs(linkTarget) {
+				linkTarget = filepath.Join(filepath.Dir(target), linkTarget)
+			}
+			linkTarget = filepath.Clean(linkTarget)
+			if !strings.HasPrefix(linkTarget, absDestDir+string(filepath.Separator)) && linkTarget != absDestDir {
+				return fmt.Errorf("symlink path traversal in archive: %s -> %s", header.Name, header.Linkname)
+			}
+			if err := os.Symlink(header.Linkname, target); err != nil {
+				return fmt.Errorf("symlink %s: %w", header.Name, err)
+			}
+		default:
+			// Skip unsupported entry types (block devices, char devices, etc.)
+			slog.Warn("skipping unsupported tar entry type", "name", header.Name, "type", header.Typeflag)
+		}
 	}
 	return nil
 }
