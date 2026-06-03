@@ -73,6 +73,13 @@ func RequireAdmin(c *fiber.Ctx, s store.Store) error {
 	return requireAdmin(c, s)
 }
 
+// RequireEditorOrAdmin verifies the current request's user has at least the
+// editor role. Exported for route setup code that needs to gate mutation
+// endpoints.
+func RequireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
+	return requireEditorOrAdmin(c, s)
+}
+
 // requireAdmin verifies the current request's user has the admin role.
 // Unlike initial OAuth login flow, requireAdmin does NOT auto-promote users
 // to admin even if admin count is zero. This prevents privilege escalation

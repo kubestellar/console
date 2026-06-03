@@ -86,8 +86,28 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
 	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)
-	api.Patch("/kagenti-provider/config", kagentiProviderHandler.UpdateConfig)
-	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
-	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
-	api.Post("/kagenti-provider/tools/call-direct", kagentiProviderHandler.CallToolDirect)
+	api.Patch("/kagenti-provider/config", func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, s.store); err != nil {
+			return err
+		}
+		return kagentiProviderHandler.UpdateConfig(c)
+	})
+	api.Post("/kagenti-provider/chat", func(c *fiber.Ctx) error {
+		if err := handlers.RequireEditorOrAdmin(c, s.store); err != nil {
+			return err
+		}
+		return kagentiProviderHandler.Chat(c)
+	})
+	api.Post("/kagenti-provider/tools/call", func(c *fiber.Ctx) error {
+		if err := handlers.RequireEditorOrAdmin(c, s.store); err != nil {
+			return err
+		}
+		return kagentiProviderHandler.CallTool(c)
+	})
+	api.Post("/kagenti-provider/tools/call-direct", func(c *fiber.Ctx) error {
+		if err := handlers.RequireEditorOrAdmin(c, s.store); err != nil {
+			return err
+		}
+		return kagentiProviderHandler.CallToolDirect(c)
+	})
 }
