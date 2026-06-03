@@ -38,22 +38,18 @@ function removeLegacyAgentToken(): void {
 }
 
 function getSessionAgentToken(): string {
-  try {
-    return getToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage) || ''
-  } catch {
-    return ''
-  }
+  // Agent token is now memory-only (CWE-922 mitigation). The agent
+  // handshake re-establishes on reconnect, so surviving page refresh
+  // is unnecessary and the sessionStorage exposure to XSS is not worth it.
+  return ''
 }
 
-function setSessionAgentToken(token: string): void {
+function setSessionAgentToken(_token: string): void {
+  // No-op: agent token is memory-only now. Clear any legacy value.
   try {
-    if (token) {
-      setToken(AGENT_TOKEN_STORAGE_KEY, token, undefined, sessionStorage)
-    } else {
-      clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
-    }
+    clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
   } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
+    // sessionStorage may be unavailable — ignore.
   }
 }
 
