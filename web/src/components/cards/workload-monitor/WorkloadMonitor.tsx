@@ -44,17 +44,12 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const [selectedWorkload, setSelectedWorkload] = useState(monitorConfig?.workload || '')
 
   // Fetch namespaces/workloads for selectors
-  const { namespaces, isLoading: nsLoading, isDemoFallback: nsDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
-
-  // Report loading state to CardWrapper for skeleton/refresh behavior
-  const hasData = clusters.length > 0
-  useCardLoadingState({
-    isLoading: clustersLoading && !hasData,
-    isRefreshing: clustersRefreshing,
-    hasAnyData: hasData,
-    isDemoData: isDemoMode || nsDemoFallback,
-    isFailed,
-    consecutiveFailures })
+  const {
+    namespaces,
+    isLoading: nsLoading,
+    isRefreshing: nsRefreshing,
+    isDemoFallback: nsDemoFallback,
+  } = useCachedNamespaces(selectedCluster || undefined)
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)
   const activeCluster = isPreConfigured ? monitorConfig!.cluster! : selectedCluster
@@ -73,11 +68,21 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     issues,
     overallStatus,
     workloadKind,
-    isLoading,
-    isRefreshing,
+    isLoading: monitorLoading,
+    isRefreshing: monitorRefreshing,
     error,
     refetch } = useWorkloadMonitor(activeCluster, activeNamespace, activeWorkload, {
     autoRefreshMs: monitorConfig?.autoRefreshMs })
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
+  useCardLoadingState({
+    isLoading: (clustersLoading || monitorLoading) && !hasData,
+    isRefreshing: clustersRefreshing || nsRefreshing || monitorRefreshing,
+    hasAnyData: hasData,
+    isDemoData: isDemoMode || nsDemoFallback,
+    isFailed,
+    consecutiveFailures })
 
   // View mode and filters
   const [viewMode, setViewMode] = useState<MonitorViewMode>('tree')
@@ -146,7 +151,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
   const clusterNames = clusters.map(c => c.name).sort()
 
   // Loading state
-  if (isLoading && !resources.length) {
+  if (monitorLoading && !resources.length) {
     return (
       <div className="space-y-3">
         <Skeleton variant="text" width={120} height={20} />
@@ -231,7 +236,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
       )}
 
       {/* Error state */}
-      {error && !isLoading && activeWorkload && (
+      {error && !monitorLoading && activeWorkload && (
         <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 flex items-start gap-2 mb-3">
           <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
           <div>
@@ -258,11 +263,11 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
             </span>
             <button
               onClick={refetch}
-              disabled={isRefreshing}
+              disabled={monitorRefreshing}
               className="p-1 rounded hover:bg-secondary transition-colors"
               title={t('common.refresh')}
             >
-              {isRefreshing
+              {monitorRefreshing
                 ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
                 : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
             </button>

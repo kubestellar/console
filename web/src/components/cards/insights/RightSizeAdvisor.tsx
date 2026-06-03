@@ -109,7 +109,7 @@ const VERDICT_CONFIG: Record<Verdict, { color: 'red' | 'green' | 'yellow' | 'gra
 export function RightSizeAdvisor() {
   const { t } = useTranslation()
   const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures, error } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
   const [headroom, setHeadroom] = useState(DEFAULT_HEADROOM_PCT)
@@ -209,7 +209,7 @@ export function RightSizeAdvisor() {
   const hasData = clusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
-    isRefreshing,
+    isRefreshing: isRefreshing || gpuRefreshing,
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
