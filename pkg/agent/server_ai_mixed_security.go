@@ -288,13 +288,43 @@ func normalizeMixedModeOutputFormat(value string) string {
 }
 
 func hasMixedModeContextOverride(args []string) bool {
+	// Blocklist of flags that override cluster context, auth, and transport settings
+	blockedFlags := map[string]bool{
+		// Cluster/context overrides
+		"--context":                    true,
+		"--kube-context":               true,
+		"--kubeconfig":                 true,
+		// Transport/server overrides
+		"--server":                     true,
+		"-s":                           true,
+		// Authentication overrides
+		"--token":                      true,
+		"--user":                       true,
+		"--cluster":                    true,
+		"--client-key":                 true,
+		"--client-certificate":         true,
+		"--certificate-authority":      true,
+		"--insecure-skip-tls-verify":   true,
+		"--tls-server-name":            true,
+		// Impersonation
+		"--as":                         true,
+		"--as-group":                   true,
+		// Resource access bypass flags
+		"--raw":                        true,
+		"--filename":                   true,
+	}
+
 	for _, arg := range args {
 		lower := strings.ToLower(arg)
-		if lower == "--context" || lower == "--kube-context" || lower == "--kubeconfig" {
+		// Check for exact flag matches
+		if blockedFlags[lower] {
 			return true
 		}
-		if strings.HasPrefix(lower, "--context=") || strings.HasPrefix(lower, "--kube-context=") || strings.HasPrefix(lower, "--kubeconfig=") {
-			return true
+		// Check for flag=value forms using HasPrefix
+		for flagName := range blockedFlags {
+			if strings.HasPrefix(lower, flagName+"=") {
+				return true
+			}
 		}
 	}
 	return false
