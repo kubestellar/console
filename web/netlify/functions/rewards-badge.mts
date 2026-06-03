@@ -1,11 +1,14 @@
 /**
  * Netlify mirror of pkg/api/handlers/rewards_badge.go (RFC #8862 Phase 3).
  * GET /api/rewards/badge/:github_login — shields.io-style SVG tier badge.
- * Netlify edge handles rate limiting; no app-level limiter needed.
+ *
+ * SECURITY (#16621): Per-IP rate limiting to prevent GitHub API quota
+ * exhaustion via unauthenticated badge spray (CWE-400).
  */
 import { getContributorLevel } from "../../src/types/rewards";
 import { GITHUB_SCORING_GENERATED } from "../../src/types/rewards.generated";
 import { readCappedJson } from "./_shared/read-capped-json";
+import { checkInMemoryRateLimit, getClientIp, type InMemoryRateLimitEntry } from "./_shared/inMemoryRateLimit";
 
 const GITHUB_API = "https://api.github.com";
 const MAX_PAGES = 10; // GitHub Search API caps at 1000 results
@@ -44,6 +47,12 @@ const LOGIN_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})$/;
 const PATH_PREFIX = "/api/rewards/badge/";
 const STATUS_OK = 200;
 const STATUS_BAD_GATEWAY = 502;
+const STATUS_TOO_MANY = 429;
+
+// Rate limiting: 5 requests per minute per IP (CWE-400 mitigation #16621)
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const rateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
 interface SearchItem {
   labels: Array<{ name: string }>;
@@ -154,6 +163,20 @@ function scorePoints(issues: SearchItem[], prs: SearchItem[]): number {
 }
 
 export default async (req: Request): Promise<Response> => {
+  // Rate limit per source IP to prevent GitHub API quota exhaustion (#16621)
+  const clientIp = getClientIp(req);
+  const rateCheck = checkInMemoryRateLimit(clientIp, rateLimitMap, RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS);
+  if (!rateCheck.allowed) {
+    return new Response(renderSVG(ERROR_NAME, ERROR_COLOR), {
+      status: STATUS_TOO_MANY,
+      headers: {
+        "Content-Type": CONTENT_TYPE,
+        "Cache-Control": CACHE_ERROR,
+        "Retry-After": String(rateCheck.retryAfterSeconds),
+      },
+    });
+  }
+
   const url = new URL(req.url);
   const login = url.pathname.startsWith(PATH_PREFIX)
     ? url.pathname.slice(PATH_PREFIX.length).trim()

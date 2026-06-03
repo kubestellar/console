@@ -166,7 +166,15 @@ func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kube
 
 // GetStatus returns the self-upgrade availability status.
 // GET /api/self-upgrade/status
+//
+// SECURITY (#16599): Requires admin role. The response reveals namespace,
+// deployment name, image tag, and RBAC capabilities — useful for
+// reconnaissance (CWE-200). Consistent with TriggerUpgrade's admin gate.
 func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	resp := SelfUpgradeStatusResponse{}
 
 	// Must be in-cluster
