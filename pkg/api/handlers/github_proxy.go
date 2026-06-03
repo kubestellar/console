@@ -167,10 +167,8 @@ func StopGitHubProxyLimiterEvictor() {
 // allowedGitHubPrefixes restricts which non-repo GitHub API paths can be proxied.
 // Repo-scoped /repos/* requests are validated separately against the repo allowlist.
 var allowedGitHubPrefixes = []string{
-	"/search/",       // issue/PR search for contributions list
-	"/rate_limit",    // rate-limit check / token validation
-	"/user",          // token validation (GET /user returns the authenticated user)
-	"/notifications", // notification badge (if used by frontend)
+	"/search/",    // issue/PR search for contributions list
+	"/rate_limit", // non-identity token health/rate-limit check
 }
 
 var githubProxyDefaultRepos = strings.Split(githubProxyAllowedReposDefault, ",")

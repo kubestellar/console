@@ -213,9 +213,9 @@ func TestIsAllowedGitHubPath(t *testing.T) {
 		{"blocked external repo", "/repos/evil/private/issues", false},
 		{"rate limit", "/rate_limit", true},
 		{"search", "/search/issues", true},
-		{"user exact", "/user", true},
-		{"user subpath", "/user/repos", true},
-		{"notifications", "/notifications", true},
+		{"user exact", "/user", false},
+		{"user subpath", "/user/repos", false},
+		{"notifications", "/notifications", false},
 		{"gists", "/gists", false},
 		{"graphql", "/graphql", false},
 	}
@@ -258,6 +258,38 @@ func TestProxy_BlocksDisallowedRepoRequest(t *testing.T) {
 	}
 	if called {
 		t.Fatal("expected disallowed repo request to be blocked before reaching GitHub")
+	}
+}
+
+func TestProxy_BlocksDisallowedIdentityPath(t *testing.T) {
+	setupGitHubProxyTestSettings(t)
+	app := fiber.New()
+	h := NewGitHubProxyHandler("", nil)
+	h.allowedRepos = map[string]struct{}{"kubestellar/console": {}}
+
+	called := false
+	originalClient := githubProxyClient
+	githubProxyClient = &http.Client{Transport: RoundTripFunc(func(_ *http.Request) *http.Response {
+		called = true
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`)), Header: make(http.Header)}
+	})}
+	defer func() { githubProxyClient = originalClient }()
+
+	app.Get("/api/github/*", func(c *fiber.Ctx) error {
+		c.Locals("userID", uuid.New())
+		return h.Proxy(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/github/user", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("proxy request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for disallowed identity path, got %d", resp.StatusCode)
+	}
+	if called {
+		t.Fatal("expected disallowed identity path to be blocked before reaching GitHub")
 	}
 }
 
