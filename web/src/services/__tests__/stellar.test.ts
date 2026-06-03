@@ -225,6 +225,22 @@ describe('stellarApi — Digest & Providers fallback', () => {
   })
 })
 
+describe('stellarApi.startSolve', () => {
+  it('encodes validated UUID event IDs before posting solve requests', async () => {
+    const eventID = '123e4567-e89b-12d3-a456-426614174000'
+    const expected = { solveId: 'solve-1', status: 'running' }
+    mockApi.post.mockResolvedValueOnce({ data: expected })
+
+    await expect(stellarApi.startSolve(eventID)).resolves.toEqual(expected)
+    expect(mockApi.post).toHaveBeenCalledWith('/api/stellar/solve/123e4567-e89b-12d3-a456-426614174000')
+  })
+
+  it('rejects invalid UUID event IDs before making a request', async () => {
+    await expect(stellarApi.startSolve('../api/settings')).rejects.toThrow('Invalid eventID')
+    expect(mockApi.post).not.toHaveBeenCalled()
+  })
+})
+
 describe('stellarApi — Write operations error propagation', () => {
   it('approveAction propagates error on api.post failure', async () => {
     const err = new Error('Action failed')

@@ -11,6 +11,7 @@ import type {
 } from '../types/stellar'
 
 const STELLAR_CHAT_TIMEOUT_MS = 300_000
+const UUID_PATH_PARAM_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 interface GetStateOptions {
   timeout?: number
@@ -25,6 +26,14 @@ const isAuthError = (err: unknown): boolean => {
 
   const errorText = String(err)
   return errorText.includes('Unauthenticated') || errorText.includes('No authentication token')
+}
+
+const encodeValidatedUuidPathParam = (value: string, paramName: string): string => {
+  if (!UUID_PATH_PARAM_PATTERN.test(value)) {
+    throw new Error(`Invalid ${paramName}`)
+  }
+
+  return encodeURIComponent(value)
 }
 
 export interface AskResponse {
@@ -333,7 +342,8 @@ export const stellarApi = {
     }
   },
   async startSolve(eventID: string): Promise<{ solveId: string; status: string; existing?: boolean }> {
-    const { data } = await api.post<{ solveId: string; status: string; existing?: boolean }>(`/api/stellar/solve/${eventID}`)
+    const encodedEventID = encodeValidatedUuidPathParam(eventID, 'eventID')
+    const { data } = await api.post<{ solveId: string; status: string; existing?: boolean }>(`/api/stellar/solve/${encodedEventID}`)
     return data
   },
   async listSolves(limit = 100): Promise<import('../types/stellar').StellarSolve[]> {
