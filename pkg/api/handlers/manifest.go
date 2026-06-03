@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -95,9 +97,17 @@ type manifestConversionResponse struct {
 // ManifestSetup renders an HTML page that auto-submits a GitHub App Manifest
 // form to GitHub. The user sees GitHub's "Create GitHub App" confirmation.
 // Returns 302 to login if OAuth is already configured (prevents duplicate apps).
+//
+// Security: When BOOTSTRAP_TOKEN is set, requires the token as a query param.
+// Otherwise restricts access to localhost. This prevents remote attackers from
+// racing the admin during first-boot setup (CWE-306, #16950).
 func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 	if h.isOAuthConfigured != nil && h.isOAuthConfigured() {
 		return c.Redirect(h.frontendURL + "/login")
+	}
+
+	if err := h.requireBootstrapAuth(c); err != nil {
+		return err
 	}
 	suffix, err := randomHex(manifestAppNameSuffixBytes)
 	if err != nil {
@@ -283,4 +293,32 @@ func randomHex(n int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// requireBootstrapAuth validates that the manifest setup request is authorized.
+// If BOOTSTRAP_TOKEN is set, the request must include it as ?token=<value>.
+// If BOOTSTRAP_TOKEN is not set, access is restricted to loopback/unspecified IPs.
+// This prevents remote attackers from racing the admin during first-boot (CWE-306, #16950).
+func (h *ManifestHandler) requireBootstrapAuth(c *fiber.Ctx) error {
+	bootstrapToken := os.Getenv("BOOTSTRAP_TOKEN")
+	if bootstrapToken != "" {
+		if c.Query("token") != bootstrapToken {
+			slog.Warn("[Manifest] bootstrap token mismatch or missing", "remote", c.IP())
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "bootstrap token required for initial setup — pass ?token=<BOOTSTRAP_TOKEN>",
+			})
+		}
+		return nil
+	}
+
+	// No token configured — restrict to localhost as a safe default.
+	// IsUnspecified covers 0.0.0.0 which appears in in-process test connections.
+	ip := net.ParseIP(c.IP())
+	if ip != nil && (ip.IsLoopback() || ip.IsUnspecified()) {
+		return nil
+	}
+	slog.Warn("[Manifest] non-local access to manifest setup without BOOTSTRAP_TOKEN", "remote", c.IP())
+	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+		"error": "manifest setup is restricted to localhost when BOOTSTRAP_TOKEN is not set",
+	})
 }
