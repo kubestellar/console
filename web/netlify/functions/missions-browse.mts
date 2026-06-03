@@ -8,6 +8,7 @@
  */
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const GITHUB_API_URL = "https://api.github.com";
 const KB_REPO = "kubestellar/console-kb";
@@ -19,6 +20,9 @@ const FETCH_TIMEOUT_MS = 30_000;
 /** Cache TTL: serve cached content for 1 hour before re-fetching from GitHub */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+/** Negative cache TTL: cache 404 responses for 60 seconds to prevent repeated lookups (#16817) */
+const NEGATIVE_CACHE_TTL_MS = 60 * 1000;
+
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
@@ -29,6 +33,32 @@ const MAX_RESPONSE_BYTES = 512_000;
 const MAX_RETRIES = 2;
 /** Base delay between retries in milliseconds */
 const RETRY_BASE_DELAY_MS = 500;
+
+/** Maximum allowed path length (#16817) */
+const MAX_PATH_LENGTH = 200;
+
+/** Rate limit: max requests per IP per window */
+const RATE_LIMIT_MAX_REQUESTS = 30;
+/** Rate limit window: 60 seconds */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+/**
+ * Allowed top-level path prefixes (#16817). Only these directories exist in
+ * the console-kb repo. Requests for unknown prefixes are rejected early to
+ * prevent cache-miss amplification via attacker-controlled paths.
+ */
+const ALLOWED_PATH_PREFIXES = [
+  "", // root listing
+  "fixes",
+  "tutorials",
+  "guides",
+  "examples",
+  "recipes",
+  "scenarios",
+  "troubleshooting",
+  "operations",
+  "reference",
+];
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
@@ -48,9 +78,23 @@ interface BrowseCacheEntry {
   fetchedAt: number;
 }
 
-/** Reject path traversal patterns, URL control characters, and excessively long inputs (#13230, #14500). */
+/** Reject path traversal patterns, URL control characters, and excessively long inputs (#13230, #14500, #16817). */
 function hasInvalidPathInput(value: string): boolean {
-  return value.length > 1000 || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+  return value.length > MAX_PATH_LENGTH || value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+}
+
+/** Check whether a path starts with one of the allowed prefixes (#16817). */
+function hasAllowedPrefix(path: string): boolean {
+  if (path === "") return true;
+  const topLevel = path.split("/")[0];
+  return ALLOWED_PATH_PREFIXES.includes(topLevel);
+}
+
+/** Extract client IP for rate limiting */
+function getClientIP(request: Request): string {
+  return request.headers.get("x-nf-client-connection-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
 }
 
 export default async (request: Request): Promise<Response> => {
@@ -65,6 +109,32 @@ export default async (request: Request): Promise<Response> => {
   if (path && hasInvalidPathInput(path)) {
     return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
   }
+
+  // SECURITY (#16817): Reject paths outside the known directory structure
+  if (!hasAllowedPrefix(path)) {
+    return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
+  }
+
+  // SECURITY (#16817): Per-IP rate limiting to prevent cache-miss amplification
+  const clientIP = getClientIP(request);
+  const rateResult = await enforceSimpleRateLimit({
+    storeName: "missions-browse-ratelimit",
+    prefix: "rl:",
+    subject: clientIP,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rateResult.limited) {
+    return new Response(JSON.stringify({ error: "rate limited" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(rateResult.retryAfterSeconds),
+        ...corsHeaders,
+      },
+    });
+  }
+
   const cacheKey = `browse:${path}`;
 
   try {
@@ -81,6 +151,12 @@ export default async (request: Request): Promise<Response> => {
           ...corsHeaders,
         },
       });
+    }
+
+    // SECURITY (#16817): Check negative cache to prevent repeated lookups of non-existent paths
+    const negCached = await store.get(`${cacheKey}:neg`, { type: "json" }) as BrowseCacheEntry | null;
+    if (negCached && Date.now() - negCached.fetchedAt < NEGATIVE_CACHE_TTL_MS) {
+      return jsonResponse(corsHeaders, { error: "not found" }, 404);
     }
 
     // Fetch from GitHub Contents API with retry for transient errors (#10966)
@@ -104,6 +180,12 @@ export default async (request: Request): Promise<Response> => {
     }
 
     if (!resp.ok) {
+      // SECURITY (#16817): Negative-cache 404 responses to prevent repeated lookups
+      // of the same invalid path from consuming GitHub API quota.
+      if (resp.status === 404) {
+        const negativeEntry: BrowseCacheEntry = { body: "[]", fetchedAt: Date.now() };
+        store.setJSON(`${cacheKey}:neg`, negativeEntry).catch(() => {});
+      }
       // If GitHub fails but we have stale cache, serve it
       if (cached) {
         return new Response(cached.body, {
@@ -116,7 +198,7 @@ export default async (request: Request): Promise<Response> => {
         });
       }
       const code = resp.status === 403 || resp.status === 429 ? "rate_limited" : "github_error";
-      return jsonResponse(corsHeaders, { error: "upstream request failed", code }, 502);
+      return jsonResponse(corsHeaders, { error: "upstream request failed", code }, resp.status === 404 ? 404 : 502);
     }
 
     // Guard against oversized upstream responses
