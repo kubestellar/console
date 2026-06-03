@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -30,14 +31,16 @@ type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
 }
 
@@ -102,6 +105,9 @@ func writeSSEDataEvent(w *bufio.Writer, payload string) error {
 
 // Chat streams a kagenti agent conversation via SSE.
 func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.client == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti not configured"})
 	}
@@ -274,6 +280,9 @@ func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
 
 // CallTool invokes a tool through a kagenti agent via A2A.
 func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.client == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti not configured"})
 	}
@@ -320,6 +329,18 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 	})
 }
 
+// sanitizeForPrompt removes characters that could be used for prompt injection.
+func sanitizeForPrompt(s string) string {
+	var result strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '-' || r == '_' || r == '.' || r == ':' || r == '/' {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
 // enrichMessageWithClusterContext prepends cluster context to the user's message
 func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx context.Context, message string) string {
 	if h.k8sClient == nil {
@@ -344,7 +365,7 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
 
 	for _, cluster := range clusters {
-		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
+		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", sanitizeForPrompt(cluster.Name)))
 		if cluster.Healthy {
 			contextBuilder.WriteString("  Status: Healthy\n")
 		} else {
@@ -367,6 +388,10 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 
 // GetTools returns available console tools for kagenti agents
 func (h *KagentiProviderProxyHandler) GetTools(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	tools := make([]map[string]any, 0, 3)
 
 	tools = append(tools, map[string]any{
@@ -433,6 +458,9 @@ type kagentiDirectToolRequest struct {
 
 // CallToolDirect routes tool calls to the appropriate console handlers
 func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "k8s client not available"})
 	}
