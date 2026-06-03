@@ -20,6 +20,7 @@
  *   GITHUB_TOKEN — read-only PAT (required)
  */
 import { getStore } from "@netlify/blobs";
+import { buildStrictKubestellarCorsHeaders } from "./_shared/cors";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import {
   STORE_NAME,
@@ -31,18 +32,25 @@ import {
   READ_RATE_LIMIT_WINDOW_MS,
   getRepos,
 } from "./github-pipelines/constants";
-import { corsOrigin, jsonResponse, readCache, writeCache, isValidRepo } from "./github-pipelines/helpers";
-import { buildPulse, buildMatrix, buildFlow, buildFailures, buildLog } from "./github-pipelines/views";
+import {
+  jsonResponse,
+  readCache,
+  writeCache,
+  isValidRepo,
+} from "./github-pipelines/helpers";
+import {
+  buildPulse,
+  buildMatrix,
+  buildFlow,
+  buildFailures,
+  buildLog,
+} from "./github-pipelines/views";
 
 const REPOS = getRepos();
 
 export default async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin");
-  const baseHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+  const baseHeaders: Record<string, string> = buildStrictKubestellarCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: baseHeaders });

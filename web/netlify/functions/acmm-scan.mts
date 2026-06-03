@@ -32,12 +32,12 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { buildStrictKubestellarCorsHeaders } from "./_shared/cors";
 import { CRITERIA } from "./acmm-scan/criteria";
 import {
   CACHE_STORE,
   CACHE_TTL_MS,
   REPO_RE,
-  corsHeaders,
   matchesHint,
 } from "./acmm-scan/helpers";
 import type { CacheEntry, ScanResult } from "./acmm-scan/helpers";
@@ -49,8 +49,11 @@ import { demoScan } from "./acmm-scan/demo";
 // ---------------------------------------------------------------------------
 
 export default async (req: Request) => {
-  const origin = req.headers.get("Origin");
-  const headers = corsHeaders(origin);
+  const origin = req.headers.get("origin");
+  const headers = {
+    ...buildStrictKubestellarCorsHeaders(origin),
+    "Cache-Control": "public, max-age=900",
+  };
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers });

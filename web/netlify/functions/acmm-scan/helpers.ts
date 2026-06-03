@@ -19,12 +19,6 @@ export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
 export const UNKNOWN_REPO = "unknown/repo";
-/** Allowed CORS origins (exact match) */
-export const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://kubestellar.io",
-  "https://www.kubestellar.io",
-];
 /** AI-generated label used to classify AI contributions */
 export const AI_LABEL = "ai-generated";
 /** Known AI authors (shared logins + bots) */
@@ -66,28 +60,6 @@ export interface GitTreeEntry {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Validate CORS origin via URL-parsed hostname check */
-export function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "localhost") return origin;
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
-  } catch { /* invalid URL */ }
-  return ALLOWED_ORIGINS[0];
-}
-
-export function corsHeaders(origin: string | null): Record<string, string> {
-  return {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Cache-Control": "public, max-age=900",
-    Vary: "Origin",
-  };
-}
 
 export function isoWeek(date: Date): string {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));

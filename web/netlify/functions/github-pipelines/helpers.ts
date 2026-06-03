@@ -3,22 +3,7 @@
  */
 import type { getStore } from "@netlify/blobs";
 import type { CachedView } from "./types";
-import { ALLOWED_ORIGINS, CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
-
-export function corsOrigin(origin: string | null): string {
-  if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  try {
-    const host = new URL(origin).hostname.toLowerCase();
-    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
-      return origin;
-    }
-    if (host === "localhost") return origin;
-  } catch {
-    // Malformed origin — fall through to default
-  }
-  return ALLOWED_ORIGINS[0];
-}
+import { CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
 
 export function jsonResponse(
   body: unknown,

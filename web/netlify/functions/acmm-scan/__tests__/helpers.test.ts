@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  buildStrictKubestellarCorsHeaders,
+  getStrictKubestellarCorsOrigin,
+  STRICT_KUBESTELLAR_ORIGINS,
+} from "../../_shared/cors";
 import type { DetectionHint } from "../criteria";
 import {
   AI_LABEL,
-  ALLOWED_ORIGINS,
-  corsHeaders,
-  corsOrigin,
   isAIContribution,
   isoWeek,
   lastNWeeks,
@@ -13,35 +15,49 @@ import {
 } from "../helpers";
 
 const EXPECTED_CORS_HEADER_KEYS = [
-  "Access-Control-Allow-Origin",
   "Access-Control-Allow-Methods",
   "Access-Control-Allow-Headers",
-  "Cache-Control",
   "Vary",
+  "Access-Control-Allow-Origin",
 ];
 
-describe("corsOrigin", () => {
-  it("returns allowed origins unchanged", () => {
-    expect(corsOrigin(ALLOWED_ORIGINS[0])).toBe(ALLOWED_ORIGINS[0]);
-    expect(corsOrigin(ALLOWED_ORIGINS[1])).toBe(ALLOWED_ORIGINS[1]);
-  });
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
-  it("allows localhost and kubestellar domains", () => {
-    expect(corsOrigin("http://localhost:5174")).toBe("http://localhost:5174");
-    expect(corsOrigin("https://console-preview.kubestellar.io")).toBe(
-      "https://console-preview.kubestellar.io",
+describe("getStrictKubestellarCorsOrigin", () => {
+  it("returns allowed origins unchanged", () => {
+    expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[0])).toBe(
+      STRICT_KUBESTELLAR_ORIGINS[0],
+    );
+    expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[1])).toBe(
+      STRICT_KUBESTELLAR_ORIGINS[1],
+    );
+    expect(getStrictKubestellarCorsOrigin(STRICT_KUBESTELLAR_ORIGINS[2])).toBe(
+      STRICT_KUBESTELLAR_ORIGINS[2],
     );
   });
 
-  it("falls back to the default origin for unknown or missing origins", () => {
-    expect(corsOrigin("https://example.com")).toBe(ALLOWED_ORIGINS[0]);
-    expect(corsOrigin(null)).toBe(ALLOWED_ORIGINS[0]);
+  it("rejects unknown kubestellar subdomains", () => {
+    expect(
+      getStrictKubestellarCorsOrigin("https://console-preview.kubestellar.io"),
+    ).toBeNull();
+  });
+
+  it("allows localhost only outside production", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBe(
+      "http://localhost:5174",
+    );
+
+    vi.stubEnv("NODE_ENV", "production");
+    expect(getStrictKubestellarCorsOrigin("http://localhost:5174")).toBeNull();
   });
 });
 
-describe("corsHeaders", () => {
+describe("buildStrictKubestellarCorsHeaders", () => {
   it("returns the expected CORS header keys", () => {
-    const headers = corsHeaders("https://console.kubestellar.io");
+    const headers = buildStrictKubestellarCorsHeaders("https://console.kubestellar.io");
 
     expect(Object.keys(headers)).toEqual(EXPECTED_CORS_HEADER_KEYS);
     expect(headers["Access-Control-Allow-Origin"]).toBe(

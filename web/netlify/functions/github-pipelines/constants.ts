@@ -72,12 +72,6 @@ export const PR_FROM_COMMIT_RE = /\(#(\d+)\)\s*$/;
 /** ms per day — used in matrix date math */
 export const MS_PER_DAY = 86_400_000;
 
-export const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://kubestellar.io",
-  "https://www.kubestellar.io",
-];
-
 /** GitHub API fetch with auth + typed error */
 export const GH_RETRY_MAX_ATTEMPTS = 3;
 export const GH_RETRY_BASE_DELAY_MS = 1_000;
