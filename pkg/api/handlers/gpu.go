@@ -224,6 +224,7 @@ func requireOwnerOrAdmin(c *fiber.Ctx, user *models.User, reservationOwnerID uui
 
 // ListReservations lists GPU reservations.
 // Admins can see all reservations; non-admins only see their own.
+// Admins may also use ?mine=true to filter to their own reservations.
 func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 	user, err := h.getCallerUser(c)
 	if err != nil {
@@ -242,6 +243,7 @@ func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 		return c.JSON(reservations)
 	}
 
+	// Admin users can see all reservations.
 	reservations, err := h.store.ListGPUReservations(c.UserContext())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list reservations")
