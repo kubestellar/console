@@ -244,6 +244,84 @@ func TestServer_HandleChatMessage_QuotaExceeded(t *testing.T) {
 	}
 }
 
+func TestValidateChatPromptSize(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     protocol.ChatRequest
+		wantErr bool
+	}{
+		{
+			name: "accepts prompt at limit",
+			req: protocol.ChatRequest{
+				Prompt: strings.Repeat("a", maxPromptChars),
+			},
+		},
+		{
+			name: "rejects prompt over limit",
+			req: protocol.ChatRequest{
+				Prompt: strings.Repeat("a", maxPromptChars+1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "rejects combined prompt and history over limit",
+			req: protocol.ChatRequest{
+				Prompt: strings.Repeat("a", maxPromptChars-1),
+				History: []protocol.ChatMessage{{
+					Role:    "user",
+					Content: "bc",
+				}},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateChatPromptSize(tt.req)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected prompt size validation error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected prompt size validation error: %v", err)
+			}
+		})
+	}
+}
+
+func TestServer_HandleChatMessage_PromptTooLarge(t *testing.T) {
+	msg := protocol.Message{
+		ID:   "test-prompt-too-large",
+		Type: protocol.TypeChat,
+		Payload: protocol.ChatRequest{
+			Prompt: strings.Repeat("a", maxPromptChars),
+			History: []protocol.ChatMessage{{
+				Role:    "user",
+				Content: "b",
+			}},
+		},
+	}
+
+	resp := (&Server{}).handleChatMessage(msg, "")
+	if resp.Type != protocol.TypeError {
+		t.Fatalf("expected error response, got type %s", resp.Type)
+	}
+
+	payload, ok := resp.Payload.(protocol.ErrorPayload)
+	if !ok {
+		t.Fatalf("expected protocol.ErrorPayload, got %T", resp.Payload)
+	}
+	if payload.Code != "prompt_too_large" {
+		t.Fatalf("expected prompt_too_large code, got %q", payload.Code)
+	}
+	if !strings.Contains(payload.Message, "combined prompt/history") {
+		t.Fatalf("expected prompt size error message, got %q", payload.Message)
+	}
+}
+
 // TestServer_SmartRouting tests the promptNeedsToolExecution heuristic
 func TestServer_SmartRouting(t *testing.T) {
 	s := &Server{}
