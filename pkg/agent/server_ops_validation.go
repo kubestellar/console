@@ -133,7 +133,9 @@ func (s *Server) validateAPIKeyValue(provider, apiKey string) (bool, error) {
 
 const perKeyValidationTimeout = 15 * time.Second
 
-var apiKeyValidationClient = &http.Client{Timeout: 30 * time.Second}
+const apiKeyValidationTimeout = 30 * time.Second
+
+var apiKeyValidationClient = newRestrictedAIProviderHTTPClient(apiKeyValidationTimeout)
 
 const maxConcurrentValidations = 5
 

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"math"
 	"net"
@@ -12,6 +13,8 @@ import (
 )
 
 const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API calls
+const aiProviderDialTimeout = 30 * time.Second
+const aiProviderDNSLookupTimeout = 3 * time.Second
 
 // cliProviderExecutionTimeout bounds standalone CLI-based providers when the
 // caller has not already attached a deadline.
@@ -19,55 +22,11 @@ const cliProviderExecutionTimeout = 5 * time.Minute
 
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
-// Uses a SSRF-safe transport that blocks connections to private/internal IPs
-// at dial time, preventing DNS rebinding attacks (#16902).
-var aiProviderHTTPClient = &http.Client{
-	Timeout: aiProviderHTTPTimeout,
-	CheckRedirect: func(_ *http.Request, via []*http.Request) error {
-		// Limit redirect hops to prevent open-redirect chains to internal services
-		const maxRedirects = 5
-		if len(via) >= maxRedirects {
-			return fmt.Errorf("stopped after %d redirects", maxRedirects)
-		}
-		return nil
-	},
-	Transport: &http.Transport{
-		DialContext: aiProviderSafeDialContext,
-	},
-}
+var aiProviderHTTPClient = newRestrictedAIProviderHTTPClient(aiProviderHTTPTimeout)
 
 // allowLoopbackForTests disables the private-IP check for 127.0.0.0/8 and ::1
 // during unit tests that use httptest.NewServer. Must never be set in production.
 var allowLoopbackForTests bool
-
-// aiProviderSafeDialContext resolves the host and rejects connections to
-// private/internal IPs before dialing. This prevents SSRF via DNS rebinding
-// where a domain passes save-time validation but resolves to an internal IP
-// at request time.
-func aiProviderSafeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return nil, err
-	}
-	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve host %s: %w", host, err)
-	}
-	if len(ips) == 0 {
-		return nil, fmt.Errorf("no IPs resolved for host %s", host)
-	}
-	for _, ip := range ips {
-		if allowLoopbackForTests && ip.IP.IsLoopback() {
-			continue
-		}
-		if isPrivateIP(ip.IP) {
-			return nil, fmt.Errorf("blocked: AI provider base URL resolved to non-public IP %s for host %s", ip.IP, host)
-		}
-	}
-	// Connect to the first validated IP directly — no second DNS lookup
-	dialer := &net.Dialer{Timeout: aiProviderHTTPTimeout}
-	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
-}
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
@@ -139,6 +98,128 @@ func estimateChatTokenUsage(req *ChatRequest, responseContent string) *ProviderT
 		OutputTokens: out,
 		TotalTokens:  in + out,
 	}
+}
+
+func newRestrictedAIProviderHTTPClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout:       timeout,
+		Transport:     newRestrictedAIProviderHTTPTransport(),
+		CheckRedirect: preventAIProviderRedirects,
+	}
+}
+
+func newRestrictedAIProviderHTTPTransport() *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	dialer := &net.Dialer{Timeout: aiProviderDialTimeout}
+
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return dialAIProviderContext(ctx, dialer, network, addr)
+	}
+	transport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return dialAIProviderTLSContext(ctx, dialer, network, addr, transport.TLSClientConfig)
+	}
+
+	return transport
+}
+
+func preventAIProviderRedirects(_ *http.Request, _ []*http.Request) error {
+	return http.ErrUseLastResponse
+}
+
+func dialAIProviderContext(ctx context.Context, dialer *net.Dialer, network, addr string) (net.Conn, error) {
+	if allowLocalProviders() {
+		return dialer.DialContext(ctx, network, addr)
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid provider address %q: %w", addr, err)
+	}
+
+	targets, err := resolveAIProviderTargets(ctx, host, port)
+	if err != nil {
+		return nil, err
+	}
+
+	var lastErr error
+	for _, target := range targets {
+		conn, dialErr := dialer.DialContext(ctx, network, target)
+		if dialErr == nil {
+			return conn, nil
+		}
+		lastErr = dialErr
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, fmt.Errorf("no provider addresses resolved for host %q", host)
+}
+
+func dialAIProviderTLSContext(ctx context.Context, dialer *net.Dialer, network, addr string, baseTLSConfig *tls.Config) (net.Conn, error) {
+	if allowLocalProviders() {
+		tlsDialer := &tls.Dialer{NetDialer: dialer, Config: cloneTLSConfig(baseTLSConfig)}
+		return tlsDialer.DialContext(ctx, network, addr)
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid provider address %q: %w", addr, err)
+	}
+
+	targets, err := resolveAIProviderTargets(ctx, host, port)
+	if err != nil {
+		return nil, err
+	}
+
+	var lastErr error
+	for _, target := range targets {
+		tlsConfig := cloneTLSConfig(baseTLSConfig)
+		if tlsConfig.ServerName == "" {
+			tlsConfig.ServerName = host
+		}
+		tlsDialer := &tls.Dialer{NetDialer: dialer, Config: tlsConfig}
+		conn, dialErr := tlsDialer.DialContext(ctx, network, target)
+		if dialErr == nil {
+			return conn, nil
+		}
+		lastErr = dialErr
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, fmt.Errorf("no provider addresses resolved for host %q", host)
+}
+
+func resolveAIProviderTargets(ctx context.Context, host, port string) ([]string, error) {
+	lookupCtx, cancel := context.WithTimeout(ctx, aiProviderDNSLookupTimeout)
+	defer cancel()
+
+	ipAddrs, err := net.DefaultResolver.LookupIPAddr(lookupCtx, host)
+	if err != nil {
+		if ip := net.ParseIP(host); ip != nil {
+			if isPrivateIP(ip) && !(allowLoopbackForTests && ip.IsLoopback()) {
+				return nil, fmt.Errorf("provider request blocked: host %q resolves to a private/internal IP address", host)
+			}
+			return []string{net.JoinHostPort(ip.String(), port)}, nil
+		}
+		return nil, err
+	}
+
+	targets := make([]string, 0, len(ipAddrs))
+	for _, ipAddr := range ipAddrs {
+		if isPrivateIP(ipAddr.IP) && !(allowLoopbackForTests && ipAddr.IP.IsLoopback()) {
+			return nil, fmt.Errorf("provider request blocked: host %q resolves to a private/internal IP address", host)
+		}
+		targets = append(targets, net.JoinHostPort(ipAddr.IP.String(), port))
+	}
+	return targets, nil
+}
+
+func cloneTLSConfig(base *tls.Config) *tls.Config {
+	if base == nil {
+		return &tls.Config{}
+	}
+	return base.Clone()
 }
 
 // newAIProviderHTTPClient returns the shared HTTP client configured with the
