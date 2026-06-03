@@ -97,6 +97,26 @@ var mixedModeBlockedStreamingFlags = map[string]bool{
 	"-w":       true,
 }
 
+// mixedModeBlockedTransportFlags are kubectl flags that allow redirecting
+// commands to attacker-controlled API servers or impersonating other users.
+var mixedModeBlockedTransportFlags = map[string]bool{
+	"--server":                     true,
+	"-s":                           true,
+	"--certificate-authority":      true,
+	"--client-certificate":         true,
+	"--client-key":                 true,
+	"--token":                      true,
+	"--as":                         true,
+	"--as-group":                   true,
+	"--as-uid":                     true,
+	"--insecure-skip-tls-verify":   true,
+	"--tls-server-name":            true,
+	"--cluster":                    true,
+	"--user":                       true,
+	"--raw":                        true,
+	"--filename":                   true,
+}
+
 func validateMixedModeCommands(commands []string) mixedModeCommandValidation {
 	validation := mixedModeCommandValidation{
 		Approved: make([]string, 0, len(commands)),
@@ -140,6 +160,9 @@ func validateMixedModeCommand(command string) (bool, string) {
 	}
 	if hasMixedModeStreamingFlag(args) {
 		return false, "streaming or watch flags are blocked in mixed mode"
+	}
+	if hasMixedModeBlockedTransportFlag(args) {
+		return false, "transport and authentication override flags are blocked in mixed mode"
 	}
 
 	switch commandName {
@@ -305,6 +328,26 @@ func hasMixedModeStreamingFlag(args []string) bool {
 		lower := strings.ToLower(arg)
 		if mixedModeBlockedStreamingFlags[lower] {
 			return true
+		}
+		// Block --watch=true, --watch-only, --follow=true variants (#16576)
+		if strings.HasPrefix(lower, "--watch") || strings.HasPrefix(lower, "--follow") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMixedModeBlockedTransportFlag(args []string) bool {
+	for _, arg := range args {
+		lower := strings.ToLower(arg)
+		if mixedModeBlockedTransportFlags[lower] {
+			return true
+		}
+		// Also block --flag=value variants
+		for flag := range mixedModeBlockedTransportFlags {
+			if strings.HasPrefix(lower, flag+"=") {
+				return true
+			}
 		}
 	}
 	return false
