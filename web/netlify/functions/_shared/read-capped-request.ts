@@ -7,6 +7,16 @@
  */
 
 /**
+ * Custom error thrown when a request body exceeds the size limit.
+ */
+export class PayloadTooLargeError extends Error {
+  constructor(label: string, totalBytes: number, maxBytes: number) {
+    super(`${label} body too large (read ${totalBytes} bytes, limit ${maxBytes})`);
+    this.name = 'PayloadTooLargeError';
+  }
+}
+
+/**
  * Reads a request body with a hard byte limit enforced on actual bytes read.
  * Throws if the body exceeds maxBytes.
  * 
@@ -41,7 +51,7 @@ export async function readCappedRequestBuffer(
 
       totalBytes += value.byteLength;
       if (totalBytes > maxBytes) {
-        throw new Error(`${label} body too large (read ${totalBytes} bytes, limit ${maxBytes})`);
+        throw new PayloadTooLargeError(label, totalBytes, maxBytes);
       }
       chunks.push(value);
     }

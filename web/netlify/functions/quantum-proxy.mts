@@ -1,7 +1,10 @@
 import type { Context } from "@netlify/functions";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
-import { readCappedRequestText } from "./_shared/read-capped-request";
+import {
+  readCappedRequestText,
+  PayloadTooLargeError,
+} from "./_shared/read-capped-request";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -84,7 +87,6 @@ const PROXY_TIMEOUT_MS = 15_000;
 const MAX_PROXY_BODY_BYTES = 1_048_576;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
-const OVERSIZED_REQUEST_ERROR = "Request body too large";
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
 const AUTH_COOKIE_NAME = "kc_auth";
 
@@ -367,12 +369,17 @@ export default async (req: Request, context: Context): Promise<Response> => {
         requestBody = await readCappedRequestText(
           req,
           MAX_PROXY_BODY_BYTES,
-          "quantum-proxy request"
+          "quantum-proxy",
         );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Request body too large";
-        return new Response(JSON.stringify({ error: message }), {
-          status: 413,
+      } catch (e) {
+        if (e instanceof PayloadTooLargeError) {
+          return new Response(JSON.stringify({ error: "Request body too large" }), {
+            status: 413,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ error: "Failed to read request body" }), {
+          status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
@@ -417,12 +424,6 @@ export default async (req: Request, context: Context): Promise<Response> => {
       headers: safeHeaders,
     });
   } catch (error) {
-    if (isBodyTooLargeError(error)) {
-      return new Response(JSON.stringify({ error: OVERSIZED_REQUEST_ERROR }), {
-        status: 413,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
     if (error instanceof Error && error.message === OVERSIZED_RESPONSE_ERROR) {
       return new Response(JSON.stringify({ error: OVERSIZED_RESPONSE_ERROR }), {
         status: 502,

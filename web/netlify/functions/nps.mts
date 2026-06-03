@@ -14,7 +14,10 @@
 import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
-import { readCappedRequestJson } from "./_shared/read-capped-request";
+import {
+  readCappedRequestJson,
+  PayloadTooLargeError,
+} from "./_shared/read-capped-request";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -231,24 +234,26 @@ export default async (req: Request) => {
         );
       }
 
-      // SECURITY: Enforce body size on actual bytes read, not Content-Length header.
-      // Chunked encoding can bypass Content-Length checks (CWE-400).
-      let body: { score: unknown; feedback?: unknown; sessionId?: unknown };
+      let body: Record<string, unknown>;
       try {
-        body = await readCappedRequestJson<{ score: unknown; feedback?: unknown; sessionId?: unknown }>(
+        body = await readCappedRequestJson<Record<string, unknown>>(
           req,
           MAX_BODY_BYTES,
-          "NPS request"
+          "nps",
         );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to read request body";
+      } catch (e) {
+        if (e instanceof PayloadTooLargeError) {
+          return new Response(
+            JSON.stringify({ error: "Payload too large" }),
+            { status: 413, headers }
+          );
+        }
         return new Response(
-          JSON.stringify({ error: message }),
-          { status: 413, headers }
+          JSON.stringify({ error: "Invalid JSON body" }),
+          { status: 400, headers }
         );
       }
-
-      const score = parseInt(body.score as string, 10);
+      const score = parseInt(String(body.score), 10);
 
       // Validate — 4-emoji widget uses scores 1-4
       if (isNaN(score) || score < SCORE_MIN || score > SCORE_MAX) {
