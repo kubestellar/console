@@ -99,55 +99,49 @@ func TestStellarBroadcastToClientsFiltersByAudience(t *testing.T) {
 }
 
 func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
+	const ingestEventPath = "/api/stellar/events"
+
+	dbPath := filepath.Join(t.TempDir(), "stellar-security.db")
+	sqlStore, err := store.NewSQLiteStore(dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	ctx := context.Background()
+	adminID := uuid.New()
+	editorID := uuid.New()
+	viewerID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: adminID, GitHubID: "1", GitHubLogin: "admin-user", Role: models.UserRoleAdmin}))
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: editorID, GitHubID: "2", GitHubLogin: "editor-user", Role: models.UserRoleEditor}))
+	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: viewerID, GitHubID: "3", GitHubLogin: "viewer-user", Role: models.UserRoleViewer}))
+
+	h := NewStellarHandler(sqlStore, nil, WithUserStore(sqlStore))
+
 	tests := []struct {
 		name       string
-		role       models.UserRole
+		userID     uuid.UUID
 		wantStatus int
 	}{
-		{name: "viewer forbidden", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
-		{name: "editor allowed", role: models.UserRoleEditor, wantStatus: http.StatusBadRequest},
-		{name: "admin allowed", role: models.UserRoleAdmin, wantStatus: http.StatusBadRequest},
+		{name: "viewer forbidden", userID: viewerID, wantStatus: http.StatusForbidden},
+		{name: "editor allowed", userID: editorID, wantStatus: http.StatusBadRequest},
+		{name: "admin allowed", userID: adminID, wantStatus: http.StatusBadRequest},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
-			h, userID, cleanup := newStellarIngestEventTestHandler(t, tt.role)
-			defer cleanup()
 			app.Use(func(c *fiber.Ctx) error {
-				c.Locals("userID", userID)
+				c.Locals("userID", tt.userID)
 				return c.Next()
 			})
-			app.Post("/api/stellar/events", h.IngestEvent)
+			app.Post(ingestEventPath, RequireEditorOrAdminMiddleware(sqlStore), h.IngestEvent)
 
-			req := httptest.NewRequest(http.MethodPost, "/api/stellar/events", strings.NewReader(`{}`))
+			req := httptest.NewRequest(http.MethodPost, ingestEventPath, strings.NewReader(`{}`))
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := app.Test(req, stellarTestFiberTimeoutMs)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStatus, resp.StatusCode)
 		})
 	}
-}
-
-func newStellarIngestEventTestHandler(t *testing.T, role models.UserRole) (*StellarHandler, uuid.UUID, func()) {
-	t.Helper()
-
-	dbPath := filepath.Join(t.TempDir(), "stellar-ingest-event.db")
-	sqlStore, err := store.NewSQLiteStore(dbPath)
-	require.NoError(t, err)
-
-	userID := uuid.New()
-	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{
-		ID:          userID,
-		GitHubLogin: "stellar-security-test",
-		Role:        role,
-	}))
-
-	cleanup := func() {
-		_ = sqlStore.Close()
-	}
-
-	return NewStellarHandler(sqlStore, nil, WithUserStore(sqlStore)), userID, cleanup
 }
 
 func readQueuedSSEEvent(t *testing.T, ch <-chan SSEEvent) SSEEvent {

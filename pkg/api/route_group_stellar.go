@@ -87,7 +87,7 @@ func (g *stellarRouteGroup) Register(api fiber.Router) {
 	api.Delete("/stellar/memory/:id", stellar.DeleteMemory)
 
 	api.Get("/stellar/observations", stellar.ListObservations)
-	api.Post("/stellar/events", handlers.RequireAdminMiddleware(g.userStore), stellar.IngestEvent)
+	api.Post("/stellar/events", handlers.RequireEditorOrAdminMiddleware(g.userStore), stellar.IngestEvent)
 
 	api.Get("/stellar/audit", stellar.ListAuditLog)
 
