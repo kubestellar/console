@@ -337,7 +337,7 @@ Routes tool calls to the appropriate console handlers.
 
 ### POST /api/kagenti-provider/chat
 
-Streams a Kagenti agent conversation via SSE with automatic cluster context injection.
+Streams a Kagenti agent conversation via SSE. Cluster inventory is injected only for console admins, and can be disabled entirely with `KAGENTI_DISABLE_INVENTORY=true`.
 
 **Request:**
 ```json

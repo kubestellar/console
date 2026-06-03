@@ -405,6 +405,7 @@ For in-cluster KAgent/KAgenti service discovery. Use controller URLs to skip dis
 | `KAGENTI_SERVICE_NAME` | Optional | — | Kubernetes service name for KAgenti |
 | `KAGENTI_SERVICE_PORT` | Optional | — | Service port for KAgenti |
 | `KAGENTI_SERVICE_PROTOCOL` | Optional | `http` | Service protocol (http/https) |
+| `KAGENTI_DISABLE_INVENTORY` | Optional | `false` | Disable cluster inventory injection for Kagenti chat prompts |
 
 ### GPU Metrics & Alerting
 

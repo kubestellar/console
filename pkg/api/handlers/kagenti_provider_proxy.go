@@ -8,13 +8,17 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // kagentiSSELineBufferBytes is the per-line read buffer for SSE streaming responses.
@@ -22,7 +26,9 @@ import (
 const kagentiSSELineBufferBytes = 256 * 1024
 
 const (
-	clusterContextTimeout = 10 * time.Second
+	clusterContextTimeout   = 10 * time.Second
+	kagentiDisableInventory = "KAGENTI_DISABLE_INVENTORY"
+	kagentiGenericPrompt    = "--- SYSTEM PROMPT ---\nYou are a helpful Kubernetes assistant. Answer the user's request using the available tools. Do not assume access to any specific cluster unless tool results provide that information.\n--- END SYSTEM PROMPT ---"
 )
 
 // KagentiProviderProxyHandler proxies requests to the kagenti A2A endpoint.
@@ -30,14 +36,16 @@ type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
 	k8sClient     *k8s.MultiClusterClient
+	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,
 		k8sClient:     k8sClient,
+		store:         s,
 	}
 }
 
@@ -115,8 +123,7 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "agent, namespace, and message are required"})
 	}
 
-	// Inject cluster context into the message
-	enrichedMessage := h.enrichMessageWithClusterContext(c.Context(), req.Message)
+	enrichedMessage := h.prepareChatMessage(c, req.Message)
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, enrichedMessage, req.ContextID, nil)
 	if err != nil {
@@ -320,28 +327,18 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 	})
 }
 
-// enrichMessageWithClusterContext prepends cluster context to the user's message
-func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx context.Context, message string) string {
-	if h.k8sClient == nil {
-		return message
-	}
+func isKagentiInventoryDisabled() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv(kagentiDisableInventory)), "true")
+}
 
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, clusterContextTimeout)
-	defer cancel()
+func buildKagentiGenericPrompt(message string) string {
+	return kagentiGenericPrompt + "\n\n" + message
+}
 
-	clusters, err := h.k8sClient.DeduplicatedClusters(ctxWithTimeout)
-	if err != nil {
-		slog.Warn("failed to fetch cluster list for kagenti context", "error", err)
-		return message
-	}
-
-	if len(clusters) == 0 {
-		return message
-	}
-
+func buildKagentiInventoryPrompt(message string, clusters []k8s.ClusterInfo) string {
 	var contextBuilder strings.Builder
-	contextBuilder.WriteString("--- SYSTEM CONTEXT ---\n")
-	contextBuilder.WriteString("You have access to the following Kubernetes clusters:\n\n")
+	contextBuilder.WriteString(kagentiGenericPrompt)
+	contextBuilder.WriteString("\nCluster inventory:\n\n")
 
 	for _, cluster := range clusters {
 		contextBuilder.WriteString(fmt.Sprintf("Cluster: %s\n", cluster.Name))
@@ -358,11 +355,61 @@ func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx contex
 	contextBuilder.WriteString("You can use the following tools to query cluster state:\n")
 	contextBuilder.WriteString("- get_cluster_list: Returns detailed cluster information\n")
 	contextBuilder.WriteString("- get_pod_list(cluster, namespace): Returns pods in a namespace\n")
-	contextBuilder.WriteString("- get_events(cluster, namespace): Returns recent warning events\n")
-	contextBuilder.WriteString("\n--- END CONTEXT ---\n\n")
+	contextBuilder.WriteString("- get_events(cluster, namespace): Returns recent warning events\n\n")
 	contextBuilder.WriteString(message)
 
 	return contextBuilder.String()
+}
+
+func (h *KagentiProviderProxyHandler) prepareChatMessage(c *fiber.Ctx, message string) string {
+	if isKagentiInventoryDisabled() {
+		return buildKagentiGenericPrompt(message)
+	}
+
+	isAdmin, err := h.isAdminUser(c)
+	if err != nil {
+		slog.Warn("failed to verify admin role for kagenti inventory", "error", err)
+		return buildKagentiGenericPrompt(message)
+	}
+	if !isAdmin {
+		return buildKagentiGenericPrompt(message)
+	}
+
+	return h.enrichMessageWithClusterContext(c.Context(), message)
+}
+
+func (h *KagentiProviderProxyHandler) isAdminUser(c *fiber.Ctx) (bool, error) {
+	if h.store == nil {
+		return false, nil
+	}
+
+	user, err := h.store.GetUser(c.UserContext(), middleware.GetUserID(c))
+	if err != nil {
+		return false, err
+	}
+	return user != nil && user.Role == models.UserRoleAdmin, nil
+}
+
+// enrichMessageWithClusterContext prepends cluster inventory to the user's message.
+func (h *KagentiProviderProxyHandler) enrichMessageWithClusterContext(ctx context.Context, message string) string {
+	if h.k8sClient == nil {
+		return buildKagentiGenericPrompt(message)
+	}
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, clusterContextTimeout)
+	defer cancel()
+
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctxWithTimeout)
+	if err != nil {
+		slog.Warn("failed to fetch cluster list for kagenti context", "error", err)
+		return buildKagentiGenericPrompt(message)
+	}
+
+	if len(clusters) == 0 {
+		return buildKagentiGenericPrompt(message)
+	}
+
+	return buildKagentiInventoryPrompt(message, clusters)
 }
 
 // GetTools returns available console tools for kagenti agents
