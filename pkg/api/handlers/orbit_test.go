@@ -318,6 +318,38 @@ func TestListMissionsScopesToCurrentUser(t *testing.T) {
 	}
 }
 
+func TestGetScheduleScopesToCurrentUser(t *testing.T) {
+	ownerID := uuid.New()
+	otherID := uuid.New()
+	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{
+		ownerID: &models.User{ID: ownerID, Role: models.UserRoleViewer},
+	}})
+	h.missions["mine"] = &OrbitMission{ID: "mine", Title: "mine", Cadence: "daily", OwnerID: ownerID.String(), History: []OrbitRunRecord{}}
+	h.missions["theirs"] = &OrbitMission{ID: "theirs", Title: "theirs", Cadence: "daily", OwnerID: otherID.String(), History: []OrbitRunRecord{}}
+
+	app := setupOrbitScopedApp(ownerID, h)
+	req, err := http.NewRequest(http.MethodGet, "/schedule", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	const fiberTestTimeoutMS = 5000
+	resp, err := app.Test(req, fiberTestTimeoutMS)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var got struct {
+		Schedule []OrbitScheduleEntry `json:"schedule"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(got.Schedule) != 1 || got.Schedule[0].MissionID != "mine" {
+		t.Fatalf("schedule = %+v, want only owned mission", got.Schedule)
+	}
+}
+
 func TestCreateMissionAssignsAuthenticatedOwner(t *testing.T) {
 	userID := uuid.New()
 	h := NewOrbitHandler(t.TempDir(), nil, &orbitSecurityStore{users: map[uuid.UUID]*models.User{

@@ -168,14 +168,7 @@ export function SubmitForm({
 
     ;(async () => {
       try {
-        const { getClientCtx } = await import('../../lib/clientCtx')
-        const ctx = getClientCtx()
-        if (!ctx) {
-          if (isCurrent) setCanLinkParentIssue(false)
-          return
-        }
         const { data } = await api.get<{ can_link_parent?: boolean }>(`/api/feedback/issue-link-capabilities?target_repo=${targetRepo}`, {
-          headers: { 'X-KC-Client-Auth': ctx },
           timeout: FETCH_DEFAULT_TIMEOUT_MS,
         })
         if (isCurrent) {

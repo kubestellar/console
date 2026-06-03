@@ -414,26 +414,10 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     setIsRefreshing(false)
   }
 
-  const withClientContext = useCallback(async <T extends { headers?: Record<string, string>; timeout?: number }>(options?: T): Promise<T | undefined> => {
-    const { getClientCtx } = await import('../lib/clientCtx')
-    const ctx = getClientCtx()
-    if (!ctx) {
-      return options
-    }
-    return {
-      ...(options ?? {}),
-      headers: {
-        ...(options?.headers ?? {}),
-        'X-KC-Client-Auth': ctx,
-      },
-    } as unknown as T
-  }, [])
-
   const createRequest = async (input: CreateFeatureRequestInput, options?: { timeout?: number }) => {
     try {
       setIsSubmitting(true)
-      const mergedOpts = await withClientContext(options)
-      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, mergedOpts)
+      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, options)
       setRequests(prev => [data, ...prev])
       return data
     } catch (err: unknown) {
@@ -467,15 +451,13 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
   }
 
   const closeRequest = async (requestId: string, input: CloseRequestInput = {}) => {
-    const requestOptions = await withClientContext<{ headers?: Record<string, string> }>({})
-    const { data } = await api.patch<FeatureRequest>(`/api/feedback/${requestId}/close`, input, requestOptions)
+    const { data } = await api.patch<FeatureRequest>(`/api/feedback/${requestId}/close`, input)
     setRequests(prev => prev.map(r => r.id === requestId ? data : r))
     return data
   }
 
   const reopenRequest = async (requestId: string, input: ReopenRequestInput) => {
-    const requestOptions = await withClientContext<{ headers?: Record<string, string> }>({})
-    const { data } = await api.post<FeatureRequest>(`/api/feedback/${requestId}/reopen`, input, requestOptions)
+    const { data } = await api.post<FeatureRequest>(`/api/feedback/${requestId}/reopen`, input)
     setRequests(prev => prev.map(r => r.id === requestId ? data : r))
     return data
   }

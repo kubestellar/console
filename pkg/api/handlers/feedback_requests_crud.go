@@ -40,7 +40,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		return err
 	}
 
-	clientAuth := c.Get("X-KC-Client-Auth")
+	clientAuth := extractClientAuth(c)
 	issueNumber, issueWarning, validScreenshots, ssResult, err := h.notifyUpstream(c.UserContext(), request, user, targetRepoName, &input, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)

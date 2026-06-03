@@ -46,6 +46,9 @@ func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, confi
 
 // GetStatus returns the kagenti controller availability status.
 func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.client == nil {
 		return c.JSON(fiber.Map{"available": false, "reason": "not configured"})
 	}

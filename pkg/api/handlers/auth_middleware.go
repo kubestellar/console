@@ -144,6 +144,29 @@ func (h *AuthHandler) clearJWTCookie(c *fiber.Ctx) {
 	})
 }
 
+func (h *AuthHandler) setClientAuthCookie(c *fiber.Ctx, token string) {
+	c.Cookie(&fiber.Cookie{
+		Name:     clientAuthCookieName,
+		Value:    token,
+		Path:     "/",
+		HTTPOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: "Strict",
+	})
+}
+
+func (h *AuthHandler) clearClientAuthCookie(c *fiber.Ctx) {
+	c.Cookie(&fiber.Cookie{
+		Name:     clientAuthCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HTTPOnly: true,
+		Secure:   isSecureRequest(c),
+		SameSite: "Strict",
+	})
+}
+
 func (h *AuthHandler) generateJWT(user *models.User) (string, error) {
 	claims := middleware.UserClaims{
 		UserID:      user.ID,

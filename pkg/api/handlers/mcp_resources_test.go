@@ -136,6 +136,33 @@ func TestGetSecrets(t *testing.T) {
 	assert.Equal(t, "test-secret", secrets[0].(map[string]interface{})["name"])
 }
 
+func TestGetSecrets_RBAC(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewMCPHandlers(nil, env.K8sClient, env.Store)
+
+	makeApp := func(userID uuid.UUID) *fiber.App {
+		app := fiber.New()
+		app.Get("/api/mcp/resources/secrets", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.GetSecrets(c)
+		})
+		return app
+	}
+
+	viewerID := uuid.New()
+	env.Store.(*test.MockStore).On("GetUser", viewerID).Return(&models.User{
+		ID:   viewerID,
+		Role: models.UserRoleViewer,
+	}, nil)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/mcp/resources/secrets?cluster=test-cluster&namespace=default", nil)
+	require.NoError(t, err)
+	resp, err := makeApp(viewerID).Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 func TestGetConfigMaps_AllClustersAnnotatesPartialErrors(t *testing.T) {
 	env := setupTestEnv(t)
 	handler := NewMCPHandlers(nil, env.K8sClient, env.Store)

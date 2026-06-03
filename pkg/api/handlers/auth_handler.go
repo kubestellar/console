@@ -14,7 +14,6 @@ import (
 	"golang.org/x/oauth2"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -421,21 +420,19 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		return h.oauthErrorRedirect(c, "jwt_failed", "")
 	}
 
-	// Set HttpOnly cookie (primary auth) — the token is NOT passed in the URL
-	// to prevent leakage via browser history, Referer headers, and server logs (#4278).
-	// The frontend reads the token from the cookie via POST /auth/refresh.
+	// Set HttpOnly cookies only — never hand bearer credentials to browser JavaScript.
+	// The JWT remains the primary auth cookie, while the GitHub OAuth access token is
+	// stored in a separate HttpOnly cookie for feedback attribution flows.
 	h.setJWTCookie(c, jwtToken)
+	if token.AccessToken != "" {
+		h.setClientAuthCookie(c, token.AccessToken)
+	}
 	audit.Log(c, audit.ActionUserLogin, "user", user.ID.String(), user.GitHubLogin)
 	slog.Info("[Auth] OAuth callback complete", "user", user.GitHubLogin, "frontendURL", h.frontendURL)
 
 	c.Set("Cache-Control", "no-store")
-	// The GitHub access credential is handed off to the frontend in the
-	// URL fragment, not a query param: fragments are not sent to servers
-	// or logged in Referer headers. The frontend moves it into session
-	// storage (obfuscated) and strips the fragment on arrival. The
-	// param name is intentionally opaque — keep it that way.
-	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t#kc_x=%s",
-		h.frontendURL, user.Onboarded, url.QueryEscape(token.AccessToken))
+	redirectURL := fmt.Sprintf("%s/auth/callback?onboarded=%t",
+		h.frontendURL, user.Onboarded)
 	return c.Redirect(redirectURL, fiber.StatusTemporaryRedirect)
 }
 
@@ -484,6 +481,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		slog.Info("[Auth] logout with expired/invalid token — clearing cookie idempotently",
 			"error", err)
 		h.clearJWTCookie(c)
+		h.clearClientAuthCookie(c)
 		return c.JSON(fiber.Map{"success": true, "message": "Already logged out"})
 	}
 
@@ -498,8 +496,9 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	}
 	middleware.RevokeToken(claims.ID, expiresAt)
 
-	// Clear the HttpOnly cookie so the browser stops sending it
+	// Clear the HttpOnly cookies so the browser stops sending them.
 	h.clearJWTCookie(c)
+	h.clearClientAuthCookie(c)
 
 	// Disconnect all active WebSocket connections for this user (#4906).
 	// This ensures that already-established WebSocket sessions cannot continue

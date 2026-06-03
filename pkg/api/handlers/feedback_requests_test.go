@@ -336,15 +336,27 @@ func TestGetIssueLinkCapabilities(t *testing.T) {
 		return handler.GetIssueLinkCapabilities(c)
 	})
 
-	req := httptest.NewRequest("GET", "/api/feedback/issue-link-capabilities?target_repo=console", nil)
-	req.Header.Set("X-KC-Client-Auth", "user-client-token")
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assertCanLinkParent := func(req *http.Request) {
+		resp, err := app.Test(req)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var result struct {
-		CanLinkParent bool `json:"can_link_parent"`
+		var result struct {
+			CanLinkParent bool `json:"can_link_parent"`
+		}
+		assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+		assert.True(t, result.CanLinkParent)
 	}
-	assert.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
-	assert.True(t, result.CanLinkParent)
+
+	t.Run("legacy header fallback", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/feedback/issue-link-capabilities?target_repo=console", nil)
+		req.Header.Set("X-KC-Client-Auth", "user-client-token")
+		assertCanLinkParent(req)
+	})
+
+	t.Run("httpOnly cookie", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/api/feedback/issue-link-capabilities?target_repo=console", nil)
+		req.AddCookie(&http.Cookie{Name: clientAuthCookieName, Value: "user-client-token"})
+		assertCanLinkParent(req)
+	})
 }

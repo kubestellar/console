@@ -42,6 +42,10 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 
 // GetSecrets returns Secrets from clusters
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 

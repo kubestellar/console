@@ -143,6 +143,18 @@ func TestKagentiProviderProxyHandler_RoleAuthorization(t *testing.T) {
 		wantMessage string
 	}{
 		{
+			name:   "GetStatus rejects viewer",
+			role:   models.UserRoleViewer,
+			method: http.MethodGet,
+			path:   "/status",
+			register: func(app *fiber.App, h *KagentiProviderProxyHandler) {
+				app.Get("/status", h.GetStatus)
+			},
+			handler:     NewKagentiProviderProxyHandler(nil, &stubKagentiConfigManager{}, nil, nil),
+			wantStatus:  http.StatusForbidden,
+			wantMessage: "Editor or admin role required",
+		},
+		{
 			name:   "UpdateConfig rejects viewer",
 			role:   models.UserRoleViewer,
 			method: http.MethodPatch,

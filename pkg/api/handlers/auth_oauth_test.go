@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"sync"
 	"testing"
 
@@ -219,17 +218,18 @@ func TestAuthOAuth_GitHubLoginAndCallback_SuccessFlow(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "/auth/callback", callbackLocation.Path)
 	assert.Contains(t, callbackLocation.RawQuery, "onboarded=false")
-	assert.True(t, strings.HasPrefix(callbackLocation.Fragment, "kc_x="))
-
-	fragmentValues, err := url.ParseQuery(callbackLocation.Fragment)
-	require.NoError(t, err)
-	assert.Equal(t, "gh-access-token", fragmentValues.Get("kc_x"))
+	assert.Empty(t, callbackLocation.Fragment)
 	assert.Equal(t, 1, tokenEndpointCalls)
 	assert.Equal(t, "test-code", tokenRequestCode)
 
 	authCookie := findResponseCookie(t, callbackResp, jwtCookieName)
 	assert.NotEmpty(t, authCookie.Value)
 	assert.Equal(t, http.SameSiteStrictMode, authCookie.SameSite)
+
+	clientAuthCookie := findResponseCookie(t, callbackResp, clientAuthCookieName)
+	assert.Equal(t, "gh-access-token", clientAuthCookie.Value)
+	assert.True(t, clientAuthCookie.HttpOnly)
+	assert.Equal(t, http.SameSiteStrictMode, clientAuthCookie.SameSite)
 
 	createdUser, err := s.GetUserByGitHubID(context.Background(), "4242")
 	require.NoError(t, err)

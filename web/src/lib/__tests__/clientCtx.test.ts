@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setClientCtx, getClientCtx, clearClientCtx, captureClientCtxFromFragment } from '../clientCtx'
 
 describe('clientCtx', () => {
@@ -6,32 +6,14 @@ describe('clientCtx', () => {
     sessionStorage.clear()
   })
 
-  describe('setClientCtx / getClientCtx round-trip', () => {
-    it('stores and retrieves a value', () => {
+  describe('setClientCtx / getClientCtx compatibility behavior', () => {
+    it('never stores the credential in sessionStorage', () => {
       setClientCtx('my-token')
-      expect(getClientCtx()).toBe('my-token')
-    })
-
-    it('stores value in obfuscated form (not plaintext in sessionStorage)', () => {
-      setClientCtx('my-token')
-      const raw = sessionStorage.getItem('kc_ux_ctx')
-      expect(raw).not.toBeNull()
-      expect(raw).not.toBe('my-token')
-    })
-
-    it('round-trips empty-ish values correctly — empty string skipped', () => {
-      setClientCtx('')
-      // Empty string is a no-op: getClientCtx returns ''
       expect(getClientCtx()).toBe('')
+      expect(sessionStorage.getItem('kc_ux_ctx')).toBeNull()
     })
 
-    it('overwrites a previously stored value', () => {
-      setClientCtx('first')
-      setClientCtx('second')
-      expect(getClientCtx()).toBe('second')
-    })
-
-    it('returns empty string when nothing stored', () => {
+    it('returns empty string when nothing is stored', () => {
       expect(getClientCtx()).toBe('')
     })
   })
@@ -68,7 +50,13 @@ describe('clientCtx', () => {
       expect(captureClientCtxFromFragment()).toBe(false)
     })
 
-    it('captures kc_x from fragment and returns true', () => {
+    it('strips kc_x from the fragment without storing it', () => {
+      const replaceState = vi.fn()
+      Object.defineProperty(window, 'history', {
+        value: { replaceState },
+        writable: true,
+        configurable: true,
+      })
       Object.defineProperty(window, 'location', {
         value: {
           hash: '#kc_x=captured-token',
@@ -80,7 +68,8 @@ describe('clientCtx', () => {
       })
       const captured = captureClientCtxFromFragment()
       expect(captured).toBe(true)
-      expect(getClientCtx()).toBe('captured-token')
+      expect(getClientCtx()).toBe('')
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/app')
     })
   })
 })

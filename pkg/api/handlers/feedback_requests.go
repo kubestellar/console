@@ -138,7 +138,7 @@ type QueueItemCount struct {
 }
 
 func (h *FeedbackHandler) GetIssueLinkCapabilities(c *fiber.Ctx) error {
-	clientAuth := c.Get("X-KC-Client-Auth")
+	clientAuth := extractClientAuth(c)
 	if clientAuth == "" {
 		return c.JSON(fiber.Map{"can_link_parent": false})
 	}
