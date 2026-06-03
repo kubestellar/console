@@ -171,17 +171,17 @@ type StellarHandler struct {
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
-	sseClients       map[string]chan SSEEvent
+	sseClients       map[string]sseClientEntry
 	sseClientsMu     sync.RWMutex
 }
 
-func (h *StellarHandler) registerSSEClient(connID string, ch chan SSEEvent) {
+func (h *StellarHandler) registerSSEClient(connID string, userID string, ch chan SSEEvent) {
 	h.sseClientsMu.Lock()
 	defer h.sseClientsMu.Unlock()
 	if h.sseClients == nil {
-		h.sseClients = make(map[string]chan SSEEvent)
+		h.sseClients = make(map[string]sseClientEntry)
 	}
-	h.sseClients[connID] = ch
+	h.sseClients[connID] = sseClientEntry{ch: ch, userID: userID}
 }
 
 func (h *StellarHandler) unregisterSSEClient(connID string) {
@@ -193,9 +193,13 @@ func (h *StellarHandler) unregisterSSEClient(connID string) {
 func (h *StellarHandler) broadcastToClients(event SSEEvent) {
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
-	for _, ch := range h.sseClients {
+	for _, entry := range h.sseClients {
+		// If event is user-scoped, only deliver to that user's clients.
+		if event.UserID != "" && entry.userID != event.UserID {
+			continue
+		}
 		select {
-		case ch <- event:
+		case entry.ch <- event:
 		default: // client too slow, skip
 		}
 	}
@@ -210,8 +214,15 @@ type SSEBroadcaster interface {
 }
 
 type SSEEvent struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type   string      `json:"type"`
+	Data   interface{} `json:"data"`
+	UserID string      `json:"-"` // If set, only deliver to this user's SSE clients (CWE-200, #16708)
+}
+
+// sseClientEntry associates an SSE channel with the owning user.
+type sseClientEntry struct {
+	ch     chan SSEEvent
+	userID string
 }
 
 func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
@@ -283,7 +294,7 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 			DedupeKey: dedupeKey,
 		}
 		_ = h.store.CreateStellarNotification(ctx, dueNotif)
-		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif})
+		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif, UserID: t.UserID})
 		if h.broadcaster != nil {
 			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
 				"taskId": t.ID,

@@ -390,7 +390,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 		defer streamCancel()
 		connID := fmt.Sprintf("%s-%d", userID, time.Now().UnixNano())
 		clientCh := make(chan SSEEvent, 32)
-		h.registerSSEClient(connID, clientCh)
+		h.registerSSEClient(connID, userID, clientCh)
 		defer h.unregisterSSEClient(connID)
 
 		// Send initial batch of unread notifications and state
