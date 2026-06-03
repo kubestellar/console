@@ -21,9 +21,9 @@ import (
 const gitopsDefaultTimeout = 30 * time.Second
 
 // gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
-// in kc-agent. Matches the backend's prefix exactly so cleanup sweeps and
-// diagnostic logs behave identically.
-const gitOpsTempDirPrefix = "/tmp/gitops-"
+// in kc-agent. Used for cleanup validation to prevent deleting directories
+// outside the temp area.
+var gitOpsTempDirPrefix = filepath.Join(os.TempDir(), "gitops-")
 
 // agentDriftedResource mirrors pkg/api/handlers/gitops.go#DriftedResource.
 // Kept local to pkg/agent because the agent cannot import pkg/api/handlers
