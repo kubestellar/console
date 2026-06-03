@@ -23,6 +23,7 @@ cmd/kc-agent/      Local agent (bridges browser to kubeconfig + MCP)
 pkg/agent/         AI providers (Claude, OpenAI, Gemini)
 pkg/api/           HTTP/WS server + handlers
 pkg/mcp/           MCP bridge to Kubernetes
+pkg/stellar/       Persistent AI runtime logic (providers, watchers, scheduler, solver)
 pkg/store/         SQLite database layer
 web/src/           React + TypeScript frontend
   components/cards/  Dashboard card components
@@ -134,6 +135,15 @@ npm run dev -- --port 5174  # Frontend
 ```
 
 The backend (KC API server) runs on port 8080. The KC agent WebSocket runs on port 8585.
+
+### Stellar orientation
+
+Stellar is the console's persistent AI runtime. When a task touches Stellar, start with these locations:
+- `pkg/api/handlers/stellar*.go` for REST endpoints, SSE, and background workers
+- `pkg/stellar/` for providers, watches, scheduling, and solver logic
+- `pkg/store/*stellar*` for persistence
+- `web/src/components/stellar/` and `web/src/services/stellar.ts` for the UI
+- `docs/stellar/README.md` for the operator guide and `docs/stellar/architecture.md` for design notes
 
 ---
 

@@ -253,6 +253,12 @@ The console can use AI for adaptive card suggestions and mission help. AI is **o
 
 **Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and the currently supported self-hosted path using kc-agent's CLI-based agents.
 
+## Stellar (persistent AI runtime)
+
+Stellar is the console's long-lived AI operations subsystem for **self-hosted** deployments. It adds a dedicated `/stellar` workspace, persistent notifications/tasks/watches/actions, provider routing, audit history, daily digests, and autonomous solve loops on top of the normal request/response assistant flow.
+
+Start with the [Stellar guide](docs/stellar/README.md) for what the feature does today, how to enable it, and how to use the UI. For deeper design notes and CRD references, see [docs/stellar/architecture.md](docs/stellar/architecture.md) and [docs/stellar/crds-v1alpha1.yaml](docs/stellar/crds-v1alpha1.yaml).
+
 ## How It Works
 
 1. **Onboarding** — Sign in with GitHub, answer role questions, get a personalized dashboard
