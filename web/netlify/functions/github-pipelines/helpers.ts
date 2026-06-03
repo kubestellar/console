@@ -3,7 +3,7 @@
  */
 import type { getStore } from "@netlify/blobs";
 import type { CachedView } from "./types";
-import { CACHE_TTL_MS, VALID_REPO_PATTERN } from "./constants";
+import { CACHE_TTL_MS, getRepos, VALID_REPO_PATTERN } from "./constants";
 
 export function jsonResponse(
   body: unknown,
@@ -20,6 +20,12 @@ export function jsonResponse(
 
 export function isValidRepo(repo: string | null): boolean {
   return !!repo && VALID_REPO_PATTERN.test(repo);
+}
+
+export function isAllowedRepo(repo: string | null): boolean {
+  if (!isValidRepo(repo)) return false;
+  const repoLower = repo.toLowerCase();
+  return getRepos().some((allowedRepo) => allowedRepo.toLowerCase() === repoLower);
 }
 
 export async function readCache<T>(

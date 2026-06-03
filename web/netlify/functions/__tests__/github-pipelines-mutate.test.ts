@@ -114,6 +114,26 @@ describe("github-pipelines-mutate", () => {
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
+  it("returns 403 for non-allowlisted repos", async () => {
+    mockMutate.mockResolvedValue(
+      new Response(JSON.stringify({ error: "Repo is not in the PIPELINE_REPOS allowlist" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const res = await handler(
+      makeMutateRequest({
+        op: "rerun",
+        repo: "some-org/some-repo",
+        run: "12345",
+        bearer: FAKE_MUTATE_AUTH_TOKEN,
+      }),
+    );
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toContain("allowlist");
+  });
+
   it("forwards authorized rerun to mutate and returns success", async () => {
     const res = await handler(
       makeMutateRequest({

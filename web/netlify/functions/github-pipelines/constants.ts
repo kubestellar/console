@@ -48,12 +48,12 @@ export const FLOW_MAX_RUNS_PER_REPO = 8;
 
 /** Default repos when PIPELINE_REPOS env var is not set */
 export const DEFAULT_REPOS = [
+  "kubestellar/kubestellar",
   "kubestellar/console",
   "kubestellar/docs",
-  "kubestellar/console-kb",
-  "kubestellar/kubestellar-mcp",
-  "kubestellar/console-marketplace",
-  "kubestellar/homebrew-tap",
+  "kubestellar/ocm-transport-plugin",
+  "kubestellar/galaxy",
+  "kubestellar/ui",
 ];
 
 /** The nightly release workflow on kubestellar/console — drives the Pulse card */
@@ -76,19 +76,25 @@ export const MS_PER_DAY = 86_400_000;
 export const GH_RETRY_MAX_ATTEMPTS = 3;
 export const GH_RETRY_BASE_DELAY_MS = 1_000;
 
-/** Matches `owner/repo` format before checking the configured PIPELINE_REPOS allowlist. */
+/** Matches `owner/repo` format for allowlisted repos. */
 export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
 /**
  * Repos scanned by the pipelines dashboard. Centralized: set the
  * PIPELINE_REPOS env var to a comma-separated list of owner/repo strings
  * to override (e.g. "myorg/myrepo" for a single-repo install, or
- * "org/a,org/b,org/c" for multi-repo). If unset, defaults to the 6
+ * "org/a,org/b,org/c" for multi-repo). If unset, defaults to the
  * KubeStellar repos above. The repo list is returned in every API
  * response so the frontend never hardcodes it.
  */
 export function getRepos(): string[] {
   const env = process.env.PIPELINE_REPOS;
   if (!env) return DEFAULT_REPOS;
-  return env.split(",").map((s) => s.trim()).filter(Boolean);
+
+  const repos = env
+    .split(",")
+    .map((repo) => repo.trim())
+    .filter((repo) => repo.length > 0 && VALID_REPO_PATTERN.test(repo));
+
+  return repos.length > 0 ? repos : DEFAULT_REPOS;
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -94,21 +95,19 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 			c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", maxAge))
 			return c.Send(stale.body)
 		}
-		status := fiber.StatusBadGateway
-		genericMsg := "failed to fetch pipeline data"
-		if err.Error() == "unknown repo" {
-			status = fiber.StatusBadRequest
-			genericMsg = "unknown repo"
+		var fiberErr *fiber.Error
+		if errors.As(err, &fiberErr) {
+			return c.Status(fiberErr.Code).JSON(fiber.Map{"error": fiberErr.Message})
 		}
 		slog.Error("[GitHubPipelines] fetch failed", "error", err)
-		return c.Status(status).JSON(fiber.Map{"error": genericMsg})
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to fetch pipeline data"})
 	}
 
 	inner, err := json.Marshal(v)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "marshal failed"})
 	}
-	reposJSON, err := json.Marshal(ghpRepos)
+	reposJSON, err := json.Marshal(ghpGetRepos())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "repos marshal failed"})
 	}

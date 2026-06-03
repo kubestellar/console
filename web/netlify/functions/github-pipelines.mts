@@ -36,7 +36,7 @@ import {
   jsonResponse,
   readCache,
   writeCache,
-  isValidRepo,
+  isAllowedRepo,
 } from "./github-pipelines/helpers";
 import {
   buildPulse,
@@ -58,6 +58,14 @@ export default async (req: Request): Promise<Response> => {
 
   const url = new URL(req.url);
   const view = url.searchParams.get("view") ?? "pulse";
+  const repo = url.searchParams.get("repo");
+
+  if (repo && !isAllowedRepo(repo)) {
+    return jsonResponse(
+      { error: "Repo is not in the PIPELINE_REPOS allowlist" },
+      { status: 403, headers: baseHeaders }
+    );
+  }
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
@@ -159,7 +167,7 @@ export default async (req: Request): Promise<Response> => {
       case "log": {
         const repo = url.searchParams.get("repo") ?? "";
         const job = url.searchParams.get("job") ?? "";
-        if (!isValidRepo(repo) || !REPOS.includes(repo) || !job || !/^\d+$/.test(job)) {
+        if (!repo || !job || !/^\d+$/.test(job)) {
           return jsonResponse(
             { error: "repo and valid numeric job params required" },
             { status: 400, headers: baseHeaders }
