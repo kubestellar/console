@@ -35,7 +35,7 @@ vi.mock('../demoMode', async (importOriginal) => {
 })
 
 vi.mock('../utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => url,
+  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
   getWsAuthToken: () => null,
 }))
 

@@ -23,7 +23,7 @@ vi.mock('../../../lib/api', () => ({
 }))
 
 vi.mock('../../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => url),
+  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
 vi.mock('../wsDetect', () => ({
@@ -292,7 +292,7 @@ describe('ws.onclose — reconnect scheduling', () => {
     })
 
     vi.runAllTimers()
-    await Promise.resolve() // flush microtasks from appendWsAuthToken
+    await Promise.resolve() // flush microtasks from getWsAuthParams
 
     expect(sharedWebSocket.reconnectAttempts).toBe(1)
     expect(reconnectWs).not.toBeNull()

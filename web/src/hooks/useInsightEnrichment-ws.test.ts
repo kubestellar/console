@@ -42,7 +42,7 @@ vi.mock('../lib/constants', async (importOriginal) => {
 } })
 
 vi.mock('../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: async (url: string) => url,
+  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
 }))
 
 // ── WebSocket mock ──────────────────────────────────────────────────────────────
