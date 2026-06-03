@@ -36,6 +36,7 @@ import { CRITERIA } from "./acmm-scan/criteria";
 import {
   CACHE_STORE,
   CACHE_TTL_MS,
+  FORCE_COOLDOWN_S,
   REPO_NOT_ALLOWED_ERROR,
   REPO_RE,
   corsHeaders,
@@ -93,6 +94,7 @@ export default async (req: Request) => {
     Netlify.env.get("GITHUB_TOKEN") || process.env.GITHUB_TOKEN || "";
 
   // Check blob cache (per-repo key) — skipped when ?force=true
+  // Rate-limit: even forced refreshes must respect the cooldown window.
   const store = getStore(CACHE_STORE);
   const cacheKey = `scan:${repo}`;
   if (!force) {
@@ -112,6 +114,26 @@ export default async (req: Request) => {
       }
     } catch {
       // cache miss — continue
+    }
+  } else {
+    // force=true: still enforce a per-repo cooldown to prevent API quota exhaustion
+    try {
+      const cached = await store.get(cacheKey, { type: "text" });
+      if (cached) {
+        const entry: CacheEntry = JSON.parse(cached);
+        const ageS = (Date.now() - (entry.expiresAt - CACHE_TTL_MS)) / 1000;
+        if (ageS < FORCE_COOLDOWN_S) {
+          return new Response(
+            JSON.stringify({ ...entry.data, fromCache: true }),
+            {
+              status: 200,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+    } catch {
+      // cache read error — allow the live scan to proceed
     }
   }
 

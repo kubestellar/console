@@ -13,6 +13,8 @@ export const GITHUB_API = "https://api.github.com";
 export const CACHE_STORE = "acmm-scan";
 /** Per-repo cache TTL: 1 hour */
 export const CACHE_TTL_MS = 60 * 60 * 1000;
+/** Minimum cooldown between forced refreshes per repo (seconds) */
+export const FORCE_COOLDOWN_S = 60;
 /** Request timeout for GitHub API calls */
 export const API_TIMEOUT_MS = 15_000;
 /** How many weeks of contribution history to return */
