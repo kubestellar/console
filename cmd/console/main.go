@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/joho/godotenv"
@@ -88,19 +90,38 @@ func main() {
 	}
 }
 
+const dataDirPerms = 0o700
+
+var chmodPath = os.Chmod //nolint:gochecknoglobals // overridden in tests
+
 func ensureDir(path string) {
-	// Extract directory from path
-	dir := path
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' {
-			dir = path[:i]
-			break
-		}
+	if err := ensureDirPath(path); err != nil {
+		slog.Error("failed to prepare data directory", "path", path, "error", err)
+		os.Exit(1)
 	}
-	if dir != path && dir != "" {
-		if err := os.MkdirAll(dir, 0700); err != nil {
-			slog.Error("failed to create data directory", "path", dir, "error", err)
-			os.Exit(1)
-		}
+}
+
+func ensureDirPath(path string) error {
+	dir := filepath.Dir(path)
+	if dir == "." || dir == "" || dir == string(filepath.Separator) {
+		return nil
 	}
+
+	_, statErr := os.Stat(dir)
+	dirExisted := statErr == nil
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("stat data directory: %w", statErr)
+	}
+
+	if err := os.MkdirAll(dir, dataDirPerms); err != nil {
+		return fmt.Errorf("create data directory: %w", err)
+	}
+	if err := chmodPath(dir, dataDirPerms); err != nil {
+		if dirExisted && os.IsPermission(err) {
+			slog.Warn("could not tighten existing data directory permissions", "path", dir, "error", err)
+			return nil
+		}
+		return fmt.Errorf("secure data directory permissions: %w", err)
+	}
+	return nil
 }

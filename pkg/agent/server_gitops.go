@@ -22,9 +22,9 @@ import (
 const gitopsDefaultTimeout = 30 * time.Second
 
 // gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
-// in kc-agent. Used for cleanup validation to prevent deleting directories
-// outside the temp area.
-var gitOpsTempDirPrefix = filepath.Join(os.TempDir(), "gitops-")
+// in kc-agent. os.MkdirTemp uses it to create a race-safe unique directory
+// under the OS temp root.
+const gitOpsTempDirPrefix = "gitops-"
 
 // agentDriftedResource mirrors pkg/api/handlers/gitops.go#DriftedResource.
 // Kept local to pkg/agent because the agent cannot import pkg/api/handlers
@@ -201,12 +201,13 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 		return "", fmt.Errorf("invalid branch name: %w", err)
 	}
 
-	tempDir, err := os.MkdirTemp("", "gitops-")
+	tempDir, err := os.MkdirTemp("", gitOpsTempDirPrefix)
 	if err != nil {
 		return "", fmt.Errorf("create temp directory: %w", err)
 	}
-	if !strings.HasPrefix(tempDir, filepath.Join(os.TempDir(), "gitops-")) {
-		os.RemoveAll(tempDir)
+	cleanTempDir := filepath.Clean(tempDir)
+	if filepath.Dir(cleanTempDir) != os.TempDir() || !strings.HasPrefix(filepath.Base(cleanTempDir), gitOpsTempDirPrefix) {
+		_ = os.RemoveAll(cleanTempDir)
 		return "", fmt.Errorf("temp dir in unexpected location: %s", tempDir)
 	}
 
@@ -227,6 +228,7 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		gitopsCleanupTempDir(tempDir)
 		return "", fmt.Errorf("git clone failed: %s", stderr.String())
 	}
 	return tempDir, nil
@@ -254,17 +256,17 @@ func gitopsIsKustomizeDir(path string) bool {
 
 // gitopsCleanupTempDir mirrors the backend cleanupTempDir helper.
 func gitopsCleanupTempDir(dir string) {
-	tempPrefix := filepath.Join(os.TempDir(), "gitops-")
-	if !strings.HasPrefix(dir, gitOpsTempDirPrefix) && !strings.HasPrefix(dir, tempPrefix) {
-		slog.Warn("[agent] SECURITY: refused to delete directory outside gitops temp prefix", "dir", dir)
+	cleanDir := filepath.Clean(dir)
+	if filepath.Dir(cleanDir) != os.TempDir() || !strings.HasPrefix(filepath.Base(cleanDir), gitOpsTempDirPrefix) {
+		slog.Warn("[agent] SECURITY: refused to delete directory outside managed gitops temp dir", "dir", dir)
 		return
 	}
-	if strings.Contains(dir, "..") {
+	if strings.Contains(cleanDir, "..") {
 		slog.Warn("[agent] SECURITY: refused to delete directory with path traversal", "dir", dir)
 		return
 	}
-	if err := os.RemoveAll(dir); err != nil {
-		slog.Warn("[agent] failed to cleanup temp directory", "dir", dir, "error", err)
+	if err := os.RemoveAll(cleanDir); err != nil {
+		slog.Warn("[agent] failed to cleanup temp directory", "dir", cleanDir, "error", err)
 	}
 }
 

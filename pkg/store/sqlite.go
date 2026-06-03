@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -95,6 +96,9 @@ const DefaultUserLevel = 1
 const (
 	// sqliteDefaultMaxOpenConns limits concurrent database connections
 	sqliteDefaultMaxOpenConns = 25
+	// sqliteDatabaseFileMode prevents other local users from reading secrets
+	// persisted in the SQLite database on shared hosts.
+	sqliteDatabaseFileMode = 0o600
 	// sqliteDefaultMaxIdleConns controls idle connection pool size
 	sqliteDefaultMaxIdleConns = 5
 	// sqliteDefaultConnMaxLifetime recycles connections periodically
@@ -372,11 +376,48 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		db.Close()
 		return nil, fmt.Errorf("failed to migrate: %w", err)
 	}
+	if err := secureSQLiteDatabaseFile(dbPath); err != nil {
+		db.Close()
+		return nil, err
+	}
 
 	// Tighten WAL and SHM sidecar files created by the driver.
 	tightenSidecarPerms(dbPath)
 
 	return store, nil
+}
+
+func secureSQLiteDatabaseFile(dbPath string) error {
+	if !isSQLiteFilePath(dbPath) {
+		return nil
+	}
+	for _, path := range []string{dbPath, dbPath + "-wal", dbPath + "-shm"} {
+		if err := chmodIfExists(path, sqliteDatabaseFileMode); err != nil {
+			return fmt.Errorf("failed to secure sqlite database permissions: %w", err)
+		}
+	}
+	return nil
+}
+
+func chmodIfExists(path string, mode os.FileMode) error {
+	if err := os.Chmod(path, mode); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func isSQLiteFilePath(dbPath string) bool {
+	cleanPath := strings.TrimSpace(dbPath)
+	if cleanPath == "" || cleanPath == ":memory:" {
+		return false
+	}
+	if strings.HasPrefix(cleanPath, "file:") {
+		return false
+	}
+	return filepath.Clean(cleanPath) != "."
 }
 
 // Close closes the database connection
