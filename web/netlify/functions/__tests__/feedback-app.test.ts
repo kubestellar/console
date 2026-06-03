@@ -331,12 +331,24 @@ describe("feedback-app", () => {
     }));
   });
 
-  it("rejects labeled issue creation when user lacks push permissions", async () => {
+  it("creates issue without labels when user lacks push permissions", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
     mockGetRepoPermissions.mockResolvedValue({ pull: true, push: false, admin: false });
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 9999,
+          number: 42,
+          html_url: "https://github.com/kubestellar/console/issues/42",
+        }),
+        {
+          status: HTTP_STATUS_CREATED,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const req = new Request("https://example.test/feedback-app", {
@@ -352,15 +364,16 @@ describe("feedback-app", () => {
         action: "create_issue",
         title: "Test Issue",
         body: "Issue content",
-        labels: ["bug"],
+        labels: ["kind/bug"],
       }),
     });
     const res = await handler(req);
-    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN);
-    const body = await readJson<{ error: string }>(res);
-    expect(body.error).toBe("Push access required to set feedback issue labels as kubestellar-console-bot");
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(mockGetInstallationCred).not.toHaveBeenCalled();
+    expect(res.status).toBe(HTTP_STATUS_OK);
+    const body = await readJson<{ warning?: string }>(res);
+    expect(body.warning).toContain("without labels");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const sentBody = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    expect(sentBody.labels).toBeUndefined();
   });
 
   it("creates issue and links to parent when user has push permissions", async () => {
@@ -413,12 +426,24 @@ describe("feedback-app", () => {
     expect(mockAddSubIssue).toHaveBeenCalledWith("mock_install_token", "kubestellar/console", 100, expectedIssueId);
   });
 
-  it("rejects parent issue linking when user lacks push permissions", async () => {
+  it("creates issue and returns warning when parent issue linking lacks push permissions", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
     mockGetRepoPermissions.mockResolvedValue({ pull: true, push: false, admin: false });
 
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 9999,
+          number: 42,
+          html_url: "https://github.com/kubestellar/console/issues/42",
+        }),
+        {
+          status: HTTP_STATUS_CREATED,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const req = new Request("https://example.test/feedback-app", {
@@ -438,11 +463,10 @@ describe("feedback-app", () => {
       }),
     });
     const res = await handler(req);
-    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN);
-    const body = await readJson<{ error: string }>(res);
-    expect(body.error).toBe("Push access required to link feedback issues to a parent issue as kubestellar-console-bot");
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(mockGetInstallationCred).not.toHaveBeenCalled();
+    expect(res.status).toBe(HTTP_STATUS_OK);
+    const body = await readJson<{ warning?: string }>(res);
+    expect(body.warning).toContain("parent issue linking requires push access");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(mockAddSubIssue).not.toHaveBeenCalled();
   });
 
@@ -450,6 +474,7 @@ describe("feedback-app", () => {
   it("adds comment to issue successfully", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user2", id: 5678 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ pull: true, push: true, admin: false });
 
     const expectedHtmlUrl = "https://github.com/kubestellar/console/issues/42#issuecomment-123456";
 
@@ -532,6 +557,7 @@ describe("feedback-app", () => {
   it("updates issue state successfully", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user3", id: 8901 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ pull: true, push: true, admin: false });
 
     const expectedHtmlUrl = "https://github.com/kubestellar/console/issues/42";
 
@@ -688,6 +714,7 @@ describe("feedback-app", () => {
   it("handles GitHub API 4xx/5xx responses safely without leaking credentials", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ pull: true, push: true, admin: false });
 
     const fetchMock = vi.fn().mockResolvedValue(
       new Response("Invalid token mock_install_token or something else", {
@@ -722,6 +749,7 @@ describe("feedback-app", () => {
   it("handles native fetch rejection safely returning 502 without leaking credentials", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ pull: true, push: true, admin: false });
 
     const fetchMock = vi.fn().mockRejectedValue(new Error("Native fetch failed with mock_install_token"));
     vi.stubGlobal("fetch", fetchMock);

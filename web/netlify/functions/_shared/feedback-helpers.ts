@@ -20,6 +20,14 @@ export const ALLOWED_REPOS = new Set([
   "kubestellar/docs",
 ]);
 
+export const ALLOWED_FEEDBACK_LABELS = new Set([
+  "ai-fix-requested",
+  "console-docs",
+  "enhancement",
+  "kind/bug",
+  "needs-triage",
+]);
+
 /** App JWT validity window (GitHub caps at 10 min; use 9). */
 const APP_JWT_TTL_SEC = 9 * 60;
 /** Clock-skew allowance when signing the App JWT. */
@@ -73,6 +81,34 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set([
   "comment_issue",
   "update_issue_state",
 ]);
+const MAX_ISSUE_TITLE_CHARS = 256;
+const MAX_ISSUE_BODY_CHARS = 20_000;
+const MAX_LABELS_PER_REQUEST = 5;
+const MAX_LABEL_CHARS = 50;
+const REPO_PART_PATTERN = /^[a-z0-9_.-]+$/;
+const UNSAFE_CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+function sanitizeSingleLineInput(value: string): string {
+  return value
+    .replace(UNSAFE_CONTROL_CHARS_PATTERN, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function sanitizeMultilineInput(value: string): string {
+  return value
+    .replace(UNSAFE_CONTROL_CHARS_PATTERN, "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+}
+
+function sanitizeRepoPart(value: string): string {
+  return sanitizeSingleLineInput(value).toLowerCase();
+}
+
+function sanitizeLabel(value: string): string {
+  return sanitizeSingleLineInput(value).toLowerCase();
+}
 
 /**
  * Validates and narrows a parsed JSON body into a typed IssueRequest.
@@ -95,6 +131,15 @@ export function validateIssueRequest(
     return { ok: false, error: "repoName must be a non-empty string" };
   }
 
+  const repoOwner = sanitizeRepoPart(obj.repoOwner);
+  const repoName = sanitizeRepoPart(obj.repoName);
+  if (!REPO_PART_PATTERN.test(repoOwner)) {
+    return { ok: false, error: "repoOwner contains invalid characters" };
+  }
+  if (!REPO_PART_PATTERN.test(repoName)) {
+    return { ok: false, error: "repoName contains invalid characters" };
+  }
+
   // action — optional, must be one of the known actions
   let action: FeedbackAppAction = "create_issue";
   if (obj.action !== undefined) {
@@ -114,6 +159,15 @@ export function validateIssueRequest(
     return { ok: false, error: "body must be a string" };
   }
 
+  const title = typeof obj.title === "string" ? sanitizeSingleLineInput(obj.title) : undefined;
+  const body = typeof obj.body === "string" ? sanitizeMultilineInput(obj.body) : undefined;
+  if (title !== undefined && title.length > MAX_ISSUE_TITLE_CHARS) {
+    return { ok: false, error: `title must be ${MAX_ISSUE_TITLE_CHARS} characters or fewer` };
+  }
+  if (body !== undefined && body.length > MAX_ISSUE_BODY_CHARS) {
+    return { ok: false, error: `body must be ${MAX_ISSUE_BODY_CHARS} characters or fewer` };
+  }
+
   // issueNumber — number if present
   if (obj.issueNumber !== undefined) {
     if (typeof obj.issueNumber !== "number" || !Number.isInteger(obj.issueNumber) || obj.issueNumber <= 0) {
@@ -127,15 +181,34 @@ export function validateIssueRequest(
   }
 
   // labels — string[] if present
+  let labels: string[] | undefined;
   if (obj.labels !== undefined) {
     if (!Array.isArray(obj.labels)) {
       return { ok: false, error: "labels must be an array of strings" };
     }
+    if (obj.labels.length > MAX_LABELS_PER_REQUEST) {
+      return { ok: false, error: `labels must contain ${MAX_LABELS_PER_REQUEST} entries or fewer` };
+    }
+
+    const sanitizedLabels = new Set<string>();
     for (let i = 0; i < obj.labels.length; i++) {
       if (typeof obj.labels[i] !== "string") {
         return { ok: false, error: `labels[${i}] must be a string` };
       }
+      const label = sanitizeLabel(obj.labels[i]);
+      if (label === "") {
+        return { ok: false, error: `labels[${i}] must not be empty` };
+      }
+      if (label.length > MAX_LABEL_CHARS) {
+        return { ok: false, error: `labels[${i}] must be ${MAX_LABEL_CHARS} characters or fewer` };
+      }
+      if (!ALLOWED_FEEDBACK_LABELS.has(label)) {
+        return { ok: false, error: `labels[${i}] is not allowed` };
+      }
+      sanitizedLabels.add(label);
     }
+
+    labels = [...sanitizedLabels];
   }
 
   // parentIssueNumber — number if present
@@ -147,17 +220,17 @@ export function validateIssueRequest(
 
   // Action-specific required field checks
   if (action === "create_issue") {
-    if (!obj.title || (typeof obj.title === "string" && obj.title.trim() === "")) {
+    if (!title) {
       return { ok: false, error: "title and body are required for issue creation" };
     }
-    if (!obj.body || (typeof obj.body === "string" && obj.body.trim() === "")) {
+    if (!body) {
       return { ok: false, error: "title and body are required for issue creation" };
     }
   }
   if ((action === "comment_issue" || action === "update_issue_state") && typeof obj.issueNumber !== "number") {
     return { ok: false, error: "issueNumber is required for this action" };
   }
-  if (action === "comment_issue" && !obj.body) {
+  if (action === "comment_issue" && !body) {
     return { ok: false, error: "body is required for issue comments" };
   }
   if (action === "update_issue_state" && obj.state !== "open" && obj.state !== "closed") {
@@ -168,13 +241,13 @@ export function validateIssueRequest(
     ok: true,
     value: {
       action,
-      repoOwner: obj.repoOwner as string,
-      repoName: obj.repoName as string,
+      repoOwner,
+      repoName,
       ...(typeof obj.issueNumber === "number" ? { issueNumber: obj.issueNumber } : {}),
-      ...(typeof obj.title === "string" ? { title: obj.title } : {}),
-      ...(typeof obj.body === "string" ? { body: obj.body } : {}),
+      ...(title ? { title } : {}),
+      ...(body ? { body } : {}),
       ...(obj.state === "open" || obj.state === "closed" ? { state: obj.state } : {}),
-      ...(Array.isArray(obj.labels) ? { labels: obj.labels as string[] } : {}),
+      ...(labels && labels.length > 0 ? { labels } : {}),
       ...(typeof obj.parentIssueNumber === "number" ? { parentIssueNumber: obj.parentIssueNumber } : {}),
     },
   };

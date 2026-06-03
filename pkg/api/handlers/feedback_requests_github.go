@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -132,6 +133,9 @@ func (h *FeedbackHandler) invokeFeedbackProxy(ctx context.Context, payload feedb
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return fmt.Errorf("%w: feedback proxy returned %d: %s", errFeedbackProxyDenied, resp.StatusCode, string(body))
+		}
 		return fmt.Errorf("feedback proxy returned %d: %s", resp.StatusCode, string(body))
 	}
 	return nil
@@ -183,6 +187,9 @@ func (h *FeedbackHandler) updateGitHubIssueStateForUser(ctx context.Context, iss
 		}, clientAuth); err == nil {
 			return nil
 		} else {
+			if errors.Is(err, errFeedbackProxyDenied) {
+				return err
+			}
 			slog.Warn("[Feedback] feedback proxy state update failed, falling back to direct GitHub", "repo", repoName, "issue", issueNumber, "error", err)
 		}
 	}
@@ -295,6 +302,9 @@ func (h *FeedbackHandler) addIssueCommentForUser(ctx context.Context, issueNumbe
 		}, clientAuth); err == nil {
 			return nil
 		} else {
+			if errors.Is(err, errFeedbackProxyDenied) {
+				return err
+			}
 			slog.Warn("[Feedback] feedback proxy comment failed, falling back to direct GitHub", "repo", repoName, "issue", issueNumber, "error", err)
 		}
 	}

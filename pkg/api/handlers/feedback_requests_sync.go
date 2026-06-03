@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 
@@ -36,6 +37,9 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 		if h.getEffectiveToken() != "" {
 			if closeErr := h.closeGitHubIssueForUser(c.UserContext(), issueNum, repoName, clientAuth); closeErr != nil {
 				slog.Error("[Feedback] failed to close GitHub issue", "issue", issueNum, "repo", repoName, "error", closeErr)
+				if errors.Is(closeErr, errFeedbackProxyDenied) {
+					return fiber.NewError(fiber.StatusForbidden, "Push access required to close this issue")
+				}
 				return fiber.NewError(fiber.StatusBadGateway, "Failed to close issue on GitHub")
 			}
 		}
@@ -75,6 +79,9 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 
 	if request.GitHubIssueNumber != nil && h.getEffectiveToken() != "" {
 		if err := h.closeGitHubIssueForUser(c.UserContext(), *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo), clientAuth); err != nil {
+			if errors.Is(err, errFeedbackProxyDenied) {
+				return fiber.NewError(fiber.StatusForbidden, "Push access required to close this issue")
+			}
 			return fiber.NewError(fiber.StatusBadGateway, "Failed to close issue on GitHub")
 		}
 	}
@@ -121,9 +128,15 @@ func (h *FeedbackHandler) ReopenRequest(c *fiber.Ctx) error {
 		commentBody := verificationCommentBody(input.Comment)
 		if h.getEffectiveToken() != "" {
 			if err := h.addIssueCommentForUser(c.UserContext(), issueNum, commentBody, repoName, clientAuth); err != nil {
+				if errors.Is(err, errFeedbackProxyDenied) {
+					return fiber.NewError(fiber.StatusForbidden, "Push access required to comment on this issue")
+				}
 				return fiber.NewError(fiber.StatusBadGateway, "Failed to add issue comment")
 			}
 			if err := h.updateGitHubIssueStateForUser(c.UserContext(), issueNum, repoName, "open", clientAuth); err != nil {
+				if errors.Is(err, errFeedbackProxyDenied) {
+					return fiber.NewError(fiber.StatusForbidden, "Push access required to reopen this issue")
+				}
 				return fiber.NewError(fiber.StatusBadGateway, "Failed to reopen issue on GitHub")
 			}
 			h.addIssueLabels(c.UserContext(), issueNum, repoName, []string{"ai-fix-requested", "needs-triage"})
@@ -168,9 +181,15 @@ func (h *FeedbackHandler) ReopenRequest(c *fiber.Ctx) error {
 	commentBody := verificationCommentBody(input.Comment)
 	if request.GitHubIssueNumber != nil && h.getEffectiveToken() != "" {
 		if err := h.addIssueCommentForUser(c.UserContext(), *request.GitHubIssueNumber, commentBody, h.resolveRepoName(request.TargetRepo), clientAuth); err != nil {
+			if errors.Is(err, errFeedbackProxyDenied) {
+				return fiber.NewError(fiber.StatusForbidden, "Push access required to comment on this issue")
+			}
 			return fiber.NewError(fiber.StatusBadGateway, "Failed to add issue comment")
 		}
 		if err := h.updateGitHubIssueStateForUser(c.UserContext(), *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo), "open", clientAuth); err != nil {
+			if errors.Is(err, errFeedbackProxyDenied) {
+				return fiber.NewError(fiber.StatusForbidden, "Push access required to reopen this issue")
+			}
 			return fiber.NewError(fiber.StatusBadGateway, "Failed to reopen issue on GitHub")
 		}
 		h.addIssueLabels(c.UserContext(), *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo), []string{"ai-fix-requested", "needs-triage"})

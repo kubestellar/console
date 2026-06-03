@@ -517,6 +517,9 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 		if err == nil {
 			return createdIssue, nil
 		}
+		if errors.Is(err, errFeedbackProxyDenied) {
+			return createdGitHubIssue{}, err
+		}
 		// Fall through to the direct path so a proxy outage doesn't
 		// block feedback submission. The issue won't get App
 		// attribution but the user's report still lands.
@@ -653,6 +656,9 @@ func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner
 		respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
 		if err != nil {
 			slog.Warn("failed to read response body", "error", err)
+		}
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return createdGitHubIssue{}, fmt.Errorf("%w: proxy returned %d: %s", errFeedbackProxyDenied, resp.StatusCode, string(respBody))
 		}
 		return createdGitHubIssue{}, fmt.Errorf("proxy returned %d: %s", resp.StatusCode, string(respBody))
 	}

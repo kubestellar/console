@@ -47,12 +47,8 @@ const MAX_FEEDBACK_BODY_BYTES = 102_400;
 const MAX_RESPONSE_BYTES = 512_000;
 const FEEDBACK_COMMENT_PERMISSION_ERROR =
   "Push access required to add feedback issue comments as kubestellar-console-bot";
-const FEEDBACK_LABEL_PERMISSION_ERROR =
-  "Push access required to set feedback issue labels as kubestellar-console-bot";
 const FEEDBACK_STATE_PERMISSION_ERROR =
   "Push access required to change feedback issue state as kubestellar-console-bot";
-const FEEDBACK_PARENT_LINK_PERMISSION_ERROR =
-  "Push access required to link feedback issues to a parent issue as kubestellar-console-bot";
 
 type MutationPermissionRequirement =
   | { allowed: true }
@@ -118,7 +114,7 @@ function logDeniedFeedbackMutation(
 
 function getMutationPermissionRequirement(
   action: FeedbackAppAction,
-  payload: IssueRequest,
+  _payload: IssueRequest,
   repoPermissions: RepoPermissions,
 ): MutationPermissionRequirement {
   if (action === "comment_issue" && !hasRepoWriteAccess(repoPermissions)) {
@@ -127,18 +123,6 @@ function getMutationPermissionRequirement(
 
   if (action === "update_issue_state" && !hasRepoWriteAccess(repoPermissions)) {
     return { allowed: false, error: FEEDBACK_STATE_PERMISSION_ERROR };
-  }
-
-  if ((payload.labels || []).length > 0 && !hasRepoWriteAccess(repoPermissions)) {
-    return { allowed: false, error: FEEDBACK_LABEL_PERMISSION_ERROR };
-  }
-
-  if (
-    typeof payload.parentIssueNumber === "number" &&
-    payload.parentIssueNumber > 0 &&
-    !hasRepoWriteAccess(repoPermissions)
-  ) {
-    return { allowed: false, error: FEEDBACK_PARENT_LINK_PERMISSION_ERROR };
   }
 
   return { allowed: true };
@@ -176,6 +160,7 @@ export default async function handler(request: Request): Promise<Response> {
 
   let payload: IssueRequest | null = null;
   let action: FeedbackAppAction = "create_issue";
+  const warningMessages: string[] = [];
   if (request.method === "POST") {
     const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
     if (contentLength > MAX_FEEDBACK_BODY_BYTES) {
@@ -254,10 +239,6 @@ export default async function handler(request: Request): Promise<Response> {
     return jsonResponse(request, 200, { can_link_parent: hasRepoWriteAccess(repoPermissions) });
   }
 
-  if (!payload) {
-    return jsonResponse(request, 400, { error: "Request body required" });
-  }
-
   const permissionRequirement = getMutationPermissionRequirement(
     action,
     payload,
@@ -272,6 +253,29 @@ export default async function handler(request: Request): Promise<Response> {
       permissionRequirement.error,
     );
     return jsonResponse(request, 403, { error: permissionRequirement.error });
+  }
+
+  if (!payload) {
+    return jsonResponse(request, 400, { error: "Request body required" });
+  }
+
+  const hasWriteAccess = hasRepoWriteAccess(repoPermissions);
+  const requestedLabels = payload.labels ?? [];
+  const requestedParentIssueNumber = payload.parentIssueNumber;
+  const issuePayloadLabels = hasWriteAccess ? requestedLabels : [];
+  if (!hasWriteAccess && requestedLabels.length > 0) {
+    warningMessages.push(
+      `Issue will be created without labels because push access is required to apply labels in ${repoSlug}.`,
+    );
+  }
+  if (
+    !hasWriteAccess &&
+    typeof requestedParentIssueNumber === "number" &&
+    requestedParentIssueNumber > 0
+  ) {
+    warningMessages.push(
+      `Issue will be created without parent issue linking because push access is required in ${repoSlug}.`,
+    );
   }
 
   let installCred: string;
@@ -349,8 +353,8 @@ export default async function handler(request: Request): Promise<Response> {
 
     // Default action: create_issue
     const issuePayload: Record<string, unknown> = { title: payload.title, body: stampedBody };
-    if (payload.labels && payload.labels.length > 0) {
-      issuePayload.labels = payload.labels;
+    if (issuePayloadLabels.length > 0) {
+      issuePayload.labels = issuePayloadLabels;
     }
 
     const resp = await fetch(`${GITHUB_API}/repos/${repoSlug}/issues`, {
@@ -376,32 +380,36 @@ export default async function handler(request: Request): Promise<Response> {
       issueId: data.id,
       htmlUrl: data.html_url,
     });
-    if ((payload.labels || []).length > 0) {
+    if (issuePayloadLabels.length > 0) {
       logFeedbackBotMutation("set_labels", repoSlug, user, {
         createdIssueNumber: data.number,
         issueId: data.id,
         htmlUrl: data.html_url,
-        labels: payload.labels ?? [],
+        labels: issuePayloadLabels,
       });
     }
 
-    let warning: string | undefined;
-    if (typeof payload.parentIssueNumber === "number" && payload.parentIssueNumber > 0) {
-      try {
-        await addSubIssue(installCred, repoSlug, payload.parentIssueNumber, data.id);
-        logFeedbackBotMutation("link_parent_issue", repoSlug, user, {
-          createdIssueNumber: data.number,
-          issueId: data.id,
-          htmlUrl: data.html_url,
-          parentIssueNumber: payload.parentIssueNumber,
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error("[feedback-app] Sub-issue linking failed:", msg);
-        warning = `Issue #${data.number} was created, but it could not be linked to parent issue #${payload.parentIssueNumber}.`;
+    if (typeof requestedParentIssueNumber === "number" && requestedParentIssueNumber > 0) {
+      if (!hasWriteAccess) {
+        warningMessages.push(`Issue #${data.number} was created, but parent issue linking requires push access to ${repoSlug}.`);
+      } else {
+        try {
+          await addSubIssue(installCred, repoSlug, requestedParentIssueNumber, data.id);
+          logFeedbackBotMutation("link_parent_issue", repoSlug, user, {
+            createdIssueNumber: data.number,
+            issueId: data.id,
+            htmlUrl: data.html_url,
+            parentIssueNumber: requestedParentIssueNumber,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("[feedback-app] Sub-issue linking failed:", msg);
+          warningMessages.push(`Issue #${data.number} was created, but it could not be linked to parent issue #${requestedParentIssueNumber}.`);
+        }
       }
     }
 
+    const warning = warningMessages.length > 0 ? warningMessages.join(" ") : undefined;
     return jsonResponse(request, 200, {
       id: data.id,
       number: data.number,

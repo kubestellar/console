@@ -41,6 +41,7 @@ describe("feedback helpers", () => {
 
     expect(module.ALLOWED_REPOS.has("kubestellar/console")).toBe(true);
     expect(module.ALLOWED_REPOS.has("kubestellar/docs")).toBe(true);
+    expect(module.ALLOWED_FEEDBACK_LABELS.has("kind/bug")).toBe(true);
     expect(module.CLIENT_AUTH_HEADER).toBe("x-kc-client-auth");
     expect(module.CORS_OPTS.headers).toContain(module.CLIENT_AUTH_HEADER);
 
@@ -49,10 +50,11 @@ describe("feedback helpers", () => {
       error: "Request body must be a JSON object",
     });
     expect(module.validateIssueRequest({
-      repoOwner: "kubestellar",
-      repoName: "console",
-      title: "Need tests",
-      body: "Please add tests",
+      repoOwner: " KubeStellar ",
+      repoName: " Console ",
+      title: "  Need tests\n",
+      body: "Please add tests\r\nwith details",
+      labels: [" KIND/BUG "],
     })).toEqual({
       ok: true,
       value: {
@@ -60,7 +62,8 @@ describe("feedback helpers", () => {
         repoOwner: "kubestellar",
         repoName: "console",
         title: "Need tests",
-        body: "Please add tests",
+        body: "Please add tests\nwith details",
+        labels: ["kind/bug"],
       },
     });
     expect(module.validateIssueRequest({
@@ -70,6 +73,16 @@ describe("feedback helpers", () => {
     })).toEqual({
       ok: false,
       error: "issueNumber is required for this action",
+    });
+    expect(module.validateIssueRequest({
+      repoOwner: "kubestellar",
+      repoName: "console",
+      title: "Need tests",
+      body: "Please add tests",
+      labels: ["bug"],
+    })).toEqual({
+      ok: false,
+      error: "labels[0] is not allowed",
     });
     expect(module.validateIssueRequest({
       action: "update_issue_state",

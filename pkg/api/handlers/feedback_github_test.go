@@ -210,3 +210,39 @@ func TestPostGitHubIssue_SubIssueLinkFailureReturnsWarning(t *testing.T) {
 	assert.Equal(t, 7, createdIssue.Number)
 	assert.Contains(t, createdIssue.Warning, "could not be linked to parent issue #123")
 }
+
+func TestPostGitHubIssue_DoesNotBypassProxyAuthorizationFailure(t *testing.T) {
+	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "token"})
+	handler.attributionProxyURL = "https://proxy.example/api/feedback-app"
+	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+		if req.URL.String() != "https://proxy.example/api/feedback-app" {
+			t.Fatalf("unexpected direct GitHub fallback: %s", req.URL.String())
+		}
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Body:       io.NopCloser(strings.NewReader(`{"error":"Push access required"}`)),
+			Header:     make(http.Header),
+		}
+	})}
+
+	_, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Bug title", "Bug body", []string{"kind/bug"}, nil, "user-client-token")
+	assert.ErrorIs(t, err, errFeedbackProxyDenied)
+}
+
+func TestAddIssueCommentForUser_DoesNotBypassProxyAuthorizationFailure(t *testing.T) {
+	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "token"})
+	handler.attributionProxyURL = "https://proxy.example/api/feedback-app"
+	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+		if req.URL.String() != "https://proxy.example/api/feedback-app" {
+			t.Fatalf("unexpected direct GitHub fallback: %s", req.URL.String())
+		}
+		return &http.Response{
+			StatusCode: http.StatusForbidden,
+			Body:       io.NopCloser(strings.NewReader(`{"error":"Push access required"}`)),
+			Header:     make(http.Header),
+		}
+	})}
+
+	err := handler.addIssueCommentForUser(context.Background(), 42, "Need update", "console", "user-client-token")
+	assert.ErrorIs(t, err, errFeedbackProxyDenied)
+}

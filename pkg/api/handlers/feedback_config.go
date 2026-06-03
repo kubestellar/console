@@ -59,6 +59,12 @@ var errGitHubUnauthorized = errors.New("github: token invalid or expired")
 // re-authenticate / open-on-GitHub message instead of the raw API payload.
 var errGitHubInsufficientPermissions = errors.New("github: insufficient issue permissions")
 
+// errFeedbackProxyDenied is returned when the feedback attribution proxy rejects
+// a mutation due to failed authentication or insufficient repository access.
+// Callers must not fall back to server-side GitHub credentials in this case,
+// or they would bypass the user's actual GitHub permissions.
+var errFeedbackProxyDenied = errors.New("feedback proxy denied request")
+
 // githubAPIBase is the default public GitHub API base URL.
 // Used as the fallback by resolveGitHubAPIBase() when GITHUB_URL is unset.
 const githubAPIBase = "https://api.github.com"
