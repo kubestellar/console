@@ -806,6 +806,9 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
 
   // ── Phase 1: Setup ────────────────────────────────────────────────────
   console.log('[CacheTest] Phase 1: Setup — mocks + cold mode')
+  // Playwright applies route handlers in reverse registration order, so install
+  // the broad /api fallback first and layer specific mocks on top of it.
+  await page.route('**/api/**', fulfillSkippedRoute)
   await setupAuth(page)
   await registerColdBatchStorageReset(page)
   mockControl = await setupLiveMocks(page, { delayDataAPIs: false })
@@ -826,10 +829,6 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   for (const pattern of skipRoutePatterns) {
     await page.route(pattern, fulfillSkippedRoute)
   }
-
-  // Catch-all for any remaining /api/* endpoints — prevents 401 redirects
-  // and keeps unknown SSE/EventSource requests from aborting on MIME mismatch.
-  await page.route('**/api/**', fulfillSkippedRoute)
 
   await setLiveColdMode(page)
 

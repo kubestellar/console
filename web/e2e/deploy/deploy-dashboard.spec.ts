@@ -214,6 +214,26 @@ function fulfillFallbackApiRoute(route: Route) {
 }
 
 async function setupMockRoutes(page: Page, state: MockState) {
+  // Playwright applies route handlers in reverse registration order, so install
+  // broad fallbacks first and let the specific mocks below override them.
+  await page.route('**/api/**', (route) => {
+    state.logCall(route, 'api-catch-all')
+    return fulfillFallbackApiRoute(route)
+  })
+  await page.route('**/api/mcp/**', (route) => {
+    state.logCall(route, 'mcp/catch-all')
+    const accept = route.request().headers()['accept'] || ''
+    if (accept.includes('text/event-stream')) {
+      route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+        body: buildSSE('items', { items: [] }),
+      })
+    } else {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
+    }
+  })
+
   // Health — required so checkBackendAvailability() returns true
   await page.route('**/health', (route) => {
     state.logCall(route, 'health')
@@ -372,21 +392,6 @@ async function setupMockRoutes(page: Page, state: MockState) {
     }
   })
 
-  // Catch-all for SSE endpoints
-  await page.route('**/api/mcp/**', (route) => {
-    state.logCall(route, 'mcp/catch-all')
-    const accept = route.request().headers()['accept'] || ''
-    if (accept.includes('text/event-stream')) {
-      route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
-        body: buildSSE('items', { items: [] }),
-      })
-    } else {
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
-    }
-  })
-
   // Permissions
   await page.route('**/api/permissions/**', (route) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ clusters: {} }) })
@@ -417,14 +422,6 @@ async function setupMockRoutes(page: Page, state: MockState) {
     await page.route(pattern, (route) => fulfillFallbackApiRoute(route))
   }
 
-  // Catch-all for any /api/* requests not explicitly mocked above — prevents
-  // networkidle from stalling on new endpoints that features add over time.
-  // Some background requests use EventSource/SSE, so preserve a stream MIME
-  // type there too instead of replying with JSON and aborting the connection.
-  await page.route('**/api/**', (route) => {
-    state.logCall(route, 'api-catch-all')
-    return fulfillFallbackApiRoute(route)
-  })
 }
 
 // ---------------------------------------------------------------------------

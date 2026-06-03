@@ -253,49 +253,10 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     return false
   }
 
-  // 1. SSE endpoints (MUST be registered BEFORE generic /api/mcp/**)
-  await page.route('**/api/mcp/*/stream**', async (route) => {
-    const url = route.request().url()
-    if (trackSSE) sseRequestLog.push(url)
-    const endpoint = url.match(/\/api\/mcp\/([^/]+)\/stream/)?.[1] || ''
+  // Register generic handlers first because Playwright applies route handlers
+  // in reverse registration order. More specific mocks added later must win.
 
-    if (shouldError(endpoint)) {
-      await fulfillError(route, endpoint)
-      return
-    }
-
-    await maybeDelay()
-    await new Promise(r => setTimeout(r, 150))
-    route.fulfill({
-      status: 200,
-      contentType: 'text/event-stream',
-      headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-      body: buildSSEResponse(endpoint),
-    })
-  })
-
-  // 2. Specific MCP REST endpoints with richer data
-  const specificMCPEndpoints = [
-    { pattern: '**/api/mcp/gpu-nodes**', data: { nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] } },
-    { pattern: '**/api/mcp/helm-releases**', data: { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2026-01-15T10:00:00Z' }] } },
-    { pattern: '**/api/mcp/operators**', data: { operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] } },
-    { pattern: '**/api/mcp/operator-subscriptions**', data: { subscriptions: [{ name: 'test-sub', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, package: 'test-operator', channel: 'stable', currentCSV: 'test-operator.v1.0.0', installedCSV: 'test-operator.v1.0.0' }] } },
-    { pattern: '**/api/mcp/resource-quotas**', data: { quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] } },
-    { pattern: '**/api/mcp/nodes**', data: { nodes: [{ name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], kubeletVersion: 'v1.28.0', conditions: [{ type: 'Ready', status: 'True' }] }] } },
-  ]
-
-  for (const ep of specificMCPEndpoints) {
-    await page.route(ep.pattern, async (route) => {
-      if (route.request().url().includes('/stream')) { await route.fallback(); return }
-      const endpoint = route.request().url().match(/\/api\/mcp\/([^/?]+)/)?.[1] || ''
-      if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
-      await maybeDelay()
-      await new Promise(r => setTimeout(r, 150))
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ep.data) })
-    })
-  }
-
-  // 3. Generic MCP REST endpoints
+  // 1. Generic MCP REST endpoints
   //
   // Issue 9086: the previous `const delay = 100 + Math.random() * 200` made
   // every mock response arrive at a different time on each test run, which
@@ -316,6 +277,48 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       body: JSON.stringify(getMockRESTData(route.request().url())),
     })
   })
+
+  // 2. SSE endpoints
+  await page.route('**/api/mcp/*/stream**', async (route) => {
+    const url = route.request().url()
+    if (trackSSE) sseRequestLog.push(url)
+    const endpoint = url.match(/\/api\/mcp\/([^/]+)\/stream/)?.[1] || ''
+
+    if (shouldError(endpoint)) {
+      await fulfillError(route, endpoint)
+      return
+    }
+
+    await maybeDelay()
+    await new Promise(r => setTimeout(r, 150))
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+      body: buildSSEResponse(endpoint),
+    })
+  })
+
+  // 3. Specific MCP REST endpoints with richer data
+  const specificMCPEndpoints = [
+    { pattern: '**/api/mcp/gpu-nodes**', data: { nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] } },
+    { pattern: '**/api/mcp/helm-releases**', data: { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2026-01-15T10:00:00Z' }] } },
+    { pattern: '**/api/mcp/operators**', data: { operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] } },
+    { pattern: '**/api/mcp/operator-subscriptions**', data: { subscriptions: [{ name: 'test-sub', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, package: 'test-operator', channel: 'stable', currentCSV: 'test-operator.v1.0.0', installedCSV: 'test-operator.v1.0.0' }] } },
+    { pattern: '**/api/mcp/resource-quotas**', data: { quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] } },
+    { pattern: '**/api/mcp/nodes**', data: { nodes: [{ name: 'node-1', cluster: MOCK_CLUSTER, status: 'Ready', roles: ['control-plane'], kubeletVersion: 'v1.28.0', conditions: [{ type: 'Ready', status: 'True' }] }] } },
+  ]
+
+  for (const ep of specificMCPEndpoints) {
+    await page.route(ep.pattern, async (route) => {
+      if (route.request().url().includes('/stream')) { await route.fallback(); return }
+      const endpoint = route.request().url().match(/\/api\/mcp\/([^/?]+)/)?.[1] || ''
+      if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
+      await maybeDelay()
+      await new Promise(r => setTimeout(r, 150))
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ep.data) })
+    })
+  }
 
   // 4. Health endpoints
   await page.route('**/health', (route) => {
