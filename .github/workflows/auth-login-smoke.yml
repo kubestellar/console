@@ -470,13 +470,13 @@ jobs:
 
           # Match: new WebSocket( with agent URL patterns, excluding
           # getWsAuthParams calls and test files.
-          # useActiveUsers.ts is excluded — it connects to the backend
-          # (not kc-agent) and authenticates via post-open message.
+          # Filter on the code portion only (not the file path), otherwise
+          # filenames like localAgentChat.ts trigger false positives.
           WS_VIOLATIONS=$(grep -rn \
             -e 'new WebSocket(' \
             web/src/ \
             --include='*.ts' --include='*.tsx' \
-            | grep -i -e 'LOCAL_AGENT' -e 'agent' -e '8585' \
+            | awk 'BEGIN{IGNORECASE=1} { code=$0; sub(/^[^:]+:[0-9]+:/, "", code); if (code ~ /(LOCAL_AGENT|agent|8585)/) print $0 }' \
             | grep -v 'getWsAuthParams' \
             | grep -v '__tests__' \
             | grep -v '\.test\.' \
