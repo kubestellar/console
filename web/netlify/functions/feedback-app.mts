@@ -23,6 +23,7 @@ import {
   type InMemoryRateLimitEntry,
 } from "./_shared/inMemoryRateLimit";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+import { readCappedRequestText, RequestBodyTooLargeError } from "./_shared/read-capped-request";
 import {
   ALLOWED_REPOS,
   CLIENT_AUTH_HEADER,
@@ -149,19 +150,14 @@ export default async function handler(request: Request): Promise<Response> {
   let payload: IssueRequest | null = null;
   let action: FeedbackAppAction = "create_issue";
   if (request.method === "POST") {
-    const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
-    if (contentLength > MAX_FEEDBACK_BODY_BYTES) {
-      return jsonResponse(request, 413, { error: "Request body too large" });
-    }
-
     let rawBody: unknown;
     try {
-      const text = await request.text();
-      if (text.length > MAX_FEEDBACK_BODY_BYTES) {
+      const text = await readCappedRequestText(request, MAX_FEEDBACK_BODY_BYTES, "feedback-app");
+      rawBody = JSON.parse(text) as unknown;
+    } catch (err) {
+      if (err instanceof RequestBodyTooLargeError) {
         return jsonResponse(request, 413, { error: "Request body too large" });
       }
-      rawBody = JSON.parse(text) as unknown;
-    } catch {
       return jsonResponse(request, 400, { error: "Invalid JSON body" });
     }
 

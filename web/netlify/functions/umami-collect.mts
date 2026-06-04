@@ -11,6 +11,7 @@
 import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
+import { readCappedRequestText, RequestBodyTooLargeError } from "./_shared/read-capped-request"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
@@ -127,16 +128,17 @@ export default async (req: Request) => {
     }
   }
 
-  const contentLength = Number.parseInt(req.headers.get("content-length") || "0", 10)
-  if (contentLength > MAX_BODY_BYTES) {
-    return new Response("Payload too large", { status: 413, headers: corsHeaders })
+  let body: string
+  try {
+    body = await readCappedRequestText(req, MAX_BODY_BYTES, "umami-collect")
+  } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return new Response("Payload too large", { status: 413, headers: corsHeaders })
+    }
+    return new Response("Bad request", { status: 400, headers: corsHeaders })
   }
 
   try {
-    const body = await req.text()
-    if (body.length > MAX_BODY_BYTES) {
-      return new Response("Payload too large", { status: 413, headers: corsHeaders })
-    }
     if (!isJsonObjectPayload(body)) {
       return new Response("Bad payload", { status: 400, headers: corsHeaders })
     }
