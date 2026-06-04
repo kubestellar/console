@@ -30,6 +30,50 @@ func (s *SQLiteStore) CreateSolve(ctx context.Context, solve *StellarSolve) erro
 	return err
 }
 
+// CreateSolveIfNoneActive atomically inserts a solve only if no running solve
+// exists for the given event. Returns (solve, true) if created, or the existing
+// active solve and false if one was already running. This prevents the TOCTOU
+// race between GetActiveSolveForEvent and CreateSolve (CWE-362).
+func (s *SQLiteStore) CreateSolveIfNoneActive(ctx context.Context, solve *StellarSolve) (*StellarSolve, bool, error) {
+	if solve.ID == "" {
+		solve.ID = uuid.New().String()
+	}
+	if solve.StartedAt.IsZero() {
+		solve.StartedAt = time.Now().UTC()
+	}
+	if solve.Status == "" {
+		solve.Status = "running"
+	}
+
+	res, err := s.db.ExecContext(ctx, `
+		INSERT INTO stellar_solves (id, event_id, user_id, cluster, namespace, workload, status, actions_taken, summary, started_at)
+		SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+		WHERE NOT EXISTS (
+			SELECT 1 FROM stellar_solves WHERE event_id = ? AND status = 'running'
+		)
+	`,
+		solve.ID, solve.EventID, solve.UserID, solve.Cluster, solve.Namespace, solve.Workload,
+		solve.Status, solve.ActionsTaken, solve.Summary, solve.StartedAt,
+		solve.EventID,
+	)
+	if err != nil {
+		return nil, false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return nil, false, err
+	}
+	if rows == 1 {
+		return solve, true, nil
+	}
+	// A running solve already exists — return it.
+	existing, err := s.GetActiveSolveForEvent(ctx, solve.EventID)
+	if err != nil {
+		return nil, false, err
+	}
+	return existing, false, nil
+}
+
 // GetActiveSolveForEvent returns the most recent running solve for an event,
 // or nil if none exists. Used to make StartSolve idempotent.
 func (s *SQLiteStore) GetActiveSolveForEvent(ctx context.Context, eventID string) (*StellarSolve, error) {
@@ -238,6 +282,31 @@ func (s *SQLiteStore) ListActivity(ctx context.Context, limit int) ([]StellarAct
 		SELECT id, user_id, ts, kind, event_id, solve_id, cluster, namespace, workload, title, detail, severity
 		FROM stellar_activity ORDER BY ts DESC LIMIT ?
 	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarActivity, 0)
+	for rows.Next() {
+		var a StellarActivity
+		if err := rows.Scan(&a.ID, &a.UserID, &a.Ts, &a.Kind, &a.EventID, &a.SolveID,
+			&a.Cluster, &a.Namespace, &a.Workload, &a.Title, &a.Detail, &a.Severity); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// ListActivityForUser returns recent activity for a specific user, newest first.
+func (s *SQLiteStore) ListActivityForUser(ctx context.Context, userID string, limit int) ([]StellarActivity, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, user_id, ts, kind, event_id, solve_id, cluster, namespace, workload, title, detail, severity
+		FROM stellar_activity WHERE user_id = ? ORDER BY ts DESC LIMIT ?
+	`, userID, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -36,6 +36,9 @@ var privateIPNets = func() []*net.IPNet {
 }()
 
 func isPrivateIP(ip net.IP) bool {
+	if ip.IsUnspecified() {
+		return true
+	}
 	for _, network := range privateIPNets {
 		if network.Contains(ip) {
 			return true

@@ -60,6 +60,7 @@ type solverStorageAdapter struct {
 // satisfies. This avoids ballooning StellarStore for features still settling.
 type solveFullStore interface {
 	CreateSolve(ctx context.Context, solve *store.StellarSolve) error
+	CreateSolveIfNoneActive(ctx context.Context, solve *store.StellarSolve) (*store.StellarSolve, bool, error)
 	UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error
 	IncrementSolveActions(ctx context.Context, solveID string) error
 	GetActiveSolveForEvent(ctx context.Context, eventID string) (*store.StellarSolve, error)
@@ -80,6 +81,7 @@ type solveFullStore interface {
 
 	LogActivity(ctx context.Context, a *store.StellarActivity) error
 	ListActivity(ctx context.Context, limit int) ([]store.StellarActivity, error)
+	ListActivityForUser(ctx context.Context, userID string, limit int) ([]store.StellarActivity, error)
 	GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*store.StellarSolve, error)
 }
 
@@ -128,8 +130,12 @@ func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivi
 }
 
 // ListActivity is the GET /api/stellar/activity handler — returns recent
-// entries from Stellar's first-person activity log.
+// entries from Stellar's first-person activity log scoped to the authenticated user.
 func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
+	}
 	full, ok := h.fullStore()
 	if !ok {
 		return c.JSON(fiber.Map{"items": []store.StellarActivity{}})
@@ -140,7 +146,7 @@ func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
 			limit = v
 		}
 	}
-	items, err := full.ListActivity(c.UserContext(), limit)
+	items, err := full.ListActivityForUser(c.UserContext(), userID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load activity"})
 	}
@@ -610,15 +616,9 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 	if notif == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "event not found"})
 	}
-
-	// Idempotent return for an already-running solve.
-	active, _ := full.GetActiveSolveForEvent(ctx, eventID)
-	if active != nil {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"solveId":  active.ID,
-			"status":   active.Status,
-			"existing": true,
-		})
+	// Ownership check: only the user who owns the notification may trigger a solve (CWE-639).
+	if notif.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
 	}
 
 	// Demo-mode / no-cluster-client → solve is meaningless. Refuse cleanly.
@@ -640,8 +640,17 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		Summary:   "AI mission triggered.",
 		StartedAt: time.Now().UTC(),
 	}
-	if err := full.CreateSolve(ctx, solve); err != nil {
+	// Atomic create-if-none-active prevents TOCTOU race (CWE-362, #16983).
+	result, created, err := full.CreateSolveIfNoneActive(ctx, solve)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to start solve"})
+	}
+	if !created {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"solveId":  result.ID,
+			"status":   result.Status,
+			"existing": true,
+		})
 	}
 
 	safeNotifCluster := renderUntrustedPromptData("stellar-notification-cluster", notif.Cluster)
