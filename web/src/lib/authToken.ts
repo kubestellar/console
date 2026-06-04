@@ -45,9 +45,7 @@ function readSessionAuthToken(): string | null {
 function readLocalAuthToken(): string | null {
   try {
     const token = getToken(STORAGE_KEY_TOKEN, localStorage)
-    if (token) {
-      return token === DEMO_TOKEN_VALUE ? token : null
-    }
+    if (token) return token
 
     return readLegacyTestAuthToken(localStorage)
   } catch {

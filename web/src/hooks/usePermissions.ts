@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isBackendUnavailable } from '../lib/api'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
 
@@ -60,7 +60,7 @@ export function usePermissions() {
       return
     }
 
-    const token = getStoredAuthToken()
+    const token = getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
 
     // Skip if backend is unavailable or using demo token
     if (isBackendUnavailable() || !token || token === 'demo-token') {
@@ -188,7 +188,7 @@ export function useCanI() {
     setResult(null)
 
     try {
-      const token = getStoredAuthToken()
+      const token = getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
       // #7993 Phase 6: SelfSubjectAccessReview must run under the caller's
       // kubeconfig, not the backend pod ServiceAccount — otherwise in-cluster
       // it answers "can the pod SA do X?" instead of "can the user do X?".

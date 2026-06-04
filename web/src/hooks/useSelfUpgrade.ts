@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { SelfUpgradeStatus } from '../types/updates'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { setUpgradeState } from '../lib/upgradeState'
 
 /** Timeout for self-upgrade API calls (ms) */
@@ -19,7 +19,11 @@ const RESTART_HEALTH_TIMEOUT_MS = 3_000
 const RELOAD_DELAY_MS = 1_500
 
 /** Read the JWT token from localStorage for authenticated API calls */
-const getToken = () => getStoredAuthToken()
+const getToken = () => {
+  const secure = getStoredAuthToken()
+  if (secure) return secure
+  try { return localStorage.getItem(STORAGE_KEY_TOKEN) } catch { return null }
+}
 
 /**
  * Hook for Helm self-upgrade via Deployment image patch.
