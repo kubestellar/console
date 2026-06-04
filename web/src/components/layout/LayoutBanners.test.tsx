@@ -75,10 +75,12 @@ describe('useLayoutBanners', () => {
 
     render(<MemoryRouter>{offlineBanner?.content}</MemoryRouter>)
 
-    const offlineInstallCopy = screen.getByText((_, element) =>
-      element?.textContent?.includes('translated:layout.offlineInstallLabel')
-      && element.textContent.includes('translated:layout.offlineInstallRun'),
-    )
+    const offlineInstallCopy = screen.getAllByText(
+      (_, element) =>
+        element?.textContent?.includes('translated:layout.offlineInstallLabel')
+        && element.textContent.includes('translated:layout.offlineInstallRun'),
+      { hidden: true },
+    )[0]
 
     expect(screen.getByText('translated:common.offline')).toBeInTheDocument()
     expect(offlineInstallCopy).toHaveTextContent('translated:layout.offlineInstallLabel')
