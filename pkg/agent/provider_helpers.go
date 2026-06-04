@@ -217,9 +217,15 @@ func resolveAIProviderTargets(ctx context.Context, host, port string) ([]string,
 
 func cloneTLSConfig(base *tls.Config) *tls.Config {
 	if base == nil {
-		return &tls.Config{}
+		return &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
 	}
-	return base.Clone()
+	cloned := base.Clone()
+	if cloned.MinVersion == 0 {
+		cloned.MinVersion = tls.VersionTLS12
+	}
+	return cloned
 }
 
 // newAIProviderHTTPClient returns the shared HTTP client configured with the

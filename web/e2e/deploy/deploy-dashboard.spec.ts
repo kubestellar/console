@@ -22,10 +22,12 @@ const MOCK_CLUSTER_2 = 'prod-cluster'
 const DEPLOY_ROUTE = '/deploy'
 const EMPTY_SSE_BODY = ': keep-alive\n\n'
 
+/** CI environments run slower — double timeouts for stability */
+const CI_TIMEOUT_MULTIPLIER = 2
 /** Timeout for initial page load (Vite compiles modules on first visit) */
-const PAGE_LOAD_TIMEOUT_MS = 60_000
+const PAGE_LOAD_TIMEOUT_MS = process.env.CI ? 120_000 : 60_000
 /** Timeout for card content to appear after navigation */
-const CARD_CONTENT_TIMEOUT_MS = 15_000
+const CARD_CONTENT_TIMEOUT_MS = process.env.CI ? 30_000 : 15_000
 // #9078 — _POLL_WAIT_MS and _SETTLE_MS were dead constants from a previous
 // refactor; both have been removed in favor of explicit Playwright wait
 // patterns (expect.poll / waitForSelector) at the call sites.

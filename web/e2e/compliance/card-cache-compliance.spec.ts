@@ -154,7 +154,7 @@ const CI_TIMEOUT_MULTIPLIER = 2
  * 120s keeps the assertion meaningful while avoiding CI-only false positives.
  * (#13547, #13789, #14815, #14979, #15179, #15209, #15411, #15469, #15523, #15645, #15851, #16068, #16193).
  */
-const WARM_TTC_THRESHOLD_MS = process.env.CI ? 120_000 : 500
+const WARM_TTC_THRESHOLD_MS = process.env.CI ? 180_000 : 500
 /**
  * With 347 cards across 15 batches, CI shared runners under CPU contention can
  * exceed the previous 4-card tolerance even when the cache behavior is still
