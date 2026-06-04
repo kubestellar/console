@@ -88,6 +88,8 @@ func TestJWTAuth(t *testing.T) {
 	})
 
 	t.Run("GitHub Pipelines Widget Bypass Is Read Only", func(t *testing.T) {
+		// After #16917, /api/github-pipelines was removed from the public
+		// prefix list — it now requires full authentication even for GET.
 		widgetApp := fiber.New()
 		handler := JWTAuth("test-secret")
 		widgetApp.Get("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
@@ -100,7 +102,7 @@ func TestJWTAuth(t *testing.T) {
 		getReq := httptest.NewRequest("GET", "/api/github-pipelines?source=ubersicht-widget&view=pulse", nil)
 		getResp, err := widgetApp.Test(getReq, 5000)
 		assert.NoError(t, err)
-		assert.Equal(t, 200, getResp.StatusCode)
+		assert.Equal(t, 401, getResp.StatusCode, "GET /api/github-pipelines must require auth after #16917")
 
 		mutateReq := httptest.NewRequest("POST", "/api/github-pipelines?source=ubersicht-widget&view=mutate", nil)
 		mutateResp, err := widgetApp.Test(mutateReq, 5000)
