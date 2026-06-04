@@ -31,6 +31,7 @@ const PROD_ORIGIN = "https://console.kubestellar.io";
  * docs PRs can test against the staging console API.
  */
 const DOCS_ORIGINS = new Set<string>([
+  "https://docs.kubestellar.io",
   "https://kubestellar.io",
   "https://www.kubestellar.io",
 ]);
@@ -46,11 +47,19 @@ const NETLIFY_DEPLOY_RE =
 const NETLIFY_DOCS_RE =
   /^https:\/\/[a-z0-9-]+--kubestellar-docs\.netlify\.app$/i;
 
-/** Local development (Vite default + project-standard port 5174). */
-const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1):(5173|5174|8080|8888)$/;
+/** Local development (only trusted outside production). */
+const LOCALHOST_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 /** Static allowlist of exact-match allowed origins. */
 const ALLOWED_EXACT = new Set<string>([PROD_ORIGIN, ...DOCS_ORIGINS]);
+
+/** Exact origins allowed for strict first-party-only CORS policies. */
+export const STRICT_KUBESTELLAR_ORIGINS = [
+  "https://console.kubestellar.io",
+  "https://docs.kubestellar.io",
+] as const;
+
+const STRICT_KUBESTELLAR_ORIGIN_SET = new Set<string>(STRICT_KUBESTELLAR_ORIGINS);
 
 /**
  * Return true if the given Origin header value is allowed to make CORS
@@ -62,8 +71,45 @@ export function isAllowedOrigin(origin: string | null | undefined): boolean {
   if (NETLIFY_PREVIEW_RE.test(origin)) return true;
   if (NETLIFY_DEPLOY_RE.test(origin)) return true;
   if (NETLIFY_DOCS_RE.test(origin)) return true;
-  if (LOCALHOST_RE.test(origin)) return true;
+  if (isNonProductionCorsRuntime() && LOCALHOST_RE.test(origin)) return true;
   return false;
+}
+
+function isNonProductionCorsRuntime(): boolean {
+  return process.env.NETLIFY_DEV === "true"
+    || process.env.NODE_ENV === "development"
+    || process.env.NODE_ENV === "test";
+}
+
+export function getStrictKubestellarCorsOrigin(
+  origin: string | null | undefined,
+): string | null {
+  if (!origin) return null;
+  if (STRICT_KUBESTELLAR_ORIGIN_SET.has(origin)) {
+    return origin;
+  }
+  if (isNonProductionCorsRuntime() && LOCALHOST_RE.test(origin)) {
+    return origin;
+  }
+  return null;
+}
+
+export function buildStrictKubestellarCorsHeaders(
+  origin: string | null | undefined,
+  options: StrictCorsOptions = {},
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": options.methods ?? "GET, OPTIONS",
+    "Access-Control-Allow-Headers": options.headers ?? "Content-Type",
+    Vary: "Origin",
+  };
+
+  const allowedOrigin = getStrictKubestellarCorsOrigin(origin);
+  if (allowedOrigin) {
+    headers["Access-Control-Allow-Origin"] = allowedOrigin;
+  }
+
+  return headers;
 }
 
 export interface CorsOptions {
@@ -75,6 +121,11 @@ export interface CorsOptions {
    * Expose specific response headers to browser JS. Rarely needed.
    */
   exposeHeaders?: string;
+}
+
+export interface StrictCorsOptions {
+  methods?: string;
+  headers?: string;
 }
 
 /**

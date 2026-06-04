@@ -11,7 +11,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 
 // ── Hoisted mock refs ────────────────────────────────────────────────────
 
-const { mockSaveResolution, mockDetectIssueSignature, mockAppendWsAuthToken } = vi.hoisted(() => ({
+const { mockSaveResolution, mockDetectIssueSignature, mockGetWsAuthParams } = vi.hoisted(() => ({
   mockSaveResolution: vi.fn(),
   mockDetectIssueSignature: vi.fn(() => ({
     type: 'CrashLoopBackOff',
@@ -19,7 +19,7 @@ const { mockSaveResolution, mockDetectIssueSignature, mockAppendWsAuthToken } = 
     errorPattern: undefined,
     namespace: 'default',
   })),
-  mockAppendWsAuthToken: vi.fn().mockResolvedValue('ws://mock/ws'),
+  mockGetWsAuthParams: vi.fn().mockResolvedValue({ url: 'ws://mock/ws', protocols: ['bearer.test-token'] }),
 }))
 
 // ── Module mocks ─────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ vi.mock('../../../hooks/useResolutions', () => ({
 }))
 
 vi.mock('../../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: mockAppendWsAuthToken,
+  getWsAuthParams: mockGetWsAuthParams,
 }))
 
 vi.mock('../../../lib/constants', () => ({
@@ -112,8 +112,12 @@ class MockWebSocket {
   onclose: WsCallback | null = null
   sent: string[] = []
   readyState = 0
+  protocols: string[]
 
-  constructor(public url: string) {
+  constructor(public url: string, protocols?: string | string[]) {
+    this.protocols = Array.isArray(protocols)
+      ? protocols
+      : protocols ? [protocols] : []
     MockWebSocket.lastInstance = this
   }
 
@@ -197,14 +201,16 @@ async function importSaveResolutionDialogWithForcedState(callIndex: number, forc
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 async function renderDialogAndWaitForError(props = DEFAULT_PROPS) {
-  // Make WS error immediately: after appendWsAuthToken resolves, WS is created,
-  // then we simulate error so generateSummary catch fires → isGenerating=false
+  // Make WS error immediately: after getWsAuthParams resolves, the authenticated
+  // WebSocket is created, then we simulate error so generateSummary catch fires.
   global.WebSocket = MockWebSocket as unknown as typeof WebSocket
   const result = render(<SaveResolutionDialog {...props} />)
 
+  await waitFor(() => {
+    expect(MockWebSocket.lastInstance).not.toBeNull()
+  })
+
   await act(async () => {
-    await Promise.resolve() // let appendWsAuthToken resolve
-    await Promise.resolve() // let new WebSocket(url) be created
     MockWebSocket.lastInstance?.simulateError()
     await Promise.resolve() // let catch + state updates propagate
   })
@@ -221,7 +227,7 @@ describe('SaveResolutionDialog', () => {
     vi.clearAllMocks()
     MockWebSocket.lastInstance = null
     global.WebSocket = MockWebSocket as unknown as typeof WebSocket
-    mockAppendWsAuthToken.mockResolvedValue('ws://mock/ws')
+    mockGetWsAuthParams.mockResolvedValue({ url: 'ws://mock/ws', protocols: ['bearer.test-token'] })
   })
 
   afterEach(() => {
@@ -247,14 +253,14 @@ describe('SaveResolutionDialog', () => {
   // ── Generating state ─────────────────────────────────────────────────
 
   it('shows generating indicator immediately on open', async () => {
-    // appendWsAuthToken takes time, so isGenerating=true during that time
-    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {})) // never resolves
+    // getWsAuthParams takes time, so isGenerating=true during that time
+    mockGetWsAuthParams.mockReturnValue(new Promise(() => {})) // never resolves
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
     expect(await screen.findByText('Generating AI Summary')).toBeInTheDocument()
   })
 
   it('pre-fills title from mission while generating', async () => {
-    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
+    mockGetWsAuthParams.mockReturnValue(new Promise(() => {}))
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
     const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service') as HTMLInputElement
     await waitFor(() => {
@@ -263,7 +269,7 @@ describe('SaveResolutionDialog', () => {
   })
 
   it('disables form inputs while generating', async () => {
-    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
+    mockGetWsAuthParams.mockReturnValue(new Promise(() => {}))
     render(<SaveResolutionDialog {...DEFAULT_PROPS} />)
     const titleInput = screen.getByPlaceholderText('e.g., Fix OOM in payment service')
     await waitFor(() => {
@@ -278,6 +284,13 @@ describe('SaveResolutionDialog', () => {
     expect(await screen.findByText(/Could not reach the local agent/i)).toBeInTheDocument()
   })
 
+  it('passes bearer auth subprotocols to the AI summary WebSocket', async () => {
+    await renderDialogAndWaitForError()
+
+    expect(MockWebSocket.lastInstance?.url).toBe('ws://mock/ws')
+    expect(MockWebSocket.lastInstance?.protocols).toEqual(['bearer.test-token'])
+  })
+
   it('shows retry button after AI error', async () => {
     await renderDialogAndWaitForError()
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
@@ -289,7 +302,9 @@ describe('SaveResolutionDialog', () => {
     await act(async () => {
       fireEvent.click(retryBtn)
     })
-    expect(mockAppendWsAuthToken).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('enables form fields after AI error', async () => {
@@ -408,7 +423,7 @@ describe('SaveResolutionDialog', () => {
 
   it('shows a spinner while saving', async () => {
     const SaveResolutionDialogWithSavingState = await importSaveResolutionDialogWithForcedState(8, true)
-    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
+    mockGetWsAuthParams.mockReturnValue(new Promise(() => {}))
 
     render(<SaveResolutionDialogWithSavingState {...DEFAULT_PROPS} />)
 
@@ -419,7 +434,7 @@ describe('SaveResolutionDialog', () => {
 
   it('disables cancel controls while saving', async () => {
     const SaveResolutionDialogWithSavingState = await importSaveResolutionDialogWithForcedState(8, true)
-    mockAppendWsAuthToken.mockReturnValue(new Promise(() => {}))
+    mockGetWsAuthParams.mockReturnValue(new Promise(() => {}))
 
     render(<SaveResolutionDialogWithSavingState {...DEFAULT_PROPS} />)
 
@@ -462,11 +477,13 @@ describe('SaveResolutionDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('calls appendWsAuthToken when regenerate is clicked', async () => {
+  it('calls getWsAuthParams when regenerate is clicked', async () => {
     await renderDialogAndWaitForError()
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Regenerate/i }))
     })
-    expect(mockAppendWsAuthToken).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    })
   })
 })

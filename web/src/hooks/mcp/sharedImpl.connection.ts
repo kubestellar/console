@@ -2,9 +2,9 @@
 
 import { isDemoToken } from '../../lib/demoMode'
 import { isBackendUnavailable } from '../../lib/api'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { getWsAuthParams } from '../../lib/utils/wsAuth'
 import { isLikelyWsError, isWebDriverAutomation, resolveAgentWsUrl } from './wsDetect'
-import { AGENT_TOKEN_STORAGE_KEY } from './agentFetch'
+import { getStoredAgentToken } from './agentFetch'
 import { MAX_RECONNECT_ATTEMPTS, RECONNECT_BASE_DELAY_MS, WS_BACKEND_RECHECK_INTERVAL } from './sharedImpl.constants'
 import { clusterCache } from './sharedImpl.state'
 
@@ -87,7 +87,8 @@ export async function connectSharedWebSocket() {
   }
 
   try {
-    const ws = new WebSocket(await appendWsAuthToken(resolveAgentWsUrl()))
+    const { url, protocols } = await getWsAuthParams(resolveAgentWsUrl())
+    const ws = new WebSocket(url, protocols)
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen
@@ -97,7 +98,7 @@ export async function connectSharedWebSocket() {
         return
       }
       // Send authentication message - backend requires this within 5 seconds
-      const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+      const token = getStoredAgentToken()
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {

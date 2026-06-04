@@ -310,7 +310,7 @@ describe('DashboardHeader — coverage', () => {
     )
     const updatingSpan = container.querySelector('.text-yellow-400')
     expect(updatingSpan).not.toBeNull()
-    expect(updatingSpan?.textContent).toContain('Updating')
+    expect(updatingSpan?.textContent).toContain('status.updating')
   })
 })
 

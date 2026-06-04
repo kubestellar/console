@@ -17,6 +17,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
@@ -41,6 +42,7 @@ const (
 	stellarRecentEventLookbackMin = 10
 	stellarStreamInterval         = 10 * time.Second
 	stellarWatchInactivityTimeout = 30 * time.Minute
+	stellarSystemUserID           = "system"
 
 	stellarOllamaAllowedCIDRsEnv = "STELLAR_OLLAMA_ALLOWED_CIDRS"
 )
@@ -82,6 +84,9 @@ type StellarDigest struct {
 
 // StellarStore is the storage contract used by StellarHandler.
 type StellarStore interface {
+	// GetUser retrieves a user by ID for authorization checks (#16709).
+	GetUser(ctx context.Context, userID uuid.UUID) (*models.User, error)
+
 	GetStellarPreferences(ctx context.Context, userID string) (*store.StellarPreferences, error)
 	UpdateStellarPreferences(ctx context.Context, preferences *store.StellarPreferences) error
 
@@ -128,8 +133,8 @@ type StellarStore interface {
 
 	CreateObservation(ctx context.Context, obs *store.StellarObservation) (string, error)
 	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]store.StellarObservation, error)
-	GetUnshownObservations(ctx context.Context) ([]store.StellarObservation, error)
-	MarkObservationShown(ctx context.Context, id string) error
+	GetUnshownObservations(ctx context.Context, userID string) ([]store.StellarObservation, error)
+	MarkObservationShown(ctx context.Context, userID, observationID string) error
 
 	GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]store.StellarWatch, error)
 	GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
@@ -158,7 +163,7 @@ type StellarStore interface {
 	GetWatchByResource(ctx context.Context, userID, cluster, namespace, kind, name string) (*store.StellarWatch, error)
 	SnoozeWatch(ctx context.Context, id, userID string, until time.Time) error
 	GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]store.StellarWatch, error)
-	ListStellarAuditLog(ctx context.Context, limit int) ([]store.StellarAuditEntry, error)
+	ListStellarAuditLog(ctx context.Context, userID string, limit int) ([]store.StellarAuditEntry, error)
 
 	// Event pipeline — recurring detection and async narration enrichment
 	CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error)
@@ -168,20 +173,27 @@ type StellarStore interface {
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
 type StellarHandler struct {
 	store            StellarStore
+	userStore        store.Store // for admin role checks on sensitive endpoints
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
-	sseClients       map[string]chan SSEEvent
+	sseClients       map[string]stellarSSEClient
 	sseClientsMu     sync.RWMutex
 }
 
-func (h *StellarHandler) registerSSEClient(connID string, ch chan SSEEvent) {
+type stellarSSEClient struct {
+	userID  string
+	isAdmin bool
+	ch      chan SSEEvent
+}
+
+func (h *StellarHandler) registerSSEClient(connID, userID string, isAdmin bool, ch chan SSEEvent) {
 	h.sseClientsMu.Lock()
 	defer h.sseClientsMu.Unlock()
 	if h.sseClients == nil {
-		h.sseClients = make(map[string]chan SSEEvent)
+		h.sseClients = make(map[string]stellarSSEClient)
 	}
-	h.sseClients[connID] = ch
+	h.sseClients[connID] = stellarSSEClient{userID: userID, isAdmin: isAdmin, ch: ch}
 }
 
 func (h *StellarHandler) unregisterSSEClient(connID string) {
@@ -190,12 +202,28 @@ func (h *StellarHandler) unregisterSSEClient(connID string) {
 	delete(h.sseClients, connID)
 }
 
+func shouldDeliverStellarSSEEvent(client stellarSSEClient, event SSEEvent) bool {
+	if event.AdminOnly || event.UserID == stellarSystemUserID || event.UserID == "" {
+		return client.isAdmin
+	}
+	return client.userID == event.UserID || client.isAdmin
+}
+
+// broadcastToClients sends an event to SSE clients scoped by the resolved
+// audience metadata and optionally narrowed to a specific user connection set.
 func (h *StellarHandler) broadcastToClients(event SSEEvent) {
+	resolvedEvent := h.resolveSSEEventAudience(event)
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
-	for _, ch := range h.sseClients {
+	for _, client := range h.sseClients {
+		if resolvedEvent.TargetUserID != "" && client.userID != resolvedEvent.TargetUserID && !client.isAdmin {
+			continue
+		}
+		if !shouldDeliverStellarSSEEvent(client, resolvedEvent) {
+			continue
+		}
 		select {
-		case ch <- event:
+		case client.ch <- resolvedEvent:
 		default: // client too slow, skip
 		}
 	}
@@ -210,15 +238,128 @@ type SSEBroadcaster interface {
 }
 
 type SSEEvent struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type         string      `json:"type"`
+	Data         interface{} `json:"data"`
+	UserID       string      `json:"userId,omitempty"`
+	AdminOnly    bool        `json:"adminOnly,omitempty"`
+	TargetUserID string      `json:"-"`
 }
 
-func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
-	return &StellarHandler{
+func newUserScopedSSEEvent(userID, eventType string, data interface{}) SSEEvent {
+	trimmedUserID := strings.TrimSpace(userID)
+	return SSEEvent{
+		Type:         eventType,
+		Data:         data,
+		UserID:       trimmedUserID,
+		TargetUserID: trimmedUserID,
+	}
+}
+
+func (h *StellarHandler) resolveSSEEventAudience(event SSEEvent) SSEEvent {
+	if event.TargetUserID != "" && event.UserID == "" {
+		event.UserID = event.TargetUserID
+	}
+	if event.AdminOnly || event.UserID != "" {
+		return event
+	}
+	if userID, adminOnly, ok := stellarSSEAudienceFromData(event.Data); ok {
+		event.UserID = userID
+		event.AdminOnly = adminOnly
+		return event
+	}
+	event.AdminOnly = true
+	return event
+}
+
+func stellarSSEAudienceFromData(data interface{}) (string, bool, bool) {
+	switch item := data.(type) {
+	case store.StellarNotification:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarNotification:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarActivity:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarActivity:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarAction:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarAction:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarWatch:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarWatch:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case store.StellarSolve:
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case *store.StellarSolve:
+		if item == nil {
+			return "", false, false
+		}
+		return stellarSSEAudienceFromUserID(item.UserID)
+	case map[string]string:
+		if userID, ok := item["userId"]; ok {
+			return stellarSSEAudienceFromUserID(userID)
+		}
+		if userID, ok := item["userID"]; ok {
+			return stellarSSEAudienceFromUserID(userID)
+		}
+	case map[string]interface{}:
+		if raw, ok := item["userId"]; ok {
+			if userID, ok := raw.(string); ok {
+				return stellarSSEAudienceFromUserID(userID)
+			}
+		}
+		if raw, ok := item["userID"]; ok {
+			if userID, ok := raw.(string); ok {
+				return stellarSSEAudienceFromUserID(userID)
+			}
+		}
+	}
+	return "", false, false
+}
+
+func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return "", false, false
+	}
+	if trimmedUserID == stellarSystemUserID {
+		return "", true, true
+	}
+	return trimmedUserID, false, true
+}
+
+func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient, opts ...StellarHandlerOption) *StellarHandler {
+	h := &StellarHandler{
 		store:            s,
 		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
+	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
+}
+
+// StellarHandlerOption configures optional dependencies for StellarHandler.
+type StellarHandlerOption func(*StellarHandler)
+
+// WithUserStore sets the user store for admin role checks on sensitive endpoints.
+func WithUserStore(us store.Store) StellarHandlerOption {
+	return func(h *StellarHandler) {
+		h.userStore = us
 	}
 }
 
@@ -230,6 +371,13 @@ func (h *StellarHandler) SetProviderRegistry(reg *providers.Registry) {
 
 func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 	h.broadcaster = b
+}
+
+// SetUserStore wires user role lookups for authorization checks on mutating
+// endpoints (e.g., IngestEvent #16709). Optional — if unset, role checks are
+// skipped for backward compatibility in tests.
+func (h *StellarHandler) SetUserStore(us store.Store) {
+	h.userStore = us
 }
 
 // StartBackgroundWorkers launches long-running goroutines owned by the handler.
@@ -283,9 +431,10 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 			DedupeKey: dedupeKey,
 		}
 		_ = h.store.CreateStellarNotification(ctx, dueNotif)
-		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif})
+		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif, TargetUserID: t.UserID})
 		if h.broadcaster != nil {
 			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
+				"userId": dueNotif.UserID,
 				"taskId": t.ID,
 				"title":  t.Title,
 			}})

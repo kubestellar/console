@@ -244,6 +244,84 @@ func TestServer_HandleChatMessage_QuotaExceeded(t *testing.T) {
 	}
 }
 
+func TestValidateChatPromptSize(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     protocol.ChatRequest
+		wantErr bool
+	}{
+		{
+			name: "accepts prompt at limit",
+			req: protocol.ChatRequest{
+				Prompt: strings.Repeat("a", maxPromptChars),
+			},
+		},
+		{
+			name: "rejects prompt over limit",
+			req: protocol.ChatRequest{
+				Prompt: strings.Repeat("a", maxPromptChars+1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "rejects combined prompt and history over limit",
+			req: protocol.ChatRequest{
+				Prompt: strings.Repeat("a", maxPromptChars-1),
+				History: []protocol.ChatMessage{{
+					Role:    "user",
+					Content: "bc",
+				}},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateChatPromptSize(tt.req)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected prompt size validation error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected prompt size validation error: %v", err)
+			}
+		})
+	}
+}
+
+func TestServer_HandleChatMessage_PromptTooLarge(t *testing.T) {
+	msg := protocol.Message{
+		ID:   "test-prompt-too-large",
+		Type: protocol.TypeChat,
+		Payload: protocol.ChatRequest{
+			Prompt: strings.Repeat("a", maxPromptChars),
+			History: []protocol.ChatMessage{{
+				Role:    "user",
+				Content: "b",
+			}},
+		},
+	}
+
+	resp := (&Server{}).handleChatMessage(msg, "")
+	if resp.Type != protocol.TypeError {
+		t.Fatalf("expected error response, got type %s", resp.Type)
+	}
+
+	payload, ok := resp.Payload.(protocol.ErrorPayload)
+	if !ok {
+		t.Fatalf("expected protocol.ErrorPayload, got %T", resp.Payload)
+	}
+	if payload.Code != "prompt_too_large" {
+		t.Fatalf("expected prompt_too_large code, got %q", payload.Code)
+	}
+	if !strings.Contains(payload.Message, "combined prompt/history") {
+		t.Fatalf("expected prompt size error message, got %q", payload.Message)
+	}
+}
+
 // TestServer_SmartRouting tests the promptNeedsToolExecution heuristic
 func TestServer_SmartRouting(t *testing.T) {
 	s := &Server{}
@@ -547,7 +625,89 @@ func TestValidateMixedModeCommands(t *testing.T) {
 		{
 			name:       "reject context overrides",
 			command:    "kubectl get pods --context other-cluster",
-			wantReason: "cluster context overrides are blocked",
+			wantReason: "transport, authentication, and context override flags are blocked",
+		},
+		{
+			name:       "reject transport overrides in equals form",
+			command:    "kubectl get pods --server=https://evil.example",
+			wantReason: "transport, authentication, and context override flags are blocked",
+		},
+		{
+			name:       "reject auth overrides",
+			command:    "kubectl get pods --token attacker-token",
+			wantReason: "transport, authentication, and context override flags are blocked",
+		},
+		{
+			name:              "require approval for config view raw",
+			command:           "kubectl config view --raw",
+			wantApprovalBlock: true,
+			wantReason:        "requires explicit user approval",
+		},
+		{
+			name:       "reject raw access",
+			command:    "kubectl get --raw=/api/v1/namespaces/kube-system/secrets",
+			wantReason: "kubectl --raw and --filename flags are blocked",
+		},
+		{
+			name:       "reject filename access",
+			command:    "kubectl get --filename manifest.yaml",
+			wantReason: "kubectl --raw and --filename flags are blocked",
+		},
+		{
+			name:       "reject watch equals form",
+			command:    "kubectl get pods --watch=true",
+			wantReason: "streaming or watch flags are blocked",
+		},
+		{
+			name:       "reject watch only variant",
+			command:    "kubectl get pods --watch-only=true",
+			wantReason: "streaming or watch flags are blocked",
+		},
+		{
+			name:       "reject cp traversal",
+			command:    "kubectl cp pod:/var/log/../../secrets/token ./loot.txt",
+			wantReason: "path traversal patterns are blocked",
+		},
+		{
+			name:       "reject exec traversal",
+			command:    "kubectl exec pod -- cat ../../var/run/secrets/kubernetes.io/serviceaccount/token",
+			wantReason: "path traversal patterns are blocked",
+		},
+		{
+			name:       "reject --watch streaming flag",
+			command:    "kubectl get pods --watch",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --watch=true bypass variant",
+			command:    "kubectl get pods --watch=true",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --watch-only bypass variant",
+			command:    "kubectl get pods --watch-only",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --follow streaming flag",
+			command:    "kubectl logs pod-1 --follow",
+			wantReason: "streaming",
+		},
+		{
+			name:       "reject --follow=true bypass variant",
+			command:    "kubectl logs pod-1 --follow=true",
+			wantReason: "streaming",
+		},
+		{
+			name:         "allow bare cluster info",
+			command:      "kubectl cluster-info",
+			wantApproved: true,
+		},
+		{
+			name:              "require approval for cluster info dump",
+			command:           "kubectl cluster-info dump",
+			wantApprovalBlock: true,
+			wantReason:        "requires explicit user approval",
 		},
 		{
 			name:              "require approval for helm install",

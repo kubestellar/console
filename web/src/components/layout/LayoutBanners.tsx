@@ -150,14 +150,16 @@ export function useLayoutBanners({
                 </>
               )}
             </Button>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onToggleDemoOrDismiss}
-              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full p-2 transition-colors hover:bg-yellow-500/20"
+              className="min-h-11 min-w-11 shrink-0 rounded-full p-2"
               aria-label={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
               title={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
             >
               <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         </div>
       ),
@@ -192,14 +194,16 @@ export function useLayoutBanners({
               <span className="hidden lg:inline">{t('layout.setupGuide')}</span>
               <span className="lg:hidden">{t('layout.setup')}</span>
             </Button>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onOpenInClusterSetup}
-              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full p-2 transition-colors hover:bg-blue-500/20 sm:hidden"
+              className="min-h-11 min-w-11 shrink-0 rounded-full p-2 sm:hidden"
               aria-label={t('layout.openAgentSetupGuide')}
               title={t('layout.openAgentSetupGuide')}
             >
               <Plug className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         </div>
       ),
@@ -230,20 +234,26 @@ export function useLayoutBanners({
               <Settings className="w-3 h-3" />
               <span className="hidden sm:inline">{t('navigation.settings')}</span>
             </Link>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onToggleDemoMode}
-              className="min-h-11 min-w-11 rounded bg-orange-500/20 px-2 py-2 text-xs text-orange-400 transition-colors whitespace-nowrap hover:bg-orange-500/30"
+              className="rounded px-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs whitespace-nowrap"
+              title={`${t('layout.switchTo')} ${t('layout.demo')}`}
             >
               <span className="hidden sm:inline">{t('layout.switchTo')} </span>
               {t('layout.demo')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onDismissOffline}
-              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full p-2 transition-colors hover:bg-orange-500/20"
+              className="min-h-11 min-w-11 shrink-0 rounded-full p-2"
               title={t('actions.dismiss')}
+              aria-label={t('actions.dismiss')}
             >
               <X className="w-3.5 h-3.5 text-orange-400" />
-            </button>
+            </Button>
           </div>
         </div>
       ),
@@ -280,14 +290,15 @@ export function useLayoutBanners({
                 {t('layout.activeAlerts', { count: activeBanners.length })}
               </span>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={bannerStack.toggle}
-              className="text-xs px-2 py-2 min-h-11 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
+              className="rounded px-2 whitespace-nowrap text-xs bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400"
               aria-expanded={bannerStack.isOpen}
             >
               {bannerStack.isOpen ? t('layout.hideAlerts') : t('layout.reviewAlerts')}
-            </button>
+            </Button>
           </div>
         ),
       }, ...(bannerStack.isOpen ? activeBanners : [])]

@@ -1,8 +1,11 @@
+// @vitest-environment node
 /**
+ * @vitest-environment node
  * Vitest unit tests for quantum-proxy.mts Netlify function (#15626, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@netlify/functions";
+import { SignJWT } from "jose";
 import {
   TEST_CORS_ORIGIN,
   makeNetlifyRequest,
@@ -23,6 +26,29 @@ const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
 
 // Match the internal limit defined in quantum-proxy.mts (1MB)
 const MAX_PROXY_BODY_BYTES = 1_048_576;
+const TEST_JWT_SECRET = "test-quantum-proxy-secret";
+const JWT_EXPIRATION_WINDOW_SECONDS = 60 * 60;
+const JWT_NONE_HEADER = { alg: "none", typ: "JWT" };
+const JWT_NONE_PAYLOAD = { sub: "quantum-proxy-test", exp: 4_102_444_800 };
+const JWT_SIGNING_HEADER = { alg: "HS256", typ: "JWT" };
+
+async function createSignedJwt(secret: string = TEST_JWT_SECRET): Promise<string> {
+  const expiresInSeconds = JWT_EXPIRATION_WINDOW_SECONDS;
+  return new SignJWT({ sub: "quantum-proxy-test" })
+    .setProtectedHeader(JWT_SIGNING_HEADER)
+    .setExpirationTime(`${expiresInSeconds}s`)
+    .sign(new TextEncoder().encode(secret));
+}
+
+function createUnsignedJwt(): string {
+  const header = Buffer.from(JSON.stringify(JWT_NONE_HEADER)).toString("base64url");
+  const payload = Buffer.from(JSON.stringify(JWT_NONE_PAYLOAD)).toString("base64url");
+  return `${header}.${payload}.`;
+}
+
+function makeContext(env: Record<string, string> = {}): Context {
+  return { env } as unknown as Context;
+}
 
 // Hoisted mock functions for rate limit
 const { mockEnforceSimpleRateLimit } = vi.hoisted(() => ({
@@ -50,7 +76,7 @@ describe("quantum-proxy", () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/status", {
         method: "PUT",
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_METHOD_NOT_ALLOWED);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Method not allowed");
@@ -61,7 +87,7 @@ describe("quantum-proxy", () => {
   describe("Path Allowlist validation", () => {
     it("returns 400 when path is not in allowlist", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/invalid-path");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Invalid proxy path");
@@ -69,7 +95,7 @@ describe("quantum-proxy", () => {
 
     it("returns 400 when path contains invalid characters or sequences", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/status//status");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Invalid proxy path");
@@ -77,7 +103,7 @@ describe("quantum-proxy", () => {
 
     it("returns 400 when scheme/absolute URL injection is attempted", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/http://malicious");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Invalid proxy path");
@@ -89,53 +115,169 @@ describe("quantum-proxy", () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Unauthorized");
     });
 
-    it("accepts Bearer Authorization token for POST request", async () => {
-      // In demo mode, it won't crash when QUANTUM_SERVICE_URL is absent
+    it("rejects invalid Bearer Authorization tokens", async () => {
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer valid-token",
+          authorization: "Bearer invalid-token",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("accepts Bearer Authorization token for POST request", async () => {
+      const bearerToken = await createSignedJwt();
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          authorization: `Bearer ${bearerToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
     });
 
-    it("accepts kc_auth Cookie for POST request", async () => {
+    it("rejects JWTs when no verification secret is configured", async () => {
+      const bearerToken = await createSignedJwt("fallback-only-secret");
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          cookie: "kc_auth=active-session",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("accepts kc_auth Cookie for POST request", async () => {
+      const sessionToken = await createSignedJwt();
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: `kc_auth=${sessionToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
+    });
+
+    it("rejects cookie headers that only mention kc_auth in another value", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "other=contains-kc_auth=forged",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("accepts Bearer tokens signed with VITE_JWT_SECRET", async () => {
+      const bearerToken = await createSignedJwt();
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          authorization: `Bearer ${bearerToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ VITE_JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_OK);
+    });
+
+    it("rejects fakekc_auth cookie names", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "fakekc_auth=opaque-session-token-12345",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("rejects unsigned Bearer tokens with alg none", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          authorization: `Bearer ${createUnsignedJwt()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("rejects opaque kc_auth Cookie values", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "kc_auth=opaque-session-token-12345",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    });
+
+    it("rejects empty kc_auth Cookie values", async () => {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
+        method: "POST",
+        headers: {
+          Origin: TEST_CORS_ORIGIN,
+          cookie: "kc_auth=",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
+      });
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      expect(res.status).toBe(HTTP_STATUS_UNAUTHORIZED);
     });
 
     it("returns 429 when simple rate limit is exceeded on POST", async () => {
       mockEnforceSimpleRateLimit.mockResolvedValue({ limited: true, retryAfterSeconds: 300 });
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer valid-token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_RATE_LIMITED);
       const body = await readJson<{ error: string; retryAfter: number }>(res);
       expect(body.error).toBe("Rate limit exceeded");
@@ -146,7 +288,7 @@ describe("quantum-proxy", () => {
   describe("Fallback / Demo Mode (QUANTUM_SERVICE_URL is absent)", () => {
     it("returns status demo response", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/status");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_OK);
       expect(res.headers.get("Content-Type")).toBe("application/json");
       const body = await readJson<{ status: string; backend: string }>(res);
@@ -156,23 +298,24 @@ describe("quantum-proxy", () => {
 
     it("returns qubits demo response", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/qubits/simple");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<{ qubits: number[] }>(res);
       expect(body.qubits).toEqual([0, 1, 2, 3, 4]);
     });
 
     it("returns execute demo response", async () => {
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<{ job_id: string; status: string }>(res);
       expect(body.job_id).toBe("demo-job-123");
@@ -180,16 +323,17 @@ describe("quantum-proxy", () => {
     });
 
     it("returns loop start demo response", async () => {
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/loop/start", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ circuit: "OPENQASM 2.0;" }),
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<{ status: string; loop_id: string }>(res);
       expect(body.status).toBe("started");
@@ -197,16 +341,17 @@ describe("quantum-proxy", () => {
     });
 
     it("returns loop stop demo response", async () => {
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/loop/stop", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({}),
       });
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<{ status: string }>(res);
       expect(body.status).toBe("stopped");
@@ -214,7 +359,7 @@ describe("quantum-proxy", () => {
 
     it("returns ASCII HTML circuit demo response", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/qasm/circuit/ascii");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_OK);
       expect(res.headers.get("Content-Type")).toBe("text/html");
       const text = await res.text();
@@ -225,7 +370,7 @@ describe("quantum-proxy", () => {
 
     it("returns auth status demo response", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/auth/status");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<{ authenticated: boolean }>(res);
       expect(body.authenticated).toBe(false);
@@ -233,7 +378,7 @@ describe("quantum-proxy", () => {
 
     it("returns listfiles demo response", async () => {
       const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/qasm/listfiles");
-      const res = await handler(req, { env: {} } as unknown as Context);
+      const res = await handler(req, makeContext());
       expect(res.status).toBe(HTTP_STATUS_OK);
       const body = await readJson<{ files: string[] }>(res);
       expect(body.files).toEqual(["bell.qasm"]);
@@ -242,9 +387,10 @@ describe("quantum-proxy", () => {
 
   describe("Proxy Mode (QUANTUM_SERVICE_URL configured)", () => {
     const mockServiceUrl = "https://quantum-backend.kubestellar.io";
-    const contextWithEnv = {
-      env: { QUANTUM_SERVICE_URL: mockServiceUrl },
-    } as unknown as Context;
+    const contextWithEnv = makeContext({
+      QUANTUM_SERVICE_URL: mockServiceUrl,
+      JWT_SECRET: TEST_JWT_SECRET,
+    });
 
     it("proxies GET request successfully to upstream and filters headers", async () => {
       const fetchMock = vi.fn().mockResolvedValue(
@@ -283,14 +429,16 @@ describe("quantum-proxy", () => {
       expect(res.headers.get("X-Sensitive-Upstream-Header")).toBeNull();
     });
 
-    it("returns 413 when request body content-length exceeds MAX_PROXY_BODY_BYTES", async () => {
-      const hugeBodyLength = MAX_PROXY_BODY_BYTES + 1;
-      const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/execute", {
+    it("returns 413 when request body exceeds MAX_PROXY_BODY_BYTES", async () => {
+      const bearerToken = await createSignedJwt();
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
-          authorization: "Bearer valid-token",
-          "content-length": String(hugeBodyLength),
+          Origin: TEST_CORS_ORIGIN,
+          authorization: `Bearer ${bearerToken}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ circuit: "x".repeat(MAX_PROXY_BODY_BYTES + 1) }),
       });
       const res = await handler(req, contextWithEnv);
       expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
@@ -299,11 +447,12 @@ describe("quantum-proxy", () => {
     });
 
     it("returns 400 when POST request body has invalid JSON", async () => {
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: "invalid-json-body-string{",
@@ -315,11 +464,12 @@ describe("quantum-proxy", () => {
     });
 
     it("returns 400 when POST request body is not an object", async () => {
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(["not-an-object"]),
@@ -339,11 +489,12 @@ describe("quantum-proxy", () => {
       );
       vi.stubGlobal("fetch", fetchMock);
 
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ backend: "aer_simulator", shots: 1024, qasm_file: "bell.qasm" }),
@@ -371,11 +522,12 @@ describe("quantum-proxy", () => {
       );
       vi.stubGlobal("fetch", fetchMock);
 
+      const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/loop/start", {
         method: "POST",
         headers: {
           Origin: TEST_CORS_ORIGIN,
-          authorization: "Bearer token",
+          authorization: `Bearer ${bearerToken}`,
           "Content-Type": "application/json",
         },
       });

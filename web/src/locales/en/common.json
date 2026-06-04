@@ -817,6 +817,7 @@
         "invalidSmtpPort": "SMTP port must be a number between 1 and 65535."
       },
       "tip": "Configure notification channels here, then add them to specific alert rules in the Alert Rules editor. Each rule can have multiple notification channels with different configurations.",
+      "secretConfigured": "A secret is already stored. Leave this blank to keep it, or enter a new value to replace it.",
       "browser": {
         "title": "Browser Notifications",
         "permissionStatus": "Permission status:",
@@ -2498,6 +2499,10 @@
     },
     "projectAdded": "Project added to mission"
   },
+  "auth": {
+    "sessionExpiresSoon": "Session expires soon",
+    "refreshNow": "Refresh Now"
+  },
   "feedback": {
     "share": "Share",
     "shareOnLinkedIn": "Share on LinkedIn",
@@ -2579,6 +2584,7 @@
     "reopenRequestFailed": "Failed to reopen request",
     "verifyFixFailed": "Failed to record verification",
     "closeRequestFailed": "Failed to close request",
+    "viewFullLeaderboard": "View Full Leaderboard",
     "releases": "Releases",
     "status": {
       "open": "Open",
@@ -2598,7 +2604,9 @@
     "couldNotLoadStatus": "Couldn't load feedback status: {{error}}",
     "yourRequestsCount_one": "{{count}} request",
     "yourRequestsCount_other": "{{count}} requests",
-    "reportBugOrFeature": "Report a bug or request a feature"
+    "reportBugOrFeature": "Report a bug or request a feature",
+    "viewFullLeaderboard": "View Full Leaderboard",
+    "draftRestored": "Draft restored."
   },
   "nps": {
     "title": "How's your experience with KubeStellar Console?",
@@ -2786,6 +2794,9 @@
     "upgrading": "Upgrading...",
     "upgradeComplete": "Upgrade complete — reloading...",
     "upgradeFailed": "Upgrade failed"
+  },
+  "updates": {
+    "loadingPullRequests": "Loading recent pull requests…"
   },
   "drilldown": {
     "goBack": "Go back",
@@ -3612,6 +3623,7 @@
     "saving": "Saving...",
     "deleting": "Deleting...",
     "updating": "Updating",
+    "updatingEllipsis": "Updating...",
     "checking": "Checking...",
     "generating": "Generating...",
     "retrying": "Retrying...",
@@ -3692,6 +3704,7 @@
     "searchQuotas": "Search quotas...",
     "noMatchingItems": "No matching items",
     "sortBy": "Sort by",
+    "sortByPlaceholder": "Sort by...",
     "groupBy": "Group by",
     "export": "Export",
     "import": "Import",
@@ -3827,7 +3840,9 @@
     "resetFilters": "Reset filters",
     "moreFilters": "More filters",
     "ascending": "Ascending",
+    "ascendingShort": "Asc",
     "descending": "Descending",
+    "descendingShort": "Desc",
     "newest": "Newest",
     "oldest": "Oldest",
     "alphabetical": "A-Z",
@@ -5411,5 +5426,23 @@
   "saveResolution": "Save Resolution",
   "shareToOrg": "Share to Org",
   "savePrivate": "Save Private",
-  "generatingAISummary": "Generating AI Summary..."
+  "generatingAISummary": "Generating AI Summary...",
+  "listVisualization": {
+    "sortBy": "Sort by...",
+    "asc": "Asc",
+    "desc": "Desc"
+  },
+  "session": {
+    "expiresSoon": "Session expires soon",
+    "refreshNow": "Refresh Now"
+  },
+  "status": {
+    "updating": "Updating",
+    "loadingNamespaces": "Loading namespaces…",
+    "updatingEllipsis": "Updating..."
+  },
+  "updates": {
+    "loadingRecentPullRequests": "Loading recent pull requests…",
+    "updateNow": "Update now"
+  }
 }

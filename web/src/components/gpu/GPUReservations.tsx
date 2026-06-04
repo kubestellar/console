@@ -648,7 +648,7 @@ export function GPUReservations() {
       />
 
       {/* Delete Confirmation */}
-      <BaseModal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} size="sm">
+      <BaseModal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} size="sm" closeOnBackdrop={false} closeOnEscape={true}>
         <BaseModal.Header title={t('gpuReservations.delete.title')} icon={Trash2} onClose={() => setDeleteConfirmId(null)} showBack={false} />
         <BaseModal.Content>
           <div className="text-muted-foreground">

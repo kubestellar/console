@@ -10,7 +10,8 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useAuth } from '../../lib/auth'
 import { useRewards } from '../../hooks/useRewards'
-import { BACKEND_DEFAULT_URL, STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE } from '../../lib/constants'
+import { BACKEND_DEFAULT_URL, DEMO_TOKEN_VALUE } from '../../lib/constants'
+import { clearStoredAuthToken } from '../../lib/authToken'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
@@ -179,7 +180,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       setShowSetupDialog(true)
       return
     }
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    clearStoredAuthToken()
     window.location.href = `${BACKEND_DEFAULT_URL}/auth/github`
   }
 

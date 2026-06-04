@@ -261,7 +261,10 @@ describe('fetchContainerdStatus (fetcher)', () => {
 
   function captureFetcher(): () => Promise<unknown> {
     renderHook(() => useCachedContainerd())
-    const config = mockCreateCachedHook.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    const config = mockUseCache.mock.calls.at(-1)?.[0] as { fetcher: () => Promise<unknown> } | undefined
+    if (!config?.fetcher) {
+      throw new Error('Failed to capture containerd fetcher')
+    }
     return config.fetcher
   }
 

@@ -34,6 +34,10 @@ const (
 
 	// imageRepo is the GitHub repo whose guide directories contain image references
 	imageRepo = "llm-d/llm-d"
+
+	// maxBlobResponseBytes caps the size of git blob API responses to prevent
+	// unbounded memory allocation from large blobs (CWE-400).
+	maxBlobResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
 
 // imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>
@@ -510,11 +514,15 @@ func (h *NightlyE2EHandler) fetchBlob(ctx context.Context, sha string) string {
 		return ""
 	}
 
+	// Cap response body to 5 MB to prevent unbounded memory allocation (CWE-400)
+	const maxBlobResponseBytes = 5 * 1024 * 1024
+	limitedBody := io.LimitReader(resp.Body, maxBlobResponseBytes)
+
 	var blob struct {
 		Content  string `json:"content"`
 		Encoding string `json:"encoding"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&blob); err != nil {
+	if err := json.NewDecoder(limitedBody).Decode(&blob); err != nil {
 		return ""
 	}
 
@@ -559,7 +567,7 @@ func parseImagesFromYAML(content string) map[string]string {
 		}
 		// Get indentation level of the hub line
 		hubIndent := len(line) - len(strings.TrimLeft(line, " \t"))
-		
+
 		// Search lines AFTER the hub line (downward) for name and tag within the same block
 		// Stop when we encounter a line with less indentation (different block)
 		const searchRadius = 5

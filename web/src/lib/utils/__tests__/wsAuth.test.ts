@@ -8,62 +8,69 @@ vi.mock('../../analytics', () => ({
 }))
 
 vi.mock('../../../hooks/mcp/agentFetch', () => ({
-  AGENT_TOKEN_STORAGE_KEY: 'kc-agent-token',
   getAgentToken: mockGetAgentToken,
+  getStoredAgentToken: () => sessionStorage.getItem('kc-agent-token') || '',
 }))
 
-describe('appendWsAuthToken', () => {
-  let appendWsAuthToken: (url: string) => Promise<string>
+describe('getWsAuthParams', () => {
+  let getWsAuthParams: (url: string) => Promise<{ url: string; protocols: string[] }>
 
   beforeEach(async () => {
     localStorage.clear()
+    sessionStorage.clear()
     mockEmitWsAuthMissing.mockClear()
     mockGetAgentToken.mockReset()
-    mockGetAgentToken.mockImplementation(async () => localStorage.getItem('kc-agent-token') || '')
-    // Reset module to clear the wsAuthMissingEmitted flag
+    mockGetAgentToken.mockImplementation(async () => sessionStorage.getItem('kc-agent-token') || '')
     vi.resetModules()
     const mod = await import('../wsAuth')
-    appendWsAuthToken = mod.appendWsAuthToken
+    getWsAuthParams = mod.getWsAuthParams
   })
 
-  it('appends token as query parameter when token exists', async () => {
-    localStorage.setItem('kc-agent-token', 'my-secret-token')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toBe('ws://localhost:8585/ws?token=my-secret-token')
+  it('returns the original URL and bearer protocol when token exists', async () => {
+    sessionStorage.setItem('kc-agent-token', 'my-secret-token')
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+    expect(result).toEqual({
+      url: 'ws://localhost:8585/ws',
+      protocols: ['bearer.my-secret-token'],
+    })
   })
 
-  it('uses & separator when URL already has query params', async () => {
-    localStorage.setItem('kc-agent-token', 'my-token')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws?foo=bar')
-    expect(result).toBe('ws://localhost:8585/ws?foo=bar&token=my-token')
+  it('preserves URL query params and avoids query-string token auth', async () => {
+    sessionStorage.setItem('kc-agent-token', 'my-token')
+    const result = await getWsAuthParams('ws://localhost:8585/ws?foo=bar')
+    expect(result).toEqual({
+      url: 'ws://localhost:8585/ws?foo=bar',
+      protocols: ['bearer.my-token'],
+    })
   })
 
-  it('returns original URL when no token in storage', async () => {
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toBe('ws://localhost:8585/ws')
-  })
-
-  it('URL-encodes special characters in token', async () => {
-    localStorage.setItem('kc-agent-token', 'token with spaces&special=chars')
-    const result = await appendWsAuthToken('ws://localhost:8585/ws')
-    expect(result).toContain('token=token%20with%20spaces%26special%3Dchars')
+  it('returns empty protocols when no token is available', async () => {
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+    expect(result).toEqual({ url: 'ws://localhost:8585/ws', protocols: [] })
   })
 
   it('does not emit when token is present', async () => {
-    localStorage.setItem('kc-agent-token', 'valid-token')
-    await appendWsAuthToken('ws://localhost:8585/ws')
+    sessionStorage.setItem('kc-agent-token', 'valid-token')
+    await getWsAuthParams('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).not.toHaveBeenCalled()
   })
 
   it('emits emitWsAuthMissing when token is missing', async () => {
-    await appendWsAuthToken('ws://localhost:8585/ws')
+    await getWsAuthParams('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledWith('ws://localhost:8585/ws')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledTimes(1)
   })
 
   it('throttles emit to once per module lifecycle', async () => {
-    await appendWsAuthToken('ws://localhost:8585/ws')
-    await appendWsAuthToken('ws://localhost:8585/ws/other')
+    await getWsAuthParams('ws://localhost:8585/ws')
+    await getWsAuthParams('ws://localhost:8585/ws/other')
     expect(mockEmitWsAuthMissing).toHaveBeenCalledTimes(1)
+  })
+
+  it('never puts token in the URL', async () => {
+    sessionStorage.setItem('kc-agent-token', 'secret')
+    const result = await getWsAuthParams('ws://localhost:8585/ws')
+    expect(result.url).not.toContain('secret')
+    expect(result.url).not.toContain('token=')
   })
 })

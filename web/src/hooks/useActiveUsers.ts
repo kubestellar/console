@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
-import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /**
@@ -28,7 +28,7 @@ const HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_INTERVAL
 const STALE_PRESENCE_TIMEOUT_MS = 45_000
 
 import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
-import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { getWsAuthParams } from '../lib/utils/wsAuth'
 
 const RECOVERY_DELAY = 30_000 // Retry after circuit breaker trips
 /** Timeout for fetch() call to the active-users endpoint */
@@ -247,7 +247,7 @@ function stopPresenceConnection() {
 function startPresenceConnection() {
   if (presenceStarted) return
 
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken()
   if (!token) return
 
   // Set flag AFTER token check so a missing token doesn't permanently block
@@ -258,7 +258,8 @@ function startPresenceConnection() {
 
   async function connect() {
     try {
-      presenceWs = new WebSocket(await appendWsAuthToken(wsUrl))
+      const { url, protocols } = await getWsAuthParams(wsUrl)
+      presenceWs = new WebSocket(url, protocols)
     } catch {
       presenceStarted = false
       return
@@ -272,7 +273,7 @@ function startPresenceConnection() {
       getPresenceStaleDetection().start()
       notifySubscribers({ stale: false })
       // Read token fresh to avoid stale closure on reconnects
-      const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const currentToken = getStoredAuthToken()
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
       // Clear any existing ping interval before starting a new one (prevents zombie intervals on reconnect)
       if (presencePingInterval) clearInterval(presencePingInterval)
@@ -317,7 +318,7 @@ function startPresenceConnection() {
       presenceReconnectTimer = setTimeout(() => {
         presenceReconnectTimer = null
         presenceReconnectAttempts++
-        if (presenceStarted && localStorage.getItem(STORAGE_KEY_TOKEN)) connect()
+        if (presenceStarted && getStoredAuthToken()) connect()
       }, delay)
     }
 

@@ -52,17 +52,19 @@ func TestEnsureDir_CreatesParentDirectory(t *testing.T) {
 	testPath := testDir + "/subdir/test.db"
 
 	// ensureDir should extract the directory and create it
-	ensureDir(testPath)
+	if err := ensureDirPath(testPath); err != nil {
+		t.Fatalf("ensureDirPath(%q) returned error: %v", testPath, err)
+	}
 
 	// Verify the parent directory was created
 	dirPath := testDir + "/subdir"
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		t.Fatalf("ensureDir(%q) did not create parent directory %q", testPath, dirPath)
+		t.Fatalf("ensureDirPath(%q) did not create parent directory %q", testPath, dirPath)
 	}
 }
 
 func TestEnsureDir_HandlesRootPath(t *testing.T) {
-	// Test that ensureDir doesn't panic with edge cases
+	// Test that ensureDirPath tolerates edge cases.
 	testCases := []string{
 		"/test.db",
 		"test.db",
@@ -71,18 +73,43 @@ func TestEnsureDir_HandlesRootPath(t *testing.T) {
 
 	for _, path := range testCases {
 		t.Run(path, func(t *testing.T) {
-			// This should not panic
-			defer func() {
-				if r := recover(); r != nil {
-					t.Errorf("ensureDir(%q) panicked: %v", path, r)
-				}
-			}()
-
-			// We can't actually create root directories in tests,
-			// so we just verify the function doesn't panic
-			// The actual directory creation will fail for "/" but shouldn't panic
-			_ = path
+			if err := ensureDirPath(path); err != nil {
+				t.Fatalf("ensureDirPath(%q) returned error: %v", path, err)
+			}
 		})
+	}
+}
+
+func TestEnsureDirPath_WarnsOnExistingDirPermissionError(t *testing.T) {
+	testDir := t.TempDir()
+	testPath := testDir + "/existing/test.db"
+	if err := os.MkdirAll(testDir+"/existing", dataDirPerms); err != nil {
+		t.Fatalf("mkdir existing dir: %v", err)
+	}
+
+	oldChmod := chmodPath
+	chmodPath = func(string, os.FileMode) error {
+		return os.ErrPermission
+	}
+	defer func() { chmodPath = oldChmod }()
+
+	if err := ensureDirPath(testPath); err != nil {
+		t.Fatalf("ensureDirPath should ignore permission errors on existing dirs, got: %v", err)
+	}
+}
+
+func TestEnsureDirPath_FailsForNewDirPermissionError(t *testing.T) {
+	testDir := t.TempDir()
+	testPath := testDir + "/newdir/test.db"
+
+	oldChmod := chmodPath
+	chmodPath = func(string, os.FileMode) error {
+		return os.ErrPermission
+	}
+	defer func() { chmodPath = oldChmod }()
+
+	if err := ensureDirPath(testPath); err == nil {
+		t.Fatal("ensureDirPath should fail when securing a newly created directory")
 	}
 }
 

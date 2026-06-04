@@ -82,24 +82,24 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     searchFilter,
   })
 
-  const { issues: podIssues } = useCachedPodIssues(selectedCluster || undefined)
-  const { nodes: allNodes, isLoading: nodesLoading, isDemoFallback: nodesDemoFallback } = useCachedNodes(selectedCluster || undefined)
-  const { namespaces: allNamespaces, isLoading: namespacesLoading, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
-  const { deployments: allDeployments, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments(selectedCluster || undefined)
-  const { services: allServices, isDemoFallback: servicesDemoFallback } = useCachedServices(selectedCluster || undefined)
-  const { pvcs: allPVCs, isDemoFallback: pvcsDemoFallback } = useCachedPVCs(selectedCluster || undefined)
-  const { pods: allPods, isDemoFallback: podsDemoFallback } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
-  const { configmaps: allConfigMaps, isDemoFallback: configmapsDemoFallback } = useCachedConfigMaps(selectedCluster || undefined)
-  const { secrets: allSecrets, isDemoFallback: secretsDemoFallback } = useCachedSecrets(selectedCluster || undefined)
-  const { serviceAccounts: allServiceAccounts, isDemoFallback: serviceAccountsDemoFallback } = useCachedServiceAccounts(selectedCluster || undefined)
-  const { jobs: allJobs, isDemoFallback: jobsDemoFallback } = useCachedJobs(selectedCluster || undefined)
-  const { hpas: allHPAs, isDemoFallback: hpasDemoFallback } = useCachedHPAs(selectedCluster || undefined)
-  const { replicasets: allReplicaSets, isDemoFallback: replicasetsDemoFallback } = useCachedReplicaSets(selectedCluster || undefined)
-  const { statefulsets: allStatefulSets, isDemoFallback: statefulsetsDemoFallback } = useCachedStatefulSets(selectedCluster || undefined)
-  const { daemonsets: allDaemonSets, isDemoFallback: daemonsetsDemoFallback } = useCachedDaemonSets(selectedCluster || undefined)
-  const { cronjobs: allCronJobs, isDemoFallback: cronjobsDemoFallback } = useCachedCronJobs(selectedCluster || undefined)
-  const { ingresses: allIngresses, isDemoFallback: ingressesDemoFallback } = useCachedIngresses(selectedCluster || undefined)
-  const { networkpolicies: allNetworkPolicies, isDemoFallback: networkpoliciesDemoFallback } = useCachedNetworkPolicies(selectedCluster || undefined)
+  const { issues: podIssues, isRefreshing: podIssuesRefreshing } = useCachedPodIssues(selectedCluster || undefined)
+  const { nodes: allNodes, isLoading: nodesLoading, isRefreshing: nodesRefreshing, isDemoFallback: nodesDemoFallback } = useCachedNodes(selectedCluster || undefined)
+  const { namespaces: allNamespaces, isLoading: namespacesLoading, isRefreshing: namespacesRefreshing, isDemoFallback: namespacesDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const { deployments: allDeployments, isRefreshing: deploymentsRefreshing, isDemoFallback: deploymentsDemoFallback } = useCachedDeployments(selectedCluster || undefined)
+  const { services: allServices, isRefreshing: servicesRefreshing, isDemoFallback: servicesDemoFallback } = useCachedServices(selectedCluster || undefined)
+  const { pvcs: allPVCs, isRefreshing: pvcsRefreshing, isDemoFallback: pvcsDemoFallback } = useCachedPVCs(selectedCluster || undefined)
+  const { pods: allPods, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
+  const { configmaps: allConfigMaps, isRefreshing: configmapsRefreshing, isDemoFallback: configmapsDemoFallback } = useCachedConfigMaps(selectedCluster || undefined)
+  const { secrets: allSecrets, isRefreshing: secretsRefreshing, isDemoFallback: secretsDemoFallback } = useCachedSecrets(selectedCluster || undefined)
+  const { serviceAccounts: allServiceAccounts, isRefreshing: serviceAccountsRefreshing, isDemoFallback: serviceAccountsDemoFallback } = useCachedServiceAccounts(selectedCluster || undefined)
+  const { jobs: allJobs, isRefreshing: jobsRefreshing, isDemoFallback: jobsDemoFallback } = useCachedJobs(selectedCluster || undefined)
+  const { hpas: allHPAs, isRefreshing: hpasRefreshing, isDemoFallback: hpasDemoFallback } = useCachedHPAs(selectedCluster || undefined)
+  const { replicasets: allReplicaSets, isRefreshing: replicasetsRefreshing, isDemoFallback: replicasetsDemoFallback } = useCachedReplicaSets(selectedCluster || undefined)
+  const { statefulsets: allStatefulSets, isRefreshing: statefulsetsRefreshing, isDemoFallback: statefulsetsDemoFallback } = useCachedStatefulSets(selectedCluster || undefined)
+  const { daemonsets: allDaemonSets, isRefreshing: daemonsetsRefreshing, isDemoFallback: daemonsetsDemoFallback } = useCachedDaemonSets(selectedCluster || undefined)
+  const { cronjobs: allCronJobs, isRefreshing: cronjobsRefreshing, isDemoFallback: cronjobsDemoFallback } = useCachedCronJobs(selectedCluster || undefined)
+  const { ingresses: allIngresses, isRefreshing: ingressesRefreshing, isDemoFallback: ingressesDemoFallback } = useCachedIngresses(selectedCluster || undefined)
+  const { networkpolicies: allNetworkPolicies, isRefreshing: networkpoliciesRefreshing, isDemoFallback: networkpoliciesDemoFallback } = useCachedNetworkPolicies(selectedCluster || undefined)
 
   const isDemoData = nodesDemoFallback || namespacesDemoFallback || deploymentsDemoFallback ||
     servicesDemoFallback || pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback ||
@@ -108,9 +108,14 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
     cronjobsDemoFallback || ingressesDemoFallback || networkpoliciesDemoFallback
 
   const hasData = clusters.length > 0
+  const isCardRefreshing = clustersRefreshing || podIssuesRefreshing || nodesRefreshing || namespacesRefreshing ||
+    deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing ||
+    secretsRefreshing || serviceAccountsRefreshing || jobsRefreshing || hpasRefreshing || replicasetsRefreshing ||
+    statefulsetsRefreshing || daemonsetsRefreshing || cronjobsRefreshing || ingressesRefreshing ||
+    networkpoliciesRefreshing
   useCardLoadingState({
     isLoading: isLoading && !hasData,
-    isRefreshing: clustersRefreshing,
+    isRefreshing: isCardRefreshing,
     hasAnyData: hasData,
     isDemoData,
     isFailed,

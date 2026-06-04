@@ -4,7 +4,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, getLocalAgentURL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
@@ -269,14 +269,15 @@ export function useServices(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[services] Backend fetch failed:', err)
+          console.error('[services] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         return
       }
       const url = `${LOCAL_AGENT_HTTP_URL}/services?${params}`
 
       // Use direct fetch with timeout to prevent hanging
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
       const controller = new AbortController()
@@ -456,7 +457,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       }
     }
     // Skip REST fallback when no token to prevent GA4 auth errors (#9957)
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const token = getStoredAuthToken()
     if (!token) {
       // Only clear data if we never had any; preserve stale data otherwise (#11540)
       if (!hasReceivedLiveDataRef.current) {
@@ -487,7 +488,8 @@ export function useIngresses(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[ingresses] Backend fetch failed:', err)
+          console.error('[ingresses] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         setIsRefreshing(false)
@@ -606,7 +608,8 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[networkpolicies] Backend fetch failed:', err)
+          console.error('[networkpolicies] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         setIsRefreshing(false)

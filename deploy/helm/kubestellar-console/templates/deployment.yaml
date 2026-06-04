@@ -350,6 +350,8 @@ spec:
           volumeMounts:
             - name: kc-config
               mountPath: /app/.kc
+            - name: tmp
+              mountPath: /tmp
             {{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /app/data
@@ -366,6 +368,8 @@ spec:
             {{- end }}
       volumes:
         - name: kc-config
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}
         {{- if .Values.persistence.enabled }}
         - name: data

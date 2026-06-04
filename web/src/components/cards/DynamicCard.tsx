@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Loader2, Database } from 'lucide-react'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
@@ -154,6 +154,23 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
   const apiEndpoint = cardDefinition?.apiEndpoint || ''
 
+  // #16506: Restrict apiEndpoint to same-origin URLs only to prevent
+  // session token exfiltration to attacker-controlled servers.
+  const isSafeEndpoint = (() => {
+    if (!apiEndpoint) return false
+    // Root-relative paths (e.g. "/api/...") are safe, but protocol-relative
+    // URLs ("//evil.com") must be rejected because the browser resolves them
+    // to an external origin.
+    if (apiEndpoint.startsWith('/')) return !apiEndpoint.startsWith('//')
+    // Absolute URLs must match current origin
+    try {
+      const parsed = new URL(apiEndpoint)
+      return parsed.origin === window.location.origin
+    } catch {
+      return false
+    }
+  })()
+
   // API data via useCache (persists across navigation, SWR pattern, demo fallback)
   const {
     data: apiData,
@@ -168,9 +185,9 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     initialData: [],
     demoData: [{ id: 'demo-1', name: 'Demo Item', status: 'active' }],
     persist: true,
-    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
+    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint && isSafeEndpoint,
     fetcher: async () => {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       const res = await fetch(apiEndpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),

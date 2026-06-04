@@ -111,14 +111,25 @@ export default defineConfig(({ mode }) => ({
             ['pages-platform', ['/src/components/gitops/', '/src/components/cicd/', '/src/components/operators/', '/src/components/helm/']],
             ['pages-aiml', ['/src/components/aiml/', '/src/components/aiagents/', '/src/components/llmd-benchmarks/']],
             ['pages-misc', ['/src/components/alerts/', '/src/components/cost/', '/src/components/events/', '/src/components/logs/', '/src/components/deploy/', '/src/components/gpu/', '/src/components/arcade/', '/src/components/marketplace/', '/src/components/clusters/']],
-            // Split card components into their own chunk (after card-registry rules, before dashboard)
-            ['cards', ['/src/components/cards/']],
+            // Split card components into domain-specific chunks (after card-registry rules, before dashboard)
+            ['cards-gpu', ['/src/components/cards/GPU', '/src/components/cards/ProactiveGPUNodeHealthMonitor']],
+            ['cards-gitops', ['/src/components/cards/ArgoCD', '/src/components/cards/GitOpsDrift', '/src/components/cards/flux_status/', '/src/components/cards/deploy/', '/src/components/cards/deploy-bundle', '/src/components/cards/cardRegistry.gitops']],
+            ['cards-observability', ['/src/components/cards/otel_status/', '/src/components/cards/jaeger_status/', '/src/components/cards/cortex_status/', '/src/components/cards/thanos_status/', '/src/components/cards/fluentd_status/', '/src/components/cards/longhorn_status/', '/src/components/cards/rook_status/', '/src/components/cards/cardRegistry.observability']],
+            ['cards-security', ['/src/components/cards/kyverno/', '/src/components/cards/opa/', '/src/components/cards/trivy/', '/src/components/cards/kubescape/', '/src/components/cards/spiffe_status/', '/src/components/cards/spire_status/', '/src/components/cards/keycloak_status/', '/src/components/cards/compliance/', '/src/components/cards/intoto_supply_chain/', '/src/components/cards/cardRegistry.security', '/src/components/cards/cardRegistry.compliance']],
+            ['cards-aiml', ['/src/components/cards/llmd/', '/src/components/cards/kuberay_fleet/', '/src/components/cards/kserve_status/', '/src/components/cards/kagent/', '/src/components/cards/kagenti/', '/src/components/cards/cardRegistry.ai']],
+            ['cards-quantum', ['/src/components/cards/quantum/', '/src/components/cards/cardRegistry.quantum']],
+            ['cards-networking', ['/src/components/cards/cilium_status/', '/src/components/cards/linkerd_status/', '/src/components/cards/envoy_status/', '/src/components/cards/contour_status/', '/src/components/cards/cni_status/', '/src/components/cards/coredns_status/', '/src/components/cards/nats_status/', '/src/components/cards/grpc_status/']],
+            ['cards-platform', ['/src/components/cards/crossplane-status/', '/src/components/cards/knative_status/', '/src/components/cards/keda_status/', '/src/components/cards/dapr_status/', '/src/components/cards/kubevela_status/', '/src/components/cards/harbor_status/', '/src/components/cards/strimzi_status/', '/src/components/cards/volcano_status/', '/src/components/cards/openkruise_status/', '/src/components/cards/cardRegistry.platform']],
+            ['cards-misc', ['/src/components/cards/']],
             // Split drilldown views into their own chunk
             ['drilldown', ['/src/components/drilldown/']],
             // Dashboard and layout
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
             ['layout-shell', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
+            ['contexts-providers', ['/src/contexts/', '/src/hooks/useDrillDown', '/src/hooks/useRewards', '/src/hooks/useMissions', '/src/hooks/useGlobalFilters']],
+            ['hooks-data', ['/src/hooks/useCached', '/src/hooks/useCache', '/src/hooks/useCluster', '/src/hooks/useDashboard']],
+            ['lib-cache', ['/src/lib/cache/']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
             ['app-shell', ['/src/App.tsx', '/src/hooks/usePersistedSettings']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],

@@ -40,7 +40,7 @@ vi.mock('../../../lib/api', () => ({
 vi.mock('../agentFetch', () => ({
   getLocalAgentURL: () => 'http://localhost:4201',
   agentFetch: vi.fn(),
-  AGENT_TOKEN_STORAGE_KEY: 'kc-auth-token',
+  getStoredAgentToken: () => sessionStorage.getItem('kc-auth-token') || '',
 }))
 
 vi.mock('../clusterUtils', () => ({

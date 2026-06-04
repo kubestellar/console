@@ -1,0 +1,5 @@
+# Minimum allowed Go coverage by package directory.
+# Format: <package-path> <minimum-percent>
+pkg/agent 48.0
+pkg/api 60.5
+pkg/k8s 68.5

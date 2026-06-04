@@ -2,7 +2,9 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -146,5 +148,48 @@ func TestListArgoApplicationSets_SeesNewContextAfterHotReload(t *testing.T) {
 	}
 	if got.TotalCount != 2 {
 		t.Errorf("expected 2 applicationsets across both contexts, got %d", got.TotalCount)
+	}
+}
+
+func TestIsNoMatchError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil error", nil, false},
+		{"unrelated error", errors.New("connection refused"), false},
+		{"no matches for", errors.New("no matches for kind \"Application\""), true},
+		{"server could not find", errors.New("the server could not find the requested resource"), true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isNoMatchError(tc.err); got != tc.want {
+				t.Errorf("isNoMatchError(%v) = %v, want %v", tc.err, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseArgoTimeAgo(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		empty bool
+	}{
+		{"empty string", "", true},
+		{"valid RFC3339", time.Now().Add(-time.Hour).Format(time.RFC3339), false},
+		{"unparseable returns raw", "not-a-timestamp", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseArgoTimeAgo(tc.input)
+			if tc.empty && got != "" {
+				t.Errorf("expected empty, got %q", got)
+			}
+			if !tc.empty && got == "" {
+				t.Errorf("expected non-empty for input %q", tc.input)
+			}
+		})
 	}
 }

@@ -41,7 +41,7 @@ const SORT_OPTIONS = [
 export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, lastRefresh, isFailed, consecutiveFailures, error } = useClusters()
-  const { nodes: gpuNodes, isDemoFallback } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
   const {
@@ -56,7 +56,7 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
   const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
-    isRefreshing,
+    isRefreshing: isRefreshing || gpuRefreshing,
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,

@@ -17,7 +17,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 
 	timeline := handlers.NewTimelineHandler(s.store, s.k8sClient)
 	api.Get("/timeline", timeline.GetTimeline)
-	timeline.StartEventCollector(s.done)
+	timeline.StartEventCollector(s.lifecycle.done)
 
 	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
 	clusterDiscoveryAuth := routes.jwtAuth
@@ -82,7 +82,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	} else {
 		kagentiConfigManager = manager
 	}
-	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient)
+	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient, s.store)
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
 	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)

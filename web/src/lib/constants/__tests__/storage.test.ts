@@ -6,6 +6,7 @@ describe('storage constants', () => {
     expect(storageConstants.STORAGE_KEY_TOKEN).toBe('token')
     expect(storageConstants.DEMO_TOKEN_VALUE).toBe('demo-token')
     expect(storageConstants.STORAGE_KEY_FEEDBACK_GITHUB_TOKEN).toBeTruthy()
+    expect(storageConstants.STORAGE_KEY_HAS_FEEDBACK_GITHUB_TOKEN).toBeTruthy()
   })
 
   it('exports demo/onboarding keys', () => {

@@ -30,6 +30,17 @@ func sanitizeK8sStringForPrompt(input string) string {
 	return strings.Join(strings.Fields(sanitized), " ")
 }
 
+// SanitizeK8sStringForPrompt neutralizes prompt-sensitive user-controlled input
+// before it is interpolated into downstream LLM prompts.
+func SanitizeK8sStringForPrompt(input string) string {
+	return sanitizeK8sStringForPrompt(input)
+}
+
+// SanitizePromptString keeps a generic alias for non-Kubernetes prompt fields.
+func SanitizePromptString(input string) string {
+	return sanitizeK8sStringForPrompt(input)
+}
+
 func sanitizeK8sStringsForPrompt(values []string) []string {
 	if len(values) == 0 {
 		return nil

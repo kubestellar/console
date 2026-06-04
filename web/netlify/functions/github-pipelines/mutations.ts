@@ -2,11 +2,9 @@
  * Mutation handling (rerun/cancel) for GitHub Pipelines Dashboard.
  * Auth and rate limiting are enforced by github-pipelines-mutate.mts.
  */
-import { getRepos } from "./constants";
 import { gh } from "./fetchers";
-import { isValidRepo, jsonResponse } from "./helpers";
+import { isAllowedRepo, jsonResponse } from "./helpers";
 
-const REPOS = getRepos();
 const RERUN_OPERATION = "rerun";
 const CANCEL_OPERATION = "cancel";
 const MAX_UPSTREAM_ERROR_PREVIEW_CHARS = 500;
@@ -26,8 +24,8 @@ export async function mutate(
   if (!/^\d+$/.test(runId)) {
     return jsonResponse({ error: "Invalid run ID" }, { status: 400 });
   }
-  if (!isValidRepo(repo) || !REPOS.includes(repo)) {
-    return jsonResponse({ error: "Unknown repo" }, { status: 400 });
+  if (!isAllowedRepo(repo)) {
+    return jsonResponse({ error: "Repo is not in the PIPELINE_REPOS allowlist" }, { status: 403 });
   }
 
   let path: string;

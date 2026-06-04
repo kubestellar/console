@@ -1,11 +1,14 @@
 /**
  * Netlify mirror of pkg/api/handlers/rewards_badge.go (RFC #8862 Phase 3).
  * GET /api/rewards/badge/:github_login — shields.io-style SVG tier badge.
- * Netlify edge handles rate limiting; no app-level limiter needed.
+ * Adds app-level input validation, IP rate limiting, and blob-backed caching
+ * to protect the server's GitHub token from quota exhaustion.
  */
+import { getStore } from "@netlify/blobs";
 import { getContributorLevel } from "../../src/types/rewards";
 import { GITHUB_SCORING_GENERATED } from "../../src/types/rewards.generated";
 import { readCappedJson } from "./_shared/read-capped-json";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const GITHUB_API = "https://api.github.com";
 const MAX_PAGES = 10; // GitHub Search API caps at 1000 results
@@ -38,12 +41,24 @@ const UNKNOWN_COLOR = "#9e9e9e";
 const ERROR_NAME = "error";
 const ERROR_COLOR = "#e05d44";
 const CONTENT_TYPE = "image/svg+xml; charset=utf-8";
-const CACHE_SUCCESS = "public, max-age=3600"; // 1h — tier rarely flips
+const CACHE_SUCCESS = "public, max-age=3600";
+const CACHE_UNKNOWN = "public, max-age=3600";
+const CACHE_INVALID = "public, max-age=3600";
 const CACHE_ERROR = "no-store";
-const LOGIN_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})$/;
+const LOGIN_RE = /^[a-zA-Z0-9-]{1,39}$/;
 const PATH_PREFIX = "/api/rewards/badge/";
 const STATUS_OK = 200;
+const STATUS_BAD_REQUEST = 400;
+const STATUS_TOO_MANY_REQUESTS = 429;
 const STATUS_BAD_GATEWAY = 502;
+const RATE_LIMIT_STORE_NAME = "rewards-badge-rate-limit";
+const RATE_LIMIT_PREFIX = "rewards-badge:";
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const CACHE_STORE_NAME = "rewards-badge-cache";
+const CACHE_KEY_PREFIX = "badge:";
+const CACHE_SUCCESS_TTL_MS = 60 * 60 * 1000;
+const CACHE_UNKNOWN_TTL_MS = 60 * 60 * 1000;
 
 interface SearchItem {
   labels: Array<{ name: string }>;
@@ -52,6 +67,14 @@ interface SearchItem {
 interface SearchResponse {
   total_count: number;
   items: SearchItem[];
+}
+
+type CacheStatus = "success" | "unknown";
+
+interface BadgeCacheEntry {
+  cachedAt: string;
+  status: CacheStatus;
+  svg: string;
 }
 
 /** Map tier color family → hex. Mirrors tierColorHex in rewards_badge.go. */
@@ -99,11 +122,77 @@ ${iconPath ? `
 </svg>`;
 }
 
-function svgResponse(status: number, svg: string, cacheControl: string): Response {
+function svgResponse(
+  status: number,
+  svg: string,
+  cacheControl: string,
+  extraHeaders: Record<string, string> = {},
+): Response {
   return new Response(svg, {
     status,
-    headers: { "Content-Type": CONTENT_TYPE, "Cache-Control": cacheControl },
+    headers: {
+      "Content-Type": CONTENT_TYPE,
+      "Cache-Control": cacheControl,
+      ...extraHeaders,
+    },
   });
+}
+
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown"
+  );
+}
+
+function getCacheKey(login: string): string {
+  return `${CACHE_KEY_PREFIX}${login.toLowerCase()}`;
+}
+
+function getCacheTtlMs(status: CacheStatus): number {
+  return status === "unknown" ? CACHE_UNKNOWN_TTL_MS : CACHE_SUCCESS_TTL_MS;
+}
+
+async function readBadgeCache(login: string): Promise<BadgeCacheEntry | null> {
+  try {
+    const store = getStore(CACHE_STORE_NAME);
+    const raw = await store.get(getCacheKey(login), { type: "json" });
+    if (!raw) {
+      return null;
+    }
+
+    const entry = raw as Partial<BadgeCacheEntry>;
+    if (
+      typeof entry.cachedAt !== "string" ||
+      typeof entry.svg !== "string" ||
+      (entry.status !== "success" && entry.status !== "unknown")
+    ) {
+      return null;
+    }
+
+    const ageMs = Date.now() - new Date(entry.cachedAt).getTime();
+    if (!Number.isFinite(ageMs) || ageMs >= getCacheTtlMs(entry.status)) {
+      return null;
+    }
+
+    return {
+      cachedAt: entry.cachedAt,
+      status: entry.status,
+      svg: entry.svg,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function writeBadgeCache(login: string, entry: BadgeCacheEntry): Promise<void> {
+  try {
+    const store = getStore(CACHE_STORE_NAME);
+    await store.setJSON(getCacheKey(login), entry);
+  } catch {
+    // Best effort only.
+  }
 }
 
 async function searchItems(login: string, itemType: "issue" | "pr", token: string): Promise<SearchItem[]> {
@@ -116,12 +205,6 @@ async function searchItems(login: string, itemType: "issue" | "pr", token: strin
     if (token) headers["Authorization"] = `Bearer ${token}`;
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
     if (!res.ok) {
-      // 404/422 ⇒ unknown-login (gray badge); other codes ⇒ propagate (red badge)
-      if (res.status === 404 || res.status === 422) {
-        const err = new Error("unknown-login") as Error & { unknownLogin?: boolean };
-        err.unknownLogin = true;
-        throw err;
-      }
       throw new Error(`GitHub API ${res.status}`);
     }
     const sr: SearchResponse = await readCappedJson<SearchResponse>(res, "GitHub Search API");
@@ -160,7 +243,32 @@ export default async (req: Request): Promise<Response> => {
     : "";
 
   if (!login || !LOGIN_RE.test(login)) {
-    return svgResponse(STATUS_BAD_GATEWAY, renderSVG(ERROR_NAME, ERROR_COLOR), CACHE_ERROR);
+    return svgResponse(STATUS_BAD_REQUEST, renderSVG(ERROR_NAME, ERROR_COLOR), CACHE_INVALID);
+  }
+
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE_NAME,
+    prefix: RATE_LIMIT_PREFIX,
+    subject: getClientIp(req),
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rate.limited) {
+    return svgResponse(
+      STATUS_TOO_MANY_REQUESTS,
+      renderSVG(ERROR_NAME, ERROR_COLOR),
+      CACHE_ERROR,
+      { "Retry-After": String(rate.retryAfterSeconds) },
+    );
+  }
+
+  const cached = await readBadgeCache(login);
+  if (cached) {
+    return svgResponse(
+      STATUS_OK,
+      cached.svg,
+      cached.status === "unknown" ? CACHE_UNKNOWN : CACHE_SUCCESS,
+    );
   }
 
   // @ts-ignore: process is available in Netlify Node.js environment
@@ -170,15 +278,27 @@ export default async (req: Request): Promise<Response> => {
       searchItems(login, "issue", token),
       searchItems(login, "pr", token),
     ]);
+
+    if (issues.length === 0 && prs.length === 0) {
+      const svg = renderSVG(UNKNOWN_NAME, UNKNOWN_COLOR);
+      await writeBadgeCache(login, {
+        cachedAt: new Date().toISOString(),
+        status: "unknown",
+        svg,
+      });
+      return svgResponse(STATUS_OK, svg, CACHE_UNKNOWN);
+    }
+
     const points = scorePoints(issues, prs);
     const { current } = getContributorLevel(points);
-    return svgResponse(STATUS_OK, renderSVG(current.name, tierColorHex(current.color), current.iconPath), CACHE_SUCCESS);
-  } catch (err) {
-    const isUnknown =
-      err instanceof Error && (err as Error & { unknownLogin?: boolean }).unknownLogin === true;
-    if (isUnknown) {
-      return svgResponse(STATUS_OK, renderSVG(UNKNOWN_NAME, UNKNOWN_COLOR), CACHE_SUCCESS);
-    }
+    const svg = renderSVG(current.name, tierColorHex(current.color), current.iconPath);
+    await writeBadgeCache(login, {
+      cachedAt: new Date().toISOString(),
+      status: "success",
+      svg,
+    });
+    return svgResponse(STATUS_OK, svg, CACHE_SUCCESS);
+  } catch {
     return svgResponse(STATUS_BAD_GATEWAY, renderSVG(ERROR_NAME, ERROR_COLOR), CACHE_ERROR);
   }
 };

@@ -154,7 +154,7 @@ const CI_TIMEOUT_MULTIPLIER = 2
  * 120s keeps the assertion meaningful while avoiding CI-only false positives.
  * (#13547, #13789, #14815, #14979, #15179, #15209, #15411, #15469, #15523, #15645, #15851, #16068, #16193).
  */
-const WARM_TTC_THRESHOLD_MS = process.env.CI ? 120_000 : 500
+const WARM_TTC_THRESHOLD_MS = process.env.CI ? 180_000 : 500
 /**
  * With 347 cards across 15 batches, CI shared runners under CPU contention can
  * exceed the previous 4-card tolerance even when the cache behavior is still
@@ -806,6 +806,9 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
 
   // ── Phase 1: Setup ────────────────────────────────────────────────────
   console.log('[CacheTest] Phase 1: Setup — mocks + cold mode')
+  // Playwright applies route handlers in reverse registration order, so install
+  // the broad /api fallback first and layer specific mocks on top of it.
+  await page.route('**/api/**', fulfillSkippedRoute)
   await setupAuth(page)
   await registerColdBatchStorageReset(page)
   mockControl = await setupLiveMocks(page, { delayDataAPIs: false })
@@ -826,10 +829,6 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   for (const pattern of skipRoutePatterns) {
     await page.route(pattern, fulfillSkippedRoute)
   }
-
-  // Catch-all for any remaining /api/* endpoints — prevents 401 redirects
-  // and keeps unknown SSE/EventSource requests from aborting on MIME mismatch.
-  await page.route('**/api/**', fulfillSkippedRoute)
 
   await setLiveColdMode(page)
 

@@ -34,6 +34,14 @@ export const RATE_LIMIT_STORE_NAME = "feedback-app-rate-limit";
 export const FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS = 50;
 /** Rate-limit window for feedback POSTs (24h). */
 export const FEEDBACK_APP_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Maximum unauthenticated requests per IP each minute before auth. */
+export const FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_MAX_REQUESTS = 10;
+/** One-minute pre-auth rate-limit window. */
+export const FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_WINDOW_MS = 60_000;
+/** Maximum failed auth attempts per IP each minute. */
+export const FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS = 5;
+/** One-minute auth failure rate-limit window. */
+export const FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS = 60_000;
 /** Non-obvious header name for the per-user client credential. */
 export const CLIENT_AUTH_HEADER = "x-kc-client-auth";
 /** Maximum chars of upstream response body to log (defense-in-depth). */
@@ -194,12 +202,14 @@ export function jsonResponse(
   request: Request,
   status: number,
   body: unknown,
+  headers: Record<string, string> = {},
 ): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...buildCorsHeaders(request, CORS_OPTS),
+      ...headers,
     },
   });
 }
@@ -339,10 +349,16 @@ export async function verifyClientAuth(
 
 // ─── Repository Permissions ───────────────────────────────────────────────────
 
+export interface RepoPermissions {
+  pull: boolean;
+  push: boolean;
+  admin: boolean;
+}
+
 export async function getRepoPermissions(
   credential: string,
   repoSlug: string,
-): Promise<{ push: boolean }> {
+): Promise<RepoPermissions> {
   const resp = await fetch(`${GITHUB_API}/repos/${repoSlug}`, {
     headers: {
       Authorization: `Bearer ${credential}`,
@@ -355,8 +371,14 @@ export async function getRepoPermissions(
   if (!resp.ok) {
     throw new Error(`repo permissions HTTP ${resp.status}`);
   }
-  const data = await readCappedJson<{ permissions?: { push?: boolean } }>(resp, "GitHub repo permissions");
-  return { push: data.permissions?.push === true };
+  const data = await readCappedJson<{
+    permissions?: { pull?: boolean; push?: boolean; admin?: boolean };
+  }>(resp, "GitHub repo permissions");
+  return {
+    pull: data.permissions?.pull === true,
+    push: data.permissions?.push === true,
+    admin: data.permissions?.admin === true,
+  };
 }
 
 // ─── Sub-Issue Linking ────────────────────────────────────────────────────────

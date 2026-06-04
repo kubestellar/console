@@ -28,6 +28,10 @@ let mockCacheState: Partial<{
   isRefreshing: boolean
 }> = {}
 
+const { mockGetStoredAuthToken } = vi.hoisted(() => ({
+  mockGetStoredAuthToken: vi.fn(() => null),
+}))
+
 vi.mock('../mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
@@ -49,6 +53,10 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+}))
+
+vi.mock('../../lib/authToken', () => ({
+  getStoredAuthToken: () => mockGetStoredAuthToken(),
 }))
 
 // Stateful useCache/createCachedHook mock — calls the real fetcher, tracks
@@ -190,6 +198,7 @@ const LIVE_CRDS: CRDData[] = [
 ]
 
 function resetState() {
+  vi.stubGlobal('fetch', mockFetch)
   vi.clearAllMocks()
   vi.useFakeTimers({ shouldAdvanceTime: true })
   localStorage.clear()
@@ -202,6 +211,11 @@ function resetState() {
     isLoading: false,
   }
   mockCacheState = {}
+  mockFetch.mockReset()
+  // Re-stub fetch after each test since setup.ts vi.unstubAllGlobals() clears it
+  vi.stubGlobal('fetch', mockFetch)
+  mockGetStoredAuthToken.mockReset()
+  mockGetStoredAuthToken.mockReturnValue(null)
 }
 
 // ---------------------------------------------------------------------------
@@ -379,7 +393,7 @@ describe('useCRDs', () => {
   })
 
   it('includes auth token in request headers when available', async () => {
-    localStorage.setItem('token', 'test-jwt-token')
+    mockGetStoredAuthToken.mockReturnValue('test-jwt-token')
     mockFetch.mockResolvedValue(okResponse(LIVE_CRDS))
 
     renderHook(() => useCRDs())

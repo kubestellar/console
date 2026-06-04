@@ -85,6 +85,19 @@ func (s *Server) validateToken(r *http.Request) bool {
 	// Browsers always send all three headers; a plain HTTP client spoofing just
 	// the Upgrade header will be missing Connection and/or Sec-WebSocket-Key.
 	if isRealWebSocketUpgrade(r) {
+		// #16508: Prefer Sec-WebSocket-Protocol based auth — avoids token in URL
+		// which gets logged by proxies. Client sends "bearer.<token>" as a
+		// subprotocol; server validates and echoes it back during upgrade.
+		for _, proto := range websocketSubprotocols(r) {
+			if strings.HasPrefix(proto, "bearer.") {
+				candidate := strings.TrimPrefix(proto, "bearer.")
+				if subtle.ConstantTimeCompare([]byte(candidate), []byte(s.agentToken)) == 1 {
+					return true
+				}
+			}
+		}
+
+		// Legacy: query parameter (deprecated — kept for backwards compat)
 		if queryToken := r.URL.Query().Get("token"); queryToken != "" {
 			return subtle.ConstantTimeCompare([]byte(queryToken), []byte(s.agentToken)) == 1
 		}
@@ -125,6 +138,23 @@ func isRealWebSocketUpgrade(r *http.Request) bool {
 	}
 
 	return true
+}
+
+// websocketSubprotocols parses the Sec-WebSocket-Protocol header into individual
+// protocol names. Browsers send this as a comma-separated list.
+func websocketSubprotocols(r *http.Request) []string {
+	header := r.Header.Get("Sec-WebSocket-Protocol")
+	if header == "" {
+		return nil
+	}
+	parts := strings.Split(header, ",")
+	protocols := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			protocols = append(protocols, trimmed)
+		}
+	}
+	return protocols
 }
 
 // isAllowedOrigin checks if the origin is in the allowed list.

@@ -152,7 +152,7 @@ export function UpdatesTab({
           className="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors"
         >
           <Trophy className="w-3.5 h-3.5" />
-          <span>View Full Leaderboard</span>
+          <span>{t('feedback.viewFullLeaderboard')}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>

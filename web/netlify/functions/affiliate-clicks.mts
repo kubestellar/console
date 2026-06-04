@@ -50,6 +50,9 @@ for (const [login, term] of Object.entries(INTERN_MAP)) {
 const CACHE_TTL_MS = 3 * 60 * 1000;
 /** Days to look back for affiliate clicks */
 const LOOKBACK_DAYS = 90;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const AFFILIATE_MAX_LENGTH = 50;
+const AFFILIATE_PATTERN = /^[a-zA-Z0-9_-]{1,50}$/;
 
 const GH_LOGIN_MIN_LEN = 2;
 const GH_LOGIN_MAX_LEN = 39;
@@ -62,6 +65,46 @@ function isPlausibleGitHubLogin(term: string): boolean {
   if (term.length < GH_LOGIN_MIN_LEN || term.length > GH_LOGIN_MAX_LEN) return false;
   if (/^intern-\d+$/.test(term)) return false;
   return GH_LOGIN_PATTERN.test(term);
+}
+
+function normalizeAffiliateParam(value: string | null): string | null {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  return trimmedValue.toLowerCase();
+}
+
+function getAllowedAffiliates(): Set<string> | null {
+  const configuredAffiliates = process.env.ALLOWED_AFFILIATES
+    ?.split(",")
+    .map((affiliate) => normalizeAffiliateParam(affiliate))
+    .filter((affiliate): affiliate is string => Boolean(affiliate));
+
+  if (!configuredAffiliates || configuredAffiliates.length === 0) {
+    return null;
+  }
+
+  return new Set(configuredAffiliates);
+}
+
+function validateAffiliateParam(affiliate: string | null): string | null {
+  const normalizedAffiliate = normalizeAffiliateParam(affiliate);
+  if (!normalizedAffiliate) {
+    return null;
+  }
+
+  if (normalizedAffiliate.length > AFFILIATE_MAX_LENGTH || !AFFILIATE_PATTERN.test(normalizedAffiliate)) {
+    throw new Error("Invalid affiliate parameter");
+  }
+
+  const allowedAffiliates = getAllowedAffiliates();
+  if (allowedAffiliates && !allowedAffiliates.has(normalizedAffiliate)) {
+    throw new Error("Affiliate is not allowed");
+  }
+
+  return normalizedAffiliate;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -355,21 +398,23 @@ export default async (req: Request) => {
   }
 
   const url = new URL(req.url);
-  const affiliate = url.searchParams.get("affiliate");
+  const rawAffiliate = url.searchParams.get("affiliate");
   const startDateParam = url.searchParams.get("startDate");
   const endDateParam = url.searchParams.get("endDate");
 
-  // Validate only when affiliate query parameter is explicitly provided,
-  // or custom dates are supplied. Keeps standard leaderboard backward compatible.
+  let affiliate: string | null;
+  try {
+    affiliate = validateAffiliateParam(rawAffiliate);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid affiliate parameter";
+    return new Response(JSON.stringify({ error: message }), { status: 400, headers });
+  }
+
+  // Validate custom date parameters while allowing an omitted affiliate
+  // query to fall back to the aggregate "all" cache key.
   const isCustomQuery = url.searchParams.has("affiliate") || url.searchParams.has("startDate") || url.searchParams.has("endDate");
 
   if (isCustomQuery) {
-    if (!affiliate) {
-      return new Response(
-        JSON.stringify({ error: "Missing required affiliate parameter" }),
-        { status: 400, headers }
-      );
-    }
     if (startDateParam && isNaN(Date.parse(startDateParam))) {
       return new Response(
         JSON.stringify({ error: "Invalid startDate parameter" }),
@@ -391,7 +436,7 @@ export default async (req: Request) => {
           { status: 400, headers }
         );
       }
-      const maxSpanMs = LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+      const maxSpanMs = LOOKBACK_DAYS * MS_PER_DAY;
       if (endMs - startMs > maxSpanMs) {
         return new Response(
           JSON.stringify({ error: `Date range cannot exceed ${LOOKBACK_DAYS} days` }),
@@ -471,4 +516,7 @@ export const _testOnly = {
   resetTokenCache: () => {
     cachedToken = null;
   },
+  normalizeAffiliateParam,
+  getAllowedAffiliates,
+  validateAffiliateParam,
 };

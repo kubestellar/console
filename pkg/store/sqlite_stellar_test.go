@@ -233,3 +233,86 @@ func TestGetActiveWatchesAutoResolvesInactiveEntries(t *testing.T) {
 	assert.Equal(t, stellarWatchAutoResolvedLastUpdate, resolved[0].LastUpdate)
 	require.NotNil(t, resolved[0].ResolvedAt)
 }
+
+func TestListStellarAuditLogScopesEntriesToRequestingUser(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	entries := []*StellarAuditEntry{
+		{
+			ID:         "audit-alice-old",
+			Ts:         now.Add(-2 * time.Minute),
+			UserID:     "alice",
+			Action:     "view",
+			EntityType: "mission",
+			EntityID:   "mission-1",
+			Cluster:    "prod-a",
+			Detail:     `{"result":"ok"}`,
+		},
+		{
+			ID:         "audit-alice-new",
+			Ts:         now.Add(-1 * time.Minute),
+			UserID:     "alice",
+			Action:     "update",
+			EntityType: "mission",
+			EntityID:   "mission-2",
+			Cluster:    "prod-a",
+			Detail:     `{"result":"ok"}`,
+		},
+		{
+			ID:         "audit-bob",
+			Ts:         now,
+			UserID:     "bob",
+			Action:     "delete",
+			EntityType: "watch",
+			EntityID:   "watch-1",
+			Cluster:    "prod-b",
+			Detail:     `{"result":"ok"}`,
+		},
+	}
+
+	for _, entry := range entries {
+		require.NoError(t, s.CreateAuditEntry(ctx, entry))
+	}
+
+	tests := []struct {
+		name    string
+		userID  string
+		limit   int
+		wantIDs []string
+	}{
+		{
+			name:    "DefaultLimitReturnsOnlyMatchingUserEntries",
+			userID:  "alice",
+			limit:   0,
+			wantIDs: []string{"audit-alice-new", "audit-alice-old"},
+		},
+		{
+			name:    "ExplicitLimitAppliesAfterScoping",
+			userID:  "alice",
+			limit:   1,
+			wantIDs: []string{"audit-alice-new"},
+		},
+		{
+			name:    "DifferentUserGetsSeparateAuditHistory",
+			userID:  "bob",
+			limit:   10,
+			wantIDs: []string{"audit-bob"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := s.ListStellarAuditLog(ctx, tt.userID, tt.limit)
+			require.NoError(t, err)
+
+			gotIDs := make([]string, 0, len(got))
+			for _, entry := range got {
+				assert.Equal(t, tt.userID, entry.UserID)
+				gotIDs = append(gotIDs, entry.ID)
+			}
+
+			assert.Equal(t, tt.wantIDs, gotIDs)
+		})
+	}
+}

@@ -488,10 +488,10 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
               )} />
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-foreground truncate block">{w.name}</span>
-                <span className="text-2xs text-muted-foreground truncate block">
+                <span className="text-2xs text-muted-foreground truncate block flex items-center gap-1">
                   {w.repo.split('/')[1]} · {w.branch}
                   {w.prNumber && (
-                    <a href={sanitizeUrl(w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`)} target="_blank" rel="noopener noreferrer" className="ml-1 text-blue-400 hover:underline">#{w.prNumber}</a>
+                    <a href={sanitizeUrl(w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`)} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">#{w.prNumber}</a>
                   )}
                 </span>
               </div>

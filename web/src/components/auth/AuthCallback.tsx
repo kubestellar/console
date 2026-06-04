@@ -6,9 +6,9 @@ import { ROUTES, getLoginWithError } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem, safeSetItem } from '../../lib/utils/localStorage'
+import { setAgentToken } from '../../hooks/mcp/agentFetch'
 import { emitError, emitGitHubConnected } from '../../lib/analytics'
 import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants/storage'
-import { captureClientCtxFromFragment } from '../../lib/clientCtx'
 
 /** Timeout (ms) for the /auth/refresh call that confirms the HttpOnly cookie session. */
 const AUTH_REFRESH_TIMEOUT_MS = 5_000
@@ -41,11 +41,9 @@ export function AuthCallback() {
       return
     }
 
-    // Capture the one-shot credential passed via URL fragment by the
-    // OAuth callback, stash it (obfuscated) in session storage, then
-    // strip the fragment so it doesn't linger in history.
-    captureClientCtxFromFragment()
-
+    // The backend sets both auth cookies during the OAuth redirect, and keeps
+    // the GitHub OAuth token in HttpOnly storage so browser JavaScript never
+    // receives the raw credential.
     // The backend sets the JWT in an HttpOnly cookie during the OAuth redirect
     // (#4278 — never put the token in the URL). We call POST /auth/refresh to
     // confirm the cookie is valid and to mint a fresh JWT — but the token is
@@ -102,7 +100,8 @@ export function AuthCallback() {
         tokenExchangeSucceeded = true
 
         // Fetch the kc-agent shared secret so agentFetch() and WebSocket
-        // connections can authenticate with the local agent.
+        // connections can authenticate with the local agent via expiring
+        // session-scoped token storage.
         const agentController = new AbortController()
         const agentTimeoutId = setTimeout(() => agentController.abort(), AUTH_REFRESH_TIMEOUT_MS)
         return fetch('/api/agent/token', {
@@ -115,7 +114,7 @@ export function AuthCallback() {
             return agentRes.ok ? agentRes.json() : null
           })
           .then((agentData: { token?: string } | null) => {
-            if (agentData?.token) safeSetItem('kc-agent-token', agentData.token)
+            if (agentData?.token) setAgentToken(agentData.token)
           })
           .catch((err: unknown) => {
             const error = err instanceof Error ? err : undefined

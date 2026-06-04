@@ -316,14 +316,22 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 		init.Rows = agentExecDefaultRows
 	}
 
+	// Log command binary and arg count only — full args may contain secrets
+	// passed as CLI arguments (CWE-532, #16984).
+	cmdBinary := ""
+	if len(init.Command) > 0 {
+		cmdBinary = init.Command[0]
+	}
 	slog.Info("[AgentExec] exec session",
 		"cluster", init.Cluster,
 		"namespace", init.Namespace,
 		"pod", init.Pod,
 		"container", init.Container,
-		"command", init.Command,
+		"command_binary", cmdBinary,
+		"command_argc", len(init.Command),
 		"tty", init.TTY,
 	)
+	slog.Debug("[AgentExec] full exec command", "command", init.Command)
 
 	// Resolve clientset + REST config for the target cluster. These come
 	// from the user's kubeconfig via the shared *k8s.MultiClusterClient; the

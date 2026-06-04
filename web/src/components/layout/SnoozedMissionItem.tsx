@@ -4,6 +4,7 @@ import { SnoozedMission, formatTimeRemaining as formatMissionTimeRemaining } fro
 import { useHoverState } from '../../hooks/useHoverState'
 import { MissionType } from '../../hooks/useMissionSuggestions'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 
 const MISSION_ICONS: Record<MissionType, typeof Zap> = {
   scale: Scale,
@@ -53,12 +54,15 @@ export function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissi
       {...hoverProps}
     >
       {/* Dismiss button */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onDismiss}
-        className="absolute top-1 right-1 p-0.5 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
+        title={t('actions.dismiss')}
+        className="absolute top-1 right-1 rounded p-0.5 text-muted-foreground hover:text-white"
       >
-        <X className="w-3 h-3" />
-      </button>
+        <X className="h-3 w-3" />
+      </Button>
 
       {/* Mission info */}
       <div className="flex items-center gap-2 pr-4 mb-1">
@@ -86,15 +90,14 @@ export function SnoozedMissionItem({ mission, onApply, onDismiss }: SnoozedMissi
         </span>
 
         {(isHovered || isExpired) && (
-          <button
+          <Button
+            variant="accent"
+            size="sm"
             onClick={onApply}
-            className={cn(
-              'px-2 py-0.5 rounded transition-colors',
-              'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-            )}
+            className="rounded px-2 py-0.5"
           >
             {t('actions.restore')}
-          </button>
+          </Button>
         )}
       </div>
 

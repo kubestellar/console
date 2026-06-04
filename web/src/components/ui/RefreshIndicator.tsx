@@ -39,6 +39,8 @@ export const RefreshIndicator = memo(function RefreshIndicator({
   showLabel = true,
   staleThresholdMinutes = 5,
 }: RefreshIndicatorProps) {
+  const { t } = useTranslation()
+
   // Track visual spinning state separately to ensure minimum spin duration
   const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
   const spinStartRef = useRef<number | null>(null)
@@ -82,13 +84,13 @@ export const RefreshIndicator = memo(function RefreshIndicator({
           textSize,
           className
         )}
-        title="Updating..."
+        title={t('common.updatingEllipsis')}
         role="status"
         aria-live="polite"
         aria-label="Updating data"
       >
         <RefreshCw className={cn(iconSize, 'animate-spin-min')} aria-hidden="true" />
-        {showLabel && <span>Updating</span>}
+        {showLabel && <span>{t('common.updating')}</span>}
       </span>
     )
   }

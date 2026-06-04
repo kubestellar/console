@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useModalState } from '../../../lib/modals'
 import { useLocation } from 'react-router-dom'
+import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { BookOpen, Play, ExternalLink, GraduationCap, Video, Loader2, Newspaper } from 'lucide-react'
 import { useTour } from '../../../hooks/useTour'
 import { LogoWithStar } from '../../ui/LogoWithStar'
@@ -56,7 +57,11 @@ interface LearnDropdownProps {
 export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
   const { isOpen, close, toggle } = useModalState()
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const { containerRef, handleKeyDown } = useKeyboardNav({
+    selector: '[role="menuitem"]:not([disabled])',
+    orientation: 'vertical',
+    onEscape: close,
+  })
   const { startTour, hasCompletedTour } = useTour()
   const location = useLocation()
   const { t } = useTranslation()
@@ -102,7 +107,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node
       const insideTrigger = triggerRef.current?.contains(target)
-      const insideDropdown = dropdownRef.current?.contains(target)
+      const insideDropdown = containerRef.current?.contains(target)
       if (!insideTrigger && !insideDropdown) {
         close()
       }
@@ -157,12 +162,14 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
       {/* Dropdown — portaled to document.body to escape navbar overflow clipping (#10319) */}
       {isOpen && createPortal(
         <div
-          ref={dropdownRef}
+          ref={containerRef as RefObject<HTMLDivElement | null>}
+          onKeyDown={handleKeyDown}
           className="w-[calc(100vw-1rem)] sm:w-96 bg-card border border-border rounded-lg shadow-xl overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto"
           style={dropdownStyle}
         >
           {/* Tour */}
           <button
+            role="menuitem"
             onClick={handleStartTour}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left"
           >
@@ -194,6 +201,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
             <div className="px-2 pb-2 max-h-64 overflow-y-auto">
               {videos.map(video => (
                 <a
+                  role="menuitem"
                   key={video.id}
                   href={getYouTubeWatchUrl(video.id)}
                   target="_blank"
@@ -263,6 +271,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
                 <div className="px-2 pb-2">
                   {blogPosts.map(post => (
                     <a
+                      role="menuitem"
                       key={post.link}
                       href={sanitizeUrl(post.link)}
                       target="_blank"
@@ -296,6 +305,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
           <div className="px-2 pb-2">
             {RESOURCES.map(resource => (
               <a
+                role="menuitem"
                 key={resource.label}
                 href={sanitizeUrl(resource.href)}
                 target="_blank"

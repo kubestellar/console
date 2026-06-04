@@ -38,13 +38,24 @@ func decodeChatHistory(value any) ([]protocol.ChatMessage, bool) {
 	case nil:
 		return nil, true
 	case []protocol.ChatMessage:
-		return history, true
+		// Normalize roles in already-decoded messages
+		normalizedHistory := make([]protocol.ChatMessage, len(history))
+		for i, msg := range history {
+			normalizedHistory[i] = protocol.ChatMessage{
+				Role:    normalizeMessageRole(msg.Role),
+				Content: msg.Content,
+			}
+		}
+		return normalizedHistory, true
 	case []any:
 		decodedHistory := make([]protocol.ChatMessage, 0, len(history))
 		for _, item := range history {
 			switch message := item.(type) {
 			case protocol.ChatMessage:
-				decodedHistory = append(decodedHistory, message)
+				decodedHistory = append(decodedHistory, protocol.ChatMessage{
+					Role:    normalizeMessageRole(message.Role),
+					Content: message.Content,
+				})
 			case map[string]any:
 				role, ok := message["role"].(string)
 				if !ok {
@@ -54,7 +65,10 @@ func decodeChatHistory(value any) ([]protocol.ChatMessage, bool) {
 				if !ok {
 					return nil, false
 				}
-				decodedHistory = append(decodedHistory, protocol.ChatMessage{Role: role, Content: content})
+				decodedHistory = append(decodedHistory, protocol.ChatMessage{
+					Role:    normalizeMessageRole(role),
+					Content: content,
+				})
 			default:
 				return nil, false
 			}
@@ -146,9 +160,8 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		return
 	}
 
-	if len(req.Prompt) > maxPromptChars {
-		safeWrite(connCtx, s.errorResponse(msg.ID, "prompt_too_large",
-			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars)))
+	if err := validateChatPromptSize(req); err != nil {
+		safeWrite(connCtx, s.errorResponse(msg.ID, "prompt_too_large", err.Error()))
 		return
 	}
 

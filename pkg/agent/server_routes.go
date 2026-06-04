@@ -225,7 +225,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/prometheus/query", s.handlePrometheusQuery)
 
 	// Prometheus metrics endpoint (agent's own metrics)
-	mux.Handle("/metrics", GetMetricsHandler())
+	mux.HandleFunc("/metrics", s.handleMetrics)
 
 	// WebSocket endpoint
 	mux.HandleFunc("/ws", s.handleWebSocket)

@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -94,6 +96,9 @@ const DefaultUserLevel = 1
 const (
 	// sqliteDefaultMaxOpenConns limits concurrent database connections
 	sqliteDefaultMaxOpenConns = 25
+	// sqliteDatabaseFileMode prevents other local users from reading secrets
+	// persisted in the SQLite database on shared hosts.
+	sqliteDatabaseFileMode = 0o600
 	// sqliteDefaultMaxIdleConns controls idle connection pool size
 	sqliteDefaultMaxIdleConns = 5
 	// sqliteDefaultConnMaxLifetime recycles connections periodically
@@ -269,8 +274,78 @@ func (s *SQLiteStore) WithTransaction(ctx context.Context, fn func(tx *sql.Tx) e
 	return tx.Commit()
 }
 
+// dbDirPerms restricts the database directory to owner-only access.
+const dbDirPerms = 0700
+
+// dbFilePerms restricts the database file to owner-only read/write.
+const dbFilePerms = 0600
+
+var osChmod = os.Chmod //nolint:gochecknoglobals // overridden in tests
+
+// ensureSecureDBPath creates the parent directory (owner-only) and pre-creates
+// the database file with 0600 permissions if it does not already exist. This
+// prevents the SQLite driver from creating files with a permissive umask on
+// shared hosts (CWE-276).
+func ensureSecureDBPath(dbPath string) error {
+	if dbPath == ":memory:" || dbPath == "" {
+		return nil
+	}
+
+	dir := filepath.Dir(dbPath)
+	_, statErr := os.Stat(dir)
+	dirExisted := statErr == nil
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("stat db directory: %w", statErr)
+	}
+	if err := os.MkdirAll(dir, dbDirPerms); err != nil {
+		return fmt.Errorf("create db directory: %w", err)
+	}
+	// Tighten directory permissions in case MkdirAll inherited a wider umask.
+	if err := osChmod(dir, dbDirPerms); err != nil {
+		if dirExisted && os.IsPermission(err) {
+			slog.Warn("could not tighten existing db directory permissions", "path", dir, "error", err)
+		} else {
+			return fmt.Errorf("chmod db directory: %w", err)
+		}
+	}
+
+	// Pre-create the file with restricted permissions so the driver doesn't
+	// rely on umask.
+	if _, err := os.Stat(dbPath); errors.Is(err, os.ErrNotExist) {
+		f, createErr := os.OpenFile(dbPath, os.O_CREATE|os.O_WRONLY, dbFilePerms)
+		if createErr != nil {
+			return fmt.Errorf("pre-create db file: %w", createErr)
+		}
+		f.Close()
+	} else if err == nil {
+		// Existing file — tighten permissions if they are too wide.
+		if chErr := osChmod(dbPath, dbFilePerms); chErr != nil {
+			slog.Warn("could not tighten db file permissions", "path", dbPath, "error", chErr)
+		}
+	}
+	return nil
+}
+
+// tightenSidecarPerms ensures WAL and SHM files have owner-only permissions.
+func tightenSidecarPerms(dbPath string) {
+	if dbPath == ":memory:" || dbPath == "" {
+		return
+	}
+	for _, suffix := range []string{"-wal", "-shm"} {
+		p := dbPath + suffix
+		if _, err := os.Stat(p); err == nil {
+			if chErr := osChmod(p, dbFilePerms); chErr != nil {
+				slog.Warn("could not tighten sidecar permissions", "path", p, "error", chErr)
+			}
+		}
+	}
+}
+
 // NewSQLiteStore creates a new SQLite store
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
+	if err := ensureSecureDBPath(dbPath); err != nil {
+		return nil, err
+	}
 	// DSN notes (modernc.org/sqlite accepts PRAGMAs via _pragma=key(value)):
 	//  - journal_mode=WAL enables Write-Ahead Logging so readers don't
 	//    block writers.
@@ -301,8 +376,48 @@ func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
 		db.Close()
 		return nil, fmt.Errorf("failed to migrate: %w", err)
 	}
+	if err := secureSQLiteDatabaseFile(dbPath); err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	// Tighten WAL and SHM sidecar files created by the driver.
+	tightenSidecarPerms(dbPath)
 
 	return store, nil
+}
+
+func secureSQLiteDatabaseFile(dbPath string) error {
+	if !isSQLiteFilePath(dbPath) {
+		return nil
+	}
+	for _, path := range []string{dbPath, dbPath + "-wal", dbPath + "-shm"} {
+		if err := chmodIfExists(path, sqliteDatabaseFileMode); err != nil {
+			return fmt.Errorf("failed to secure sqlite database permissions: %w", err)
+		}
+	}
+	return nil
+}
+
+func chmodIfExists(path string, mode os.FileMode) error {
+	if err := os.Chmod(path, mode); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func isSQLiteFilePath(dbPath string) bool {
+	cleanPath := strings.TrimSpace(dbPath)
+	if cleanPath == "" || cleanPath == ":memory:" {
+		return false
+	}
+	if strings.HasPrefix(cleanPath, "file:") {
+		return false
+	}
+	return filepath.Clean(cleanPath) != "."
 }
 
 // Close closes the database connection

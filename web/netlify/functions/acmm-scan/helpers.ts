@@ -2,6 +2,7 @@
  * ACMM Scan — Types and helper utilities
  */
 
+import { getAllowedRepoSlugs } from "../_shared/repo-allowlist";
 import type { DetectionHint } from "./criteria";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +19,7 @@ export const API_TIMEOUT_MS = 15_000;
 export const WEEKS_OF_HISTORY = 16;
 /** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
 export const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+export const REPO_NOT_ALLOWED_ERROR = "Repository not allowed";
 export const UNKNOWN_REPO = "unknown/repo";
 /** Allowed CORS origins (exact match) */
 export const ALLOWED_ORIGINS = [
@@ -87,6 +89,14 @@ export function corsHeaders(origin: string | null): Record<string, string> {
     "Cache-Control": "public, max-age=900",
     Vary: "Origin",
   };
+}
+
+export function getAllowedRepos(): Set<string> {
+  return new Set(getAllowedRepoSlugs(["ACMM_REPOS", "PIPELINE_REPOS"]));
+}
+
+export function isAllowedRepo(repo: string): boolean {
+  return getAllowedRepos().has(repo.toLowerCase());
 }
 
 export function isoWeek(date: Date): string {

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => Promise.resolve(url),
+  getWsAuthParams: (url: string) => Promise.resolve({ url, protocols: [] }),
 }))
 
 import { useExecSession } from '../useExecSession'
@@ -55,6 +55,7 @@ async function flushPendingConnection() {
   await act(async () => {
     await Promise.resolve()
     await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
   })
 }
 
@@ -70,7 +71,8 @@ describe('useExecSession', () => {
 
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('kc-agent-token', 'test-jwt')
+    sessionStorage.clear()
+    sessionStorage.setItem('kc-agent-token', 'test-jwt')
     vi.clearAllMocks()
     vi.useFakeTimers()
 

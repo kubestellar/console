@@ -4,7 +4,7 @@
  * Combines cards (AI + browse), card factories, dashboards, and card collections
  * into a single modal with flat left navigation.
  */
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../../ui/Toast'
 import { Palette, Undo2, Redo2, RotateCcw } from 'lucide-react'
@@ -20,7 +20,7 @@ import { CreateDashboardModal } from '../CreateDashboardModal'
 import { WidgetExportModal } from '../../widgets/WidgetExportModal'
 import { DEFAULT_SECTION, type CustomizerSection } from './customizerNav'
 import { useNavigate } from 'react-router-dom'
-import { getCustomDashboardRoute } from '../../../config/routes'
+import { ROUTES, getCustomDashboardRoute } from '../../../config/routes'
 import { useDashboards } from '../../../hooks/useDashboards'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { suggestIconSync } from '../../../lib/iconSuggester'
@@ -50,6 +50,7 @@ interface DashboardCustomizerProps {
 
 const SECTIONS_WITH_PREVIEW = new Set<CustomizerSection>(['cards', 'collections'])
 const LOCAL_DASHBOARD_ID_PREFIX = 'local-'
+const CUSTOM_DASHBOARD_ROUTE_PREFIX = getCustomDashboardRoute('')
 
 function createLocalDashboardId(): string {
   return `${LOCAL_DASHBOARD_ID_PREFIX}${crypto.randomUUID()}`
@@ -81,12 +82,23 @@ export function DashboardCustomizer({
   const [selectedPreviewCard, setSelectedPreviewCard] = useState<HoveredCard | null>(null)
 
   // Reset modal-local state when the modal opens so initial props take effect.
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- needed to sync with external isOpen prop
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+      return
+    }
+
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) {
+        return
+      }
       setUserSelectedSection(null)
       setHoveredCard(null)
       setSelectedPreviewCard(null)
+    })
+
+    return () => {
+      cancelled = true
     }
   }, [isOpen])
 
@@ -95,8 +107,21 @@ export function DashboardCustomizer({
   // Global search reserved for future use
   const globalSearch = ''
   const { dashboards, createDashboard: _createDashboard } = useDashboards()
-  const { addItem } = useSidebarConfig()
+  const { addItem, config } = useSidebarConfig()
   const navigate = useNavigate()
+
+  const existingDashboardNames = useMemo(() => {
+    const dashboardNames = dashboards.map((dashboard) => dashboard.name)
+    if (dashboardNames.length > 0) {
+      return dashboardNames
+    }
+
+    return Array.from(new Set(
+      [...config.primaryNav, ...config.secondaryNav]
+        .filter((item) => item.type === 'link' && (item.href === ROUTES.HOME || item.href.startsWith(CUSTOM_DASHBOARD_ROUTE_PREFIX)))
+        .map((item) => item.name)
+    ))
+  }, [config.primaryNav, config.secondaryNav, dashboards])
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
   const handleSelectPreviewCard = useCallback((card: HoveredCard) => setSelectedPreviewCard(card), [])
@@ -189,7 +214,7 @@ export function DashboardCustomizer({
                 onClose()
                 navigate(href)
               }}
-              existingNames={dashboards.map(d => d.name)}
+              existingNames={existingDashboardNames}
               embedded
             />
           )}

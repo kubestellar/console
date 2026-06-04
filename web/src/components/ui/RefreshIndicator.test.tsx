@@ -56,8 +56,8 @@ describe('RefreshIndicator & RefreshButton', () => {
 
     const indicator = screen.getByRole('status')
     expect(indicator).toHaveAttribute('aria-label', 'Updating data')
-    expect(indicator).toHaveAttribute('title', 'Updating...')
-    expect(screen.getByText('Updating')).toBeInTheDocument()
+    expect(indicator).toHaveAttribute('title', 'common.updatingEllipsis')
+    expect(screen.getByText('common.updating')).toBeInTheDocument()
   })
 
   it('displays last refreshed timestamp when provided', () => {

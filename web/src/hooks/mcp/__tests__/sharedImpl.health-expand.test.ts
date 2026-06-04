@@ -41,7 +41,7 @@ const mockAgentFetch = vi.fn()
 vi.mock('../agentFetch', () => ({
   getLocalAgentURL: () => 'http://localhost:4201',
   agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
-  AGENT_TOKEN_STORAGE_KEY: 'kc-auth-token',
+  getStoredAgentToken: () => sessionStorage.getItem('kc-auth-token') || '',
 }))
 
 const mockDetectDistributionFromNamespaces = vi.fn(() => undefined as string | undefined)

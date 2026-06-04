@@ -14,37 +14,31 @@ const DRASI_CARDS_KEY = 'kubestellar-drasi-cards'
 
 const DEFAULT_DRASI_CARDS = getDefaultCards('drasi')
 
-// Demo stat counts — match the default demo pipeline in DrasiReactiveGraph
-const DEMO_SOURCE_COUNT = 3
-const DEMO_QUERY_COUNT = 4
-const DEMO_REACTION_COUNT = 1
-
 export function Drasi() {
   const { t } = useTranslation()
-  const { data, isLoading, error } = useDrasiResources()
+  const { data, isLoading, error, isDemoData } = useDrasiResources()
 
-  const hasRealData = !!data && ((data.sources || []).length > 0 || (data.queries || []).length > 0)
-  const isDemoData = !hasRealData && !isLoading
+  const hasRealData = !isDemoData && !!data && ((data.sources || []).length > 0 || (data.queries || []).length > 0)
 
   const getStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'sources':
         return {
-          value: (data?.sources || []).length ?? (isDemoData ? DEMO_SOURCE_COUNT : 0),
+          value: (data?.sources || []).length,
           sublabel: t('drasi.statSources'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'queries':
         return {
-          value: (data?.queries || []).length ?? (isDemoData ? DEMO_QUERY_COUNT : 0),
+          value: (data?.queries || []).length,
           sublabel: t('drasi.statContinuousQueries'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'reactions':
         return {
-          value: (data?.reactions || []).length ?? (isDemoData ? DEMO_REACTION_COUNT : 0),
+          value: (data?.reactions || []).length,
           sublabel: t('drasi.statReactions'),
           isClickable: false,
           isDemo: isDemoData,

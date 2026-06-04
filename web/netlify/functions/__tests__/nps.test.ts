@@ -1,4 +1,7 @@
+// @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for nps.mts Netlify function (#15633, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -317,7 +320,7 @@ describe("nps", () => {
   });
 
   describe("Error Handling & Protection against exception leaking", () => {
-    it("returns 500 when request body contains malformed JSON", async () => {
+    it("returns 400 when request body contains malformed JSON", async () => {
       const req = new Request("https://example.test/.netlify/functions/nps", {
         method: "POST",
         headers: {
@@ -327,9 +330,9 @@ describe("nps", () => {
         body: "invalid-json-body{",
       });
       const res = await handler(req);
-      expect(res.status).toBe(HTTP_STATUS_INTERNAL_SERVER_ERROR);
+      expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       const body = await readJson<{ error: string }>(res);
-      expect(body.error).toBe("Internal server error");
+      expect(body.error).toBe("Invalid JSON body");
     });
 
     it("returns 500 with safe generic error when Blob store write rejects, preventing exception leak", async () => {

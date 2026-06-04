@@ -25,6 +25,7 @@ export function OpsGenieNotificationSettings({
   isLoading,
 }: OpsGenieNotificationSettingsProps) {
   const { t } = useTranslation()
+  const hasStoredApiKey = config.opsgenieApiKeyConfigured === true && !config.opsgenieApiKey
 
   const handleTestOpsGenie = async () => {
     if (!config.opsgenieApiKey) {
@@ -62,10 +63,18 @@ export function OpsGenieNotificationSettings({
           id="opsgenie-api-key"
           type="password"
           value={config.opsgenieApiKey || ''}
-          onChange={e => updateConfig({ opsgenieApiKey: e.target.value })}
+          onChange={e => updateConfig({
+            opsgenieApiKey: e.target.value,
+            opsgenieApiKeyConfigured: e.target.value.trim().length > 0,
+          })}
           placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
           className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
+        {hasStoredApiKey && (
+          <p className="mt-1 text-xs text-green-400">
+            {t('settings.notifications.secretConfigured')}
+          </p>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.opsgenie.apiKeyHint', 'Find this under Settings > API key management in OpsGenie')}
         </p>

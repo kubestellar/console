@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGet, mockSetJSON } = vi.hoisted(() => ({
@@ -37,9 +38,13 @@ describe("missions-file", () => {
   it("rejects traversal-like path input", async () => {
     const cases = [
       "../fixes/index.json",
+      "%2e%2e/fixes/index.json",
+      "%252e%252e/fixes/index.json",
+      "fixes/%2e%2e/index.json",
       "/fixes/index.json",
       "fixes/index.json#fragment",
       "fixes/index.json?raw=1",
+      "%zz",
     ];
 
     for (const value of cases) {
@@ -49,22 +54,17 @@ describe("missions-file", () => {
     }
   });
 
-  it("rejects percent-encoded path traversal attempts", async () => {
+  it("rejects percent-encoded traversal variants", async () => {
     const cases = [
-      // Single-encoded ../ (CWE-22)
       "%2e%2e%2ffixes/index.json",
-      // Single-encoded .. without slash
       "%2e%2efixes/index.json",
-      // Double-encoded ../ (defense-in-depth)
       "%252e%252e%252ffixes/index.json",
-      // Mixed case variations
       "%2E%2E%2Ffixes/index.json",
       "%2e%2E%2ffixes/index.json",
-      // Encoded forward slash for leading /
+      "fixes/%2e%2e/secret.json",
       "%2ffixes/index.json",
-      // Encoded hash (#)
+      "%2F/etc/passwd",
       "fixes/index.json%23fragment",
-      // Encoded question mark (?)
       "fixes/index.json%3fraw=1",
     ];
 
@@ -80,7 +80,10 @@ describe("missions-file", () => {
       "main#fragment",
       "main?raw=1",
       "../other-repo",
+      "%2e%2e/other-repo",
+      "%252e%252e/other-repo",
       "/etc/passwd",
+      "%zz",
     ];
 
     for (const value of cases) {

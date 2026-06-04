@@ -16,6 +16,7 @@ const CIRCUIT_ZOOM_MIN_PCT = 15
 const CIRCUIT_ZOOM_MAX_PCT = 150
 const CIRCUIT_ZOOM_PERCENT_DIVISOR = 100
 const CIRCUIT_POPOUT_URL = '/api/quantum/qasm/circuit/ascii'
+const CIRCUIT_POPOUT_FETCH_TIMEOUT_MS = 5_000
 const CIRCUIT_ZOOM_LEVELS_PCT = [15, 20, 25, 35, 50, 65, 85, 100, 125, 150]
 
 const isBrowser = typeof window !== 'undefined'
@@ -91,7 +92,9 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
 
   const handlePopout = async () => {
     try {
-      const response = await fetch(CIRCUIT_POPOUT_URL)
+      const response = await fetch(CIRCUIT_POPOUT_URL, {
+        signal: AbortSignal.timeout(CIRCUIT_POPOUT_FETCH_TIMEOUT_MS),
+      })
       if (!response.ok) {
         console.error('Failed to fetch circuit HTML:', response.statusText)
         return

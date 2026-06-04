@@ -58,10 +58,12 @@ export async function fetchWithRetry(
     }
 
     try {
-      const response = await agentFetch(url, {
+      const responsePromise = agentFetch(url, {
         ...fetchOptions,
         signal: controller.signal,
       })
+      responsePromise.catch(() => undefined)
+      const response = await responsePromise
       clearTimeout(timeoutId)
 
       // Don't retry on 4xx — those are permanent client errors

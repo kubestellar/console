@@ -17,10 +17,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 )
 
 // testWebhookSendTimeout bounds the unit test; the adapter's own timeout is
@@ -129,6 +133,62 @@ func TestRegisterDestination_StubProvidersReturnUnsupportedError(t *testing.T) {
 			sendErr := adapter.Send(context.Background(), []audit.PipelineEvent{{ID: "evt"}})
 			require.Error(t, sendErr)
 			assert.ErrorIs(t, sendErr, audit.ErrDestinationUnsupported)
+		})
+	}
+}
+
+func TestSIEMHandler_RegisterRoutesRequiresAdmin(t *testing.T) {
+	tests := []struct {
+		name       string
+		user       *models.User
+		wantStatus int
+	}{
+		{
+			name:       "AdminCanReadSummary",
+			user:       &models.User{Role: models.UserRoleAdmin},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "ViewerIsForbidden",
+			user:       &models.User{Role: models.UserRoleViewer},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "UnknownUserIsForbidden",
+			user:       nil,
+			wantStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			userID := uuid.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("userID", userID)
+				return c.Next()
+			})
+
+			mockStore := new(test.MockStore)
+			mockStore.On("GetUser", userID).Return(tt.user, nil).Once()
+
+			handler := NewSIEMHandler(mockStore)
+			handler.RegisterRoutes(app.Group("/api"))
+
+			req := httptest.NewRequest(http.MethodGet, "/api/audit/export/summary", nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+
+			if tt.wantStatus == http.StatusOK {
+				var summary audit.ExportSummary
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&summary))
+				assert.Zero(t, summary.TotalDestinations)
+				assert.Zero(t, summary.ActiveDestinations)
+				assert.False(t, summary.EvaluatedAt.IsZero())
+			}
+
+			mockStore.AssertExpectations(t)
 		})
 	}
 }

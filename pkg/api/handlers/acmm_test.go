@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -278,4 +279,101 @@ func TestACMMScanHandler_DemoMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "any/repo", result.Repo)
 	assert.NotEmpty(t, result.WeeklyActivity)
+}
+
+func TestACMMScanHandler_ForceRefreshRateLimitedPerUser(t *testing.T) {
+	acmmForceRefreshState.Reset()
+	m := setupMockGitHub(t)
+	repo := "owner/force-limited-repo"
+	userID := uuid.New()
+
+	repoURL := fmt.Sprintf("%s/repos/%s", acmmGitHubAPI, repo)
+	m.responses[repoURL] = mockResponse(200, `{"default_branch":"main"}`)
+	treeURL := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", acmmGitHubAPI, repo)
+	m.responses[treeURL] = mockResponse(200, `{"tree": []}`)
+
+	since := time.Now().AddDate(0, 0, -weeksOfHistory*7).Format("2006-01-02")
+	prURL := fmt.Sprintf("%s/search/issues?q=repo:%s+type:pr+created:>=%s&per_page=100&page=1", acmmGitHubAPI, repo, since)
+	m.responses[prURL] = mockResponse(200, `{"items": []}`)
+	issueURL := fmt.Sprintf("%s/search/issues?q=repo:%s+type:issue+created:>=%s&per_page=100&page=1", acmmGitHubAPI, repo, since)
+	m.responses[issueURL] = mockResponse(200, `{"items": []}`)
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		return c.Next()
+	})
+	app.Get("/api/acmm/scan", ACMMScanHandler)
+
+	firstReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	firstResp, err := app.Test(firstReq)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, firstResp.StatusCode)
+
+	secondReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	secondResp, err := app.Test(secondReq)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusTooManyRequests, secondResp.StatusCode)
+	assert.Equal(t, "60", secondResp.Header.Get("Retry-After"))
+
+	var body map[string]string
+	err = json.NewDecoder(secondResp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.Equal(t, "too many force-refresh requests, try again later", body["error"])
+	assert.Equal(t, 1, m.calls[repoURL], "rate-limited force refresh should not hit GitHub again")
+}
+
+func TestACMMScanHandler_ForceRefreshRateLimitIsPerUser(t *testing.T) {
+	acmmForceRefreshState.Reset()
+	m := setupMockGitHub(t)
+	repo := "owner/per-user-force-repo"
+	firstUserID := uuid.New()
+	secondUserID := uuid.New()
+
+	repoURL := fmt.Sprintf("%s/repos/%s", acmmGitHubAPI, repo)
+	m.responses[repoURL] = mockResponse(200, `{"default_branch":"main"}`)
+	treeURL := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", acmmGitHubAPI, repo)
+	m.responses[treeURL] = mockResponse(200, `{"tree": []}`)
+
+	since := time.Now().AddDate(0, 0, -weeksOfHistory*7).Format("2006-01-02")
+	prURL := fmt.Sprintf("%s/search/issues?q=repo:%s+type:pr+created:>=%s&per_page=100&page=1", acmmGitHubAPI, repo, since)
+	m.responses[prURL] = mockResponse(200, `{"items": []}`)
+	issueURL := fmt.Sprintf("%s/search/issues?q=repo:%s+type:issue+created:>=%s&per_page=100&page=1", acmmGitHubAPI, repo, since)
+	m.responses[issueURL] = mockResponse(200, `{"items": []}`)
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		userIDHeader := c.Get("X-Test-User-ID")
+		if userIDHeader != "" {
+			parsedUserID, parseErr := uuid.Parse(userIDHeader)
+			if parseErr == nil {
+				c.Locals("userID", parsedUserID)
+			}
+		}
+		return c.Next()
+	})
+	app.Get("/api/acmm/scan", ACMMScanHandler)
+
+	firstReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	firstReq.Header.Set("X-Test-User-ID", firstUserID.String())
+	firstResp, err := app.Test(firstReq)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, firstResp.StatusCode)
+
+	m.responses[repoURL] = mockResponse(200, `{"default_branch":"main"}`)
+	m.responses[treeURL] = mockResponse(200, `{"tree": []}`)
+	m.responses[prURL] = mockResponse(200, `{"items": []}`)
+	m.responses[issueURL] = mockResponse(200, `{"items": []}`)
+
+	secondReq := httptest.NewRequest("GET", "/api/acmm/scan?repo="+repo+"&force=true", nil)
+	secondReq.Header.Set("X-Test-User-ID", secondUserID.String())
+	secondResp, err := app.Test(secondReq)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, secondResp.StatusCode)
+	assert.Equal(t, 2, m.calls[repoURL], "different users should have independent force-refresh budgets")
+}
+
+func TestACMMForceRefreshRetryAfterSeconds(t *testing.T) {
+	assert.Equal(t, 1, acmmForceRefreshRetryAfterSeconds(250*time.Millisecond))
+	assert.Equal(t, 60, acmmForceRefreshRetryAfterSeconds(time.Minute))
 }

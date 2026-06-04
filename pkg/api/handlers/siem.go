@@ -18,17 +18,27 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // SIEMHandler serves SIEM export configuration and monitoring endpoints.
-type SIEMHandler struct{}
+type SIEMHandler struct {
+	store store.Store
+}
 
 // NewSIEMHandler creates a SIEM handler.
-func NewSIEMHandler() *SIEMHandler { return &SIEMHandler{} }
+func NewSIEMHandler(s store.Store) *SIEMHandler { return &SIEMHandler{store: s} }
 
-// RegisterPublicRoutes mounts SIEM endpoints under /api/audit/export.
-func (h *SIEMHandler) RegisterPublicRoutes(r fiber.Router) {
+// RegisterRoutes mounts SIEM endpoints under /api/audit/export on the
+// authenticated router with admin-only access (CWE-306 fix: #16518).
+func (h *SIEMHandler) RegisterRoutes(r fiber.Router) {
 	g := r.Group("/audit/export")
+	g.Use(func(c *fiber.Ctx) error {
+		if err := RequireAdmin(c, h.store); err != nil {
+			return err
+		}
+		return c.Next()
+	})
 	g.Get("/summary", h.getSummary)
 	g.Get("/destinations", h.listDestinations)
 	g.Get("/events", h.listEvents)

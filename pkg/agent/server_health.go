@@ -16,21 +16,31 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
-	// Handle preflight
-	if r.Method == "OPTIONS" {
+	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	// Health endpoint doesn't require token auth (used for discovery)
-	// but does enforce origin checks via CORS
+	// Health endpoint stays unauthenticated for discovery, so keep the response
+	// minimal and avoid leaking operational telemetry.
+	writeJSON(w, map[string]string{
+		"status":  "ok",
+		"version": Version,
+	})
+}
 
-	clusters, _ := s.kubectl.ListContexts()
-	hasClaude := s.checkClaudeAvailable()
-
-	// Build lightweight provider summaries for telemetry
+func (s *Server) buildStatusPayload() protocol.HealthPayload {
+	clusterCount := 0
+	if s.kubectl != nil {
+		clusters, _ := s.kubectl.ListContexts()
+		clusterCount = len(clusters)
+	}
+	registry := s.registry
+	if registry == nil {
+		registry = &Registry{providers: make(map[string]AIProvider)}
+	}
 	providerSummaries := make([]protocol.ProviderSummary, 0)
-	for _, p := range s.registry.ListAvailable() {
+	for _, p := range registry.ListAvailable() {
 		providerSummaries = append(providerSummaries, protocol.ProviderSummary{
 			Name:         p.Name,
 			DisplayName:  p.DisplayName,
@@ -38,7 +48,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	payload := protocol.HealthPayload{
+	hasClaude := s.checkClaudeAvailable()
+
+	return protocol.HealthPayload{
 		Status:             "ok",
 		Version:            Version,
 		CommitSHA:          CommitSHA,
@@ -46,14 +58,12 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		GoVersion:          runtime.Version(),
 		OS:                 runtime.GOOS,
 		Arch:               runtime.GOARCH,
-		Clusters:           len(clusters),
+		Clusters:           clusterCount,
 		HasClaude:          hasClaude,
 		Claude:             s.getClaudeInfo(),
 		InstallMethod:      detectAgentInstallMethod(),
 		AvailableProviders: providerSummaries,
 	}
-
-	writeJSON(w, payload)
 }
 
 // handleStatus handles authenticated agent status probes.
@@ -71,13 +81,23 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clusters, _ := s.kubectl.ListContexts()
+	writeJSON(w, s.buildStatusPayload())
+}
 
-	writeJSON(w, map[string]interface{}{
-		"status":   "ok",
-		"version":  Version,
-		"clusters": len(clusters),
-	})
+func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	GetMetricsHandler().ServeHTTP(w, r)
 }
 
 // handleProviderCheck runs a readiness handshake for a specific provider.

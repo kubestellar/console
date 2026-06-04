@@ -257,10 +257,11 @@ describe('fetchWithRetry — timers and abort wiring', () => {
       initialBackoffMs: 5,
       maxRetries: 1,
     })
+    const rejection = expect(promise).rejects.toThrow('The operation was aborted')
 
     await vi.runAllTimersAsync()
 
-    await expect(promise).rejects.toThrow('The operation was aborted')
+    await rejection
     expect(mockAgentFetch).toHaveBeenCalledTimes(2)
   })
 

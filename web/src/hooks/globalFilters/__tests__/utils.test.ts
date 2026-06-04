@@ -81,7 +81,9 @@ describe('loadStoredText', () => {
   })
 
   it('returns empty string when getItem throws', () => {
+    const storage = makeStorage()
     vi.stubGlobal('localStorage', {
+      ...storage,
       getItem: () => { throw new Error('quota') },
     })
     expect(loadStoredText('key')).toBe('')

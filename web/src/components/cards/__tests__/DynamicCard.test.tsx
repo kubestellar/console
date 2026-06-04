@@ -532,6 +532,57 @@ describe('Tier1CardRuntime', () => {
         expect(callArgs).toEqual([{ name: 'FromItems' }])
       })
     })
+
+    it('allows same-origin absolute apiEndpoint URLs', async () => {
+      const sameOriginEndpoint = `${window.location.origin}/api/things`
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([{ name: 'Allowed' }]), { status: 200 })
+      ) as unknown as typeof fetch
+
+      const def: DynamicCardDefinition_T1 = {
+        ...BASE_T1_DEF,
+        dataSource: 'api',
+        apiEndpoint: sameOriginEndpoint,
+      }
+
+      await act(async () => {
+        render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
+      })
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          sameOriginEndpoint,
+          expect.objectContaining({
+            headers: { Authorization: 'Bearer test-token' },
+          }),
+        )
+      })
+    })
+
+    it.each([
+      ['external https URL', 'https://evil.com/steal'],
+      ['protocol-relative URL', '//evil.com/steal'],
+      ['javascript URL', 'javascript:alert(1)'],
+      ['data URL', 'data:text/plain,steal'],
+    ])('blocks %s from being fetched', async (_label, apiEndpoint) => {
+      global.fetch = vi.fn() as unknown as typeof fetch
+
+      const def: DynamicCardDefinition_T1 = {
+        ...BASE_T1_DEF,
+        dataSource: 'api',
+        apiEndpoint,
+        emptyMessage: 'Blocked endpoint',
+      }
+
+      await act(async () => {
+        render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
+      })
+
+      await waitFor(() => {
+        expect(global.fetch).not.toHaveBeenCalled()
+      })
+      expect(screen.getByText('Blocked endpoint')).toBeInTheDocument()
+    })
   })
 })
 

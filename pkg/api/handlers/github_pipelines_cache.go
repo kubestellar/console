@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/store"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -21,6 +23,7 @@ type GitHubPipelinesHandler struct {
 	mutationToken string
 	httpClient    *http.Client
 	history       *ghpHistory
+	store         store.Store
 
 	mu       sync.RWMutex
 	cache    map[string]ghpCacheEntry
@@ -30,12 +33,13 @@ type GitHubPipelinesHandler struct {
 // NewGitHubPipelinesHandler constructs the handler. `githubToken` is the
 // read-only PAT. Mutation token comes from GITHUB_MUTATIONS_TOKEN env var
 // — if unset, mutations return 503.
-func NewGitHubPipelinesHandler(githubToken string) *GitHubPipelinesHandler {
+func NewGitHubPipelinesHandler(githubToken string, s store.Store) *GitHubPipelinesHandler {
 	return &GitHubPipelinesHandler{
 		token:         githubToken,
 		mutationToken: os.Getenv("GITHUB_MUTATIONS_TOKEN"),
 		httpClient:    client.GitHub,
 		history:       newGHPHistory(),
+		store:         s,
 		cache:         make(map[string]ghpCacheEntry),
 	}
 }
@@ -91,21 +95,19 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 			c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d", maxAge))
 			return c.Send(stale.body)
 		}
-		status := fiber.StatusBadGateway
-		genericMsg := "failed to fetch pipeline data"
-		if err.Error() == "unknown repo" {
-			status = fiber.StatusBadRequest
-			genericMsg = "unknown repo"
+		var fiberErr *fiber.Error
+		if errors.As(err, &fiberErr) {
+			return c.Status(fiberErr.Code).JSON(fiber.Map{"error": fiberErr.Message})
 		}
 		slog.Error("[GitHubPipelines] fetch failed", "error", err)
-		return c.Status(status).JSON(fiber.Map{"error": genericMsg})
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to fetch pipeline data"})
 	}
 
 	inner, err := json.Marshal(v)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "marshal failed"})
 	}
-	reposJSON, err := json.Marshal(ghpRepos)
+	reposJSON, err := json.Marshal(ghpGetRepos())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "repos marshal failed"})
 	}

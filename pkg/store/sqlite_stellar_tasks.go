@@ -74,7 +74,6 @@ func (s *SQLiteStore) GetOverdueOpenTasks(ctx context.Context, asOf time.Time) (
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) GetOpenTasks(ctx context.Context, userID string) ([]StellarTask, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
 		FROM stellar_tasks
@@ -95,7 +94,6 @@ func (s *SQLiteStore) GetOpenTasks(ctx context.Context, userID string) ([]Stella
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) UpdateTaskStatus(ctx context.Context, id, status, userID string) error {
 	normalized := strings.TrimSpace(strings.ToLower(status))
 	completedAt := interface{}(nil)
@@ -106,7 +104,6 @@ func (s *SQLiteStore) UpdateTaskStatus(ctx context.Context, id, status, userID s
 		normalized, completedAt, id, userID)
 	return err
 }
-
 
 func (s *SQLiteStore) GetTasksForCluster(ctx context.Context, cluster string, limit int) ([]StellarTask, error) {
 	lim := resolvePageLimit(limit, 50)
@@ -130,7 +127,6 @@ func (s *SQLiteStore) GetTasksForCluster(ctx context.Context, cluster string, li
 	return out, rows.Err()
 }
 
-
 func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObservation) (string, error) {
 	if obs.ID == "" {
 		obs.ID = uuid.NewString()
@@ -152,7 +148,6 @@ func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObserva
 	}
 	return obs.ID, nil
 }
-
 
 func (s *SQLiteStore) GetRecentObservations(ctx context.Context, cluster string, limit int) ([]StellarObservation, error) {
 	lim := resolvePageLimit(limit, 20)
@@ -181,12 +176,15 @@ func (s *SQLiteStore) GetRecentObservations(ctx context.Context, cluster string,
 	return out, rows.Err()
 }
 
-
-func (s *SQLiteStore) GetUnshownObservations(ctx context.Context) ([]StellarObservation, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
-		FROM stellar_observations
-		WHERE shown_to_user = 0
-		ORDER BY created_at ASC`)
+// GetUnshownObservations returns observations not yet seen by the given user,
+// scoped to clusters the user is actively watching (CWE-200 fix: #16814).
+func (s *SQLiteStore) GetUnshownObservations(ctx context.Context, userID string) ([]StellarObservation, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT o.id, o.cluster, o.kind, o.summary, o.detail, o.ref_type, o.ref_id, o.shown_to_user, o.created_at
+		FROM stellar_observations o
+		WHERE o.id NOT IN (SELECT observation_id FROM stellar_observation_seen WHERE user_id = ?)
+		AND (o.cluster = '' OR o.cluster IN (SELECT DISTINCT cluster FROM stellar_watches WHERE user_id = ? AND status = 'active'))
+		ORDER BY o.created_at ASC
+		LIMIT 10`, userID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +200,9 @@ func (s *SQLiteStore) GetUnshownObservations(ctx context.Context) ([]StellarObse
 	return out, rows.Err()
 }
 
-
-func (s *SQLiteStore) MarkObservationShown(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE stellar_observations SET shown_to_user = 1 WHERE id = ?`, id)
+// MarkObservationShown records that a specific user has seen an observation (#16814).
+func (s *SQLiteStore) MarkObservationShown(ctx context.Context, userID, observationID string) error {
+	_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO stellar_observation_seen (user_id, observation_id) VALUES (?, ?)`, userID, observationID)
 	return err
 }
 
@@ -246,7 +244,6 @@ func scanStellarTaskRow(rows *sql.Rows) (*StellarTask, error) {
 	return &item, nil
 }
 
-
 func scanStellarObservationRow(rows *sql.Rows) (*StellarObservation, error) {
 	var item StellarObservation
 	var shownInt int
@@ -266,4 +263,3 @@ func scanStellarObservationRow(rows *sql.Rows) (*StellarObservation, error) {
 	item.ShownToUser = shownInt == 1
 	return &item, nil
 }
-

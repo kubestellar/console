@@ -135,6 +135,7 @@ export interface SlackWebhook {
 // Notification configuration (stored client-side)
 export interface NotificationConfig {
   slackWebhookUrl?: string
+  slackWebhookConfigured?: boolean
   slackChannel?: string
   emailSMTPHost?: string
   emailSMTPPort?: number
@@ -142,9 +143,14 @@ export interface NotificationConfig {
   emailTo?: string
   emailUsername?: string
   emailPassword?: string
+  emailPasswordConfigured?: boolean
   webhookUrl?: string
   pagerdutyRoutingKey?: string
+  pagerdutyRoutingKeyConfigured?: boolean
+  pagerdutyIntegrationKey?: string
+  pagerdutyIntegrationKeyConfigured?: boolean
   opsgenieApiKey?: string
+  opsgenieApiKeyConfigured?: boolean
 }
 
 // Alert statistics

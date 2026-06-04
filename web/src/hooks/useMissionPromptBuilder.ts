@@ -8,17 +8,11 @@
  * mission parameters into enriched prompts and system messages.
  */
 
+import { sanitizeForPrompt } from '../lib/sanitizeForPrompt'
 import { detectIssueSignature, findSimilarResolutionsStandalone, generateResolutionPromptContext } from './useResolutions'
 import type { Mission, MissionMessage, MatchedResolution, StartMissionParams } from './useMissionTypes'
 
-const PROMPT_INPUT_MAX_LENGTH = 500
-const ESCAPED_LT_PATTERN = /\\u0*03[cC]|\\x3[cC]/g
-const ESCAPED_GT_PATTERN = /\\u0*03[eE]|\\x3[eE]/g
-const PROMPT_ENTITY_MAP: Record<string, string> = {
-  '&': '&amp;',
-  '"': '&quot;',
-  "'": '&#39;',
-}
+export { sanitizeForPrompt }
 
 /**
  * Generate a unique message ID using a monotonic counter + timestamp.
@@ -35,21 +29,6 @@ let messageIdCounter = 0
 export function generateMessageId(suffix = ''): string {
   messageIdCounter += 1
   return `msg-${Date.now()}-${messageIdCounter}${suffix ? `-${suffix}` : ''}`
-}
-
-/**
- * Normalize user-provided mission text before it is interpolated into prompts.
- * Removes literal or unicode-escaped angle brackets, encodes a few HTML
- * metacharacters, trims whitespace, and caps length to prevent abuse.
- */
-export function sanitizeForPrompt(input: string): string {
-  return input
-    .replace(ESCAPED_LT_PATTERN, '<')
-    .replace(ESCAPED_GT_PATTERN, '>')
-    .replace(/[<>]/g, '')
-    .replace(/[&"']/g, character => PROMPT_ENTITY_MAP[character] || character)
-    .trim()
-    .slice(0, PROMPT_INPUT_MAX_LENGTH)
 }
 
 /**

@@ -12,6 +12,7 @@ import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { Select } from '../ui/Select'
+import { cn } from '../../lib/cn'
 
 /* ─── Types ─── */
 
@@ -91,9 +92,11 @@ export const DataResidencyContent = memo(function DataResidencyContent() {
   const [error, setError] = useState<string | null>(null)
   const [filterSeverity, setFilterSeverity] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
+    setIsRetrying(false)
     setError(null)
     try {
       const [summaryRes, rulesRes, clustersRes, violationsRes] = await Promise.all([
@@ -125,6 +128,11 @@ export const DataResidencyContent = memo(function DataResidencyContent() {
     }
   }, [])
 
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true)
+    await fetchData()
+  }, [fetchData])
+
   useEffect(() => { fetchData() }, [fetchData])
 
   const filteredViolations = useMemo(() =>
@@ -146,8 +154,8 @@ export const DataResidencyContent = memo(function DataResidencyContent() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-red-400 font-medium">{error}</p>
-        <button onClick={fetchData} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 min-h-11 min-w-11 px-3 py-2">
-          <RefreshCw className="w-4 h-4" /> Retry
+        <button onClick={handleRetry} disabled={isRetrying} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 min-h-11 min-w-11 px-3 py-2 disabled:opacity-50">
+          <RefreshCw className={cn('w-4 h-4', isRetrying && 'animate-spin')} /> Retry
         </button>
       </div>
     )

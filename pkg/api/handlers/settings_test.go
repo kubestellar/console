@@ -40,6 +40,7 @@ func TestGetSettings(t *testing.T) {
 	// Case 2: File exists with custom data
 	// Modify something and save
 	result.Theme = "light"
+	result.FeedbackGitHubToken = "ghp_hidden"
 	err = env.Settings.SaveAll(&result)
 	require.NoError(t, err)
 
@@ -54,12 +55,19 @@ func TestGetSettings(t *testing.T) {
 	err = json.Unmarshal(body2, &result2)
 	require.NoError(t, err)
 	assert.Equal(t, "light", result2.Theme)
+	assert.True(t, result2.HasFeedbackToken)
+	assert.Empty(t, result2.FeedbackGitHubToken)
 }
 
 func TestSaveSettings(t *testing.T) {
 	env := setupTestEnv(t)
 	handler := NewSettingsHandler(env.Settings, env.Store)
 	env.App.Put("/api/settings", handler.SaveSettings)
+
+	current, err := env.Settings.GetAll()
+	require.NoError(t, err)
+	current.FeedbackGitHubToken = "ghp_preserve"
+	require.NoError(t, env.Settings.SaveAll(current))
 
 	// Case 1: Valid save
 	payload := settings.AllSettings{
@@ -83,6 +91,7 @@ func TestSaveSettings(t *testing.T) {
 	assert.Equal(t, "light", stored.Theme)
 	assert.Equal(t, "cloud", stored.AIMode)
 	assert.Equal(t, "sk-test", stored.APIKeys["openai"].APIKey)
+	assert.Equal(t, "ghp_preserve", stored.FeedbackGitHubToken)
 
 	// Case 2: Malformed JSON
 	reqInvalid := httptest.NewRequest("PUT", "/api/settings", bytes.NewReader([]byte("{invalid-json")))

@@ -6,6 +6,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { CardContentList, CardColumnConfig, CardDrillDownConfig, CardAIActionsConfig } from '../../types'
 import { renderCell } from '../renderers'
@@ -33,6 +34,7 @@ export function ListVisualization({
   data,
   drillDown,
   onDrillDown }: ListVisualizationProps) {
+  const { t } = useTranslation()
   const {
     columns,
     pageSize = 10,
@@ -137,7 +139,7 @@ export function ListVisualization({
             }}
             className="px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground focus:outline-hidden focus:border-blue-500"
           >
-            <option value="">Sort by...</option>
+            <option value="">{t('listVisualization.sortBy')}</option>
             {availableSortOptions.map((opt) => (
               <option key={opt.field} value={opt.field}>
                 {opt.label}
@@ -153,12 +155,12 @@ export function ListVisualization({
               {sortDirection === 'asc' ? (
                 <>
                   <ArrowUp className="w-3 h-3" />
-                  <span>Asc</span>
+                  <span>{t('listVisualization.asc')}</span>
                 </>
               ) : (
                 <>
                   <ArrowDown className="w-3 h-3" />
-                  <span>Desc</span>
+                  <span>{t('listVisualization.desc')}</span>
                 </>
               )}
             </button>
@@ -173,7 +175,7 @@ export function ListVisualization({
             No items to display
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-border">
             {paginatedData.map((item, index) => (
               <ListItem
                 key={index}

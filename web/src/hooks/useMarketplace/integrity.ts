@@ -1,9 +1,9 @@
 /**
  * Marketplace item integrity verification using SHA-256.
  *
- * When a registry entry includes a `sha256` field, the fetched content
- * is hashed and compared before use. This prevents tampered payloads
- * from being installed silently (e.g., via CDN compromise or MITM).
+ * Every marketplace entry must provide a `sha256` field. Downloaded content
+ * is hashed and compared before use so untrusted or tampered payloads are
+ * rejected before they are persisted.
  */
 
 export class IntegrityError extends Error {
@@ -12,6 +12,13 @@ export class IntegrityError extends Error {
       `Integrity check failed: expected sha256 ${expected}, got ${actual}`
     )
     this.name = 'IntegrityError'
+  }
+}
+
+export class MissingIntegrityError extends Error {
+  constructor() {
+    super('Marketplace item is missing required sha256 integrity metadata')
+    this.name = 'MissingIntegrityError'
   }
 }
 
@@ -28,18 +35,19 @@ export async function computeSha256(content: string): Promise<string> {
 
 /**
  * Verify that `content` matches the expected SHA-256 digest.
- * If `expectedHash` is undefined/null (registry entry has no sha256 field),
- * verification is skipped — this allows gradual adoption.
  *
+ * @throws MissingIntegrityError if the registry entry omits `sha256`.
  * @throws IntegrityError if hash does not match.
  */
 export async function verifyIntegrity(
   content: string,
   expectedHash: string | undefined
 ): Promise<void> {
-  if (!expectedHash) return
+  const normalizedExpected = expectedHash?.toLowerCase().trim()
+  if (!normalizedExpected) {
+    throw new MissingIntegrityError()
+  }
 
-  const normalizedExpected = expectedHash.toLowerCase().trim()
   const actual = await computeSha256(content)
 
   if (actual !== normalizedExpected) {

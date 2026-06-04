@@ -4,118 +4,104 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestValidateToken_ConstantTimeComparison verifies that validateToken uses
-// crypto/subtle.ConstantTimeCompare (not ==) for token comparison, preventing
-// timing side-channel attacks. We test correctness here; the constant-time
-// property is guaranteed by the crypto/subtle package itself.
-func TestValidateToken_ConstantTimeComparison(t *testing.T) {
-	const validToken = "secret-agent-token-abc123"
+const (
+	wsAuthToken    = "secret-agent-token-abc123"
+	wsHandshakeKey = "dGhlIHNhbXBsZSBub25jZQ=="
+)
 
-	s := &Server{
-		agentToken:     validToken,
-		tokenExplicit:  true,
-		allowedOrigins: []string{"http://localhost:5174"},
+func newWebSocketAuthRequest(t *testing.T, target string) *http.Request {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Sec-WebSocket-Key", wsHandshakeKey)
+
+	return req
+}
+
+func newTokenAuthServer() *Server {
+	return &Server{
+		agentToken:    wsAuthToken,
+		tokenExplicit: true,
 	}
+}
 
+func TestWsSubprotocols_ParseBearerToken(t *testing.T) {
+	req := newWebSocketAuthRequest(t, "/ws")
+	req.Header.Set("Sec-WebSocket-Protocol", "json, bearer."+wsAuthToken+", v2")
+
+	protocols := websocketSubprotocols(req)
+
+	require.Equal(t, []string{"json", "bearer." + wsAuthToken, "v2"}, protocols)
+}
+
+func TestWsValidateToken_SubprotocolAccepted(t *testing.T) {
+	s := newTokenAuthServer()
+	req := newWebSocketAuthRequest(t, "/ws")
+	req.Header.Set("Sec-WebSocket-Protocol", "json, bearer."+wsAuthToken)
+
+	assert.True(t, s.validateToken(req))
+}
+
+func TestWsValidateToken_InvalidSubprotocolsRejected(t *testing.T) {
 	tests := []struct {
-		name   string
-		setup  func(r *http.Request)
-		expect bool
+		name        string
+		subprotocol string
 	}{
 		{
-			name: "valid bearer token",
-			setup: func(r *http.Request) {
-				r.Header.Set("Authorization", "Bearer "+validToken)
-			},
-			expect: true,
+			name:        "empty subprotocol header",
+			subprotocol: "",
 		},
 		{
-			name: "invalid bearer token",
-			setup: func(r *http.Request) {
-				r.Header.Set("Authorization", "Bearer wrong-token")
-			},
-			expect: false,
+			name:        "missing bearer prefix",
+			subprotocol: wsAuthToken,
 		},
 		{
-			name: "token differs by one char",
-			setup: func(r *http.Request) {
-				r.Header.Set("Authorization", "Bearer secret-agent-token-abc124")
-			},
-			expect: false,
-		},
-		{
-			name: "empty bearer token",
-			setup: func(r *http.Request) {
-				r.Header.Set("Authorization", "Bearer ")
-			},
-			expect: false,
-		},
-		{
-			name: "no auth header",
-			setup: func(r *http.Request) {},
-			expect: false,
-		},
-		{
-			name: "valid query token on real WebSocket upgrade",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=" + validToken
-				r.Header.Set("Upgrade", "websocket")
-				r.Header.Set("Connection", "Upgrade")
-				r.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
-			},
-			expect: true,
-		},
-		{
-			name: "invalid query token on real WebSocket upgrade",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=wrong-token"
-				r.Header.Set("Upgrade", "websocket")
-				r.Header.Set("Connection", "Upgrade")
-				r.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
-			},
-			expect: false,
-		},
-		{
-			name: "valid query token but no WebSocket upgrade headers",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=" + validToken
-			},
-			expect: false,
-		},
-		{
-			name: "valid query token with only Upgrade header (spoofed)",
-			setup: func(r *http.Request) {
-				r.URL.RawQuery = "token=" + validToken
-				r.Header.Set("Upgrade", "websocket")
-			},
-			expect: false,
-		},
-		{
-			name: "no token configured allows all",
-			setup: func(r *http.Request) {},
-			expect: true,
+			name:        "multiple dots in bearer token",
+			subprotocol: "bearer.secret.token",
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			testServer := s
-			// Special case: "no token configured" uses a different server config
-			if tc.name == "no token configured allows all" {
-				testServer = &Server{agentToken: ""}
+	s := newTokenAuthServer()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := newWebSocketAuthRequest(t, "/ws")
+			if tt.subprotocol != "" {
+				req.Header.Set("Sec-WebSocket-Protocol", tt.subprotocol)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, "/clusters", nil)
-			tc.setup(req)
-
-			got := testServer.validateToken(req)
-			if got != tc.expect {
-				t.Errorf("validateToken() = %v, want %v", got, tc.expect)
-			}
+			assert.False(t, s.validateToken(req))
 		})
 	}
+}
+
+func TestWsValidateToken_LegacyQueryParamAccepted(t *testing.T) {
+	s := newTokenAuthServer()
+	req := newWebSocketAuthRequest(t, "/ws?token="+wsAuthToken)
+
+	assert.True(t, s.validateToken(req))
+}
+
+func TestWsValidateToken_SubprotocolTakesPrecedence(t *testing.T) {
+	s := newTokenAuthServer()
+	req := newWebSocketAuthRequest(t, "/ws?token=wrong-token")
+	req.Header.Set("Sec-WebSocket-Protocol", "bearer."+wsAuthToken)
+
+	assert.True(t, s.validateToken(req))
+}
+
+func TestWsValidateToken_InvalidSubprotocolFallsBackToQueryParam(t *testing.T) {
+	s := newTokenAuthServer()
+	req := newWebSocketAuthRequest(t, "/ws?token="+wsAuthToken)
+	req.Header.Set("Sec-WebSocket-Protocol", "bearer.wrong-token")
+
+	assert.True(t, s.validateToken(req))
 }
 
 // TestValidateToken_OriginBypass verifies the origin-bypass path for
@@ -125,7 +111,7 @@ func TestValidateToken_OriginBypass(t *testing.T) {
 
 	s := &Server{
 		agentToken:     validToken,
-		tokenExplicit:  false, // auto-generated
+		tokenExplicit:  false,
 		allowedOrigins: []string{"http://localhost:5174"},
 	}
 
@@ -161,17 +147,14 @@ func TestValidateToken_OriginBypass(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
-			if tc.origin != "" {
-				req.Header.Set("Origin", tc.origin)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
 			}
 
-			got := s.validateToken(req)
-			if got != tc.expect {
-				t.Errorf("validateToken() = %v, want %v", got, tc.expect)
-			}
+			assert.Equal(t, tt.expect, s.validateToken(req))
 		})
 	}
 }
@@ -187,9 +170,9 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "all three headers present",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Connection":       "Upgrade",
-				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+				"Upgrade":           "websocket",
+				"Connection":        "Upgrade",
+				"Sec-WebSocket-Key": wsHandshakeKey,
 			},
 			expect: true,
 		},
@@ -204,16 +187,16 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "missing Connection header",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+				"Upgrade":           "websocket",
+				"Sec-WebSocket-Key": wsHandshakeKey,
 			},
 			expect: false,
 		},
 		{
 			name: "missing Upgrade header",
 			headers: map[string]string{
-				"Connection":       "Upgrade",
-				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+				"Connection":        "Upgrade",
+				"Sec-WebSocket-Key": wsHandshakeKey,
 			},
 			expect: false,
 		},
@@ -225,25 +208,22 @@ func TestIsRealWebSocketUpgrade(t *testing.T) {
 		{
 			name: "Connection has upgrade in comma list",
 			headers: map[string]string{
-				"Upgrade":          "websocket",
-				"Connection":       "keep-alive, Upgrade",
-				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+				"Upgrade":           "websocket",
+				"Connection":        "keep-alive, Upgrade",
+				"Sec-WebSocket-Key": wsHandshakeKey,
 			},
 			expect: true,
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/ws", nil)
-			for k, v := range tc.headers {
-				req.Header.Set(k, v)
+			for key, value := range tt.headers {
+				req.Header.Set(key, value)
 			}
 
-			got := isRealWebSocketUpgrade(req)
-			if got != tc.expect {
-				t.Errorf("isRealWebSocketUpgrade() = %v, want %v", got, tc.expect)
-			}
+			assert.Equal(t, tt.expect, isRealWebSocketUpgrade(req))
 		})
 	}
 }

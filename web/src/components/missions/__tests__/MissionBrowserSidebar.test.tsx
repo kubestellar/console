@@ -194,15 +194,16 @@ describe('MissionBrowserSidebar', () => {
     expect(screen.queryByPlaceholderText(/owner\/repo/i)).not.toBeInTheDocument()
   })
 
-  it('calls onAddRepo and showToast on repo form submit', async () => {
+  it('calls onAddRepo and showToast on repo confirm click', async () => {
     const user = userEvent.setup()
     const { props } = renderSidebar({
       addingRepo: true,
       newRepoValue: 'my-org/my-repo',
     })
     const input = screen.getByPlaceholderText(/owner\/repo/i)
-    await user.click(input)
-    fireEvent.submit(input.closest('form')!)
+    const actionRow = input.parentElement
+    const confirmButton = actionRow?.querySelectorAll('button')[0] as HTMLButtonElement
+    await user.click(confirmButton)
     expect(props.onAddRepo).toHaveBeenCalledWith('my-org/my-repo')
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.stringContaining('my-org/my-repo'),
@@ -212,9 +213,10 @@ describe('MissionBrowserSidebar', () => {
 
   it('does not call onAddRepo when repo value is empty', async () => {
     const { props } = renderSidebar({ addingRepo: true, newRepoValue: '' })
-    fireEvent.submit(
-      screen.getByPlaceholderText(/owner\/repo/i).closest('form')!,
-    )
+    const input = screen.getByPlaceholderText(/owner\/repo/i)
+    const actionRow = input.parentElement
+    const confirmButton = actionRow?.querySelectorAll('button')[0] as HTMLButtonElement
+    fireEvent.click(confirmButton)
     expect(props.onAddRepo).not.toHaveBeenCalled()
   })
 
@@ -224,9 +226,10 @@ describe('MissionBrowserSidebar', () => {
       newRepoValue: 'existing/repo',
       watchedRepos: ['existing/repo'],
     })
-    fireEvent.submit(
-      screen.getByPlaceholderText(/owner\/repo/i).closest('form')!,
-    )
+    const input = screen.getByPlaceholderText(/owner\/repo/i)
+    const actionRow = input.parentElement
+    const confirmButton = actionRow?.querySelectorAll('button')[0] as HTMLButtonElement
+    fireEvent.click(confirmButton)
     expect(props.onAddRepo).not.toHaveBeenCalled()
   })
 
@@ -263,14 +266,15 @@ describe('MissionBrowserSidebar', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('calls onAddPath and showToast on path form submit', async () => {
+  it('calls onAddPath and showToast on path confirm click', async () => {
     const { props } = renderSidebar({
       addingPath: true,
       newPathValue: '/home/user/missions',
     })
-    fireEvent.submit(
-      screen.getByPlaceholderText('/path/to/missions').closest('form')!,
-    )
+    const input = screen.getByPlaceholderText('/path/to/missions')
+    const actionRow = input.parentElement
+    const confirmButton = actionRow?.querySelectorAll('button')[0] as HTMLButtonElement
+    fireEvent.click(confirmButton)
     expect(props.onAddPath).toHaveBeenCalledWith('/home/user/missions')
     expect(mockShowToast).toHaveBeenCalledWith(
       expect.stringContaining('/home/user/missions'),
@@ -280,9 +284,10 @@ describe('MissionBrowserSidebar', () => {
 
   it('does not call onAddPath when path value is empty', async () => {
     const { props } = renderSidebar({ addingPath: true, newPathValue: '' })
-    fireEvent.submit(
-      screen.getByPlaceholderText('/path/to/missions').closest('form')!,
-    )
+    const input = screen.getByPlaceholderText('/path/to/missions')
+    const actionRow = input.parentElement
+    const confirmButton = actionRow?.querySelectorAll('button')[0] as HTMLButtonElement
+    fireEvent.click(confirmButton)
     expect(props.onAddPath).not.toHaveBeenCalled()
   })
 

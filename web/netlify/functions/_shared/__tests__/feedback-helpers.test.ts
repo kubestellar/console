@@ -168,7 +168,7 @@ describe("feedback helpers", () => {
 
   it("reads repo permissions and links sub-issues via GitHub", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ permissions: { push: true } }), {
+      .mockResolvedValueOnce(new Response(JSON.stringify({ permissions: { pull: true, push: true, admin: true } }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }))
@@ -177,7 +177,9 @@ describe("feedback helpers", () => {
     const module = await loadModule();
 
     await expect(module.getRepoPermissions(USER_TOKEN, "kubestellar/console")).resolves.toEqual({
+      pull: true,
       push: true,
+      admin: true,
     });
     await expect(module.addSubIssue(INSTALL_TOKEN, "kubestellar/console", 16109, 999)).resolves.toBeUndefined();
 

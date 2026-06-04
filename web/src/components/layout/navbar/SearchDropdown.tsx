@@ -24,7 +24,7 @@ import { scrollToCard } from '../../../lib/scrollToCard'
 import { useFeatureHints } from '../../../hooks/useFeatureHints'
 import { FeatureHintTooltip } from '../../ui/FeatureHintTooltip'
 import { emitGlobalSearchOpened, emitGlobalSearchQueried, emitGlobalSearchSelected, emitGlobalSearchAskAI } from '../../../lib/analytics'
-import { useModalState } from '../../../lib/modals'
+import { useEscapeLayer, useModalState } from '../../../lib/modals'
 
 /** Routes for dashboards that are discoverable but not shown by default in the sidebar */
 const DISCOVERABLE_ROUTES = new Set(DISCOVERABLE_DASHBOARDS.map(d => d.href))
@@ -216,6 +216,7 @@ export function SearchDropdown({ autoFocusOnMount = false }: SearchDropdownProps
   const { config: sidebarConfig } = useSidebarConfig()
   const [searchQuery, setSearchQuery] = useState('')
   const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = useModalState()
+  const isTopEscapeLayer = useEscapeLayer(isSearchOpen)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -377,6 +378,9 @@ export function SearchDropdown({ autoFocusOnMount = false }: SearchDropdownProps
           handleSelect(flatResults[selectedIndex], selectedIndex)
         }
       } else if (event.key === 'Escape') {
+        if (!isTopEscapeLayer()) return
+        event.preventDefault()
+        event.stopPropagation()
         closeSearch()
         inputRef.current?.blur()
       }
@@ -391,7 +395,7 @@ export function SearchDropdown({ autoFocusOnMount = false }: SearchDropdownProps
       document.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI, openSearch, closeSearch])
+  }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI, openSearch, closeSearch, isTopEscapeLayer])
 
   useEffect(() => {
     if (previousPathnameRef.current !== location.pathname) {

@@ -1,4 +1,7 @@
+// @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest handler tests for issue-stats.mts (#15397, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,9 +11,10 @@ import {
   readJson,
 } from "./netlify-handler-helpers";
 
-const { mockGet, mockSetJSON } = vi.hoisted(() => ({
+const { mockGet, mockSetJSON, mockEnforceSimpleRateLimit } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockSetJSON: vi.fn(),
+  mockEnforceSimpleRateLimit: vi.fn(),
 }));
 
 // issue-stats.mts uses store.get(key, { type: "json" }) — Netlify returns a parsed object, not a string.
@@ -19,6 +23,10 @@ vi.mock("@netlify/blobs", () => ({
     get: mockGet,
     setJSON: mockSetJSON,
   }),
+}));
+
+vi.mock("../_shared/rate-limit", () => ({
+  enforceSimpleRateLimit: mockEnforceSimpleRateLimit,
 }));
 
 import handler from "../issue-stats.mts";
@@ -54,6 +62,7 @@ describe("issue-stats", () => {
     process.env.GITHUB_TOKEN = FAKE_GITHUB_TOKEN;
     mockGet.mockResolvedValue(null);
     mockSetJSON.mockResolvedValue(undefined);
+    mockEnforceSimpleRateLimit.mockResolvedValue({ limited: false, retryAfterSeconds: 0 });
 
     const today = new Date();
     const yesterday = new Date(today.getTime() - 86_400_000);
@@ -91,6 +100,14 @@ describe("issue-stats", () => {
     expect(res.status).toBe(400);
     const body = await readJson<{ error: string }>(res);
     expect(body.error).toContain("Invalid repo");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for repos outside the allowlist", async () => {
+    const res = await handler(makeRequest("repo=evil/private-repo&days=7"));
+    expect(res.status).toBe(403);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Repository not allowed");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

@@ -25,7 +25,7 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 		}
 	}
 
-	clientAuth := c.Get("X-KC-Client-Auth")
+	clientAuth := extractClientAuth(c)
 	idParam := c.Params("id")
 	if targetRepo, issueNum, ok := parseGitHubRequestID(idParam); ok {
 		repoName := h.resolveRepoName(targetRepo)
@@ -110,7 +110,7 @@ func (h *FeedbackHandler) ReopenRequest(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Comment is too long")
 	}
 
-	clientAuth := c.Get("X-KC-Client-Auth")
+	clientAuth := extractClientAuth(c)
 	idParam := c.Params("id")
 	if targetRepo, issueNum, ok := parseGitHubRequestID(idParam); ok {
 		repoName := h.resolveRepoName(targetRepo)

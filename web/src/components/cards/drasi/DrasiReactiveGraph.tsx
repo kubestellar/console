@@ -27,7 +27,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useModalState } from '../../../lib/modals'
-import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
+import { useReportCardDataState } from '../CardDataContext'
 import { useDrasiConnections } from '../../../hooks/useDrasiConnections'
 import { useDrasiQueryStream } from '../../../hooks/useDrasiQueryStream'
 import { useDrasiResources } from '../../../hooks/useDrasiResources'
@@ -63,15 +63,21 @@ import { rectsEqual } from './DrasiTypes'
 
 export function DrasiReactiveGraph() {
   const { t } = useTranslation()
-  const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'none' })
-  const { data: liveData, isLoading, isRefreshing, error } = useDrasiResources()
+  const {
+    data: drasiData,
+    isRefreshing,
+    isDemoData,
+    isFailed,
+    consecutiveFailures,
+    refetch: refetchDrasi,
+  } = useDrasiResources()
 
   useReportCardDataState({
-    isDemoData: showDemoBadge || (!liveData && !isLoading),
+    isDemoData,
     isRefreshing,
-    isFailed: !!error,
-    consecutiveFailures: error ? 1 : 0,
-    hasData: true,
+    isFailed,
+    consecutiveFailures,
+    hasData: drasiData !== null,
   })
 
   const [selectedQueryId, setSelectedQueryId] = useState<string>('q-top-losers')
@@ -95,24 +101,38 @@ export function DrasiReactiveGraph() {
     () => demoThemeForConnection(activeConnection?.isDemoSeed ? activeConnection.id : undefined),
     [activeConnection],
   )
-  const [demoData, setDemoData] = useState<DrasiPipelineData>(() => generateDemoData(demoThemeId))
+  const [demoPipelineData, setDemoPipelineData] = useState<DrasiPipelineData>(() => generateDemoData(demoThemeId))
 
   useEffect(() => {
-    setDemoData(generateDemoData(demoThemeId))
-  }, [demoThemeId])
+    if (!isDemoData || !drasiData) return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setDemoPipelineData({
+        sources: [...(drasiData.sources || [])],
+        queries: [...(drasiData.queries || [])],
+        reactions: [...(drasiData.reactions || [])],
+        liveResults: [...(drasiData.liveResults || [])],
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [drasiData, isDemoData])
 
   useEffect(() => {
-    if (!isDemoMode && liveData) return
+    if (!isDemoData) return
     const interval = setInterval(() => {
-      setDemoData(prev => {
+      setDemoPipelineData(prev => {
         const fresh = generateDemoData(demoThemeId)
         return { ...prev, liveResults: fresh.liveResults }
       })
     }, FLOW_ANIMATION_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [isDemoMode, liveData, demoThemeId])
+  }, [demoThemeId, isDemoData])
 
-  const isLive = !!liveData && !isDemoMode
+  const isLive = !isDemoData && drasiData !== null
+  const liveData = isLive ? drasiData : null
   const { isOpen: showConnectionsModal, open: openConnectionsModal, close: closeConnectionsModal } = useModalState()
   const { isOpen: showStreamSamples, open: openStreamSamples, close: closeStreamSamples } = useModalState()
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -137,8 +157,8 @@ export function DrasiReactiveGraph() {
         : liveData.liveResults
       return { ...liveData, liveResults }
     }
-    return demoData
-  }, [isLive, liveData, demoData, streamSubscription.results])
+    return demoPipelineData
+  }, [demoPipelineData, isLive, liveData, streamSubscription.results])
 
   const flows = useMemo(
     () => computeFlows(rawPipelineData.sources, rawPipelineData.queries, rawPipelineData.reactions),
@@ -160,20 +180,29 @@ export function DrasiReactiveGraph() {
   const { sources, queries, reactions, liveResults } = pipelineData
 
   useEffect(() => {
-    if (selectedFlowId !== FLOW_ID_ALL && !flows.some(flow => flow.id === selectedFlowId)) {
-      setSelectedFlowId(FLOW_ID_ALL)
+    if (selectedFlowId === FLOW_ID_ALL || flows.some(flow => flow.id === selectedFlowId)) return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) setSelectedFlowId(FLOW_ID_ALL)
+    })
+    return () => {
+      cancelled = true
     }
   }, [flows, selectedFlowId])
 
   useEffect(() => {
-    if (queries.length > 0 && !queries.find(query => query.id === selectedQueryId)) {
-      setSelectedQueryId(
-        pinnedQueryId && queries.find(query => query.id === pinnedQueryId)
-          ? pinnedQueryId
-          : queries[0].id,
-      )
+    if (queries.length === 0 || queries.find(query => query.id === selectedQueryId)) return
+    const nextQueryId = pinnedQueryId && queries.find(query => query.id === pinnedQueryId)
+      ? pinnedQueryId
+      : queries[0].id
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) setSelectedQueryId(nextQueryId)
+    })
+    return () => {
+      cancelled = true
     }
-  }, [queries, selectedQueryId, pinnedQueryId])
+  }, [pinnedQueryId, queries, selectedQueryId])
 
   const handleQueryClick = useCallback((queryId: string) => {
     if (pinnedQueryId && pinnedQueryId !== queryId) return
@@ -194,7 +223,6 @@ export function DrasiReactiveGraph() {
     setSelectedQueryId(queryId)
   }, [])
 
-  const { refetch: refetchDrasi } = useDrasiResources()
   const drasiProxyTarget = useCallback(() => buildDrasiProxyTarget(activeConnection), [activeConnection])
   const drasiResourcePath = useCallback(
     (kind: DrasiResourceKind): string => getDrasiResourcePath(liveData?.mode, kind),
@@ -220,13 +248,13 @@ export function DrasiReactiveGraph() {
       return
     }
     if (sourceId === null) {
-      setDemoData(prev => ({
+      setDemoPipelineData(prev => ({
         ...prev,
         sources: [...prev.sources, { id: config.name, name: config.name, kind: config.kind, status: 'ready' }],
       }))
       return
     }
-    setDemoData(prev => ({
+    setDemoPipelineData(prev => ({
       ...prev,
       sources: prev.sources.map(source => (
         source.id === sourceId
@@ -258,7 +286,7 @@ export function DrasiReactiveGraph() {
       return
     }
     if (queryId === null) {
-      setDemoData(prev => ({
+      setDemoPipelineData(prev => ({
         ...prev,
         queries: [...prev.queries, {
           id: config.name,
@@ -271,7 +299,7 @@ export function DrasiReactiveGraph() {
       }))
       return
     }
-    setDemoData(prev => ({
+    setDemoPipelineData(prev => ({
       ...prev,
       queries: prev.queries.map(query => (
         query.id === queryId
@@ -300,7 +328,7 @@ export function DrasiReactiveGraph() {
       }
       return
     }
-    setDemoData(prev => ({
+    setDemoPipelineData(prev => ({
       ...prev,
       reactions: [...prev.reactions, {
         id: defaultName,
@@ -348,7 +376,7 @@ export function DrasiReactiveGraph() {
           }
           return
         }
-        setDemoData(prev => {
+        setDemoPipelineData(prev => {
           if (kind === 'source') return { ...prev, sources: prev.sources.filter(source => source.id !== id) }
           if (kind === 'query') return { ...prev, queries: prev.queries.filter(query => query.id !== id) }
           return { ...prev, reactions: prev.reactions.filter(reaction => reaction.id !== id) }
@@ -523,7 +551,7 @@ export function DrasiReactiveGraph() {
     }
 
     return items
-  }, [liveResults.length, queries, reactions, rects, selectedQueryId, sources, stoppedNodeIds])
+  }, [queries, reactions, rects, sources, stoppedNodeIds])
 
   const connectedNodeIds = useCallback((hoverId: string): Set<string> => {
     const keep = new Set<string>()
@@ -698,7 +726,7 @@ export function DrasiReactiveGraph() {
         selectedRow={selectedRow}
         onCloseSelectedRow={() => setSelectedRow(null)}
         showStreamSamples={showStreamSamples}
-        streamEndpoint={buildStreamEndpoint(activeConnection, liveData, selectedQueryId)}
+        streamEndpoint={buildStreamEndpoint(activeConnection, isLive ? liveData : null, selectedQueryId)}
         isDemo={!isLive}
         onCloseStreamSamples={closeStreamSamples}
         showConnectionsModal={showConnectionsModal}

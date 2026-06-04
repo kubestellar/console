@@ -11,6 +11,7 @@
 import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
+import { readCappedRequestText, RequestBodyTooLargeError } from "./_shared/read-capped-request"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
@@ -19,29 +20,59 @@ const UMAMI_RATE_LIMIT_MAX_REQUESTS = 500
 const UMAMI_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 const MAX_BODY_BYTES = 65_536
 const MAX_UPSTREAM_TEXT_BYTES = 1_048_576
+const ALLOWED_METHODS = "POST, OPTIONS"
+const JSON_OBJECT_TYPE = "object"
 
-/**
- * Hosts allowed via Referer fallback when Origin is absent. Keep
- * separate from the CORS allowlist because Referer is a weaker signal
- * (can be stripped by Referrer-Policy) — only used when Origin is
- * entirely missing (e.g. beacon sendBeacon() without CORS).
- */
 const REFERER_FALLBACK_HOSTS = new Set([
   "console.kubestellar.io",
   "localhost",
   "127.0.0.1",
 ])
 
-function isRequestAllowed(req: Request): boolean {
-  // Prefer the CORS allowlist via the Origin header.
-  if (isAllowedOrigin(req.headers.get("origin"))) return true
+function normalizeOrigin(header: string | null): string | null {
+  if (!header) return null
 
-  // Fall back to Referer for requests where Origin is not sent.
+  try {
+    return new URL(header).origin
+  } catch {
+    return header
+  }
+}
+
+function isJsonObjectPayload(body: string): boolean {
+  if (!body) return false
+
+  try {
+    const parsed: unknown = JSON.parse(body)
+    return typeof parsed === JSON_OBJECT_TYPE && parsed !== null && !Array.isArray(parsed)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Validates that a netlify.app hostname belongs to a KubeStellar deploy preview.
+ * Rejects arbitrary attacker-controlled *.netlify.app subdomains (#16744).
+ */
+function isKubeStellarNetlifyHost(hostname: string): boolean {
+  if (!hostname.endsWith(".netlify.app")) return false
+  // KubeStellar deploy previews use patterns like:
+  // deploy-preview-123--kubestellar-console.netlify.app
+  // kubestellar-console.netlify.app
+  const subdomain = hostname.replace(".netlify.app", "")
+  return subdomain === "kubestellar-console" ||
+    subdomain.startsWith("deploy-preview-") && subdomain.endsWith("--kubestellar-console")
+}
+
+function isRequestAllowed(req: Request): boolean {
+  const origin = normalizeOrigin(req.headers.get("origin"))
+  if (isAllowedOrigin(origin)) return true
+
   const referer = req.headers.get("referer")
   if (referer) {
     try {
       const hostname = new URL(referer).hostname
-      if (REFERER_FALLBACK_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
+      if (REFERER_FALLBACK_HOSTS.has(hostname) || isKubeStellarNetlifyHost(hostname)) {
         return true
       }
     } catch {
@@ -49,13 +80,12 @@ function isRequestAllowed(req: Request): boolean {
     }
   }
 
-  // Allow if neither Origin nor Referer is present (rare, same-origin POST with strict Referrer-Policy).
-  return !req.headers.get("origin") && !referer
+  return false
 }
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
-  methods: "POST, OPTIONS",
+  methods: ALLOWED_METHODS,
   headers: "Content-Type",
 } as const
 
@@ -64,6 +94,13 @@ export default async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return handlePreflight(req, CORS_OPTS)
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { ...corsHeaders, Allow: ALLOWED_METHODS },
+    })
   }
 
   if (!isRequestAllowed(req)) {
@@ -91,15 +128,19 @@ export default async (req: Request) => {
     }
   }
 
-  const contentLength = Number.parseInt(req.headers.get("content-length") || "0", 10)
-  if (contentLength > MAX_BODY_BYTES) {
-    return new Response("Payload too large", { status: 413, headers: corsHeaders })
+  let body: string
+  try {
+    body = await readCappedRequestText(req, MAX_BODY_BYTES, "umami-collect")
+  } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return new Response("Payload too large", { status: 413, headers: corsHeaders })
+    }
+    return new Response("Bad request", { status: 400, headers: corsHeaders })
   }
 
   try {
-    const body = await req.text()
-    if (body.length > MAX_BODY_BYTES) {
-      return new Response("Payload too large", { status: 413, headers: corsHeaders })
+    if (!isJsonObjectPayload(body)) {
+      return new Response("Bad payload", { status: 400, headers: corsHeaders })
     }
 
     const resp = await fetch(UMAMI_COLLECT_URL, {

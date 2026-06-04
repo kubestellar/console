@@ -41,6 +41,9 @@ const (
 	// endpointStatus verifies agent auth for local browser clients (sensitive).
 	endpointStatus = "/status"
 
+	// endpointMetrics exposes Prometheus metrics for the agent and must be authenticated.
+	endpointMetrics = "/metrics"
+
 	// endpointSecrets lists Kubernetes secrets (sensitive).
 	endpointSecrets = "/secrets"
 
@@ -181,6 +184,7 @@ var sensitiveEndpoints = []struct {
 	{endpointSettingsImport, "POST"},
 	{endpointClusters, "GET"},
 	{endpointStatus, "GET"},
+	{endpointMetrics, "GET"},
 	{endpointSecrets, "GET"},
 	{endpointRestartBackend, "POST"},
 	{endpointAutoUpdateTrigger, "POST"},
@@ -465,18 +469,8 @@ func TestEndpointAuth_HealthDoesNotLeakSecrets(t *testing.T) {
 	}
 
 	allowedFields := map[string]bool{
-		"status":             true,
-		"version":            true,
-		"commitSHA":          true,
-		"buildTime":          true,
-		"goVersion":          true,
-		"os":                 true,
-		"arch":               true,
-		"clusters":           true,
-		"hasClaude":          true,
-		"claude":             true,
-		"install_method":     true,
-		"availableProviders": true,
+		"status":  true,
+		"version": true,
 	}
 
 	for field := range rawMap {
@@ -486,39 +480,39 @@ func TestEndpointAuth_HealthDoesNotLeakSecrets(t *testing.T) {
 	}
 }
 
-// TestEndpointAuth_HealthProviderSummaryNoSecrets ensures the provider
-// summaries in /health don't accidentally include API keys or config.
-func TestEndpointAuth_HealthProviderSummaryNoSecrets(t *testing.T) {
-	server := newAuthTestServerNoToken()
-
-	// Register a fake provider to ensure summaries are populated
+// TestEndpointAuth_StatusReturnsTelemetry ensures the authenticated status
+// endpoint carries the detailed telemetry removed from /health.
+func TestEndpointAuth_StatusReturnsTelemetry(t *testing.T) {
+	server := newAuthTestServerWithToken()
 	server.registry.providers["test-provider"] = &authTestFakeProvider{
 		name:        "test-provider",
 		displayName: "Test Provider",
 	}
 
-	req := httptest.NewRequest("GET", endpointHealth, nil)
+	req := httptest.NewRequest("GET", endpointStatus, nil)
 	req.Header.Set("Origin", testAllowedOrigin)
+	req.Header.Set("Authorization", "Bearer "+testTokenValue)
 	w := httptest.NewRecorder()
 
-	server.handleHealth(w, req)
+	server.handleStatus(w, req)
 
-	body := w.Body.String()
-
-	// Provider summaries should only contain name, displayName, capabilities
-	var payload protocol.HealthPayload
-	if err := json.Unmarshal([]byte(body), &payload); err != nil {
-		t.Fatalf("Failed to decode health payload: %v", err)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /status: expected 200, got %d", w.Code)
 	}
 
-	for _, p := range payload.AvailableProviders {
-		// Verify no secret-like data in the summary
-		combined := p.Name + p.DisplayName
-		for _, pattern := range sensitiveFieldPatterns {
-			if pattern.MatchString(combined) {
-				t.Errorf("Provider summary for %q matches sensitive pattern %q", p.Name, pattern.String())
-			}
-		}
+	var payload protocol.HealthPayload
+	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("Failed to decode status payload: %v", err)
+	}
+
+	if payload.Clusters != 1 {
+		t.Fatalf("expected cluster count in /status, got %d", payload.Clusters)
+	}
+	if payload.GoVersion == "" || payload.OS == "" || payload.Arch == "" {
+		t.Fatalf("expected runtime metadata in /status, got %+v", payload)
+	}
+	if len(payload.AvailableProviders) != 1 {
+		t.Fatalf("expected provider summaries in /status, got %d", len(payload.AvailableProviders))
 	}
 }
 
@@ -574,6 +568,7 @@ func resolveEndpointHandler(s *Server, path string) func(http.ResponseWriter, *h
 		endpointSettingsImport:      s.handleSettingsImport,
 		endpointClusters:            s.handleClustersHTTP,
 		endpointStatus:              s.handleStatus,
+		endpointMetrics:             s.handleMetrics,
 		endpointSecrets:             s.handleSecretsHTTP,
 		endpointWS:                  s.handleWebSocket,
 		endpointRestartBackend:      s.handleRestartBackend,

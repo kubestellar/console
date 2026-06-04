@@ -316,7 +316,7 @@ function TriagedRequestContent({
           {statusInfo.label}
         </span>
         {request.status === 'fix_complete' && (
-          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-gray-500/20 text-muted-foreground">
+          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-muted text-muted-foreground">
             Closed
           </span>
         )}

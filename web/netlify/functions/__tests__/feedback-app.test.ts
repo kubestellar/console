@@ -1,4 +1,7 @@
+// @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for feedback-app.mts Netlify function (#15621, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -53,11 +56,12 @@ vi.mock("../_shared/rate-limit", () => ({
   enforceSimpleRateLimit: mockEnforceSimpleRateLimit,
 }));
 
-import handler from "../feedback-app.mts";
+import handler, { resetFeedbackAppRateLimitsForTests } from "../feedback-app.mts";
 
 describe("feedback-app", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetFeedbackAppRateLimitsForTests();
     mockEnforceSimpleRateLimit.mockResolvedValue({ limited: false });
   });
 
@@ -127,26 +131,7 @@ describe("feedback-app", () => {
   // Body and input validation checks
   // Note: The handler rejects oversized bodies BEFORE calling verifyClientAuth.
   // This is intentional DoS prevention — expensive auth is skipped for invalid payloads.
-  it("returns 413 for oversized request body based on content-length header", async () => {
-    mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
-    const hugeLength = 200_000;
-    const res = await handler(
-      makeNetlifyRequest("/feedback-app", {
-        method: "POST",
-        headers: {
-          "x-kc-client-auth": "valid_token",
-          "content-length": String(hugeLength),
-        },
-      })
-    );
-    expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
-    const body = await readJson<{ error: string }>(res);
-    expect(body.error).toBe("Request body too large");
-    // Auth is never reached — handler short-circuits before verifyClientAuth
-    expect(mockVerifyClientAuth).not.toHaveBeenCalled();
-  });
-
-  it("returns 413 when request body text is oversized", async () => {
+  it("returns 413 for oversized request body based on actual bytes read", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     const largeBodyText = "a".repeat(102_401);
     const req = new Request("https://example.test/feedback-app", {
@@ -173,16 +158,22 @@ describe("feedback-app", () => {
 
   it("returns 413 (not 401) when body is oversized even with invalid auth — DoS prevention ordering", async () => {
     mockVerifyClientAuth.mockRejectedValue(new Error("Invalid token"));
-    const hugeLength = 200_000;
-    const res = await handler(
-      makeNetlifyRequest("/feedback-app", {
-        method: "POST",
-        headers: {
-          "x-kc-client-auth": "will_fail_auth",
-          "content-length": String(hugeLength),
-        },
-      })
-    );
+    const largeBodyText = "a".repeat(102_401);
+    const req = new Request("https://example.test/feedback-app", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:5174",
+        "x-kc-client-auth": "will_fail_auth",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        repoOwner: "kubestellar",
+        repoName: "console",
+        title: "Test",
+        body: largeBodyText,
+      }),
+    });
+    const res = await handler(req);
     // Body-size rejection takes priority over auth verification
     expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
     expect(mockVerifyClientAuth).not.toHaveBeenCalled();
@@ -257,10 +248,70 @@ describe("feedback-app", () => {
     expect(body.retryAfter).toBe(300);
   });
 
+  it("blocks pre-auth floods before calling verifyClientAuth", async () => {
+    mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await handler(makeNetlifyRequest("/feedback-app", {
+        method: "GET",
+        headers: {
+          "x-kc-client-auth": "valid_token",
+          "x-nf-client-connection-ip": "203.0.113.10",
+        },
+        search: "repoOwner=kubestellar&repoName=console",
+      }));
+      expect(response.status).toBe(HTTP_STATUS_OK);
+    }
+
+    const blocked = await handler(makeNetlifyRequest("/feedback-app", {
+      method: "GET",
+      headers: {
+        "x-kc-client-auth": "valid_token",
+        "x-nf-client-connection-ip": "203.0.113.10",
+      },
+      search: "repoOwner=kubestellar&repoName=console",
+    }));
+
+    expect(blocked.status).toBe(HTTP_STATUS_RATE_LIMITED);
+    expect(blocked.headers.get("retry-after")).toBe("60");
+    expect(mockVerifyClientAuth).toHaveBeenCalledTimes(10);
+  });
+
+  it("blocks repeated auth failures before calling GitHub again", async () => {
+    mockVerifyClientAuth.mockRejectedValue(new Error("Invalid token"));
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await handler(makeNetlifyRequest("/feedback-app", {
+        method: "GET",
+        headers: {
+          "x-kc-client-auth": "invalid_auth_token",
+          "x-nf-client-connection-ip": "203.0.113.20",
+        },
+        search: "repoOwner=kubestellar&repoName=console",
+      }));
+      expect(response.status).toBe(HTTP_STATUS_UNAUTHORIZED);
+    }
+
+    const blocked = await handler(makeNetlifyRequest("/feedback-app", {
+      method: "GET",
+      headers: {
+        "x-kc-client-auth": "invalid_auth_token",
+        "x-nf-client-connection-ip": "203.0.113.20",
+      },
+      search: "repoOwner=kubestellar&repoName=console",
+    }));
+
+    expect(blocked.status).toBe(HTTP_STATUS_RATE_LIMITED);
+    expect(blocked.headers.get("retry-after")).toBe("60");
+    expect(mockVerifyClientAuth).toHaveBeenCalledTimes(5);
+  });
+
   // Valid Action scenarios: create_issue
   it("creates issue successfully without parent link", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
 
     const expectedIssueId = 9999;
     const expectedIssueNumber = 42;
@@ -368,28 +419,12 @@ describe("feedback-app", () => {
     expect(mockAddSubIssue).toHaveBeenCalledWith("mock_install_token", "kubestellar/console", 100, expectedIssueId);
   });
 
-  it("creates issue and returns warning if parent issue link is attempted but user has no push permissions", async () => {
+  it("rejects issue creation when the user lacks push permissions", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
     mockGetRepoPermissions.mockResolvedValue({ push: false });
 
-    const expectedIssueId = 9999;
-    const expectedIssueNumber = 42;
-    const expectedHtmlUrl = "https://github.com/kubestellar/console/issues/42";
-
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          id: expectedIssueId,
-          number: expectedIssueNumber,
-          html_url: expectedHtmlUrl,
-        }),
-        {
-          status: HTTP_STATUS_CREATED,
-          headers: { "Content-Type": "application/json" },
-        }
-      )
-    );
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     const req = new Request("https://example.test/feedback-app", {
@@ -409,16 +444,18 @@ describe("feedback-app", () => {
       }),
     });
     const res = await handler(req);
-    expect(res.status).toBe(HTTP_STATUS_OK);
-    const body = await readJson<{ id: number; number: number; html_url: string; warning?: string }>(res);
-    expect(body.warning).toContain("parent issue linking requires push access");
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Push access required for feedback mutations");
     expect(mockAddSubIssue).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   // Valid Action scenarios: comment_issue
   it("adds comment to issue successfully", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user2", id: 5678 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
 
     const expectedHtmlUrl = "https://github.com/kubestellar/console/issues/42#issuecomment-123456";
 
@@ -470,6 +507,7 @@ describe("feedback-app", () => {
   it("updates issue state successfully", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user3", id: 8901 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
 
     const expectedHtmlUrl = "https://github.com/kubestellar/console/issues/42";
 
@@ -518,6 +556,68 @@ describe("feedback-app", () => {
     expect(sentBody.state).toBe("closed");
   });
 
+  it("rejects comment mutations when the user lacks push permissions", async () => {
+    mockVerifyClientAuth.mockResolvedValue({ login: "user2", id: 5678 });
+    mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: false });
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://example.test/feedback-app", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:5174",
+        "x-kc-client-auth": "valid_token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        repoOwner: "kubestellar",
+        repoName: "console",
+        action: "comment_issue",
+        issueNumber: 42,
+        body: "Adding a new comment",
+      }),
+    });
+
+    const res = await handler(req);
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Push access required for feedback mutations");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects state updates when the user lacks push permissions", async () => {
+    mockVerifyClientAuth.mockResolvedValue({ login: "user3", id: 8901 });
+    mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: false });
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new Request("https://example.test/feedback-app", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:5174",
+        "x-kc-client-auth": "valid_token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        repoOwner: "kubestellar",
+        repoName: "console",
+        action: "update_issue_state",
+        issueNumber: 42,
+        state: "closed",
+      }),
+    });
+
+    const res = await handler(req);
+    expect(res.status).toBe(HTTP_STATUS_FORBIDDEN);
+    const body = await readJson<{ error: string }>(res);
+    expect(body.error).toBe("Push access required for feedback mutations");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   // Capabilities checking (GET mode)
   it("checks capabilities and returns can_link_parent true when user has push permissions", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
@@ -540,6 +640,7 @@ describe("feedback-app", () => {
   it("handles GitHub API 4xx/5xx responses safely without leaking credentials", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
 
     const fetchMock = vi.fn().mockResolvedValue(
       new Response("Invalid token mock_install_token or something else", {
@@ -574,6 +675,7 @@ describe("feedback-app", () => {
   it("handles native fetch rejection safely returning 502 without leaking credentials", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     mockGetInstallationCred.mockResolvedValue("mock_install_token");
+    mockGetRepoPermissions.mockResolvedValue({ push: true });
 
     const fetchMock = vi.fn().mockRejectedValue(new Error("Native fetch failed with mock_install_token"));
     vi.stubGlobal("fetch", fetchMock);

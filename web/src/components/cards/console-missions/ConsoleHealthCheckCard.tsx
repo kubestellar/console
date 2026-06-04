@@ -17,8 +17,20 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation()
   const { startMission, missions } = useMissions()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
-  const { issues: allPodIssues, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
-  const { issues: allDeploymentIssues, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
+  const {
+    issues: allPodIssues,
+    isRefreshing: podsRefreshing,
+    isDemoFallback: podsDemoFallback,
+    isFailed: podsFailed,
+    consecutiveFailures: podsFailures,
+  } = useCachedPodIssues()
+  const {
+    issues: allDeploymentIssues,
+    isRefreshing: deploysRefreshing,
+    isDemoFallback: deploysDemoFallback,
+    isFailed: deploysFailed,
+    consecutiveFailures: deploysFailures,
+  } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToAllClusters, drillToCluster, drillToPod } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -27,7 +39,7 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const hasData = allClusters.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
-    isRefreshing,
+    isRefreshing: isRefreshing || podsRefreshing || deploysRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,

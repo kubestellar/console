@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,6 +85,29 @@ func TestJWTAuth(t *testing.T) {
 		restrictedResp, err := widgetApp.Test(restrictedReq, 5000)
 		assert.NoError(t, err)
 		assert.Equal(t, 401, restrictedResp.StatusCode)
+	})
+
+	t.Run("GitHub Pipelines Widget Bypass Is Read Only", func(t *testing.T) {
+		// After #16917, /api/github-pipelines was removed from the public
+		// prefix list — it now requires full authentication even for GET.
+		widgetApp := fiber.New()
+		handler := JWTAuth("test-secret")
+		widgetApp.Get("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
+			return c.SendString("ok")
+		})
+		widgetApp.Post("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
+			return c.SendString("should-not-reach")
+		})
+
+		getReq := httptest.NewRequest("GET", "/api/github-pipelines?source=ubersicht-widget&view=pulse", nil)
+		getResp, err := widgetApp.Test(getReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, getResp.StatusCode, "GET /api/github-pipelines must require auth after #16917")
+
+		mutateReq := httptest.NewRequest("POST", "/api/github-pipelines?source=ubersicht-widget&view=mutate", nil)
+		mutateResp, err := widgetApp.Test(mutateReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, mutateResp.StatusCode)
 	})
 
 	t.Run("Query Param Fallback Rejected On Non-Allowlisted Stream Path (#6585)", func(t *testing.T) {
@@ -206,6 +230,52 @@ func TestJWTAuth(t *testing.T) {
 	})
 }
 
+func TestParseJWT_RejectsUnexpectedAlgorithms(t *testing.T) {
+	secret := "test-secret"
+	claims := UserClaims{
+		UserID:      uuid.New(),
+		GitHubLogin: "test",
+		Role:        models.UserRoleViewer,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+
+	tests := []struct {
+		name   string
+		method jwt.SigningMethod
+		key    interface{}
+	}{
+		{
+			name:   "rejects alg none",
+			method: jwt.SigningMethodNone,
+			key:    jwt.UnsafeAllowNoneSignatureType,
+		},
+		{
+			name:   "rejects hs384 even with valid signature",
+			method: jwt.SigningMethodHS384,
+			key:    []byte(secret),
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			token := jwt.NewWithClaims(tc.method, claims)
+			tokenString, err := token.SignedString(tc.key)
+			require.NoError(t, err)
+
+			parsed, err := ParseJWT(tokenString, secret)
+			require.Error(t, err)
+			require.NotNil(t, parsed)
+			assert.False(t, parsed.Valid)
+			assert.Equal(t, tc.method.Alg(), parsed.Method.Alg())
+		})
+	}
+}
+
 func TestJWTAuth_TokenRefreshHeader(t *testing.T) {
 	secret := "test-secret"
 	app := fiber.New()
@@ -277,6 +347,7 @@ func generateTestToken(secret string, expiry time.Time) (string, error) {
 	claims := UserClaims{
 		UserID:      uuid.New(),
 		GitHubLogin: "test",
+		Role:        models.UserRoleViewer,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.NewString(),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -291,6 +362,7 @@ func generateTestTokenWithTimes(secret string, issuedAt, expiresAt time.Time) (s
 	claims := UserClaims{
 		UserID:      uuid.New(),
 		GitHubLogin: "test",
+		Role:        models.UserRoleViewer,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.NewString(),
 			IssuedAt:  jwt.NewNumericDate(issuedAt),
@@ -539,6 +611,20 @@ func (noopRevoker) RevokeToken(_ context.Context, _ string, _ time.Time) error {
 func (noopRevoker) IsTokenRevoked(_ context.Context, _ string) (bool, error)   { return false, nil }
 func (noopRevoker) CleanupExpiredTokens(_ context.Context) (int64, error)      { return 0, nil }
 
+type userValidationTestStore struct {
+	user  *models.User
+	err   error
+	calls int
+}
+
+func (s *userValidationTestStore) GetUser(_ context.Context, id uuid.UUID) (*models.User, error) {
+	s.calls++
+	if s.user != nil && s.user.ID != id {
+		return nil, nil
+	}
+	return s.user, s.err
+}
+
 // TestInitTokenRevocationIdempotent covers #6586: calling InitTokenRevocation
 // multiple times must not spawn multiple cleanup goroutines. We verify this
 // indirectly by ensuring the cancel func is still set after a second call
@@ -671,6 +757,7 @@ func TestValidateJWT_Revoked(t *testing.T) {
 	jti := "revoked-jti"
 	claims := UserClaims{
 		UserID: uuid.New(),
+		Role:   models.UserRoleViewer,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        jti,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
@@ -683,4 +770,85 @@ func TestValidateJWT_Revoked(t *testing.T) {
 
 	_, err := ValidateJWT(signed, secret)
 	assert.ErrorIs(t, err, ErrTokenRevoked)
+}
+
+func TestJWTAuth_UserValidation(t *testing.T) {
+	resetUserValidationForTest()
+	t.Cleanup(resetUserValidationForTest)
+
+	secret := "test-secret"
+	userID := uuid.New()
+	app := fiber.New()
+	app.Get("/protected", JWTAuth(secret), func(c *fiber.Ctx) error {
+		return c.SendString("ok")
+	})
+
+	makeToken := func(role models.UserRole) string {
+		t.Helper()
+		claims := UserClaims{
+			UserID:      userID,
+			GitHubLogin: "test-user",
+			Role:        role,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ID:        uuid.NewString(),
+				IssuedAt:  jwt.NewNumericDate(time.Now()),
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			},
+		}
+		tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signed, err := tok.SignedString([]byte(secret))
+		require.NoError(t, err)
+		return signed
+	}
+
+	t.Run("rejects deleted users", func(t *testing.T) {
+		store := &userValidationTestStore{}
+		InitUserValidation(store)
+
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+makeToken(models.UserRoleViewer))
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+		assert.Equal(t, 1, store.calls)
+	})
+
+	t.Run("rejects role changes", func(t *testing.T) {
+		store := &userValidationTestStore{user: &models.User{ID: userID, Role: models.UserRoleViewer}}
+		InitUserValidation(store)
+
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+makeToken(models.UserRoleAdmin))
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+		assert.Equal(t, 1, store.calls)
+	})
+
+	t.Run("caches successful lookups", func(t *testing.T) {
+		store := &userValidationTestStore{user: &models.User{ID: userID, Role: models.UserRoleViewer}}
+		InitUserValidation(store)
+		token := makeToken(models.UserRoleViewer)
+
+		for i := 0; i < 2; i++ {
+			req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+			req.Header.Set("Authorization", "Bearer "+token)
+			resp, err := app.Test(req, 5000)
+			require.NoError(t, err)
+			assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		}
+		assert.Equal(t, 1, store.calls)
+	})
+
+	t.Run("fails closed on lookup errors", func(t *testing.T) {
+		store := &userValidationTestStore{err: assertErr{}}
+		InitUserValidation(store)
+
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+makeToken(models.UserRoleViewer))
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
+		assert.Equal(t, 1, store.calls)
+	})
 }

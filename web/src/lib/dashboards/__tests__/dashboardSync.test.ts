@@ -1,4 +1,8 @@
-import { describe, it, expect, vi, beforeEach} from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const { mockGetStoredAuthToken } = vi.hoisted(() => ({
+  mockGetStoredAuthToken: vi.fn(() => null),
+}))
 
 // Mock the api module
 const mockApiGet = vi.fn()
@@ -19,6 +23,10 @@ vi.mock('../../constants', () => ({
   STORAGE_KEY_TOKEN: 'auth-token',
 }))
 
+vi.mock('../../authToken', () => ({
+  getStoredAuthToken: () => mockGetStoredAuthToken(),
+}))
+
 // Import after mocks
 import { dashboardSync } from '../dashboardSync'
 import type { BackendDashboard, BackendCard } from '../dashboardSync'
@@ -26,6 +34,8 @@ import type { BackendDashboard, BackendCard } from '../dashboardSync'
 describe('DashboardSyncService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetStoredAuthToken.mockReset()
+    mockGetStoredAuthToken.mockReturnValue(null)
     localStorage.clear()
     dashboardSync.clearCache()
   })
@@ -36,7 +46,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('returns true when token exists in localStorage', () => {
-      localStorage.setItem('auth-token', 'some-jwt-token')
+      mockGetStoredAuthToken.mockReturnValue('some-jwt-token')
       expect(dashboardSync.isAuthenticated()).toBe(true)
     })
   })
@@ -48,7 +58,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('fetches dashboard by name when authenticated', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -63,7 +73,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('creates dashboard when not found', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const newDashboard: BackendDashboard = {
         id: 'dash-new',
         user_id: 'user-1',
@@ -83,7 +93,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('caches dashboard after first fetch', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -102,7 +112,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('returns null on API error', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       mockApiGet.mockRejectedValueOnce(new Error('Network error'))
 
       const result = await dashboardSync.getOrCreateDashboard('test-dashboard')
@@ -117,7 +127,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('returns parsed frontend cards', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -149,7 +159,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('handles invalid config JSON gracefully', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -180,7 +190,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('returns null on API error', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       mockApiGet.mockRejectedValueOnce(new Error('Fetch error'))
 
       const result = await dashboardSync.fetchCards('test-key')
@@ -198,7 +208,7 @@ describe('DashboardSyncService', () => {
 
   describe('fullSync', () => {
     it('returns empty array when fetch returns empty (#7254)', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -218,7 +228,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('updates localStorage with backend data', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -251,7 +261,7 @@ describe('DashboardSyncService', () => {
 
   describe('clearCache', () => {
     it('clears internal caches', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -282,7 +292,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('triggers sync after debounce delay when authenticated', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -327,7 +337,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('creates new cards that are not in backend', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -361,7 +371,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('updates existing cards', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -402,7 +412,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('deletes cards that are in backend but not in frontend', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -436,7 +446,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('skips creating cards with default- prefix', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -467,7 +477,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('skips sync when already in progress', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -500,7 +510,7 @@ describe('DashboardSyncService', () => {
 
   describe('fullSync edge cases', () => {
     it('returns null and does not touch localStorage when fetch fails', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       localStorage.setItem('test-key-fail', '["old-data"]')
       mockApiGet.mockRejectedValueOnce(new Error('Network fail'))
 
@@ -511,7 +521,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('clears localStorage when backend returns empty cards (#7254)', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       localStorage.setItem('test-key-empty', '[{"old":"card"}]')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
@@ -533,7 +543,7 @@ describe('DashboardSyncService', () => {
 
   describe('fetchCards edge cases', () => {
     it('handles cards with null/undefined config and position', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',
@@ -563,7 +573,7 @@ describe('DashboardSyncService', () => {
     })
 
     it('handles position with partial fields', async () => {
-      localStorage.setItem('auth-token', 'token')
+      mockGetStoredAuthToken.mockReturnValue('token')
       const mockDashboard: BackendDashboard = {
         id: 'dash-1',
         user_id: 'user-1',

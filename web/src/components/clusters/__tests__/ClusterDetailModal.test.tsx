@@ -137,7 +137,7 @@ describe('ClusterDetailModal', () => {
     fireEvent.click(screen.getByText('clusterDetail.ask'))
 
     expect(mockStartMission).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      initialPrompt: expect.stringContaining('- Memory: 7.58 GB'),
+      initialPrompt: expect.stringContaining('- Memory: """7.58 GB"""'),
     }))
     expect(mockStartMission).toHaveBeenNthCalledWith(2, expect.objectContaining({
       initialPrompt: expect.stringContaining('and 7.58 GB memory.'),

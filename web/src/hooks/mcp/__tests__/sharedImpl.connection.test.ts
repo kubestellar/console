@@ -25,7 +25,7 @@ vi.mock('../../../lib/api', () => ({
 }))
 
 vi.mock('../../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => url),
+  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
 }))
 
 vi.mock('../wsDetect', () => ({
@@ -35,7 +35,7 @@ vi.mock('../wsDetect', () => ({
 }))
 
 vi.mock('../agentFetch', () => ({
-  AGENT_TOKEN_STORAGE_KEY: 'agent-token',
+  getStoredAgentToken: () => sessionStorage.getItem('agent-token') || '',
 }))
 
 vi.mock('../sharedImpl.constants', () => ({

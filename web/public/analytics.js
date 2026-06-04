@@ -30,6 +30,12 @@
       return (n * 100).toFixed(1) + '%';
     }
 
+    // CWE-79: HTML-escape untrusted strings before interpolation into innerHTML templates.
+    function esc(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     function pctChange(current, previous) {
       if (previous === 0) return current > 0 ? { value: '+100%', dir: 'up' } : { value: '0%', dir: 'flat' };
       const change = ((current - previous) / previous) * 100;
@@ -123,7 +129,7 @@
       if (data.engagementByPage.length > 0) {
         const stickiest = [...data.engagementByPage].sort((a, b) => b.avgEngagement - a.avgEngagement)[0];
         if (stickiest && stickiest.avgEngagement > 30) {
-          insights.push({ type: 'success', title: 'Stickiest Page', body: `"${stickiest.page}" has the highest engagement at ${fmtTime(stickiest.avgEngagement)} per user. Users find real value here.` });
+          insights.push({ type: 'success', title: 'Stickiest Page', body: `"${esc(stickiest.page)}" has the highest engagement at ${fmtTime(stickiest.avgEngagement)} per user. Users find real value here.` });
         }
       }
 
@@ -238,14 +244,14 @@
       // Top Pages table
       html += '<div class="table-card"><h3>Top Pages</h3><table><thead><tr><th>Page</th><th class="num">Views</th><th class="num">Avg Time</th></tr></thead><tbody>';
       for (const p of data.topPages) {
-        html += `<tr><td>${p.page}</td><td class="num">${fmt(p.views)}</td><td class="num">${fmtTime(p.avgTime)}</td></tr>`;
+        html += `<tr><td>${esc(p.page)}</td><td class="num">${fmt(p.views)}</td><td class="num">${fmtTime(p.avgTime)}</td></tr>`;
       }
       html += '</tbody></table></div>';
 
       // Engagement by Page
       html += '<div class="table-card"><h3>Page Engagement</h3><table><thead><tr><th>Page</th><th class="num">Avg Engagement</th><th class="num">Bounce Rate</th><th class="num">Views</th></tr></thead><tbody>';
       for (const p of data.engagementByPage) {
-        html += `<tr><td>${p.page}</td><td class="num">${fmtTime(p.avgEngagement)}</td><td class="num">${fmtPct(p.bounceRate)}</td><td class="num">${fmt(p.views)}</td></tr>`;
+        html += `<tr><td>${esc(p.page)}</td><td class="num">${fmtTime(p.avgEngagement)}</td><td class="num">${fmtPct(p.bounceRate)}</td><td class="num">${fmt(p.views)}</td></tr>`;
       }
       html += '</tbody></table></div>';
 
@@ -255,7 +261,7 @@
       html += '<div class="section-title">Events</div>';
       html += '<div class="table-card"><h3>All Events (28 days)</h3><table><thead><tr><th>Event Name</th><th class="num">Count</th><th class="num">Users</th></tr></thead><tbody>';
       for (const e of data.topEvents) {
-        html += `<tr><td><code>${e.event}</code></td><td class="num">${fmt(e.count)}</td><td class="num">${fmt(e.users)}</td></tr>`;
+        html += `<tr><td><code>${esc(e.event)}</code></td><td class="num">${fmt(e.count)}</td><td class="num">${fmt(e.users)}</td></tr>`;
       }
       html += '</tbody></table></div>';
 
@@ -264,7 +270,7 @@
         html += '<div class="section-title">CNCF Outreach Campaign</div>';
         html += '<div class="table-card"><h3>Per-Project Performance</h3><table><thead><tr><th>Project</th><th class="num">Sessions</th><th class="num">Users</th><th class="num">Events</th></tr></thead><tbody>';
         for (const p of data.cncfOutreach) {
-          html += `<tr><td>${p.project}</td><td class="num">${p.sessions}</td><td class="num">${p.users}</td><td class="num">${p.events}</td></tr>`;
+          html += `<tr><td>${esc(p.project)}</td><td class="num">${p.sessions}</td><td class="num">${p.users}</td><td class="num">${p.events}</td></tr>`;
         }
         html += '</tbody></table></div>';
       }
@@ -274,14 +280,14 @@
       html += '<div class="chart-grid">';
       html += '<div class="table-card"><h3>New vs Returning Users</h3><table><thead><tr><th>Type</th><th class="num">Users</th><th class="num">Sessions</th></tr></thead><tbody>';
       for (const r of data.newVsReturning) {
-        html += `<tr><td style="text-transform: capitalize;">${r.type}</td><td class="num">${fmt(r.users)}</td><td class="num">${fmt(r.sessions)}</td></tr>`;
+        html += `<tr><td style="text-transform: capitalize;">${esc(r.type)}</td><td class="num">${fmt(r.users)}</td><td class="num">${fmt(r.sessions)}</td></tr>`;
       }
       html += '</tbody></table></div>';
 
       // Traffic sources table
       html += '<div class="table-card"><h3>Traffic Sources</h3><table><thead><tr><th>Source</th><th>Medium</th><th class="num">Sessions</th><th class="num">Users</th></tr></thead><tbody>';
       for (const s of data.trafficSources) {
-        html += `<tr><td>${s.source}</td><td>${s.medium}</td><td class="num">${s.sessions}</td><td class="num">${s.users}</td></tr>`;
+        html += `<tr><td>${esc(s.source)}</td><td>${esc(s.medium)}</td><td class="num">${s.sessions}</td><td class="num">${s.users}</td></tr>`;
       }
       html += '</tbody></table></div>';
       html += '</div>'; // end chart-grid
@@ -321,7 +327,7 @@
         html += '<div class="table-card"><h3>Card Interactions (28 days)</h3><table><thead><tr><th>Card</th><th class="num">Added</th><th class="num">Expanded</th><th class="num">Clicked</th><th class="num">Total</th></tr></thead><tbody>';
         for (const c of data.cardPopularity.slice(0, 20)) {
           const total = c.added + c.expanded + c.clicked;
-          html += `<tr><td><code>${c.card}</code></td><td class="num">${fmt(c.added)}</td><td class="num">${fmt(c.expanded)}</td><td class="num">${fmt(c.clicked)}</td><td class="num"><strong>${fmt(total)}</strong></td></tr>`;
+          html += `<tr><td><code>${esc(c.card)}</code></td><td class="num">${fmt(c.added)}</td><td class="num">${fmt(c.expanded)}</td><td class="num">${fmt(c.clicked)}</td><td class="num"><strong>${fmt(total)}</strong></td></tr>`;
         }
         html += '</tbody></table></div>';
         html += '</div>';
@@ -334,7 +340,7 @@
         html += '<div class="chart-card"><h3>Feature Usage</h3><div class="chart-wrapper"><canvas id="featureChart"></canvas></div></div>';
         html += '<div class="table-card"><h3>Feature Events (28 days)</h3><table><thead><tr><th>Feature</th><th class="num">Events</th><th class="num">Users</th></tr></thead><tbody>';
         for (const f of data.featureAdoption) {
-          html += `<tr><td style="text-transform:capitalize">${f.feature}</td><td class="num">${fmt(f.count)}</td><td class="num">${fmt(f.users)}</td></tr>`;
+          html += `<tr><td style="text-transform:capitalize">${esc(f.feature)}</td><td class="num">${fmt(f.count)}</td><td class="num">${fmt(f.users)}</td></tr>`;
         }
         html += '</tbody></table></div>';
         html += '</div>';
@@ -361,7 +367,7 @@
           const color = e.count > 20 ? 'var(--red)' : e.count > 5 ? 'var(--yellow)' : 'var(--text)';
           const sparkline = buildSparklineSVG(e.daily || [], color);
           const trend = getTrend(e.daily || []);
-          html += `<tr><td style="text-transform:capitalize">${e.event}</td><td><code>${e.detail !== '(not set)' ? e.detail : '—'}</code></td><td>${sparkline}<span class="trend-indicator ${trend.dir}">${trend.label}</span></td><td class="num" style="color:${color}">${fmt(e.count)}</td></tr>`;
+          html += `<tr><td style="text-transform:capitalize">${esc(e.event)}</td><td><code>${e.detail !== '(not set)' ? esc(e.detail) : '—'}</code></td><td>${sparkline}<span class="trend-indicator ${esc(trend.dir)}">${esc(trend.label)}</span></td><td class="num" style="color:${color}">${fmt(e.count)}</td></tr>`;
         }
         html += '</tbody></table></div>';
         html += '</div>';
@@ -810,7 +816,7 @@
         document.getElementById('content').innerHTML = `
           <div class="error-box">
             <strong>Failed to load analytics data</strong><br>
-            ${err.message}<br><br>
+            ${esc(err.message)}<br><br>
             <small>Ensure GA4_SERVICE_ACCOUNT_JSON and GA4_PROPERTY_ID are set in Netlify env vars.</small>
           </div>`;
         dot.style.background = '#ef4444';
@@ -867,7 +873,7 @@
         for (const r of nps.recent) {
           const catColor = r.category === 'promoter' ? 'var(--green)' : r.category === 'passive' ? 'var(--yellow)' : 'var(--red)';
           const date = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          html += `<tr><td class="num">${r.score}</td><td style="color:${catColor}">${r.category}</td><td>${r.feedback || '—'}</td><td class="num">${date}</td></tr>`;
+          html += `<tr><td class="num">${r.score}</td><td style="color:${catColor}">${esc(r.category)}</td><td>${esc(r.feedback) || '—'}</td><td class="num">${date}</td></tr>`;
         }
         html += '</tbody></table></div>';
       }

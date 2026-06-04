@@ -75,7 +75,7 @@ vi.mock('../../lib/demoMode', () => ({
 }))
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: async (url: string) => url,
+  getWsAuthParams: async (url: string) => ({ url, protocols: [] }),
 }))
 
 // Assign mock to global before importing the hook

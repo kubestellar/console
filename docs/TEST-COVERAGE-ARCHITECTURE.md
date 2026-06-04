@@ -106,7 +106,7 @@ The console supports **E2E code coverage** via Istanbul instrumentation:
 | `coverage-weekly-review.yml` | Schedule | Weekly trend analysis |
 | `fullstack-e2e.yml` | PR / manual | Full-stack Playwright run (Go backend + frontend) |
 | `nightly-test-suite.yml` | Schedule | Nightly deep tests (health, page coverage, RCE scan) |
-| `go-test.yml` | PR | Go unit tests (`pkg/`, `cmd/`) |
+| `go-test.yml` | PR | Go unit tests plus total/per-package coverage ratchets and uploaded coverage artifacts |
 | `helm-test.yml` | PR | Helm chart lint + template test |
 
 ---
@@ -137,6 +137,18 @@ E2E coverage is measured separately via Istanbul instrumentation
 (`vite-plugin-istanbul`). It captures which frontend code paths are exercised
 during Playwright runs but is **not** part of the PR gate today. It is used
 for gap analysis and trend tracking.
+
+### Go Coverage Ratchet
+
+The Go PR gate (`.github/workflows/go-test.yml`) now records and enforces both:
+
+1. A **total coverage floor** stored in `.github/go-coverage-ratchet.txt`
+2. **Per-package coverage floors** stored in `.github/go-package-coverage-ratchet.txt`
+
+`scripts/check-go-coverage-ratchet.sh` reads the generated `coverage.out`,
+verifies the total floor, checks each configured package, writes a markdown
+summary, and uploads `coverage.out`, the function-level report, and the summary
+as workflow artifacts for later inspection.
 
 ---
 

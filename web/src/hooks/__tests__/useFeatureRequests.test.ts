@@ -224,7 +224,7 @@ describe('useFeatureRequests', () => {
     await act(async () => {
       await result.current.closeRequest('r2')
     })
-    expect(api.patch).toHaveBeenCalledWith('/api/feedback/r2/close', {}, {})
+    expect(api.patch).toHaveBeenCalledWith('/api/feedback/r2/close', {})
     expect(result.current.requests[0].status).toBe('closed')
     expect(result.current.requests[0].closed_by_user).toBe(true)
   })
@@ -407,8 +407,7 @@ describe('useFeatureRequests', () => {
 
     expect(api.post).toHaveBeenCalledWith(
       '/api/feedback/r3/reopen',
-      { comment: 'Still broken on my cluster.' },
-      {}
+      { comment: 'Still broken on my cluster.' }
     )
     expect(result.current.requests.find(r => r.id === 'r3')?.status).toBe('triage_accepted')
   })

@@ -20,6 +20,10 @@ const BLOCKED_GLOBALS = [
   'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
   'requestAnimationFrame',
   'postMessage', 'crypto',
+  // #16505: Block Reflect/Proxy to prevent sandbox escape via prototype walking
+  'Reflect', 'Proxy',
+  // #16898: Block encoding APIs that can construct blocked identifiers at runtime
+  'atob', 'btoa', 'TextDecoder', 'TextEncoder',
 ] as const
 
 /**
@@ -33,6 +37,24 @@ const BLOCKED_GLOBALS = [
  * object that refers to the outer call (scopeValues), shadowing any global.
  */
 const STRICT_RESERVED_BLOCKED = new Set<string>(['arguments'])
+
+const FORBIDDEN_SANDBOX_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /\b__proto__\b/, label: '__proto__' },
+  { re: /\.constructor\b/, label: '.constructor' },
+  { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
+  { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
+  { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+  { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
+  { re: /\bsetPrototypeOf\b/, label: 'setPrototypeOf' },
+  { re: /\bReflect\b/, label: 'Reflect' },
+  { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
+  { re: /\bprototype\b/, label: 'prototype' },
+  { re: /\bfromCharCode\b/, label: 'fromCharCode' },
+  { re: /\bfromCodePoint\b/, label: 'fromCodePoint' },
+  { re: /\bcharCodeAt\b/, label: 'charCodeAt' },
+  { re: /\bcodePointAt\b/, label: 'codePointAt' },
+  { re: /\bString\.raw\b/, label: 'String.raw' },
+]
 
 /**
  * Deep-freeze an object graph so dynamic card code cannot mutate shared
@@ -145,19 +167,11 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
     // could bypass the BLOCKED_GLOBALS param shadowing because they reach
     // Function via the prototype chain rather than the global binding.
     //
-    // We intentionally match on the raw compiled output (post-Sucrase), so
-    // renaming, string concatenation, or bracket access `obj['constructor']`
-    // still bypasses this — but combined with Function/AsyncFunction/
-    // GeneratorFunction param shadowing and the runtime throw injected
-    // below, the common escape routes are closed.
-    const FORBIDDEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
-      { re: /\.constructor\s*\(/, label: '.constructor(' },
-      { re: /\[\s*(['"`])constructor\1\s*\]\s*\(/, label: "['constructor']" },
-      { re: /\b__proto__\b/, label: '__proto__' },
-      { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
-      { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
-    ]
-    for (const { re, label } of FORBIDDEN_PATTERNS) {
+    // #16505: Expanded coverage — bracket-access with string concatenation,
+    // template literals, or computed property names are also blocked.
+    // #16898: Block string-decoding helpers that can reassemble "constructor"
+    // at runtime before a computed-property lookup.
+    for (const { re, label } of FORBIDDEN_SANDBOX_PATTERNS) {
       if (re.test(compiledCode)) {
         return {
           component: null,

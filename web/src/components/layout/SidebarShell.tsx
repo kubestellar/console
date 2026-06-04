@@ -47,6 +47,7 @@ import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/con
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { getSidebarCardCount } from './sidebarCardCount'
 import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
+import { useEscapeLayer, useModalFocusTrap } from '../../lib/modals'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -198,6 +199,10 @@ export function SidebarShell({
   const location = useLocation()
   const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sidebarRef = useRef<HTMLElement | null>(null)
+  const isMobileSidebarOpen = isMobile && config.isMobileOpen
+  const isTopEscapeLayer = useEscapeLayer(isMobileSidebarOpen)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -207,10 +212,26 @@ export function SidebarShell({
   }, [location.pathname, isMobile, closeMobileSidebar])
 
   useEffect(() => {
-    if (isMobile && config.isMobileOpen && sidebarRef.current) {
+    if (isMobileSidebarOpen && sidebarRef.current) {
       sidebarRef.current.scrollTop = 0
     }
-  }, [config.isMobileOpen, isMobile])
+  }, [isMobileSidebarOpen])
+
+  useModalFocusTrap(sidebarRef, isMobileSidebarOpen)
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !isTopEscapeLayer() || editingItemId !== null) return
+      event.preventDefault()
+      event.stopPropagation()
+      closeMobileSidebar()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [closeMobileSidebar, editingItemId, isMobileSidebarOpen, isTopEscapeLayer])
 
   // ---- Auto-hide: collapse sidebar when mouse leaves, expand on hover ----
   const [isPinned, setIsPinned] = useState(() => {
@@ -254,6 +275,11 @@ export function SidebarShell({
       }
       return next
     })
+  }
+
+  const handleMobileBackdropClose = () => {
+    if (editingItemId !== null) return
+    closeMobileSidebar()
   }
 
   useEffect(() => () => clearAutoHideTimer(), [clearAutoHideTimer])
@@ -317,10 +343,6 @@ export function SidebarShell({
     event.preventDefault()
     setWidth(clampSidebarWidth(sidebarWidth + delta))
   }
-
-  // ---- Inline rename state ----
-  const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [editingName, setEditingName] = useState('')
 
   // ---- Drag and drop state ----
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
@@ -690,8 +712,8 @@ export function SidebarShell({
         <div
           className="fixed inset-x-0 bottom-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
           style={{ top: NAVBAR_HEIGHT_PX }}
-          onClick={closeMobileSidebar}
-          onPointerDown={closeMobileSidebar}
+          onClick={handleMobileBackdropClose}
+          onPointerDown={handleMobileBackdropClose}
           tabIndex={-1}
           aria-hidden="true"
         />
@@ -701,6 +723,10 @@ export function SidebarShell({
         ref={sidebarRef}
         data-testid="sidebar"
         data-tour="sidebar"
+        role={isMobileSidebarOpen ? 'dialog' : undefined}
+        aria-modal={isMobileSidebarOpen ? 'true' : undefined}
+        aria-label={isMobileSidebarOpen ? t('sidebar.navigation', 'Navigation') : undefined}
+        tabIndex={-1}
         onMouseEnter={handleSidebarMouseEnter}
         onMouseLeave={handleSidebarMouseLeave}
         className={cn(

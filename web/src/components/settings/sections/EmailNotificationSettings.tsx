@@ -37,6 +37,7 @@ export function EmailNotificationSettings({
     config.emailSMTPPort != null ? String(config.emailSMTPPort) : String(DEFAULT_SMTP_PORT),
   )
   const [portError, setPortError] = useState<string | null>(null)
+  const hasStoredPassword = config.emailPasswordConfigured === true && !config.emailPassword
 
   const handlePortChange = (value: string) => {
     setPortRaw(value)
@@ -185,10 +186,18 @@ export function EmailNotificationSettings({
             id="email-password"
             type="password"
             value={config.emailPassword || ''}
-            onChange={e => updateConfig({ emailPassword: e.target.value })}
+            onChange={e => updateConfig({
+              emailPassword: e.target.value,
+              emailPasswordConfigured: e.target.value.trim().length > 0,
+            })}
             placeholder="password"
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
           />
+          {hasStoredPassword && (
+            <p className="mt-1 text-xs text-green-400">
+              {t('settings.notifications.secretConfigured')}
+            </p>
+          )}
         </div>
       </div>
 

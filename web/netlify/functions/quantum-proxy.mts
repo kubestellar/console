@@ -1,6 +1,7 @@
 import type { Context } from "@netlify/functions";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
-import { validateBearerToken } from "./_shared/jwt-validation";
+import { validateBearerToken, validateJWT } from "./_shared/jwt-validation";
+import { readCappedRequestText, RequestBodyTooLargeError } from "./_shared/read-capped-request";
 
 const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
 const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
@@ -83,7 +84,9 @@ const PROXY_TIMEOUT_MS = 15_000;
 const MAX_PROXY_BODY_BYTES = 1_048_576;
 const MAX_RESPONSE_BYTES = 1_048_576;
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
+const OVERSIZED_REQUEST_ERROR = "Request body too large";
 const OVERSIZED_RESPONSE_ERROR = "Upstream response too large";
+const AUTH_COOKIE_NAME = "kc_auth";
 
 function isAllowedPath(path: string): boolean {
   // Reject path traversal attempts
@@ -116,6 +119,53 @@ function validatePostBody(requestBody: string): string | null {
   }
 
   return null;
+}
+
+function getCookieValue(cookieHeader: string, cookieName: string): string | null {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookieHeader.split(";");
+  for (const cookie of cookies) {
+    const trimmedCookie = cookie.trim();
+    if (!trimmedCookie) {
+      continue;
+    }
+
+    const separatorIndex = trimmedCookie.indexOf("=");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const name = trimmedCookie.slice(0, separatorIndex).trim();
+    if (name !== cookieName) {
+      continue;
+    }
+
+    const cookieValue = trimmedCookie.slice(separatorIndex + 1).trim();
+    return cookieValue || null;
+  }
+
+  return null;
+}
+
+function getJwtVerificationSecret(context: Context): string | undefined {
+  const envSecret = context.env?.JWT_SECRET ?? context.env?.VITE_JWT_SECRET;
+  return typeof envSecret === "string" ? envSecret.trim() || undefined : undefined;
+}
+
+async function hasValidSessionCookie(cookieHeader: string, jwtSecret?: string): Promise<boolean> {
+  const sessionValue = getCookieValue(cookieHeader, AUTH_COOKIE_NAME);
+  if (!sessionValue) {
+    return false;
+  }
+
+  const validation = await validateJWT(sessionValue, jwtSecret);
+  if (!validation.valid) {
+    console.warn(`kc_auth cookie validation failed: ${validation.error}`);
+  }
+  return validation.valid;
 }
 
 async function readResponseBodyWithCap(response: Response): Promise<Uint8Array | null> {
@@ -192,19 +242,21 @@ export default async (req: Request, context: Context): Promise<Response> => {
   // Auth check for POST mutation endpoints (parity with Go backend requireBearerToken)
   if (req.method === "POST") {
     const authHeader = req.headers.get("authorization") || "";
-    const cookie = req.headers.get("cookie") || "";
-    const hasCookie = cookie.includes("kc_auth=");
-    
+    const cookieHeader = req.headers.get("cookie") || "";
+    const jwtSecret = getJwtVerificationSecret(context);
+
     let hasValidBearer = false;
     if (authHeader.startsWith("Bearer ")) {
-      const bearerValidation = validateBearerToken(authHeader);
+      const bearerValidation = await validateBearerToken(authHeader, jwtSecret);
       hasValidBearer = bearerValidation.valid;
       if (!hasValidBearer) {
         console.warn(`Bearer token validation failed: ${bearerValidation.error}`);
       }
     }
-    
-    if (!hasValidBearer && !hasCookie) {
+
+    const hasValidCookie = await hasValidSessionCookie(cookieHeader, jwtSecret);
+
+    if (!hasValidBearer && !hasValidCookie) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         {
@@ -307,16 +359,25 @@ export default async (req: Request, context: Context): Promise<Response> => {
     }
 
     const targetURL = new URL(path, quantumServiceURL).toString();
+    // SECURITY: Enforce body size on actual bytes read, not Content-Length header.
+    // Chunked encoding can bypass Content-Length checks (CWE-400, #16666).
+    let requestBody: string | undefined;
     if (req.method !== "GET") {
-      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-      if (contentLength > MAX_PROXY_BODY_BYTES) {
-        return new Response(JSON.stringify({ error: "Request body too large" }), {
-          status: 413,
+      try {
+        requestBody = await readCappedRequestText(req, MAX_PROXY_BODY_BYTES, "quantum-proxy request");
+      } catch (err) {
+        if (err instanceof RequestBodyTooLargeError) {
+          return new Response(JSON.stringify({ error: OVERSIZED_REQUEST_ERROR }), {
+            status: 413,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ error: "Failed to read request body" }), {
+          status: 400,
           headers: { "Content-Type": "application/json" },
         });
       }
     }
-    const requestBody = req.method === "GET" ? undefined : await req.text();
     if (req.method === "POST" && requestBody !== undefined) {
       const validationError = validatePostBody(requestBody);
       if (validationError) {

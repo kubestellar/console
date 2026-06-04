@@ -58,6 +58,7 @@ export function ResourceMarshall() {
   const {
     namespaces,
     isLoading: nsLoading,
+    isRefreshing: namespacesRefreshing,
     isDemoFallback,
     isFailed: namespacesFailed,
     error: namespacesError,
@@ -68,7 +69,7 @@ export function ResourceMarshall() {
   const hasData = clusters.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
-    isRefreshing: clustersRefreshing,
+    isRefreshing: clustersRefreshing || namespacesRefreshing,
     hasAnyData: hasData,
     isDemoData: demoMode || isDemoFallback,
     isFailed: clustersFailed,

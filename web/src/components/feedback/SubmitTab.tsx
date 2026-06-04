@@ -168,14 +168,7 @@ export function SubmitForm({
 
     ;(async () => {
       try {
-        const { getClientCtx } = await import('../../lib/clientCtx')
-        const ctx = getClientCtx()
-        if (!ctx) {
-          if (isCurrent) setCanLinkParentIssue(false)
-          return
-        }
         const { data } = await api.get<{ can_link_parent?: boolean }>(`/api/feedback/issue-link-capabilities?target_repo=${targetRepo}`, {
-          headers: { 'X-KC-Client-Auth': ctx },
           timeout: FETCH_DEFAULT_TIMEOUT_MS,
         })
         if (isCurrent) {
@@ -429,13 +422,13 @@ export function SubmitForm({
                   <li key={p.scope}><em>{p.scope}</em> — to {p.reason}</li>
                 ))}
               </ul>
-              <div className="text-muted-foreground text-xs mt-1.5">
+              <div className="text-muted-foreground text-xs mt-1.5 flex flex-wrap gap-1 items-center">
                 <a href={GITHUB_TOKEN_CREATE_URL} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">Create token on GitHub</a>
-                {' · '}
+                <span>{' · '}</span>
                 <button
                   type="button"
                   onClick={() => { window.location.href = '/settings#github-token' }}
-                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2"
+                  className="text-purple-400 hover:text-purple-300 underline underline-offset-2 p-0 h-auto bg-transparent border-none"
                 >
                   Console Settings
                 </button>

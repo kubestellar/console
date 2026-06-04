@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Bell } from 'lucide-react'
 import { useNotificationAPI } from '../../../hooks/useNotificationAPI'
 import { NotificationConfig } from '../../../types/alerts'
+import { redactNotificationSecrets, rememberNotificationSecrets } from '../../../lib/settingsSync'
 import { BrowserNotificationSettings } from './BrowserNotificationSettings'
 import { SlackNotificationSettings } from './SlackNotificationSettings'
 import { EmailNotificationSettings } from './EmailNotificationSettings'
@@ -17,7 +18,10 @@ function loadConfig(): NotificationConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY) // no TTL: user notification preferences
     if (stored) {
-      return JSON.parse(stored)
+      const parsedConfig = JSON.parse(stored) as NotificationConfig
+      const redactedConfig = redactNotificationSecrets(parsedConfig)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(redactedConfig))
+      return redactedConfig
     }
   } catch {
     // Silently fall back to empty object {} (e.g. corrupted storage)
@@ -28,7 +32,8 @@ function loadConfig(): NotificationConfig {
 // Save to localStorage - returns true on success, false on failure
 function saveConfig(config: NotificationConfig): boolean {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
+    rememberNotificationSecrets(config)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(redactNotificationSecrets(config)))
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
     return true
   } catch {

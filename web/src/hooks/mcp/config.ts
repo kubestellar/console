@@ -4,7 +4,7 @@ import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import { getLocalAgentURL, agentFetch } from './shared'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import { getClusterModeBaseUrl, isClusterModeBackend } from '../../lib/cache/fetcherUtils'
@@ -51,7 +51,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       }
     }
     // Try SSE streaming for progressive display
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const token = getStoredAuthToken()
     if (token && token !== 'demo-token') {
       try {
         const sseParams: Record<string, string> = {}
@@ -93,7 +93,8 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[configmaps] Backend fetch failed:', err)
+          console.error('[configmaps] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         return
@@ -174,7 +175,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
       }
     }
     // Try SSE streaming for progressive display
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    const token = getStoredAuthToken()
     if (token && token !== 'demo-token') {
       try {
         const sseParams: Record<string, string> = {}
@@ -216,7 +217,8 @@ export function useSecrets(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[secrets] Backend fetch failed:', err)
+          console.error('[secrets] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         return
@@ -313,7 +315,8 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[serviceaccounts] Backend fetch failed:', err)
+          console.error('[serviceaccounts] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         return

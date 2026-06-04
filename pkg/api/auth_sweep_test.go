@@ -46,6 +46,7 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		// This test validates the production (non-dev-mode) behavior.
 		{"GET", "/api/mcp/clusters"},
 		{"GET", "/api/mcp/clusters/health"},
+		{"GET", "/api/ping"},
 		{"GET", "/api/mcp/pods"},
 		{"GET", "/api/mcp/nodes"},
 		{"GET", "/api/mcp/events"},

@@ -434,7 +434,7 @@ export function Workloads() {
                             <button
                               data-testid="action-btn-restart"
                               onClick={(e) => handleRestartDeployment(e, deploy.cluster, deploy.namespace, deploy.name)}
-                              className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors"
+                              className="p-1.5 hover:bg-secondary/50 rounded-md text-muted-foreground hover:text-blue-400 transition-colors"
                               aria-label="Restart deployment"
                             >
                               <RefreshCw className="w-4 h-4" />
@@ -445,7 +445,7 @@ export function Workloads() {
                             <button
                               data-testid="action-btn-logs"
                               onClick={(e) => handleShowLogs(e, deploy.cluster, deploy.namespace, deploy.name)}
-                              className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
+                              className="p-1.5 hover:bg-secondary/50 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
                               aria-label="View logs"
                             >
                               <Terminal className="w-4 h-4" />
@@ -456,7 +456,7 @@ export function Workloads() {
                             <button
                               data-testid="action-btn-delete"
                               onClick={(e) => handleDeleteDeployment(e, deploy.cluster, deploy.namespace, deploy.name)}
-                              className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors"
+                              className="p-1.5 hover:bg-secondary/50 rounded-md text-muted-foreground hover:text-red-400 transition-colors"
                               aria-label="Delete deployment"
                             >
                               <Trash2 className="w-4 h-4" />

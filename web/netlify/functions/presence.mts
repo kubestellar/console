@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+import { readCappedRequestJson, RequestBodyTooLargeError } from "./_shared/read-capped-request";
 
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -192,16 +193,15 @@ export default async (req: Request) => {
 
     let sessionId: string | undefined;
     try {
-      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-      if (contentLength > MAX_BODY_BYTES) {
-        return new Response("Payload too large", { status: 413, headers });
-      }
-      const body = await req.json();
+      const body = await readCappedRequestJson<{ sessionId?: unknown }>(req, MAX_BODY_BYTES, "presence");
       if (isValidSessionId(body.sessionId)) {
         sessionId = body.sessionId;
       }
-    } catch {
-      /* ignore */
+    } catch (err) {
+      if (err instanceof RequestBodyTooLargeError) {
+        return new Response("Payload too large", { status: 413, headers });
+      }
+      /* ignore parse errors */
     }
 
     if (sessionId) {

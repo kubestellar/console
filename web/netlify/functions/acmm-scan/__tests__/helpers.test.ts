@@ -6,7 +6,9 @@ import {
   ALLOWED_ORIGINS,
   corsHeaders,
   corsOrigin,
+  getAllowedRepos,
   isAIContribution,
+  isAllowedRepo,
   isoWeek,
   lastNWeeks,
   matchesHint,
@@ -47,6 +49,30 @@ describe("corsHeaders", () => {
     expect(headers["Access-Control-Allow-Origin"]).toBe(
       "https://console.kubestellar.io",
     );
+  });
+});
+
+describe("getAllowedRepos", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("prefers ACMM_REPOS over PIPELINE_REPOS", () => {
+    vi.stubEnv("ACMM_REPOS", "kubestellar/console,acme/allowed");
+    vi.stubEnv("PIPELINE_REPOS", "acme/pipeline-only");
+
+    expect(Array.from(getAllowedRepos())).toEqual([
+      "kubestellar/console",
+      "acme/allowed",
+    ]);
+    expect(isAllowedRepo("acme/allowed")).toBe(true);
+    expect(isAllowedRepo("acme/pipeline-only")).toBe(false);
+  });
+
+  it("falls back to PIPELINE_REPOS when ACMM_REPOS is unset", () => {
+    vi.stubEnv("PIPELINE_REPOS", "kubestellar/console,acme/pipeline-only");
+
+    expect(isAllowedRepo("acme/pipeline-only")).toBe(true);
   });
 });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, RateLimitError } from '../lib/api'
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 
@@ -17,7 +18,7 @@ const FEEDBACK_ATTACHMENT_LIMIT_ERROR = 'Attachments are too large to submit. Ke
 // signal that a real user is logged in even with an empty localStorage token.
 function isDemoUser(): boolean {
   if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return false
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === DEMO_TOKEN_VALUE
 }
 
@@ -414,26 +415,10 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     setIsRefreshing(false)
   }
 
-  const withClientContext = useCallback(async <T extends { headers?: Record<string, string>; timeout?: number }>(options?: T): Promise<T | undefined> => {
-    const { getClientCtx } = await import('../lib/clientCtx')
-    const ctx = getClientCtx()
-    if (!ctx) {
-      return options
-    }
-    return {
-      ...(options ?? {}),
-      headers: {
-        ...(options?.headers ?? {}),
-        'X-KC-Client-Auth': ctx,
-      },
-    } as unknown as T
-  }, [])
-
   const createRequest = async (input: CreateFeatureRequestInput, options?: { timeout?: number }) => {
     try {
       setIsSubmitting(true)
-      const mergedOpts = await withClientContext(options)
-      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, mergedOpts)
+      const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, options)
       setRequests(prev => [data, ...prev])
       return data
     } catch (err: unknown) {
@@ -467,15 +452,13 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
   }
 
   const closeRequest = async (requestId: string, input: CloseRequestInput = {}) => {
-    const requestOptions = await withClientContext<{ headers?: Record<string, string> }>({})
-    const { data } = await api.patch<FeatureRequest>(`/api/feedback/${requestId}/close`, input, requestOptions)
+    const { data } = await api.patch<FeatureRequest>(`/api/feedback/${requestId}/close`, input)
     setRequests(prev => prev.map(r => r.id === requestId ? data : r))
     return data
   }
 
   const reopenRequest = async (requestId: string, input: ReopenRequestInput) => {
-    const requestOptions = await withClientContext<{ headers?: Record<string, string> }>({})
-    const { data } = await api.post<FeatureRequest>(`/api/feedback/${requestId}/reopen`, input, requestOptions)
+    const { data } = await api.post<FeatureRequest>(`/api/feedback/${requestId}/reopen`, input)
     setRequests(prev => prev.map(r => r.id === requestId ? data : r))
     return data
   }

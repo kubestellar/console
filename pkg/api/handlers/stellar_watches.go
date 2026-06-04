@@ -151,11 +151,12 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
 func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
-	if _, err := h.requireUser(c); err != nil {
+	userID, err := h.requireUser(c)
+	if err != nil {
 		return err
 	}
 	limit := readListLimit(c)
-	entries, err := h.store.ListStellarAuditLog(c.UserContext(), limit)
+	entries, err := h.store.ListStellarAuditLog(c.UserContext(), userID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load audit log"})
 	}
@@ -447,6 +448,7 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 			if updateErr := h.store.UpdateNotificationBody(ctx, dedupKey, resp.Content); updateErr == nil {
 				// Push updated narration to SSE clients so they see the richer body
 				h.broadcastToClients(SSEEvent{Type: "notification_update", Data: map[string]string{
+					"userId":   "system",
 					"dedupKey": dedupKey,
 					"body":     resp.Content,
 				}})
@@ -613,6 +615,7 @@ func (h *StellarHandler) autoExecuteAction(ctx context.Context, e IncomingEvent,
 
 	if h.broadcaster != nil {
 		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"userId": action.UserID,
 			"id":     action.ID,
 			"status": status,
 		}})
@@ -681,6 +684,7 @@ func (h *StellarHandler) queueAutoTendAction(ctx context.Context, e IncomingEven
 
 	if h.broadcaster != nil {
 		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"userId": action.UserID,
 			"id":     action.ID,
 			"status": "pending_approval",
 		}})
@@ -777,7 +781,9 @@ func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
 	if err == nil {
 		slog.Info("stellar: auto-created watch", "id", id, "resource", e.Name, "cluster", e.Cluster)
 		h.broadcastToClients(SSEEvent{Type: "watch_created", Data: map[string]string{
-			"id": id, "cluster": e.Cluster,
+			"userId":  "system",
+			"id":      id,
+			"cluster": e.Cluster,
 		}})
 	}
 }

@@ -3,6 +3,7 @@ package agent
 import (
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -55,6 +56,31 @@ func TestServer_HandleWebSocket_Upgrade(t *testing.T) {
 		defer s.clientsMux.Unlock()
 		return len(s.clients) == 0
 	}, 2*time.Second, 10*time.Millisecond, "Expected 0 registered clients after close")
+}
+
+func TestIsReadOnlyKubectlCommand(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{name: "get is read only", args: []string{"get", "pods"}, want: true},
+		{name: "bare cluster info is read only", args: []string{"cluster-info"}, want: true},
+		{name: "cluster info dump is not read only", args: []string{"cluster-info", "dump"}, want: false},
+		{name: "cluster info skips valued flags", args: []string{"cluster-info", "-n", "default"}, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := append([]string(nil), tt.args...)
+			if got := isReadOnlyKubectlCommand(args); got != tt.want {
+				t.Fatalf("isReadOnlyKubectlCommand(%v) = %v, want %v", tt.args, got, tt.want)
+			}
+			if !reflect.DeepEqual(args, tt.args) {
+				t.Fatalf("isReadOnlyKubectlCommand mutated args: got %v want %v", args, tt.args)
+			}
+		})
+	}
 }
 
 func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
@@ -139,7 +165,7 @@ func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
 	if resp.ID != "h1" || resp.Type != protocol.TypeResult {
 		t.Errorf("Unexpected response: %+v", resp)
 	}
-	
+
 	// 2. Test Clusters Message
 	clustersMsg := protocol.Message{
 		ID:   "c1",

@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -53,6 +55,11 @@ func (h *GitHubPipelinesHandler) HandleHealth(c *fiber.Ctx) error {
 func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 	view := c.Query("view", "pulse")
 	method := c.Method()
+	repo := c.Query("repo")
+
+	if repo != "" && !ghpIsAllowedRepo(repo) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": ghpRepoAllowlistError})
+	}
 
 	if view == "mutate" {
 		if method != fiber.MethodPost {
@@ -109,7 +116,7 @@ func (h *GitHubPipelinesHandler) buildPulseFromRequest(req ghpBuildRequest) (any
 	if pulseRepo == "" {
 		pulseRepo = ghpNightlyReleaseRepo
 	} else if !ghpIsAllowedRepo(pulseRepo) {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "invalid repo slug")
+		return nil, ghpRepoAllowlistForbidden()
 	}
 
 	releaseRuns, err := h.fetchWorkflowRuns(
@@ -437,8 +444,11 @@ func (h *GitHubPipelinesHandler) buildAll(c *fiber.Ctx) (any, error) {
 func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 	repo := c.Query("repo")
 	jobStr := c.Query("job")
-	if !ghpIsAllowedRepo(repo) || jobStr == "" {
+	if repo == "" || jobStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "repo and job required"})
+	}
+	if !ghpIsAllowedRepo(repo) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": ghpRepoAllowlistError})
 	}
 	if _, err := strconv.ParseInt(jobStr, 10, 64); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "job must be a numeric ID"})
@@ -475,14 +485,23 @@ func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 }
 
 func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
+	if middleware.GetUserID(c) == uuid.Nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
+	}
+	if err := RequireAdmin(c, h.store); err != nil {
+		return err
+	}
 	if h.mutationToken == "" {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "Workflow mutations disabled on this deployment"})
 	}
 	op := c.Query("op")
 	repo := c.Query("repo")
 	run := c.Query("run")
+	if repo == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "repo required"})
+	}
 	if !ghpIsAllowedRepo(repo) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown repo"})
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": ghpRepoAllowlistError})
 	}
 	if _, err := strconv.ParseInt(run, 10, 64); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "run must be a numeric ID"})

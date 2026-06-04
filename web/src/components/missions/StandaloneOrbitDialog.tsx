@@ -45,6 +45,7 @@ interface ClusterScopeSectionProps {
 }
 
 function ClusterScopeSection({ clusterName, value, onChange }: ClusterScopeSectionProps) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(value.length > 0)
   const { namespaces, isLoading: nsLoading } = useNamespaces(clusterName)
   const nsOptions = (namespaces || []) as string[]
@@ -157,7 +158,7 @@ function ClusterScopeSection({ clusterName, value, onChange }: ClusterScopeSecti
                         {isKindChecked(k.kind) && (
                           <div className="ml-4 mt-1">
                             {nsLoading ? (
-                              <span className="text-[9px] text-muted-foreground">Loading namespaces…</span>
+                              <span className="text-[9px] text-muted-foreground">{t('rbac.loadingNamespaces')}</span>
                             ) : nsOptions.length === 0 ? (
                               <span className="text-[9px] text-muted-foreground">All namespaces</span>
                             ) : (

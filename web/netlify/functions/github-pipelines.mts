@@ -20,6 +20,7 @@
  *   GITHUB_TOKEN — read-only PAT (required)
  */
 import { getStore } from "@netlify/blobs";
+import { buildStrictKubestellarCorsHeaders } from "./_shared/cors";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import {
   STORE_NAME,
@@ -31,18 +32,25 @@ import {
   READ_RATE_LIMIT_WINDOW_MS,
   getRepos,
 } from "./github-pipelines/constants";
-import { corsOrigin, jsonResponse, readCache, writeCache, isValidRepo } from "./github-pipelines/helpers";
-import { buildPulse, buildMatrix, buildFlow, buildFailures, buildLog } from "./github-pipelines/views";
-
-const REPOS = getRepos();
+import {
+  jsonResponse,
+  readCache,
+  writeCache,
+  isValidRepo,
+} from "./github-pipelines/helpers";
+import { isAllowedRepoSlug } from "./_shared/repo-allowlist";
+import {
+  buildPulse,
+  buildMatrix,
+  buildFlow,
+  buildFailures,
+  buildLog,
+} from "./github-pipelines/views";
 
 export default async (req: Request): Promise<Response> => {
+  const repos = getRepos();
   const origin = req.headers.get("origin");
-  const baseHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": corsOrigin(origin),
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+  const baseHeaders: Record<string, string> = buildStrictKubestellarCorsHeaders(origin);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: baseHeaders });
@@ -50,19 +58,34 @@ export default async (req: Request): Promise<Response> => {
 
   const url = new URL(req.url);
   const view = url.searchParams.get("view") ?? "pulse";
+  const repoFilter = url.searchParams.get("repo");
+
+  if (req.method !== "GET") {
+    return jsonResponse(
+      { error: "Only GET is supported on this endpoint" },
+      { status: 405, headers: baseHeaders },
+    );
+  }
+
+  if (repoFilter !== null && !isValidRepo(repoFilter)) {
+    return jsonResponse(
+      { error: "Invalid repo format" },
+      { status: 400, headers: baseHeaders },
+    );
+  }
+
+  if (repoFilter !== null && !isAllowedRepoSlug(repoFilter, repos)) {
+    return jsonResponse(
+      { error: "Repository not allowed" },
+      { status: 403, headers: baseHeaders },
+    );
+  }
 
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     return jsonResponse(
       { error: "GITHUB_TOKEN not configured" },
       { status: 500, headers: baseHeaders }
-    );
-  }
-
-  if (req.method !== "GET") {
-    return jsonResponse(
-      { error: "Only GET is supported on this endpoint" },
-      { status: 405, headers: baseHeaders },
     );
   }
 
@@ -97,7 +120,7 @@ export default async (req: Request): Promise<Response> => {
     // daily and doesn't serve yesterday's release tag for hours after a new
     // nightly publishes. Other views are keyed by their query params.
     const datePrefix = view === "pulse" ? new Date().toISOString().slice(0, 13) : ""; // hourly bucket for pulse
-    const cacheKey = `${view}:${datePrefix}:${url.searchParams.get("repo") ?? "all"}:${url.searchParams.get("days") ?? ""}:${url.searchParams.get("job") ?? ""}`;
+    const cacheKey = `${view}:${datePrefix}:${repoFilter ?? "all"}:${url.searchParams.get("days") ?? ""}:${url.searchParams.get("job") ?? ""}`;
     if (view !== "log") {
       const cached = await readCache<unknown>(store, cacheKey);
       if (cached) {
@@ -114,24 +137,23 @@ export default async (req: Request): Promise<Response> => {
     let payload: unknown;
     switch (view) {
       case "pulse":
-        payload = await buildPulse(store, token, url.searchParams.get("repo"));
+        payload = await buildPulse(store, token, repoFilter);
         break;
       case "matrix": {
         const daysRaw = parseInt(url.searchParams.get("days") ?? String(MATRIX_DEFAULT_DAYS), 10);
         const days = Math.min(Math.max(1, daysRaw || MATRIX_DEFAULT_DAYS), MATRIX_MAX_DAYS);
-        payload = await buildMatrix(store, token, days, url.searchParams.get("repo"));
+        payload = await buildMatrix(store, token, days, repoFilter);
         break;
       }
       case "flow":
-        payload = await buildFlow(token, url.searchParams.get("repo"));
+        payload = await buildFlow(token, repoFilter);
         break;
       case "failures":
-        payload = await buildFailures(token, url.searchParams.get("repo"));
+        payload = await buildFailures(token, repoFilter);
         break;
       case "all": {
         // Unified fetch — builds all four views in parallel so the CI/CD
         // dashboard makes one request instead of four.
-        const repoFilter = url.searchParams.get("repo");
         const daysRaw = parseInt(url.searchParams.get("days") ?? String(MATRIX_DEFAULT_DAYS), 10);
         const days = Math.min(Math.max(1, daysRaw || MATRIX_DEFAULT_DAYS), MATRIX_MAX_DAYS);
         const [pulse, matrix, flow, failures] = await Promise.allSettled([
@@ -149,9 +171,9 @@ export default async (req: Request): Promise<Response> => {
         break;
       }
       case "log": {
-        const repo = url.searchParams.get("repo") ?? "";
+        const repo = repoFilter ?? "";
         const job = url.searchParams.get("job") ?? "";
-        if (!isValidRepo(repo) || !REPOS.includes(repo) || !job || !/^\d+$/.test(job)) {
+        if (!repo || !job || !/^\d+$/.test(job)) {
           return jsonResponse(
             { error: "repo and valid numeric job params required" },
             { status: 400, headers: baseHeaders }
@@ -167,7 +189,7 @@ export default async (req: Request): Promise<Response> => {
 
     // Wrap payload with the repo list so the client never hardcodes it.
     // Cards read `repos` from the response to populate their filter dropdown.
-    const wrapped = { ...(payload as Record<string, unknown>), repos: REPOS };
+    const wrapped = { ...(payload as Record<string, unknown>), repos };
     await writeCache(store, cacheKey, wrapped).catch((err) => { console.warn("[github-pipelines] blob cache write failed:", err instanceof Error ? err.message : err) });
     return jsonResponse(wrapped, {
       headers: {
@@ -180,7 +202,7 @@ export default async (req: Request): Promise<Response> => {
     return jsonResponse(
       {
         error: "Internal error",
-        repos: REPOS,
+        repos,
         nextCron: "0 5 * * *",
       },
       { status: 500, headers: baseHeaders }

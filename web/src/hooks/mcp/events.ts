@@ -47,8 +47,8 @@ let eventsCache: EventsCache | null = null
 
 export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const cacheKey = `events:${cluster || 'all'}:${namespace || 'all'}:${limit}`
-  // Track AbortController for cleanup on unmount
   const abortControllerRef = useRef<AbortController | null>(null)
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
@@ -70,6 +70,27 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached?.timestamp || null)
 
+  const clearRefreshTimeout = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current)
+      refreshTimeoutRef.current = null
+    }
+  }, [])
+
+  const finishRefreshing = useCallback((silent: boolean) => {
+    clearRefreshTimeout()
+    if (silent) {
+      setIsRefreshing(false)
+      return
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshTimeoutRef.current = null
+      if (isMountedRef.current) {
+        setIsRefreshing(false)
+      }
+    }, MIN_REFRESH_INDICATOR_MS)
+  }, [clearRefreshTimeout])
+
   const refetch = useCallback(async (silent = false) => {
     // In demo mode, use demo data
     if (isDemoMode()) {
@@ -84,10 +105,8 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setError(null)
       if (!silent) {
         setIsRefreshing(true)
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-      } else {
-        setIsRefreshing(false)
       }
+      finishRefreshing(silent)
       return
     }
 
@@ -140,11 +159,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
           setConsecutiveFailures(0)
           setLastRefresh(now)
           setIsLoading(false)
-          if (!silent) {
-            setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-          } else {
-            setIsRefreshing(false)
-          }
+          finishRefreshing(silent)
           if (!clusterModeBackend) {
             reportAgentDataSuccess()
           }
@@ -168,6 +183,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         itemsKey: 'events',
         signal,
         onClusterData: (_clusterName, items) => {
+          if (signal.aborted || !isMountedRef.current) return
           setEvents(prev => [...prev, ...items].slice(0, limit))
           setIsLoading(false)
         },
@@ -194,45 +210,36 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false)
-        if (!silent) {
-          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-        } else {
-          setIsRefreshing(false)
-        }
+        finishRefreshing(silent)
       }
     }
-  }, [cluster, namespace, limit, cacheKey])
+  }, [cacheKey, cluster, finishRefreshing, limit, namespace])
 
   // Track mounted state for cleanup
   useEffect(() => {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
-      // Abort any in-flight request on unmount
+      clearRefreshTimeout()
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
     }
-  }, [])
+  }, [clearRefreshTimeout])
 
   useEffect(() => {
     const hasCachedData = eventsCache && eventsCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
-    // Poll for events (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
+    refetch(!!hasCachedData)
+    return registerRefetch(`events:${cacheKey}`, () => refetch(false))
+  }, [cacheKey, refetch])
+
+  useEffect(() => {
+    return subscribePolling(
       `events:${cacheKey}`,
       getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`events:${cacheKey}`, () => refetch(false))
-
-    return () => {
-      unsubscribePolling()
-      unregisterRefetch()
-    }
-  }, [refetch, cacheKey, consecutiveFailures])
+  }, [cacheKey, consecutiveFailures, refetch])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -278,8 +285,8 @@ let warningEventsCache: WarningEventsCache | null = null
 
 export function useWarningEvents(cluster?: string, namespace?: string, limit = 20) {
   const cacheKey = `warningEvents:${cluster || 'all'}:${namespace || 'all'}:${limit}`
-  // Track AbortController for cleanup on unmount
   const abortControllerRef = useRef<AbortController | null>(null)
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
@@ -299,6 +306,27 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+
+  const clearRefreshTimeout = useCallback(() => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current)
+      refreshTimeoutRef.current = null
+    }
+  }, [])
+
+  const finishRefreshing = useCallback((silent: boolean) => {
+    clearRefreshTimeout()
+    if (silent) {
+      setIsRefreshing(false)
+      return
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshTimeoutRef.current = null
+      if (isMountedRef.current) {
+        setIsRefreshing(false)
+      }
+    }, MIN_REFRESH_INDICATOR_MS)
+  }, [clearRefreshTimeout])
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -322,11 +350,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       setLastUpdated(now)
       setError(null)
       setIsLoading(false)
-      if (!silent) {
-        setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-      } else {
-        setIsRefreshing(false)
-      }
+      finishRefreshing(silent)
       return
     }
 
@@ -376,45 +400,36 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     } finally {
       if (isMountedRef.current && !signal.aborted) {
         setIsLoading(false)
-        if (!silent) {
-          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
-        } else {
-          setIsRefreshing(false)
-        }
+        finishRefreshing(silent)
       }
     }
-  }, [cluster, namespace, limit, cacheKey])
+  }, [cacheKey, cluster, finishRefreshing, limit, namespace])
 
   // Track mounted state for cleanup
   useEffect(() => {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
-      // Abort any in-flight request on unmount
+      clearRefreshTimeout()
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
     }
-  }, [])
+  }, [clearRefreshTimeout])
 
   useEffect(() => {
     const hasCachedData = warningEventsCache && warningEventsCache.key === cacheKey
-    refetch(!!hasCachedData) // silent=true if we have cached data
-    // Poll for warning events (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
+    refetch(!!hasCachedData)
+    return registerRefetch(`warning-events:${cacheKey}`, () => refetch(false))
+  }, [cacheKey, refetch])
+
+  useEffect(() => {
+    return subscribePolling(
       `warningEvents:${cacheKey}`,
       getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`warning-events:${cacheKey}`, () => refetch(false))
-
-    return () => {
-      unsubscribePolling()
-      unregisterRefetch()
-    }
-  }, [refetch, cacheKey, consecutiveFailures])
+  }, [cacheKey, consecutiveFailures, refetch])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {

@@ -81,6 +81,21 @@ describe('NotificationSettingsSection', () => {
     expect(screen.getByTestId('email-loading')).toHaveTextContent('false')
   })
 
+  it('redacts stored notification secrets on load', () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      emailSMTPHost: 'loaded.example.com',
+      emailPassword: 'super-secret',
+    }))
+
+    render(<NotificationSettingsSection />)
+
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')).toEqual({
+      emailSMTPHost: 'loaded.example.com',
+      emailPassword: '',
+      emailPasswordConfigured: true,
+    })
+  })
+
   it('persists config updates and emits a settings changed event', () => {
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
 

@@ -194,7 +194,7 @@ func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 	// Requesting 3 more should exceed capacity (3 + 3 > 4).
 	const clusterCapacity = 4
 	store := &gpuTestStore{
-		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
+		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
 		clusterReserved: 3,
 	}
 	handler := NewGPUHandler(store, stubCapacity(clusterCapacity), nil)
@@ -224,7 +224,7 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 	// 8 GPU capacity, 0 reserved — should succeed
 	const clusterCapacity = 8
 	store := &gpuTestStore{
-		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
+		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
 		clusterReserved: 0,
 	}
 	handler := NewGPUHandler(store, stubCapacity(clusterCapacity), nil)
@@ -256,7 +256,7 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 func TestGPUCreateReservation_ProvisioningSuccessReturnsActiveReservation(t *testing.T) {
 	env := setupTestEnv(t)
 	store := &gpuTestStore{
-		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
+		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
 		clusterReserved: 0,
 	}
 	k8sClient := &gpuProvisioningTestClient{}
@@ -309,7 +309,7 @@ func TestGPUCreateReservation_ProvisioningSuccessReturnsActiveReservation(t *tes
 func TestGPUCreateReservation_ProvisioningCleanupOnStoreFailure(t *testing.T) {
 	env := setupTestEnv(t)
 	store := &gpuTestStore{
-		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
+		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
 		clusterReserved: 0,
 		createErr:       errors.New("db write failed"),
 	}
@@ -361,6 +361,51 @@ func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {
 	var reservations []models.GPUReservation
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&reservations))
 	assert.Len(t, reservations, 0)
+}
+
+func TestGPUListReservations_NonAdminOnlyGetsOwnReservations(t *testing.T) {
+	env := setupTestEnv(t)
+	callerID := uuid.New()
+	store := &gpuTestStore{
+		user:     &models.User{ID: callerID, GitHubLogin: "viewer", Role: models.UserRoleViewer},
+		listAll:  []models.GPUReservation{{ID: uuid.New(), UserID: uuid.New(), Title: "other"}},
+		listMine: []models.GPUReservation{{ID: uuid.New(), UserID: callerID, Title: "mine"}},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations", handler.ListReservations)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations", nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var reservations []models.GPUReservation
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&reservations))
+	require.Len(t, reservations, 1)
+	assert.Equal(t, "mine", reservations[0].Title)
+}
+
+func TestGPUGetReservation_NonOwnerIsForbidden(t *testing.T) {
+	env := setupTestEnv(t)
+	ownerID := uuid.New()
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: uuid.New(), GitHubLogin: "viewer", Role: models.UserRoleViewer},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: ownerID, Title: "secret reservation"},
+		},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id", handler.GetReservation)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+resID.String(), nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 func TestGPUUpdateReservation_RejectsZeroGPUCount(t *testing.T) {

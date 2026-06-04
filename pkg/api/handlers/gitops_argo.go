@@ -66,6 +66,10 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 
 // GetHelmValues returns the values of a specific Helm release
 func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
+	if err := requireAdmin(c, h.userStore); err != nil {
+		return err
+	}
+
 	cluster := c.Query("cluster")
 	release := c.Query("release")
 	namespace := c.Query("namespace")

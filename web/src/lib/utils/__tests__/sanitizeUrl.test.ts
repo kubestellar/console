@@ -32,8 +32,9 @@ describe('sanitizeUrl', () => {
     expect(result).toBe('tel:+1234567890')
   })
 
-  it('allows protocol-relative URLs', () => {
-    expect(sanitizeUrl('//cdn.example.com/file.js')).toBe('//cdn.example.com/file.js')
+  it('rejects protocol-relative URLs (open redirect CWE-601)', () => {
+    expect(sanitizeUrl('//cdn.example.com/file.js')).toBe('about:blank')
+    expect(sanitizeUrl('//evil.example/phish')).toBe('about:blank')
   })
 
   it('allows relative paths starting with /', () => {

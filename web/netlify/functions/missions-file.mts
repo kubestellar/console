@@ -59,34 +59,47 @@ interface CacheEntry {
 
 const fileRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
 
-function hasInvalidPathInput(value: string): boolean {
-  // Iteratively decode to catch %2e%2e, %252e%252e, etc. (CWE-22 defense-in-depth)
+/**
+ * Fully decode a value to catch percent-encoded traversal attempts
+ * (e.g. %2e%2e, %252e%252e). Iterates until stable or rejects on malformed encoding.
+ */
+function fullyDecode(value: string): string | null {
   let decoded = value;
-  try {
-    let prev = "";
-    while (decoded !== prev) {
-      prev = decoded;
+  let prev = "";
+  const MAX_ITERATIONS = 5;
+  for (let i = 0; i < MAX_ITERATIONS && decoded !== prev; i++) {
+    prev = decoded;
+    try {
       decoded = decodeURIComponent(decoded);
+    } catch {
+      return null; // Malformed encoding — reject
     }
-  } catch {
-    return true; // Malformed percent-encoding — reject
   }
-  return decoded.includes("..") || decoded.startsWith("/") || decoded.includes("#") || decoded.includes("?");
+  return decoded;
+}
+
+function hasInvalidPathInput(value: string): boolean {
+  const decoded = fullyDecode(value);
+  if (decoded === null) return true;
+  return (
+    decoded.includes("..") ||
+    decoded.startsWith("/") ||
+    decoded.includes("#") ||
+    decoded.includes("?") ||
+    decoded.includes("\0")
+  );
 }
 
 function hasInvalidRefInput(value: string): boolean {
-  // Iteratively decode to catch encoded traversal (CWE-22 defense-in-depth)
-  let decoded = value;
-  try {
-    let prev = "";
-    while (decoded !== prev) {
-      prev = decoded;
-      decoded = decodeURIComponent(decoded);
-    }
-  } catch {
-    return true; // Malformed percent-encoding — reject
-  }
-  return decoded.includes("..") || decoded.startsWith("/") || decoded.includes("#") || decoded.includes("?");
+  const decoded = fullyDecode(value);
+  if (decoded === null) return true;
+  return (
+    decoded.includes("..") ||
+    decoded.startsWith("/") ||
+    decoded.includes("#") ||
+    decoded.includes("?") ||
+    decoded.includes("\0")
+  );
 }
 
 export default async (request: Request): Promise<Response> => {

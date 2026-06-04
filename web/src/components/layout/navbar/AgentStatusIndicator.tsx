@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type RefObject } from 'react'
 import { Server, Box, Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useMissions } from '../../../hooks/useMissions'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
+import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import {
   useDemoMode,
   isDemoModeForced,
@@ -60,6 +61,11 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   const [discoveredAgents, setDiscoveredAgents] = useState<AgentInfo[]>([])
   const [isDiscoveringAgents, setIsDiscoveringAgents] = useState(false)
   const agentRef = useRef<HTMLDivElement>(null)
+  const { containerRef, handleKeyDown } = useKeyboardNav({
+    selector: '[role="menuitem"]:not([disabled])',
+    orientation: 'vertical',
+    onEscape: () => setShowAgentStatus(false),
+  })
 
   // Fetch agents from kc-agent health endpoint (works even in demo mode
   // when the WebSocket is not connected)
@@ -371,7 +377,9 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
       {/* Agent status dropdown */}
       {showAgentStatus && (
         <div
-          ref={dropdownRef}
+          ref={containerRef as RefObject<HTMLDivElement | null>}
+          onKeyDown={handleKeyDown}
+          role="menu"
           data-testid="navbar-agent-status-dropdown"
           className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-toast"
         >
@@ -385,6 +393,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
                 </span>
               </div>
               <button
+                role="menuitem"
                 data-testid="demo-mode-toggle"
                 disabled={isDiscoveringAgents}
                 onClick={() => {
@@ -513,6 +522,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
             </p>
             {!isDemoMode && isAuthError && !hasApprovedAgents() && (
               <button
+                role="menuitem"
                 data-testid="agent-approval-cta"
                 onClick={openAgentApprovalDialog}
                 className="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-xs font-medium text-yellow-300 hover:bg-yellow-500/20"

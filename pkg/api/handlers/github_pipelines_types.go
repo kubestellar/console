@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"log/slog"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // ---------------------------------------------------------------------------
@@ -61,19 +63,20 @@ const (
 	GH_RETRY_MAX_DELAY_MS  = 10_000
 )
 
+const ghpRepoAllowlistError = "Repo is not in the PIPELINE_REPOS allowlist"
+
 // ghpDefaultRepos is the default when PIPELINE_REPOS env var is not set.
 var ghpDefaultRepos = []string{
+	"kubestellar/kubestellar",
 	"kubestellar/console",
 	"kubestellar/docs",
-	"kubestellar/console-kb",
-	"kubestellar/kubestellar-mcp",
-	"kubestellar/console-marketplace",
-	"kubestellar/homebrew-tap",
+	"kubestellar/ocm-transport-plugin",
+	"kubestellar/galaxy",
+	"kubestellar/ui",
 }
 
 // ghpGetRepos reads the PIPELINE_REPOS env var (comma-separated owner/repo
-// list). Falls back to ghpDefaultRepos if unset. Called once at handler
-// construction time — not on every request.
+// list). Falls back to ghpDefaultRepos if unset.
 func ghpGetRepos() []string {
 	env := os.Getenv("PIPELINE_REPOS")
 	if env == "" {
@@ -96,9 +99,6 @@ func ghpGetRepos() []string {
 	return repos
 }
 
-// ghpRepos is populated once at init from PIPELINE_REPOS env var.
-var ghpRepos = ghpGetRepos()
-
 // ghpRateLimitHeadersKey is the context key for storing GitHub API rate limit headers.
 type ghpContextKey string
 
@@ -119,19 +119,19 @@ var ghpNightlyTagRe = regexp.MustCompile(`(?i)^.*nightly.*$`)
 var ghpPRFromCommitRe = regexp.MustCompile(`^.*\(#(\d+)\)\s*$`)
 
 func ghpIsAllowedRepo(repo string) bool {
-	// Accept any valid owner/repo slug — the GitHub token's permissions
-	// are the real access control. The preconfigured list only controls
-	// which repos are fetched by default (no filter), not which repos
-	// a user is allowed to query.
-	if ghpValidRepoPattern.MatchString(repo) {
-		return true
+	if !ghpValidRepoPattern.MatchString(repo) {
+		return false
 	}
-	for _, r := range ghpRepos {
-		if r == repo {
+	for _, allowedRepo := range ghpGetRepos() {
+		if strings.EqualFold(allowedRepo, repo) {
 			return true
 		}
 	}
 	return false
+}
+
+func ghpRepoAllowlistForbidden() error {
+	return fiber.NewError(fiber.StatusForbidden, ghpRepoAllowlistError)
 }
 
 // ---------------------------------------------------------------------------

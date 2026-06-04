@@ -175,15 +175,16 @@ func (s *SQLiteStore) SetUserLastDigest(ctx context.Context, userID string) erro
 // ─── Sprint 5: Watch deduplication ───────────────────────────────────────────
 
 
-func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, limit int) ([]StellarAuditEntry, error) {
+func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, userID string, limit int) ([]StellarAuditEntry, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, ts, user_id, action, entity_type, entity_id, cluster, detail
 		 FROM stellar_audit_log
+		 WHERE user_id = ?
 		 ORDER BY ts DESC
-		 LIMIT ?`, limit)
+		 LIMIT ?`, userID, limit)
 	if err != nil {
 		return nil, err
 	}

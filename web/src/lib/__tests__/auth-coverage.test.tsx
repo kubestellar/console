@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
+import { AUTH_TOKEN_SYNC_KEY, getStoredAuthToken, setStoredAuthToken } from '../authToken'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -86,6 +87,14 @@ const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function readStoredSessionToken(): string | null {
+  return getStoredAuthToken()
+}
+
+function makeAuthSyncEvent(state: 'cleared' | 'demo' | 'session'): string {
+  return JSON.stringify({ state, ts: Date.now() })
+}
 
 function makeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -419,11 +428,9 @@ describe('token expiry timer', () => {
     // Banner should be removed
     expect(document.getElementById('session-expiry-warning')).toBeNull()
 
-    // The localStorage token (Bearer) is intentionally NOT mutated by the
-    // banner refresh — the refreshed JWT lives in the HttpOnly cookie now.
-    // The original Bearer token remains in localStorage as a fallback for
-    // legacy code paths that still send Authorization headers.
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+    // The stored session token is intentionally NOT mutated by the banner
+    // refresh — the refreshed JWT lives in the HttpOnly cookie now.
+    expect(readStoredSessionToken()).toBe(nearExpiryToken)
   })
 
   it('clicking Refresh Now handles /auth/refresh failure gracefully', async () => {
@@ -464,7 +471,7 @@ describe('token expiry timer', () => {
     expect(document.getElementById('session-expiry-warning')).toBeNull()
 
     // Token should remain unchanged
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+    expect(readStoredSessionToken()).toBe(nearExpiryToken)
   })
 
   it('emits emitSessionRefreshFailure GA4 event when /auth/refresh fails', async () => {
@@ -637,10 +644,11 @@ describe('storage event coverage', () => {
 
     // Simulate storage event from another tab with a new real token
     const newToken = 'new-jwt-from-another-tab'
+    setStoredAuthToken(newToken)
     act(() => {
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: newToken,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: makeAuthSyncEvent('session'),
       }))
     })
 
@@ -688,7 +696,7 @@ describe('token refresh non-ok response', () => {
     })
 
     // Token should remain the original near-expiry token
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+    expect(readStoredSessionToken()).toBe(nearExpiryToken)
   })
 })
 
@@ -827,8 +835,8 @@ describe('cross-tab logout (#6065)', () => {
     act(() => {
       localStorage.removeItem(STORAGE_KEY_TOKEN)
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: null,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: makeAuthSyncEvent('cleared'),
       }))
     })
 

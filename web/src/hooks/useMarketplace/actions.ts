@@ -5,7 +5,7 @@ import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFa
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { isCardTypeRegistered } from '../../components/cards/cardRegistry'
 import { getDefaultCardSize } from '../../components/dashboard/dashboardUtils'
-import { verifyIntegrity, IntegrityError } from './integrity'
+import { verifyIntegrity, IntegrityError, MissingIntegrityError } from './integrity'
 import type {
   DashboardSummary,
   InstallResult,
@@ -17,6 +17,16 @@ import type {
 } from './types'
 
 const INSTALLED_KEY = 'kc-marketplace-installed'
+
+interface TrustedMarketplaceDownloadSource {
+  origin: string
+  pathnamePrefix: string
+}
+
+const TRUSTED_MARKETPLACE_DOWNLOAD_SOURCES: ReadonlyArray<TrustedMarketplaceDownloadSource> = [
+  { origin: 'https://raw.githubusercontent.com', pathnamePrefix: '/kubestellar/' },
+  { origin: 'https://github.com', pathnamePrefix: '/kubestellar/' },
+]
 
 const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-karmada': 'karmada_status',
@@ -135,6 +145,31 @@ function markUninstalled(itemId: string) {
   notifyInstalledChange()
 }
 
+class MarketplaceDownloadOriginError extends Error {
+  constructor(downloadUrl: string) {
+    super(`Marketplace download URL is not allowed: ${downloadUrl}`)
+    this.name = 'MarketplaceDownloadOriginError'
+  }
+}
+
+function assertTrustedMarketplaceDownloadUrl(downloadUrl: string): void {
+  let parsedUrl: URL
+
+  try {
+    parsedUrl = new URL(downloadUrl)
+  } catch {
+    throw new MarketplaceDownloadOriginError(downloadUrl)
+  }
+
+  const isTrustedSource = TRUSTED_MARKETPLACE_DOWNLOAD_SOURCES.some(source => (
+    parsedUrl.origin === source.origin && parsedUrl.pathname.startsWith(source.pathnamePrefix)
+  ))
+
+  if (!isTrustedSource) {
+    throw new MarketplaceDownloadOriginError(downloadUrl)
+  }
+}
+
 export function useInstalledMarketplaceItems(): InstalledMap {
   return useSyncExternalStore(subscribeInstalled, getInstalledSnapshot, () => emptyInstalledMap)
 }
@@ -171,6 +206,20 @@ export function useMarketplaceActions(installedItems: InstalledMap) {
   const getInstalledDashboardId = (itemId: string): string | undefined => installedItems[itemId]?.dashboardId
 
   const installItem = async (item: MarketplaceItem): Promise<InstallResult> => {
+    try {
+      assertTrustedMarketplaceDownloadUrl(item.downloadUrl)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'download URL validation failed'
+      emitMarketplaceInstallFailed(item.type, item.name, message, 'download')
+      throw error
+    }
+
+    if (!item.sha256?.trim()) {
+      const error = new MissingIntegrityError()
+      emitMarketplaceInstallFailed(item.type, item.name, error.message, 'integrity')
+      throw error
+    }
+
     let response: Response
     try {
       response = await fetch(item.downloadUrl, {
@@ -189,7 +238,7 @@ export function useMarketplaceActions(installedItems: InstalledMap) {
     try {
       await verifyIntegrity(rawText, item.sha256)
     } catch (error: unknown) {
-      const message = error instanceof IntegrityError
+      const message = error instanceof IntegrityError || error instanceof MissingIntegrityError
         ? error.message
         : 'integrity verification failed'
       emitMarketplaceInstallFailed(item.type, item.name, message, 'integrity')

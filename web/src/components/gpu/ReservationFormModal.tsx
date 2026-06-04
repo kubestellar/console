@@ -540,7 +540,7 @@ export function ReservationFormModal({
             {cluster && !isNewNamespace && namespacesLoading && (
               <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Loading namespaces…</span>
+                <span>{t('common:status.loadingNamespaces')}</span>
               </div>
             )}
             {cluster && !isNewNamespace && namespacesError && !namespacesLoading && (

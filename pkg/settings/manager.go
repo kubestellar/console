@@ -345,6 +345,8 @@ func (sm *SettingsManager) GetAll() (*AllSettings, error) {
 		}
 	}
 
+	all.HasFeedbackToken = all.FeedbackGitHubToken != ""
+
 	// Decrypt notification secrets
 	if sm.settings.Encrypted.Notifications != nil {
 		plaintext, err := decrypt(sm.key, sm.settings.Encrypted.Notifications)

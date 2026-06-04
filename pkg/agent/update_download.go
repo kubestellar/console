@@ -1,7 +1,11 @@
 package agent
 
 import (
+	"archive/tar"
+	"bufio"
+	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log/slog"
@@ -24,6 +28,130 @@ func sanitizeTagName(tag string) string {
 		tag = "unknown"
 	}
 	return tag
+}
+
+// verifyChecksumFromRelease downloads checksums.txt from a GitHub release and verifies
+// the SHA256 hash of a downloaded file against it (CWE-494 mitigation).
+// Returns the expected checksum if verification succeeds, or an error if:
+// - checksums.txt cannot be downloaded
+// - the expected filename is not found in checksums.txt
+// - the actual file hash does not match the expected hash
+func verifyChecksumFromRelease(release *githubReleaseInfo, fileName, downloadedFilePath string) (string, error) {
+	// Find checksums.txt asset in the release
+	var checksumsURL string
+	for _, a := range release.Assets {
+		if a.Name == "checksums.txt" {
+			checksumsURL = a.BrowserDownloadURL
+			break
+		}
+	}
+
+	if checksumsURL == "" {
+		return "", fmt.Errorf("checksums.txt not found in release %s", release.TagName)
+	}
+
+	// Download checksums.txt
+	client := &http.Client{Timeout: 5 * time.Minute}
+	resp, err := client.Get(checksumsURL)
+	if err != nil {
+		return "", fmt.Errorf("download checksums.txt failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("checksums.txt download returned %d", resp.StatusCode)
+	}
+
+	// Parse checksums.txt (format: "sha256hash  filename")
+	checksumMap := make(map[string]string)
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		hash, fname, err := parseChecksumLine(scanner.Text())
+		if err != nil {
+			slog.Warn("[AutoUpdate] skipping invalid checksum line", "line", scanner.Text())
+			continue
+		}
+		checksumMap[fname] = hash
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("parse checksums.txt failed: %w", err)
+	}
+
+	// Get expected checksum for our binary
+	expectedHash, found := checksumMap[fileName]
+	if !found {
+		availableKeys := make([]string, 0, len(checksumMap))
+		for k := range checksumMap {
+			availableKeys = append(availableKeys, k)
+		}
+		return "", fmt.Errorf("checksum for %s not found in checksums.txt (available: %v)", fileName, availableKeys)
+	}
+
+	// Compute SHA256 of downloaded file
+	actualHash, err := computeSHA256(downloadedFilePath)
+	if err != nil {
+		return "", fmt.Errorf("compute SHA256 of downloaded file failed: %w", err)
+	}
+
+	// Compare hashes (case-insensitive)
+	if strings.EqualFold(actualHash, expectedHash) {
+		slog.Info("[AutoUpdate] checksum verified", "file", fileName, "hash", actualHash)
+		return expectedHash, nil
+	}
+
+	return "", fmt.Errorf("checksum mismatch for %s: expected %s, got %s (CWE-494)", fileName, expectedHash, actualHash)
+}
+
+// computeSHA256 computes the SHA256 hash of a file.
+func computeSHA256(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// parseChecksumLine parses a line from checksums.txt (format: "sha256hash  filename")
+// Returns (hash, filename, error).
+func parseChecksumLine(line string) (string, string, error) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return "", "", fmt.Errorf("empty or comment line")
+	}
+
+	// Split on whitespace (usually "hash  filename" with two spaces)
+	parts := strings.Fields(line)
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid format: %s", line)
+	}
+
+	hash := parts[0]
+	filename := parts[1]
+
+	// Validate hash is hex and reasonable length (SHA256 = 64 hex chars)
+	if len(hash) != 64 || !isHexString(hash) {
+		return "", "", fmt.Errorf("invalid hash format: %s", hash)
+	}
+
+	return hash, filename, nil
+}
+
+// isHexString checks if a string contains only valid hex characters.
+func isHexString(s string) bool {
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func renameOrCopy(src, dst string) error {
@@ -123,6 +251,24 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 		return
 	}
 
+	// Verify checksum after download (CWE-494 mitigation)
+	uc.broadcast("update_progress", UpdateProgressPayload{
+		Status:   "building",
+		Message:  "Verifying integrity...",
+		Progress: 35,
+	})
+
+	_, err = verifyChecksumFromRelease(release, assetName, tmpFile)
+	if err != nil {
+		uc.recordError(fmt.Sprintf("checksum verification failed: %v", err))
+		uc.broadcast("update_progress", UpdateProgressPayload{
+			Status:  "failed",
+			Message: "Integrity verification failed",
+			Error:   "Binary checksum does not match release artifact - possible tampering or corruption detected",
+		})
+		return
+	}
+
 	uc.broadcast("update_progress", UpdateProgressPayload{
 		Status:   "building",
 		Message:  "Extracting update...",
@@ -152,8 +298,7 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	}
 	extractCtx, extractCancel := context.WithTimeout(parentCtx, extractTimeout)
 	defer extractCancel()
-	extractCmd := exec.CommandContext(extractCtx, "tar", "xzf", tmpFile, "-C", stagingDir)
-	if err := extractCmd.Run(); err != nil {
+	if err := safeTarExtract(extractCtx, tmpFile, stagingDir); err != nil {
 		// If cancelled by the user, report as cancellation rather than failure (#7440)
 		if uc.isCancelled() {
 			uc.broadcast("update_progress", UpdateProgressPayload{
@@ -339,5 +484,115 @@ func downloadFile(url, dest string) error {
 	if n > maxDownloadBytes {
 		return fmt.Errorf("download exceeds maximum allowed size (%d bytes)", maxDownloadBytes)
 	}
+	return nil
+}
+
+// safeTarExtract extracts a .tar.gz archive to destDir, validating that no
+// extracted path escapes the destination directory (zip-slip prevention, CWE-22).
+// It also enforces a maximum file size and file count to prevent resource exhaustion.
+func safeTarExtract(ctx context.Context, archivePath, destDir string) error {
+	const maxExtractedFileSize = 500 * 1024 * 1024 // 500 MB per file
+	const maxFileCount = 1000
+
+	absDestDir, err := filepath.Abs(destDir)
+	if err != nil {
+		return fmt.Errorf("resolve dest dir: %w", err)
+	}
+	cleanDestDir := filepath.Clean(absDestDir)
+	destDirPrefix := cleanDestDir + string(os.PathSeparator)
+
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("open archive: %w", err)
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return fmt.Errorf("gzip reader: %w", err)
+	}
+	defer gz.Close()
+
+	tr := tar.NewReader(gz)
+	fileCount := 0
+
+	for {
+		// Check context cancellation between entries
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("read tar header: %w", err)
+		}
+
+		fileCount++
+		if fileCount > maxFileCount {
+			return fmt.Errorf("archive contains too many files (max %d)", maxFileCount)
+		}
+
+		cleanName := filepath.Clean(header.Name)
+		if filepath.IsAbs(cleanName) {
+			return fmt.Errorf("absolute path in archive: %s", header.Name)
+		}
+		target := filepath.Clean(filepath.Join(cleanDestDir, header.Name))
+		if target != cleanDestDir && !strings.HasPrefix(target, destDirPrefix) {
+			return fmt.Errorf("path traversal in archive: %s", header.Name)
+		}
+
+		relTarget, err := filepath.Rel(cleanDestDir, target)
+		if err != nil {
+			return fmt.Errorf("resolve archive path %s: %w", header.Name, err)
+		}
+		if relTarget == ".." || strings.HasPrefix(relTarget, ".."+string(os.PathSeparator)) {
+			return fmt.Errorf("path traversal in archive: %s", header.Name)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			const dirMode = 0750
+			if err := os.MkdirAll(target, dirMode); err != nil {
+				return fmt.Errorf("create dir %s: %w", cleanName, err)
+			}
+		case tar.TypeReg:
+			if header.Size > maxExtractedFileSize {
+				return fmt.Errorf("file %s exceeds max size (%d > %d)", cleanName, header.Size, maxExtractedFileSize)
+			}
+			// Ensure parent directory exists
+			const parentDirMode = 0750
+			if err := os.MkdirAll(filepath.Dir(target), parentDirMode); err != nil {
+				return fmt.Errorf("create parent dir for %s: %w", cleanName, err)
+			}
+			const fileMode = 0640
+			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(fileMode))
+			if err != nil {
+				return fmt.Errorf("create file %s: %w", cleanName, err)
+			}
+			written, copyErr := io.Copy(out, io.LimitReader(tr, maxExtractedFileSize+1))
+			closeErr := out.Close()
+			if copyErr != nil {
+				return fmt.Errorf("write file %s: %w", cleanName, copyErr)
+			}
+			if closeErr != nil {
+				return fmt.Errorf("close file %s: %w", cleanName, closeErr)
+			}
+			if written > maxExtractedFileSize {
+				return fmt.Errorf("file %s exceeds max size during extraction", cleanName)
+			}
+		case tar.TypeSymlink, tar.TypeLink:
+			// Reject symlinks — they can be used to escape the directory
+			return fmt.Errorf("archive contains disallowed link entry: %s", header.Name)
+		default:
+			// Skip other types (block devices, char devices, etc.)
+			slog.Warn("[AutoUpdate] skipping unsupported tar entry type", "name", header.Name, "type", header.Typeflag)
+		}
+	}
+
 	return nil
 }

@@ -10,7 +10,7 @@ import {
   safeRemoveItem,
   safeSetItem,
 } from './utils/localStorage'
-import type { AllSettings } from './settingsTypes'
+import type { AllSettings, NotificationSecrets } from './settingsTypes'
 import {
   STORAGE_KEY_AI_MODE,
   STORAGE_KEY_PREDICTION_SETTINGS,
@@ -22,6 +22,7 @@ import {
   STORAGE_KEY_GITHUB_TOKEN_SOURCE,
   STORAGE_KEY_GITHUB_TOKEN_DISMISSED,
   STORAGE_KEY_FEEDBACK_GITHUB_TOKEN,
+  STORAGE_KEY_HAS_FEEDBACK_GITHUB_TOKEN,
   STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE,
   STORAGE_KEY_NOTIFICATION_CONFIG,
   STORAGE_KEY_TOUR_COMPLETED,
@@ -41,14 +42,109 @@ const LS_KEYS = {
   [STORAGE_KEY_THEME]: 'theme',
   [STORAGE_KEY_CUSTOM_THEMES]: 'customThemes',
   [STORAGE_KEY_ACCESSIBILITY]: 'accessibility',
-  [STORAGE_KEY_FEEDBACK_GITHUB_TOKEN]: 'feedbackGithubToken',
+  [STORAGE_KEY_HAS_FEEDBACK_GITHUB_TOKEN]: 'hasFeedbackToken',
   [STORAGE_KEY_NOTIFICATION_CONFIG]: 'notifications',
   [STORAGE_KEY_TOUR_COMPLETED]: 'tourCompleted',
 } as const
 
+export const NOTIFICATION_SECRET_FIELDS = [
+  'emailPassword',
+  'slackWebhookUrl',
+  'pagerdutyRoutingKey',
+  'pagerdutyIntegrationKey',
+  'opsgenieApiKey',
+] as const
+
+const NOTIFICATION_CONFIGURED_FLAGS = {
+  emailPassword: 'emailPasswordConfigured',
+  slackWebhookUrl: 'slackWebhookConfigured',
+  pagerdutyRoutingKey: 'pagerdutyRoutingKeyConfigured',
+  pagerdutyIntegrationKey: 'pagerdutyIntegrationKeyConfigured',
+  opsgenieApiKey: 'opsgenieApiKeyConfigured',
+} as const satisfies Record<(typeof NOTIFICATION_SECRET_FIELDS)[number], keyof NotificationSecrets>
+
+const NOTIFICATION_PLAIN_FIELDS = [
+  'slackChannel',
+  'emailSMTPHost',
+  'emailSMTPPort',
+  'emailFrom',
+  'emailTo',
+  'emailUsername',
+] as const satisfies ReadonlyArray<keyof NotificationSecrets>
+
+type NotificationSecretField = (typeof NOTIFICATION_SECRET_FIELDS)[number]
+
+const volatileNotificationSecrets: Partial<Record<NotificationSecretField, string>> = {}
+
+function isNonEmptySecret(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+export function rememberNotificationSecrets(config?: Partial<NotificationSecrets>): void {
+  if (!config) return
+
+  for (const field of NOTIFICATION_SECRET_FIELDS) {
+    const flag = NOTIFICATION_CONFIGURED_FLAGS[field]
+    const value = config[field]
+
+    if (isNonEmptySecret(value)) {
+      volatileNotificationSecrets[field] = value
+      continue
+    }
+
+    if (value === '' && config[flag] !== true) {
+      delete volatileNotificationSecrets[field]
+    }
+  }
+}
+
+export function redactNotificationSecrets<T extends Partial<NotificationSecrets>>(config: T): T {
+  const redacted: Partial<NotificationSecrets> = { ...config }
+
+  for (const field of NOTIFICATION_SECRET_FIELDS) {
+    const flag = NOTIFICATION_CONFIGURED_FLAGS[field]
+    const isConfigured = config[flag] === true || isNonEmptySecret(config[field])
+
+    if (isConfigured) {
+      redacted[flag] = true
+    }
+
+    if (field in redacted) {
+      redacted[field] = ''
+    }
+  }
+
+  return { ...config, ...redacted } as T
+}
+
+function restoreVolatileNotificationSecrets<T extends Partial<NotificationSecrets>>(config: T): T {
+  const restored: Partial<NotificationSecrets> = { ...config }
+
+  for (const field of NOTIFICATION_SECRET_FIELDS) {
+    const flag = NOTIFICATION_CONFIGURED_FLAGS[field]
+    if (restored[flag] === true && volatileNotificationSecrets[field]) {
+      restored[field] = volatileNotificationSecrets[field]
+    }
+  }
+
+  return { ...config, ...restored } as T
+}
+
+export function hasNotificationConfig(config?: Partial<NotificationSecrets>): boolean {
+  if (!config) return false
+
+  return NOTIFICATION_SECRET_FIELDS.some((field) => {
+    const flag = NOTIFICATION_CONFIGURED_FLAGS[field]
+    return config[flag] === true || isNonEmptySecret(config[field])
+  }) || NOTIFICATION_PLAIN_FIELDS.some((field) => {
+    const value = config[field]
+    return typeof value === 'number' || (typeof value === 'string' && value.trim().length > 0)
+  })
+}
+
 /**
  * Collect current settings from localStorage into an AllSettings partial.
- * JSON fields are parsed; the GitHub token is decoded from base64.
+ * JSON fields are parsed; GitHub token sync only stores a presence flag.
  */
 export function collectFromLocalStorage(): Partial<AllSettings> {
   const result: Partial<AllSettings> = {}
@@ -89,10 +185,13 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
     try { result.accessibility = JSON.parse(accessibility) } catch { /* skip */ }
   }
 
-  // GitHub token (base64 encoded in localStorage)
-  const feedbackGithubToken = safeGetItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
-  if (feedbackGithubToken) {
-    try { result.feedbackGithubToken = atob(feedbackGithubToken) } catch { result.feedbackGithubToken = feedbackGithubToken }
+  // Remove any legacy client-stored PAT immediately; only the presence flag remains.
+  safeRemoveItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+
+  // GitHub token presence flag (actual token stays server-side)
+  const hasFeedbackToken = safeGetItem(STORAGE_KEY_HAS_FEEDBACK_GITHUB_TOKEN)
+  if (hasFeedbackToken === 'true' || hasFeedbackToken === 'false') {
+    result.hasFeedbackToken = hasFeedbackToken === 'true'
   }
 
   // GitHub token source ("settings" or "env")
@@ -104,7 +203,15 @@ export function collectFromLocalStorage(): Partial<AllSettings> {
   // Notification config (JSON)
   const notifications = safeGetItem(STORAGE_KEY_NOTIFICATION_CONFIG)
   if (notifications) {
-    try { result.notifications = JSON.parse(notifications) } catch { /* skip */ }
+    try {
+      const parsedNotifications = JSON.parse(notifications) as NotificationSecrets
+      rememberNotificationSecrets(parsedNotifications)
+      const redactedNotifications = redactNotificationSecrets(parsedNotifications)
+      result.notifications = restoreVolatileNotificationSecrets(redactedNotifications)
+      safeSetItem(STORAGE_KEY_NOTIFICATION_CONFIG, JSON.stringify(redactedNotifications))
+    } catch {
+      /* skip */
+    }
   }
 
   // Tour completed (plain string 'true'/'false')
@@ -165,16 +272,16 @@ export function restoreToLocalStorage(settings: AllSettings): void {
     safeSetItem(STORAGE_KEY_ACCESSIBILITY, JSON.stringify(settings.accessibility))
   }
 
-  // Clean up legacy main-token localStorage keys (consolidated into feedback token)
+  // Clean up legacy token localStorage keys. Only presence metadata remains.
   safeRemoveItem(STORAGE_KEY_GITHUB_TOKEN)
   safeRemoveItem(STORAGE_KEY_GITHUB_TOKEN_SOURCE)
   safeRemoveItem(STORAGE_KEY_GITHUB_TOKEN_DISMISSED)
+  safeRemoveItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
 
-  if (settings.feedbackGithubToken) {
-    safeSetItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN, btoa(settings.feedbackGithubToken))
+  if (settings.hasFeedbackToken !== undefined) {
+    safeSetItem(STORAGE_KEY_HAS_FEEDBACK_GITHUB_TOKEN, String(settings.hasFeedbackToken))
   } else {
-    // Remove stale entries when the token is cleared/absent from backend settings
-    safeRemoveItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN)
+    safeRemoveItem(STORAGE_KEY_HAS_FEEDBACK_GITHUB_TOKEN)
   }
   if (settings.feedbackGithubTokenSource) {
     safeSetItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE, settings.feedbackGithubTokenSource)
@@ -182,8 +289,13 @@ export function restoreToLocalStorage(settings: AllSettings): void {
     safeRemoveItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
   }
 
+  if (!settings.hasFeedbackToken) {
+    safeRemoveItem(STORAGE_KEY_FEEDBACK_GITHUB_TOKEN_SOURCE)
+  }
+
   if (settings.notifications) {
-    safeSetItem(STORAGE_KEY_NOTIFICATION_CONFIG, JSON.stringify(settings.notifications))
+    rememberNotificationSecrets(settings.notifications)
+    safeSetItem(STORAGE_KEY_NOTIFICATION_CONFIG, JSON.stringify(redactNotificationSecrets(settings.notifications)))
   }
 
   if (settings.tourCompleted !== undefined) {

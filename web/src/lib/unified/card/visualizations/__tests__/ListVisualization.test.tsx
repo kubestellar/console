@@ -24,6 +24,19 @@ vi.mock('../../../../cards/useStablePageHeight', () => ({
   }),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'listVisualization.sortBy': 'Sort by...',
+        'listVisualization.asc': 'Asc',
+        'listVisualization.desc': 'Desc',
+      }
+      return translations[key] ?? key
+    },
+  }),
+}))
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -478,6 +491,17 @@ describe('ListVisualization', () => {
       expect(items[1].textContent).toBe('[count:5]')
       // null goes to end
       expect(items[2].textContent).toBe('[count:]')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Semantic theme token classes (dark-mode migration)
+  // -------------------------------------------------------------------------
+  describe('semantic theme token classes', () => {
+    it('uses divide-border for row dividers, not light-only divide-gray-800', () => {
+      const { container } = renderList({}, { data: SAMPLE_DATA })
+      expect(container.querySelector('.divide-border')).not.toBeNull()
+      expect(container.querySelector('.divide-gray-800')).toBeNull()
     })
   })
 })

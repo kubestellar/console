@@ -24,6 +24,34 @@ const (
 	kagentiMaxConcurrentClusterFetches = 10
 )
 
+// normalizeMessageRole validates and normalizes message roles from client input.
+// Only "user" and "assistant" roles are allowed. Any other role (including
+// "system") is normalized to "user" to prevent prompt injection attacks (CWE-20).
+func normalizeMessageRole(role string) string {
+	switch role {
+	case "user", "assistant":
+		return role
+	default:
+		// Normalize any other role (especially "system") to "user"
+		return "user"
+	}
+}
+
+func totalChatPromptChars(req protocol.ChatRequest) int {
+	totalChars := len(req.Prompt)
+	for _, histMsg := range req.History {
+		totalChars += len(histMsg.Content)
+	}
+	return totalChars
+}
+
+func validateChatPromptSize(req protocol.ChatRequest) error {
+	if totalChatPromptChars(req) <= maxPromptChars {
+		return nil
+	}
+	return fmt.Errorf("Prompt exceeds maximum combined prompt/history length of %d characters", maxPromptChars)
+}
+
 type kagentiClusterSnapshot struct {
 	Name          string             `json:"name"`
 	Context       string             `json:"context"`
@@ -203,8 +231,20 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		req.SessionID = legacyReq.SessionID
 	}
 
+	// SECURITY: Normalize message roles from client input to prevent prompt injection (CWE-20).
+	// Only "user" and "assistant" roles are allowed; any other role (especially "system")
+	// is normalized to "user" to prevent bypassing server-side safety prompts.
+	for i, histMsg := range req.History {
+		req.History[i].Role = normalizeMessageRole(histMsg.Role)
+	}
+
 	if req.Prompt == "" {
 		return s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty")
+	}
+
+	// SECURITY: Enforce prompt size limit matching the streaming path (CWE-770, #16759).
+	if err := validateChatPromptSize(req); err != nil {
+		return s.errorResponse(msg.ID, "prompt_too_large", err.Error())
 	}
 
 	// SECURITY: Reject new prompts when the session token quota is exhausted
@@ -371,6 +411,9 @@ func (s *Server) handleListAgentsMessage(msg protocol.Message) protocol.Message 
 }
 
 // handleSelectAgentMessage handles agent selection for a session
+// CWE-362 fix: Store agent selection per-session instead of mutating global state.
+// Only SetSelectedAgent is called now (not SetDefault), ensuring one user's
+// agent selection does not affect other users' sessions.
 func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message {
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
@@ -386,15 +429,21 @@ func (s *Server) handleSelectAgentMessage(msg protocol.Message) protocol.Message
 		return s.errorResponse(msg.ID, "empty_agent", "Agent name cannot be empty")
 	}
 
-	// For session-based selection, we'd need a session ID from the request
-	// For now, update the default agent
-	previousAgent := s.registry.GetDefaultName()
-	if err := s.registry.SetDefault(req.Agent); err != nil {
-		slog.Error("set default agent error", "error", err)
+	// Use provided SessionID, or generate a unique one if not provided.
+	// This ensures agent selection is per-session and doesn't mutate global state.
+	sessionID := req.SessionID
+	if sessionID == "" {
+		sessionID = msg.ID // Use message ID as fallback session identifier
+	}
+
+	// Store the agent selection per-session (not globally)
+	previousAgent := s.registry.GetSelectedAgent(sessionID)
+	if err := s.registry.SetSelectedAgent(sessionID, req.Agent); err != nil {
+		slog.Error("set selected agent error", "error", err, "sessionID", sessionID)
 		return s.errorResponse(msg.ID, "invalid_agent", "invalid agent selection")
 	}
 
-	slog.Info("agent selected", "agent", req.Agent, "previous", previousAgent)
+	slog.Info("agent selected", "agent", req.Agent, "sessionID", sessionID, "previous", previousAgent)
 
 	return protocol.Message{
 		ID:   msg.ID,

@@ -89,12 +89,16 @@ vi.mock('@/lib/cache', async () => {
 
 import { useMarketplace, useAuthorProfile } from '../useMarketplace'
 import type { MarketplaceItem } from '../useMarketplace'
+import { computeSha256 } from '../useMarketplace/integrity'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 const INSTALLED_KEY = 'kc-marketplace-installed'
+const TRUSTED_DOWNLOAD_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/test.json'
+const UNTRUSTED_DOWNLOAD_URL = 'https://example.com/test.json'
+const DEFAULT_SHA256 = 'a'.repeat(64)
 
 function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
   return {
@@ -103,7 +107,8 @@ function makeItem(overrides: Partial<MarketplaceItem> = {}): MarketplaceItem {
     description: 'A test item for the marketplace',
     author: 'tester',
     version: '1.0.0',
-    downloadUrl: 'https://example.com/test.json',
+    downloadUrl: TRUSTED_DOWNLOAD_URL,
+    sha256: DEFAULT_SHA256,
     tags: ['monitoring'],
     cardCount: 2,
     type: 'dashboard',
@@ -616,8 +621,9 @@ describe('useMarketplace', () => {
   // ──────────────────────── Install / Remove ────────────────────────
 
   it('installs a dashboard item via API import', async () => {
-    seedCache([makeItem({ id: 'dash-1', type: 'dashboard', downloadUrl: 'https://example.com/dash.json' })])
     const dashJson = { layout: [{ type: 'cluster_health' }] }
+    const sha256 = await computeSha256(JSON.stringify(dashJson))
+    seedCache([makeItem({ id: 'dash-1', type: 'dashboard', downloadUrl: TRUSTED_DOWNLOAD_URL, sha256 })])
 
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: true,
@@ -642,10 +648,11 @@ describe('useMarketplace', () => {
   })
 
   it('installs a card-preset item by POSTing to the default dashboard and dispatching the event', async () => {
-    seedCache([makeItem({ id: 'preset-1', type: 'card-preset', downloadUrl: 'https://example.com/preset.json' })])
     // Payload matches the backend card shape — card_type (snake_case) is
     // what the Go handler and Dashboard.tsx both use.
     const presetJson = { card_type: 'custom_card', config: { foo: 'bar' }, title: 'Custom Card' }
+    const sha256 = await computeSha256(JSON.stringify(presetJson))
+    seedCache([makeItem({ id: 'preset-1', type: 'card-preset', downloadUrl: TRUSTED_DOWNLOAD_URL, sha256 })])
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-add-card-from-marketplace', eventSpy)
@@ -690,8 +697,9 @@ describe('useMarketplace', () => {
   })
 
   it('does not mark card-preset installed when the backend POST fails (#6620)', async () => {
-    seedCache([makeItem({ id: 'preset-fail', type: 'card-preset', downloadUrl: 'https://example.com/preset.json' })])
     const presetJson = { card_type: 'custom_card', config: {} }
+    const sha256 = await computeSha256(JSON.stringify(presetJson))
+    seedCache([makeItem({ id: 'preset-fail', type: 'card-preset', downloadUrl: TRUSTED_DOWNLOAD_URL, sha256 })])
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-add-card-from-marketplace', eventSpy)
@@ -720,8 +728,9 @@ describe('useMarketplace', () => {
   })
 
   it('installs a theme item and calls addCustomTheme', async () => {
-    seedCache([makeItem({ id: 'theme-1', type: 'theme', downloadUrl: 'https://example.com/theme.json' })])
     const themeJson = { id: 'theme-1', name: 'Dark Ocean', colors: {} }
+    const sha256 = await computeSha256(JSON.stringify(themeJson))
+    seedCache([makeItem({ id: 'theme-1', type: 'theme', downloadUrl: TRUSTED_DOWNLOAD_URL, sha256 })])
 
     const eventSpy = vi.fn()
     window.addEventListener('kc-custom-themes-changed', eventSpy)
@@ -781,6 +790,70 @@ describe('useMarketplace', () => {
     ).rejects.toThrow('Download failed: 404')
 
     expect(mockEmitInstallFailed).toHaveBeenCalledWith('dashboard', expect.any(String), 'HTTP 404', 'http_error')
+  })
+
+  it('rejects marketplace installs from untrusted download origins', async () => {
+    seedCache([makeItem({ id: 'origin-fail', downloadUrl: UNTRUSTED_DOWNLOAD_URL })])
+
+    const { result } = renderHook(() => useMarketplace())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await expect(
+      act(() => result.current.installItem(result.current.allItems[0]))
+    ).rejects.toThrow(`Marketplace download URL is not allowed: ${UNTRUSTED_DOWNLOAD_URL}`)
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith(
+      'dashboard',
+      expect.any(String),
+      `Marketplace download URL is not allowed: ${UNTRUSTED_DOWNLOAD_URL}`,
+      'download'
+    )
+  })
+
+  it('rejects marketplace installs when sha256 metadata is missing', async () => {
+    seedCache([makeItem({ id: 'missing-sha', sha256: '' })])
+
+    const { result } = renderHook(() => useMarketplace())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await expect(
+      act(() => result.current.installItem(result.current.allItems[0]))
+    ).rejects.toThrow('Marketplace item is missing required sha256 integrity metadata')
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith(
+      'dashboard',
+      expect.any(String),
+      'Marketplace item is missing required sha256 integrity metadata',
+      'integrity'
+    )
+  })
+
+  it('rejects marketplace installs when downloaded content hash does not match', async () => {
+    seedCache([makeItem({ id: 'hash-fail', sha256: 'b'.repeat(64) })])
+    const dashJson = { layout: [{ type: 'cluster_health' }] }
+
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(dashJson),
+      text: () => Promise.resolve(JSON.stringify(dashJson)),
+    } as Response)
+
+    const { result } = renderHook(() => useMarketplace())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await expect(
+      act(() => result.current.installItem(result.current.allItems[0]))
+    ).rejects.toThrow('Integrity check failed')
+
+    expect(mockApiPost).not.toHaveBeenCalled()
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith(
+      'dashboard',
+      expect.any(String),
+      expect.stringContaining('Integrity check failed'),
+      'integrity'
+    )
   })
 
   it('removes an installed dashboard via API delete', async () => {

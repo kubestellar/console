@@ -2,6 +2,8 @@
  * Constants for GitHub Pipelines Dashboard
  */
 
+import { DEFAULT_ALLOWED_REPOS, getAllowedRepoSlugs } from "../_shared/repo-allowlist";
+
 export const GITHUB_API = "https://api.github.com";
 
 /** Netlify Blobs store for all cached pipeline views */
@@ -47,14 +49,7 @@ export const MATRIX_RUNS_PER_REPO = 200;
 export const FLOW_MAX_RUNS_PER_REPO = 8;
 
 /** Default repos when PIPELINE_REPOS env var is not set */
-export const DEFAULT_REPOS = [
-  "kubestellar/console",
-  "kubestellar/docs",
-  "kubestellar/console-kb",
-  "kubestellar/kubestellar-mcp",
-  "kubestellar/console-marketplace",
-  "kubestellar/homebrew-tap",
-];
+export const DEFAULT_REPOS = DEFAULT_ALLOWED_REPOS;
 
 /** The nightly release workflow on kubestellar/console — drives the Pulse card */
 export const NIGHTLY_RELEASE_REPO = "kubestellar/console";
@@ -72,30 +67,21 @@ export const PR_FROM_COMMIT_RE = /\(#(\d+)\)\s*$/;
 /** ms per day — used in matrix date math */
 export const MS_PER_DAY = 86_400_000;
 
-export const ALLOWED_ORIGINS = [
-  "https://console.kubestellar.io",
-  "https://kubestellar.io",
-  "https://www.kubestellar.io",
-];
-
 /** GitHub API fetch with auth + typed error */
 export const GH_RETRY_MAX_ATTEMPTS = 3;
 export const GH_RETRY_BASE_DELAY_MS = 1_000;
 
-/** Matches `owner/repo` format — allows any valid GitHub repo, not just
- * preconfigured PIPELINE_REPOS. The token's access controls what's fetchable. */
+/** Matches `owner/repo` format for allowlisted repos. */
 export const VALID_REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/;
 
 /**
  * Repos scanned by the pipelines dashboard. Centralized: set the
  * PIPELINE_REPOS env var to a comma-separated list of owner/repo strings
  * to override (e.g. "myorg/myrepo" for a single-repo install, or
- * "org/a,org/b,org/c" for multi-repo). If unset, defaults to the 6
- * KubeStellar repos above. The repo list is returned in every API
+ * "org/a,org/b,org/c" for multi-repo). If unset, defaults to the
+ * shared KubeStellar allowlist above. The repo list is returned in every API
  * response so the frontend never hardcodes it.
  */
 export function getRepos(): string[] {
-  const env = process.env.PIPELINE_REPOS;
-  if (!env) return DEFAULT_REPOS;
-  return env.split(",").map((s) => s.trim()).filter(Boolean);
+  return getAllowedRepoSlugs(["PIPELINE_REPOS"]);
 }

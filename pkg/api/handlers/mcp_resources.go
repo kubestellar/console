@@ -40,8 +40,13 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 	})
 }
 
-// GetSecrets returns Secrets from clusters
+// GetSecrets returns Secrets from clusters.
+// Requires editor or admin role — Secrets contain sensitive data (CWE-862, #16731).
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
@@ -270,6 +275,10 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 // GetPodLogs returns logs from a pod
 func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	// Demo mode: return demo data immediately
 	if isDemoMode(c) {
 		return demoResponse(c, "logs", getDemoPodLogs())

@@ -17,11 +17,21 @@
  */
 
 import { handlePreflight } from "./_shared/cors";
+import {
+  checkInMemoryRateLimit,
+  getClientIp,
+  type InMemoryRateLimitEntry,
+} from "./_shared/inMemoryRateLimit";
 import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+import { readCappedRequestText, RequestBodyTooLargeError } from "./_shared/read-capped-request";
 import {
   ALLOWED_REPOS,
   CLIENT_AUTH_HEADER,
   CORS_OPTS,
+  FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+  FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+  FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_MAX_REQUESTS,
+  FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_WINDOW_MS,
   FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS,
   FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
   GITHUB_API,
@@ -41,6 +51,28 @@ import type { FeedbackAppAction, IssueRequest } from "./_shared/feedback-helpers
 const MAX_FEEDBACK_BODY_BYTES = 102_400;
 /** Maximum response body size for GitHub API responses (512 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
+const HTTP_STATUS_RATE_LIMITED = 429;
+const FEEDBACK_MUTATION_PERMISSION_ERROR = "Push access required for feedback mutations";
+
+const preAuthRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
+const authFailureRateLimitMap = new Map<string, InMemoryRateLimitEntry>();
+
+function rateLimitResponse(request: Request, retryAfterSeconds: number): Response {
+  return jsonResponse(
+    request,
+    HTTP_STATUS_RATE_LIMITED,
+    {
+      error: "Rate limit exceeded",
+      retryAfter: retryAfterSeconds,
+    },
+    { "Retry-After": String(retryAfterSeconds) },
+  );
+}
+
+export function resetFeedbackAppRateLimitsForTests(): void {
+  preAuthRateLimitMap.clear();
+  authFailureRateLimitMap.clear();
+}
 
 async function readCappedJson<T>(response: Response): Promise<T> {
   const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
@@ -64,9 +96,52 @@ export default async function handler(request: Request): Promise<Response> {
     return jsonResponse(request, 405, { error: "Method not allowed" });
   }
 
+  const clientIp = getClientIp(request);
+  const preAuthRate = checkInMemoryRateLimit(
+    clientIp,
+    preAuthRateLimitMap,
+    FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_MAX_REQUESTS,
+    FEEDBACK_APP_PRE_AUTH_RATE_LIMIT_WINDOW_MS,
+  );
+  if (!preAuthRate.allowed) {
+    return rateLimitResponse(request, preAuthRate.retryAfterSeconds);
+  }
+
+  const authFailureRate = checkInMemoryRateLimit(
+    clientIp,
+    authFailureRateLimitMap,
+    FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+    FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+    { consume: false },
+  );
+  if (!authFailureRate.allowed) {
+    return rateLimitResponse(request, authFailureRate.retryAfterSeconds);
+  }
+
   const clientAuth = request.headers.get(CLIENT_AUTH_HEADER);
   if (!clientAuth) {
+    checkInMemoryRateLimit(
+      clientIp,
+      authFailureRateLimitMap,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+    );
     return jsonResponse(request, 401, { error: "Missing client credential" });
+  }
+
+  // Pre-auth rate limit per IP to prevent token introspection flooding (CWE-770, #16646)
+  const blobPreAuthRate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE_NAME,
+    prefix: "feedback-preauth:",
+    subject: clientIp,
+    windowMs: FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
+    maxRequests: FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS,
+  });
+  if (blobPreAuthRate.limited) {
+    return jsonResponse(request, 429, {
+      error: "Rate limit exceeded",
+      retryAfter: blobPreAuthRate.retryAfterSeconds,
+    });
   }
 
   const url = new URL(request.url);
@@ -75,19 +150,14 @@ export default async function handler(request: Request): Promise<Response> {
   let payload: IssueRequest | null = null;
   let action: FeedbackAppAction = "create_issue";
   if (request.method === "POST") {
-    const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
-    if (contentLength > MAX_FEEDBACK_BODY_BYTES) {
-      return jsonResponse(request, 413, { error: "Request body too large" });
-    }
-
     let rawBody: unknown;
     try {
-      const text = await request.text();
-      if (text.length > MAX_FEEDBACK_BODY_BYTES) {
+      const text = await readCappedRequestText(request, MAX_FEEDBACK_BODY_BYTES, "feedback-app");
+      rawBody = JSON.parse(text) as unknown;
+    } catch (err) {
+      if (err instanceof RequestBodyTooLargeError) {
         return jsonResponse(request, 413, { error: "Request body too large" });
       }
-      rawBody = JSON.parse(text) as unknown;
-    } catch {
       return jsonResponse(request, 400, { error: "Invalid JSON body" });
     }
 
@@ -114,16 +184,21 @@ export default async function handler(request: Request): Promise<Response> {
   try {
     user = await verifyClientAuth(clientAuth);
   } catch (err) {
+    const failedAuthRate = checkInMemoryRateLimit(
+      clientIp,
+      authFailureRateLimitMap,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_MAX_REQUESTS,
+      FEEDBACK_APP_AUTH_FAILURE_RATE_LIMIT_WINDOW_MS,
+    );
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[feedback-app] Client auth failed:", msg);
+    if (!failedAuthRate.allowed) {
+      return rateLimitResponse(request, failedAuthRate.retryAfterSeconds);
+    }
     return jsonResponse(request, 401, { error: "Client authentication failed" });
   }
 
   if (request.method === "POST") {
-    const clientIp =
-      request.headers.get("x-nf-client-connection-ip") ??
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      "unknown";
     const rate = await enforceSimpleRateLimit({
       storeName: RATE_LIMIT_STORE_NAME,
       prefix: "feedback-app:",
@@ -132,22 +207,37 @@ export default async function handler(request: Request): Promise<Response> {
       windowMs: FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
     });
     if (rate.limited) {
-      return jsonResponse(request, 429, {
-        error: "Rate limit exceeded",
-        retryAfter: rate.retryAfterSeconds,
-      });
+      return rateLimitResponse(request, rate.retryAfterSeconds);
     }
   }
 
+  let repoPermissions: { push: boolean } | null = null;
   if (request.method === "GET" || mode === "capabilities") {
     try {
-      const permissions = await getRepoPermissions(clientAuth, repoSlug);
-      return jsonResponse(request, 200, { can_link_parent: permissions.push });
+      repoPermissions = await getRepoPermissions(clientAuth, repoSlug);
+      return jsonResponse(request, 200, { can_link_parent: repoPermissions.push });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[feedback-app] Repo capability check failed:", msg);
       return jsonResponse(request, 502, { error: "Repository capability check failed" });
     }
+  }
+
+  try {
+    repoPermissions = await getRepoPermissions(clientAuth, repoSlug);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[feedback-app] Repo permission check failed:", msg);
+    return jsonResponse(request, 502, { error: "Repository permission check failed" });
+  }
+  if (!repoPermissions.push) {
+    console.warn("[feedback-app] Denied mutation without push access:", {
+      action,
+      repoSlug,
+      login: user.login,
+      userId: user.id,
+    });
+    return jsonResponse(request, 403, { error: FEEDBACK_MUTATION_PERMISSION_ERROR });
   }
 
   let installCred: string;
@@ -246,12 +336,7 @@ export default async function handler(request: Request): Promise<Response> {
     let warning: string | undefined;
     if (typeof payload.parentIssueNumber === "number" && payload.parentIssueNumber > 0) {
       try {
-        const permissions = await getRepoPermissions(clientAuth, repoSlug);
-        if (!permissions.push) {
-          warning = `Issue #${data.number} was created, but parent issue linking requires push access to ${repoSlug}.`;
-        } else {
-          await addSubIssue(installCred, repoSlug, payload.parentIssueNumber, data.id);
-        }
+        await addSubIssue(installCred, repoSlug, payload.parentIssueNumber, data.id);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[feedback-app] Sub-issue linking failed:", msg);

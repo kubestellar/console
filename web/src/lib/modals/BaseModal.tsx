@@ -186,6 +186,7 @@ export function BaseModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
+          tabIndex={-1}
           data-testid={testId}
           className={`glass w-full ${SIZE_CLASSES[size]} ${HEIGHT_CLASSES[size]} rounded-xl flex flex-col overflow-hidden ${className}`}
           onPointerDown={(e) => e.stopPropagation()}

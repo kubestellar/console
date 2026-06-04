@@ -117,7 +117,8 @@ export function useClusterResourceQuery<T>(
             return
           }
         } catch (err) {
-          console.warn(`[${resourceKey}] Backend fetch failed:`, err)
+          console.error(`[${resourceKey}] Backend fetch failed:`, err)
+          // Error propagated via hook error state if silentErrors=false; falling back to agent fetch
         }
         if (!isMountedRef.current) return
         setIsLoading(false)

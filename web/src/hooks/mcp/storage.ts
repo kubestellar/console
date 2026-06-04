@@ -7,7 +7,7 @@ import { REFRESH_INTERVAL_MS, getEffectiveInterval, getLocalAgentURL, agentFetch
 import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
-import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import { useClusterResourceQuery } from './useClusterResourceQuery'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
@@ -295,7 +295,8 @@ export function usePVCs(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.warn('[pvcs] Backend fetch failed:', err)
+          console.error('[pvcs] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
         }
         if (!isMountedRef.current) return
         setIsLoading(false)
@@ -336,36 +337,47 @@ export function usePVCs(cluster?: string, namespace?: string) {
   }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
-    // Use a flag to prevent state updates if this effect is cleaned up
     let cancelled = false
 
     const doFetch = async () => {
       const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
       if (!cancelled) {
-        await refetch(!!hasCachedData) // silent=true if we have cached data
+        await refetch(!!hasCachedData)
       }
     }
 
-    doFetch()
+    void doFetch()
 
-    // Poll for PVC updates (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
-      `pvcs:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
-      () => { if (!cancelled) refetch(true) },
-    )
-
-    // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`pvcs:${cacheKey}`, () => {
-      if (!cancelled) refetch(false)
+      if (!cancelled) {
+        void refetch(false)
+      }
     })
 
     return () => {
       cancelled = true
-      unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey, consecutiveFailures])
+  }, [cacheKey, refetch])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const unsubscribePolling = subscribePolling(
+      `pvcs:${cacheKey}`,
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
+      () => {
+        if (!cancelled) {
+          void refetch(true)
+        }
+      },
+    )
+
+    return () => {
+      cancelled = true
+      unsubscribePolling()
+    }
+  }, [cacheKey, consecutiveFailures, refetch])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -458,7 +470,7 @@ export function usePVs(cluster?: string) {
           if (isClusterModeBackend()) {
             try {
               const response = await fetch(`/api/mcp/pvs?${params}`, {
-                signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+                signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
               })
               if (response.ok) {
                 const agentData = await response.json()
@@ -466,7 +478,8 @@ export function usePVs(cluster?: string) {
                 return { success: true, pvs: mappedPVs }
               }
             } catch (err) {
-              console.warn('[pvs] Backend fetch failed:', err)
+              console.error('[pvs] Backend fetch failed:', err)
+              // Error propagated; caller handles fallback to agent fetch
             }
             return { success: false, pvs: [] }
           }
@@ -520,24 +533,21 @@ export function usePVs(cluster?: string) {
   }, [cluster])
 
   useEffect(() => {
-    refetch()
-    // Poll for PV updates (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
+    void refetch()
+    return registerRefetch(`pvs:${cluster || 'all'}`, () => {
+      void refetch()
+    })
+  }, [cluster, refetch])
+
+  useEffect(() => {
+    return subscribePolling(
       `pvs:${cluster || 'all'}`,
       getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
-      () => refetch(),
+      () => {
+        void refetch()
+      },
     )
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`pvs:${cluster || 'all'}`, () => {
-      refetch()
-    })
-
-    return () => {
-      unsubscribePolling()
-      unregisterRefetch()
-    }
-  }, [refetch, cluster, consecutiveFailures])
+  }, [cluster, consecutiveFailures, refetch])
 
   return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }

@@ -73,10 +73,10 @@ func ghpParseMatrixDays(raw string) int {
 
 func ghpResolveRepos(repoFilter string) ([]string, error) {
 	if repoFilter == "" {
-		return ghpRepos, nil
+		return ghpGetRepos(), nil
 	}
 	if !ghpIsAllowedRepo(repoFilter) {
-		return nil, fmt.Errorf("unknown repo")
+		return nil, ghpRepoAllowlistForbidden()
 	}
 	return []string{repoFilter}, nil
 }

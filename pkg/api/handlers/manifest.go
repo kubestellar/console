@@ -1,17 +1,19 @@
 package handlers
 
 import (
-	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
-	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -23,9 +25,10 @@ const (
 	// manifestAppNameSuffixBytes is the number of random bytes appended to the
 	// GitHub App name to avoid global name collisions on retry.
 	manifestAppNameSuffixBytes = 3
-	// manifestOAuthStateBytes is the number of random bytes used for the
+	// manifestStateBytes is the number of random bytes used for the
 	// single-use CSRF state on the manifest setup/callback flow.
-	manifestOAuthStateBytes = 32
+	manifestStateBytes = 16
+	manifestStateTTL   = 10 * time.Minute
 )
 
 // ManifestHandler implements the GitHub App Manifest one-click OAuth flow.
@@ -37,18 +40,23 @@ type ManifestHandler struct {
 	backendURL        string
 	frontendURL       string
 	githubURL         string
+	bootstrapToken    string
 	onConfigured      func(clientID, clientSecret string)
 	isOAuthConfigured func() bool
 	httpClient        *http.Client
+	stateMu           sync.Mutex
+	pendingStates     map[string]time.Time
 }
 
 // NewManifestHandler creates a ManifestHandler. onConfigured is called after
 // credentials are persisted so the server can hot-reload OAuth config.
 // isOAuthConfigured reports whether OAuth is already fully configured
 // (from env vars OR SQLite), preventing duplicate app creation.
+// bootstrapToken, if non-empty, must be provided as ?token= query parameter
+// to access the manifest flow. If empty, access is restricted to loopback IPs.
 func NewManifestHandler(
 	s store.Store,
-	backendURL, frontendURL, githubURL string,
+	backendURL, frontendURL, githubURL, bootstrapToken string,
 	onConfigured func(clientID, clientSecret string),
 	isOAuthConfigured func() bool,
 ) *ManifestHandler {
@@ -60,10 +68,46 @@ func NewManifestHandler(
 		backendURL:        strings.TrimRight(backendURL, "/"),
 		frontendURL:       strings.TrimRight(frontendURL, "/"),
 		githubURL:         strings.TrimRight(githubURL, "/"),
+		bootstrapToken:    bootstrapToken,
 		onConfigured:      onConfigured,
 		isOAuthConfigured: isOAuthConfigured,
 		httpClient:        client.GitHub,
+		pendingStates:     make(map[string]time.Time),
 	}
+}
+
+// checkBootstrapAuth verifies the caller is authorized to use the manifest
+// bootstrap flow. If CONSOLE_BOOTSTRAP_TOKEN is set, the request must include
+// it as ?token=<value>. If no token is configured, only loopback/private-network
+// clients are permitted (CWE-306 mitigation).
+func (h *ManifestHandler) checkBootstrapAuth(c *fiber.Ctx) error {
+	if h.bootstrapToken != "" {
+		provided := c.Query("token")
+		if subtle.ConstantTimeCompare([]byte(h.bootstrapToken), []byte(provided)) != 1 {
+			slog.Warn("[Manifest] bootstrap access denied — invalid or missing token", "ip", c.IP())
+			return fiber.NewError(fiber.StatusForbidden, "bootstrap token required")
+		}
+		return nil
+	}
+
+	// No explicit token configured — restrict to loopback/private IPs.
+	if !isBootstrapAllowedIP(c.IP()) {
+		slog.Warn("[Manifest] bootstrap access denied — non-private IP without token", "ip", c.IP())
+		return fiber.NewError(fiber.StatusForbidden,
+			"manifest bootstrap is restricted; set CONSOLE_BOOTSTRAP_TOKEN or access from localhost")
+	}
+	return nil
+}
+
+// isBootstrapAllowedIP returns true if the IP is loopback, private, link-local,
+// or unspecified (0.0.0.0/::) — the unspecified case covers direct connections
+// without a reverse proxy where the kernel hasn't resolved the peer address.
+func isBootstrapAllowedIP(ip string) bool {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return false
+	}
+	return parsed.IsLoopback() || parsed.IsPrivate() || parsed.IsLinkLocalUnicast() || parsed.IsUnspecified()
 }
 
 // manifestPayload is the JSON structure POSTed to GitHub as the app manifest.
@@ -95,35 +139,25 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 	if h.isOAuthConfigured != nil && h.isOAuthConfigured() {
 		return c.Redirect(h.frontendURL + "/login")
 	}
+	if err := h.checkBootstrapAuth(c); err != nil {
+		return err
+	}
 	suffix, err := randomHex(manifestAppNameSuffixBytes)
 	if err != nil {
 		slog.Error("[Manifest] failed to generate random suffix", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
 	}
-	state, err := randomHex(manifestOAuthStateBytes)
+	state, err := h.issueState()
 	if err != nil {
-		slog.Error("[Manifest] failed to generate OAuth state", "error", err)
+		slog.Error("[Manifest] failed to generate setup state", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
 	}
-	if err := h.storeManifestState(c.UserContext(), state); err != nil {
-		slog.Error("[Manifest] failed to persist OAuth state", "error", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
-	}
-
-	redirectURL, err := url.Parse(h.backendURL + "/auth/manifest/callback")
-	if err != nil {
-		slog.Error("[Manifest] failed to build manifest redirect URL", "error", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
-	}
-	query := redirectURL.Query()
-	query.Set("state", state)
-	redirectURL.RawQuery = query.Encode()
 
 	manifest := manifestPayload{
 		Name:               fmt.Sprintf("KubeStellar Console %s", suffix),
 		URL:                h.backendURL,
 		CallbackURLs:       []string{h.backendURL + "/auth/github/callback"},
-		RedirectURL:        redirectURL.String(),
+		RedirectURL:        h.backendURL + "/auth/manifest/callback",
 		HookAttributes:     map[string]any{"url": "https://example.com/events", "active": false},
 		Public:             false,
 		DefaultPermissions: map[string]string{},
@@ -146,6 +180,7 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
   <div style="text-align:center">
     <p>Redirecting to GitHub to create your OAuth app…</p>
     <form id="manifest-form" method="post" action="%s">
+      <input type="hidden" name="state" value="%s">
       <input type="hidden" id="manifest-input" name="manifest" value="">
       <noscript><button type="submit">Continue to GitHub</button></noscript>
     </form>
@@ -155,7 +190,7 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
     </script>
   </div>
 </body>
-</html>`, formAction, manifestB64)
+</html>`, formAction, state, manifestB64)
 
 	c.Set("Content-Type", "text/html; charset=utf-8")
 	return c.SendString(page)
@@ -169,14 +204,13 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 		slog.Warn("[Manifest] callback rejected — OAuth already configured")
 		return c.Redirect(h.frontendURL + "/login?error=manifest_already_configured")
 	}
+	if err := h.checkBootstrapAuth(c); err != nil {
+		return err
+	}
 
 	state := c.Query("state")
-	if state == "" {
-		slog.Warn("[Manifest] callback called without state")
-		return c.Redirect(h.frontendURL + "/login?error=manifest_invalid_state")
-	}
-	if !h.validateAndConsumeManifestState(c.UserContext(), state) {
-		slog.Warn("[Manifest] callback rejected — invalid state")
+	if !h.consumeState(state) {
+		slog.Warn("[Manifest] callback rejected — invalid or expired state")
 		return c.Redirect(h.frontendURL + "/login?error=manifest_invalid_state")
 	}
 
@@ -244,17 +278,49 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 	return c.Redirect(h.frontendURL + "/login?manifest=success")
 }
 
-func (h *ManifestHandler) storeManifestState(ctx context.Context, state string) error {
-	return h.store.StoreOAuthState(ctx, state, oauthStateExpiration)
+func (h *ManifestHandler) issueState() (string, error) {
+	state, err := randomHex(manifestStateBytes)
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Now()
+	h.stateMu.Lock()
+	defer h.stateMu.Unlock()
+	if h.pendingStates == nil {
+		h.pendingStates = make(map[string]time.Time)
+	}
+	h.pruneExpiredStatesLocked(now)
+	h.pendingStates[state] = now.Add(manifestStateTTL)
+	return state, nil
 }
 
-func (h *ManifestHandler) validateAndConsumeManifestState(ctx context.Context, state string) bool {
-	ok, err := h.store.ConsumeOAuthState(ctx, state)
-	if err != nil {
-		slog.Error("[Manifest] failed to consume OAuth state", "error", err)
+func (h *ManifestHandler) consumeState(state string) bool {
+	if state == "" {
 		return false
 	}
-	return ok
+
+	now := time.Now()
+	h.stateMu.Lock()
+	defer h.stateMu.Unlock()
+	if h.pendingStates == nil {
+		return false
+	}
+	h.pruneExpiredStatesLocked(now)
+	expiresAt, ok := h.pendingStates[state]
+	if !ok {
+		return false
+	}
+	delete(h.pendingStates, state)
+	return expiresAt.After(now)
+}
+
+func (h *ManifestHandler) pruneExpiredStatesLocked(now time.Time) {
+	for state, expiresAt := range h.pendingStates {
+		if !expiresAt.After(now) {
+			delete(h.pendingStates, state)
+		}
+	}
 }
 
 func randomHex(n int) (string, error) {
