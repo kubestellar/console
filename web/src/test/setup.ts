@@ -42,6 +42,11 @@ vi.mock('react-i18next', async () => {
 // Cleanup after each test
 afterEach(() => {
   cleanup()
+  window.localStorage.clear()
+  window.sessionStorage?.clear()
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 
 // Mock agentFetch to delegate to global.fetch so test mocks intercept it
