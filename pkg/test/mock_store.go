@@ -627,10 +627,14 @@ func (m *MockStore) ListStellarMissions(_ context.Context, _ string, _, _ int) (
 	return nil, nil
 }
 
-func (m *MockStore) CreateStellarMission(_ context.Context, _ *store.StellarMission) error { return nil }
-func (m *MockStore) UpdateStellarMission(_ context.Context, _ *store.StellarMission) error { return nil }
-func (m *MockStore) DeleteStellarMission(_ context.Context, _, _ string) error         { return nil }
-func (m *MockStore) GetActiveMissionIDs(_ context.Context) ([]string, error)            { return nil, nil }
+func (m *MockStore) CreateStellarMission(_ context.Context, _ *store.StellarMission) error {
+	return nil
+}
+func (m *MockStore) UpdateStellarMission(_ context.Context, _ *store.StellarMission) error {
+	return nil
+}
+func (m *MockStore) DeleteStellarMission(_ context.Context, _, _ string) error { return nil }
+func (m *MockStore) GetActiveMissionIDs(_ context.Context) ([]string, error)   { return nil, nil }
 
 func (m *MockStore) GetStellarExecution(_ context.Context, _, _ string) (*store.StellarExecution, error) {
 	return nil, nil
@@ -684,22 +688,22 @@ func (m *MockStore) ListStellarActions(_ context.Context, _, _ string, _, _ int)
 	return nil, nil
 }
 
-func (m *MockStore) CreateStellarAction(_ context.Context, _ *store.StellarAction) error { return nil }
+func (m *MockStore) CreateStellarAction(_ context.Context, _ *store.StellarAction) error  { return nil }
 func (m *MockStore) UpdateStellarActionStatus(_ context.Context, _, _, _, _ string) error { return nil }
-func (m *MockStore) DeleteStellarAction(_ context.Context, _, _ string) error              { return nil }
-func (m *MockStore) ApproveStellarAction(_ context.Context, _, _, _ string) error          { return nil }
-func (m *MockStore) RejectStellarAction(_ context.Context, _, _, _, _ string) error        { return nil }
-func (m *MockStore) GetPendingActionIDs(_ context.Context) ([]string, error)               { return nil, nil }
+func (m *MockStore) DeleteStellarAction(_ context.Context, _, _ string) error             { return nil }
+func (m *MockStore) ApproveStellarAction(_ context.Context, _, _, _ string) error         { return nil }
+func (m *MockStore) RejectStellarAction(_ context.Context, _, _, _, _ string) error       { return nil }
+func (m *MockStore) GetPendingActionIDs(_ context.Context) ([]string, error)              { return nil, nil }
 func (m *MockStore) GetDueApprovedStellarActions(_ context.Context, _ time.Time, _ int) ([]store.StellarAction, error) {
 	return nil, nil
 }
 func (m *MockStore) CompleteDueStellarActions(_ context.Context, _ time.Time) ([]store.StellarAction, error) {
 	return nil, nil
 }
-func (m *MockStore) IncrementRetry(_ context.Context, _ string) error                    { return nil }
-func (m *MockStore) SupersedeAction(_ context.Context, _, _ string) error                { return nil }
-func (m *MockStore) BumpActionPriority(_ context.Context, _ string) error                { return nil }
-func (m *MockStore) ActionCompletedByIdempotencyKey(_ context.Context, _ string) bool    { return false }
+func (m *MockStore) IncrementRetry(_ context.Context, _ string) error                 { return nil }
+func (m *MockStore) SupersedeAction(_ context.Context, _, _ string) error             { return nil }
+func (m *MockStore) BumpActionPriority(_ context.Context, _ string) error             { return nil }
+func (m *MockStore) ActionCompletedByIdempotencyKey(_ context.Context, _ string) bool { return false }
 func (m *MockStore) GetPendingApprovalActionsOlderThan(_ context.Context, _ time.Time, _ int) ([]store.StellarAction, error) {
 	return nil, nil
 }
@@ -741,8 +745,10 @@ func (m *MockStore) GetLatestEventBatchTimestamp(_ context.Context) (*time.Time,
 }
 func (m *MockStore) PruneOldNotifications(_ context.Context, _ int) (int64, error) { return 0, nil }
 
-func (m *MockStore) CreateTask(_ context.Context, _ *store.StellarTask) (string, error) { return "", nil }
-func (m *MockStore) UpdateTaskStatus(_ context.Context, _, _, _ string) error            { return nil }
+func (m *MockStore) CreateTask(_ context.Context, _ *store.StellarTask) (string, error) {
+	return "", nil
+}
+func (m *MockStore) UpdateTaskStatus(_ context.Context, _, _, _ string) error { return nil }
 func (m *MockStore) GetOpenTasks(_ context.Context, _ string) ([]store.StellarTask, error) {
 	return nil, nil
 }
@@ -753,8 +759,10 @@ func (m *MockStore) GetTasksForCluster(_ context.Context, _ string, _ int) ([]st
 	return nil, nil
 }
 
-func (m *MockStore) CreateWatch(_ context.Context, _ *store.StellarWatch) (string, error) { return "", nil }
-func (m *MockStore) UpdateWatchStatus(_ context.Context, _, _, _, _ string) error          { return nil }
+func (m *MockStore) CreateWatch(_ context.Context, _ *store.StellarWatch) (string, error) {
+	return "", nil
+}
+func (m *MockStore) UpdateWatchStatus(_ context.Context, _, _, _, _ string) error { return nil }
 func (m *MockStore) GetActiveWatches(_ context.Context, _ string) ([]store.StellarWatch, error) {
 	return nil, nil
 }
@@ -767,10 +775,10 @@ func (m *MockStore) GetWatchByResource(_ context.Context, _, _, _, _, _ string) 
 func (m *MockStore) GetWatchesSince(_ context.Context, _ string, _ time.Time, _ string) ([]store.StellarWatch, error) {
 	return nil, nil
 }
-func (m *MockStore) TouchWatch(_ context.Context, _, _ string, _ time.Time) error          { return nil }
-func (m *MockStore) SetWatchLastChecked(_ context.Context, _ string, _ time.Time) error    { return nil }
-func (m *MockStore) ResolveWatch(_ context.Context, _, _ string) error                      { return nil }
-func (m *MockStore) SnoozeWatch(_ context.Context, _, _ string, _ time.Time) error         { return nil }
+func (m *MockStore) TouchWatch(_ context.Context, _, _ string, _ time.Time) error       { return nil }
+func (m *MockStore) SetWatchLastChecked(_ context.Context, _ string, _ time.Time) error { return nil }
+func (m *MockStore) ResolveWatch(_ context.Context, _, _ string) error                  { return nil }
+func (m *MockStore) SnoozeWatch(_ context.Context, _, _ string, _ time.Time) error      { return nil }
 
 func (m *MockStore) CreateObservation(_ context.Context, _ *store.StellarObservation) (string, error) {
 	return "", nil
@@ -778,14 +786,10 @@ func (m *MockStore) CreateObservation(_ context.Context, _ *store.StellarObserva
 func (m *MockStore) GetRecentObservations(_ context.Context, _ string, _ int) ([]store.StellarObservation, error) {
 	return nil, nil
 }
-func (m *MockStore) GetUnshownObservations(_ context.Context) ([]store.StellarObservation, error) {
+func (m *MockStore) GetUnshownObservations(_ context.Context, _ string) ([]store.StellarObservation, error) {
 	return nil, nil
 }
-func (m *MockStore) GetUnshownObservationsForUser(_ context.Context, _ string) ([]store.StellarObservation, error) {
-	return nil, nil
-}
-func (m *MockStore) MarkObservationShown(_ context.Context, _ string) error { return nil }
-func (m *MockStore) MarkObservationShownForUser(_ context.Context, _, _ string) error { return nil }
+func (m *MockStore) MarkObservationShown(_ context.Context, _, _ string) error { return nil }
 
 func (m *MockStore) CreateSolve(_ context.Context, _ *store.StellarSolve) error { return nil }
 func (m *MockStore) GetSolveByID(_ context.Context, _ string) (*store.StellarSolve, error) {
