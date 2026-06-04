@@ -225,6 +225,80 @@ describe('createCardComponent', () => {
       expect(result.component).toBeNull()
       expect(result.error).toMatch(/AsyncFunction/)
     })
+
+    it('shadows atob and btoa from dynamic card code', () => {
+      const code = `
+        if (typeof atob !== 'undefined' || typeof btoa !== 'undefined') {
+          throw new Error('base64 globals escaped sandbox');
+        }
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.error).toBeNull()
+      expect(typeof result.component).toBe('function')
+    })
+
+    it('blocks String.fromCharCode constructor reconstruction', () => {
+      const code = `
+        var key = String.fromCharCode(99, 111, 110, 115, 116, 114, 117, 99, 116, 111, 114);
+        var fn = [][key][key]('return this');
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/fromCharCode/)
+    })
+
+    it('blocks atob constructor reconstruction', () => {
+      const code = `
+        var key = atob('Y29uc3RydWN0b3I=');
+        var fn = [][key][key]('return this');
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/computed constructor access|Runtime error/)
+    })
+
+    it('blocks String.fromCodePoint constructor reconstruction', () => {
+      const code = `
+        var key = String.fromCodePoint(99, 111, 110, 115, 116, 114, 117, 99, 116, 111, 114);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/fromCodePoint/)
+    })
+
+    it('blocks charCodeAt constructor reconstruction helpers', () => {
+      const code = `
+        var code = 'constructor'.charCodeAt(0);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/charCodeAt/)
+    })
+
+    it('blocks codePointAt constructor reconstruction helpers', () => {
+      const code = `
+        var code = 'constructor'.codePointAt(0);
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/codePointAt/)
+    })
+
+    it('blocks String.raw constructor reconstruction helpers', () => {
+      const code = `
+        var tag = String.raw;
+        module.exports.default = function() { return null; };
+      `
+      const result = createCardComponent(code)
+      expect(result.component).toBeNull()
+      expect(result.error).toMatch(/String\.raw/)
+    })
   })
 
   // Security regression tests (#6677 — deep-freeze injected scope)
@@ -266,67 +340,4 @@ describe('createCardComponent', () => {
     })
   })
 
-  // Security regression tests (#16898 — sandbox escape via computed constructor)
-  describe('Sandbox escape via encoding APIs (#16898)', () => {
-    it('blocks String.fromCharCode used to compute constructor', () => {
-      const code = `
-        var s = String.fromCharCode(99,111,110,115,116,114,117,99,116,111,114);
-        module.exports.default = function() { return null; };
-      `
-      const result = createCardComponent(code)
-      expect(result.component).toBeNull()
-      expect(result.error).toMatch(/fromCharCode/)
-    })
-
-    it('blocks String.fromCodePoint', () => {
-      const code = `
-        var s = String.fromCodePoint(99,111,110,115,116,114,117,99,116,111,114);
-        module.exports.default = function() { return null; };
-      `
-      const result = createCardComponent(code)
-      expect(result.component).toBeNull()
-      expect(result.error).toMatch(/fromCodePoint/)
-    })
-
-    it('blocks charCodeAt (information leak for building escape strings)', () => {
-      const code = `
-        var x = "c".charCodeAt(0);
-        module.exports.default = function() { return null; };
-      `
-      const result = createCardComponent(code)
-      expect(result.component).toBeNull()
-      expect(result.error).toMatch(/charCodeAt/)
-    })
-
-    it('blocks codePointAt', () => {
-      const code = `
-        var x = "c".codePointAt(0);
-        module.exports.default = function() { return null; };
-      `
-      const result = createCardComponent(code)
-      expect(result.component).toBeNull()
-      expect(result.error).toMatch(/codePointAt/)
-    })
-
-    it('blocks atob used to decode constructor string', () => {
-      const code = `
-        var s = atob('Y29uc3RydWN0b3I=');
-        module.exports.default = function() { return null; };
-      `
-      const result = createCardComponent(code)
-      expect(result.component).toBeNull()
-      // atob is blocked as a global (shadowed to undefined), not via pattern
-      expect(result.error).toBeTruthy()
-    })
-
-    it('blocks String.raw template tag', () => {
-      const code = `
-        var s = String.raw\`constructor\`;
-        module.exports.default = function() { return null; };
-      `
-      const result = createCardComponent(code)
-      expect(result.component).toBeNull()
-      expect(result.error).toMatch(/String\.raw/)
-    })
-  })
 })
