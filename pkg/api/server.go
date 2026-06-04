@@ -97,6 +97,25 @@ func NewServer(cfg Config) (*Server, error) {
 		}
 	}
 
+	// Manifest bootstrap secret — guards /auth/manifest/setup against
+	// unauthenticated takeover on fresh deployments (CWE-306).
+	// In production: use MANIFEST_BOOTSTRAP_SECRET env var, or a per-run
+	// random token is generated and logged so the operator can use it once
+	// to complete OAuth setup. In dev mode a fixed token is used for convenience.
+	if cfg.ManifestBootstrapSecret == "" {
+		if cfg.DevMode {
+			cfg.ManifestBootstrapSecret = "dev-bootstrap"
+			slog.Info("[Server] manifest bootstrap token (dev mode fixed token)", "token", cfg.ManifestBootstrapSecret)
+		} else {
+			cfg.ManifestBootstrapSecret = generateRandomSecret()
+			slog.Warn("[Server] ┌─────────────────────────────────────────────────────────────────┐")
+			slog.Warn("[Server] │  GitHub App manifest bootstrap token (one-time, per startup)     │")
+			slog.Warn("[Server] │  Set MANIFEST_BOOTSTRAP_SECRET env var to use a fixed token.     │")
+			slog.Warn("[Server] └─────────────────────────────────────────────────────────────────┘",
+				"setup_url", "/auth/manifest/setup?setup_token="+cfg.ManifestBootstrapSecret)
+		}
+	}
+
 	// Start a temporary loading page server immediately so the user
 	// sees a loading screen instead of "connection refused" during init.
 	// When BackendPort is set (watchdog mode), listen on that port instead.

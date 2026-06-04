@@ -111,6 +111,11 @@ type Config struct {
 	// Exposed via /health as "no_local_agent" so the pre-built frontend image
 	// can detect this at runtime without requiring a VITE_NO_LOCAL_AGENT rebuild.
 	NoLocalAgent bool
+	// ManifestBootstrapSecret is the token required to initiate the GitHub App
+	// Manifest bootstrap flow (/auth/manifest/setup). Set via
+	// MANIFEST_BOOTSTRAP_SECRET. If not set, a random token is generated at
+	// startup and printed to the log (CWE-306 guard).
+	ManifestBootstrapSecret string
 	// Watchdog support: when set, the backend listens on this port instead of Port
 	BackendPort int
 }
@@ -228,6 +233,8 @@ func LoadConfigFromEnv() Config {
 		NoLocalAgent: os.Getenv("NO_LOCAL_AGENT") == "true",
 		// Watchdog backend port override
 		BackendPort: backendPort,
+		// Bootstrap secret for the manifest OAuth setup flow (CWE-306 guard)
+		ManifestBootstrapSecret: os.Getenv("MANIFEST_BOOTSTRAP_SECRET"),
 	}
 }
 

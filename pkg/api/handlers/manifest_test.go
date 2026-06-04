@@ -15,6 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testJWTSecret is the HMAC key used for nonce cookies in manifest tests.
+const testJWTSecret = "test-jwt-secret-for-manifest-tests"
+
+// testBootstrapSecret is the setup token used in bootstrap auth tests.
+const testBootstrapSecret = "test-bootstrap-secret-abc123"
+
 func newTestManifestHandler(oauthConfigured bool) *ManifestHandler {
 	return NewManifestHandler(
 		&test.MockStore{},
@@ -23,7 +29,16 @@ func newTestManifestHandler(oauthConfigured bool) *ManifestHandler {
 		"https://github.com",
 		func(clientID, clientSecret string) {},
 		func() bool { return oauthConfigured },
+		"", // no bootstrap secret — setup tests call the endpoint directly
+		testJWTSecret,
 	)
+}
+
+// makeValidNonceCookie returns a Cookie header value containing a properly
+// signed nonce, allowing callback tests to simulate a completed setup flow.
+func makeValidNonceCookie(jwtSecret string) string {
+	nonce := "testnonce1234567890abcd" // fixed for deterministic tests
+	return manifestNonceCookie + "=" + signedNonce(nonce, jwtSecret)
 }
 
 func TestManifestSetup_RedirectsWhenAlreadyConfigured(t *testing.T) {
@@ -106,6 +121,92 @@ func TestManifestSetup_ManifestContainsExpectedFields(t *testing.T) {
 	assert.False(t, hasEmailAddresses, "email_addresses is not a valid GitHub App permission")
 }
 
+// --- Bootstrap secret guard tests (CWE-306) ---
+
+func TestManifestSetup_RejectsMissingBootstrapToken(t *testing.T) {
+	app := fiber.New()
+	h := NewManifestHandler(
+		&test.MockStore{},
+		"http://localhost:8080",
+		"http://localhost:8080",
+		"https://github.com",
+		func(clientID, clientSecret string) {},
+		func() bool { return false },
+		testBootstrapSecret,
+		testJWTSecret,
+	)
+	app.Get("/auth/manifest/setup", h.ManifestSetup)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
+}
+
+func TestManifestSetup_RejectsWrongBootstrapToken(t *testing.T) {
+	app := fiber.New()
+	h := NewManifestHandler(
+		&test.MockStore{},
+		"http://localhost:8080",
+		"http://localhost:8080",
+		"https://github.com",
+		func(clientID, clientSecret string) {},
+		func() bool { return false },
+		testBootstrapSecret,
+		testJWTSecret,
+	)
+	app.Get("/auth/manifest/setup", h.ManifestSetup)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/setup?setup_token=wrong-token", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
+}
+
+func TestManifestSetup_AllowsCorrectBootstrapToken(t *testing.T) {
+	app := fiber.New()
+	h := NewManifestHandler(
+		&test.MockStore{},
+		"http://localhost:8080",
+		"http://localhost:8080",
+		"https://github.com",
+		func(clientID, clientSecret string) {},
+		func() bool { return false },
+		testBootstrapSecret,
+		testJWTSecret,
+	)
+	app.Get("/auth/manifest/setup", h.ManifestSetup)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/setup?setup_token="+testBootstrapSecret, nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+}
+
+func TestManifestSetup_SetsSignedNonceCookie(t *testing.T) {
+	app := fiber.New()
+	h := newTestManifestHandler(false)
+	app.Get("/auth/manifest/setup", h.ManifestSetup)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/setup", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	cookies := resp.Cookies()
+	var nonceCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == manifestNonceCookie {
+			nonceCookie = c
+			break
+		}
+	}
+	require.NotNil(t, nonceCookie, "manifest_setup_nonce cookie must be set")
+	assert.True(t, nonceCookie.HttpOnly, "nonce cookie must be HttpOnly")
+	assert.Greater(t, nonceCookie.MaxAge, 0, "nonce cookie must have a positive TTL")
+	assert.True(t, verifySignedNonce(nonceCookie.Value, testJWTSecret), "nonce cookie must be validly signed")
+}
+
 func TestManifestCallback_RedirectsWhenAlreadyConfigured(t *testing.T) {
 	app := fiber.New()
 	h := newTestManifestHandler(true)
@@ -118,12 +219,38 @@ func TestManifestCallback_RedirectsWhenAlreadyConfigured(t *testing.T) {
 	assert.Contains(t, resp.Header.Get("Location"), "manifest_already_configured")
 }
 
+func TestManifestCallback_RejectsWithoutNonceCookie(t *testing.T) {
+	app := fiber.New()
+	h := newTestManifestHandler(false)
+	app.Get("/auth/manifest/callback", h.ManifestCallback)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Location"), "manifest_invalid_session")
+}
+
+func TestManifestCallback_RejectsTamperedNonceCookie(t *testing.T) {
+	app := fiber.New()
+	h := newTestManifestHandler(false)
+	app.Get("/auth/manifest/callback", h.ManifestCallback)
+
+	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test123", nil)
+	req.Header.Set("Cookie", manifestNonceCookie+"=tamperednonce.invalidsignature")
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Location"), "manifest_invalid_session")
+}
+
 func TestManifestCallback_RedirectsWithoutCode(t *testing.T) {
 	app := fiber.New()
 	h := newTestManifestHandler(false)
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback", nil)
+	req.Header.Set("Cookie", makeValidNonceCookie(testJWTSecret))
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -159,12 +286,14 @@ func TestManifestCallback_ExchangesCodeAndPersists(t *testing.T) {
 		},
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
+		jwtSecret:         testJWTSecret,
 	}
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test-code", nil)
+	req.Header.Set("Cookie", makeValidNonceCookie(testJWTSecret))
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -188,12 +317,14 @@ func TestManifestCallback_HandlesGitHubError(t *testing.T) {
 		onConfigured:      func(clientID, clientSecret string) {},
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
+		jwtSecret:         testJWTSecret,
 	}
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=bad-code", nil)
+	req.Header.Set("Cookie", makeValidNonceCookie(testJWTSecret))
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -218,12 +349,14 @@ func TestManifestCallback_HandlesMissingCredentials(t *testing.T) {
 		onConfigured:      func(clientID, clientSecret string) {},
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
+		jwtSecret:         testJWTSecret,
 	}
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=test", nil)
+	req.Header.Set("Cookie", makeValidNonceCookie(testJWTSecret))
 	resp, err := app.Test(req, -1)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
@@ -239,6 +372,8 @@ func TestManifestSetup_GHEURLHandling(t *testing.T) {
 		"https://github.example.com",
 		func(clientID, clientSecret string) {},
 		func() bool { return false },
+		"",
+		testJWTSecret,
 	)
 	app.Get("/auth/manifest/setup", h.ManifestSetup)
 
@@ -273,13 +408,14 @@ func TestManifestCallback_GHEAPIBase(t *testing.T) {
 		onConfigured:      func(clientID, clientSecret string) {},
 		isOAuthConfigured: func() bool { return false },
 		httpClient:        githubAPI.Client(),
+		jwtSecret:         testJWTSecret,
 	}
 
 	app := fiber.New()
 	app.Get("/auth/manifest/callback", h.ManifestCallback)
 
 	req := httptest.NewRequest("GET", "/auth/manifest/callback?code=ghe-code", nil)
+	req.Header.Set("Cookie", makeValidNonceCookie(testJWTSecret))
 	app.Test(req, -1)
 	assert.Contains(t, receivedPath, "/api/v3/app-manifests/ghe-code/conversions")
 }
-

@@ -141,6 +141,8 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		s.config.GitHubURL,
 		func(clientID, clientSecret string) { s.reloadOAuth(clientID, clientSecret) },
 		s.oauthConfigured,
+		s.config.ManifestBootstrapSecret,
+		s.config.JWTSecret,
 	)
 	app.Get("/auth/manifest/setup", authLimiter, manifest.ManifestSetup)
 	app.Get("/auth/manifest/callback", authLimiter, manifest.ManifestCallback)
