@@ -491,7 +491,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     await fetchSingleClusterHealth('auth-test')
 
     const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-    const headers = call[1]?.headers as Headers
+    const headers = new Headers(call[1]?.headers)
     expect(headers.get('Authorization')).toBe('Bearer my-jwt')
   })
 
@@ -507,7 +507,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     await fetchSingleClusterHealth('no-auth-test')
 
     const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-    const headers = call[1]?.headers as Headers
+    const headers = new Headers(call[1]?.headers)
     expect(headers.get('Authorization')).toBeNull()
   })
 })

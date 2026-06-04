@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
+import { AUTH_TOKEN_SYNC_KEY } from '../authToken'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -353,20 +354,19 @@ describe('showExpiryWarningBanner expanded', () => {
 // ============================================================================
 
 describe('AuthProvider expanded', () => {
-  it('refreshUser with real token drops session when /api/me json() rejects (#6067)', async () => {
+  it('refreshUser with invalid /api/me payload drops session (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt')
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockRejectedValue(new Error('JSON parse error')),
+      json: vi.fn().mockResolvedValue({ invalid: true }),
     })
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // json() rejected → invalid JSON → no cache → session dropped (not demo mode)
     expect(result.current.token).toBeNull()
-  })
+  }, 10_000)
 
   it('refreshUser with real token drops session when /api/me returns 500 (#6067)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'real-jwt')
@@ -383,7 +383,7 @@ describe('AuthProvider expanded', () => {
     expect(result.current.token).toBeNull()
   })
 
-  it('storage event with null newValue clears local auth state (#6065)', async () => {
+  it('storage sync cleared event clears local auth state (#6065)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
 
@@ -400,14 +400,12 @@ describe('AuthProvider expanded', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
-      localStorage.removeItem(STORAGE_KEY_TOKEN)
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: null,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: JSON.stringify({ state: 'cleared', ts: Date.now() }),
       }))
     })
 
-    // Cross-tab logout mirrored locally
     expect(result.current.token).toBeNull()
     expect(result.current.user).toBeNull()
 

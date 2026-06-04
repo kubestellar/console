@@ -90,18 +90,15 @@ describe('token retrieval fallback behavior', () => {
     })
 
     it('handles localStorage access errors gracefully', () => {
-      // Mock localStorage.getItem to throw an error
-      const originalGetItem = localStorage.getItem
-      localStorage.getItem = vi.fn(() => {
+      const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
         throw new Error('Storage access denied')
       })
 
       try {
         const token = getToken()
-        // Should return null gracefully when localStorage throws
         expect(token).toBeNull()
       } finally {
-        localStorage.getItem = originalGetItem
+        getItemSpy.mockRestore()
       }
     })
   })

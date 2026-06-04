@@ -28,9 +28,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
-        'common.sortByPlaceholder': 'Sort by...',
-        'common.ascendingShort': 'Asc',
-        'common.descendingShort': 'Desc',
+        'listVisualization.sortBy': 'Sort by...',
+        'listVisualization.asc': 'Asc',
+        'listVisualization.desc': 'Desc',
       }
       return translations[key] ?? key
     },

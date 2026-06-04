@@ -13,11 +13,15 @@ function readLegacyTestAuthToken(storage: Storage): string | null {
     return null
   }
 
-  for (const key of LEGACY_TEST_STORAGE_KEYS) {
-    const token = storage.getItem(key)?.trim()
-    if (token) {
-      return token
+  try {
+    for (const key of LEGACY_TEST_STORAGE_KEYS) {
+      const token = storage.getItem(key)?.trim()
+      if (token) {
+        return token
+      }
     }
+  } catch {
+    return null
   }
 
   return null

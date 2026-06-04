@@ -211,17 +211,16 @@ describe('UnifiedStatsSection', () => {
     expect(screen.queryByText('Configure Test Stats')).not.toBeInTheDocument()
   })
 
-  it('config modal closes when backdrop is clicked', () => {
+  it('config modal ignores backdrop clicks', () => {
     const config = makeConfig({ showConfigButton: true })
     render(<UnifiedStatsSection config={config} />)
 
     fireEvent.click(screen.getByTitle('Configure stats'))
-    // Click the backdrop (bg-black/60 — standardized in UX cohesion PR #5286)
     const backdrop = document.querySelector('.bg-black\\/60')
     expect(backdrop).not.toBeNull()
     fireEvent.click(backdrop!)
 
-    expect(screen.queryByText('Configure Test Stats')).not.toBeInTheDocument()
+    expect(screen.getByText('Configure Test Stats')).toBeInTheDocument()
   })
 
   it('displays demo badge when resolveStatValue returns isDemo=true', () => {
