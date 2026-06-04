@@ -64,4 +64,20 @@ describe('SnoozedMissionItem', () => {
     expect(screen.getByText('Investigate crash loops in the payments namespace')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'actions.restore' })).toBeInTheDocument()
   })
+
+  it('dismiss button has accessible title attribute', () => {
+    render(<SnoozedMissionItem mission={mission} onApply={vi.fn()} onDismiss={vi.fn()} />)
+
+    expect(screen.getByTitle('actions.dismiss')).toHaveAttribute('title', 'actions.dismiss')
+  })
+
+  it('calls onDismiss when dismiss button is clicked', () => {
+    const onDismiss = vi.fn()
+
+    render(<SnoozedMissionItem mission={mission} onApply={vi.fn()} onDismiss={onDismiss} />)
+
+    fireEvent.click(screen.getByTitle('actions.dismiss'))
+
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
 })
