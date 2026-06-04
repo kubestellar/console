@@ -29,6 +29,7 @@ vi.mock('../lib/cache', () => ({
   // are re-exported through useCachedData.ts; this stub prevents load failures
   // when the module is imported in tests that only mock useCache.
   createCachedHook: (_config: unknown) => () => mockUseCache(_config),
+  CONSECUTIVE_FAILURE_THRESHOLD: 3,
   REFRESH_RATES: {
     realtime: 15_000,
     pods: 30_000,

@@ -68,7 +68,7 @@ describe('useLayoutBanners', () => {
   })
 
   it('renders translated offline banner copy from i18n keys', () => {
-    const { result } = renderHook(() => useLayoutBanners(buildOptions()))
+    const { result } = renderHook(() => useLayoutBanners({ ...buildOptions(), isOnline: false }))
     const offlineBanner = result.current.visibleBanners.find((banner) => banner.id === 'offline')
 
     expect(offlineBanner).toBeDefined()

@@ -29,6 +29,7 @@ const mockSettledWithConcurrency = vi.fn()
 vi.mock('../../lib/cache', () => ({
   createCachedHook: (...args: unknown[]) => mockCreateCachedHook(...args),
   useCache: (...args: unknown[]) => mockUseCache(...args),
+  CONSECUTIVE_FAILURE_THRESHOLD: 3,
   REFRESH_RATES: {
     realtime: 15_000, pods: 30_000, clusters: 60_000,
     deployments: 60_000, services: 60_000, metrics: 45_000,
