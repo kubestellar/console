@@ -92,6 +92,7 @@ vi.mock('../../lib/clipboard', () => ({
 
 vi.mock('../../lib/api', () => ({
   api: { get: vi.fn().mockResolvedValue({ data: [] }) },
+  authFetch: vi.fn(),
   RateLimitError: class RateLimitError extends Error {},
 }))
 
@@ -155,7 +156,7 @@ describe('WhatsNewModal', () => {
 
   it('has Update now button', () => {
     render(<WhatsNewModal isOpen={true} onClose={onClose} />)
-    expect(screen.getByText('Update now')).toBeInTheDocument()
+    expect(screen.getByText('updates.updateNow')).toBeInTheDocument()
   })
 
   it('has Skip this version button', () => {

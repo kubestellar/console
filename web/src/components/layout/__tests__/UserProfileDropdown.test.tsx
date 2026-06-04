@@ -117,6 +117,7 @@ vi.mock('../../../lib/analytics', () => ({
 
 vi.mock('../../../lib/api', () => ({
   checkOAuthConfigured: vi.fn().mockResolvedValue({ oauthConfigured: true, backendUp: true }),
+  authFetch: vi.fn(),
 }))
 
 vi.mock('../../../lib/utils/localStorage', () => ({

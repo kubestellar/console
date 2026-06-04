@@ -8,6 +8,7 @@ const {
   mockSafeSetItem,
   mockSafeSetJSON,
   mockSafeRemoveItem,
+  mockGetStoredAuthToken,
 } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockRefreshUser: vi.fn(),
@@ -15,6 +16,7 @@ const {
   mockSafeSetItem: vi.fn(),
   mockSafeSetJSON: vi.fn(),
   mockSafeRemoveItem: vi.fn(),
+  mockGetStoredAuthToken: vi.fn(() => 'demo-token'),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -31,10 +33,15 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('../../../lib/api', () => ({
   api: { post: vi.fn() },
+  authFetch: vi.fn(),
 }))
 
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({ refreshUser: mockRefreshUser }),
+}))
+
+vi.mock('../../../lib/authToken', () => ({
+  getStoredAuthToken: () => mockGetStoredAuthToken(),
 }))
 
 vi.mock('../../../lib/utils/localStorage', () => ({
@@ -85,6 +92,8 @@ describe('Onboarding', () => {
     mockSafeSetItem.mockReturnValue(true)
     mockSafeSetJSON.mockReturnValue(true)
     mockRefreshUser.mockResolvedValue(undefined)
+    mockGetStoredAuthToken.mockReset()
+    mockGetStoredAuthToken.mockReturnValue(DEMO_TOKEN_VALUE)
   })
 
   it('exports Onboarding component', () => {

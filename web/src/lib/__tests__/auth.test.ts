@@ -78,6 +78,7 @@ vi.mock('../../hooks/mcp/shared', () => ({
 // ---------------------------------------------------------------------------
 const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 const STORAGE_KEY_TOKEN = 'token'
+const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
 
 function readStoredSessionToken(): string | null {
   const rawValue = sessionStorage.getItem(STORAGE_KEY_TOKEN)
@@ -905,19 +906,19 @@ describe('AuthProvider', () => {
 
   // ---------- Storage event listener ----------
 
-  it('updates token when storage event fires with new token', async () => {
+  it('updates token when auth sync event fires with a new session token', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
 
     const { result } = await renderWithAuthProvider()
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // Simulate a storage event (from another tab) with a new real token
     const newToken = 'refreshed-jwt-token'
     act(() => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, newToken)
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: newToken,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: JSON.stringify({ state: 'session', ts: Date.now() }),
       }))
     })
 
@@ -1160,7 +1161,7 @@ describe('AuthProvider', () => {
   // Behavior changed in #6065 — previously `null` was ignored; now the other
   // tab's logout is mirrored locally so both tabs end up logged out.
 
-  it('clears local auth state when storage event fires with null newValue (#6065)', async () => {
+  it('clears local auth state when auth sync event reports logout (#6065)', async () => {
     localStorage.setItem(STORAGE_KEY_TOKEN, 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
 
@@ -1177,20 +1178,16 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
-      // Clear the underlying storage first so the auth provider's null-newValue
-      // handler observes the same state a real cross-tab logout would present.
       localStorage.removeItem(STORAGE_KEY_TOKEN)
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: null,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: JSON.stringify({ state: 'cleared', ts: Date.now() }),
       }))
     })
 
-    // Local auth state must have been wiped
     expect(result.current.token).toBeNull()
     expect(result.current.user).toBeNull()
 
-    // Restore
     ;(window as unknown as { location: Location }).location = originalLocation
   })
 
