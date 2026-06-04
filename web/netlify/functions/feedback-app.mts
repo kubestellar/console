@@ -128,24 +128,8 @@ export default async function handler(request: Request): Promise<Response> {
     return jsonResponse(request, 401, { error: "Missing client credential" });
   }
 
-  // Pre-auth rate limit per IP to prevent token introspection flooding (CWE-770, #16646)
-  const clientIp =
-    request.headers.get("x-nf-client-connection-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown";
-  const preAuthRate = await enforceSimpleRateLimit({
-    storeName: RATE_LIMIT_STORE_NAME,
-    prefix: "feedback-preauth:",
-    subject: clientIp,
-    windowMs: FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
-    maxRequests: FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS,
-  });
-  if (preAuthRate.limited) {
-    return jsonResponse(request, 429, {
-      error: "Rate limit exceeded",
-      retryAfter: preAuthRate.retryAfterSeconds,
-    });
-  }
+  // Duplicate rate-limit block removed — the in-memory rate limiter at line 98
+  // already handles pre-auth rate limiting using getClientIp() (CWE-670, #16972).
 
   const url = new URL(request.url);
   const mode = url.searchParams.get("mode");
