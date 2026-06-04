@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { cleanup, renderHook, act, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -108,6 +108,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  cleanup()
   globalThis.fetch = originalFetch
   vi.useRealTimers()
 })
@@ -210,20 +211,19 @@ describe('useEvents', () => {
     ]
     mockFetchSSE.mockResolvedValue(fakeEvents)
 
-    const { result } = renderHook(() => useEvents())
+    const { result, unmount } = renderHook(() => useEvents())
     await waitFor(() => expect(result.current.events.length).toBeGreaterThan(0))
 
-    // Block next fetch so loading state is visible after reset
     mockFetchSSE.mockReturnValue(new Promise(() => {}))
 
-    // Trigger the real cache reset via the captured registerCacheReset callback
     const reset = capturedCacheResets.get('events')
     expect(reset).toBeDefined()
-    await act(async () => { reset!() })
+    act(() => { reset!() })
 
-    // Hook reacts: loading flag is set and visible data is cleared
     expect(result.current.isLoading).toBe(true)
     expect(result.current.events).toEqual([])
+
+    unmount()
   })
 
   it('handles SSE failure without surfacing an error (events are optional)', async () => {
@@ -370,9 +370,13 @@ describe('useEvents', () => {
 
     const { result } = renderHook(() => useEvents())
 
-    // With exponential backoff, consecutiveFailures is a useEffect dependency.
-    // Each failure triggers an effect re-run which immediately refetches,
-    // causing rapid cascading failures that quickly exceed the threshold.
+    await waitFor(() => expect(result.current.consecutiveFailures).toBe(1))
+
+    await act(async () => {
+      await result.current.refetch()
+      await result.current.refetch()
+    })
+
     await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
     expect(result.current.isFailed).toBe(true)
   })
@@ -714,19 +718,19 @@ describe('useWarningEvents', () => {
     ]
     mockFetchSSE.mockResolvedValue(fakeWarnings)
 
-    const { result } = renderHook(() => useWarningEvents())
+    const { result, unmount } = renderHook(() => useWarningEvents())
     await waitFor(() => expect(result.current.events.length).toBeGreaterThan(0))
 
-    // Block next fetch so loading state is visible after reset
     mockFetchSSE.mockReturnValue(new Promise(() => {}))
 
     const reset = capturedCacheResets.get('events')
     expect(reset).toBeDefined()
-    await act(async () => { reset!() })
+    act(() => { reset!() })
 
-    // Hook reacts to cache reset
     expect(result.current.isLoading).toBe(true)
     expect(result.current.events).toEqual([])
+
+    unmount()
   })
 
   it('sets error message on cold-cache SSE failure', async () => {

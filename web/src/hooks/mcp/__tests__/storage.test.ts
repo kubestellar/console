@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { cleanup, renderHook, act, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -159,6 +159,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  cleanup()
   globalThis.fetch = originalFetch
   vi.useRealTimers()
 })
@@ -232,20 +233,19 @@ describe('usePVCs', () => {
     ]
     globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: fakePVCs }), { status: 200 })))
 
-    const { result } = renderHook(() => usePVCs())
+    const { result, unmount } = renderHook(() => usePVCs())
     await waitFor(() => expect(result.current.pvcs.length).toBeGreaterThan(0))
 
-    // Block the next fetch so loading state is visible after reset
     globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
 
-    // Trigger the real cache reset via the captured registerCacheReset callback
     const reset = capturedCacheResets.get('storage')
     expect(reset).toBeDefined()
-    await act(async () => { reset!() })
+    act(() => { reset!() })
 
-    // Hook reacts: loading flag is set and visible data is cleared
     expect(result.current.isLoading).toBe(true)
     expect(result.current.pvcs).toEqual([])
+
+    unmount()
   })
 
   it('returns demo PVCs in demo mode', async () => {
@@ -260,11 +260,7 @@ describe('usePVCs', () => {
   })
 
   it('returns empty PVCs with error message on fetch failure', async () => {
-    // Reject once then hang — prevents the consecutiveFailures dep loop from
-    // saturating the microtask queue before waitFor can check the assertion.
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('fetch error'))
-      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fetch error'))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -278,6 +274,13 @@ describe('usePVCs', () => {
 // ===========================================================================
 
 describe('usePVs', () => {
+  beforeEach(() => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockIsClusterModeBackend.mockReturnValue(true)
+    mockClusterCacheRef.clusters = [
+      { name: 'c1', context: 'c1', reachable: true },
+    ]
+  })
   it('returns empty array with loading state on mount', () => {
     globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => usePVs())
@@ -332,13 +335,11 @@ describe('usePVs', () => {
   })
 
   it('returns empty list with error message on fetch failure', async () => {
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('network error'))
-      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => usePVs())
 
-    await waitFor(() => expect(result.current.error).toBe('network error'))
+    await waitFor(() => expect(result.current.error).toBe('Failed to fetch PVs from any cluster'))
     expect(result.current.pvs).toEqual([])
   })
 })
@@ -414,9 +415,7 @@ describe('useResourceQuotas', () => {
   })
 
   it('returns empty list with error: null on failure', async () => {
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('API error'))
-      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -483,9 +482,7 @@ describe('useLimitRanges', () => {
   })
 
   it('returns empty list with error: null on failure', async () => {
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('API error'))
-      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useLimitRanges())
 
@@ -728,8 +725,13 @@ describe('usePVCs - consecutive failure tracking', () => {
 
     const { result } = renderHook(() => usePVCs())
 
-    // With exponential backoff, consecutiveFailures in useEffect deps causes
-    // cascading re-fetches that quickly exceed the threshold
+    await waitFor(() => expect(result.current.consecutiveFailures).toBe(1))
+
+    await act(async () => {
+      await result.current.refetch()
+      await result.current.refetch()
+    })
+
     await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
     expect(result.current.isFailed).toBe(true)
   })
@@ -807,6 +809,13 @@ describe('usePVs - backend fetch timeout', () => {
 })
 
 describe('usePVs - additional edge cases', () => {
+  beforeEach(() => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockIsClusterModeBackend.mockReturnValue(true)
+    mockClusterCacheRef.clusters = [
+      { name: 'c1', context: 'c1', reachable: true },
+    ]
+  })
   it('handles API returning null pvs field', async () => {
     globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: null }), { status: 200 })))
 
@@ -831,7 +840,13 @@ describe('usePVs - additional edge cases', () => {
 
     const { result } = renderHook(() => usePVs())
 
-    // With exponential backoff, cascading effect re-runs quickly accumulate failures
+    await waitFor(() => expect(result.current.consecutiveFailures).toBe(1))
+
+    await act(async () => {
+      await result.current.refetch()
+      await result.current.refetch()
+    })
+
     await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
     expect(result.current.isFailed).toBe(true)
   })
@@ -1134,10 +1149,7 @@ describe('usePVCs — additional branches', () => {
     const { result } = renderHook(() => usePVCs())
     await waitFor(() => expect(result.current.pvcs).toHaveLength(1))
 
-    // Next fetch fails — hang subsequent calls to prevent cascade
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('server error'))
-      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('server error'))
     await act(async () => { await result.current.refetch() })
 
     // Should preserve cached data, not clear it
@@ -1168,6 +1180,13 @@ describe('usePVCs — additional branches', () => {
 })
 
 describe('usePVs — additional branches', () => {
+  beforeEach(() => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockIsClusterModeBackend.mockReturnValue(true)
+    mockClusterCacheRef.clusters = [
+      { name: 'c1', context: 'c1', reachable: true },
+    ]
+  })
   it('returns the complete return shape with all expected keys', async () => {
     globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [] }), { status: 200 })))
     const { result } = renderHook(() => usePVs())
@@ -1275,9 +1294,7 @@ describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
   })
 
   it('returns isDemoFallback: false when live API fails (empty, not demo)', async () => {
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('API error'))
-      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useResourceQuotas())
 

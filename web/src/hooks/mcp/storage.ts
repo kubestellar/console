@@ -336,36 +336,47 @@ export function usePVCs(cluster?: string, namespace?: string) {
   }, [cluster, namespace, cacheKey])
 
   useEffect(() => {
-    // Use a flag to prevent state updates if this effect is cleaned up
     let cancelled = false
 
     const doFetch = async () => {
       const hasCachedData = pvcsCache && pvcsCache.key === cacheKey
       if (!cancelled) {
-        await refetch(!!hasCachedData) // silent=true if we have cached data
+        await refetch(!!hasCachedData)
       }
     }
 
-    doFetch()
+    void doFetch()
 
-    // Poll for PVC updates (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
-      `pvcs:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
-      () => { if (!cancelled) refetch(true) },
-    )
-
-    // Register for unified mode transition refetch
     const unregisterRefetch = registerRefetch(`pvcs:${cacheKey}`, () => {
-      if (!cancelled) refetch(false)
+      if (!cancelled) {
+        void refetch(false)
+      }
     })
 
     return () => {
       cancelled = true
-      unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey, consecutiveFailures])
+  }, [cacheKey, refetch])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const unsubscribePolling = subscribePolling(
+      `pvcs:${cacheKey}`,
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
+      () => {
+        if (!cancelled) {
+          void refetch(true)
+        }
+      },
+    )
+
+    return () => {
+      cancelled = true
+      unsubscribePolling()
+    }
+  }, [cacheKey, consecutiveFailures, refetch])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -520,24 +531,21 @@ export function usePVs(cluster?: string) {
   }, [cluster])
 
   useEffect(() => {
-    refetch()
-    // Poll for PV updates (shared interval prevents duplicates across components)
-    const unsubscribePolling = subscribePolling(
+    void refetch()
+    return registerRefetch(`pvs:${cluster || 'all'}`, () => {
+      void refetch()
+    })
+  }, [cluster, refetch])
+
+  useEffect(() => {
+    return subscribePolling(
       `pvs:${cluster || 'all'}`,
       getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
-      () => refetch(),
+      () => {
+        void refetch()
+      },
     )
-
-    // Register for unified mode transition refetch
-    const unregisterRefetch = registerRefetch(`pvs:${cluster || 'all'}`, () => {
-      refetch()
-    })
-
-    return () => {
-      unsubscribePolling()
-      unregisterRefetch()
-    }
-  }, [refetch, cluster, consecutiveFailures])
+  }, [cluster, consecutiveFailures, refetch])
 
   return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
