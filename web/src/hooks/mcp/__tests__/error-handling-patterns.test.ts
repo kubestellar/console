@@ -44,22 +44,50 @@ describe('MCP hooks error propagation documentation', () => {
 })
 
 describe('intentional catch-and-fallback patterns are documented', () => {
-  const optionalDataHooks = [
-    { file: 'useKyverno.ts', tag: 'intentional' },
-    { file: 'useTrestle.ts', tag: 'intentional' },
-    { file: 'useKubescape.ts', tag: 'intentional' },
-    { file: 'useCachedLLMd.ts', tag: 'intentional' },
-    { file: 'useTokenUsage.ts', tag: 'intentional' },
+  interface DocumentedFallbackPattern {
+    file: string
+    documentation: RegExp[]
+    fallback: RegExp[]
+  }
+
+  const optionalDataHooks: DocumentedFallbackPattern[] = [
+    {
+      file: 'useKyverno.ts',
+      documentation: [/fall back to default/i],
+      fallback: [/return emptyStatus\(\s*cluster,\s*false/i, /return emptyStatus\(\s*cluster,\s*true,/i],
+    },
+    {
+      file: 'useTrestle.ts',
+      documentation: [/fall back to default/i, /JSON parse error, try next API group/i],
+      fallback: [/return emptyStatus\(\s*cluster,\s*false/i, /return emptyStatus\(\s*cluster,\s*true\)/i],
+    },
+    {
+      file: 'useKubescape.ts',
+      documentation: [/fall back to default/i],
+      fallback: [/return emptyStatus\(\s*cluster,\s*false/i, /return emptyStatus\(\s*cluster,\s*true,/i],
+    },
+    {
+      file: 'useCachedLLMd.ts',
+      documentation: [/Suppress demo mode errors - they're expected when agent is unavailable/i],
+      fallback: [/return \[\]/i],
+    },
+    {
+      file: 'useTokenUsage.ts',
+      documentation: [
+        /Corrupted settings JSON — fall back to defaults\./i,
+        /Ignore invalid data — start from zeroed byCategory\./i,
+        /prevent Firefox from firing unhandledrejection/i,
+      ],
+      fallback: [/response\.json\(\)\.catch\(\(\) => null\)/i, /Failures swallow silently/i],
+    },
   ]
 
-  for (const { file, tag } of optionalDataHooks) {
-    it(`${file} documents ${tag} fallback in catch blocks`, () => {
+  for (const { file, documentation, fallback } of optionalDataHooks) {
+    it(`${file} documents its current fallback behavior`, () => {
       const content = readFileSync(join(hooksRoot, file), 'utf-8')
-      const intentionalComments = content
-        .split('\n')
-        .filter(line => line.toLowerCase().includes(tag))
 
-      expect(intentionalComments.length).toBeGreaterThan(0)
+      expect(documentation.some(pattern => pattern.test(content))).toBe(true)
+      expect(fallback.some(pattern => pattern.test(content))).toBe(true)
     })
   }
 })
