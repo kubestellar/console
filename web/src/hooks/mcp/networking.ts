@@ -8,6 +8,7 @@ import { getStoredAuthToken } from '../../lib/authToken'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, getLocalAgentURL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { CONSECUTIVE_FAILURE_THRESHOLD } from '../../lib/cache'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { Service, Ingress, NetworkPolicy } from './types'
 import { getDemoIngresses } from '../useCachedData/demoData'
@@ -382,7 +383,7 @@ export function useServices(cluster?: string, namespace?: string) {
     error,
     refetch: () => refetch(false),
     consecutiveFailures,
-    isFailed: consecutiveFailures >= 3,
+    isFailed: consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD,
     lastRefresh,
   }
 }
@@ -536,7 +537,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
     refetch()
   }, [demoMode, refetch])
 
-  return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3, isDemoFallback }
+  return { ingresses, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD, isDemoFallback }
 }
 
 // Hook to get NetworkPolicies
@@ -655,7 +656,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
     refetch()
   }, [demoMode, refetch])
 
-  return { networkpolicies, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { networkpolicies, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD }
 }
 
 function getDemoServices(): Service[] {

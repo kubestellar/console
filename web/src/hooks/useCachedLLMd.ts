@@ -5,7 +5,7 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { createCachedHook, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { CONSECUTIVE_FAILURE_THRESHOLD, createCachedHook, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { KUBECTL_DEFAULT_TIMEOUT_MS, KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -343,7 +343,7 @@ export async function fetchLLMdServers(
 
 function computeLLMdStatus(servers: LLMdServer[], consecutiveFailures: number): LLMdStatus {
   return {
-    healthy: consecutiveFailures < 3,
+    healthy: consecutiveFailures < CONSECUTIVE_FAILURE_THRESHOLD,
     totalServers: servers.length,
     runningServers: servers.filter(s => s.status === 'running').length,
     stoppedServers: servers.filter(s => s.status === 'stopped').length,

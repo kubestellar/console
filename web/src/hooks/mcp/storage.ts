@@ -8,6 +8,7 @@ import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+import { CONSECUTIVE_FAILURE_THRESHOLD } from '../../lib/cache'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import { useClusterResourceQuery } from './useClusterResourceQuery'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
@@ -399,7 +400,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
     error,
     refetch: () => refetch(false),
     consecutiveFailures,
-    isFailed: consecutiveFailures >= 3,
+    isFailed: consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD,
     lastRefresh,
   }
 }
@@ -549,7 +550,7 @@ export function usePVs(cluster?: string) {
     )
   }, [cluster, consecutiveFailures, refetch])
 
-  return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD }
 }
 
 // Hook to get ResourceQuotas

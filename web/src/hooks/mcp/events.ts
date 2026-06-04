@@ -8,6 +8,7 @@ import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, getLocalAgentURL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { CONSECUTIVE_FAILURE_THRESHOLD } from '../../lib/cache'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { ClusterEvent } from './types'
 
@@ -270,7 +271,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     error,
     refetch: () => refetch(false),
     consecutiveFailures,
-    isFailed: consecutiveFailures >= 3,
+    isFailed: consecutiveFailures >= CONSECUTIVE_FAILURE_THRESHOLD,
     lastRefresh,
   }
 }

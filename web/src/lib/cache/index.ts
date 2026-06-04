@@ -43,6 +43,7 @@ export {
 
 export { createCachedHook } from './createCachedHook'
 export type { CreateCachedHookConfig } from './createCachedHook'
+export { CONSECUTIVE_FAILURE_THRESHOLD } from './constants'
 
 import { getEffectiveInterval } from './cacheCore'
 import { isEquivalentToInitial } from './cacheFallback'
