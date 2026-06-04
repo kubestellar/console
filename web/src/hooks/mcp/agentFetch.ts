@@ -5,7 +5,7 @@ import {
   MCP_HOOK_TIMEOUT_MS,
 } from '../../lib/constants'
 import { isLocalAgentSuppressed } from '../../lib/constants/network'
-import { clearToken, getToken, setToken } from '../../lib/secureTokenStore'
+import { clearToken } from '../../lib/secureTokenStore'
 import { resetAuthFailed } from './sharedImpl.connection'
 
 // Re-export as a live getter. LOCAL_AGENT_HTTP_URL is a mutable `let` that
@@ -28,40 +28,18 @@ let agentTokenFailureEmitted = false
 /** Timestamp of last negative result (empty/error) — used for short-TTL in-memory cache. */
 let agentTokenNegativeCacheUntil = 0
 
-// Best-effort migration cleanup for legacy plaintext tokens left in localStorage.
+// Best-effort cleanup for legacy tokens left in localStorage/sessionStorage.
+// Removes any stale persisted tokens from prior versions (CWE-922, #16903).
 function removeLegacyAgentToken(): void {
   try {
     clearToken(AGENT_TOKEN_STORAGE_KEY, localStorage)
   } catch {
     // localStorage may be unavailable in some embedded contexts — ignore.
   }
-}
-
-function getSessionAgentToken(): string {
-  try {
-    return getToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage) || ''
-  } catch {
-    return ''
-  }
-}
-
-function setSessionAgentToken(token: string): void {
-  try {
-    if (token) {
-      setToken(AGENT_TOKEN_STORAGE_KEY, token, undefined, sessionStorage)
-    } else {
-      clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
-    }
-  } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
-  }
-}
-
-function clearSessionAgentToken(): void {
   try {
     clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
   } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
+    // sessionStorage may be unavailable — ignore.
   }
 }
 
@@ -69,14 +47,8 @@ export function getStoredAgentToken(): string {
   if (inMemoryAgentToken) {
     return inMemoryAgentToken
   }
-
   removeLegacyAgentToken()
-
-  const sessionToken = getSessionAgentToken()
-  if (sessionToken) {
-    inMemoryAgentToken = sessionToken
-  }
-  return sessionToken
+  return ''
 }
 
 export function setAgentToken(token: string): void {
@@ -88,8 +60,6 @@ export function setAgentToken(token: string): void {
   if (token) {
     resetAuthFailed()
   }
-
-  setSessionAgentToken(token)
 }
 
 export function clearAgentToken(): void {
@@ -97,7 +67,6 @@ export function clearAgentToken(): void {
   agentTokenPromise = null
   agentTokenNegativeCacheUntil = 0
   removeLegacyAgentToken()
-  clearSessionAgentToken()
 }
 
 /** Reset internal getAgentToken state — exposed for tests only. */
@@ -110,7 +79,8 @@ export function _resetAgentTokenState(): void {
 
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
- * in memory and mirrored to expiring sessionStorage for same-tab reloads.
+ * in memory only — never persisted to storage (CWE-922, #16903).
+ * On page refresh the token is re-fetched from the agent.
  *
  * On Netlify / demo mode there is no kc-agent backend, so we skip the
  * fetch entirely to avoid 404 → HTML parse errors that pollute GA4
