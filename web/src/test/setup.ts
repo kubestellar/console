@@ -2,25 +2,6 @@ import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
-const mockAgentFetch = vi.hoisted(() => vi.fn())
-const mockMatchMedia = vi.hoisted(() => vi.fn())
-
-function restorePersistentTestMocks() {
-  mockAgentFetch.mockImplementation(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init))
-  mockMatchMedia.mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }))
-}
-
-restorePersistentTestMocks()
-
 // Mock react-i18next globally to prevent i18n.ts from failing when imported
 // by vite.config.ts or other modules. Uses importOriginal to get the real
 // initReactI18next object that i18n.ts needs.
@@ -63,8 +44,9 @@ afterEach(() => {
   cleanup()
   window.localStorage.clear()
   window.sessionStorage?.clear()
-  vi.resetAllMocks()
-  restorePersistentTestMocks()
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 
 // Mock agentFetch to delegate to global.fetch so test mocks intercept it
@@ -75,7 +57,10 @@ vi.mock('../hooks/mcp/shared', async () => {
   const actual = await vi.importActual<typeof import('../hooks/mcp/shared')>('../hooks/mcp/shared')
   return {
     ...actual,
-    agentFetch: mockAgentFetch,
+    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      // Delegate to global.fetch so test mocks intercept this call
+      return global.fetch(url, init)
+    }),
   }
 })
 
@@ -94,7 +79,16 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock, writabl
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: mockMatchMedia,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
 })
 
 // Mock IntersectionObserver
