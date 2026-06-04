@@ -223,7 +223,7 @@ export function useLayoutBanners({
               {t('common.offline')}
             </span>
             <span className="hidden truncate text-xs text-orange-400/70 lg:inline">
-              — Install: <code className="rounded bg-orange-500/20 px-1">brew install kubestellar/tap/kc-agent</code> → run <code className="rounded bg-orange-500/20 px-1">kc-agent</code>
+              — {t('layout.offlineInstallLabel')} <code className="rounded bg-orange-500/20 px-1">brew install kubestellar/tap/kc-agent</code> → {t('layout.offlineInstallRun')} <code className="rounded bg-orange-500/20 px-1">kc-agent</code>
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">

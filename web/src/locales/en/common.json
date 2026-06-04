@@ -4611,6 +4611,8 @@
     "hideAlerts": "Hide alerts",
     "switchTo": "Switch to",
     "demo": "Demo",
+    "offlineInstallLabel": "Install:",
+    "offlineInstallRun": "run",
     "connectionLost": "Connection lost",
     "connectionLostHint": "Could not reach the backend — restart the server to reconnect",
     "backendUnavailable": "Backend unavailable",
