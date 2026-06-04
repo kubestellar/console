@@ -15,7 +15,7 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('@/hooks/useModal', () => ({
-  useModal: () => ({ isOpen: false, open: vi.fn(), close: vi.fn() }),
+  useModal: () => ({ isOpen: false, open: vi.fn(), close: vi.fn(), toggle: vi.fn() }),
 }))
 
 const baseOptions = {
@@ -43,7 +43,7 @@ const baseOptions = {
 function renderBanners(overrides: Partial<typeof baseOptions> = {}) {
   const opts = { ...baseOptions, ...overrides }
   const { result } = renderHook(() => useLayoutBanners(opts))
-  const banners = result.current.activeBanners
+  const banners = result.current.visibleBanners
   // Render all banners
   const { container } = render(<>{banners.map(b => <div key={b.id}>{b.content}</div>)}</>)
   return { banners, container }

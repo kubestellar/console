@@ -794,7 +794,7 @@ describe('usePVs - backend fetch timeout', () => {
     const timeoutSignal = new AbortController().signal
     const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeoutSignal)
     const timeoutError = new DOMException('The operation timed out', 'TimeoutError')
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     globalThis.fetch = vi.fn().mockRejectedValue(timeoutError)
 
     const { result } = renderHook(() => usePVs())
@@ -804,7 +804,7 @@ describe('usePVs - backend fetch timeout', () => {
     expect(timeoutSpy).toHaveBeenCalledWith(FETCH_DEFAULT_TIMEOUT_MS)
     expect(result.current.pvs).toEqual([])
     expect(result.current.error).toBe('Failed to fetch PVs from any cluster')
-    expect(warnSpy).toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalled()
   })
 })
 
