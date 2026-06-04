@@ -1,4 +1,5 @@
 /**
+ * @vitest-environment node
  * Vitest unit tests for quantum-proxy.mts Netlify function (#15626, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

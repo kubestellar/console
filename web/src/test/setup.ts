@@ -2,6 +2,9 @@ import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
+// Check if we're running in a browser-like environment (jsdom)
+const isBrowserEnvironment = typeof window !== 'undefined'
+
 // Mock react-i18next globally to prevent i18n.ts from failing when imported
 // by vite.config.ts or other modules. Uses importOriginal to get the real
 // initReactI18next object that i18n.ts needs.
@@ -41,12 +44,18 @@ vi.mock('react-i18next', async () => {
 
 // Cleanup after each test
 afterEach(() => {
-  cleanup()
-  window.localStorage.clear()
-  window.sessionStorage?.clear()
+  // cleanup() is React Testing Library specific — only call in browser env
+  if (isBrowserEnvironment) {
+    cleanup()
+    window.localStorage?.clear()
+    window.sessionStorage?.clear()
+  }
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
-  vi.restoreAllMocks()
+  // Use resetAllMocks instead of restoreAllMocks to preserve vi.mock module mocks
+  // while still clearing mock call history and return values.
+  // restoreAllMocks() undoes vi.spyOn and can interfere with test-level mocks.
+  vi.resetAllMocks()
 })
 
 // Mock agentFetch to delegate to global.fetch so test mocks intercept it
@@ -64,32 +73,35 @@ vi.mock('../hooks/mcp/shared', async () => {
   }
 })
 
-// Mock localStorage
-const localStorageStore: Record<string, string> = {}
-const localStorageMock = {
-  getItem: (key: string) => localStorageStore[key] ?? null,
-  setItem: (key: string, value: string) => { localStorageStore[key] = String(value) },
-  removeItem: (key: string) => { delete localStorageStore[key] },
-  clear: () => { Object.keys(localStorageStore).forEach(k => delete localStorageStore[k]) },
-  key: (index: number) => Object.keys(localStorageStore)[index] ?? null,
-  get length() { return Object.keys(localStorageStore).length },
-}
-Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true })
+// Browser-specific mocks — only apply in jsdom environment
+if (isBrowserEnvironment) {
+  // Mock localStorage
+  const localStorageStore: Record<string, string> = {}
+  const localStorageMock = {
+    getItem: (key: string) => localStorageStore[key] ?? null,
+    setItem: (key: string, value: string) => { localStorageStore[key] = String(value) },
+    removeItem: (key: string) => { delete localStorageStore[key] },
+    clear: () => { Object.keys(localStorageStore).forEach(k => delete localStorageStore[k]) },
+    key: (index: number) => Object.keys(localStorageStore)[index] ?? null,
+    get length() { return Object.keys(localStorageStore).length },
+  }
+  Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true })
 
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-})
+  // Mock window.matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+}
 
 // Mock IntersectionObserver
 Object.defineProperty(globalThis, 'IntersectionObserver', {

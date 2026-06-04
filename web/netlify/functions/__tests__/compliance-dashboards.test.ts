@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment node
+ */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   makeIdentityRequest,

@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment node
+ *
  * Vitest handler tests for github-pipelines.mts (#15397, Part of #4189).
  *
  * Run from web/: npm run test:netlify-github-cluster

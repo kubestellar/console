@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for nps.mts Netlify function (#15633, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
