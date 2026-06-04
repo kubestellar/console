@@ -345,9 +345,6 @@ func TestDeleteToken_RejectsNonAdmin(t *testing.T) {
 
 	app.Delete("/api/github/token", func(c *fiber.Ctx) error {
 		c.Locals("userID", userID)
-		if err := RequireAdmin(c, mockStore); err != nil {
-			return err
-		}
 		return h.DeleteToken(c)
 	})
 
@@ -378,9 +375,6 @@ func TestDeleteToken_AllowsAdmin(t *testing.T) {
 
 	app.Delete("/api/github/token", func(c *fiber.Ctx) error {
 		c.Locals("userID", userID)
-		if err := RequireAdmin(c, mockStore); err != nil {
-			return err
-		}
 		return h.DeleteToken(c)
 	})
 
