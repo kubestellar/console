@@ -134,9 +134,10 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 
 	slog.Debug("[QuantumProxy] Response received", "status", resp.StatusCode, "content_type", resp.Header.Get("Content-Type"), "body_size", len(body))
 
-	// Set response headers and status
+	// Force safe content type to prevent XSS via reflected Content-Type (CWE-79, #17004)
 	c.Status(resp.StatusCode)
-	c.Set("Content-Type", resp.Header.Get("Content-Type"))
+	c.Set("Content-Type", "application/json")
+	c.Set("X-Content-Type-Options", "nosniff")
 
 	return c.Send(body)
 }
@@ -292,9 +293,10 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 
 	slog.Debug("[QuantumProxy] Response received", "status", resp.StatusCode, "content_type", resp.Header.Get("Content-Type"), "body_size", len(body))
 
-	// Set response headers and status
+	// Force safe content type to prevent XSS via reflected Content-Type (CWE-79, #17004)
 	c.Status(resp.StatusCode)
-	c.Set("Content-Type", resp.Header.Get("Content-Type"))
+	c.Set("Content-Type", "application/json")
+	c.Set("X-Content-Type-Options", "nosniff")
 
 	return c.Send(body)
 }

@@ -59,6 +59,8 @@ func TestServer_ValidateBaseURL(t *testing.T) {
 		{"http://172.16.0.1:11434", false},
 		{"http://192.168.1.100:8080", false},
 		{"http://127.0.0.1:11434", false},
+		{"http://0.0.0.0:11434", false},
+		{"http://[::]:8080", false},
 		{"http://169.254.169.254/latest/meta-data", false},
 		// Syntactic failures
 		{"missing-scheme", false},
