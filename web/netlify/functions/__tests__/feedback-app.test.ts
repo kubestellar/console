@@ -128,26 +128,7 @@ describe("feedback-app", () => {
   // Body and input validation checks
   // Note: The handler rejects oversized bodies BEFORE calling verifyClientAuth.
   // This is intentional DoS prevention — expensive auth is skipped for invalid payloads.
-  it("returns 413 for oversized request body based on content-length header", async () => {
-    mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
-    const hugeLength = 200_000;
-    const res = await handler(
-      makeNetlifyRequest("/feedback-app", {
-        method: "POST",
-        headers: {
-          "x-kc-client-auth": "valid_token",
-          "content-length": String(hugeLength),
-        },
-      })
-    );
-    expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
-    const body = await readJson<{ error: string }>(res);
-    expect(body.error).toBe("Request body too large");
-    // Auth is never reached — handler short-circuits before verifyClientAuth
-    expect(mockVerifyClientAuth).not.toHaveBeenCalled();
-  });
-
-  it("returns 413 when request body text is oversized", async () => {
+  it("returns 413 for oversized request body based on actual bytes read", async () => {
     mockVerifyClientAuth.mockResolvedValue({ login: "user1", id: 1234 });
     const largeBodyText = "a".repeat(102_401);
     const req = new Request("https://example.test/feedback-app", {
@@ -174,16 +155,22 @@ describe("feedback-app", () => {
 
   it("returns 413 (not 401) when body is oversized even with invalid auth — DoS prevention ordering", async () => {
     mockVerifyClientAuth.mockRejectedValue(new Error("Invalid token"));
-    const hugeLength = 200_000;
-    const res = await handler(
-      makeNetlifyRequest("/feedback-app", {
-        method: "POST",
-        headers: {
-          "x-kc-client-auth": "will_fail_auth",
-          "content-length": String(hugeLength),
-        },
-      })
-    );
+    const largeBodyText = "a".repeat(102_401);
+    const req = new Request("https://example.test/feedback-app", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:5174",
+        "x-kc-client-auth": "will_fail_auth",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        repoOwner: "kubestellar",
+        repoName: "console",
+        title: "Test",
+        body: largeBodyText,
+      }),
+    });
+    const res = await handler(req);
     // Body-size rejection takes priority over auth verification
     expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
     expect(mockVerifyClientAuth).not.toHaveBeenCalled();

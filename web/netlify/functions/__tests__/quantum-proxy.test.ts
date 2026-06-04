@@ -435,15 +435,16 @@ describe("quantum-proxy", () => {
       expect(res.headers.get("X-Sensitive-Upstream-Header")).toBeNull();
     });
 
-    it("returns 413 when request body content-length exceeds MAX_PROXY_BODY_BYTES", async () => {
+    it("returns 413 when request body exceeds MAX_PROXY_BODY_BYTES", async () => {
       const bearerToken = await createSignedJwt();
-      const hugeBodyLength = MAX_PROXY_BODY_BYTES + 1;
-      const req = makeNetlifyRequest("/.netlify/functions/quantum-proxy/execute", {
+      const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
         headers: {
+          Origin: TEST_CORS_ORIGIN,
           authorization: `Bearer ${bearerToken}`,
-          "content-length": String(hugeBodyLength),
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({ circuit: "x".repeat(MAX_PROXY_BODY_BYTES + 1) }),
       });
       const res = await handler(req, contextWithEnv);
       expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);

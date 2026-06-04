@@ -44,9 +44,7 @@ afterEach(() => {
   cleanup()
   window.localStorage.clear()
   window.sessionStorage?.clear()
-  vi.unstubAllGlobals()
-  vi.unstubAllEnvs()
-  vi.restoreAllMocks()
+  vi.clearAllMocks()
 })
 
 // Mock agentFetch to delegate to global.fetch so test mocks intercept it
