@@ -292,12 +292,12 @@ export default async (req: Request) => {
   }
 
   // ── Layer 1: Blobs cache (fastest, no network) ───────────────────────
-  let blobResult: { detectedIds: string[]; fresh: boolean } | null = null;
-  if (!force) {
-    blobResult = await readBlobCache(repo);
-    if (blobResult?.fresh) {
-      return badgeResponse(blobResult.detectedIds, origin);
-    }
+  // Always read blob cache — even with force=true we need stale data as a
+  // fallback to prevent force requests from falling through to direct GitHub
+  // when the scan endpoint is rate-limited (CWE-770 mitigation).
+  const blobResult = await readBlobCache(repo);
+  if (!force && blobResult?.fresh) {
+    return badgeResponse(blobResult.detectedIds, origin);
   }
 
   // ── Layer 2: scan endpoint ────────────────────────────────────────────
@@ -310,23 +310,34 @@ export default async (req: Request) => {
       console.error('[acmm-badge] blob cache write failed', err instanceof Error ? err.message : err)
     });
   } catch {
-    // scan endpoint unreachable — try direct GitHub
+    // scan endpoint unreachable or rate-limited.
+    // When force=true, do NOT fall through to direct GitHub — return stale
+    // blob data instead. This prevents force=true from being used to bypass
+    // the scan endpoint's per-minute rate limit and exhaust GitHub API quota.
+    if (force && blobResult) {
+      return badgeResponse(blobResult.detectedIds, origin);
+    }
   }
 
   if (detectedIds) {
     return badgeResponse(detectedIds, origin);
   }
 
-  // ── Layer 3: direct GitHub ────────────────────────────────────────────
-  const token = process.env.GITHUB_TOKEN || "";
-  try {
-    detectedIds = await fetchDetectedIdsDirect(repo, token);
-    writeBlobCache(repo, detectedIds).catch((err) => {
-      console.error('[acmm-badge] blob cache write failed', err instanceof Error ? err.message : err)
-    });
-    return badgeResponse(detectedIds, origin);
-  } catch {
-    // direct GitHub also failed
+  // ── Layer 3: direct GitHub (only for non-force cache misses) ──────────
+  // force=true requests are not allowed to reach this layer — they must be
+  // satisfied by the scan endpoint or stale blob cache. This prevents
+  // repeated force requests from burning GitHub API quota (CWE-770).
+  if (!force) {
+    const token = process.env.GITHUB_TOKEN || "";
+    try {
+      detectedIds = await fetchDetectedIdsDirect(repo, token);
+      writeBlobCache(repo, detectedIds).catch((err) => {
+        console.error('[acmm-badge] blob cache write failed', err instanceof Error ? err.message : err)
+      });
+      return badgeResponse(detectedIds, origin);
+    } catch {
+      // direct GitHub also failed
+    }
   }
 
   // ── Layer 4: stale Blob fallback (better than "unavailable") ──────────
