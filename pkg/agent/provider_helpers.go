@@ -16,6 +16,10 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 const aiProviderDialTimeout = 30 * time.Second
 const aiProviderDNSLookupTimeout = 3 * time.Second
 
+// allowLoopbackForTests disables the private-IP check for loopback addresses
+// during unit tests that use httptest.NewServer. Must never be set in production.
+var allowLoopbackForTests bool
+
 // cliProviderExecutionTimeout bounds standalone CLI-based providers when the
 // caller has not already attached a deadline.
 const cliProviderExecutionTimeout = 5 * time.Minute
@@ -23,10 +27,6 @@ const cliProviderExecutionTimeout = 5 * time.Minute
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
 var aiProviderHTTPClient = newRestrictedAIProviderHTTPClient(aiProviderHTTPTimeout)
-
-// allowLoopbackForTests disables the private-IP check for 127.0.0.0/8 and ::1
-// during unit tests that use httptest.NewServer. Must never be set in production.
-var allowLoopbackForTests bool
 
 var explicitNegativeConstraintPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),

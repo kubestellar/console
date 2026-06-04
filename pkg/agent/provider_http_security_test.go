@@ -15,6 +15,11 @@ const testAIProviderHTTPTimeout = 2 * time.Second
 func TestRestrictedAIProviderHTTPClientBlocksPrivateTargets(t *testing.T) {
 	t.Setenv("ALLOW_LOCAL_PROVIDERS", "")
 
+	// Temporarily disable the test loopback bypass so we can verify
+	// that the SSRF protection actually blocks private IPs.
+	allowLoopbackForTests = false
+	t.Cleanup(func() { allowLoopbackForTests = true })
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("request should have been blocked before reaching the server")
 	}))
