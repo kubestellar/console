@@ -209,17 +209,22 @@ export function DraftsTab({
               </span>
               {recentlyDeletedOpen && (
                 showEmptyAllConfirm ? (
-                  <span role="group" className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <span
+                    role="group"
+                    className={cn('flex items-center gap-1.5', TOUCH_TARGET_HEIGHT_CLASS)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     <span className="text-xs text-muted-foreground">{t('drafts.emptyAllConfirm', 'Remove all?')}</span>
                     <button
                       onClick={() => { onEmptyRecentlyDeleted(); setShowEmptyAllConfirm(false); showToast(t('drafts.permanentlyDeletedAll', 'All deleted drafts removed'), 'success') }}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors min-h-11 min-w-11"
+                      className={cn('inline-flex items-center justify-center text-xs text-red-400 transition-colors hover:text-red-300', TOUCH_TARGET_SIZE_CLASS)}
                     >
                       {t('drafts.confirm', 'Confirm')}
                     </button>
                     <button
                       onClick={() => setShowEmptyAllConfirm(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11"
+                      className={cn('inline-flex items-center justify-center text-xs text-muted-foreground transition-colors hover:text-foreground', TOUCH_TARGET_SIZE_CLASS)}
                     >
                       {t('drafts.cancel', 'Cancel')}
                     </button>
