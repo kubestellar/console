@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
-const { mockAgentFetch, mockUseCache } = vi.hoisted(() => ({
+const { mockAgentFetch, mockUseCache, createCachedHookState } = vi.hoisted(() => ({
   mockAgentFetch: vi.fn(),
   mockUseCache: vi.fn(() => ({
     data: null,
@@ -18,6 +18,7 @@ const { mockAgentFetch, mockUseCache } = vi.hoisted(() => ({
     lastRefresh: null,
     refetch: vi.fn(),
   })),
+  createCachedHookState: { config: null as { fetcher: () => Promise<unknown> } | null },
 }))
 
 const mockCreateCachedHook = vi.hoisted(() => vi.fn())
@@ -37,6 +38,7 @@ vi.mock('../useDemoMode', () => ({
 vi.mock('../../lib/cache', () => ({
   createCachedHook: (config: Record<string, unknown>) => {
     mockCreateCachedHook(config)
+    createCachedHookState.config = config as { fetcher: () => Promise<unknown> }
     return () => {
       const result = mockUseCache(config)
       return {
@@ -261,7 +263,10 @@ describe('fetchContainerdStatus (fetcher)', () => {
 
   function captureFetcher(): () => Promise<unknown> {
     renderHook(() => useCachedContainerd())
-    const config = mockCreateCachedHook.mock.calls[0]?.[0] as { fetcher: () => Promise<unknown> }
+    const config = createCachedHookState.config
+    if (!config) {
+      throw new Error('Expected createCachedHook config to be captured')
+    }
     return config.fetcher
   }
 

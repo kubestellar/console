@@ -93,6 +93,8 @@ vi.mock('../../../lib/analytics', () => ({
   emitAgentTokenFailure: mockEmitAgentTokenFailure,
 }))
 
+vi.unmock('../agentFetch')
+
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks)
 // ---------------------------------------------------------------------------

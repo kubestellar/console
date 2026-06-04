@@ -36,6 +36,8 @@ vi.mock('../../../lib/constants/network', async (importOriginal) => {
   }
 })
 
+vi.unmock('../agentFetch')
+
 import { agentFetch, clearAgentToken, getStoredAgentToken, setAgentToken, _resetAgentTokenState } from '../agentFetch'
 
 const TOKEN_VALUE = 'test-agent-token-abc123'
