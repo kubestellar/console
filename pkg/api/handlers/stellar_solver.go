@@ -60,6 +60,7 @@ type solverStorageAdapter struct {
 // satisfies. This avoids ballooning StellarStore for features still settling.
 type solveFullStore interface {
 	CreateSolve(ctx context.Context, solve *store.StellarSolve) error
+	CreateSolveIfNoneActive(ctx context.Context, solve *store.StellarSolve) (*store.StellarSolve, bool, error)
 	UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error
 	IncrementSolveActions(ctx context.Context, solveID string) error
 	GetActiveSolveForEvent(ctx context.Context, eventID string) (*store.StellarSolve, error)
@@ -620,16 +621,6 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
 	}
 
-	// Idempotent return for an already-running solve.
-	active, _ := full.GetActiveSolveForEvent(ctx, eventID)
-	if active != nil {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"solveId":  active.ID,
-			"status":   active.Status,
-			"existing": true,
-		})
-	}
-
 	// Demo-mode / no-cluster-client → solve is meaningless. Refuse cleanly.
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusPreconditionFailed).JSON(fiber.Map{
@@ -649,8 +640,19 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		Summary:   "AI mission triggered.",
 		StartedAt: time.Now().UTC(),
 	}
-	if err := full.CreateSolve(ctx, solve); err != nil {
+
+	// Atomic check-and-insert prevents TOCTOU race where concurrent requests
+	// both observe no active solve and create duplicates (CWE-362, #16983).
+	solve, created, err := full.CreateSolveIfNoneActive(ctx, solve)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to start solve"})
+	}
+	if !created {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"solveId":  solve.ID,
+			"status":   solve.Status,
+			"existing": true,
+		})
 	}
 
 	safeNotifCluster := renderUntrustedPromptData("stellar-notification-cluster", notif.Cluster)

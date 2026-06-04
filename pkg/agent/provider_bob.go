@@ -189,12 +189,14 @@ func (b *BobProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse
 	// Build prompt with history for context
 	fullPrompt := b.buildPromptWithHistory(req)
 
-	// Build command: bob "prompt" --yolo -o json
+	// Build command: bob --yolo -o json -- "prompt"
 	// --yolo: auto-approve all tool actions so Bob can execute commands non-interactively
+	// "--" prevents prompt from being interpreted as a flag (CWE-88, #17003)
 	args := []string{
-		fullPrompt,
 		"--yolo",
 		"-o", "json",
+		"--",
+		fullPrompt,
 	}
 
 	cmd := exec.CommandContext(ctx, b.cliPath, args...)

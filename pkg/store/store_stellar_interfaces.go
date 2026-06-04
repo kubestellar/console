@@ -113,6 +113,7 @@ type StellarObservationStore interface {
 // StellarSolveStore manages solve attempts.
 type StellarSolveStore interface {
 	CreateSolve(ctx context.Context, solve *StellarSolve) error
+	CreateSolveIfNoneActive(ctx context.Context, solve *StellarSolve) (*StellarSolve, bool, error)
 	GetSolveByID(ctx context.Context, id string) (*StellarSolve, error)
 	GetActiveSolveForEvent(ctx context.Context, eventID string) (*StellarSolve, error)
 	GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*StellarSolve, error)
