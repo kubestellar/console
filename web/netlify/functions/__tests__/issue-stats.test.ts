@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vitest handler tests for issue-stats.mts (#15397, Part of #4189).
  */

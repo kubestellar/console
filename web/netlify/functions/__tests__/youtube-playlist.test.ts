@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vitest unit tests for youtube-playlist.mts Netlify function (#15655, Part of #4189).
  *

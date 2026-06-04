@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vitest handler tests for missions-browse.mts (#15403, Part of #4189).
  */

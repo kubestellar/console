@@ -12,6 +12,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../lib/modals', () => ({
   ConfirmDialog: () => null,
+  useModalFocusTrap: vi.fn(),
 }))
 
 vi.mock('../ui/StatusBadge', () => ({

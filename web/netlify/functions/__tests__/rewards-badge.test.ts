@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vitest unit tests for rewards-badge.mts Netlify function (#15951, Part of #4189).
  *

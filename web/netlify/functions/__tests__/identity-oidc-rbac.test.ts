@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vitest handler tests for identity OIDC + RBAC Netlify functions (#15399, Part of #4189).
  *

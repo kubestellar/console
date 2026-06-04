@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Vitest handler tests for identity sessions + RBAC bindings Netlify functions (#16128).
  *

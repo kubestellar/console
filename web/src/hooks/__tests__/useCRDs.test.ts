@@ -198,6 +198,7 @@ const LIVE_CRDS: CRDData[] = [
 ]
 
 function resetState() {
+  vi.stubGlobal('fetch', mockFetch)
   vi.clearAllMocks()
   vi.useFakeTimers({ shouldAdvanceTime: true })
   localStorage.clear()
