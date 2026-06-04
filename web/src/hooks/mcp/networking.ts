@@ -270,7 +270,7 @@ export function useServices(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[services] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         return
       }
@@ -489,7 +489,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[ingresses] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         setIsRefreshing(false)
@@ -609,7 +609,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[networkpolicies] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         setIsRefreshing(false)

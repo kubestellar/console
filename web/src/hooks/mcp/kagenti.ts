@@ -159,7 +159,7 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
     return await res.json()
   } catch (err: unknown) {
     clearTimeout(tid)
-    console.warn(`[kagenti] fetch failed for ${path} (cluster: ${cluster}):`, err)
+    console.error(`[kagenti] fetch failed for ${path} (cluster: ${cluster}):`, err)
     // If already classified (from !res.ok branch), re-throw as-is
     if (err instanceof Error && !(/^TypeError/.test(err.constructor.name) || err.name === 'AbortError')) {
       throw err

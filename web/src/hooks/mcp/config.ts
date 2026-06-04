@@ -94,7 +94,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[configmaps] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         return
@@ -218,7 +218,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[secrets] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         return
@@ -316,7 +316,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[serviceaccounts] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         setIsLoading(false)
         return

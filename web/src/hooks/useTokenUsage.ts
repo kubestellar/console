@@ -712,6 +712,7 @@ export function useTokenUsage() {
         const parsedSettings = JSON.parse(settings)
         updateSharedUsage(parsedSettings)
       } catch (err) {
+        // Non-critical: malformed optional storage event data; skip processing and continue
         console.warn('[TokenUsage] Ignoring malformed settings JSON from storage event:', err)
       }
     }

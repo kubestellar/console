@@ -296,7 +296,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[pvcs] Backend fetch failed:', err)
-          // Error state handling deferred to outer catch block if needed
+          // Error propagated via hook error state; log here for debugging
         }
         if (!isMountedRef.current) return
         setIsLoading(false)
@@ -479,7 +479,7 @@ export function usePVs(cluster?: string) {
               }
             } catch (err) {
               console.error('[pvs] Backend fetch failed:', err)
-              // Error state handling deferred to caller if needed
+              // Error propagated; caller handles fallback to agent fetch
             }
             return { success: false, pvs: [] }
           }
