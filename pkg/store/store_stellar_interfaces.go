@@ -129,7 +129,7 @@ type StellarSolveStore interface {
 // StellarActivityStore manages Stellar activity log entries.
 type StellarActivityStore interface {
 	LogActivity(ctx context.Context, activity *StellarActivity) error
-	ListActivity(ctx context.Context, limit int) ([]StellarActivity, error)
+	ListActivity(ctx context.Context, userID string, limit int) ([]StellarActivity, error)
 }
 
 // StellarProviderConfigStore manages per-user provider settings.

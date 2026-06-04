@@ -229,15 +229,15 @@ func (s *SQLiteStore) LogActivity(ctx context.Context, a *StellarActivity) error
 	return err
 }
 
-// ListActivity returns recent activity, newest first, capped by limit.
-func (s *SQLiteStore) ListActivity(ctx context.Context, limit int) ([]StellarActivity, error) {
+// ListActivity returns recent activity for a specific user, newest first, capped by limit.
+func (s *SQLiteStore) ListActivity(ctx context.Context, userID string, limit int) ([]StellarActivity, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, user_id, ts, kind, event_id, solve_id, cluster, namespace, workload, title, detail, severity
-		FROM stellar_activity ORDER BY ts DESC LIMIT ?
-	`, limit)
+		FROM stellar_activity WHERE user_id = ? ORDER BY ts DESC LIMIT ?
+	`, userID, limit)
 	if err != nil {
 		return nil, err
 	}

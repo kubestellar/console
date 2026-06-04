@@ -813,7 +813,7 @@ func (m *MockStore) CountRecentEventsForResource(_ context.Context, _, _, _ stri
 }
 
 func (m *MockStore) LogActivity(_ context.Context, _ *store.StellarActivity) error { return nil }
-func (m *MockStore) ListActivity(_ context.Context, _ int) ([]store.StellarActivity, error) {
+func (m *MockStore) ListActivity(_ context.Context, _ string, _ int) ([]store.StellarActivity, error) {
 	return nil, nil
 }
 

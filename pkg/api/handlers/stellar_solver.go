@@ -79,7 +79,7 @@ type solveFullStore interface {
 	GetExecutionsByDedupeSince(ctx context.Context, dedupeKey string, since time.Time) ([]store.StellarExecution, error)
 
 	LogActivity(ctx context.Context, a *store.StellarActivity) error
-	ListActivity(ctx context.Context, limit int) ([]store.StellarActivity, error)
+	ListActivity(ctx context.Context, userID string, limit int) ([]store.StellarActivity, error)
 	GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*store.StellarSolve, error)
 }
 
@@ -128,11 +128,15 @@ func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivi
 }
 
 // ListActivity is the GET /api/stellar/activity handler — returns recent
-// entries from Stellar's first-person activity log.
+// entries from Stellar's first-person activity log scoped to the caller.
 func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
 	full, ok := h.fullStore()
 	if !ok {
 		return c.JSON(fiber.Map{"items": []store.StellarActivity{}})
+	}
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
 	}
 	limit := 100
 	if raw := c.Query("limit"); raw != "" {
@@ -140,7 +144,7 @@ func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
 			limit = v
 		}
 	}
-	items, err := full.ListActivity(c.UserContext(), limit)
+	items, err := full.ListActivity(c.UserContext(), userID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load activity"})
 	}
@@ -609,6 +613,11 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 	}
 	if notif == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "event not found"})
+	}
+	// Ownership check: prevent IDOR — only the notification owner can trigger
+	// AI remediation against their resources (CWE-639, #16969).
+	if notif.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
 	}
 
 	// Idempotent return for an already-running solve.
