@@ -75,9 +75,14 @@ describe('useLayoutBanners', () => {
 
     render(<MemoryRouter>{offlineBanner?.content}</MemoryRouter>)
 
+    const offlineInstallCopy = screen.getByText((_, element) =>
+      element?.textContent?.includes('translated:layout.offlineInstallLabel')
+      && element.textContent.includes('translated:layout.offlineInstallRun'),
+    )
+
     expect(screen.getByText('translated:common.offline')).toBeInTheDocument()
-    expect(screen.getByText('translated:layout.offlineInstallLabel')).toBeInTheDocument()
-    expect(screen.getByText('translated:layout.offlineInstallRun')).toBeInTheDocument()
+    expect(offlineInstallCopy).toHaveTextContent('translated:layout.offlineInstallLabel')
+    expect(offlineInstallCopy).toHaveTextContent('translated:layout.offlineInstallRun')
   })
 
   it('calls t with the offline banner translation keys', () => {
