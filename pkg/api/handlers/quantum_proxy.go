@@ -189,7 +189,8 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	slog.Debug("[QuantumProxy] Histogram response received", "status", resp.StatusCode, "content_type", resp.Header.Get("Content-Type"), "body_size", len(body))
 
 	c.Status(resp.StatusCode)
-	c.Set("Content-Type", resp.Header.Get("Content-Type"))
+	// Force safe Content-Type to prevent XSS via upstream-controlled headers (CWE-79).
+	c.Set("Content-Type", "application/json; charset=utf-8")
 
 	return c.Send(body)
 }

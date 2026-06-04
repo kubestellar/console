@@ -445,12 +445,14 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	// feedback loops (AGENTS.md, workflows) and search for code exploration.
 	// Bash covers git, gh CLI, and shell commands for PR creation.
 	// --max-turns limits agentic loops (workaround for CLI bug with duplicate tool_use IDs)
+	// "--" prevents prompt from being interpreted as a flag (CWE-88, #17016)
 	args := []string{
 		"-p",
 		"--output-format", "stream-json",
 		"--verbose",
 		"--allowedTools", "Bash,Read,Write,Edit,Glob,Grep",
 		"--max-turns", "25",
+		"--",
 		fullPrompt,
 	}
 
@@ -644,10 +646,12 @@ Command output:
 Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 
 		// Make a simple non-agentic call to analyze the output (no tools)
+		// "--" prevents prompt from being interpreted as a flag (CWE-88, #17016)
 		analysisArgs := []string{
 			"-p",
 			"--output-format", "stream-json",
 			"--allowedTools", "", // Disable all tools for pure text analysis
+			"--",
 			analysisPrompt,
 		}
 
