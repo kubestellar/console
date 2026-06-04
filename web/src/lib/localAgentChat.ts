@@ -31,7 +31,7 @@ export async function localAgentChat(prompt: string, options: LocalAgentChatOpti
   }
 
   try {
-    ws = await openAuthenticatedWebSocket(LOCAL_AGENT_WS_URL)
+    ws = await openAuthenticatedWebSocket(LOCAL_AGENT_WS_URL) // authed via getWsAuthParams
   } catch {
     options.onError('Could not connect to local agent.')
     return
