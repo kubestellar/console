@@ -36,6 +36,10 @@ var aiProviderHTTPClient = &http.Client{
 	},
 }
 
+// allowLoopbackForTests disables the private-IP check for 127.0.0.0/8 and ::1
+// during unit tests that use httptest.NewServer. Must never be set in production.
+var allowLoopbackForTests bool
+
 // aiProviderSafeDialContext resolves the host and rejects connections to
 // private/internal IPs before dialing. This prevents SSRF via DNS rebinding
 // where a domain passes save-time validation but resolves to an internal IP
@@ -53,6 +57,9 @@ func aiProviderSafeDialContext(ctx context.Context, network, addr string) (net.C
 		return nil, fmt.Errorf("no IPs resolved for host %s", host)
 	}
 	for _, ip := range ips {
+		if allowLoopbackForTests && ip.IP.IsLoopback() {
+			continue
+		}
 		if isPrivateIP(ip.IP) {
 			return nil, fmt.Errorf("blocked: AI provider base URL resolved to non-public IP %s for host %s", ip.IP, host)
 		}

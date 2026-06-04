@@ -23,6 +23,10 @@ import (
 const hardTestTimeout = 5 * time.Minute
 
 func TestMain(m *testing.M) {
+	// Allow tests using httptest.NewServer (127.0.0.1) to connect through
+	// the SSRF-safe transport without being blocked.
+	allowLoopbackForTests = true
+
 	// Kill the entire process group (not just this process) so any
 	// subprocess trees (kubectl, kc-agent, Python) are also reaped.
 	// On Unix, setting the process group to our PID lets us kill -PGID.
