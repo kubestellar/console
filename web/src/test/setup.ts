@@ -2,7 +2,7 @@ import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
-const isBrowserEnvironment = typeof window !== 'undefined' && window.constructor.name !== 'Object'
+const isBrowserEnvironment = typeof window !== 'undefined'
 
 // Mock react-i18next globally to prevent i18n.ts from failing when imported
 // by vite.config.ts or other modules. Uses importOriginal to get the real
@@ -50,7 +50,7 @@ afterEach(() => {
   }
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
-  vi.resetAllMocks()
+  vi.clearAllMocks()
 })
 
 // Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
