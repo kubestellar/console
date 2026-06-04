@@ -6,7 +6,7 @@ vi.mock('../constants', () => ({
 }))
 
 vi.mock('../utils/wsAuth', () => ({
-  getWsAuthParams: vi.fn(async (url: string) => ({ url, protocols: [] })),
+  openAuthenticatedWebSocket: vi.fn(async (url: string) => new WebSocket(url)),
 }))
 
 class MockWebSocket {

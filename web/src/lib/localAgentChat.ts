@@ -1,5 +1,5 @@
 import { LOCAL_AGENT_WS_URL } from './constants'
-import { getWsAuthParams } from './utils/wsAuth'
+import { openAuthenticatedWebSocket } from './utils/wsAuth'
 
 export interface LocalAgentChatOptions {
   agent?: string
@@ -31,8 +31,7 @@ export async function localAgentChat(prompt: string, options: LocalAgentChatOpti
   }
 
   try {
-    const { url, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
-    ws = new WebSocket(url, protocols)
+    ws = await openAuthenticatedWebSocket(LOCAL_AGENT_WS_URL)
   } catch {
     options.onError('Could not connect to local agent.')
     return

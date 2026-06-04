@@ -41,3 +41,8 @@ export async function getWsAuthParams(url: string): Promise<{ url: string; proto
   // Use subprotocol-based auth (preferred — #16508)
   return { url, protocols: [`${WS_AUTH_PROTOCOL_PREFIX}${token}`] }
 }
+
+export async function openAuthenticatedWebSocket(url: string): Promise<WebSocket> {
+  const authParams = await getWsAuthParams(url)
+  return new WebSocket(authParams.url, authParams.protocols)
+}
