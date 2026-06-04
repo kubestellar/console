@@ -115,7 +115,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	}
 	api.Get("/github/token/status", githubProxy.HasToken)
 	api.Post("/github/token", githubTokenAdminOnly, githubProxy.SaveToken)
-	api.Delete("/github/token", githubProxy.DeleteToken)
+	api.Delete("/github/token", githubTokenAdminOnly, githubProxy.DeleteToken)
 
 	githubPipelines := handlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
 	api.Get("/github-pipelines", githubPipelines.Serve)
