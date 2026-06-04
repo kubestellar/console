@@ -5,11 +5,10 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { UserProfileDropdown } from '../UserProfileDropdown'
 
-const changeLanguage = vi.fn()
-const safeSetItem = vi.fn()
-const emitLanguageChanged = vi.fn()
-
-const { demoModeState } = vi.hoisted(() => ({
+const { changeLanguage, safeSetItem, emitLanguageChanged, demoModeState } = vi.hoisted(() => ({
+  changeLanguage: vi.fn(),
+  safeSetItem: vi.fn(),
+  emitLanguageChanged: vi.fn(),
   demoModeState: { isForced: false },
 }))
 
