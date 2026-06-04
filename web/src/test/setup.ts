@@ -41,14 +41,18 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-// Cleanup after each test
+// Cleanup after each test.
+// NOTE: vi.unstubAllGlobals() is intentionally NOT called here. Each test file
+// runs in its own vitest worker so global stubs cannot leak between files.
+// Calling unstubAllGlobals() here would remove file-level stubs (e.g.
+// vi.stubGlobal('fetch', mockFetch)) after the first test in a file, breaking
+// all subsequent tests that rely on that stub.
 afterEach(() => {
   cleanup()
   if (isBrowserEnvironment) {
     window.localStorage.clear()
     window.sessionStorage?.clear()
   }
-  vi.unstubAllGlobals()
   vi.unstubAllEnvs()
   vi.clearAllMocks()
 })
@@ -113,7 +117,7 @@ if (isBrowserEnvironment) {
   // Mock window.matchMedia
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation((query) => ({
+    value: vi.fn().mockImplementation((query: string) => ({
       matches: false,
       media: query,
       onchange: null,
