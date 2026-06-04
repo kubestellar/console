@@ -1,5 +1,7 @@
 // @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for presence.mts Netlify function (#15635, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

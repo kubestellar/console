@@ -211,6 +211,9 @@ function resetState() {
     isLoading: false,
   }
   mockCacheState = {}
+  mockFetch.mockReset()
+  // Re-stub fetch after each test since setup.ts vi.unstubAllGlobals() clears it
+  vi.stubGlobal('fetch', mockFetch)
   mockGetStoredAuthToken.mockReset()
   mockGetStoredAuthToken.mockReturnValue(null)
 }

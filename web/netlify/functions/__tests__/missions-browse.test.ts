@@ -1,5 +1,7 @@
 // @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest handler tests for missions-browse.mts (#15403, Part of #4189).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

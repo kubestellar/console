@@ -1,5 +1,7 @@
 // @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for youtube-playlist.mts Netlify function (#15655, Part of #4189).
  *
  * Covers Invidious API primary path, RSS fallback, feed parsing,
@@ -20,6 +22,8 @@ const HTTP_STATUS_FORBIDDEN = 403;
 const HTTP_STATUS_BAD_GATEWAY = 502;
 
 /**
+ * @vitest-environment node
+ *
  * Oversized response test threshold: exactly one byte above the max so the test
  * continues to validate the intended boundary condition dynamically.
  */
@@ -29,7 +33,9 @@ const mockFetch = vi.fn();
 
 // ── Sample Data ──────────────────────────────────────────────────────────────
 
-/** Simulates a valid Invidious API JSON response */
+/**
+ * @vitest-environment node
+ * Simulates a valid Invidious API JSON response */
 const SAMPLE_INVIDIOUS_RESPONSE = {
   videos: [
     { videoId: "abc123", title: "Getting Started with KubeStellar" },
@@ -37,7 +43,9 @@ const SAMPLE_INVIDIOUS_RESPONSE = {
   ],
 };
 
-/** Simulates a valid YouTube Atom RSS feed with <entry> blocks */
+/**
+ * @vitest-environment node
+ * Simulates a valid YouTube Atom RSS feed with <entry> blocks */
 const SAMPLE_ATOM_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"
       xmlns:media="http://search.yahoo.com/mrss/">
@@ -54,7 +62,9 @@ const SAMPLE_ATOM_FEED = `<?xml version="1.0" encoding="UTF-8"?>
   </entry>
 </feed>`;
 
-/** Atom feed with no <entry> blocks */
+/**
+ * @vitest-environment node
+ * Atom feed with no <entry> blocks */
 const EMPTY_ATOM_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"></feed>`;
 

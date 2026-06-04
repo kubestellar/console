@@ -1,5 +1,7 @@
 // @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for medium-blog.mts Netlify function (#15655, Part of #4189).
  *
  * Covers CORS origin handling, RSS parsing with CDATA, cutoff date filtering,
@@ -19,19 +21,25 @@ const HTTP_STATUS_NO_CONTENT = 204;
 const HTTP_STATUS_BAD_GATEWAY = 502;
 
 /**
+ * @vitest-environment node
+ *
  * Oversized response test threshold: exactly one byte above the max so the test
  * continues to validate the intended boundary condition dynamically.
  */
 const TEST_OVERSIZED_RESPONSE_BYTES = MAX_RESPONSE_BYTES + 1;
 
-/** Allowed production origin for CORS echoing */
+/**
+ * @vitest-environment node
+ * Allowed production origin for CORS echoing */
 const PROD_ORIGIN = "https://console.kubestellar.io";
 
 const mockFetch = vi.fn();
 
 // ── Sample Data ──────────────────────────────────────────────────────────────
 
-/** Builds a minimal RSS <item> block with CDATA wrapping (Medium's format) */
+/**
+ * @vitest-environment node
+ * Builds a minimal RSS <item> block with CDATA wrapping (Medium's format) */
 function buildRSSItem(opts: {
   title: string;
   link: string;
@@ -54,7 +62,9 @@ function buildRSSItem(opts: {
   </item>`;
 }
 
-/** A valid RSS feed with recent posts (after CUTOFF_DATE 2026-04-07) */
+/**
+ * @vitest-environment node
+ * A valid RSS feed with recent posts (after CUTOFF_DATE 2026-04-07) */
 const SAMPLE_RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -73,7 +83,9 @@ const SAMPLE_RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>`;
 
-/** An RSS feed where all items predate the cutoff */
+/**
+ * @vitest-environment node
+ * An RSS feed where all items predate the cutoff */
 const OLD_POSTS_RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
@@ -86,7 +98,9 @@ const OLD_POSTS_RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>`;
 
-/** An empty RSS feed with no <item> blocks */
+/**
+ * @vitest-environment node
+ * An empty RSS feed with no <item> blocks */
 const EMPTY_RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel></channel></rss>`;
 

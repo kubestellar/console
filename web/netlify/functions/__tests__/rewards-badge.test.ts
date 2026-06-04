@@ -1,5 +1,7 @@
 // @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Vitest unit tests for rewards-badge.mts Netlify function (#15951, Part of #4189).
  *
  * Mirrors pkg/api/handlers/rewards_badge.go: shields.io-style SVG tier badges
@@ -38,7 +40,9 @@ const SAMPLE_LOGIN = "contributor-one";
 const INVALID_LOGIN_SCRIPT = "<script>alert(1)</script>";
 const INVALID_LOGIN_AMPERSAND = "user&amp;quotes";
 
-/** Fixed clock so GitHub Search `created:>=YYYY-01-01` assertions stay deterministic. */
+/**
+ * @vitest-environment node
+ * Fixed clock so GitHub Search `created:>=YYYY-01-01` assertions stay deterministic. */
 const FIXED_SEARCH_DATE = new Date("2026-06-15T12:00:00Z");
 const FIXED_SEARCH_YEAR = 2026;
 
@@ -113,7 +117,9 @@ function resolveFetchUrl(input: string | URL | Request): string {
   return input.url;
 }
 
-/** Route GitHub Search calls by issue vs PR query type. */
+/**
+ * @vitest-environment node
+ * Route GitHub Search calls by issue vs PR query type. */
 function mockGitHubSearch(issues: SearchItem[], prs: SearchItem[]): void {
   mockFetch.mockImplementation((input: string | URL | Request) => {
     const url = resolveFetchUrl(input);

@@ -1,5 +1,7 @@
 // @vitest-environment node
 /**
+ * @vitest-environment node
+ *
  * Unit tests for the ACMM badge Netlify function.
  *
  * Mocks Netlify Blobs and global fetch so we can exercise every code path
