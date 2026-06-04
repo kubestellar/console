@@ -60,6 +60,7 @@ type solverStorageAdapter struct {
 // satisfies. This avoids ballooning StellarStore for features still settling.
 type solveFullStore interface {
 	CreateSolve(ctx context.Context, solve *store.StellarSolve) error
+	CreateSolveIfNoneActive(ctx context.Context, solve *store.StellarSolve) (*store.StellarSolve, bool, error)
 	UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error
 	IncrementSolveActions(ctx context.Context, solveID string) error
 	GetActiveSolveForEvent(ctx context.Context, eventID string) (*store.StellarSolve, error)
@@ -207,8 +208,13 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 		Summary:   "Autonomous solve in progress.",
 		StartedAt: time.Now().UTC(),
 	}
-	if err := full.CreateSolve(ctx, solve); err != nil {
-		slog.Warn("stellar: auto-solve CreateSolve failed", "error", err)
+	result, created, err := full.CreateSolveIfNoneActive(ctx, solve)
+	if err != nil {
+		slog.Warn("stellar: auto-solve CreateSolveIfNoneActive failed", "error", err)
+		return
+	}
+	if !created {
+		slog.Info("stellar: auto-solve skipped — solve already running", "existingSolveId", result.ID)
 		return
 	}
 
@@ -611,16 +617,6 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "event not found"})
 	}
 
-	// Idempotent return for an already-running solve.
-	active, _ := full.GetActiveSolveForEvent(ctx, eventID)
-	if active != nil {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"solveId":  active.ID,
-			"status":   active.Status,
-			"existing": true,
-		})
-	}
-
 	// Demo-mode / no-cluster-client → solve is meaningless. Refuse cleanly.
 	if h.k8sClient == nil {
 		return c.Status(fiber.StatusPreconditionFailed).JSON(fiber.Map{
@@ -640,8 +636,17 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		Summary:   "AI mission triggered.",
 		StartedAt: time.Now().UTC(),
 	}
-	if err := full.CreateSolve(ctx, solve); err != nil {
+	// Atomic check-and-insert prevents TOCTOU race (CWE-362, #16983).
+	result, created, err := full.CreateSolveIfNoneActive(ctx, solve)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to start solve"})
+	}
+	if !created {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"solveId":  result.ID,
+			"status":   result.Status,
+			"existing": true,
+		})
 	}
 
 	safeNotifCluster := renderUntrustedPromptData("stellar-notification-cluster", notif.Cluster)

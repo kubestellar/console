@@ -30,6 +30,54 @@ func (s *SQLiteStore) CreateSolve(ctx context.Context, solve *StellarSolve) erro
 	return err
 }
 
+// CreateSolveIfNoneActive atomically checks for an existing running solve and
+// inserts a new one only if none exists. Returns (solve, true, nil) on successful
+// insert, or (existing, false, nil) if a running solve already exists. This
+// prevents the TOCTOU race in concurrent StartSolve requests (CWE-362, #16983).
+func (s *SQLiteStore) CreateSolveIfNoneActive(ctx context.Context, solve *StellarSolve) (*StellarSolve, bool, error) {
+	if solve.ID == "" {
+		solve.ID = uuid.New().String()
+	}
+	if solve.StartedAt.IsZero() {
+		solve.StartedAt = time.Now().UTC()
+	}
+	if solve.Status == "" {
+		solve.Status = "running"
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Check for existing running solve within the transaction (serialized by SQLite).
+	row := tx.QueryRowContext(ctx, `
+		SELECT id, event_id, user_id, cluster, namespace, workload, status, actions_taken, limit_hit, summary, error, started_at, ended_at, next_recheck_at
+		FROM stellar_solves
+		WHERE event_id = ? AND status = 'running'
+		ORDER BY started_at DESC LIMIT 1
+	`, solve.EventID)
+	existing, scanErr := scanSolveRow(row)
+	if scanErr == nil && existing != nil {
+		// A running solve already exists — return it without inserting.
+		return existing, false, tx.Commit()
+	}
+
+	// No active solve — insert.
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO stellar_solves (id, event_id, user_id, cluster, namespace, workload, status, actions_taken, summary, started_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`,
+		solve.ID, solve.EventID, solve.UserID, solve.Cluster, solve.Namespace, solve.Workload,
+		solve.Status, solve.ActionsTaken, solve.Summary, solve.StartedAt,
+	)
+	if err != nil {
+		return nil, false, err
+	}
+	return solve, true, tx.Commit()
+}
+
 // GetActiveSolveForEvent returns the most recent running solve for an event,
 // or nil if none exists. Used to make StartSolve idempotent.
 func (s *SQLiteStore) GetActiveSolveForEvent(ctx context.Context, eventID string) (*StellarSolve, error) {

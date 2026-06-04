@@ -124,6 +124,10 @@ type StellarSolveStore interface {
 	GetSolvesForUser(ctx context.Context, userID string, limit int) ([]StellarSolve, error)
 	GetSolvesSince(ctx context.Context, userID string, since time.Time) ([]StellarSolve, error)
 	CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error)
+	// CreateSolveIfNoneActive atomically inserts a solve only if no running solve
+	// exists for the same event. Returns (solve, true) on insert, or (existing, false)
+	// if a running solve already exists (CWE-362, #16983).
+	CreateSolveIfNoneActive(ctx context.Context, solve *StellarSolve) (*StellarSolve, bool, error)
 }
 
 // StellarActivityStore manages Stellar activity log entries.

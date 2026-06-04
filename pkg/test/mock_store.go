@@ -788,6 +788,9 @@ func (m *MockStore) MarkObservationShown(_ context.Context, _ string) error { re
 func (m *MockStore) MarkObservationShownForUser(_ context.Context, _, _ string) error { return nil }
 
 func (m *MockStore) CreateSolve(_ context.Context, _ *store.StellarSolve) error { return nil }
+func (m *MockStore) CreateSolveIfNoneActive(_ context.Context, solve *store.StellarSolve) (*store.StellarSolve, bool, error) {
+	return solve, true, nil
+}
 func (m *MockStore) GetSolveByID(_ context.Context, _ string) (*store.StellarSolve, error) {
 	return nil, nil
 }
