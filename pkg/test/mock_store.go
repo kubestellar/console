@@ -816,6 +816,9 @@ func (m *MockStore) LogActivity(_ context.Context, _ *store.StellarActivity) err
 func (m *MockStore) ListActivity(_ context.Context, _ int) ([]store.StellarActivity, error) {
 	return nil, nil
 }
+func (m *MockStore) ListActivityForUser(_ context.Context, _ string, _ int) ([]store.StellarActivity, error) {
+	return nil, nil
+}
 
 func (m *MockStore) UpsertProviderConfig(_ context.Context, _ *store.StellarProviderConfig) error {
 	return nil

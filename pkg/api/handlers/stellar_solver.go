@@ -80,6 +80,7 @@ type solveFullStore interface {
 
 	LogActivity(ctx context.Context, a *store.StellarActivity) error
 	ListActivity(ctx context.Context, limit int) ([]store.StellarActivity, error)
+	ListActivityForUser(ctx context.Context, userID string, limit int) ([]store.StellarActivity, error)
 	GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*store.StellarSolve, error)
 }
 
@@ -128,8 +129,12 @@ func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivi
 }
 
 // ListActivity is the GET /api/stellar/activity handler — returns recent
-// entries from Stellar's first-person activity log.
+// entries from Stellar's first-person activity log, scoped to the authenticated user.
 func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
+	}
 	full, ok := h.fullStore()
 	if !ok {
 		return c.JSON(fiber.Map{"items": []store.StellarActivity{}})
@@ -140,7 +145,7 @@ func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
 			limit = v
 		}
 	}
-	items, err := full.ListActivity(c.UserContext(), limit)
+	items, err := full.ListActivityForUser(c.UserContext(), userID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load activity"})
 	}

@@ -254,6 +254,31 @@ func (s *SQLiteStore) ListActivity(ctx context.Context, limit int) ([]StellarAct
 	return out, rows.Err()
 }
 
+// ListActivityForUser returns recent activity for a specific user, newest first.
+func (s *SQLiteStore) ListActivityForUser(ctx context.Context, userID string, limit int) ([]StellarActivity, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, user_id, ts, kind, event_id, solve_id, cluster, namespace, workload, title, detail, severity
+		FROM stellar_activity WHERE user_id = ? ORDER BY ts DESC LIMIT ?
+	`, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarActivity, 0)
+	for rows.Next() {
+		var a StellarActivity
+		if err := rows.Scan(&a.ID, &a.UserID, &a.Ts, &a.Kind, &a.EventID, &a.SolveID,
+			&a.Cluster, &a.Namespace, &a.Workload, &a.Title, &a.Detail, &a.Severity); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 // GetRecentSolveForWorkload returns the most recent solve for a given workload
 // (regardless of status), or nil if none in the lookback window. Used by the
 // auto-solve trigger to enforce a cooldown — Stellar must not bash the same
