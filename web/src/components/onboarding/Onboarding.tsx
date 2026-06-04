@@ -5,7 +5,8 @@ import { ChevronRight, ChevronLeft, Check, GripVertical, ArrowUp, ArrowDown } fr
 import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
-import { getStoredAuthToken, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
+import { DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import { safeSetItem, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 import { Button } from '../ui/Button'
 

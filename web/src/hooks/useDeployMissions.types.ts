@@ -1,4 +1,4 @@
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** HTTP status codes that indicate authentication/authorization failure */

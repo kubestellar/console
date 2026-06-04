@@ -32,7 +32,7 @@ import { PageErrorBoundary } from '../components/PageErrorBoundary'
 import { InitialInfrastructureGate } from '../components/InitialInfrastructureGate'
 import { StellarProvider } from '../hooks/useStellar'
 import { ROUTES } from '../config/routes'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { safeSet } from '../lib/safeLocalStorage'
 import {
   OrbitAutoRunner, SettingsSyncInit, PageViewTracker, DataPrefetchInit,

@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Check, AlertTriangle, Play, Loader2, ChevronRight, GitBranch, Box, Server, Shield, Settings, Database, Network, Layers, Container, FileText, Puzzle, X } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
-import { FETCH_DEFAULT_TIMEOUT_MS, getStoredAuthToken, LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import { agentFetch } from '../../hooks/mcp/shared'
 
 // Sync phases

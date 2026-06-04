@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw, Check, Copy, Share2 } from 'lucide-react'
-import { FETCH_DEFAULT_TIMEOUT_MS, getStoredAuthToken } from '../../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { getStoredAuthToken } from '../../../lib/authToken'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface ProfileSectionProps {

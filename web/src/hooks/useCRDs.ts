@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react'
 import { useClusters } from './useMCP'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { createCachedHook } from '../lib/cache'
 

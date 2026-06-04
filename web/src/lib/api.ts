@@ -1,14 +1,6 @@
 /* eslint-disable max-lines -- TODO: split this file (tracked by #15790) */
-import {
-  MCP_HOOK_TIMEOUT_MS,
-  BACKEND_HEALTH_CHECK_TIMEOUT_MS,
-  clearStoredAuthToken,
-  STORAGE_KEY_USER_CACHE,
-  STORAGE_KEY_HAS_SESSION,
-  DEMO_TOKEN_VALUE,
-  FETCH_DEFAULT_TIMEOUT_MS,
-  getStoredAuthToken,
-} from './constants'
+import { MCP_HOOK_TIMEOUT_MS, BACKEND_HEALTH_CHECK_TIMEOUT_MS, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
+import { clearStoredAuthToken, getStoredAuthToken } from './authToken'
 import { emitSessionExpired, emitHttpError } from './analytics'
 import {
   reportBackendAvailable,

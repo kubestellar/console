@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { isBackendUnavailable } from '../lib/api'
-import { getStoredAuthToken, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, RateLimitError } from '../lib/api'
-import { getStoredAuthToken, STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
+import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { useDemoMode } from './useDemoMode'
 
 // ============================================================================

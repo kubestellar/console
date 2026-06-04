@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
-import { getStoredAuthToken } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import type { ClusterHealth, MCPStatus } from './types'
 import {
   REFRESH_INTERVAL_MS,

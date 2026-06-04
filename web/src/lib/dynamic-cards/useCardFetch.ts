@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getStoredAuthToken } from '../constants'
+import { getStoredAuthToken } from '../authToken'
 import { useKeepAliveActive } from '../../hooks/useKeepAliveActive'
 
 /**

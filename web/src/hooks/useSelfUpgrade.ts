@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { SelfUpgradeStatus } from '../types/updates'
-import { getStoredAuthToken, STORAGE_KEY_TOKEN } from '../lib/constants'
+import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { setUpgradeState } from '../lib/upgradeState'
 
 /** Timeout for self-upgrade API calls (ms) */

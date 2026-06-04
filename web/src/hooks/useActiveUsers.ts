@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /**

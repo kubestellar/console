@@ -17,16 +17,8 @@
  */
 
 import { clearAllRegisteredCaches } from './modeTransition'
-import {
-  DEMO_TOKEN_VALUE,
-  getStoredAuthToken,
-  setStoredAuthToken,
-  STORAGE_KEY_DEMO_MODE,
-  STORAGE_KEY_HAS_SESSION,
-  STORAGE_KEY_ONBOARDED,
-  STORAGE_KEY_USER_CACHE,
-} from './constants'
-
+import { DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
+import { getStoredAuthToken, setStoredAuthToken } from './authToken'
 const DEMO_MODE_KEY = STORAGE_KEY_DEMO_MODE
 const DEMO_TOKEN = DEMO_TOKEN_VALUE
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'

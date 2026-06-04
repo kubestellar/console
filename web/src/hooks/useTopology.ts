@@ -15,7 +15,8 @@
 
 import { useRef, useEffect } from 'react'
 import { useCache } from '../lib/cache'
-import { getStoredAuthToken, DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   TopologyResponse,

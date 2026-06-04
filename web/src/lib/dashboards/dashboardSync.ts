@@ -1,5 +1,5 @@
 import { api } from '../api'
-import { getStoredAuthToken } from '../constants'
+import { getStoredAuthToken } from '../authToken'
 import { DashboardCard } from './types'
 
 // ============================================================================

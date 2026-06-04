@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Loader2, Database } from 'lucide-react'
-import { getStoredAuthToken } from '../../lib/constants'
+import { getStoredAuthToken } from '../../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'

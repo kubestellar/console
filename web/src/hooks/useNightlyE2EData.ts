@@ -16,7 +16,7 @@ import {
   type NightlyGuideStatus,
   type NightlyRun,
 } from '../lib/llmd/nightlyE2EDemoData'
-import { getStoredAuthToken } from '../lib/constants'
+import { getStoredAuthToken } from '../lib/authToken'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_MINUTE } from '../lib/constants/time'

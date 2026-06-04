@@ -13,7 +13,7 @@
  * - Auto-reconnect with exponential backoff on connection drop (#2654)
  */
 
-import { getStoredAuthToken } from './constants'
+import { getStoredAuthToken } from './authToken'
 import { emitSseAuthFailure } from './analytics'
 import { isDemoMode } from './demoMode'
 
