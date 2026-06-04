@@ -5,7 +5,7 @@ import {
   MCP_HOOK_TIMEOUT_MS,
 } from '../../lib/constants'
 import { isLocalAgentSuppressed } from '../../lib/constants/network'
-import { clearToken, getToken, setToken } from '../../lib/secureTokenStore'
+import { clearToken } from '../../lib/secureTokenStore'
 import { resetAuthFailed } from './sharedImpl.connection'
 
 // Re-export as a live getter. LOCAL_AGENT_HTTP_URL is a mutable `let` that
@@ -28,40 +28,21 @@ let agentTokenFailureEmitted = false
 /** Timestamp of last negative result (empty/error) — used for short-TTL in-memory cache. */
 let agentTokenNegativeCacheUntil = 0
 
-// Best-effort migration cleanup for legacy plaintext tokens left in localStorage.
-function removeLegacyAgentToken(): void {
+// Remove legacy tokens from both localStorage and sessionStorage.
+// Previously, the agent token was persisted in sessionStorage (CWE-922 risk:
+// any XSS could exfiltrate the token for cluster access). Now the token is
+// kept only in the module-level closure — on page refresh the backend
+// re-issues the token via /api/agent/token.
+function removeLegacyStoredTokens(): void {
   try {
     clearToken(AGENT_TOKEN_STORAGE_KEY, localStorage)
   } catch {
-    // localStorage may be unavailable in some embedded contexts — ignore.
+    // Storage may be unavailable in some embedded contexts — ignore.
   }
-}
-
-function getSessionAgentToken(): string {
-  try {
-    return getToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage) || ''
-  } catch {
-    return ''
-  }
-}
-
-function setSessionAgentToken(token: string): void {
-  try {
-    if (token) {
-      setToken(AGENT_TOKEN_STORAGE_KEY, token, undefined, sessionStorage)
-    } else {
-      clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
-    }
-  } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
-  }
-}
-
-function clearSessionAgentToken(): void {
   try {
     clearToken(AGENT_TOKEN_STORAGE_KEY, sessionStorage)
   } catch {
-    // sessionStorage may be unavailable in some embedded contexts — ignore.
+    // Storage may be unavailable in some embedded contexts — ignore.
   }
 }
 
@@ -70,34 +51,26 @@ export function getStoredAgentToken(): string {
     return inMemoryAgentToken
   }
 
-  removeLegacyAgentToken()
-
-  const sessionToken = getSessionAgentToken()
-  if (sessionToken) {
-    inMemoryAgentToken = sessionToken
-  }
-  return sessionToken
+  removeLegacyStoredTokens()
+  return ''
 }
 
 export function setAgentToken(token: string): void {
   inMemoryAgentToken = token
   agentTokenPromise = null
   agentTokenNegativeCacheUntil = 0
-  removeLegacyAgentToken()
+  removeLegacyStoredTokens()
 
   if (token) {
     resetAuthFailed()
   }
-
-  setSessionAgentToken(token)
 }
 
 export function clearAgentToken(): void {
   inMemoryAgentToken = ''
   agentTokenPromise = null
   agentTokenNegativeCacheUntil = 0
-  removeLegacyAgentToken()
-  clearSessionAgentToken()
+  removeLegacyStoredTokens()
 }
 
 /** Reset internal getAgentToken state — exposed for tests only. */
