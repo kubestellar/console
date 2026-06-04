@@ -222,7 +222,7 @@ describe('UserProfileDropdown', () => {
     renderDropdown({ onLogout })
     const user = await openDropdown()
 
-    await user.click(screen.getByRole('button', { name: 'actions.signOut' }))
+    await user.click(screen.getByRole('menuitem', { name: 'actions.signOut' }))
 
     expect(onLogout).not.toHaveBeenCalled()
     expect(await screen.findByTestId('confirm-dialog')).toBeInTheDocument()
