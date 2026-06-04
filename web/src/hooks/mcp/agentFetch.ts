@@ -72,11 +72,14 @@ export function getStoredAgentToken(): string {
 
   removeLegacyAgentToken()
 
+  // Migration: pull any existing sessionStorage token into memory, then clear it.
+  // Going forward tokens live in memory only — no web-storage exposure to XSS (#16903).
   const sessionToken = getSessionAgentToken()
   if (sessionToken) {
     inMemoryAgentToken = sessionToken
+    clearSessionAgentToken()
   }
-  return sessionToken
+  return inMemoryAgentToken
 }
 
 export function setAgentToken(token: string): void {
@@ -89,7 +92,9 @@ export function setAgentToken(token: string): void {
     resetAuthFailed()
   }
 
-  setSessionAgentToken(token)
+  // No longer persist to sessionStorage — memory-only (CWE-922, #16903).
+  // The agent handshake re-establishes on reconnect, so survival across
+  // page refresh is unnecessary.
 }
 
 export function clearAgentToken(): void {

@@ -36,6 +36,11 @@ var privateIPNets = func() []*net.IPNet {
 }()
 
 func isPrivateIP(ip net.IP) bool {
+	// Block unspecified addresses (0.0.0.0, ::) which on Linux route to
+	// localhost, bypassing the private-CIDR checks below (CWE-918, #16971).
+	if ip.IsUnspecified() {
+		return true
+	}
 	for _, network := range privateIPNets {
 		if network.Contains(ip) {
 			return true
