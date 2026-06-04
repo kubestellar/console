@@ -187,7 +187,7 @@ describe("github-pipelines", () => {
     const res = await handler(makeRequest("view=pulse&repo=some-org/some-repo"));
     expect(res.status).toBe(403);
     const body = await readJson<{ error: string }>(res);
-    expect(body.error).toContain("allowlist");
+    expect(body.error).toBe("Repository not allowed");
     expect(mockBuildPulse).not.toHaveBeenCalled();
   });
 

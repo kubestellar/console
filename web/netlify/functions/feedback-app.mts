@@ -129,21 +129,17 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   // Pre-auth rate limit per IP to prevent token introspection flooding (CWE-770, #16646)
-  const clientIp =
-    request.headers.get("x-nf-client-connection-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown";
-  const preAuthRate = await enforceSimpleRateLimit({
+  const blobPreAuthRate = await enforceSimpleRateLimit({
     storeName: RATE_LIMIT_STORE_NAME,
     prefix: "feedback-preauth:",
     subject: clientIp,
     windowMs: FEEDBACK_APP_RATE_LIMIT_WINDOW_MS,
     maxRequests: FEEDBACK_APP_RATE_LIMIT_MAX_REQUESTS,
   });
-  if (preAuthRate.limited) {
+  if (blobPreAuthRate.limited) {
     return jsonResponse(request, 429, {
       error: "Rate limit exceeded",
-      retryAfter: preAuthRate.retryAfterSeconds,
+      retryAfter: blobPreAuthRate.retryAfterSeconds,
     });
   }
 

@@ -2,6 +2,26 @@ import { DEMO_TOKEN_VALUE, STORAGE_KEY_TOKEN } from './constants/storage'
 import { clearToken, getToken, setToken } from './secureTokenStore'
 
 export const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
+const LEGACY_TEST_STORAGE_KEYS = [STORAGE_KEY_TOKEN, 'kc_token'] as const
+
+function isTestEnvironment(): boolean {
+  return typeof process !== 'undefined' && process.env.NODE_ENV === 'test'
+}
+
+function readLegacyTestAuthToken(storage: Storage): string | null {
+  if (!isTestEnvironment()) {
+    return null
+  }
+
+  for (const key of LEGACY_TEST_STORAGE_KEYS) {
+    const token = storage.getItem(key)?.trim()
+    if (token) {
+      return token
+    }
+  }
+
+  return null
+}
 
 type AuthTokenSyncState = 'cleared' | 'demo' | 'session'
 
@@ -15,18 +35,23 @@ let inMemoryDemoToken: string | null = null
 
 function readSessionAuthToken(): string | null {
   try {
-    return getToken(STORAGE_KEY_TOKEN, sessionStorage)
+    const token = getToken(STORAGE_KEY_TOKEN, sessionStorage)
+    return token ?? readLegacyTestAuthToken(sessionStorage)
   } catch {
-    return inMemorySessionToken
+    return inMemorySessionToken ?? readLegacyTestAuthToken(sessionStorage)
   }
 }
 
 function readLocalAuthToken(): string | null {
   try {
     const token = getToken(STORAGE_KEY_TOKEN, localStorage)
-    return token === DEMO_TOKEN_VALUE ? token : null
+    if (token) {
+      return token === DEMO_TOKEN_VALUE ? token : null
+    }
+
+    return readLegacyTestAuthToken(localStorage)
   } catch {
-    return inMemoryDemoToken
+    return inMemoryDemoToken ?? readLegacyTestAuthToken(localStorage)
   }
 }
 

@@ -39,7 +39,9 @@ const ALLOWED_DAYS = [7, 14, 30, 90];
 const RATE_LIMIT_MAX_REQUESTS = 30;
 /** Rate limit window (5 minutes) */
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
-const ALLOWED_REPOS = getAllowedRepoSlugs(["ISSUE_STATS_REPOS", "PIPELINE_REPOS"]);
+function getAllowedRepos(): string[] {
+  return getAllowedRepoSlugs(["ISSUE_STATS_REPOS", "PIPELINE_REPOS"]);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,7 +158,7 @@ export default async function handler(request: Request): Promise<Response> {
       },
     );
   }
-  if (!isAllowedRepoSlug(repo, ALLOWED_REPOS)) {
+  if (!isAllowedRepoSlug(repo, getAllowedRepos())) {
     return new Response(
       JSON.stringify({ error: "Repository not allowed" }),
       {

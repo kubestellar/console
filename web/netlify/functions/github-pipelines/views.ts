@@ -35,8 +35,6 @@ import { isAllowedRepo, jsonResponse } from "./helpers";
 import { normalizeRun } from "./transform";
 import { readHistory, writeHistory, mergeIntoHistory } from "./history";
 
-const REPOS = getRepos();
-
 // ---------------------------------------------------------------------------
 // Pulse view
 // ---------------------------------------------------------------------------
@@ -176,7 +174,8 @@ export async function buildMatrix(
   days: number,
   repoFilter: string | null
 ): Promise<MatrixPayload> {
-  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
+  const repos = getRepos();
+  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : repos;
 
   // Fetch fresh runs per repo with pagination (GitHub caps per_page at 100)
   const MAX_PER_PAGE = 100;
@@ -245,7 +244,8 @@ export async function buildFlow(
   token: string,
   repoFilter: string | null
 ): Promise<FlowPayload> {
-  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
+  const repos = getRepos();
+  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : repos;
 
   const all: FlowRun[] = [];
   for (const repo of targetRepos) {
@@ -308,7 +308,8 @@ export async function buildFailures(
   token: string,
   repoFilter: string | null
 ): Promise<FailuresPayload> {
-  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : (REPOS as readonly string[]);
+  const repos = getRepos();
+  const targetRepos = repoFilter && isAllowedRepo(repoFilter) ? [repoFilter] : repos;
 
   const rows: FailureRow[] = [];
   for (const repo of targetRepos) {

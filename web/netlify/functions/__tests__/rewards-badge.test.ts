@@ -13,19 +13,18 @@ import {
 import handler from "../rewards-badge.mts";
 
 const HTTP_STATUS_OK = 200;
+const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_BAD_GATEWAY = 502;
 
 const CONTENT_TYPE_SVG = "image/svg+xml; charset=utf-8";
 const BADGE_PATH_PREFIX = "/api/rewards/badge/";
 const GITHUB_SEARCH_HOST = "https://api.github.com/search/issues";
 
-const TIER_OBSERVER = "Observer";
 const TIER_EXPLORER = "Explorer";
 const TIER_PILOT = "Pilot";
 const TIER_ERROR = "error";
 const TIER_UNKNOWN = "unknown";
 
-const COLOR_OBSERVER = "#6b7280";
 const COLOR_EXPLORER = "#3b82f6";
 const COLOR_PILOT = "#10b981";
 const COLOR_ERROR = "#e05d44";
@@ -47,7 +46,23 @@ interface SearchItem {
   pull_request?: { merged_at?: string | null };
 }
 
-const mockFetch = vi.fn();
+const { mockFetch, mockEnforceSimpleRateLimit, mockGet, mockSetJSON } = vi.hoisted(() => ({
+  mockFetch: vi.fn(),
+  mockEnforceSimpleRateLimit: vi.fn(),
+  mockGet: vi.fn(),
+  mockSetJSON: vi.fn(),
+}));
+
+vi.mock("@netlify/blobs", () => ({
+  getStore: () => ({
+    get: mockGet,
+    setJSON: mockSetJSON,
+  }),
+}));
+
+vi.mock("../_shared/rate-limit", () => ({
+  enforceSimpleRateLimit: mockEnforceSimpleRateLimit,
+}));
 
 function makeBadgeRequest(login: string): Request {
   const path = login ? `${BADGE_PATH_PREFIX}${login}` : `${BADGE_PATH_PREFIX}`;
@@ -142,6 +157,9 @@ describe("rewards-badge", () => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_SEARCH_DATE);
     mockFetch.mockReset();
+    mockGet.mockResolvedValue(null);
+    mockSetJSON.mockResolvedValue(undefined);
+    mockEnforceSimpleRateLimit.mockResolvedValue({ limited: false, retryAfterSeconds: 0 });
     vi.stubGlobal("fetch", mockFetch);
     delete process.env.GITHUB_TOKEN;
   });
@@ -159,7 +177,7 @@ describe("rewards-badge", () => {
   describe("input validation", () => {
     it("returns error badge when username param is missing", async () => {
       const res = await handler(makeBadgeRequest(""));
-      expect(res.status).toBe(HTTP_STATUS_BAD_GATEWAY);
+      expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       expect(res.headers.get("Content-Type")).toBe(CONTENT_TYPE_SVG);
 
       const svg = await readSvg(res);
@@ -170,7 +188,7 @@ describe("rewards-badge", () => {
 
     it("returns error badge when username contains invalid characters", async () => {
       const res = await handler(makeBadgeRequest("not valid!!!"));
-      expect(res.status).toBe(HTTP_STATUS_BAD_GATEWAY);
+      expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
 
       const svg = await readSvg(res);
       expect(svg).toContain(TIER_ERROR);
@@ -206,15 +224,15 @@ describe("rewards-badge", () => {
   });
 
   describe("score calculation", () => {
-    it("calculates Observer tier (entry level) when GitHub search returns 0 results", async () => {
+    it("calculates unknown tier when GitHub search returns 0 results", async () => {
       mockGitHubSearch([], []);
 
       const res = await handler(makeBadgeRequest(SAMPLE_LOGIN));
       expect(res.status).toBe(HTTP_STATUS_OK);
 
       const svg = await readSvg(res);
-      expect(svg).toContain(TIER_OBSERVER);
-      expect(svg).toContain(COLOR_OBSERVER);
+      expect(svg).toContain(TIER_UNKNOWN);
+      expect(svg).toContain(COLOR_UNKNOWN);
     });
 
     it("calculates Explorer tier for score in mid contributor range", async () => {
@@ -267,8 +285,8 @@ describe("rewards-badge", () => {
       const svg = await readSvg(res);
 
       expect(svg).toContain("kubestellar");
-      expect(svg).toContain(TIER_OBSERVER);
-      expect(svg).toContain(`aria-label="kubestellar: ${TIER_OBSERVER}"`);
+      expect(svg).toContain(TIER_UNKNOWN);
+      expect(svg).toContain(`aria-label="kubestellar: ${TIER_UNKNOWN}"`);
     });
 
     it("SVG output contains Explorer tier label for mid-range score", async () => {
@@ -283,7 +301,7 @@ describe("rewards-badge", () => {
       const res = await handler(makeBadgeRequest(INVALID_LOGIN_SCRIPT));
       const svg = await readSvg(res);
 
-      expect(res.status).toBe(HTTP_STATUS_BAD_GATEWAY);
+      expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       expect(svg).not.toContain("<script>");
       expect(svg).not.toMatch(/<script[\s>]/i);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -293,7 +311,7 @@ describe("rewards-badge", () => {
       const res = await handler(makeBadgeRequest(INVALID_LOGIN_AMPERSAND));
       const svg = await readSvg(res);
 
-      expect(res.status).toBe(HTTP_STATUS_BAD_GATEWAY);
+      expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       expect(svg).not.toContain("&amp;");
       expect(svg).not.toContain(INVALID_LOGIN_AMPERSAND);
       expect(svg).toContain(TIER_ERROR);
@@ -336,15 +354,15 @@ describe("rewards-badge", () => {
       expect(svg).toContain(TIER_ERROR);
     });
 
-    it("returns unknown tier SVG when GitHub reports unknown login (404)", async () => {
+    it("returns error badge when GitHub reports 404 for an upstream lookup", async () => {
       mockFetch.mockResolvedValue(new Response("", { status: 404 }));
 
       const res = await handler(makeBadgeRequest("ghost-user"));
-      expect(res.status).toBe(HTTP_STATUS_OK);
+      expect(res.status).toBe(HTTP_STATUS_BAD_GATEWAY);
 
       const svg = await readSvg(res);
-      expect(svg).toContain(TIER_UNKNOWN);
-      expect(svg).toContain(COLOR_UNKNOWN);
+      expect(svg).toContain(TIER_ERROR);
+      expect(svg).toContain(COLOR_ERROR);
     });
   });
 });

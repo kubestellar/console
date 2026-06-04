@@ -84,13 +84,13 @@ describe("affiliate-clicks Netlify Function", () => {
   });
 
   describe("Input Validation Scenario Tests", () => {
-    it("returns 400 when required affiliate param is missing", async () => {
-      // Trigger validation by passing other parameter fields (enforces custom query validation branch)
+    it("allows aggregate date-range queries when affiliate param is missing", async () => {
+      mockGet.mockResolvedValue(JSON.stringify({ data: {}, fetchedAt: Date.now() }));
       const req = makeEvent("startDate=2026-01-01");
       const res = await handler(req);
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body.error).toBe("Missing required affiliate parameter");
+      expect(body).toEqual({});
     });
 
     it("returns 400 when date range params are invalid formats", async () => {
