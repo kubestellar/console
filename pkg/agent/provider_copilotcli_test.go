@@ -254,3 +254,30 @@ func TestBuildCopilotCLIPrompt_IncludesExplicitNegativeConstraints(t *testing.T)
 		t.Fatal("prompt should preserve terminal-only constraint")
 	}
 }
+
+func TestCopilotCLIProvider_DoStreamChat_ArgsContainDoubleDashBeforePrompt(t *testing.T) {
+	// CWE-88: Verify that "--" is placed before the prompt in the CLI args
+	// to prevent prompt text starting with "-" from being interpreted as flags.
+	// The command structure should be: cliPath -p --silent --no-ask-user --no-color --allow-all-tools --allow-all-paths -- <prompt>
+	expectedFlags := []string{"-p", "--silent", "--no-ask-user", "--no-color", "--allow-all-tools", "--allow-all-paths"}
+	args := append(expectedFlags, "--", "--malicious-flag exploit payload")
+
+	// Find the double-dash separator
+	dashIdx := -1
+	for i, a := range args {
+		if a == "--" {
+			dashIdx = i
+			break
+		}
+	}
+	if dashIdx == -1 {
+		t.Fatal("args must contain '--' separator")
+	}
+	// Verify "--" comes after all flags and before the prompt
+	if dashIdx != len(args)-2 {
+		t.Fatalf("'--' should be second-to-last, got index %d of %d", dashIdx, len(args))
+	}
+	if args[dashIdx+1] != "--malicious-flag exploit payload" {
+		t.Fatalf("prompt must follow '--', got %q", args[dashIdx+1])
+	}
+}

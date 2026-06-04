@@ -262,7 +262,8 @@ func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest,
 	// --no-color: disable ANSI color codes
 	// --allow-all-tools: allow tool execution without confirmation (required for non-interactive mode)
 	// --allow-all-paths: allow access to any file path for kubectl/helm operations
-	cmd := exec.CommandContext(ctx, c.cliPath, "-p", prompt, "--silent", "--no-ask-user", "--no-color", "--allow-all-tools", "--allow-all-paths")
+	// "--" prevents prompt from being interpreted as a flag (CWE-88)
+	cmd := exec.CommandContext(ctx, c.cliPath, "-p", "--silent", "--no-ask-user", "--no-color", "--allow-all-tools", "--allow-all-paths", "--", prompt)
 	cmd.Env = freshEnv()
 	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
