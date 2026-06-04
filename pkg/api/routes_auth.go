@@ -144,6 +144,7 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		s.backendURL(),
 		s.config.FrontendURL,
 		s.config.GitHubURL,
+		s.config.BootstrapToken,
 		func(clientID, clientSecret string) { s.reloadOAuth(clientID, clientSecret) },
 		s.oauthConfigured,
 	)
