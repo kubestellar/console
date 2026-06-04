@@ -14,6 +14,7 @@ import {
   setQuantumWorkloadAvailable,
   isQuantumForcedToDemo,
 } from '../demoMode'
+import { getStoredAuthToken } from '../authToken'
 
 describe('isDemoMode', () => {
   it('returns a boolean', () => {
@@ -148,9 +149,9 @@ describe('subscribeDemoMode', () => {
 describe('setDemoToken', () => {
   beforeEach(() => { localStorage.clear() })
 
-  it('sets demo-token in localStorage', () => {
+  it('stores demo-token in auth storage', () => {
     setDemoToken()
-    expect(localStorage.getItem('token')).toBe('demo-token')
+    expect(getStoredAuthToken()).toBe('demo-token')
   })
 })
 
@@ -168,7 +169,7 @@ describe('activatePublicDemoMode', () => {
 
     expect(localStorage.getItem('kc-demo-mode')).toBe('true')
     expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
-    expect(localStorage.getItem('token')).toBe('demo-token')
+    expect(getStoredAuthToken()).toBe('demo-token')
     expect(localStorage.getItem('kc-user-cache')).toBeNull()
     expect(localStorage.getItem('kc-has-session')).toBeNull()
   })
@@ -181,7 +182,7 @@ describe('activatePublicDemoMode', () => {
 
     expect(localStorage.getItem('kc-demo-mode')).toBe('true')
     expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
-    expect(localStorage.getItem('token')).toBe('real-jwt-token')
+    expect(getStoredAuthToken()).toBe('real-jwt-token')
     expect(localStorage.getItem('kc-user-cache')).toBe(JSON.stringify({ id: 'real-user' }))
   })
 })

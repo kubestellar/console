@@ -122,13 +122,17 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+function renderFreshHook() {
+  return renderHook(() => useKagentBackend())
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('useKagentBackend', () => {
   it('returns all expected properties', () => {
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current).toHaveProperty('kagentAvailable')
     expect(result.current).toHaveProperty('kagentStatus')
     expect(result.current).toHaveProperty('kagentAgents')
@@ -147,7 +151,7 @@ describe('useKagentBackend', () => {
   })
 
   it('starts with kagent and kagenti unavailable', () => {
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.kagentAvailable).toBe(false)
     expect(result.current.kagentiAvailable).toBe(false)
     expect(result.current.kagentAgents).toEqual([])
@@ -158,35 +162,35 @@ describe('useKagentBackend', () => {
   })
 
   it('defaults preferredBackend to kc-agent when no localStorage', () => {
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.preferredBackend).toBe('kc-agent')
     unmount()
   })
 
   it('restores preferredBackend=kagent from localStorage', () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagent')
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.preferredBackend).toBe('kagent')
     unmount()
   })
 
   it('restores preferredBackend=kagenti from localStorage', () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.preferredBackend).toBe('kagenti')
     unmount()
   })
 
   it('defaults to kc-agent when localStorage has invalid value', () => {
     localStorage.setItem('kc_agent_backend_preference', 'invalid-backend')
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.preferredBackend).toBe('kc-agent')
     unmount()
   })
 
   it('fetches kagent status on mount and populates agents', async () => {
     setupKagentAvailable([kagentAgent('test-agent', 'ns-1')])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAvailable).toBe(true))
     expect(result.current.kagentAgents).toHaveLength(1)
     expect(result.current.kagentAgents[0].name).toBe('test-agent')
@@ -197,7 +201,7 @@ describe('useKagentBackend', () => {
 
   it('does not fetch agents when kagent is unavailable', async () => {
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(mockFetchKagentStatus).toHaveBeenCalled())
     expect(mockFetchKagentAgents).not.toHaveBeenCalled()
     expect(result.current.kagentAgents).toEqual([])
@@ -206,7 +210,7 @@ describe('useKagentBackend', () => {
 
   it('fetches kagenti status and populates agents when available', async () => {
     setupKagentiAvailable([kagentiAgent('prov-agent', 'ns-2')])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiAvailable).toBe(true))
     expect(result.current.kagentiAgents).toHaveLength(1)
     expect(result.current.kagentiAgents[0].name).toBe('prov-agent')
@@ -215,7 +219,7 @@ describe('useKagentBackend', () => {
 
   it('clears kagenti agents when kagenti becomes unavailable', async () => {
     setupKagentiAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiAvailable).toBe(true))
 
     mockFetchKagentiProviderStatus.mockResolvedValue({ available: false })
@@ -231,7 +235,7 @@ describe('useKagentBackend', () => {
   it('selects a kagent agent and persists to localStorage', async () => {
     const agent = kagentAgent('my-agent', 'my-ns')
     setupKagentAvailable([agent])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAgents).toHaveLength(1))
     act(() => result.current.selectKagentAgent(agent))
     expect(result.current.selectedKagentAgent).toEqual(agent)
@@ -245,7 +249,7 @@ describe('useKagentBackend', () => {
     const agent = kagentAgent('saved-agent', 'prod')
     localStorage.setItem('kc_kagent_selected_agent', 'prod/saved-agent')
     setupKagentAvailable([agent])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.selectedKagentAgent).not.toBeNull())
     expect(result.current.selectedKagentAgent?.name).toBe('saved-agent')
     expect(result.current.selectedKagentAgent?.namespace).toBe('prod')
@@ -255,7 +259,7 @@ describe('useKagentBackend', () => {
   it('does not restore kagent agent if saved name does not match any agent', async () => {
     localStorage.setItem('kc_kagent_selected_agent', 'ns/nonexistent-agent')
     setupKagentAvailable([kagentAgent('other-agent', 'ns')])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAgents).toHaveLength(1))
     expect(result.current.selectedKagentAgent).toBeNull()
     unmount()
@@ -264,7 +268,7 @@ describe('useKagentBackend', () => {
   it('selects a kagenti agent and persists to localStorage', async () => {
     const agent = kagentiAgent('ki-agent', 'ki-ns')
     setupKagentiAvailable([agent])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiAgents).toHaveLength(1))
     act(() => result.current.selectKagentiAgent(agent))
     expect(result.current.selectedKagentiAgent).toEqual(agent)
@@ -278,7 +282,7 @@ describe('useKagentBackend', () => {
     const agent = kagentiAgent('restored-agent', 'staging')
     localStorage.setItem('kc_kagenti_selected_agent', 'staging/restored-agent')
     setupKagentiAvailable([agent])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() =>
       expect(result.current.selectedKagentiAgent).not.toBeNull(),
     )
@@ -287,7 +291,7 @@ describe('useKagentBackend', () => {
   })
 
   it('updates preferredBackend and persists to localStorage', () => {
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     act(() => result.current.setPreferredBackend('kagent'))
     expect(result.current.preferredBackend).toBe('kagent')
     expect(localStorage.getItem('kc_agent_backend_preference')).toBe('kagent')
@@ -299,7 +303,7 @@ describe('useKagentBackend', () => {
 
   it('returns kc-agent as activeBackend when nothing is available', async () => {
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(mockFetchKagentStatus).toHaveBeenCalled())
     expect(result.current.activeBackend).toBe('kc-agent')
     unmount()
@@ -308,7 +312,7 @@ describe('useKagentBackend', () => {
   it('returns kagent as activeBackend when preferred=kagent and available', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagent')
     setupKagentAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAvailable).toBe(true))
     expect(result.current.activeBackend).toBe('kagent')
     unmount()
@@ -317,7 +321,7 @@ describe('useKagentBackend', () => {
   it('falls back to kc-agent when preferred=kagent but not available', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagent')
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     // Issue 9246: `activeBackend` starts equal to `preferredBackend` and only
     // snaps to 'kc-agent' after `hasPolled` flips true. Waiting for the mock
     // to have been CALLED is insufficient — the state commit happens in a
@@ -330,7 +334,7 @@ describe('useKagentBackend', () => {
   it('returns kagenti as activeBackend when preferred=kagenti and available', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     setupKagentiAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiAvailable).toBe(true))
     expect(result.current.activeBackend).toBe('kagenti')
     unmount()
@@ -339,7 +343,7 @@ describe('useKagentBackend', () => {
   it('falls back to kc-agent when preferred=kagenti but not available', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     // Issue 9246: same race as the 'kagent' fallback test above — wait for
     // `hasPolled` instead of the mock call, so `activeBackend` has settled.
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
@@ -350,7 +354,7 @@ describe('useKagentBackend', () => {
   it('returns kc-agent as activeBackend when kc-agent is preferred even with both available', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kc-agent')
     setupBothAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAvailable).toBe(true))
     expect(result.current.activeBackend).toBe('kc-agent')
     unmount()
@@ -360,7 +364,7 @@ describe('useKagentBackend', () => {
     vi.useFakeTimers()
     setupBothUnavailable()
     const POLL_INTERVAL_MS = 30_000
-    const { unmount } = renderHook(() => useKagentBackend())
+    const { unmount } = renderFreshHook()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100)
     })
@@ -377,7 +381,7 @@ describe('useKagentBackend', () => {
 
   it('clears poll interval on unmount', () => {
     const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
-    const { unmount } = renderHook(() => useKagentBackend())
+    const { unmount } = renderFreshHook()
     unmount()
     expect(clearIntervalSpy).toHaveBeenCalled()
     clearIntervalSpy.mockRestore()
@@ -385,8 +389,8 @@ describe('useKagentBackend', () => {
 
   it('shares a single polling cycle across multiple consumers', async () => {
     setupBothUnavailable()
-    const first = renderHook(() => useKagentBackend())
-    const second = renderHook(() => useKagentBackend())
+    const first = renderFreshHook()
+    const second = renderFreshHook()
 
     await waitFor(() => expect(first.result.current.hasPolled).toBe(true))
     await waitFor(() => expect(second.result.current.hasPolled).toBe(true))
@@ -402,14 +406,14 @@ describe('useKagentBackend', () => {
     vi.useFakeTimers()
     setupBothUnavailable()
 
-    const firstMount = renderHook(() => useKagentBackend())
+    const firstMount = renderFreshHook()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100)
     })
     expect(mockFetchKagentiProviderStatus).toHaveBeenCalledTimes(1)
     firstMount.unmount()
 
-    const secondMount = renderHook(() => useKagentBackend())
+    const secondMount = renderFreshHook()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100)
     })
@@ -433,7 +437,7 @@ describe('useKagentBackend', () => {
     })
     mockFetchKagentiProviderStatus.mockImplementation(() => new Promise(() => {}))
 
-    const { unmount } = renderHook(() => useKagentBackend())
+    const { unmount } = renderFreshHook()
 
     expect(observedSignal).toBeDefined()
     expect(observedSignal?.aborted).toBe(false)
@@ -445,7 +449,7 @@ describe('useKagentBackend', () => {
 
   it('refresh triggers an immediate re-fetch', async () => {
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(mockFetchKagentStatus).toHaveBeenCalledTimes(1))
     setupKagentAvailable()
     await act(async () => {
@@ -458,7 +462,7 @@ describe('useKagentBackend', () => {
 
   it('reports both backends as available when both are running', async () => {
     setupBothAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => {
       expect(result.current.kagentAvailable).toBe(true)
       expect(result.current.kagentiAvailable).toBe(true)
@@ -473,7 +477,7 @@ describe('useKagentBackend', () => {
     const agentB = kagentAgent('agent-b', 'ns')
     localStorage.setItem('kc_kagent_selected_agent', 'ns/agent-a')
     setupKagentAvailable([agentA, agentB])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.selectedKagentAgent).not.toBeNull())
     act(() => result.current.selectKagentAgent(agentB))
     expect(result.current.selectedKagentAgent?.name).toBe('agent-b')
@@ -493,7 +497,7 @@ describe('useKagentBackend', () => {
     mockFetchKagentAgents.mockResolvedValue([])
     mockFetchKagentiProviderStatus.mockResolvedValue({ available: false })
     mockFetchKagentiProviderAgents.mockResolvedValue([])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentStatus).not.toBeNull())
     expect(result.current.kagentStatus?.available).toBe(true)
     expect(result.current.kagentStatus?.url).toBe('http://kagent:8080')
@@ -508,7 +512,7 @@ describe('useKagentBackend', () => {
       url: 'http://kagenti:9090',
     })
     mockFetchKagentiProviderAgents.mockResolvedValue([])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiStatus).not.toBeNull())
     expect(result.current.kagentiStatus?.available).toBe(true)
     expect(result.current.kagentiStatus?.url).toBe('http://kagenti:9090')
@@ -522,7 +526,7 @@ describe('useKagentBackend', () => {
       kagentAgent('agent-3', 'other-ns'),
     ]
     setupKagentAvailable(agents)
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAgents).toHaveLength(3))
     expect(result.current.kagentAgents[0].name).toBe('agent-1')
     expect(result.current.kagentAgents[1].name).toBe('agent-2')
@@ -532,7 +536,7 @@ describe('useKagentBackend', () => {
 
   it('clears kagent agents when kagent becomes unavailable on refresh', async () => {
     setupKagentAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => {
       expect(result.current.kagentAvailable).toBe(true)
       expect(result.current.kagentAgents).toHaveLength(1)
@@ -558,7 +562,7 @@ describe('useKagentBackend', () => {
     mockFetchKagentAgents.mockResolvedValue([])
     mockFetchKagentiProviderStatus.mockResolvedValue({ available: false })
     mockFetchKagentiProviderAgents.mockResolvedValue([])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentStatus).not.toBeNull())
     expect(result.current.kagentStatus?.available).toBe(false)
     expect(result.current.kagentStatus?.reason).toBe('not installed')
@@ -573,7 +577,7 @@ describe('useKagentBackend', () => {
     mockFetchKagentAgents.mockResolvedValue([])
     mockFetchKagentiProviderStatus.mockResolvedValue({ available: false })
     mockFetchKagentiProviderAgents.mockResolvedValue([])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentAvailable).toBe(true))
     expect(result.current.kagentAgents).toEqual([])
     expect(result.current.selectedKagentAgent).toBeNull()
@@ -583,7 +587,7 @@ describe('useKagentBackend', () => {
   it('activeBackend changes when preferred backend becomes available', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagent')
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     // Wait for the first poll to settle so hasPolled=true and activeBackend reflects live state
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
     expect(result.current.activeBackend).toBe('kc-agent')
@@ -597,7 +601,7 @@ describe('useKagentBackend', () => {
   })
 
   it('can change preference back to kc-agent', () => {
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     act(() => result.current.setPreferredBackend('kagent'))
     expect(result.current.preferredBackend).toBe('kagent')
     act(() => result.current.setPreferredBackend('kc-agent'))
@@ -613,7 +617,7 @@ describe('useKagentBackend', () => {
     const agentB = kagentiAgent('agent-b', 'ns')
     localStorage.setItem('kc_kagenti_selected_agent', 'ns/agent-a')
     setupKagentiAvailable([agentA, agentB])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() =>
       expect(result.current.selectedKagentiAgent).not.toBeNull(),
     )
@@ -630,7 +634,7 @@ describe('useKagentBackend', () => {
   it('does not restore kagenti agent if saved name does not match', async () => {
     localStorage.setItem('kc_kagenti_selected_agent', 'ns/nonexistent-agent')
     setupKagentiAvailable([kagentiAgent('other-agent', 'ns')])
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiAgents).toHaveLength(1))
     expect(result.current.selectedKagentiAgent).toBeNull()
     unmount()
@@ -639,7 +643,7 @@ describe('useKagentBackend', () => {
   it('handles multiple kagenti agents', async () => {
     const agents = [kagentiAgent('ki-1', 'ns'), kagentiAgent('ki-2', 'other-ns')]
     setupKagentiAvailable(agents)
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.kagentiAgents).toHaveLength(2))
     expect(result.current.kagentiAgents[0].name).toBe('ki-1')
     expect(result.current.kagentiAgents[1].name).toBe('ki-2')
@@ -651,7 +655,7 @@ describe('useKagentBackend', () => {
   // ---------------------------------------------------------------------------
 
   it('exposes hasPolled property', () => {
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current).toHaveProperty('hasPolled')
     unmount()
   })
@@ -660,14 +664,14 @@ describe('useKagentBackend', () => {
     // Use a never-resolving mock so we can inspect the pre-poll state
     mockFetchKagentStatus.mockReturnValue(new Promise(() => {}))
     mockFetchKagentiProviderStatus.mockReturnValue(new Promise(() => {}))
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.hasPolled).toBe(false)
     unmount()
   })
 
   it('hasPolled becomes true after the first poll completes', async () => {
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.hasPolled).toBe(false)
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
     unmount()
@@ -675,7 +679,7 @@ describe('useKagentBackend', () => {
 
   it('hasPolled becomes true even when kagenti is available', async () => {
     setupKagentiAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
     expect(result.current.kagentiAvailable).toBe(true)
     unmount()
@@ -687,7 +691,7 @@ describe('useKagentBackend', () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     mockFetchKagentiProviderStatus.mockReturnValue(new Promise(() => {})) // never resolves
     mockFetchKagentStatus.mockReturnValue(new Promise(() => {}))
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     expect(result.current.hasPolled).toBe(false)
     expect(result.current.activeBackend).toBe('kagenti') // trust stored pref, not live state
     unmount()
@@ -696,7 +700,7 @@ describe('useKagentBackend', () => {
   it('activeBackend reflects live kagentiAvailable after first poll', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     setupKagentiAvailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
     expect(result.current.activeBackend).toBe('kagenti')
     unmount()
@@ -705,7 +709,7 @@ describe('useKagentBackend', () => {
   it('activeBackend falls back to kc-agent after poll when preferred kagenti is unavailable', async () => {
     localStorage.setItem('kc_agent_backend_preference', 'kagenti')
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
     expect(result.current.activeBackend).toBe('kc-agent')
     unmount()
@@ -713,7 +717,7 @@ describe('useKagentBackend', () => {
 
   it('hasPolled remains true across subsequent refreshes', async () => {
     setupBothUnavailable()
-    const { result, unmount } = renderHook(() => useKagentBackend())
+    const { result, unmount } = renderFreshHook()
     await waitFor(() => expect(result.current.hasPolled).toBe(true))
     await act(async () => { await result.current.refresh() })
     expect(result.current.hasPolled).toBe(true)

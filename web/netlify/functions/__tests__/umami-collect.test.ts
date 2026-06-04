@@ -28,10 +28,11 @@ function makeRequest(options?: {
     headers.set("content-length", options.contentLength);
   }
 
+  const method = options?.method ?? "POST";
   return new Request("https://console.kubestellar.io/api/send", {
-    method: options?.method ?? "POST",
+    method,
     headers,
-    body: options?.body ?? "{}",
+    ...(method === "GET" || method === "HEAD" ? {} : { body: options?.body ?? "{}" }),
   });
 }
 

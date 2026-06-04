@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import React from 'react'
+import { AUTH_TOKEN_SYNC_KEY, getStoredAuthToken, setStoredAuthToken } from '../authToken'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -88,17 +89,11 @@ const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 // ---------------------------------------------------------------------------
 
 function readStoredSessionToken(): string | null {
-  const rawValue = sessionStorage.getItem(STORAGE_KEY_TOKEN)
-  if (!rawValue) {
-    return null
-  }
+  return getStoredAuthToken()
+}
 
-  try {
-    const parsed = JSON.parse(rawValue) as { token?: string }
-    return typeof parsed.token === 'string' ? parsed.token : rawValue
-  } catch {
-    return rawValue
-  }
+function makeAuthSyncEvent(state: 'cleared' | 'demo' | 'session'): string {
+  return JSON.stringify({ state, ts: Date.now() })
 }
 
 function makeJwt(payload: Record<string, unknown>): string {
@@ -649,10 +644,11 @@ describe('storage event coverage', () => {
 
     // Simulate storage event from another tab with a new real token
     const newToken = 'new-jwt-from-another-tab'
+    setStoredAuthToken(newToken)
     act(() => {
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: newToken,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: makeAuthSyncEvent('session'),
       }))
     })
 
@@ -839,8 +835,8 @@ describe('cross-tab logout (#6065)', () => {
     act(() => {
       localStorage.removeItem(STORAGE_KEY_TOKEN)
       window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEY_TOKEN,
-        newValue: null,
+        key: AUTH_TOKEN_SYNC_KEY,
+        newValue: makeAuthSyncEvent('cleared'),
       }))
     })
 

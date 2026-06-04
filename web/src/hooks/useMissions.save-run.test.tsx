@@ -156,8 +156,8 @@ async function startMissionWithConnection(
   act(() => {
     missionId = result.current.startMission(defaultParams)
   })
-  // Flush microtask queue so the preflight .then() chain resolves (#3742)
-  await act(async () => { await Promise.resolve() })
+  // Flush the preflight promise chain before simulating the socket opening.
+  await flushMissionPreflightChain()
   await act(async () => {
     MockWebSocket.lastInstance?.simulateOpen()
   })

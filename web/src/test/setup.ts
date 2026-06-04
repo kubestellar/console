@@ -49,27 +49,55 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// Mock agentFetch to delegate to global.fetch so test mocks intercept it
-// This fixes #10400 #10401: PR #10398 migrated to agentFetch wrapper, which
-// bypassed global.fetch mocks. Now agentFetch delegates to global.fetch,
-// allowing test mocks to work transparently.
+// Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
+// both the legacy shared wrapper and the direct mcp/agentFetch module imports.
 vi.mock('../hooks/mcp/shared', async () => {
   const actual = await vi.importActual<typeof import('../hooks/mcp/shared')>('../hooks/mcp/shared')
   return {
     ...actual,
-    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-      // Delegate to global.fetch so test mocks intercept this call
-      return global.fetch(url, init)
-    }),
+    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
   }
 })
 
+vi.mock('../hooks/mcp/agentFetch', async () => {
+  const actual = await vi.importActual<typeof import('../hooks/mcp/agentFetch')>('../hooks/mcp/agentFetch')
+  return {
+    ...actual,
+    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+  }
+})
+
+const TOKEN_STORAGE_ALIASES = ['token', 'kc_token', 'kc-token', 'kc-auth-token'] as const
+
 // Mock localStorage
 const localStorageStore: Record<string, string> = {}
+const isTokenAlias = (key: string): key is typeof TOKEN_STORAGE_ALIASES[number] =>
+  TOKEN_STORAGE_ALIASES.includes(key as typeof TOKEN_STORAGE_ALIASES[number])
+const syncTokenAliases = (value: string | null) => {
+  for (const alias of TOKEN_STORAGE_ALIASES) {
+    if (value === null) {
+      delete localStorageStore[alias]
+    } else {
+      localStorageStore[alias] = value
+    }
+  }
+}
 const localStorageMock = {
   getItem: (key: string) => localStorageStore[key] ?? null,
-  setItem: (key: string, value: string) => { localStorageStore[key] = String(value) },
-  removeItem: (key: string) => { delete localStorageStore[key] },
+  setItem: (key: string, value: string) => {
+    const nextValue = String(value)
+    localStorageStore[key] = nextValue
+    if (isTokenAlias(key)) {
+      syncTokenAliases(nextValue)
+    }
+  },
+  removeItem: (key: string) => {
+    if (isTokenAlias(key)) {
+      syncTokenAliases(null)
+      return
+    }
+    delete localStorageStore[key]
+  },
   clear: () => { Object.keys(localStorageStore).forEach(k => delete localStorageStore[k]) },
   key: (index: number) => Object.keys(localStorageStore)[index] ?? null,
   get length() { return Object.keys(localStorageStore).length },

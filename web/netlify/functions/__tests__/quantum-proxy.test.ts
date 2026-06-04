@@ -3,7 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "@netlify/functions";
-import { createHmac } from "node:crypto";
+import { SignJWT } from "jose";
 import {
   TEST_CORS_ORIGIN,
   makeNetlifyRequest,
@@ -30,20 +30,12 @@ const JWT_NONE_HEADER = { alg: "none", typ: "JWT" };
 const JWT_NONE_PAYLOAD = { sub: "quantum-proxy-test", exp: 4_102_444_800 };
 const JWT_SIGNING_HEADER = { alg: "HS256", typ: "JWT" };
 
-function encodeJwtSegment(value: unknown): string {
-  return Buffer.from(JSON.stringify(value)).toString("base64url");
-}
-
 async function createSignedJwt(secret: string = TEST_JWT_SECRET): Promise<string> {
-  const payload = {
-    sub: "quantum-proxy-test",
-    exp: Math.floor(Date.now() / 1000) + JWT_EXPIRATION_WINDOW_SECONDS,
-  };
-  const encodedHeader = encodeJwtSegment(JWT_SIGNING_HEADER);
-  const encodedPayload = encodeJwtSegment(payload);
-  const signingInput = `${encodedHeader}.${encodedPayload}`;
-  const signature = createHmac("sha256", secret).update(signingInput).digest("base64url");
-  return `${signingInput}.${signature}`;
+  const expiresInSeconds = JWT_EXPIRATION_WINDOW_SECONDS;
+  return new SignJWT({ sub: "quantum-proxy-test" })
+    .setProtectedHeader(JWT_SIGNING_HEADER)
+    .setExpirationTime(`${expiresInSeconds}s`)
+    .sign(new TextEncoder().encode(secret));
 }
 
 function createUnsignedJwt(): string {
