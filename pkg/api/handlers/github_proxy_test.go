@@ -331,3 +331,75 @@ func TestProxy_AllowsAllowlistedRepoRequest(t *testing.T) {
 		t.Fatalf("expected 200 for allowlisted repo, got %d", resp.StatusCode)
 	}
 }
+
+func TestDeleteToken_RejectsNonAdmin(t *testing.T) {
+	setupGitHubProxyTestSettings(t)
+
+	app := fiber.New()
+	mockStore := new(test.MockStore)
+	h := NewGitHubProxyHandler("", mockStore)
+	userID := uuid.New()
+	viewer := &models.User{ID: userID, Role: models.UserRoleViewer}
+
+	mockStore.On("GetUser", userID).Return(viewer, nil).Once()
+
+	app.Delete("/api/github/token", func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		if err := RequireAdmin(c, mockStore); err != nil {
+			return err
+		}
+		return h.DeleteToken(c)
+	})
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/github/token", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("DeleteToken request failed: %v", err)
+	}
+	// Non-admin users must NOT be able to delete GitHub token (CWE-862)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden for non-admin user, got %d", resp.StatusCode)
+	}
+	if viewer.Role != models.UserRoleViewer {
+		t.Fatalf("expected viewer role to remain unchanged, got %q", viewer.Role)
+	}
+}
+
+func TestDeleteToken_AllowsAdmin(t *testing.T) {
+	setupGitHubProxyTestSettings(t)
+
+	app := fiber.New()
+	mockStore := new(test.MockStore)
+	h := NewGitHubProxyHandler("", mockStore)
+	userID := uuid.New()
+	admin := &models.User{ID: userID, Role: models.UserRoleAdmin}
+
+	mockStore.On("GetUser", userID).Return(admin, nil).Once()
+
+	app.Delete("/api/github/token", func(c *fiber.Ctx) error {
+		c.Locals("userID", userID)
+		if err := RequireAdmin(c, mockStore); err != nil {
+			return err
+		}
+		return h.DeleteToken(c)
+	})
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/github/token", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("DeleteToken request failed: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for admin delete attempt, got %d", resp.StatusCode)
+	}
+
+	all, err := settings.GetSettingsManager().GetAll()
+	if err != nil {
+		t.Fatalf("get settings: %v", err)
+	}
+	if all.FeedbackGitHubToken != "" {
+		t.Fatalf("expected token to be cleared, got %q", all.FeedbackGitHubToken)
+	}
+
+	mockStore.AssertExpectations(t)
+}
