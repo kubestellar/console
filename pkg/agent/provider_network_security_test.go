@@ -65,14 +65,16 @@ func TestAIProviderHTTPTransport_DialsPinnedResolvedIP(t *testing.T) {
 	})
 
 	transport := newAIProviderHTTPTransport(allowLocalProviders)
+	require.NotNil(t, transport.DialContext)
 	_, err := transport.DialContext(t.Context(), "tcp", "public.example:443")
+	require.Error(t, err, "transport dial should return sentinel error")
 	require.ErrorIs(t, err, sentinelErr)
 	require.False(t, strings.Contains(err.Error(), "public.example:443"), "transport should dial the resolved IP directly")
 }
 
 func TestAIProviderHTTPClient_DisablesRedirects(t *testing.T) {
 	client := newSecuredAIProviderHTTPClient(func() bool { return false }, aiProviderHTTPTimeout)
-	req := require.New(t)
 	err := client.CheckRedirect(&http.Request{}, []*http.Request{{}})
-	req.ErrorIs(err, http.ErrUseLastResponse)
+	require.Error(t, err, "CheckRedirect must return non-nil error to block redirects")
+	require.ErrorIs(t, err, http.ErrUseLastResponse)
 }
