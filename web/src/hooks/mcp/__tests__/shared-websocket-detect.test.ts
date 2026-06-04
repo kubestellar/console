@@ -128,6 +128,7 @@ import {
   clusterCacheRef,
   subscribeClusterCache,
 } from '../shared'
+import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -480,7 +481,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('sends Authorization header when token exists', async () => {
     mockIsAgentUnavailable.mockReturnValue(true) // skip agent
-    sessionStorage.setItem('kc-agent-token', 'my-jwt')
+    setAgentToken('my-jwt')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -490,12 +491,13 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     await fetchSingleClusterHealth('auth-test')
 
     const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(call[1]?.headers?.Authorization).toBe('Bearer my-jwt')
+    const headers = call[1]?.headers as Headers
+    expect(headers.get('Authorization')).toBe('Bearer my-jwt')
   })
 
   it('omits Authorization header when no token', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    sessionStorage.removeItem('kc-agent-token')
+    clearAgentToken()
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -505,7 +507,8 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     await fetchSingleClusterHealth('no-auth-test')
 
     const call = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-    expect(call[1]?.headers?.Authorization).toBeUndefined()
+    const headers = call[1]?.headers as Headers
+    expect(headers.get('Authorization')).toBeNull()
   })
 })
 

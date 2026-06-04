@@ -225,20 +225,6 @@ export default async (req: Request) => {
         );
       }
 
-      const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
-      if (contentLength > MAX_BODY_BYTES) {
-        return new Response(
-          JSON.stringify({ error: "Payload too large" }),
-          { status: 413, headers }
-        );
-      }
-
-      const body = await req.json();
-      const score = parseInt(body.score, 10);
-      let body: NPSSubmissionBody;
-      // SECURITY: Enforce body size on actual bytes read, not Content-Length header.
-      // Chunked encoding can bypass Content-Length checks (CWE-400).
-      let body: { score: unknown; feedback?: unknown; sessionId?: unknown };
       // SECURITY: Enforce body size on actual bytes, not Content-Length (CWE-400, #16666).
       let body: { score?: unknown; feedback?: unknown; sessionId?: unknown };
       try {

@@ -129,6 +129,7 @@ import {
   clusterCacheRef,
   subscribeClusterCache,
 } from '../shared'
+import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -777,12 +778,12 @@ describe('fetchWithRetry', () => {
   beforeEach(() => {
     // Pre-seed agent token so agentFetch() does not call fetch('/api/agent/token')
     // which would interfere with call-count assertions.
-    sessionStorage.setItem('kc-agent-token', 'test-token')
+    setAgentToken('test-token')
   })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
-    sessionStorage.removeItem('kc-agent-token')
+    clearAgentToken()
     vi.restoreAllMocks()
   })
 

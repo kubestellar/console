@@ -131,6 +131,7 @@ import {
   clusterCacheRef,
   subscribeClusterCache,
 } from '../shared'
+import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -728,7 +729,7 @@ describe('fetchSingleClusterHealth', () => {
   it('uses kubectlContext for agent request when provided', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
     // Pre-seed agent token to prevent getAgentToken() from calling /api/agent/token
-    sessionStorage.setItem('kc-agent-token', 'test-token')
+    setAgentToken('test-token')
     const healthData: ClusterHealth = {
       cluster: 'test',
       healthy: true,

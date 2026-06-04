@@ -21,6 +21,48 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useKeyboardNav', async () => {
+  const React = await import('react')
+  const { moveFocusByKey } = await vi.importActual<typeof import('../../../lib/a11y/rovingFocus')>('../../../lib/a11y/rovingFocus')
+
+  return {
+    useKeyboardNav: ({
+      selector = '[role="menuitem"]:not([disabled])',
+      onEscape,
+    }: {
+      selector?: string
+      onEscape?: () => void
+    } = {}) => {
+      const containerRef = React.useRef<HTMLElement | null>(null)
+      const getItems = () => Array.from(containerRef.current?.querySelectorAll<HTMLElement>(selector) ?? [])
+        .filter((item) => !item.hasAttribute('disabled') && item.getAttribute('aria-disabled') !== 'true')
+
+      return {
+        containerRef,
+        focusMatchingItem: () => {
+          const firstItem = getItems()[0] ?? null
+          firstItem?.focus()
+          return firstItem
+        },
+        focusLastItem: () => {
+          const items = getItems()
+          const lastItem = items[items.length - 1] ?? null
+          lastItem?.focus()
+          return lastItem
+        },
+        handleKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            onEscape?.()
+            return
+          }
+          moveFocusByKey(event, { selector, orientation: 'vertical' })
+        },
+      }
+    },
+  }
+})
+
 vi.mock('../../ui/Tooltip', () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
