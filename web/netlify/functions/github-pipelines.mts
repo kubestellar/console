@@ -47,9 +47,8 @@ import {
   buildLog,
 } from "./github-pipelines/views";
 
-const REPOS = getRepos();
-
 export default async (req: Request): Promise<Response> => {
+  const repos = getRepos();
   const origin = req.headers.get("origin");
   const baseHeaders: Record<string, string> = buildStrictKubestellarCorsHeaders(origin);
 
@@ -75,7 +74,7 @@ export default async (req: Request): Promise<Response> => {
     );
   }
 
-  if (repoFilter !== null && !isAllowedRepoSlug(repoFilter, REPOS)) {
+  if (repoFilter !== null && !isAllowedRepoSlug(repoFilter, repos)) {
     return jsonResponse(
       { error: "Repository not allowed" },
       { status: 403, headers: baseHeaders },
@@ -190,7 +189,7 @@ export default async (req: Request): Promise<Response> => {
 
     // Wrap payload with the repo list so the client never hardcodes it.
     // Cards read `repos` from the response to populate their filter dropdown.
-    const wrapped = { ...(payload as Record<string, unknown>), repos: REPOS };
+    const wrapped = { ...(payload as Record<string, unknown>), repos };
     await writeCache(store, cacheKey, wrapped).catch((err) => { console.warn("[github-pipelines] blob cache write failed:", err instanceof Error ? err.message : err) });
     return jsonResponse(wrapped, {
       headers: {
@@ -203,7 +202,7 @@ export default async (req: Request): Promise<Response> => {
     return jsonResponse(
       {
         error: "Internal error",
-        repos: REPOS,
+        repos,
         nextCron: "0 5 * * *",
       },
       { status: 500, headers: baseHeaders }

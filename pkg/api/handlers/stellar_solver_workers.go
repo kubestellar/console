@@ -103,6 +103,7 @@ func (h *StellarHandler) runStaleApprovalSweep(ctx context.Context) {
 			}
 			h.broadcastToClients(SSEEvent{Type: "notification", Data: notif})
 			h.broadcastToClients(SSEEvent{Type: "action_update", Data: map[string]string{
+				"userId": action.UserID,
 				"id":     action.ID,
 				"status": "superseded",
 			}})
@@ -112,7 +113,8 @@ func (h *StellarHandler) runStaleApprovalSweep(ctx context.Context) {
 			}
 			entry.bumped++
 			h.broadcastToClients(SSEEvent{Type: "action_bumped", Data: map[string]string{
-				"id": action.ID,
+				"userId": action.UserID,
+				"id":     action.ID,
 			}})
 		}
 		perUser[action.UserID] = entry

@@ -87,6 +87,29 @@ func TestJWTAuth(t *testing.T) {
 		assert.Equal(t, 401, restrictedResp.StatusCode)
 	})
 
+	t.Run("GitHub Pipelines Widget Bypass Is Read Only", func(t *testing.T) {
+		// After #16917, /api/github-pipelines was removed from the public
+		// prefix list — it now requires full authentication even for GET.
+		widgetApp := fiber.New()
+		handler := JWTAuth("test-secret")
+		widgetApp.Get("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
+			return c.SendString("ok")
+		})
+		widgetApp.Post("/api/github-pipelines", handler, func(c *fiber.Ctx) error {
+			return c.SendString("should-not-reach")
+		})
+
+		getReq := httptest.NewRequest("GET", "/api/github-pipelines?source=ubersicht-widget&view=pulse", nil)
+		getResp, err := widgetApp.Test(getReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, getResp.StatusCode, "GET /api/github-pipelines must require auth after #16917")
+
+		mutateReq := httptest.NewRequest("POST", "/api/github-pipelines?source=ubersicht-widget&view=mutate", nil)
+		mutateResp, err := widgetApp.Test(mutateReq, 5000)
+		assert.NoError(t, err)
+		assert.Equal(t, 401, mutateResp.StatusCode)
+	})
+
 	t.Run("Query Param Fallback Rejected On Non-Allowlisted Stream Path (#6585)", func(t *testing.T) {
 		// #6585 — _token query param is no longer accepted on arbitrary
 		// paths just because they end in /stream. The endpoint must be
@@ -205,6 +228,52 @@ func TestJWTAuth(t *testing.T) {
 		assert.Empty(t, observedQueryToken, "_token must be scrubbed on non-stream paths too")
 		assert.NotContains(t, observedOriginalURL, leakedToken, "token value must not appear in OriginalURL()")
 	})
+}
+
+func TestParseJWT_RejectsUnexpectedAlgorithms(t *testing.T) {
+	secret := "test-secret"
+	claims := UserClaims{
+		UserID:      uuid.New(),
+		GitHubLogin: "test",
+		Role:        models.UserRoleViewer,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+
+	tests := []struct {
+		name   string
+		method jwt.SigningMethod
+		key    interface{}
+	}{
+		{
+			name:   "rejects alg none",
+			method: jwt.SigningMethodNone,
+			key:    jwt.UnsafeAllowNoneSignatureType,
+		},
+		{
+			name:   "rejects hs384 even with valid signature",
+			method: jwt.SigningMethodHS384,
+			key:    []byte(secret),
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			token := jwt.NewWithClaims(tc.method, claims)
+			tokenString, err := token.SignedString(tc.key)
+			require.NoError(t, err)
+
+			parsed, err := ParseJWT(tokenString, secret)
+			require.Error(t, err)
+			require.NotNil(t, parsed)
+			assert.False(t, parsed.Valid)
+			assert.Equal(t, tc.method.Alg(), parsed.Method.Alg())
+		})
+	}
 }
 
 func TestJWTAuth_TokenRefreshHeader(t *testing.T) {

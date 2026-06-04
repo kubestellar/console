@@ -19,7 +19,10 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-const stellarTestFiberTimeoutMs = 5000
+const (
+	stellarTestFiberTimeoutMs = 5000
+	stellarTestEventWait      = 100 * time.Millisecond
+)
 
 func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	t.Helper()
@@ -217,6 +220,40 @@ func TestStellarAskStateDigestAndNotifications(t *testing.T) {
 			require.Equal(t, http.StatusNoContent, readResp.StatusCode)
 		}
 	}
+}
+
+func TestBroadcastToClientsScopesEventsByUser(t *testing.T) {
+	h := NewStellarHandler(nil, nil)
+
+	userChannel := make(chan SSEEvent, 4)
+	otherChannel := make(chan SSEEvent, 4)
+	adminChannel := make(chan SSEEvent, 4)
+
+	h.registerSSEClient("user", "user-a", false, userChannel)
+	h.registerSSEClient("other", "user-b", false, otherChannel)
+	h.registerSSEClient("admin", "admin-user", true, adminChannel)
+
+	h.broadcastToClients(SSEEvent{Type: "notification", Data: &store.StellarNotification{UserID: "user-a", Title: "owned"}})
+	require.Eventually(t, func() bool { return len(userChannel) == 1 }, stellarTestEventWait, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(adminChannel) == 1 }, stellarTestEventWait, 10*time.Millisecond)
+	assert.Len(t, otherChannel, 0)
+
+	assert.Equal(t, "notification", (<-userChannel).Type)
+	assert.Equal(t, "notification", (<-adminChannel).Type)
+
+	h.broadcastToClients(newUserScopedSSEEvent("user-b", "action_update", map[string]string{"id": "a1", "status": "done"}))
+	require.Eventually(t, func() bool { return len(otherChannel) == 1 }, stellarTestEventWait, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(adminChannel) == 1 }, stellarTestEventWait, 10*time.Millisecond)
+	assert.Len(t, userChannel, 0)
+
+	assert.Equal(t, "action_update", (<-otherChannel).Type)
+	assert.Equal(t, "action_update", (<-adminChannel).Type)
+
+	h.broadcastToClients(SSEEvent{Type: "notification", Data: &store.StellarNotification{UserID: stellarSystemUserID, Title: "system"}})
+	require.Eventually(t, func() bool { return len(adminChannel) == 1 }, stellarTestEventWait, 10*time.Millisecond)
+	assert.Len(t, userChannel, 0)
+	assert.Len(t, otherChannel, 0)
+	assert.Equal(t, "notification", (<-adminChannel).Type)
 }
 
 func TestStellarNotificationStateTransitions(t *testing.T) {

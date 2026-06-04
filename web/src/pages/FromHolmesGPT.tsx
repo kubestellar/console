@@ -155,11 +155,11 @@ export function FromHolmesGPT() {
               plus 140+ dashboard cards
             </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+          <div className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             KubeStellar Console includes AI-powered root cause analysis, investigation runbooks,
             PagerDuty/OpsGenie integration, and Inspektor Gadget eBPF tracing —
             wrapped in a multi-cluster dashboard with real-time visibility.
-          </p>
+          </div>
           <div className="flex items-center justify-center gap-4">
             <Link
               to={ROUTES.HOME}
@@ -202,9 +202,9 @@ export function FromHolmesGPT() {
         <h2 className="text-3xl font-bold text-center mb-4">
           Migration path
         </h2>
-        <p className="text-muted-foreground text-center mb-12">
+        <div className="text-muted-foreground text-center mb-12">
           Your HolmesGPT concepts map directly to the console.
-        </p>
+        </div>
         <div className="space-y-4">
           {MIGRATION_ITEMS.map(({ from, to, description }) => (
             <div key={from} className="p-5 rounded-xl border border-border/50 bg-card/30">
@@ -224,9 +224,9 @@ export function FromHolmesGPT() {
           Get started in{' '}
           <span className="text-purple-400">60 seconds</span>
         </h2>
-        <p className="text-muted-foreground text-center mb-12">
+        <div className="text-muted-foreground text-center mb-12">
           No sign-up, no license file. Just curl and a kubeconfig.
-        </p>
+        </div>
         <div className="max-w-3xl mx-auto space-y-6">
           {INSTALL_STEPS.map(step => (
             <InstallStepCard

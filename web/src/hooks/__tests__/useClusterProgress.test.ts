@@ -8,6 +8,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
+const { mockGetWsAuthParams } = vi.hoisted(() => ({
+  mockGetWsAuthParams: vi.fn((url: string) => Promise.resolve({ url, protocols: [] as string[] })),
+}))
+
 // ---------------------------------------------------------------------------
 // WebSocket mock
 // ---------------------------------------------------------------------------
@@ -21,6 +25,8 @@ interface MockWebSocketInstance {
   onerror: (() => void) | null
   close: ReturnType<typeof vi.fn>
   readyState: number
+  url: string
+  protocols: string[]
 }
 
 let wsInstances: MockWebSocketInstance[] = []
@@ -40,8 +46,14 @@ class MockWebSocket implements MockWebSocketInstance {
     if (this.onclose) this.onclose()
   })
   readyState = MockWebSocket.OPEN
+  url: string
+  protocols: string[]
 
-  constructor() {
+  constructor(url = 'ws://127.0.0.1:8585/ws', protocols?: string | string[]) {
+    this.url = url
+    this.protocols = Array.isArray(protocols)
+      ? protocols
+      : protocols ? [protocols] : []
     wsInstances.push(this)
     // Simulate async open
     setTimeout(() => {
@@ -61,7 +73,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 } })
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  getWsAuthParams: (url: string) => Promise.resolve({ url, protocols: [] }),
+  getWsAuthParams: mockGetWsAuthParams,
 }))
 
 // Assign mock to global before importing the hook
@@ -73,6 +85,7 @@ async function flushPendingWebSocketSetup() {
   await act(async () => {
     await Promise.resolve()
     await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
   })
 }
 
@@ -95,6 +108,7 @@ describe('useClusterProgress', () => {
     vi.useFakeTimers()
     wsInstances = []
     vi.stubGlobal('WebSocket', MockWebSocket)
+    mockGetWsAuthParams.mockImplementation((url: string) => Promise.resolve({ url, protocols: [] }))
   })
 
   afterEach(() => {
@@ -118,6 +132,14 @@ describe('useClusterProgress', () => {
     await renderClusterProgressHook()
 
     expect(wsInstances.length).toBe(1)
+  })
+
+  it('passes bearer auth subprotocols to WebSocket when provided', async () => {
+    mockGetWsAuthParams.mockImplementationOnce((url: string) => Promise.resolve({ url, protocols: ['bearer.cluster-token'] }))
+
+    await renderClusterProgressHook()
+
+    expect(wsInstances[0].protocols).toEqual(['bearer.cluster-token'])
   })
 
   // ── Parses local_cluster_progress messages ─────────────────────────────

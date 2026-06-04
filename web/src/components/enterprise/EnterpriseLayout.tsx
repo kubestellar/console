@@ -80,6 +80,29 @@ const DEFAULT_CARD_HEIGHT_ROWS = 3
 const GRID_COLUMNS = 12
 const ROWS_PER_ADD_STRIDE = 2
 
+function dispatchSyntheticStorageEvent(key: string, oldValue: string | null, newValue: string): void {
+  try {
+    window.dispatchEvent(new StorageEvent('storage', {
+      key,
+      oldValue,
+      newValue,
+      storageArea: window.localStorage,
+      url: window.location.href,
+    }))
+    return
+  } catch {
+    const event = new Event('storage')
+    Object.defineProperties(event, {
+      key: { value: key, enumerable: true },
+      oldValue: { value: oldValue, enumerable: true },
+      newValue: { value: newValue, enumerable: true },
+      storageArea: { value: window.localStorage, enumerable: true },
+      url: { value: window.location.href, enumerable: true },
+    })
+    window.dispatchEvent(event)
+  }
+}
+
 function readExistingPlacements(storageKey: string): DashboardCardPlacement[] {
   try {
     const raw = localStorage.getItem(storageKey)
@@ -153,6 +176,7 @@ function EnterpriseLayoutContent() {
     if (!activeStorageKey || cards.length === 0) return
 
     const existing = readExistingPlacements(activeStorageKey)
+    const previousSerialized = localStorage.getItem(activeStorageKey)
     const timestamp = Date.now()
     const additions: DashboardCardPlacement[] = cards.map((card, index) => ({
       id: `${card.type}-${timestamp}-${index}`,
@@ -182,10 +206,7 @@ function EnterpriseLayoutContent() {
     // one. UnifiedDashboard's handler (see UnifiedDashboard.tsx) treats the
     // flat-cards key as authoritative when `hasTabs` is false, which is
     // the case for every enterprise dashboard today.
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: activeStorageKey,
-      newValue: serialized,
-    }))
+    dispatchSyntheticStorageEvent(activeStorageKey, previousSerialized, serialized)
   }, [activeStorageKey])
 
   return (

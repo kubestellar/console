@@ -71,7 +71,7 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 	g.app.Get("/api/ksc", publicLimiter, handlers.UmamiScriptProxy)
 	g.app.Post("/api/send", publicLimiter, analyticsBodyGuard, handlers.UmamiCollectProxy)
 
-	g.app.Get("/api/ping", publicLimiter, handlers.PingHandler)
+	// /api/ping moved to authenticated group (CWE-918 / #16948)
 	g.app.Get("/api/youtube/playlist", publicLimiter, handlers.YouTubePlaylistHandler)
 	g.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnailProxy)
 	g.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)

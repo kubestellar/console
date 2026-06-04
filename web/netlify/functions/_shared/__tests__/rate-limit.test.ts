@@ -182,12 +182,12 @@ describe("rate-limit", () => {
       expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
     });
 
-    it("fails open when blob operations error", async () => {
+    it("fails closed when blob operations error", async () => {
       mockSet.mockRejectedValueOnce(new Error("store error"));
 
       const result = await enforceSimpleRateLimit(DEFAULT_OPTIONS);
 
-      expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+      expect(result).toEqual({ limited: true, retryAfterSeconds: 60 });
     });
   });
 });

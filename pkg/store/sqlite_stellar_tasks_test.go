@@ -274,17 +274,39 @@ func TestGetRecentObservations_NoClusterReturnsAll(t *testing.T) {
 
 func TestGetUnshownObservations_AndMarkShown(t *testing.T) {
 	s := newTestStore(t)
-	obs := &StellarObservation{Cluster: "prod-a", Kind: "Alert", Summary: "new alert", ShownToUser: false}
+	obs := &StellarObservation{Cluster: "", Kind: "Alert", Summary: "new alert", ShownToUser: false}
 	id, err := s.CreateObservation(ctx, obs)
 	require.NoError(t, err)
 
-	unshown, err := s.GetUnshownObservations(ctx)
+	unshown, err := s.GetUnshownObservations(ctx, "user-a")
 	require.NoError(t, err)
 	require.Len(t, unshown, 1)
 
-	require.NoError(t, s.MarkObservationShown(ctx, id))
+	require.NoError(t, s.MarkObservationShown(ctx, "user-a", id))
 
-	unshown, err = s.GetUnshownObservations(ctx)
+	unshown, err = s.GetUnshownObservations(ctx, "user-a")
 	require.NoError(t, err)
 	assert.Empty(t, unshown)
+}
+
+func TestGetUnshownObservations_IsScopedPerUser(t *testing.T) {
+	s := newTestStore(t)
+	obs := &StellarObservation{Cluster: "", Kind: "Alert", Summary: "shared alert"}
+	id, err := s.CreateObservation(ctx, obs)
+	require.NoError(t, err)
+
+	userAUnshown, err := s.GetUnshownObservations(ctx, "user-a")
+	require.NoError(t, err)
+	require.Len(t, userAUnshown, 1)
+
+	require.NoError(t, s.MarkObservationShown(ctx, "user-a", id))
+
+	userAUnshown, err = s.GetUnshownObservations(ctx, "user-a")
+	require.NoError(t, err)
+	assert.Empty(t, userAUnshown)
+
+	userBUnshown, err := s.GetUnshownObservations(ctx, "user-b")
+	require.NoError(t, err)
+	require.Len(t, userBUnshown, 1)
+	assert.Equal(t, id, userBUnshown[0].ID)
 }

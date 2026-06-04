@@ -349,10 +349,7 @@ func TestGenerateJWT(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
 
-	// Verify manually
-	parsed, err := jwt.ParseWithClaims(token, &middleware.UserClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return []byte("test-secret"), nil
-	})
+	parsed, err := middleware.ParseJWT(token, "test-secret")
 	assert.NoError(t, err)
 	claims, ok := parsed.Claims.(*middleware.UserClaims)
 	assert.True(t, ok)

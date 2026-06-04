@@ -101,7 +101,7 @@ export function GitHubInviteModal({ isOpen, onClose }: GitHubInviteProps) {
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="sm" enableBackspace={false}>
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="sm" closeOnBackdrop={false} closeOnEscape={true} enableBackspace={false}>
       <BaseModal.Header title="Invite via GitHub" description="Invite a friend to contribute" icon={Github} onClose={handleClose} />
 
       <BaseModal.Content>

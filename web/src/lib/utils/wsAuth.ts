@@ -7,8 +7,6 @@
  *
  * The server validates the token from the subprotocol header and echoes it
  * back during the upgrade handshake.
- *
- * Falls back to query parameter for backwards compatibility with older agents.
  */
 import { emitWsAuthMissing } from '../analytics'
 import { isLocalAgentSuppressed } from '../constants/network'
@@ -44,23 +42,7 @@ export async function getWsAuthParams(url: string): Promise<{ url: string; proto
   return { url, protocols: [`${WS_AUTH_PROTOCOL_PREFIX}${token}`] }
 }
 
-/**
- * @deprecated Use getWsAuthParams() instead. This function passes the token
- * in the URL query string which is logged by proxies (CWE-598).
- * Kept for backwards compatibility during migration.
- */
-export async function appendWsAuthToken(url: string): Promise<string> {
-  await getAgentToken()
-
-  const token = getStoredAgentToken()
-  if (!token) {
-    if (!wsAuthMissingEmitted && !isLocalAgentSuppressed() && !isDemoMode()) {
-      wsAuthMissingEmitted = true
-      emitWsAuthMissing(url)
-    }
-    return url
-  }
-
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}token=${encodeURIComponent(token)}`
+export async function openAuthenticatedWebSocket(url: string): Promise<WebSocket> {
+  const authParams = await getWsAuthParams(url)
+  return new WebSocket(authParams.url, authParams.protocols)
 }

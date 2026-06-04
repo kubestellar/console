@@ -1,15 +1,22 @@
 /**
  * Shared utility for reading incoming request bodies with a size cap.
  * Prevents memory exhaustion and DoS attacks via chunked transfer encoding bypass.
- * 
+ *
  * SECURITY: Do NOT trust Content-Length header — enforce limits on actual bytes read.
  * Chunked encoding can bypass Content-Length checks (CWE-400).
  */
 
+export class RequestBodyTooLargeError extends Error {
+  constructor(label: string, maxBytes: number, actualBytes: number) {
+    super(`${label} body too large (read ${actualBytes} bytes, limit ${maxBytes})`);
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
 /**
  * Reads a request body with a hard byte limit enforced on actual bytes read.
  * Throws if the body exceeds maxBytes.
- * 
+ *
  * @param request - The incoming request
  * @param maxBytes - Maximum allowed body size in bytes
  * @param label - Descriptive label for error messages
@@ -41,16 +48,20 @@ export async function readCappedRequestBuffer(
 
       totalBytes += value.byteLength;
       if (totalBytes > maxBytes) {
-        throw new Error(`${label} body too large (read ${totalBytes} bytes, limit ${maxBytes})`);
+        await reader.cancel();
+        throw new RequestBodyTooLargeError(label, maxBytes, totalBytes);
       }
       chunks.push(value);
     }
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      throw error;
+    }
+    throw new Error(`Failed to read ${label} body: ${error instanceof Error ? error.message : String(error)}`);
   } finally {
-    // Ensure reader is released even on error
     reader.releaseLock();
   }
 
-  // Combine chunks into single buffer
   if (chunks.length === 0) {
     return new Uint8Array(0);
   }
@@ -70,7 +81,7 @@ export async function readCappedRequestBuffer(
 
 /**
  * Reads a request body as text with a hard byte limit enforced on actual bytes read.
- * 
+ *
  * @param request - The incoming request
  * @param maxBytes - Maximum allowed body size in bytes
  * @param label - Descriptive label for error messages
@@ -88,7 +99,7 @@ export async function readCappedRequestText(
 
 /**
  * Reads a request body as JSON with a hard byte limit enforced on actual bytes read.
- * 
+ *
  * @param request - The incoming request
  * @param maxBytes - Maximum allowed body size in bytes
  * @param label - Descriptive label for error messages

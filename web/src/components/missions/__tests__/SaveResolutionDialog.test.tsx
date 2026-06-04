@@ -19,7 +19,7 @@ const { mockSaveResolution, mockDetectIssueSignature, mockGetWsAuthParams } = vi
     errorPattern: undefined,
     namespace: 'default',
   })),
-  mockGetWsAuthParams: vi.fn().mockResolvedValue({ url: 'ws://mock/ws', protocols: [] }),
+  mockGetWsAuthParams: vi.fn().mockResolvedValue({ url: 'ws://mock/ws', protocols: ['bearer.test-token'] }),
 }))
 
 // ── Module mocks ─────────────────────────────────────────────────────────
@@ -112,8 +112,12 @@ class MockWebSocket {
   onclose: WsCallback | null = null
   sent: string[] = []
   readyState = 0
+  protocols: string[]
 
-  constructor(public url: string) {
+  constructor(public url: string, protocols?: string | string[]) {
+    this.protocols = Array.isArray(protocols)
+      ? protocols
+      : protocols ? [protocols] : []
     MockWebSocket.lastInstance = this
   }
 
@@ -197,14 +201,16 @@ async function importSaveResolutionDialogWithForcedState(callIndex: number, forc
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 async function renderDialogAndWaitForError(props = DEFAULT_PROPS) {
-  // Make WS error immediately: after getWsAuthParams resolves, WS is created,
-  // then we simulate error so generateSummary catch fires → isGenerating=false
+  // Make WS error immediately: after getWsAuthParams resolves, the authenticated
+  // WebSocket is created, then we simulate error so generateSummary catch fires.
   global.WebSocket = MockWebSocket as unknown as typeof WebSocket
   const result = render(<SaveResolutionDialog {...props} />)
 
+  await waitFor(() => {
+    expect(MockWebSocket.lastInstance).not.toBeNull()
+  })
+
   await act(async () => {
-    await Promise.resolve() // let getWsAuthParams resolve
-    await Promise.resolve() // let new WebSocket(url) be created
     MockWebSocket.lastInstance?.simulateError()
     await Promise.resolve() // let catch + state updates propagate
   })
@@ -221,7 +227,7 @@ describe('SaveResolutionDialog', () => {
     vi.clearAllMocks()
     MockWebSocket.lastInstance = null
     global.WebSocket = MockWebSocket as unknown as typeof WebSocket
-    mockGetWsAuthParams.mockResolvedValue({ url: 'ws://mock/ws', protocols: [] })
+    mockGetWsAuthParams.mockResolvedValue({ url: 'ws://mock/ws', protocols: ['bearer.test-token'] })
   })
 
   afterEach(() => {
@@ -278,6 +284,13 @@ describe('SaveResolutionDialog', () => {
     expect(await screen.findByText(/Could not reach the local agent/i)).toBeInTheDocument()
   })
 
+  it('passes bearer auth subprotocols to the AI summary WebSocket', async () => {
+    await renderDialogAndWaitForError()
+
+    expect(MockWebSocket.lastInstance?.url).toBe('ws://mock/ws')
+    expect(MockWebSocket.lastInstance?.protocols).toEqual(['bearer.test-token'])
+  })
+
   it('shows retry button after AI error', async () => {
     await renderDialogAndWaitForError()
     expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
@@ -289,7 +302,9 @@ describe('SaveResolutionDialog', () => {
     await act(async () => {
       fireEvent.click(retryBtn)
     })
-    expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('enables form fields after AI error', async () => {
@@ -467,6 +482,8 @@ describe('SaveResolutionDialog', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Regenerate/i }))
     })
-    expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    await waitFor(() => {
+      expect(mockGetWsAuthParams).toHaveBeenCalledTimes(2)
+    })
   })
 })

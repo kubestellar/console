@@ -237,7 +237,7 @@ describe("shared core utilities", () => {
     expect(limited.retryAfterSeconds).toBe(29);
   });
 
-  it("fails open when append-only blob-backed rate limit operations error", async () => {
+  it("fails closed when append-only blob-backed rate limit operations error", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW_MS);
     vi.spyOn(crypto, "randomUUID").mockReturnValue("uuid-1");
@@ -252,7 +252,7 @@ describe("shared core utilities", () => {
       windowMs: RATE_LIMIT_WINDOW_MS,
     });
 
-    expect(result).toEqual({ limited: false, retryAfterSeconds: 0 });
+    expect(result).toEqual({ limited: true, retryAfterSeconds: 60 });
   });
 
   it("passes AbortSignal timeouts through fetchWithTimeout", async () => {

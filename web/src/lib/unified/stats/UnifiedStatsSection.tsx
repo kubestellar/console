@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
+import { BaseModal } from '../../modals/BaseModal'
 import type { UnifiedStatsSectionProps, UnifiedStatBlockConfig, StatBlockValue } from '../types'
 import { UnifiedStatBlock } from './UnifiedStatBlock'
 import { resolveStatValue } from './valueResolvers'
@@ -244,19 +245,10 @@ function StatsConfigModal({
   }
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative glass rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold mb-4">{title}</h2>
-
-        {/* Block list */}
-        <div className="space-y-2 mb-6">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false} closeOnEscape={true}>
+      <BaseModal.Header title={title} onClose={onClose} showBack={false} />
+      <BaseModal.Content className="space-y-6">
+        <div className="space-y-2">
           {localBlocks.map((block) => (
             <label
               key={block.id}
@@ -272,9 +264,9 @@ function StatsConfigModal({
             </label>
           ))}
         </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-between">
+      </BaseModal.Content>
+      <BaseModal.Footer>
+        <div className="flex items-center justify-between w-full">
           <Button
             variant="ghost"
             onClick={handleReset}
@@ -297,8 +289,8 @@ function StatsConfigModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </BaseModal.Footer>
+    </BaseModal>
   )
 }
 

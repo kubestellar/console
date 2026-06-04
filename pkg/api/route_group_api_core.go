@@ -43,6 +43,11 @@ func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *ha
 
 func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
+
+	// Ping requires authentication to prevent abuse as an outbound request
+	// primitive (CWE-918, #16948).
+	api.Get("/ping", handlers.PingHandler)
+
 	agentToken := g.config.AgentToken
 	api.Get("/agent/token", func(c *fiber.Ctx) error {
 		if err := handlers.RequireAdmin(c, g.store); err != nil {
@@ -107,9 +112,15 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	})
 
 	githubProxy := handlers.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
+	githubTokenAdminOnly := func(c *fiber.Ctx) error {
+		if err := handlers.RequireAdmin(c, g.store); err != nil {
+			return err
+		}
+		return c.Next()
+	}
 	api.Get("/github/token/status", githubProxy.HasToken)
-	api.Post("/github/token", githubProxy.SaveToken)
-	api.Delete("/github/token", githubProxy.DeleteToken)
+	api.Post("/github/token", githubTokenAdminOnly, githubProxy.SaveToken)
+	api.Delete("/github/token", githubTokenAdminOnly, githubProxy.DeleteToken)
 
 	githubPipelines := handlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
 	api.Get("/github-pipelines", githubPipelines.Serve)

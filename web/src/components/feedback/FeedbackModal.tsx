@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
-import { ConfirmDialog } from '../../lib/modals'
+import { ConfirmDialog, useModalFocusTrap } from '../../lib/modals'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
@@ -73,6 +73,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
 
   const handleScreenshotFiles = (files: FileList | null) => {
     if (!files) return
@@ -329,6 +330,8 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   // Submit form programmatically via ref (used by Cmd/Ctrl+Enter shortcut)
   const formRef = useRef<HTMLFormElement>(null)
 
+  useModalFocusTrap(modalRef, isOpen)
+
   // Keyboard navigation - ESC to close, Space to close when not typing,
   // Cmd/Ctrl+Enter to submit (#8651)
   useEffect(() => {
@@ -378,23 +381,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform?.includes('Mac')
   const submitShortcutLabel = `${isMacPlatform ? '⌘' : 'Ctrl'}+↵`
 
-  // Close on backdrop click — only when the click target is the backdrop
-  // itself, not any child element (so clicks inside the modal content do
-  // not dismiss it). Routes through handleClose() so the unsaved-changes
-  // confirmation flow runs if the user has typed anything. (Fixes #9159)
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      handleClose()
-    }
-  }
-
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Submit Feedback"
     >
       <ConfirmDialog
         isOpen={showDiscardConfirm}
@@ -406,7 +395,14 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         cancelLabel={t('common:common.keepEditing', 'Keep editing')}
         variant="warning"
       />
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Submit Feedback"
+        tabIndex={-1}
+        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-secondary/30">
           <div className="flex items-center gap-3">
@@ -496,7 +492,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               {/* Draft restore notice */}
               {(title || description) && (
                 <div className="flex items-center gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-muted-foreground">
-                  <span>{t('drafts.draftRestored')}</span>
+                  <span>{t('feedback.draftRestored')}</span>
                 </div>
               )}
 

@@ -131,6 +131,18 @@ func TestGitHubPipelines_ReadRejectsNonAllowlistedRepo(t *testing.T) {
 	}
 }
 
+func TestGitHubPipelines_MutateRequiresAuthenticatedUser(t *testing.T) {
+	app := newGHPTestApp(t, "fake-token", "fake-mutation-token", nil, "")
+	req := httptest.NewRequest("POST", "/api/github-pipelines?view=mutate&op=rerun&repo=kubestellar/console&run=1", nil)
+	res, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if res.StatusCode != 401 {
+		t.Fatalf("expected 401 for anonymous mutation request, got %d", res.StatusCode)
+	}
+}
+
 func TestGitHubPipelines_MutateRequiresAdmin(t *testing.T) {
 	mockStore := new(test.MockStore)
 	app := newGHPTestApp(t, "fake-token", "fake-mutation-token", mockStore, models.UserRoleViewer)

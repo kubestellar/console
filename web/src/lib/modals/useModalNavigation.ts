@@ -11,6 +11,8 @@ const modalStack: number[] = []
 let modalStackCounter = 0
 const escapeLayerStack: number[] = []
 let escapeLayerCounter = 0
+const focusTrapStack: number[] = []
+let focusTrapCounter = 0
 
 /** Returns true when at least one BaseModal is currently open. Used by
  *  non-modal ESC handlers (e.g. the mission sidebar) to yield to the
@@ -234,41 +236,77 @@ export function useModalFocusTrap(
   ref: React.RefObject<HTMLElement | null>,
   isOpen: boolean
 ) {
+  const focusTrapIdRef = useRef(++focusTrapCounter)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const id = focusTrapIdRef.current
+    focusTrapStack.push(id)
+    return () => {
+      const idx = focusTrapStack.lastIndexOf(id)
+      if (idx >= 0) focusTrapStack.splice(idx, 1)
+    }
+  }, [isOpen])
+
+  const isTopFocusTrap = useCallback(() => {
+    const topId = focusTrapStack[focusTrapStack.length - 1]
+    return topId === focusTrapIdRef.current
+  }, [])
+
   useEffect(() => {
     if (!isOpen || !ref.current) return
 
     const modal = ref.current
-    const focusableElements = modal.querySelectorAll<HTMLElement>(
+    const previouslyFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
+    const getFocusableElements = () => Array.from(modal.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
+    )).filter((element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true')
+    const focusFirstElement = () => {
+      if (!isTopFocusTrap()) return
+      const firstElement = getFocusableElements()[0] ?? modal
+      firstElement.focus()
+    }
 
-    if (focusableElements.length === 0) return
-
-    const firstElement = focusableElements[0]
-    const lastElement = focusableElements[focusableElements.length - 1]
-
-    // Focus first element
-    firstElement.focus()
+    focusFirstElement()
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return
+      if (e.key !== 'Tab' || !isTopFocusTrap()) return
+
+      const focusableElements = getFocusableElements()
+      const firstElement = focusableElements[0] ?? modal
+      const lastElement = focusableElements[focusableElements.length - 1] ?? modal
 
       if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
+        if (document.activeElement === firstElement || document.activeElement === modal) {
           e.preventDefault()
           lastElement.focus()
         }
-      } else {
-        if (document.activeElement === lastElement) {
-          e.preventDefault()
-          firstElement.focus()
-        }
+      } else if (document.activeElement === lastElement) {
+        e.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    const handleFocusIn = (e: FocusEvent) => {
+      if (!isTopFocusTrap()) return
+      if (!modal.contains(e.target as Node)) {
+        focusFirstElement()
       }
     }
 
     modal.addEventListener('keydown', handleKeyDown)
-    return () => modal.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, ref])
+    document.addEventListener('focusin', handleFocusIn)
+
+    return () => {
+      modal.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('focusin', handleFocusIn)
+      if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
+        previouslyFocusedElement.focus()
+      }
+    }
+  }, [isOpen, isTopFocusTrap, ref])
 }
 
 /**

@@ -47,8 +47,18 @@ import { fetchTreePaths, fetchWeeklyActivity } from "./acmm-scan/fetchers";
 import { demoScan } from "./acmm-scan/demo";
 
 // ---------------------------------------------------------------------------
+// Rate-limit constants for force-refresh (CWE-400, #16904)
+// ---------------------------------------------------------------------------
+
+/** Minimum interval between force-refresh scans for the same repo (ms). */
+const FORCE_REFRESH_COOLDOWN_MS = 60_000;
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
+
+const FORCE_COOLDOWN_MS = 60_000;
+const LAST_FORCE_KEY = "acmm-scan:last-force";
 
 export default async (req: Request) => {
   const origin = req.headers.get("Origin");
@@ -67,7 +77,7 @@ export default async (req: Request) => {
 
   const url = new URL(req.url);
   const repo = url.searchParams.get("repo") || "";
-  const force = url.searchParams.get("force") === "true";
+  let force = url.searchParams.get("force") === "true";
 
   if (!REPO_RE.test(repo)) {
     return new Response(
@@ -92,9 +102,52 @@ export default async (req: Request) => {
   const token =
     Netlify.env.get("GITHUB_TOKEN") || process.env.GITHUB_TOKEN || "";
 
-  // Check blob cache (per-repo key) — skipped when ?force=true
   const store = getStore(CACHE_STORE);
+  // Rate-limit forced refreshes: max once per minute to protect API quota.
+  if (force) {
+    try {
+      const lastForceTs = await store.get(LAST_FORCE_KEY, { type: "text" });
+      if (
+        lastForceTs &&
+        Date.now() - Number(lastForceTs) < FORCE_COOLDOWN_MS
+      ) {
+        force = false;
+      } else {
+        await store.set(LAST_FORCE_KEY, String(Date.now()));
+      }
+    } catch {
+      // blob-store failure should not block refreshes
+    }
+  }
+
+  // Check blob cache (per-repo key) — skipped when ?force=true
   const cacheKey = `scan:${repo}`;
+
+  // Rate-limit force-refresh to prevent API quota exhaustion (CWE-400, #16904).
+  if (force) {
+    const forceKey = `force-ts:${repo}`;
+    try {
+      const lastForce = await store.get(forceKey, { type: "text" });
+      if (lastForce && Date.now() - Number(lastForce) < FORCE_REFRESH_COOLDOWN_MS) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit: force-refresh available once per minute per repo" }),
+          {
+            status: 429,
+            headers: { ...headers, "Content-Type": "application/json", "Retry-After": "60" },
+          },
+        );
+      }
+    } catch {
+      // blob read failure — allow the request to proceed
+    }
+    // Record this force-refresh timestamp (best-effort)
+    try {
+      await store.set(forceKey, String(Date.now()));
+    } catch {
+      // best-effort
+    }
+  }
+
   if (!force) {
     try {
       const cached = await store.get(cacheKey, { type: "text" });

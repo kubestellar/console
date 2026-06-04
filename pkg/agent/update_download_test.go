@@ -5,8 +5,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -194,5 +199,47 @@ func TestSanitizeTagName(t *testing.T) {
 				t.Errorf("sanitizeTagName(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestVerifyChecksumFromReleaseRejectsTamperedBinary(t *testing.T) {
+	const assetName = "console_1.2.3_linux_amd64.tar.gz"
+	const expectedContent = "expected release payload"
+	const actualContent = "tampered release payload"
+
+	expectedSum := sha256.Sum256([]byte(expectedContent))
+	checksumsBody := fmt.Sprintf("%x  %s\n", expectedSum, assetName)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/checksums.txt" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(checksumsBody))
+	}))
+	defer server.Close()
+
+	tempDir := t.TempDir()
+	downloadedFilePath := filepath.Join(tempDir, assetName)
+	if err := os.WriteFile(downloadedFilePath, []byte(actualContent), 0o600); err != nil {
+		t.Fatalf("write downloaded file: %v", err)
+	}
+
+	release := &githubReleaseInfo{
+		TagName: "v1.2.3",
+		Assets: []struct {
+			Name               string `json:"name"`
+			BrowserDownloadURL string `json:"browser_download_url"`
+		}{
+			{Name: "checksums.txt", BrowserDownloadURL: server.URL + "/checksums.txt"},
+		},
+	}
+
+	_, err := verifyChecksumFromRelease(release, assetName, downloadedFilePath)
+	if err == nil {
+		t.Fatal("expected checksum verification to reject tampered binary")
+	}
+	if !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Fatalf("expected checksum mismatch error, got %v", err)
 	}
 }

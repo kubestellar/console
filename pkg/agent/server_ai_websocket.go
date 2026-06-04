@@ -54,8 +54,8 @@ var codeBlockCmdRe = regexp.MustCompile(`^\s*(kubectl|helm|oc)\s+.+`)
 // send arbitrarily large prompts that get forwarded to paid LLM APIs.
 const wsMaxMessageBytes = 1 << 20 // 1 MB
 
-// maxPromptChars caps the per-request prompt length forwarded to LLM
-// providers. Set well above interactive use but below the WebSocket frame
+// maxPromptChars caps the combined prompt and history content forwarded to
+// LLM providers. Set well above interactive use but below the WebSocket frame
 // limit to keep cost and latency bounded.
 const maxPromptChars = 100_000
 

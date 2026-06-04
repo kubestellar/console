@@ -230,6 +230,36 @@ func TestQuantumProxyGetRequestDoesNotRequireBearerToken(t *testing.T) {
 	}
 }
 
+func TestQuantumProxyHistogram_ForcesContentType(t *testing.T) {
+	// CWE-79: Verify that the histogram endpoint forces Content-Type to
+	// application/json regardless of what the upstream returns, preventing
+	// XSS via upstream-controlled headers.
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Malicious upstream returns text/html Content-Type
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<script>alert('xss')</script>`))
+	}))
+	defer upstream.Close()
+
+	handler := &QuantumProxyHandler{quantumServiceURL: upstream.URL, jwtSecret: "unused"}
+	app := fiber.New()
+	app.Get("/api/quantum/result/histogram", handler.ProxyResultHistogram)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/quantum/result/histogram?sort=count", nil)
+	resp, err := app.Test(req, 5000)
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	ct := resp.Header.Get("Content-Type")
+	if ct != "application/json; charset=utf-8" {
+		t.Fatalf("expected forced Content-Type 'application/json; charset=utf-8', got %q", ct)
+	}
+}
+
 func generateQuantumTestToken(t *testing.T, secret string) string {
 	t.Helper()
 

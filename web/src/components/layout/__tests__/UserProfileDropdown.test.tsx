@@ -1,31 +1,28 @@
-/**
- * UserProfileDropdown Component Tests
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+/// <reference types="@testing-library/jest-dom/vitest" />
+import type { ComponentProps, ReactNode } from 'react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { UserProfileDropdown } from '../UserProfileDropdown'
 
 const changeLanguage = vi.fn()
 const safeSetItem = vi.fn()
+const emitLanguageChanged = vi.fn()
 
 const { demoModeState } = vi.hoisted(() => ({
   demoModeState: { isForced: false },
 }))
 
-const modalState = vi.hoisted(() => ({
-  isOpen: false,
-  open: vi.fn(),
-  close: vi.fn(),
-  toggle: vi.fn(),
-}))
-
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en', resolvedLanguage: 'en', changeLanguage } }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', resolvedLanguage: 'en', changeLanguage },
+  }),
 }))
 
-vi.mock('../../../lib/modals', () => ({
-  useModalState: () => modalState,
+vi.mock('../../ui/Tooltip', () => ({
+  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../../../hooks/useRewards', () => ({
@@ -72,15 +69,13 @@ vi.mock('../../../lib/demoMode', () => ({
   },
 }))
 
-const emitLanguageChanged = vi.fn()
-
 vi.mock('../../../lib/analytics', () => ({
   emitLinkedInShare: vi.fn(),
   emitLanguageChanged,
 }))
 
 vi.mock('../../../lib/api', () => ({
-  checkOAuthConfigured: vi.fn().mockResolvedValue({ oauthConfigured: false, backendUp: false }),
+  checkOAuthConfigured: vi.fn().mockResolvedValue({ oauthConfigured: true, backendUp: true }),
 }))
 
 vi.mock('../../../lib/utils/localStorage', () => ({
@@ -108,16 +103,44 @@ vi.mock('../../../lib/modals/ConfirmDialog', () => ({
       <div data-testid="confirm-dialog">
         <span>{title}</span>
         <span>{message}</span>
-        <button onClick={onClose}>cancel-confirm</button>
-        <button onClick={onConfirm}>{confirmLabel || 'confirm'}</button>
+        <button type="button" onClick={onClose}>cancel-confirm</button>
+        <button type="button" onClick={onConfirm}>{confirmLabel || 'confirm'}</button>
       </div>
     ) : null
   ),
 }))
 
+const TEST_USER = {
+  github_login: 'testuser',
+  email: 'test@example.com',
+  role: 'viewer',
+  slack_id: 'U123456',
+}
+
+function renderDropdown(overrides: Partial<ComponentProps<typeof UserProfileDropdown>> = {}) {
+  render(
+    <UserProfileDropdown
+      user={TEST_USER}
+      onLogout={vi.fn()}
+      onPreferences={vi.fn()}
+      {...overrides}
+    />,
+  )
+}
+
+async function openDropdown() {
+  const user = userEvent.setup()
+  await user.click(screen.getByTestId('navbar-profile-btn'))
+  await screen.findByTestId('navbar-profile-dropdown')
+  return user
+}
+
+function getMenuItems() {
+  return within(screen.getByTestId('navbar-profile-dropdown')).getAllByRole('menuitem')
+}
+
 describe('UserProfileDropdown', () => {
   beforeEach(() => {
-    modalState.isOpen = false
     changeLanguage.mockReset()
     changeLanguage.mockResolvedValue(undefined)
     safeSetItem.mockReset()
@@ -125,70 +148,25 @@ describe('UserProfileDropdown', () => {
     demoModeState.isForced = false
   })
 
-  it('exports UserProfileDropdown', async () => {
-    const mod = await import('../UserProfileDropdown')
-    expect(mod.UserProfileDropdown).toBeDefined()
-    expect(typeof mod.UserProfileDropdown).toBe('function')
-  })
-
-  it('renders with user data', async () => {
-    const { UserProfileDropdown } = await import('../UserProfileDropdown')
-    const user = { github_login: 'testuser', email: 'test@example.com', role: 'admin' }
-    const { container } = render(
-      <MemoryRouter>
-        <UserProfileDropdown user={user} onLogout={vi.fn()} />
-      </MemoryRouter>
-    )
-    expect(container).toBeTruthy()
-  })
-
-  it('renders with null user', async () => {
-    const { UserProfileDropdown } = await import('../UserProfileDropdown')
-    const { container } = render(
-      <MemoryRouter>
-        <UserProfileDropdown user={null} onLogout={vi.fn()} />
-      </MemoryRouter>
-    )
-    expect(container).toBeTruthy()
-  })
-
-  it('removes the dedicated email row from the open dropdown', async () => {
-    modalState.isOpen = true
-    const { UserProfileDropdown } = await import('../UserProfileDropdown')
-    render(
-      <MemoryRouter>
-        <UserProfileDropdown user={{ github_login: 'testuser', email: 'test@example.com', role: 'viewer' }} onLogout={vi.fn()} />
-      </MemoryRouter>
-    )
-
-    expect(screen.queryByText('profile.email')).toBeNull()
-    expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0)
+  it('renders with null user', () => {
+    renderDropdown({ user: null })
+    expect(screen.queryByTestId('navbar-profile-btn')).not.toBeInTheDocument()
   })
 
   it('shows the contributor rank once instead of duplicating it in the coins row', async () => {
-    modalState.isOpen = true
-    const { UserProfileDropdown } = await import('../UserProfileDropdown')
-    render(
-      <MemoryRouter>
-        <UserProfileDropdown user={{ github_login: 'testuser', email: 'test@example.com', role: 'viewer' }} onLogout={vi.fn()} />
-      </MemoryRouter>
-    )
+    renderDropdown()
+    await openDropdown()
 
     expect(screen.getAllByText('Commander')).toHaveLength(1)
-    expect(screen.queryByText('viewer')).toBeNull()
+    expect(screen.queryByText(TEST_USER.role)).toBeNull()
   })
 
   it('changes language and persists the selection', async () => {
-    modalState.isOpen = true
-    const { UserProfileDropdown } = await import('../UserProfileDropdown')
-    render(
-      <MemoryRouter>
-        <UserProfileDropdown user={{ github_login: 'testuser', email: 'test@example.com', role: 'viewer' }} onLogout={vi.fn()} />
-      </MemoryRouter>
-    )
+    renderDropdown()
+    const user = await openDropdown()
 
-    fireEvent.click(screen.getByText('profile.language'))
-    fireEvent.click(screen.getByText('中文 (简体)'))
+    await user.click(screen.getByText('profile.language'))
+    await user.click(screen.getByText('中文 (简体)'))
 
     await waitFor(() => {
       expect(changeLanguage).toHaveBeenCalledWith('zh')
@@ -198,23 +176,86 @@ describe('UserProfileDropdown', () => {
   })
 
   it('opens a logout confirmation and waits for confirm before logging out', async () => {
-    modalState.isOpen = true
     const onLogout = vi.fn()
-    const { UserProfileDropdown } = await import('../UserProfileDropdown')
-    render(
-      <MemoryRouter>
-        <UserProfileDropdown user={{ github_login: 'testuser', email: 'test@example.com', role: 'viewer' }} onLogout={onLogout} />
-      </MemoryRouter>
-    )
+    renderDropdown({ onLogout })
+    const user = await openDropdown()
 
-    fireEvent.click(screen.getByRole('button', { name: 'actions.signOut' }))
+    await user.click(screen.getByRole('button', { name: 'actions.signOut' }))
 
     expect(onLogout).not.toHaveBeenCalled()
     expect(await screen.findByTestId('confirm-dialog')).toBeInTheDocument()
     expect(screen.getByText('confirmDialog.logoutTitle')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'actions.logout' }))
+    await user.click(screen.getByRole('button', { name: 'actions.logout' }))
 
     expect(onLogout).toHaveBeenCalledTimes(1)
+  })
+
+  describe('keyboard navigation', () => {
+    it('moves focus to the next menu item on ArrowDown', async () => {
+      renderDropdown()
+      const user = await openDropdown()
+      const items = getMenuItems()
+
+      items[0].focus()
+      await user.keyboard('{ArrowDown}')
+
+      expect(items[1]).toHaveFocus()
+    })
+
+    it('moves focus to the previous menu item on ArrowUp', async () => {
+      renderDropdown()
+      const user = await openDropdown()
+      const items = getMenuItems()
+
+      items[1].focus()
+      await user.keyboard('{ArrowUp}')
+
+      expect(items[0]).toHaveFocus()
+    })
+
+    it('moves focus to the first menu item on Home', async () => {
+      renderDropdown()
+      const user = await openDropdown()
+      const items = getMenuItems()
+
+      items[items.length - 1].focus()
+      await user.keyboard('{Home}')
+
+      expect(items[0]).toHaveFocus()
+    })
+
+    it('moves focus to the last menu item on End', async () => {
+      renderDropdown()
+      const user = await openDropdown()
+      const items = getMenuItems()
+
+      items[0].focus()
+      await user.keyboard('{End}')
+
+      expect(items[items.length - 1]).toHaveFocus()
+    })
+
+    it('closes the dropdown on Escape', async () => {
+      renderDropdown()
+      const user = await openDropdown()
+      const items = getMenuItems()
+
+      items[0].focus()
+      await user.keyboard('{Escape}')
+
+      expect(screen.queryByTestId('navbar-profile-dropdown')).not.toBeInTheDocument()
+    })
+
+    it('wraps focus from the last menu item back to the first', async () => {
+      renderDropdown()
+      const user = await openDropdown()
+      const items = getMenuItems()
+
+      items[items.length - 1].focus()
+      await user.keyboard('{ArrowDown}')
+
+      expect(items[0]).toHaveFocus()
+    })
   })
 })

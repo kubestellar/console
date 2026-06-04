@@ -225,10 +225,10 @@ export function DashboardHeader({
           {/* Reserve fixed width to prevent layout shift */}
           <span
             className={`flex items-center gap-1 text-xs w-[72px] ${isRefreshing ? 'text-yellow-400 animate-pulse' : 'invisible'}`}
-            title={t('common.updatingEllipsis')}
+            title={t('status.updating')}
           >
             <Hourglass className="w-3 h-3" />
-            <span>{t('common.updating')}</span>
+            <span>{t('status.updating')}</span>
           </span>
         </div>
         <div className="flex items-center gap-3">

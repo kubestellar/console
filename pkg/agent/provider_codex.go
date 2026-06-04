@@ -111,7 +111,8 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 
 	// exec subcommand: non-interactive mode for codex
 	// --full-auto: allow tool execution without confirmation
-	cmd := execCommandContext(ctx, c.cliPath, "exec", "--full-auto", prompt)
+	// "--" prevents prompt from being interpreted as a flag (CWE-88, #17003)
+	cmd := execCommandContext(ctx, c.cliPath, "exec", "--full-auto", "--", prompt)
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
 	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 

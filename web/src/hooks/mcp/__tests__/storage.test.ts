@@ -9,6 +9,7 @@ const {
   mockIsDemoMode,
   mockUseDemoMode,
   mockIsAgentUnavailable,
+  mockIsClusterModeBackend,
   mockReportAgentDataSuccess,
   mockApiGet,
   mockApiPost,
@@ -24,6 +25,7 @@ const {
     mockIsDemoMode: vi.fn(() => false),
     mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
     mockIsAgentUnavailable: vi.fn(() => true),
+    mockIsClusterModeBackend: vi.fn(() => false),
     mockReportAgentDataSuccess: vi.fn(),
     mockApiGet: vi.fn(),
     mockApiPost: vi.fn(),
@@ -98,7 +100,7 @@ vi.mock('../pollingManager', () => ({
 
 // Mock isClusterModeBackend so the backend-mode fetch path is deterministic.
 vi.mock('../../../lib/cache/fetcherUtils', () => ({
-  isClusterModeBackend: vi.fn(() => false),
+  isClusterModeBackend: () => mockIsClusterModeBackend(),
 }))
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
@@ -131,7 +133,7 @@ import {
 } from '../storage'
 // Import the same constant the source hooks use so URL assertions track
 // kc-agent migration automatically (phase 4.5b, #7993 / #8173).
-import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
@@ -146,6 +148,7 @@ beforeEach(() => {
   mockIsDemoMode.mockReturnValue(false)
   mockUseDemoMode.mockReturnValue({ isDemoMode: false })
   mockIsAgentUnavailable.mockReturnValue(true)
+  mockIsClusterModeBackend.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
   globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [], pvs: [], resourceQuotas: [], limitRanges: [], resourceQuota: {} }), { status: 200 })))
@@ -751,6 +754,57 @@ describe('usePVCs - consecutive failure tracking', () => {
 // ===========================================================================
 // usePVs - additional edge cases
 // ===========================================================================
+
+describe('usePVs - backend fetch timeout', () => {
+  it('passes AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) to backend PV fetches', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockIsClusterModeBackend.mockReturnValue(true)
+    mockClusterCacheRef.clusters = [
+      { name: 'cluster-a', context: 'ctx-a', reachable: true },
+    ]
+
+    const timeoutSignal = new AbortController().signal
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeoutSignal)
+    const backendPVs = [{ name: 'pv-backend', capacity: '100Gi', storageClass: 'fast', status: 'Bound' }]
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ pvs: backendPVs }),
+    })
+
+    const { result } = renderHook(() => usePVs())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(timeoutSpy).toHaveBeenCalledWith(FETCH_DEFAULT_TIMEOUT_MS)
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/mcp/pvs?cluster=ctx-a', {
+      signal: timeoutSignal,
+    })
+    expect(result.current.pvs).toEqual([{ ...backendPVs[0], cluster: 'cluster-a' }])
+  })
+
+  it('surfaces a backend timeout as a PV fetch failure', async () => {
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockIsClusterModeBackend.mockReturnValue(true)
+    mockClusterCacheRef.clusters = [
+      { name: 'cluster-a', context: 'ctx-a', reachable: true },
+    ]
+
+    const timeoutSignal = new AbortController().signal
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeoutSignal)
+    const timeoutError = new DOMException('The operation timed out', 'TimeoutError')
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    globalThis.fetch = vi.fn().mockRejectedValue(timeoutError)
+
+    const { result } = renderHook(() => usePVs())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(timeoutSpy).toHaveBeenCalledWith(FETCH_DEFAULT_TIMEOUT_MS)
+    expect(result.current.pvs).toEqual([])
+    expect(result.current.error).toBe('Failed to fetch PVs from any cluster')
+    expect(warnSpy).toHaveBeenCalled()
+  })
+})
 
 describe('usePVs - additional edge cases', () => {
   it('handles API returning null pvs field', async () => {

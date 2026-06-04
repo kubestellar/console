@@ -87,6 +87,20 @@ const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 // Helpers
 // ---------------------------------------------------------------------------
 
+function readStoredSessionToken(): string | null {
+  const rawValue = sessionStorage.getItem(STORAGE_KEY_TOKEN)
+  if (!rawValue) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as { token?: string }
+    return typeof parsed.token === 'string' ? parsed.token : rawValue
+  } catch {
+    return rawValue
+  }
+}
+
 function makeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const body = btoa(JSON.stringify(payload))
@@ -419,11 +433,9 @@ describe('token expiry timer', () => {
     // Banner should be removed
     expect(document.getElementById('session-expiry-warning')).toBeNull()
 
-    // The localStorage token (Bearer) is intentionally NOT mutated by the
-    // banner refresh — the refreshed JWT lives in the HttpOnly cookie now.
-    // The original Bearer token remains in localStorage as a fallback for
-    // legacy code paths that still send Authorization headers.
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+    // The stored session token is intentionally NOT mutated by the banner
+    // refresh — the refreshed JWT lives in the HttpOnly cookie now.
+    expect(readStoredSessionToken()).toBe(nearExpiryToken)
   })
 
   it('clicking Refresh Now handles /auth/refresh failure gracefully', async () => {
@@ -464,7 +476,7 @@ describe('token expiry timer', () => {
     expect(document.getElementById('session-expiry-warning')).toBeNull()
 
     // Token should remain unchanged
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+    expect(readStoredSessionToken()).toBe(nearExpiryToken)
   })
 
   it('emits emitSessionRefreshFailure GA4 event when /auth/refresh fails', async () => {
@@ -688,7 +700,7 @@ describe('token refresh non-ok response', () => {
     })
 
     // Token should remain the original near-expiry token
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe(nearExpiryToken)
+    expect(readStoredSessionToken()).toBe(nearExpiryToken)
   })
 })
 

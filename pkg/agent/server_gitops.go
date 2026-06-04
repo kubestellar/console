@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -20,10 +21,22 @@ import (
 // in lockstep until Phase 4 deletes the backend handlers.
 const gitopsDefaultTimeout = 30 * time.Second
 
+const gitopsDNSLookupTimeout = 3 * time.Second
+
 // gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
-// in kc-agent. Matches the backend's prefix exactly so cleanup sweeps and
-// diagnostic logs behave identically.
-const gitOpsTempDirPrefix = "/tmp/gitops-"
+// in kc-agent. os.MkdirTemp uses it to create a race-safe unique directory
+// under the OS temp root.
+const gitOpsTempDirPrefix = "gitops-"
+
+var gitopsLookupIPAddr = func(ctx context.Context, host string) ([]net.IPAddr, error) {
+	return net.DefaultResolver.LookupIPAddr(ctx, host)
+}
+
+var (
+	_, gitopsCGNATNet, _        = net.ParseCIDR("100.64.0.0/10")
+	_, gitopsCloudMetadataIP, _ = net.ParseCIDR("169.254.169.254/32")
+	_, gitopsIETFProtocolNet, _ = net.ParseCIDR("192.0.0.0/24")
+)
 
 // agentDriftedResource mirrors pkg/api/handlers/gitops.go#DriftedResource.
 // Kept local to pkg/agent because the agent cannot import pkg/api/handlers
@@ -80,6 +93,53 @@ type agentSyncResponse struct {
 	TokensUsed int      `json:"tokensUsed,omitempty"`
 }
 
+func normalizeGitopsHost(host string) string {
+	host = strings.TrimSpace(host)
+	host = strings.TrimPrefix(host, "[")
+	host = strings.TrimSuffix(host, "]")
+	return strings.ToLower(host)
+}
+
+// isGitopsBlockedIP mirrors pkg/api/handlers/card_proxy.go:isBlockedIP.
+func isGitopsBlockedIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() ||
+		gitopsCGNATNet.Contains(ip) || gitopsCloudMetadataIP.Contains(ip) || gitopsIETFProtocolNet.Contains(ip)
+}
+
+func validateGitopsResolvedIPs(ctx context.Context, host string) error {
+	normalizedHost := normalizeGitopsHost(host)
+	if normalizedHost == "" {
+		return fmt.Errorf("repository URL must include a host")
+	}
+	if ip := net.ParseIP(normalizedHost); ip != nil {
+		if isGitopsBlockedIP(ip) {
+			return fmt.Errorf("repository host resolves to a blocked IP address")
+		}
+		return nil
+	}
+
+	lookupCtx, cancel := context.WithTimeout(ctx, gitopsDNSLookupTimeout)
+	defer cancel()
+
+	ips, err := gitopsLookupIPAddr(lookupCtx, normalizedHost)
+	if err != nil {
+		return fmt.Errorf("resolve repository host: %w", err)
+	}
+	if len(ips) == 0 {
+		return fmt.Errorf("repository host did not resolve to any IP addresses")
+	}
+	for _, ip := range ips {
+		if isGitopsBlockedIP(ip.IP) {
+			return fmt.Errorf("repository host resolves to a blocked IP address")
+		}
+	}
+	return nil
+}
+
 // validateGitopsRepoURL mirrors the backend validateRepoURL (#6022 SECURITY).
 // Uses net/url.Parse for scheme validation instead of strings.HasPrefix to
 // satisfy CodeQL js/incomplete-url-substring-sanitization (issue #9119).
@@ -90,12 +150,6 @@ func validateGitopsRepoURL(repoURL string) error {
 	// SSH git URLs (git@host:path) are not parseable by net/url; handle explicitly.
 	// For HTTPS URLs, use net/url.Parse to extract the scheme safely.
 	isSSH := strings.HasPrefix(repoURL, "git@")
-	if !isSSH {
-		parsed, err := url.Parse(repoURL)
-		if err != nil || parsed.Scheme != "https" {
-			return fmt.Errorf("only HTTPS and SSH git URLs are allowed")
-		}
-	}
 	dangerousChars := []string{";", "|", "&", "$", "`", "(", ")", "{", "}", "<", ">", "\\", "'", "\"", "\n", "\r"}
 	for _, char := range dangerousChars {
 		if strings.Contains(repoURL, char) {
@@ -105,7 +159,22 @@ func validateGitopsRepoURL(repoURL string) error {
 	if strings.Contains(strings.ToLower(repoURL), "file://") {
 		return fmt.Errorf("file:// URLs are not allowed")
 	}
-	return nil
+	if isSSH {
+		host, _, found := strings.Cut(strings.TrimPrefix(repoURL, "git@"), ":")
+		if !found || strings.TrimSpace(host) == "" {
+			return fmt.Errorf("invalid repository URL")
+		}
+		return validateGitopsResolvedIPs(context.Background(), host)
+	}
+
+	parsed, err := url.Parse(repoURL)
+	if err != nil || parsed.Scheme != "https" {
+		return fmt.Errorf("only HTTPS and SSH git URLs are allowed")
+	}
+	if parsed.Hostname() == "" {
+		return fmt.Errorf("repository URL must include a host")
+	}
+	return validateGitopsResolvedIPs(context.Background(), parsed.Hostname())
 }
 
 // validateGitopsBranchName mirrors the backend validateBranchName.
@@ -168,13 +237,13 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 		return "", fmt.Errorf("invalid branch name: %w", err)
 	}
 
-	tempDir, err := os.MkdirTemp("", "gitops-")
+	tempDir, err := os.MkdirTemp("", gitOpsTempDirPrefix)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp dir: %w", err)
+		return "", fmt.Errorf("create temp directory: %w", err)
 	}
-	// Verify the created dir passes the cleanup safety check
-	if !strings.HasPrefix(tempDir, filepath.Join(os.TempDir(), "gitops-")) {
-		os.RemoveAll(tempDir)
+	cleanTempDir := filepath.Clean(tempDir)
+	if filepath.Dir(cleanTempDir) != os.TempDir() || !strings.HasPrefix(filepath.Base(cleanTempDir), gitOpsTempDirPrefix) {
+		_ = os.RemoveAll(cleanTempDir)
 		return "", fmt.Errorf("temp dir in unexpected location: %s", tempDir)
 	}
 
@@ -195,6 +264,7 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		gitopsCleanupTempDir(tempDir)
 		return "", fmt.Errorf("git clone failed: %s", stderr.String())
 	}
 	return tempDir, nil
@@ -222,17 +292,17 @@ func gitopsIsKustomizeDir(path string) bool {
 
 // gitopsCleanupTempDir mirrors the backend cleanupTempDir helper.
 func gitopsCleanupTempDir(dir string) {
-	tempPrefix := filepath.Join(os.TempDir(), "gitops-")
-	if !strings.HasPrefix(dir, gitOpsTempDirPrefix) && !strings.HasPrefix(dir, tempPrefix) {
-		slog.Warn("[agent] SECURITY: refused to delete directory outside gitops temp prefix", "dir", dir)
+	cleanDir := filepath.Clean(dir)
+	if filepath.Dir(cleanDir) != os.TempDir() || !strings.HasPrefix(filepath.Base(cleanDir), gitOpsTempDirPrefix) {
+		slog.Warn("[agent] SECURITY: refused to delete directory outside managed gitops temp dir", "dir", dir)
 		return
 	}
-	if strings.Contains(dir, "..") {
+	if strings.Contains(cleanDir, "..") {
 		slog.Warn("[agent] SECURITY: refused to delete directory with path traversal", "dir", dir)
 		return
 	}
-	if err := os.RemoveAll(dir); err != nil {
-		slog.Warn("[agent] failed to cleanup temp directory", "dir", dir, "error", err)
+	if err := os.RemoveAll(cleanDir); err != nil {
+		slog.Warn("[agent] failed to cleanup temp directory", "dir", cleanDir, "error", err)
 	}
 }
 

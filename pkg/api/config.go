@@ -61,6 +61,7 @@ type AuthConfig struct {
 	GitHubURL       string // GitHub base URL (e.g., "https://github.ibm.com"), defaults to "https://github.com"
 	JWTSecret       string
 	AgentToken      string // Shared secret for authenticating with kc-agent
+	BootstrapToken  string // CONSOLE_BOOTSTRAP_TOKEN — required to access manifest bootstrap flow (CWE-306 mitigation)
 	DevUserLogin    string // Dev mode user settings (used when GitHub OAuth not configured)
 	DevUserEmail    string
 	DevUserAvatar   string
@@ -214,6 +215,7 @@ func LoadConfigFromEnv() Config {
 			GitHubURL:      getEnvOrDefault("GITHUB_URL", "https://github.com"),
 			JWTSecret:      jwtSecret,
 			AgentToken:     os.Getenv("KC_AGENT_TOKEN"),
+			BootstrapToken: os.Getenv("CONSOLE_BOOTSTRAP_TOKEN"),
 			DevUserLogin:   getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
 			DevUserEmail:   getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
 			DevUserAvatar:  getEnvOrDefault("DEV_USER_AVATAR", ""),

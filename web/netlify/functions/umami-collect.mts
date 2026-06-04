@@ -11,6 +11,7 @@
 import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
 import { isResponseTooLargeError, readCappedText } from "./_shared/read-capped-json"
+import { readCappedRequestText, RequestBodyTooLargeError } from "./_shared/read-capped-request"
 import { enforceSimpleRateLimit } from "./_shared/rate-limit"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
@@ -21,6 +22,12 @@ const MAX_BODY_BYTES = 65_536
 const MAX_UPSTREAM_TEXT_BYTES = 1_048_576
 const ALLOWED_METHODS = "POST, OPTIONS"
 const JSON_OBJECT_TYPE = "object"
+
+const REFERER_FALLBACK_HOSTS = new Set([
+  "console.kubestellar.io",
+  "localhost",
+  "127.0.0.1",
+])
 
 function normalizeOrigin(header: string | null): string | null {
   if (!header) return null
@@ -43,12 +50,37 @@ function isJsonObjectPayload(body: string): boolean {
   }
 }
 
+/**
+ * Validates that a netlify.app hostname belongs to a KubeStellar deploy preview.
+ * Rejects arbitrary attacker-controlled *.netlify.app subdomains (#16744).
+ */
+function isKubeStellarNetlifyHost(hostname: string): boolean {
+  if (!hostname.endsWith(".netlify.app")) return false
+  // KubeStellar deploy previews use patterns like:
+  // deploy-preview-123--kubestellar-console.netlify.app
+  // kubestellar-console.netlify.app
+  const subdomain = hostname.replace(".netlify.app", "")
+  return subdomain === "kubestellar-console" ||
+    subdomain.startsWith("deploy-preview-") && subdomain.endsWith("--kubestellar-console")
+}
+
 function isRequestAllowed(req: Request): boolean {
   const origin = normalizeOrigin(req.headers.get("origin"))
   if (isAllowedOrigin(origin)) return true
 
-  const referer = normalizeOrigin(req.headers.get("referer"))
-  return isAllowedOrigin(referer)
+  const referer = req.headers.get("referer")
+  if (referer) {
+    try {
+      const hostname = new URL(referer).hostname
+      if (REFERER_FALLBACK_HOSTS.has(hostname) || isKubeStellarNetlifyHost(hostname)) {
+        return true
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+  }
+
+  return false
 }
 
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
@@ -96,16 +128,17 @@ export default async (req: Request) => {
     }
   }
 
-  const contentLength = Number.parseInt(req.headers.get("content-length") || "0", 10)
-  if (contentLength > MAX_BODY_BYTES) {
-    return new Response("Payload too large", { status: 413, headers: corsHeaders })
+  let body: string
+  try {
+    body = await readCappedRequestText(req, MAX_BODY_BYTES, "umami-collect")
+  } catch (err) {
+    if (err instanceof RequestBodyTooLargeError) {
+      return new Response("Payload too large", { status: 413, headers: corsHeaders })
+    }
+    return new Response("Bad request", { status: 400, headers: corsHeaders })
   }
 
   try {
-    const body = await req.text()
-    if (body.length > MAX_BODY_BYTES) {
-      return new Response("Payload too large", { status: 413, headers: corsHeaders })
-    }
     if (!isJsonObjectPayload(body)) {
       return new Response("Bad payload", { status: 400, headers: corsHeaders })
     }

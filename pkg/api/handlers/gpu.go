@@ -223,17 +223,16 @@ func requireOwnerOrAdmin(c *fiber.Ctx, user *models.User, reservationOwnerID uui
 }
 
 // ListReservations lists GPU reservations.
-// All authenticated users see all reservations. ?mine=true filters to caller's own.
+// Admins can see all reservations; non-admins only see their own.
+// Admins may also use ?mine=true to filter to their own reservations.
 func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 	user, err := h.getCallerUser(c)
 	if err != nil {
 		return err
 	}
 
-	// All authenticated users see all reservations.
-	// ?mine=true filter returns only the caller's reservations.
 	mine := c.Query("mine") == "true"
-	if mine {
+	if mine || user.Role != models.UserRoleAdmin {
 		reservations, err := h.store.ListUserGPUReservations(c.UserContext(), user.ID)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to list reservations")
@@ -244,6 +243,7 @@ func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 		return c.JSON(reservations)
 	}
 
+	// Admin users can see all reservations.
 	reservations, err := h.store.ListGPUReservations(c.UserContext())
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list reservations")
@@ -255,9 +255,10 @@ func (h *GPUHandler) ListReservations(c *fiber.Ctx) error {
 }
 
 // GetReservation gets a single GPU reservation by ID.
-// All authenticated users may view any reservation.
+// Only the reservation owner or an admin may view it.
 func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
-	if _, uerr := h.getCallerUser(c); uerr != nil {
+	user, uerr := h.getCallerUser(c)
+	if uerr != nil {
 		return uerr
 	}
 
@@ -272,6 +273,15 @@ func (h *GPUHandler) GetReservation(c *fiber.Ctx) error {
 	}
 	if reservation == nil {
 		return fiber.NewError(fiber.StatusNotFound, "Reservation not found")
+	}
+	if authErr := requireOwnerOrAdmin(c, user, reservation.UserID); authErr != nil {
+		return authErr
+	}
+
+
+	// SECURITY: Non-admin users can only view their own reservations (#16711).
+	if err := requireOwnerOrAdmin(c, user, reservation.UserID); err != nil {
+		return err
 	}
 
 	return c.JSON(reservation)

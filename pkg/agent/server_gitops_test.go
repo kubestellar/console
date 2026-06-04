@@ -1,41 +1,130 @@
 package agent
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
 )
 
-
 func TestValidateGitopsRepoURL(t *testing.T) {
+	originalLookup := gitopsLookupIPAddr
+	t.Cleanup(func() {
+		gitopsLookupIPAddr = originalLookup
+	})
+
 	tests := []struct {
-		name    string
-		url     string
-		wantErr bool
+		name       string
+		url        string
+		lookupHost string
+		resolved   []net.IPAddr
+		wantErr    bool
 	}{
-		{"valid https", "https://github.com/org/repo.git", false},
-		{"valid ssh", "git@github.com:org/repo.git", false},
-		{"empty url", "", true},
-		{"invalid scheme", "http://github.com/org/repo.git", true},
-		{"file scheme", "file:///etc/passwd", true},
-		{"file scheme uppercase", "FILE://C:/windows", true},
-		{"dangerous char semicolon", "https://github.com/repo.git;rm -rf /", true},
-		{"dangerous char pipe", "https://github.com/repo.git|ls", true},
-		{"dangerous char newline", "https://github.com/repo.git\n", true},
+		{"valid https", "https://github.com/org/repo.git", "github.com", []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}}, false},
+		{"valid ssh", "git@github.com:org/repo.git", "github.com", []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}}, false},
+		{"empty url", "", "", nil, true},
+		{"invalid scheme", "http://github.com/org/repo.git", "", nil, true},
+		{"file scheme", "file:///etc/passwd", "", nil, true},
+		{"file scheme uppercase", "FILE://C:/windows", "", nil, true},
+		{"dangerous char semicolon", "https://github.com/repo.git;rm -rf /", "", nil, true},
+		{"dangerous char pipe", "https://github.com/repo.git|ls", "", nil, true},
+		{"dangerous char newline", "https://github.com/repo.git\n", "", nil, true},
+		{"private ip literal", "https://127.0.0.1/org/repo.git", "", nil, true},
+		{"metadata ip literal", "https://169.254.169.254/org/repo.git", "", nil, true},
+		{"public ip literal", "https://8.8.8.8/org/repo.git", "", nil, false},
+		{"resolved private ip", "https://github.com/org/repo.git", "github.com", []net.IPAddr{{IP: net.ParseIP("10.0.0.10")}}, true},
+		{"resolved ssh private ip", "git@gitlab.com:org/repo.git", "gitlab.com", []net.IPAddr{{IP: net.ParseIP("169.254.169.254")}}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			lookupCalled := false
+			gitopsLookupIPAddr = func(_ context.Context, host string) ([]net.IPAddr, error) {
+				lookupCalled = true
+				if host != tt.lookupHost {
+					t.Fatalf("unexpected host lookup: %s", host)
+				}
+				return tt.resolved, nil
+			}
 			err := validateGitopsRepoURL(tt.url)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateGitopsRepoURL() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			if tt.lookupHost == "" && lookupCalled {
+				t.Fatal("unexpected DNS lookup")
+			}
+			if tt.lookupHost != "" && !lookupCalled {
+				t.Fatal("expected DNS lookup")
+			}
 		})
+	}
+}
+
+func TestValidateGitopsResolvedIPs(t *testing.T) {
+	originalLookup := gitopsLookupIPAddr
+	t.Cleanup(func() {
+		gitopsLookupIPAddr = originalLookup
+	})
+
+	tests := []struct {
+		name     string
+		host     string
+		resolved []net.IPAddr
+		wantErr  bool
+	}{
+		{"public ip allowed", "github.com", []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}}, false},
+		{"private ip rejected", "github.com", []net.IPAddr{{IP: net.ParseIP("10.0.0.10")}}, true},
+		{"link local rejected", "github.com", []net.IPAddr{{IP: net.ParseIP("169.254.169.254")}}, true},
+		{"ipv6 unique local rejected", "github.com", []net.IPAddr{{IP: net.ParseIP("fc00::1")}}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gitopsLookupIPAddr = func(_ context.Context, host string) ([]net.IPAddr, error) {
+				if host != tt.host {
+					t.Fatalf("unexpected host lookup: %s", host)
+				}
+				return tt.resolved, nil
+			}
+			err := validateGitopsResolvedIPs(context.Background(), tt.host)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateGitopsResolvedIPs() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGitopsCloneRepoRejectsBlockedResolvedIP(t *testing.T) {
+	originalExecCommandContext := execCommandContext
+	originalLookup := gitopsLookupIPAddr
+	defer func() {
+		execCommandContext = originalExecCommandContext
+		gitopsLookupIPAddr = originalLookup
+	}()
+
+	execCalled := false
+	execCommandContext = func(ctx context.Context, command string, args ...string) *exec.Cmd {
+		execCalled = true
+		return fakeExecCommandContext(ctx, command, args...)
+	}
+	gitopsLookupIPAddr = func(_ context.Context, host string) ([]net.IPAddr, error) {
+		if host != "github.com" {
+			t.Fatalf("unexpected host lookup: %s", host)
+		}
+		return []net.IPAddr{{IP: net.ParseIP("127.0.0.1")}}, nil
+	}
+
+	_, err := gitopsCloneRepo(context.Background(), "https://github.com/org/repo.git", "")
+	if err == nil || !strings.Contains(err.Error(), "blocked IP") {
+		t.Fatalf("expected blocked IP error, got %v", err)
+	}
+	if execCalled {
+		t.Fatal("expected git clone not to run for blocked repository host")
 	}
 }
 
@@ -225,6 +314,12 @@ func TestGitopsHandlers(t *testing.T) {
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
 	execCommandContext = fakeExecCommandContext
+
+	originalLookup := gitopsLookupIPAddr
+	defer func() { gitopsLookupIPAddr = originalLookup }()
+	gitopsLookupIPAddr = func(_ context.Context, _ string) ([]net.IPAddr, error) {
+		return []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}}, nil
+	}
 
 	server := &Server{
 		allowedOrigins: []string{"*"},

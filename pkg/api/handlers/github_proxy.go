@@ -167,10 +167,11 @@ func StopGitHubProxyLimiterEvictor() {
 // allowedGitHubPrefixes restricts which non-repo GitHub API paths can be proxied.
 // Repo-scoped /repos/* requests are validated separately against the repo allowlist.
 var allowedGitHubPrefixes = []string{
-	"/search/",       // issue/PR search for contributions list
-	"/rate_limit",    // rate-limit check / token validation
-	"/user",          // token validation (GET /user returns the authenticated user)
-	"/notifications", // notification badge (if used by frontend)
+	"/search/",    // issue/PR search for contributions list
+	"/rate_limit", // rate-limit check / token validation
+	// NOTE: /user and /notifications removed — these exposed the shared PAT
+	// owner's identity and notification stream to all authenticated users.
+	// See #16920.
 }
 
 var githubProxyDefaultRepos = strings.Split(githubProxyAllowedReposDefault, ",")
@@ -462,14 +463,9 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 
 // SaveToken handles POST /api/github/token — saves a user-provided GitHub PAT
 // to the encrypted server-side settings file. The token is NOT stored in
-// localStorage after this migration.
+// localStorage after this migration. Admin authorization is enforced by the
+// route-level middleware in setupRoutes.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
-	// Verify admin role — no auto-promotion (CWE-269, #16653).
-	// Bootstrap only happens during OAuth login flow, gated by BOOTSTRAP_ADMIN_ALLOWED.
-	if err := requireAdmin(c, h.store); err != nil {
-		return err
-	}
-
 	var body struct {
 		Token string `json:"token"`
 	}

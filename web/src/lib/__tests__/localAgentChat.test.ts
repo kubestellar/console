@@ -6,8 +6,10 @@ vi.mock('../constants', () => ({
 }))
 
 vi.mock('../utils/wsAuth', () => ({
-  appendWsAuthToken: vi.fn(async (url: string) => url),
+  openAuthenticatedWebSocket: vi.fn(async (url: string) => new WebSocket(url)),
 }))
+
+import { openAuthenticatedWebSocket } from '../utils/wsAuth'
 
 class MockWebSocket {
   static readonly CONNECTING = 0
@@ -288,5 +290,21 @@ describe('localAgentChat', () => {
     expect(onChunk).not.toHaveBeenCalled()
     expect(onDone).not.toHaveBeenCalled()
     expect(onError).toHaveBeenCalledWith('Lost connection to local agent.')
+  })
+
+  it('connects via openAuthenticatedWebSocket for auth compliance', async () => {
+    const onChunk = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    void localAgentChat('test prompt', {
+      onChunk,
+      onDone,
+      onError,
+    })
+
+    await flushMicrotasks()
+
+    expect(openAuthenticatedWebSocket).toHaveBeenCalledWith('ws://local-agent.test/ws')
   })
 })

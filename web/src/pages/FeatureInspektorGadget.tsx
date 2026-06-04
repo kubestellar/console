@@ -114,14 +114,14 @@ export function FeatureInspektorGadget() {
               in your dashboard
             </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+          <div className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             KubeStellar Console integrates with{' '}
             <a href="https://inspektor-gadget.io" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
               Inspektor Gadget
             </a>
             {' '}to surface kernel-level network, DNS, process, and security data —
             with zero application instrumentation.
-          </p>
+          </div>
           <div className="flex items-center justify-center gap-4">
             <Link
               to={ROUTES.HOME}

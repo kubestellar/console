@@ -86,10 +86,9 @@ describe("umami-collect", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects requests whose declared body exceeds 64KB", async () => {
+  it("rejects requests whose actual body exceeds 64KB", async () => {
     const response = await umamiHandler(makeRequest({
-      contentLength: "65537",
-      body: "{}",
+      body: "x".repeat(65537),
     }));
 
     expect(response.status).toBe(413);

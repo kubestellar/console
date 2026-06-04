@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Save, User, Loader2, AlertCircle, RefreshCw, Check, Copy, Share2 } from 'lucide-react'
-import { STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { getStoredAuthToken } from '../../../lib/authToken'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
-import { safeGetItem } from '../../../lib/utils/localStorage'
 
 interface ProfileSectionProps {
   initialEmail: string
@@ -118,7 +118,7 @@ export function ProfileSection({ initialEmail, initialSlackId, githubLogin, refr
     setIsSaving(true)
     setError(null)
     try {
-      const token = safeGetItem(STORAGE_KEY_TOKEN)
+      const token = getStoredAuthToken()
       const response = await fetch('/api/me', {
         method: 'PUT',
         headers: {

@@ -9,6 +9,7 @@ import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { Select } from '../ui/Select'
+import { cn } from '../../lib/cn'
 
 interface ChangeRecord {
   id: string; timestamp: string; cluster: string; namespace: string
@@ -72,10 +73,12 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
   const [filterApproval, setFilterApproval] = useState('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [activeTab, setActiveTab] = useState<'changes' | 'violations' | 'policies'>('changes')
+  const [isRetrying, setIsRetrying] = useState(false)
   const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
+    setIsRetrying(false)
     setError(null)
     try {
       const [sRes, cRes, vRes, pRes] = await Promise.all([
@@ -103,6 +106,11 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
     }
   }
 
+  const handleRetry = async () => {
+    setIsRetrying(true)
+    await fetchData()
+  }
+
   useEffect(() => {
     cancelledRef.current = false
     fetchData()
@@ -119,7 +127,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
   if (error) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <p className="text-red-400 font-medium">{error}</p>
-      <button type="button" onClick={fetchData} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 min-h-11 min-w-11 px-3 py-2"><RefreshCw className="w-4 h-4" /> Retry</button>
+      <button type="button" onClick={handleRetry} disabled={isRetrying} className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1 min-h-11 min-w-11 px-3 py-2 disabled:opacity-50"><RefreshCw className={cn('w-4 h-4', isRetrying && 'animate-spin')} /> Retry</button>
     </div>
   )
 

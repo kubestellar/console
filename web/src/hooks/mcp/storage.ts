@@ -7,7 +7,7 @@ import { REFRESH_INTERVAL_MS, getEffectiveInterval, getLocalAgentURL, agentFetch
 import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
-import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import { useClusterResourceQuery } from './useClusterResourceQuery'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
@@ -458,7 +458,7 @@ export function usePVs(cluster?: string) {
           if (isClusterModeBackend()) {
             try {
               const response = await fetch(`/api/mcp/pvs?${params}`, {
-                signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+                signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
               })
               if (response.ok) {
                 const agentData = await response.json()

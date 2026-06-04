@@ -11,20 +11,26 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
 // ACMM scan constants
 const (
-	acmmGitHubAPI    = "https://api.github.com"
-	acmmAPITimeoutMS = 15000
-	weeksOfHistory   = 16
+	acmmGitHubAPI              = "https://api.github.com"
+	acmmAPITimeoutMS           = 15000
+	weeksOfHistory             = 16
+	acmmForceRefreshCooldown   = time.Minute
+	acmmForceRefreshRecordTTL  = time.Hour
+	acmmForceRefreshRetryFloor = 1
 	// GitHub search API max pages/size
 	searchPageSize = 100
 	searchMaxPages = 10
@@ -41,7 +47,6 @@ const (
 // lacks a timeout, risking indefinite hangs on unresponsive upstreams.
 var acmmHTTPClient = client.External
 
-
 var (
 	repoSlugRE = regexp.MustCompile(`^[\w.\-]+/[\w.\-]+$`)
 	aiAuthors  = map[string]bool{
@@ -51,7 +56,8 @@ var (
 	}
 	// acmmScanInFlight tracks repo scans currently being processed to avoid
 	// redundant GitHub API calls from concurrent requests.
-	acmmScanInFlight sync.Map
+	acmmScanInFlight      sync.Map
+	acmmForceRefreshState = newACMMForceRefreshLimiter()
 )
 
 // acmmCriterion describes a single maturity detection rule.
@@ -74,6 +80,60 @@ type acmmWeeklyActivity struct {
 	HumanPrs    int    `json:"humanPrs"`
 	AIIssues    int    `json:"aiIssues"`
 	HumanIssues int    `json:"humanIssues"`
+}
+
+type acmmForceRefreshLimiter struct {
+	mu          sync.Mutex
+	lastRequest map[string]time.Time
+}
+
+func newACMMForceRefreshLimiter() *acmmForceRefreshLimiter {
+	return &acmmForceRefreshLimiter{
+		lastRequest: make(map[string]time.Time),
+	}
+}
+
+func (l *acmmForceRefreshLimiter) Allow(key string, now time.Time) (bool, time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.purgeExpired(now)
+	if lastRequestAt, ok := l.lastRequest[key]; ok {
+		elapsed := now.Sub(lastRequestAt)
+		if elapsed < acmmForceRefreshCooldown {
+			return false, acmmForceRefreshCooldown - elapsed
+		}
+	}
+
+	l.lastRequest[key] = now
+	return true, 0
+}
+
+func (l *acmmForceRefreshLimiter) Reset() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.lastRequest = make(map[string]time.Time)
+}
+
+func (l *acmmForceRefreshLimiter) purgeExpired(now time.Time) {
+	cutoff := now.Add(-acmmForceRefreshRecordTTL)
+	for key, lastRequestAt := range l.lastRequest {
+		if lastRequestAt.Before(cutoff) {
+			delete(l.lastRequest, key)
+		}
+	}
+}
+
+func acmmForceRefreshKey(c *fiber.Ctx, repo string) string {
+	userID := middleware.GetUserID(c)
+	if userID != uuid.Nil {
+		return userID.String() + ":" + repo
+	}
+	return c.IP() + ":" + repo
+}
+
+func acmmForceRefreshRetryAfterSeconds(retryAfter time.Duration) int {
+	return max(acmmForceRefreshRetryFloor, int(math.Ceil(retryAfter.Seconds())))
 }
 
 // criteria catalog — mirrors the Netlify Function and frontend sources.
@@ -170,6 +230,18 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	// Demo mode support
 	if isDemoMode(c) {
 		return c.JSON(demoACMMScan(repo))
+	}
+
+	forceRefresh := c.Query("force") == "true"
+	if forceRefresh {
+		allowed, retryAfter := acmmForceRefreshState.Allow(acmmForceRefreshKey(c, repo), time.Now())
+		if !allowed {
+			retryAfterSeconds := acmmForceRefreshRetryAfterSeconds(retryAfter)
+			c.Set("Retry-After", strconv.Itoa(retryAfterSeconds))
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "too many force-refresh requests, try again later",
+			})
+		}
 	}
 
 	// Coordination: collapse concurrent requests for the same repo (#6842).

@@ -464,7 +464,9 @@ var widgetPublicPrefixes = []string{
 	"/api/nightly-e2e/",
 	"/api/rewards/",
 	"/api/issue-stats",
-	"/api/github-pipelines",
+	// NOTE: /api/github-pipelines removed — mutate operations (rerun/cancel)
+	// require authentication. Read-only pipeline data uses per-handler auth
+	// checks instead. See #16917.
 }
 
 var widgetAgentAllowedPaths = map[string]struct{}{

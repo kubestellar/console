@@ -30,8 +30,9 @@ var safeAutoActions = map[string]bool{
 // broadcastSolveProgress emits a structured phase update over SSE. The event
 // card uses it to render the live progress bar; the activity log uses the
 // matching kind to record the same step. Phase strings are stable contract.
-func (h *StellarHandler) broadcastSolveProgress(solveID, eventID, phase, message string, percent int) {
+func (h *StellarHandler) broadcastSolveProgress(userID, solveID, eventID, phase, message string, percent int) {
 	h.broadcastToClients(SSEEvent{Type: "solve_progress", Data: map[string]interface{}{
+		"userId":       userID,
 		"solveId":      solveID,
 		"eventId":      eventID,
 		"step":         phase,
@@ -59,6 +60,7 @@ type solverStorageAdapter struct {
 // satisfies. This avoids ballooning StellarStore for features still settling.
 type solveFullStore interface {
 	CreateSolve(ctx context.Context, solve *store.StellarSolve) error
+	CreateSolveIfNoneActive(ctx context.Context, solve *store.StellarSolve) (*store.StellarSolve, bool, error)
 	UpdateSolveStatus(ctx context.Context, solveID, status, summary, limitHit, errStr string) error
 	IncrementSolveActions(ctx context.Context, solveID string) error
 	GetActiveSolveForEvent(ctx context.Context, eventID string) (*store.StellarSolve, error)
@@ -79,6 +81,7 @@ type solveFullStore interface {
 
 	LogActivity(ctx context.Context, a *store.StellarActivity) error
 	ListActivity(ctx context.Context, limit int) ([]store.StellarActivity, error)
+	ListActivityForUser(ctx context.Context, userID string, limit int) ([]store.StellarActivity, error)
 	GetRecentSolveForWorkload(ctx context.Context, cluster, namespace, workload string, since time.Time) (*store.StellarSolve, error)
 }
 
@@ -116,16 +119,23 @@ func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivi
 	if !ok {
 		return
 	}
+	if strings.TrimSpace(a.UserID) == "" {
+		a.UserID = "system"
+	}
 	if err := full.LogActivity(ctx, a); err != nil {
 		slog.Warn("stellar: LogActivity failed", "error", err)
 		return
 	}
-	h.broadcastToClients(SSEEvent{Type: "activity", Data: a})
+	h.broadcastToClients(SSEEvent{Type: "activity", Data: a, TargetUserID: a.UserID})
 }
 
 // ListActivity is the GET /api/stellar/activity handler — returns recent
-// entries from Stellar's first-person activity log.
+// entries from Stellar's first-person activity log scoped to the authenticated user.
 func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
+	userID, err := h.requireUser(c)
+	if err != nil {
+		return err
+	}
 	full, ok := h.fullStore()
 	if !ok {
 		return c.JSON(fiber.Map{"items": []store.StellarActivity{}})
@@ -136,7 +146,7 @@ func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
 			limit = v
 		}
 	}
-	items, err := full.ListActivity(c.UserContext(), limit)
+	items, err := full.ListActivityForUser(c.UserContext(), userID, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load activity"})
 	}
@@ -170,9 +180,10 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 		// exhausted) intentionally fall through so Stellar gets another shot;
 		// the operator deserves a fresh attempt, not an inherited verdict.
 		h.broadcastToClients(SSEEvent{Type: "solve_started", Data: map[string]interface{}{
+			"userId":  notif.UserID,
 			"solveId": recent.ID, "eventId": notif.ID,
 		}})
-		h.broadcastSolveProgress(recent.ID, notif.ID, "solving",
+		h.broadcastSolveProgress(notif.UserID, recent.ID, notif.ID, "solving",
 			fmt.Sprintf("Linked to active solve started %s ago.",
 				time.Since(recent.StartedAt).Round(time.Second)), 60)
 		h.logActivity(ctx, &store.StellarActivity{
@@ -210,6 +221,7 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 	// Flip the card into "solving" mode immediately so the user never sees a
 	// dead critical event without status.
 	h.broadcastToClients(SSEEvent{Type: "solve_started", Data: map[string]interface{}{
+		"userId":  notif.UserID,
 		"solveId": solve.ID, "eventId": notif.ID,
 	}})
 
@@ -218,7 +230,7 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 	// it's looking into it. Activity log and card progress both update.
 	investigatingMsg := fmt.Sprintf("Investigating %s on %s/%s — pulling logs and pod state.",
 		event.Reason, event.Namespace, workload)
-	h.broadcastSolveProgress(solve.ID, notif.ID, "investigating", investigatingMsg, 20)
+	h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "investigating", investigatingMsg, 20)
 	h.logActivity(ctx, &store.StellarActivity{
 		Kind:      "investigating",
 		EventID:   notif.ID,
@@ -249,7 +261,7 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 		rootCauseDetail = fmt.Sprintf("Reason: %s. Message: %s",
 			event.Reason, truncateString(event.Message, 200))
 	}
-	h.broadcastSolveProgress(solve.ID, notif.ID, "root_cause", "Root cause: "+rootCauseHeadline, 50)
+	h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "root_cause", "Root cause: "+rootCauseHeadline, 50)
 	h.logActivity(ctx, &store.StellarActivity{
 		Kind:      "root_cause",
 		EventID:   notif.ID,
@@ -284,8 +296,9 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 			Detail:    summary,
 			Severity:  "warning",
 		})
-		h.broadcastSolveProgress(solve.ID, notif.ID, "escalated", summary, 100)
+		h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "escalated", summary, 100)
 		h.broadcastToClients(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+			"userId":  notif.UserID,
 			"solveId": solve.ID,
 			"eventId": notif.ID,
 			"status":  "escalated",
@@ -306,7 +319,7 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 	// through to PHASE 3b (mission trigger) so the operator's connected AI
 	// agent can take a deeper look.
 	if eval != nil && eval.RecommendedAction != nil && safeAutoActions[eval.RecommendedAction.Type] && h.k8sClient != nil {
-		h.broadcastSolveProgress(solve.ID, notif.ID, "solving",
+		h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "solving",
 			fmt.Sprintf("Trying %s — Stellar's first-line fix.", eval.RecommendedAction.Type), 75)
 		h.logActivity(ctx, &store.StellarActivity{
 			Kind:      "solving",
@@ -372,8 +385,9 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 				Detail:    summary,
 				Severity:  "info",
 			})
-			h.broadcastSolveProgress(solve.ID, notif.ID, "resolved", summary, 100)
+			h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "resolved", summary, 100)
 			h.broadcastToClients(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+				"userId":  notif.UserID,
 				"solveId": solve.ID,
 				"eventId": notif.ID,
 				"status":  "resolved",
@@ -428,7 +442,7 @@ Please:
 Don't ask me first — act. If you genuinely can't fix it safely, tell me what's blocking you.`,
 		safeEventCluster, safeEventNamespace, safeEventKind, safeEventName, safeEventReason, safeEventMessage, safeRootCauseHeadline)
 
-	h.broadcastSolveProgress(solve.ID, notif.ID, "solving",
+	h.broadcastSolveProgress(notif.UserID, solve.ID, notif.ID, "solving",
 		"Applying fix via AI mission — using your connected agent.", 75)
 	h.logActivity(ctx, &store.StellarActivity{
 		Kind:      "solving",
@@ -442,6 +456,7 @@ Don't ask me first — act. If you genuinely can't fix it safely, tell me what's
 		Severity:  "info",
 	})
 	h.broadcastToClients(SSEEvent{Type: "mission_trigger", Data: map[string]interface{}{
+		"userId":    notif.UserID,
 		"solveId":   solve.ID,
 		"eventId":   notif.ID,
 		"cluster":   event.Cluster,
@@ -525,8 +540,9 @@ func (h *StellarHandler) CompleteAutoMission(c *fiber.Ctx) error {
 	// resolved/escalated badge. Operator can then Dismiss to clear it.
 	terminalPhase := body.Status // "resolved" | "escalated" | "exhausted"
 	terminalMsg := body.Summary
-	h.broadcastSolveProgress(body.SolveID, body.EventID, terminalPhase, terminalMsg, 100)
+	h.broadcastSolveProgress(userID, body.SolveID, body.EventID, terminalPhase, terminalMsg, 100)
 	h.broadcastToClients(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+		"userId":  userID,
 		"solveId": body.SolveID,
 		"eventId": body.EventID,
 		"status":  body.Status,
@@ -600,15 +616,9 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 	if notif == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "event not found"})
 	}
-
-	// Idempotent return for an already-running solve.
-	active, _ := full.GetActiveSolveForEvent(ctx, eventID)
-	if active != nil {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"solveId":  active.ID,
-			"status":   active.Status,
-			"existing": true,
-		})
+	// Ownership check: only the notification's owner may trigger a solve.
+	if notif.UserID != userID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied"})
 	}
 
 	// Demo-mode / no-cluster-client → solve is meaningless. Refuse cleanly.
@@ -630,8 +640,19 @@ func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
 		Summary:   "AI mission triggered.",
 		StartedAt: time.Now().UTC(),
 	}
-	if err := full.CreateSolve(ctx, solve); err != nil {
+
+	// Atomic check-and-insert prevents TOCTOU race where concurrent requests
+	// both observe no active solve and create duplicates (CWE-362, #16983).
+	solve, created, err := full.CreateSolveIfNoneActive(ctx, solve)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to start solve"})
+	}
+	if !created {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"solveId":  solve.ID,
+			"status":   solve.Status,
+			"existing": true,
+		})
 	}
 
 	safeNotifCluster := renderUntrustedPromptData("stellar-notification-cluster", notif.Cluster)
@@ -672,6 +693,7 @@ Don't ask me first — act. I trust you.`,
 	// Same mission_trigger envelope as the autonomous path. Frontend bridge
 	// invokes startMission on the MissionContext.
 	h.broadcastToClients(SSEEvent{Type: "mission_trigger", Data: map[string]interface{}{
+		"userId":    userID,
 		"solveId":   solve.ID,
 		"eventId":   eventID,
 		"cluster":   notif.Cluster,
@@ -683,6 +705,7 @@ Don't ask me first — act. I trust you.`,
 		"prompt":    missionPrompt,
 	}})
 	h.broadcastToClients(SSEEvent{Type: "solve_started", Data: map[string]interface{}{
+		"userId":  userID,
 		"solveId": solve.ID,
 		"eventId": eventID,
 	}})
@@ -760,4 +783,3 @@ func renderUntrustedPromptData(source, value string) string {
 		html.EscapeString(truncated),
 	)
 }
-

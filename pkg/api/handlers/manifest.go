@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -38,6 +40,7 @@ type ManifestHandler struct {
 	backendURL        string
 	frontendURL       string
 	githubURL         string
+	bootstrapToken    string
 	onConfigured      func(clientID, clientSecret string)
 	isOAuthConfigured func() bool
 	httpClient        *http.Client
@@ -49,9 +52,11 @@ type ManifestHandler struct {
 // credentials are persisted so the server can hot-reload OAuth config.
 // isOAuthConfigured reports whether OAuth is already fully configured
 // (from env vars OR SQLite), preventing duplicate app creation.
+// bootstrapToken, if non-empty, must be provided as ?token= query parameter
+// to access the manifest flow. If empty, access is restricted to loopback IPs.
 func NewManifestHandler(
 	s store.Store,
-	backendURL, frontendURL, githubURL string,
+	backendURL, frontendURL, githubURL, bootstrapToken string,
 	onConfigured func(clientID, clientSecret string),
 	isOAuthConfigured func() bool,
 ) *ManifestHandler {
@@ -63,11 +68,46 @@ func NewManifestHandler(
 		backendURL:        strings.TrimRight(backendURL, "/"),
 		frontendURL:       strings.TrimRight(frontendURL, "/"),
 		githubURL:         strings.TrimRight(githubURL, "/"),
+		bootstrapToken:    bootstrapToken,
 		onConfigured:      onConfigured,
 		isOAuthConfigured: isOAuthConfigured,
 		httpClient:        client.GitHub,
 		pendingStates:     make(map[string]time.Time),
 	}
+}
+
+// checkBootstrapAuth verifies the caller is authorized to use the manifest
+// bootstrap flow. If CONSOLE_BOOTSTRAP_TOKEN is set, the request must include
+// it as ?token=<value>. If no token is configured, only loopback/private-network
+// clients are permitted (CWE-306 mitigation).
+func (h *ManifestHandler) checkBootstrapAuth(c *fiber.Ctx) error {
+	if h.bootstrapToken != "" {
+		provided := c.Query("token")
+		if subtle.ConstantTimeCompare([]byte(h.bootstrapToken), []byte(provided)) != 1 {
+			slog.Warn("[Manifest] bootstrap access denied — invalid or missing token", "ip", c.IP())
+			return fiber.NewError(fiber.StatusForbidden, "bootstrap token required")
+		}
+		return nil
+	}
+
+	// No explicit token configured — restrict to loopback/private IPs.
+	if !isBootstrapAllowedIP(c.IP()) {
+		slog.Warn("[Manifest] bootstrap access denied — non-private IP without token", "ip", c.IP())
+		return fiber.NewError(fiber.StatusForbidden,
+			"manifest bootstrap is restricted; set CONSOLE_BOOTSTRAP_TOKEN or access from localhost")
+	}
+	return nil
+}
+
+// isBootstrapAllowedIP returns true if the IP is loopback, private, link-local,
+// or unspecified (0.0.0.0/::) — the unspecified case covers direct connections
+// without a reverse proxy where the kernel hasn't resolved the peer address.
+func isBootstrapAllowedIP(ip string) bool {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return false
+	}
+	return parsed.IsLoopback() || parsed.IsPrivate() || parsed.IsLinkLocalUnicast() || parsed.IsUnspecified()
 }
 
 // manifestPayload is the JSON structure POSTed to GitHub as the app manifest.
@@ -98,6 +138,9 @@ type manifestConversionResponse struct {
 func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 	if h.isOAuthConfigured != nil && h.isOAuthConfigured() {
 		return c.Redirect(h.frontendURL + "/login")
+	}
+	if err := h.checkBootstrapAuth(c); err != nil {
+		return err
 	}
 	suffix, err := randomHex(manifestAppNameSuffixBytes)
 	if err != nil {
@@ -160,6 +203,9 @@ func (h *ManifestHandler) ManifestCallback(c *fiber.Ctx) error {
 	if h.isOAuthConfigured != nil && h.isOAuthConfigured() {
 		slog.Warn("[Manifest] callback rejected — OAuth already configured")
 		return c.Redirect(h.frontendURL + "/login?error=manifest_already_configured")
+	}
+	if err := h.checkBootstrapAuth(c); err != nil {
+		return err
 	}
 
 	state := c.Query("state")

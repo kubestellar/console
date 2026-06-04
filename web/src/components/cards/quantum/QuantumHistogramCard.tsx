@@ -100,7 +100,7 @@ function HistogramMetadata({
 export function QuantumHistogramCard() {
   const { t } = useTranslation(['cards', 'common'])
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
-  const [sortBy, setSortBy] = useState<HistogramSort>('count')
+  const [sortBy, setSortBy] = useState<HistogramSort>('pattern')
   const [refreshInterval, setRefreshInterval] = useState(HISTOGRAM_DEFAULT_POLL_MS)
   const {
     data,

@@ -8,9 +8,10 @@ import {
   readJson,
 } from "./netlify-handler-helpers";
 
-const { mockGet, mockSetJSON } = vi.hoisted(() => ({
+const { mockGet, mockSetJSON, mockEnforceSimpleRateLimit } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockSetJSON: vi.fn(),
+  mockEnforceSimpleRateLimit: vi.fn(),
 }));
 
 // issue-stats.mts uses store.get(key, { type: "json" }) — Netlify returns a parsed object, not a string.
@@ -19,6 +20,10 @@ vi.mock("@netlify/blobs", () => ({
     get: mockGet,
     setJSON: mockSetJSON,
   }),
+}));
+
+vi.mock("../_shared/rate-limit", () => ({
+  enforceSimpleRateLimit: mockEnforceSimpleRateLimit,
 }));
 
 import handler from "../issue-stats.mts";
@@ -54,6 +59,7 @@ describe("issue-stats", () => {
     process.env.GITHUB_TOKEN = FAKE_GITHUB_TOKEN;
     mockGet.mockResolvedValue(null);
     mockSetJSON.mockResolvedValue(undefined);
+    mockEnforceSimpleRateLimit.mockResolvedValue({ limited: false, retryAfterSeconds: 0 });
 
     const today = new Date();
     const yesterday = new Date(today.getTime() - 86_400_000);

@@ -79,6 +79,20 @@ vi.mock('../../hooks/mcp/shared', () => ({
 const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 const STORAGE_KEY_TOKEN = 'token'
 
+function readStoredSessionToken(): string | null {
+  const rawValue = sessionStorage.getItem(STORAGE_KEY_TOKEN)
+  if (!rawValue) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as { token?: string }
+    return typeof parsed.token === 'string' ? parsed.token : rawValue
+  } catch {
+    return rawValue
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helper: create a valid JWT with an exp claim
 // ---------------------------------------------------------------------------
@@ -814,7 +828,7 @@ describe('AuthProvider', () => {
     })
 
     expect(result.current.token).toBe('new-jwt-token')
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).toBe('new-jwt-token')
+    expect(readStoredSessionToken()).toBe('new-jwt-token')
     // setToken clears cached user (cacheUser(null))
     expect(localStorage.getItem(AUTH_USER_CACHE_KEY)).toBeNull()
     // Sets a temp user with onboarded flag

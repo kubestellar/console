@@ -80,6 +80,20 @@ vi.mock('../../hooks/mcp/shared', () => ({
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const STORAGE_KEY_TOKEN = 'token'
+
+function readStoredSessionToken(): string | null {
+  const rawValue = sessionStorage.getItem(STORAGE_KEY_TOKEN)
+  if (!rawValue) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as { token?: string }
+    return typeof parsed.token === 'string' ? parsed.token : rawValue
+  } catch {
+    return rawValue
+  }
+}
 const AUTH_USER_CACHE_KEY = 'kc-user-cache'
 const AUTH_USER_CACHE_VALIDATED_KEY = 'kc-user-cache-validated'
 /** Milliseconds per second — JWT exp is in seconds */
@@ -192,8 +206,8 @@ describe('refreshUser with expired JWT (#8507)', () => {
       { timeout: 5_000 },
     )
 
-    // Token should be cleared from localStorage
-    expect(localStorage.getItem(STORAGE_KEY_TOKEN)).not.toBe(expired)
+    // Token should no longer resolve to the expired session token.
+    expect(readStoredSessionToken()).not.toBe(expired)
 
     // Auth state should not retain the old user — either null (login) or demo
     if (result.current.user) {

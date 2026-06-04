@@ -228,11 +228,11 @@ export function Welcome() {
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
+          <div className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
             KubeStellar Console is the open-source Kubernetes dashboard with{' '}
             <span className="text-white font-medium">AI troubleshooting, GPU visibility, cost analytics, and security compliance</span>{' '}
             built in — not bolted on.
-          </p>
+          </div>
 
           <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-10">
             No sign-up. No install. Explore the full demo right now.
