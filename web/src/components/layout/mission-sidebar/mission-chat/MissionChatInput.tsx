@@ -171,6 +171,7 @@ export function MissionChatInput({
             </button>
           </div>
         </div>
+      ) : (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 min-w-0">
             <input
@@ -201,7 +202,8 @@ export function MissionChatInput({
               )}
             </button>
           </div>
-        </div>}
+        </div>
+      )}
 
       {inputError && (
         <div className="mt-2 px-1 text-xs text-red-400 flex items-center gap-1.5">
