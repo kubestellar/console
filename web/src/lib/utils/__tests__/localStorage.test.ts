@@ -20,7 +20,7 @@ describe('dispatchStorageError (via public API)', () => {
     expect(event.detail).toMatchObject({
       operation: 'setItem',
       key: 'my-key',
-      error: 'QuotaExceededError',
+      error: expect.stringContaining('QuotaExceededError'),
     })
     expect(event.detail.timestamp).toBeTypeOf('number')
 

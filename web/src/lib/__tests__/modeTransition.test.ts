@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   registerCacheReset,
   unregisterCacheReset,
@@ -12,7 +12,11 @@ import {
 
 describe('cache reset registry', () => {
   beforeEach(() => {
-    // Clean up by unregistering test keys
+    unregisterCacheReset('test-cache-1')
+    unregisterCacheReset('test-cache-2')
+  })
+
+  afterEach(() => {
     unregisterCacheReset('test-cache-1')
     unregisterCacheReset('test-cache-2')
   })
@@ -108,6 +112,14 @@ describe('mode transition version', () => {
 
 describe('dispatchTransitionError (via clearAllRegisteredCaches)', () => {
   beforeEach(() => {
+    unregisterCacheReset('test-cache-1')
+    unregisterCacheReset('test-cache-2')
+    unregisterCacheReset('error-cache')
+  })
+
+  afterEach(() => {
+    unregisterCacheReset('test-cache-1')
+    unregisterCacheReset('test-cache-2')
     unregisterCacheReset('error-cache')
   })
 
