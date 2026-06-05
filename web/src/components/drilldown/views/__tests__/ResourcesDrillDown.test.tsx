@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
+/**
+ * Note: Back navigation for drill-down views is provided by DrillDownModal
+ * and is tested in DrillDownModal.test.tsx (pop, goTo, close functions).
+ */
+
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),

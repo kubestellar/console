@@ -9,9 +9,12 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('react-router-dom', () => ({
-  Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [k: string]: unknown }) => (
-    <a href={to} {...props}>{children}</a>
-  ),
+  Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [k: string]: unknown }) => {
+    // Check if link is external (starts with http:// or https://)
+    const isExternal = typeof to === 'string' && (to.startsWith('http://') || to.startsWith('https://'))
+    const externalProps = isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {}
+    return <a href={to} {...externalProps} {...props}>{children}</a>
+  },
 }))
 
 vi.mock('@/hooks/useModal', () => ({

@@ -1,5 +1,8 @@
 /**
  * RTL interaction tests for DriftDrillDown (#15406, Part of #4189).
+ * 
+ * Note: Back navigation for drill-down views is provided by DrillDownModal
+ * and is tested in DrillDownModal.test.tsx (pop, goTo, close functions).
  */
 import './drilldown-interaction-mocks'
 import { describe, it, expect, vi, beforeEach } from 'vitest'

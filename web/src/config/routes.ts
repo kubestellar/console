@@ -7,9 +7,11 @@
  * Navigation Best Practices:
  * - Always use ROUTES constants instead of hardcoding paths
  * - Use helper functions (getCustomDashboardRoute, getMissionRoute) for dynamic routes
- * - External links should use the ExternalLink component from components/ui/ExternalLink
+ * - External links MUST use the ExternalLink component from components/ui/ExternalLink
+ *   (automatically adds target="_blank" and rel="noopener noreferrer" for security)
  * - Deep navigation is handled by DrillDownProvider with automatic breadcrumbs
  * - Browser history integration is automatic for drill-down views
+ * - Back navigation in drill-downs is provided by DrillDownModal (see DrillDownModal.test.tsx)
  */
 
 export const ROUTES = {

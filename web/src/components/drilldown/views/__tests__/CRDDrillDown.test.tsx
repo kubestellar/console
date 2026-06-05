@@ -1,5 +1,8 @@
 /**
  * RTL interaction tests for CRDDrillDown (#15406, Part of #4189).
+ * 
+ * Note: Back navigation for drill-down views is provided by DrillDownModal
+ * and is tested in DrillDownModal.test.tsx (pop, goTo, close functions).
  */
 import './drilldown-interaction-mocks'
 import type { ReactNode } from 'react'
