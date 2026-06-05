@@ -26,7 +26,8 @@ function dispatchStorageError(operation: string, key: string, error: unknown): v
   const errorMessage = error instanceof Error ? error.message : String(error)
   
   // Log with clear warning (not just error) for better visibility
-  console.warn(`[localStorage] ${operation} failed for key="${sanitizedKey}":`, errorMessage)
+  // All dynamic values passed as separate console.warn arguments to avoid format-string injection
+  console.warn('[localStorage] operation failed —', 'op:', operation, 'key:', sanitizedKey, 'error:', errorMessage)
   
   // Dispatch custom event for monitoring/debugging tools
   if (typeof window !== 'undefined') {

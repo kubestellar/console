@@ -105,3 +105,53 @@ describe('mode transition version', () => {
     expect(getModeTransitionVersion()).toBe(before + 1)
   })
 })
+
+describe('dispatchTransitionError (via clearAllRegisteredCaches)', () => {
+  beforeEach(() => {
+    unregisterCacheReset('error-cache')
+  })
+
+  it('dispatches mode-transition-error CustomEvent when a cache reset throws', () => {
+    const handler = vi.fn()
+    window.addEventListener('mode-transition-error', handler)
+
+    registerCacheReset('error-cache', () => {
+      throw new Error('reset exploded')
+    })
+
+    clearAllRegisteredCaches()
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    const event = handler.mock.calls[0][0] as CustomEvent
+    expect(event.detail).toMatchObject({
+      operation: 'cache-reset',
+      key: 'error-cache',
+      error: 'reset exploded',
+    })
+    expect(event.detail.timestamp).toBeTypeOf('number')
+
+    window.removeEventListener('mode-transition-error', handler)
+    unregisterCacheReset('error-cache')
+  })
+
+  it('dispatches mode-transition-error CustomEvent when a refetch throws', () => {
+    const handler = vi.fn()
+    window.addEventListener('mode-transition-error', handler)
+
+    registerRefetch('error-refetch', () => {
+      throw new Error('refetch failed')
+    })
+
+    triggerAllRefetches()
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    const event = handler.mock.calls[0][0] as CustomEvent
+    expect(event.detail).toMatchObject({
+      operation: 'refetch',
+      key: 'error-refetch',
+      error: 'refetch failed',
+    })
+
+    window.removeEventListener('mode-transition-error', handler)
+  })
+})

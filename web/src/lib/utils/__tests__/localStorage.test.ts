@@ -1,6 +1,67 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { safeGetItem, safeSetItem, safeRemoveItem, safeGetJSON, safeSetJSON } from '../localStorage'
 
+describe('dispatchStorageError (via public API)', () => {
+  beforeEach(() => { localStorage.clear() })
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('dispatches storage-error CustomEvent when setItem fails', () => {
+    const handler = vi.fn()
+    window.addEventListener('storage-error', handler)
+
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError')
+    })
+
+    safeSetItem('my-key', 'value')
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    const event = handler.mock.calls[0][0] as CustomEvent
+    expect(event.detail).toMatchObject({
+      operation: 'setItem',
+      key: 'my-key',
+      error: 'QuotaExceededError',
+    })
+    expect(event.detail.timestamp).toBeTypeOf('number')
+
+    window.removeEventListener('storage-error', handler)
+  })
+
+  it('dispatches storage-error CustomEvent when getItem fails', () => {
+    const handler = vi.fn()
+    window.addEventListener('storage-error', handler)
+
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError')
+    })
+
+    safeGetItem('test-key')
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    const event = handler.mock.calls[0][0] as CustomEvent
+    expect(event.detail.operation).toBe('getItem')
+    expect(event.detail.key).toBe('test-key')
+
+    window.removeEventListener('storage-error', handler)
+  })
+
+  it('sanitizes key in dispatched event detail', () => {
+    const handler = vi.fn()
+    window.addEventListener('storage-error', handler)
+
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('fail')
+    })
+
+    safeSetItem('key with spaces & <special>', 'val')
+
+    const event = handler.mock.calls[0][0] as CustomEvent
+    expect(event.detail.key).toBe('key%20with%20spaces%20%26%20%3Cspecial%3E')
+
+    window.removeEventListener('storage-error', handler)
+  })
+})
+
 describe('safeGetItem', () => {
   beforeEach(() => { localStorage.clear() })
 

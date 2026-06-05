@@ -36,7 +36,8 @@ function dispatchTransitionError(operation: string, key: string, error: unknown)
   const errorMessage = error instanceof Error ? error.message : String(error)
   
   // Log with clear warning for better visibility
-  console.warn(`[ModeTransition] ${operation} failed for '${key}':`, errorMessage)
+  // Note: key is passed as a separate argument (not interpolated) to avoid format-string injection
+  console.warn('[ModeTransition] %s failed for:', operation, key, errorMessage)
   
   // Dispatch custom event for UI components and monitoring tools
   if (typeof window !== 'undefined') {
