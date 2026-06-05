@@ -12,7 +12,7 @@
  * - getStatValue passthrough
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { UnifiedStatsSection } from '../UnifiedStatsSection'
 import type { UnifiedStatsSectionConfig, UnifiedStatBlockConfig } from '../../types'
 
@@ -86,6 +86,29 @@ describe('UnifiedStatsSection', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
+  })
+
+  it('shows an inline error when restoring state fails', () => {
+    const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('storage unavailable')
+    })
+
+    render(<UnifiedStatsSection config={makeConfig({ storageKey: 'restore-error' })} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.storageRestoreFailed')
+    getItemSpy.mockRestore()
+  })
+
+  it('shows an inline error when persisting state fails', () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('storage full')
+    })
+
+    render(<UnifiedStatsSection config={makeConfig({ storageKey: 'persist-error' })} />)
+    fireEvent.click(screen.getByText('Test Stats'))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.storagePersistFailed')
+    setItemSpy.mockRestore()
   })
 
   it('renders stat blocks for each visible block', () => {

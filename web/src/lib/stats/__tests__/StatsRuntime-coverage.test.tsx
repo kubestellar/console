@@ -171,6 +171,30 @@ describe('StatsRuntime hasData', () => {
 // ============================================================================
 
 describe('StatsRuntime collapse', () => {
+  it('shows an inline error when restoring collapsed state fails', () => {
+    const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('storage unavailable')
+    })
+
+    render(<StatsRuntime definition={makeDefinition(1, { type: 'restore-error' })} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.storageRestoreFailed')
+    getItemSpy.mockRestore()
+  })
+
+  it('shows an inline error when persisting collapsed state fails', () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('storage full')
+    })
+
+    render(<StatsRuntime definition={makeDefinition(1)} getStatValue={() => ({ value: 1 })} />)
+
+    fireEvent.click(screen.getByText('Test Stats'))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.storagePersistFailed')
+    setItemSpy.mockRestore()
+  })
+
   it('toggles collapsed state on click', () => {
     const def = makeDefinition(1)
     const getStatValue = (): StatBlockValue => ({ value: 999 })

@@ -33,6 +33,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getIcon } from '../icons'
 import { ChevronDown, ChevronRight, Activity, Settings } from 'lucide-react'
 import {
@@ -159,12 +160,15 @@ export function StatsRuntime({
   collapsedStorageKey,
   showConfigButton = true,
   className = '' }: StatsRuntimeProps) {
+  const { t } = useTranslation('common')
   const {
     type,
     title = 'Stats Overview',
     blocks,
     defaultCollapsed = false,
     grid } = definition
+
+  const defaultIsExpanded = defaultCollapsed ? false : defaultExpanded
 
   // Get visible blocks (respect visible flag)
   const visibleBlocks = blocks.filter((b) => b.visible !== false)
@@ -177,29 +181,48 @@ export function StatsRuntime({
   // (UnifiedStatsSection) that DID store the collapsed sense disagreed on
   // the same key. Read and write both now use the collapsed sense.
   const storageKey = collapsedStorageKey || `kubestellar-${type}-stats-collapsed`
-  const [isExpanded, setIsExpanded] = useState(() => {
+  const [collapsedState, setCollapsedState] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved !== null) {
         const parsed = JSON.parse(saved) as boolean
-        // parsed represents COLLAPSED state
-        return !parsed
+        return {
+          isExpanded: !parsed,
+          error: null as string | null,
+        }
       }
-      return defaultCollapsed ? false : defaultExpanded
-    } catch {
-      return defaultCollapsed ? false : defaultExpanded
+      return {
+        isExpanded: defaultIsExpanded,
+        error: null as string | null,
+      }
+    } catch (error) {
+      console.error('Failed to restore stats runtime collapsed state', error)
+      return {
+        isExpanded: defaultIsExpanded,
+        error: t('errors.storageRestoreFailed'),
+      }
     }
   })
+  const { isExpanded, error: storageError } = collapsedState
 
   const toggleExpanded = () => {
-    const newValue = !isExpanded
-    setIsExpanded(newValue)
-    try {
-      // Store COLLAPSED state to match the storage-key semantics.
-      localStorage.setItem(storageKey, JSON.stringify(!newValue))
-    } catch {
-      // Ignore storage errors
-    }
+    setCollapsedState((prev) => {
+      const newValue = !prev.isExpanded
+      try {
+        // Store COLLAPSED state to match the storage-key semantics.
+        localStorage.setItem(storageKey, JSON.stringify(!newValue))
+        return {
+          isExpanded: newValue,
+          error: null,
+        }
+      } catch (error) {
+        console.error('Failed to persist stats runtime collapsed state', error)
+        return {
+          isExpanded: newValue,
+          error: t('errors.storagePersistFailed'),
+        }
+      }
+    })
   }
 
   // Get stat value getter
@@ -288,6 +311,15 @@ export function StatsRuntime({
           )}
         </div>
       </div>
+
+      {storageError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {storageError}
+        </div>
+      )}
 
       {/* Stats grid */}
       {(!collapsible || isExpanded) && (

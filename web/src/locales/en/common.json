@@ -5171,6 +5171,7 @@
   },
   "errors": {
     "storagePersistFailed": "Failed to save your selection. Browser storage may be full.",
+    "storageRestoreFailed": "Failed to restore your saved selection. Browser storage may be unavailable.",
     "cacheWriteFailed": "Failed to cache data. Browser storage may be full.",
     "cardRegistryLoadFailed": "Failed to load card catalog.",
     "cacheResetFailed": "Failed to reset some caches during mode switch."

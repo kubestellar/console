@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Activity, ChevronDown, ChevronRight, Settings, FlaskConical } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -26,6 +27,9 @@ export function UnifiedStatsSection({
   isLoading = false,
   lastUpdated: _lastUpdated = null,
   className = '' }: UnifiedStatsSectionProps) {
+  const { t } = useTranslation('common')
+  const defaultIsExpanded = !config.defaultCollapsed
+
   // Collapsed state with localStorage persistence.
   // The storage key name says "collapsed", so the stored value represents
   // collapsed state (true = collapsed). Historically the read path here
@@ -33,23 +37,34 @@ export function UnifiedStatsSection({
   // `!isExpanded` — they disagreed, so reloading the page showed the inverse
   // of the last toggle. Keep read and write aligned with the name of the key.
   const storageKey = config.storageKey || `kubestellar-${config.type}-stats-collapsed`
-  const [isExpanded, setIsExpanded] = useState(() => {
+  const [collapsedState, setCollapsedState] = useState(() => {
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved !== null) {
         const parsed = JSON.parse(saved) as boolean
-        // parsed represents COLLAPSED state
-        return !parsed
+        return {
+          isExpanded: !parsed,
+          error: null as string | null,
+        }
       }
-      return !config.defaultCollapsed
-    } catch {
-      return !config.defaultCollapsed
+      return {
+        isExpanded: defaultIsExpanded,
+        error: null as string | null,
+      }
+    } catch (error) {
+      console.error('Failed to restore unified stats section state', error)
+      return {
+        isExpanded: defaultIsExpanded,
+        error: t('errors.storageRestoreFailed'),
+      }
     }
   })
+  const { isExpanded, error: storageError } = collapsedState
 
   // Configuration modal state
   const [isConfigOpen, setIsConfigOpen] = useState(false)
   const [customBlocks, setCustomBlocks] = useState<UnifiedStatBlockConfig[] | null>(null)
+  const [configError, setConfigError] = useState<string | null>(null)
 
   // Determine visible blocks
   const visibleBlocks = (() => {
@@ -68,13 +83,22 @@ export function UnifiedStatsSection({
 
   // Toggle collapsed state
   const toggleExpanded = () => {
-    const newValue = !isExpanded
-    setIsExpanded(newValue)
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(!newValue))
-    } catch {
-      // Ignore storage errors
-    }
+    setCollapsedState((prev) => {
+      const newValue = !prev.isExpanded
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(!newValue))
+        return {
+          isExpanded: newValue,
+          error: null,
+        }
+      } catch (error) {
+        console.error('Failed to persist unified stats section state', error)
+        return {
+          isExpanded: newValue,
+          error: t('errors.storagePersistFailed'),
+        }
+      }
+    })
   }
 
   // Get value for a block
@@ -91,8 +115,10 @@ export function UnifiedStatsSection({
     // Persist to localStorage
     try {
       localStorage.setItem(`${storageKey}-blocks`, JSON.stringify(blocks))
-    } catch {
-      // Ignore storage errors
+      setConfigError(null)
+    } catch (error) {
+      console.error('Failed to persist unified stats block configuration', error)
+      setConfigError(t('errors.storagePersistFailed'))
     }
   }
 
@@ -104,10 +130,12 @@ export function UnifiedStatsSection({
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setCustomBlocks(JSON.parse(saved))
       }
-    } catch {
-      // Ignore storage errors
+      setConfigError(null)
+    } catch (error) {
+      console.error('Failed to restore unified stats block configuration', error)
+      setConfigError(t('errors.storageRestoreFailed'))
     }
-  }, [storageKey])
+  }, [storageKey, t])
 
   // Dynamic grid columns based on visible blocks
   const gridCols = (() => {
@@ -173,6 +201,15 @@ export function UnifiedStatsSection({
           )}
         </div>
       </div>
+
+      {(storageError || configError) && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {storageError || configError}
+        </div>
+      )}
 
       {/* Stats grid */}
       {(!collapsible || isExpanded) && (

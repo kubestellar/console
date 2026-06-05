@@ -9,7 +9,7 @@
  *   <UnifiedDashboard config={mainDashboardConfig} />
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Activity, RefreshCw, Plus, ExternalLink } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { AgentIcon } from '../../../components/agent/AgentIcon'
@@ -56,28 +56,63 @@ export function UnifiedDashboard({
   // to route persistence differently in tab-mode dashboards.
   const hasTabs = (config.tabs?.length ?? 0) > 0
 
-  // Card state - load from localStorage or use config defaults.
-  //
-  // #6710 — Distinguish "never persisted" (no key in storage) from
-  // "explicitly empty" ([]). A user who removed every card should see an
-  // empty dashboard after reload, not a restored default layout. We only
-  // fall back to `config.cards` when the storage slot is missing entirely.
-  const [cards, setCards] = useState<DashboardCardPlacement[]>(() => {
+  const initialStorageState = (() => {
+    const nextState: {
+      cards: DashboardCardPlacement[]
+      tabCards: Record<string, DashboardCardPlacement[]>
+      error: string | null
+    } = {
+      cards: config.cards,
+      tabCards: {},
+      error: null,
+    }
+
     if (config.storageKey) {
       try {
         const stored = localStorage.getItem(config.storageKey)
         if (stored !== null) {
           const parsed = JSON.parse(stored)
           if (Array.isArray(parsed)) {
-            return parsed
+            nextState.cards = parsed
           }
         }
-      } catch {
-        // Ignore parse errors — fall through to defaults
+      } catch (error) {
+        console.error('Failed to restore unified dashboard cards', error)
+        nextState.error = t('errors.storageRestoreFailed')
       }
     }
-    return config.cards
-  })
+
+    for (const tab of (config.tabs || [])) {
+      let seeded: DashboardCardPlacement[] | null = null
+      if (config.storageKey) {
+        try {
+          const slot = `${config.storageKey}::tab::${tab.id}::cards`
+          const raw = localStorage.getItem(slot)
+          if (raw !== null) {
+            const parsed = JSON.parse(raw)
+            if (Array.isArray(parsed)) {
+              seeded = parsed
+            }
+          }
+        } catch (error) {
+          console.error('Failed to restore unified dashboard tab cards', error)
+          nextState.error = t('errors.storageRestoreFailed')
+        }
+      }
+      nextState.tabCards[tab.id] = seeded ?? tab.cards ?? []
+    }
+
+    return nextState
+  })()
+
+  // Card state - load from localStorage or use config defaults.
+  //
+  // #6710 — Distinguish "never persisted" (no key in storage) from
+  // "explicitly empty" ([]). A user who removed every card should see an
+  // empty dashboard after reload, not a restored default layout. We only
+  // fall back to `config.cards` when the storage slot is missing entirely.
+  const [cards, setCards] = useState<DashboardCardPlacement[]>(initialStorageState.cards)
+  const [dashboardError, setDashboardError] = useState<string | null>(initialStorageState.error)
 
   const [activeTabId, setActiveTabId] = useState<string>(() => {
     if (!config.tabs || config.tabs.length === 0) return ''
@@ -99,27 +134,7 @@ export function UnifiedDashboard({
   // `${storageKey}::tab::${tabId}::cards` and seed `tabCards` from those
   // slots on mount when they exist. Non-tab dashboards keep using the
   // original `storageKey`.
-  const [tabCards, setTabCards] = useState<Record<string, DashboardCardPlacement[]>>(() => {
-    if (!config.tabs) return {}
-    const initial: Record<string, DashboardCardPlacement[]> = {}
-    for (const t of config.tabs) {
-      let seeded: DashboardCardPlacement[] | null = null
-      if (config.storageKey) {
-        try {
-          const slot = `${config.storageKey}::tab::${t.id}::cards`
-          const raw = localStorage.getItem(slot)
-          if (raw !== null) {
-            const parsed = JSON.parse(raw)
-            if (Array.isArray(parsed)) seeded = parsed
-          }
-        } catch {
-          // Ignore parse errors — fall through to config defaults
-        }
-      }
-      initial[t.id] = seeded ?? t.cards ?? []
-    }
-    return initial
-  })
+  const [tabCards, setTabCards] = useState<Record<string, DashboardCardPlacement[]>>(initialStorageState.tabCards)
 
   // Prefetch card chunks for this dashboard so React.lazy() resolves instantly
   useEffect(() => {
@@ -136,6 +151,8 @@ export function UnifiedDashboard({
   // Loading state
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const hasInitializedFlatPersistence = useRef(false)
+  const hasInitializedTabPersistence = useRef(false)
 
   // Modal state
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false)
@@ -152,14 +169,20 @@ export function UnifiedDashboard({
     // Skip flat-cards persistence for tab-mode dashboards — tab-mode uses
     // per-tab slots, handled by the effect below (#6749-A).
     if (hasTabs) return
+    if (!hasInitializedFlatPersistence.current) {
+      hasInitializedFlatPersistence.current = true
+      return
+    }
     if (config.storageKey) {
       try {
         localStorage.setItem(config.storageKey, JSON.stringify(cards))
-      } catch {
-        // Ignore storage errors
+        setDashboardError(null)
+      } catch (error) {
+        console.error('Failed to persist unified dashboard cards', error)
+        setDashboardError(t('errors.storagePersistFailed'))
       }
     }
-  }, [cards, config.storageKey, hasTabs])
+  }, [cards, config.storageKey, hasTabs, t])
 
   // #6749-A — Persist per-tab cards to their own storage slots so tab-mode
   // mutations survive a reload. Without this, the add/remove/reorder
@@ -169,15 +192,21 @@ export function UnifiedDashboard({
   useEffect(() => {
     if (!hasTabs) return
     if (!config.storageKey) return
+    if (!hasInitializedTabPersistence.current) {
+      hasInitializedTabPersistence.current = true
+      return
+    }
     for (const [tabId, placements] of Object.entries(tabCards)) {
       try {
         const slot = `${config.storageKey}::tab::${tabId}::cards`
         localStorage.setItem(slot, JSON.stringify(placements))
-      } catch {
-        // Ignore storage errors
+        setDashboardError(null)
+      } catch (error) {
+        console.error('Failed to persist unified dashboard tab cards', error)
+        setDashboardError(t('errors.storagePersistFailed'))
       }
     }
-  }, [tabCards, config.storageKey, hasTabs])
+  }, [tabCards, config.storageKey, hasTabs, t])
 
   // #6709 — Helper that mutates either the active tab's cards or the flat
   // `cards` state, depending on dashboard mode. All card mutators go
@@ -302,8 +331,10 @@ export function UnifiedDashboard({
           }
           setTabCards(seeded)
         }
-      } catch {
-        // Ignore storage errors
+        setDashboardError(null)
+      } catch (error) {
+        console.error('Failed to reset unified dashboard layout', error)
+        setDashboardError(t('errors.storagePersistFailed'))
       }
     }
     setShowResetConfirm(false)
@@ -322,9 +353,13 @@ export function UnifiedDashboard({
       if (e.key === config.storageKey && !hasTabs) {
         try {
           const parsed = JSON.parse(e.newValue)
-          if (Array.isArray(parsed)) setCards(parsed)
-        } catch {
-          // Ignore parse errors from other tabs
+          if (Array.isArray(parsed)) {
+            setCards(parsed)
+            setDashboardError(null)
+          }
+        } catch (error) {
+          console.error('Failed to sync unified dashboard cards from storage event', error)
+          setDashboardError(t('errors.storageRestoreFailed'))
         }
         return
       }
@@ -338,16 +373,18 @@ export function UnifiedDashboard({
           const parsed = JSON.parse(e.newValue)
           if (Array.isArray(parsed)) {
             setTabCards((prev) => ({ ...prev, [tabId]: parsed }))
+            setDashboardError(null)
           }
-        } catch {
-          // Ignore parse errors from other tabs
+        } catch (error) {
+          console.error('Failed to sync unified dashboard tab cards from storage event', error)
+          setDashboardError(t('errors.storageRestoreFailed'))
         }
       }
     }
 
     window.addEventListener('storage', handleStorageEvent)
     return () => window.removeEventListener('storage', handleStorageEvent)
-  }, [config.storageKey, hasTabs])
+  }, [config.storageKey, hasTabs, t])
 
   // Check if customized (different from defaults)
   //
@@ -446,6 +483,15 @@ export function UnifiedDashboard({
           )}
         </div>
       </div>
+
+      {dashboardError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {dashboardError}
+        </div>
+      )}
 
       {/* Stats section */}
       {config.stats && (

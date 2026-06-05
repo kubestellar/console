@@ -129,6 +129,17 @@ afterEach(() => {
 // ============================================================================
 
 describe('UnifiedDashboard rendering', () => {
+  it('shows an inline error when restoring dashboard storage fails', () => {
+    const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('storage unavailable')
+    })
+
+    render(<UnifiedDashboard config={makeConfig({ storageKey: 'restore-error' })} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.storageRestoreFailed')
+    getItemSpy.mockRestore()
+  })
+
   it('renders dashboard name and subtitle', () => {
     const config = makeConfig()
     render(<UnifiedDashboard config={config} />)
@@ -177,6 +188,20 @@ describe('UnifiedDashboard rendering', () => {
 // ============================================================================
 
 describe('Card removal', () => {
+  it('shows an inline error when persisting dashboard changes fails', () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('storage full')
+    })
+
+    render(<UnifiedDashboard config={makeConfig({ storageKey: 'persist-error' })} />)
+
+    const onRemoveCard = capturedGridProps.onRemoveCard as (id: string) => void
+    act(() => { onRemoveCard('card-1') })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.storagePersistFailed')
+    setItemSpy.mockRestore()
+  })
+
   it('removes a card when onRemoveCard is called', () => {
     const config = makeConfig()
     render(<UnifiedDashboard config={config} />)
