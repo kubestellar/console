@@ -108,6 +108,9 @@ describe('mode transition version', () => {
 
 describe('dispatchTransitionError (via clearAllRegisteredCaches)', () => {
   beforeEach(() => {
+    // Clean up any leftover caches from prior describe blocks
+    unregisterCacheReset('test-cache-1')
+    unregisterCacheReset('test-cache-2')
     unregisterCacheReset('error-cache')
   })
 

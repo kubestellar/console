@@ -24,7 +24,9 @@ function dispatchStorageError(operation: string, key: string, error: unknown): v
       detail: {
         operation,
         key: sanitizeKeyForLog(key),
-        error: error instanceof Error ? error.message : String(error),
+        error: (error instanceof Error || (error != null && typeof (error as { message?: unknown }).message === 'string'))
+          ? (error as { message: string }).message
+          : String(error),
         timestamp: Date.now(),
       }
     }))
