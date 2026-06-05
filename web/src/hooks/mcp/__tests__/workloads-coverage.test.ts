@@ -122,6 +122,7 @@ import {
   usePodLogs,
   subscribeWorkloadsCache,
 } from '../workloads'
+import { __resetInfrastructureCaches } from '../workloadQueries'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,6 +142,7 @@ const originalFetch = globalThis.fetch
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  __resetInfrastructureCaches()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
   mockUseDemoMode.mockReturnValue({ isDemoMode: false })
@@ -626,8 +628,9 @@ describe('useJobs — uncovered branches', () => {
 
     const { result } = renderHook(() => useJobs())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch jobs')
+    await waitFor(() => {
+      expect(result.current.error).toBe('Failed to fetch jobs')
+    })
   })
 
   it('agent agent-error falls through to SSE', async () => {
