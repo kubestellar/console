@@ -25,6 +25,35 @@ const refetchRegistry = new Map<string, () => void | Promise<void>>()
 let modeTransitionVersion = 0
 
 /**
+ * Dispatch a mode transition error event for monitoring and debugging.
+ * Logs to console and dispatches a custom event that UI components can subscribe to.
+ *
+ * @param operation - The operation that failed (e.g., 'cache-reset', 'refetch')
+ * @param key - The cache/hook key that failed
+ * @param error - The error that occurred
+ */
+function dispatchTransitionError(operation: string, key: string, error: unknown): void {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  
+  // Log with clear warning for better visibility
+  console.warn(`[ModeTransition] ${operation} failed for '${key}':`, errorMessage)
+  
+  // Dispatch custom event for UI components and monitoring tools
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('mode-transition-error', {
+        detail: {
+          operation,
+          key,
+          error: errorMessage,
+          timestamp: Date.now(),
+        },
+      })
+    )
+  }
+}
+
+/**
  * Register a cache reset function.
  * Called by cache systems at module initialization.
  *
@@ -59,7 +88,7 @@ export function clearAllRegisteredCaches(): void {
     try {
       resetFn()
     } catch (e: unknown) {
-      console.error(`[ModeTransition] Failed to reset cache '${key}':`, e)
+      dispatchTransitionError('cache-reset', key, e)
       failures.push(key)
     }
   })
@@ -113,7 +142,7 @@ export function triggerAllRefetches(): void {
     try {
       refetchFn()
     } catch (e: unknown) {
-      console.error(`[ModeTransition] Failed to refetch '${key}':`, e)
+      dispatchTransitionError('refetch', key, e)
     }
   })
 }

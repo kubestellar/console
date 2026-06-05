@@ -13,6 +13,37 @@ function sanitizeKeyForLog(key: string): string {
 }
 
 /**
+ * Dispatch a structured storage error event for monitoring and debugging.
+ * Logs to console with clear warning and dispatches a custom event that
+ * monitoring tools, error boundaries, and debug panels can subscribe to.
+ *
+ * @param operation - The operation that failed (e.g., 'getItem', 'setItem')
+ * @param key - The localStorage key involved (will be sanitized)
+ * @param error - The error that occurred
+ */
+function dispatchStorageError(operation: string, key: string, error: unknown): void {
+  const sanitizedKey = sanitizeKeyForLog(key)
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  
+  // Log with clear warning (not just error) for better visibility
+  console.warn(`[localStorage] ${operation} failed for key="${sanitizedKey}":`, errorMessage)
+  
+  // Dispatch custom event for monitoring/debugging tools
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('storage-error', {
+        detail: {
+          operation,
+          key: sanitizedKey,
+          error: errorMessage,
+          timestamp: Date.now(),
+        },
+      })
+    )
+  }
+}
+
+/**
  * Safely get an item from localStorage
  * @param key - The key to retrieve
  * @returns The stored value or null if not found or error occurs
@@ -22,7 +53,7 @@ export function safeGetItem(key: string): string | null {
     return localStorage.getItem(key)
   } catch (error: unknown) {
     // localStorage may throw in private browsing mode or when disabled
-    console.error('Failed to read from localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('getItem', key, error)
     return null
   }
 }
@@ -39,7 +70,7 @@ export function safeSetItem(key: string, value: string): boolean {
     return true
   } catch (error: unknown) {
     // localStorage may throw in private browsing mode, when quota exceeded, or when disabled
-    console.error('Failed to write to localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('setItem', key, error)
     return false
   }
 }
@@ -54,7 +85,7 @@ export function safeRemoveItem(key: string): boolean {
     localStorage.removeItem(key)
     return true
   } catch (error: unknown) {
-    console.error('Failed to remove from localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('removeItem', key, error)
     return false
   }
 }
@@ -68,7 +99,20 @@ export function safeKey(index: number): string | null {
   try {
     return localStorage.key(index)
   } catch (error: unknown) {
-    console.error('Failed to read localStorage key by index:', index, error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.warn(`[localStorage] key() failed for index=${index}:`, errorMessage)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('storage-error', {
+          detail: {
+            operation: 'key',
+            key: `index:${index}`,
+            error: errorMessage,
+            timestamp: Date.now(),
+          },
+        })
+      )
+    }
     return null
   }
 }
@@ -81,7 +125,20 @@ export function safeGetStorageLength(): number {
   try {
     return localStorage.length
   } catch (error: unknown) {
-    console.error('Failed to read localStorage length:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.warn('[localStorage] length read failed:', errorMessage)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('storage-error', {
+          detail: {
+            operation: 'length',
+            key: 'N/A',
+            error: errorMessage,
+            timestamp: Date.now(),
+          },
+        })
+      )
+    }
     return 0
   }
 }
@@ -98,7 +155,7 @@ export function safeGetJSON<T = unknown>(key: string): T | null {
       return JSON.parse(item) as T
     }
   } catch (error: unknown) {
-    console.error('Failed to read/parse JSON from localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('getJSON', key, error)
   }
   return null
 }
@@ -114,7 +171,7 @@ export function safeSetJSON<T = unknown>(key: string, value: T): boolean {
     localStorage.setItem(key, JSON.stringify(value))
     return true
   } catch (error: unknown) {
-    console.error('Failed to write JSON to localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('setJSON', key, error)
     return false
   }
 }
