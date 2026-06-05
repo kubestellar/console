@@ -134,6 +134,15 @@ describe('getDefaultCards', () => {
   it('returns empty array for unknown dashboard IDs', () => {
     expect(getDefaultCards('nonexistent')).toEqual([])
   })
+
+  // Regression: #17093 — getDefaultCards must pass through card.id from config
+  it('preserves card id from dashboard config when present', () => {
+    const cards = getDefaultCards('deploy')
+    expect(cards.length).toBeGreaterThan(0)
+    const withId = cards.filter(c => c.id)
+    expect(withId.length).toBeGreaterThan(0)
+    expect(withId[0].id).toBe('workload-deployment-1')
+  })
 })
 
 describe('getDefaultCardsForDashboard', () => {

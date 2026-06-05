@@ -108,6 +108,22 @@ describe('useDashboardCards', () => {
     expect(result.current.isCustomized).toBe(false)
   })
 
+  // Regression: #17093 — placements with explicit id must preserve it
+  it('uses configured id from DashboardCardPlacement instead of generating synthetic id', () => {
+    const placementsWithIds: DashboardCardPlacement[] = [
+      { id: 'workload-deployment-1', type: 'workload_deployment', position: { w: 4, h: 2 } },
+      { id: 'cluster-groups-1', type: 'cluster_groups', position: { w: 6, h: 3 } },
+      { type: 'card_no_id', position: { w: 4, h: 2 } },
+    ]
+
+    const { result } = renderHook(() => useDashboardCards(STORAGE_KEY, placementsWithIds))
+
+    expect(result.current.cards[0].id).toBe('workload-deployment-1')
+    expect(result.current.cards[1].id).toBe('cluster-groups-1')
+    // Card without explicit id falls back to synthetic format
+    expect(result.current.cards[2].id).toBe('default-card_no_id-2')
+  })
+
   it('restores cards from localStorage on mount', () => {
     const stored: DashboardCard[] = [
       makeCard('saved_card', 0),
