@@ -54,18 +54,23 @@ export function unregisterCacheReset(key: string): void {
  * Cards will then fetch appropriate data (demo or live) based on the new mode.
  */
 export function clearAllRegisteredCaches(): void {
-  const failures: string[] = []
   cacheResetRegistry.forEach((resetFn, key) => {
     try {
       resetFn()
     } catch (e: unknown) {
       console.error(`[ModeTransition] Failed to reset cache '${key}':`, e)
-      failures.push(key)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mode-transition-error', {
+          detail: {
+            operation: 'cache-reset',
+            key,
+            error: e instanceof Error ? e.message : String(e),
+            timestamp: Date.now(),
+          }
+        }))
+      }
     }
   })
-  if (failures.length > 0 && typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cache-reset-error', { detail: { keys: failures } }))
-  }
 }
 
 /**
@@ -114,6 +119,16 @@ export function triggerAllRefetches(): void {
       refetchFn()
     } catch (e: unknown) {
       console.error(`[ModeTransition] Failed to refetch '${key}':`, e)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mode-transition-error', {
+          detail: {
+            operation: 'refetch',
+            key,
+            error: e instanceof Error ? e.message : String(e),
+            timestamp: Date.now(),
+          }
+        }))
+      }
     }
   })
 }

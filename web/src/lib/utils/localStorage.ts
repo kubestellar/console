@@ -13,6 +13,25 @@ function sanitizeKeyForLog(key: string): string {
 }
 
 /**
+ * Dispatch a storage-error CustomEvent when localStorage operations fail.
+ * @param operation - The localStorage operation that failed
+ * @param key - The key involved in the operation
+ * @param error - The error that occurred
+ */
+function dispatchStorageError(operation: string, key: string, error: unknown): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('storage-error', {
+      detail: {
+        operation,
+        key: sanitizeKeyForLog(key),
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: Date.now(),
+      }
+    }))
+  }
+}
+
+/**
  * Safely get an item from localStorage
  * @param key - The key to retrieve
  * @returns The stored value or null if not found or error occurs
@@ -23,6 +42,7 @@ export function safeGetItem(key: string): string | null {
   } catch (error: unknown) {
     // localStorage may throw in private browsing mode or when disabled
     console.error('Failed to read from localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('getItem', key, error)
     return null
   }
 }
@@ -40,6 +60,7 @@ export function safeSetItem(key: string, value: string): boolean {
   } catch (error: unknown) {
     // localStorage may throw in private browsing mode, when quota exceeded, or when disabled
     console.error('Failed to write to localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('setItem', key, error)
     return false
   }
 }
@@ -55,6 +76,7 @@ export function safeRemoveItem(key: string): boolean {
     return true
   } catch (error: unknown) {
     console.error('Failed to remove from localStorage:', sanitizeKeyForLog(key), error)
+    dispatchStorageError('removeItem', key, error)
     return false
   }
 }
