@@ -1,4 +1,4 @@
-import * as moduleExports from '../events-timeline'
+import { eventsTimelineConfig } from '../events-timeline'
 import { registerCardConfigTest } from './card-config-test-helpers'
 
-registerCardConfigTest('events-timeline', moduleExports)
+registerCardConfigTest('events-timeline', { eventsTimelineConfig })

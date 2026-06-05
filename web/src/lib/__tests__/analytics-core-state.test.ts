@@ -30,9 +30,20 @@ import {
   setUmamiWebsiteId,
   setRealMeasurementId,
   resetAnalyticsCoreState,
+  // Import mutable bindings for assertion
+  measurementId,
+  pageId,
+  userProperties,
+  userId,
+  initialized,
+  userHasInteracted,
+  analyticsScriptsLoaded,
+  pendingRecoveryEvent,
+  sessionEngaged,
+  gtagMeasurementId,
+  umamiWebsiteId,
+  realMeasurementId,
 } from '../analytics-core-state'
-// Import the mutable bindings for assertion
-import * as state from '../analytics-core-state'
 
 beforeEach(() => {
   resetAnalyticsCoreState()
@@ -57,20 +68,20 @@ describe('module constants', () => {
 describe('setMeasurementId', () => {
   it('updates measurementId', () => {
     setMeasurementId('G-TEST123')
-    expect(state.measurementId).toBe('G-TEST123')
+    expect(measurementId).toBe('G-TEST123')
   })
 
   it('resets to empty string via resetAnalyticsCoreState', () => {
     setMeasurementId('G-TEST123')
     resetAnalyticsCoreState()
-    expect(state.measurementId).toBe('')
+    expect(measurementId).toBe('')
   })
 })
 
 describe('setPageId', () => {
   it('updates pageId', () => {
     setPageId('/dashboard')
-    expect(state.pageId).toBe('/dashboard')
+    expect(pageId).toBe('/dashboard')
   })
 })
 
@@ -78,13 +89,13 @@ describe('replaceUserProperties', () => {
   it('replaces userProperties entirely', () => {
     mergeUserProperties({ existing: 'value' })
     replaceUserProperties({ role: 'admin' })
-    expect(state.userProperties).toEqual({ role: 'admin' })
-    expect(state.userProperties).not.toHaveProperty('existing')
+    expect(userProperties).toEqual({ role: 'admin' })
+    expect(userProperties).not.toHaveProperty('existing')
   })
 
   it('sets empty object', () => {
     replaceUserProperties({})
-    expect(state.userProperties).toEqual({})
+    expect(userProperties).toEqual({})
   })
 })
 
@@ -92,50 +103,50 @@ describe('mergeUserProperties', () => {
   it('merges into current userProperties', () => {
     replaceUserProperties({ a: '1' })
     mergeUserProperties({ b: '2' })
-    expect(state.userProperties).toEqual({ a: '1', b: '2' })
+    expect(userProperties).toEqual({ a: '1', b: '2' })
   })
 
   it('later keys overwrite earlier keys', () => {
     replaceUserProperties({ key: 'old' })
     mergeUserProperties({ key: 'new' })
-    expect(state.userProperties.key).toBe('new')
+    expect(userProperties.key).toBe('new')
   })
 })
 
 describe('setUserId', () => {
   it('updates userId', () => {
     setUserId('user-abc')
-    expect(state.userId).toBe('user-abc')
+    expect(userId).toBe('user-abc')
   })
 })
 
 describe('setInitialized', () => {
   it('sets initialized to true', () => {
-    expect(state.initialized).toBe(false)
+    expect(initialized).toBe(false)
     setInitialized(true)
-    expect(state.initialized).toBe(true)
+    expect(initialized).toBe(true)
   })
 
   it('sets initialized to false', () => {
     setInitialized(true)
     setInitialized(false)
-    expect(state.initialized).toBe(false)
+    expect(initialized).toBe(false)
   })
 })
 
 describe('setUserHasInteracted', () => {
   it('sets userHasInteracted to true', () => {
-    expect(state.userHasInteracted).toBe(false)
+    expect(userHasInteracted).toBe(false)
     setUserHasInteracted(true)
-    expect(state.userHasInteracted).toBe(true)
+    expect(userHasInteracted).toBe(true)
   })
 })
 
 describe('setAnalyticsScriptsLoaded', () => {
   it('sets analyticsScriptsLoaded to true', () => {
-    expect(state.analyticsScriptsLoaded).toBe(false)
+    expect(analyticsScriptsLoaded).toBe(false)
     setAnalyticsScriptsLoaded(true)
-    expect(state.analyticsScriptsLoaded).toBe(true)
+    expect(analyticsScriptsLoaded).toBe(true)
   })
 })
 
@@ -143,10 +154,10 @@ describe('setPendingRecoveryEvent / consumePendingRecoveryEvent', () => {
   it('stores and returns the event on consume', () => {
     const event = { name: 'ksc_error', params: { error_type: 'chunk' } }
     setPendingRecoveryEvent(event)
-    expect(state.pendingRecoveryEvent).toEqual(event)
+    expect(pendingRecoveryEvent).toEqual(event)
     const consumed = consumePendingRecoveryEvent()
     expect(consumed).toEqual(event)
-    expect(state.pendingRecoveryEvent).toBeNull()
+    expect(pendingRecoveryEvent).toBeNull()
   })
 
   it('returns null when no pending event', () => {
@@ -156,42 +167,42 @@ describe('setPendingRecoveryEvent / consumePendingRecoveryEvent', () => {
   it('clears the pending event to null after consume', () => {
     setPendingRecoveryEvent({ name: 'ksc_error', params: {} })
     consumePendingRecoveryEvent()
-    expect(state.pendingRecoveryEvent).toBeNull()
+    expect(pendingRecoveryEvent).toBeNull()
   })
 
   it('stores null directly via setPendingRecoveryEvent', () => {
     setPendingRecoveryEvent({ name: 'ksc_error', params: {} })
     setPendingRecoveryEvent(null)
-    expect(state.pendingRecoveryEvent).toBeNull()
+    expect(pendingRecoveryEvent).toBeNull()
   })
 })
 
 describe('setSessionEngaged', () => {
   it('sets sessionEngaged to true', () => {
-    expect(state.sessionEngaged).toBe(false)
+    expect(sessionEngaged).toBe(false)
     setSessionEngaged(true)
-    expect(state.sessionEngaged).toBe(true)
+    expect(sessionEngaged).toBe(true)
   })
 })
 
 describe('setGtagMeasurementId', () => {
   it('updates gtagMeasurementId', () => {
     setGtagMeasurementId('G-CUSTOM')
-    expect(state.gtagMeasurementId).toBe('G-CUSTOM')
+    expect(gtagMeasurementId).toBe('G-CUSTOM')
   })
 })
 
 describe('setUmamiWebsiteId', () => {
   it('updates umamiWebsiteId', () => {
     setUmamiWebsiteId('custom-umami-id')
-    expect(state.umamiWebsiteId).toBe('custom-umami-id')
+    expect(umamiWebsiteId).toBe('custom-umami-id')
   })
 })
 
 describe('setRealMeasurementId', () => {
   it('updates realMeasurementId', () => {
     setRealMeasurementId('G-REAL')
-    expect(state.realMeasurementId).toBe('G-REAL')
+    expect(realMeasurementId).toBe('G-REAL')
   })
 })
 
@@ -212,17 +223,17 @@ describe('resetAnalyticsCoreState', () => {
 
     resetAnalyticsCoreState()
 
-    expect(state.measurementId).toBe('')
-    expect(state.pageId).toBe('')
-    expect(state.userProperties).toEqual({})
-    expect(state.userId).toBe('')
-    expect(state.initialized).toBe(false)
-    expect(state.userHasInteracted).toBe(false)
-    expect(state.analyticsScriptsLoaded).toBe(false)
-    expect(state.pendingRecoveryEvent).toBeNull()
-    expect(state.sessionEngaged).toBe(false)
-    expect(state.gtagMeasurementId).toBe(DEFAULT_GTAG_MEASUREMENT_ID)
-    expect(state.umamiWebsiteId).toBe(DEFAULT_UMAMI_WEBSITE_ID)
-    expect(state.realMeasurementId).toBe('')
+    expect(measurementId).toBe('')
+    expect(pageId).toBe('')
+    expect(userProperties).toEqual({})
+    expect(userId).toBe('')
+    expect(initialized).toBe(false)
+    expect(userHasInteracted).toBe(false)
+    expect(analyticsScriptsLoaded).toBe(false)
+    expect(pendingRecoveryEvent).toBeNull()
+    expect(sessionEngaged).toBe(false)
+    expect(gtagMeasurementId).toBe(DEFAULT_GTAG_MEASUREMENT_ID)
+    expect(umamiWebsiteId).toBe(DEFAULT_UMAMI_WEBSITE_ID)
+    expect(realMeasurementId).toBe('')
   })
 })

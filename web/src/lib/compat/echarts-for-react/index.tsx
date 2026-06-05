@@ -1,5 +1,5 @@
 import React, { createRef } from 'react'
-import * as echarts from 'echarts/core'
+import { use, getInstanceByDom, init } from 'echarts/core'
 import {
   GridComponent,
   LegendComponent,
@@ -23,7 +23,7 @@ import type { EChartsReactProps, EChartsEventHandler } from './lib/types'
 
 // Register only the chart types/components used by the console to avoid pulling
 // the full ECharts bundle into the app.
-echarts.use([
+use([
   GridComponent,
   LegendComponent,
   TooltipComponent,
@@ -40,6 +40,9 @@ echarts.use([
   SVGRenderer,
   CanvasRenderer,
 ])
+
+// Create a minimal echarts module object with the functions we need
+const echartsCore = { use, getInstanceByDom, init }
 
 interface RegisteredEvents {
   [eventName: string]: EChartsEventHandler
@@ -92,7 +95,7 @@ export default class ReactECharts extends React.Component<EChartsReactProps> {
   }
 
   private getEchartsModule() {
-    return this.props.echarts ?? echarts
+    return this.props.echarts ?? echartsCore
   }
 
   private shouldRecreateChart(previousProps: Readonly<EChartsReactProps>): boolean {

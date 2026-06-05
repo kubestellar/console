@@ -69,7 +69,14 @@ captureUtmParams,
   updateAnalyticsIds,
   userProperties,
 } from '../analytics-core'
-import * as analyticsSession from '../analytics-session'
+import {
+  isOptedOut,
+  peekEngagementMs,
+  _loadUtmParams,
+  getOrCreateAnonymousId,
+  hashUserId,
+  stopEngagementTracking,
+} from '../analytics-session'
 
 const {
   inferErrorType,
@@ -89,9 +96,9 @@ _resetCapturedApiCalls()
   localStorage.clear()
   document.querySelectorAll('script[src*="/api/gtag"], script[src*="googletagmanager.com/gtag/js"], script[src="/api/ksc"]').forEach((s) => s.remove())
   ;(window as Window & { umami?: { track?: ReturnType<typeof vi.fn> } }).umami = undefined
-  vi.mocked(analyticsSession.isOptedOut).mockReturnValue(false)
-  vi.mocked(analyticsSession.peekEngagementMs).mockReturnValue(0)
-  vi.mocked(analyticsSession._loadUtmParams).mockReturnValue(undefined)
+  vi.mocked(isOptedOut).mockReturnValue(false)
+  vi.mocked(peekEngagementMs).mockReturnValue(0)
+  vi.mocked(_loadUtmParams).mockReturnValue(undefined)
 })
 
 // ---------------------------------------------------------------------------
@@ -361,41 +368,41 @@ describe('public analytics API', () => {
 
   it('send is blocked when analytics is opted out', () => {
     const track = setupInitializedAnalytics()
-    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    vi.mocked(isOptedOut).mockReturnValue(true)
     send('ksc_opt_out_blocked', { ok: true })
     expect(track).not.toHaveBeenCalledWith('ksc_opt_out_blocked', { ok: true })
   })
 
   it('send bypasses opt-out when bypassOptOut=true', () => {
     const track = setupInitializedAnalytics()
-    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    vi.mocked(isOptedOut).mockReturnValue(true)
     send('ksc_forced_event', { ok: true }, { bypassOptOut: true })
     expect(track).toHaveBeenCalledWith('ksc_forced_event', { ok: true })
   })
 
   it('emitUserEngagement emits only when engagement > 0', () => {
     const track = setupInitializedAnalytics()
-    vi.mocked(analyticsSession.peekEngagementMs).mockReturnValue(250)
+    vi.mocked(peekEngagementMs).mockReturnValue(250)
     emitUserEngagement()
     expect(track).toHaveBeenCalledWith('user_engagement', {})
   })
 
   it('captureUtmParams emits ksc_utm_landing when UTM values exist', () => {
     const track = setupInitializedAnalytics()
-    vi.mocked(analyticsSession._loadUtmParams).mockReturnValue({ utm_source: 'newsletter' })
+    vi.mocked(_loadUtmParams).mockReturnValue({ utm_source: 'newsletter' })
     captureUtmParams()
     expect(track).toHaveBeenCalledWith('ksc_utm_landing', { utm_source: 'newsletter' })
   })
 
   it('setAnalyticsUserId uses anonymous id for demo-user', async () => {
     await setAnalyticsUserId('demo-user')
-    expect(analyticsSession.getOrCreateAnonymousId).toHaveBeenCalled()
-    expect(analyticsSession.hashUserId).toHaveBeenCalledWith('anon-id')
+    expect(getOrCreateAnonymousId).toHaveBeenCalled()
+    expect(hashUserId).toHaveBeenCalledWith('anon-id')
   })
 
   it('setAnalyticsUserId hashes explicit uid as-is', async () => {
     await setAnalyticsUserId('real-user-123')
-    expect(analyticsSession.hashUserId).toHaveBeenCalledWith('real-user-123')
+    expect(hashUserId).toHaveBeenCalledWith('real-user-123')
   })
 
   it('setAnalyticsUserProperties merges into exported userProperties', () => {
@@ -419,7 +426,7 @@ describe('public analytics API', () => {
     expect(localStorage.getItem('kc-sid')).toBeNull()
     expect(localStorage.getItem('kc-sc')).toBeNull()
     expect(localStorage.getItem('kc-last')).toBeNull()
-    expect(analyticsSession.stopEngagementTracking).toHaveBeenCalled()
+    expect(stopEngagementTracking).toHaveBeenCalled()
   })
 
   it('setAnalyticsOptOut(false) persists opt-in state', () => {
@@ -428,7 +435,7 @@ describe('public analytics API', () => {
   })
 
   it('isAnalyticsOptedOut reflects analytics-session state', () => {
-    vi.mocked(analyticsSession.isOptedOut).mockReturnValue(true)
+    vi.mocked(isOptedOut).mockReturnValue(true)
     expect(isAnalyticsOptedOut()).toBe(true)
   })
 
