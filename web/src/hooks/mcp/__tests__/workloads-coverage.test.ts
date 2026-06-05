@@ -626,8 +626,9 @@ describe('useJobs — uncovered branches', () => {
 
     const { result } = renderHook(() => useJobs())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch jobs')
+    await waitFor(() => {
+      expect(result.current.error).toBe('Failed to fetch jobs')
+    })
   })
 
   it('agent agent-error falls through to SSE', async () => {
