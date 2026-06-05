@@ -9,6 +9,7 @@ import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, ChevronLeft, Laye
 import { cn } from '../../../lib/cn'
 import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 import { RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
+import { getHealthColors } from '../../../lib/statusColors'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
@@ -466,6 +467,7 @@ function DeploymentDrillDownContent({ data }: Props) {
   }
 
   const isHealthy = readyReplicas === replicas && replicas > 0
+  const healthColors = getHealthColors(isHealthy)
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
     { id: 'overview', label: t('drilldown.tabs.overview', 'Overview'), icon: Info },
@@ -611,7 +613,7 @@ function DeploymentDrillDownContent({ data }: Props) {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Status */}
-            <div className={`p-4 rounded-lg border ${isHealthy ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+            <div className={cn('p-4 rounded-lg border', healthColors.bg, healthColors.border)}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <StatusIndicator status={isHealthy ? 'healthy' : 'warning'} size="lg" />

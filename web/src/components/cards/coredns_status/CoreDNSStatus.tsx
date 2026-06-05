@@ -4,6 +4,8 @@ import { Wifi, AlertTriangle, CheckCircle, XCircle, RotateCcw } from 'lucide-rea
 import { useCachedCoreDNSStatus, type CoreDNSClusterStatus } from '../../../hooks/useCachedData'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
+import { cn } from '../../../lib/cn'
+import { STATUS_COLORS } from '../../../lib/statusColors'
 
 const RESTART_WARNING_THRESHOLD = 5
 
@@ -115,50 +117,49 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
 function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnType<typeof useTranslation<'cards'>>['t'] }) {
   const StatusIcon = cluster.healthy ? CheckCircle : XCircle
   const readyCount = cluster.pods.filter(pod => pod.ready?.startsWith('1/')).length
+  const clusterColors = cluster.healthy ? STATUS_COLORS.success : STATUS_COLORS.error
 
   return (
     <div
-      className={`p-3 rounded-lg transition-colors ${cluster.healthy
-        ? 'bg-secondary/30 hover:bg-secondary/50'
-        : 'bg-red-500/10 border border-red-500/20 hover:bg-red-500/15'
-        }`}
+      className={cn(
+        'p-3 rounded-lg transition-colors',
+        cluster.healthy
+          ? 'bg-secondary/30 hover:bg-secondary/50'
+          : clusterColors.bg,
+        !cluster.healthy && 'border hover:bg-red-500/15',
+        !cluster.healthy && clusterColors.border
+      )}
     >
       {/* name + badge */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <div className="flex items-center gap-2">
-          <StatusIcon
-            className={`w-4 h-4 shrink-0 ${cluster.healthy ? 'text-green-400' : 'text-red-400'}`}
-          />
+          <StatusIcon className={cn('w-4 h-4 shrink-0', clusterColors.text)} />
           <span className="text-sm font-medium truncate">{cluster.cluster}</span>
         </div>
-        <span
-          className={`text-xs px-1.5 py-0.5 rounded ${cluster.healthy
-            ? 'bg-green-500/10 text-green-400'
-            : 'bg-red-500/10 text-red-400'
-            }`}
-        >
+        <span className={cn('text-xs px-1.5 py-0.5 rounded', clusterColors.bg, clusterColors.text)}>
           {cluster.healthy ? t('coreDNSStatus.healthy') : t('coreDNSStatus.degraded')}
         </span>
       </div>
 
       {/* pods */}
       <div className="flex gap-1 flex-wrap mb-2">
-        {cluster.pods.map(pod => (
-          <span
-            key={pod.name}
-            title={pod.name}
-            className={`text-xs px-1.5 py-0.5 rounded ${pod.status === 'Running'
-              ? 'bg-green-500/10 text-green-400'
-              : 'bg-red-500/10 text-red-400'
-              }`}
-          >
+        {cluster.pods.map(pod => {
+          const podColors = pod.status === 'Running' ? STATUS_COLORS.success : STATUS_COLORS.error
+
+          return (
+            <span
+              key={pod.name}
+              title={pod.name}
+              className={cn('text-xs px-1.5 py-0.5 rounded', podColors.bg, podColors.text)}
+            >
             {pod.status === 'Running' ? '✓' : '✗'}
             {pod.version ? ` v${pod.version}` : ''}
             {pod.restarts > 0 && (
               <span className="ml-1 text-orange-400">↺{pod.restarts}</span>
             )}
-          </span>
-        ))}
+            </span>
+          )
+        })}
       </div>
 
       {/* pod summary for healthy clusters */}
@@ -182,14 +183,16 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
 }
 
 function StatTile({ value, sub, color }: { value: string; sub: string; color: string }) {
-  const COLORS: Record<string, string> = {
-    blue: 'bg-blue-500/10 text-blue-400',
-    green: 'bg-green-500/10 text-green-400',
-    yellow: 'bg-yellow-500/10 text-yellow-400',
-    red: 'bg-red-500/10 text-red-400',
+  const COLORS: Record<string, { bg: string; text: string }> = {
+    blue: STATUS_COLORS.info,
+    green: STATUS_COLORS.success,
+    yellow: STATUS_COLORS.warning,
+    red: STATUS_COLORS.error,
   }
+  const colorClasses = COLORS[color] ?? COLORS.blue
+
   return (
-    <div className={`p-2 rounded-lg text-center ${COLORS[color] ?? COLORS.blue}`}>
+    <div className={cn('p-2 rounded-lg text-center', colorClasses.bg, colorClasses.text)}>
       <div className="text-base font-bold leading-tight">{value}</div>
       <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>
     </div>

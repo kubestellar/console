@@ -4,6 +4,8 @@ import { useCachedThanosStatus } from '../../../hooks/useCachedThanosStatus'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../CardDataContext'
 import { createCardSyncFormatter } from '../../../lib/formatters'
+import { cn } from '../../../lib/cn'
+import { STATUS_COLORS } from '../../../lib/statusColors'
 
 const MAX_VISIBLE_TARGETS = 5
 
@@ -27,7 +29,7 @@ function MetricTile({ label, value, colorClass, icon }: MetricTileProps) {
             <div className="flex items-center justify-center gap-1.5 mb-1">
                 {icon}
             </div>
-            <span className={`text-2xl font-bold ${colorClass}`}>{value}</span>
+            <span className={cn('text-2xl font-bold', colorClass)}>{value}</span>
             <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
         </div>
     )
@@ -95,10 +97,11 @@ export function ThanosStatus() {
             {/* Health badge + last check */}
             <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <div
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${isHealthy
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-yellow-500/20 text-yellow-400'
-                        }`}
+                    className={cn(
+                        'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
+                        isHealthy ? STATUS_COLORS.success.bg : STATUS_COLORS.warning.bg,
+                        isHealthy ? STATUS_COLORS.success.text : STATUS_COLORS.warning.text
+                    )}
                 >
                     {isHealthy ? (
                         <CheckCircle className="w-4 h-4" />
@@ -114,19 +117,19 @@ export function ThanosStatus() {
                 <MetricTile
                     label={t('thanosStatus.targetsUp')}
                     value={`${targetsUp}/${targetsTotal}`}
-                    colorClass={targetsUp === targetsTotal ? 'text-green-400' : 'text-yellow-400'}
+                    colorClass={targetsUp === targetsTotal ? STATUS_COLORS.success.text : STATUS_COLORS.warning.text}
                     icon={<Radio className="w-4 h-4 text-blue-400" />}
                 />
                 <MetricTile
                     label={t('thanosStatus.storeGateways')}
                     value={storesTotal > 0 ? `${storesHealthy}/${storesTotal}` : '—'}
-                    colorClass={storesTotal === 0 || storesHealthy === storesTotal ? 'text-green-400' : 'text-yellow-400'}
+                    colorClass={storesTotal === 0 || storesHealthy === storesTotal ? STATUS_COLORS.success.text : STATUS_COLORS.warning.text}
                     icon={<Database className="w-4 h-4 text-purple-400" />}
                 />
                 <MetricTile
                     label={t('thanosStatus.query')}
                     value={isHealthy ? t('thanosStatus.ok') : '!'}
-                    colorClass={isHealthy ? 'text-green-400' : 'text-yellow-400'}
+                    colorClass={isHealthy ? STATUS_COLORS.success.text : STATUS_COLORS.warning.text}
                     icon={<Activity className="w-4 h-4 text-cyan-400" />}
                 />
             </div>
@@ -138,8 +141,7 @@ export function ThanosStatus() {
                     {(data.targets || []).slice(0, MAX_VISIBLE_TARGETS).map((target) => (
                         <div key={target.name} className="flex items-center gap-2 text-xs">
                             <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${target.health === 'up' ? 'bg-green-400' : 'bg-red-400'
-                                    }`}
+                                className={cn('w-2 h-2 rounded-full shrink-0', target.health === 'up' ? STATUS_COLORS.success.dot : STATUS_COLORS.error.dot)}
                             />
                             <span className="truncate flex-1 text-muted-foreground">{target.name}</span>
                             <span className="text-muted-foreground/60 shrink-0">
@@ -163,11 +165,10 @@ export function ThanosStatus() {
                         {data.storeGateways.map((store) => (
                             <div key={store.name} className="flex items-center gap-2 text-xs">
                                 <span
-                                    className={`w-2 h-2 rounded-full shrink-0 ${store.health === 'healthy' ? 'bg-green-400' : 'bg-red-400'
-                                        }`}
+                                    className={cn('w-2 h-2 rounded-full shrink-0', store.health === 'healthy' ? STATUS_COLORS.success.dot : STATUS_COLORS.error.dot)}
                                 />
                                 <span className="truncate flex-1 text-muted-foreground">{store.name}</span>
-                                <span className={`shrink-0 ${store.health === 'healthy' ? 'text-green-400/60' : 'text-red-400/60'}`}>
+                                <span className={cn('shrink-0', store.health === 'healthy' ? STATUS_COLORS.success.text : STATUS_COLORS.error.text)}>
                                     {store.health === 'healthy' ? t('thanosStatus.healthy') : t('thanosStatus.unhealthy')}
                                 </span>
                             </div>
