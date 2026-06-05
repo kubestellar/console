@@ -79,18 +79,24 @@ export function MissionChatInput({
               onKeyDown={onKeyDown}
               placeholder={t('missionChat.askFollowUp', { defaultValue: 'Ask a follow-up question...' })}
               className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-border bg-secondary/50 focus:bg-secondary focus:outline-hidden focus:ring-1 focus:ring-primary"
+              disabled={mission.status === 'running' || mission.status === 'cancelling'}
             />
             <FileAttachmentButton compact />
             <MicrophoneButton onTranscript={onMicrophoneTranscript} compact />
             <button
               onClick={onSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || mission.status === 'running' || mission.status === 'cancelling'}
               className={cn(
                 compactActionButtonClass,
                 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors'
               )}
+              title={mission.status === 'running' ? t('missionChat.agentProcessing') : undefined}
             >
-              <Send className="w-4 h-4" />
+              {mission.status === 'running' || mission.status === 'cancelling' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -124,9 +130,14 @@ export function MissionChatInput({
           {(mission.messages || []).some((message) => message.role === 'user') && (
             <button
               onClick={onRetryMission}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              disabled={mission.status === 'running' || mission.status === 'cancelling'}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <RotateCcw className="w-4 h-4" />
+              {mission.status === 'running' || mission.status === 'cancelling' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4" />
+              )}
               {t('missionChat.retryMission', { defaultValue: 'Retry Mission' })}
             </button>
           )}
@@ -139,22 +150,27 @@ export function MissionChatInput({
               onKeyDown={onKeyDown}
               placeholder={t('missionChat.retryWithMessage')}
               className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+              disabled={mission.status === 'running' || mission.status === 'cancelling'}
             />
             <FileAttachmentButton compact />
             <MicrophoneButton onTranscript={onMicrophoneTranscript} compact />
             <button
               onClick={onSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || mission.status === 'running' || mission.status === 'cancelling'}
               className={cn(
                 compactActionButtonClass,
                 'bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed'
               )}
+              title={mission.status === 'running' ? t('missionChat.agentProcessing') : undefined}
             >
-              <Send className="w-4 h-4" />
+              {mission.status === 'running' || mission.status === 'cancelling' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
-      ) : (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 min-w-0">
             <input
@@ -165,22 +181,27 @@ export function MissionChatInput({
               onKeyDown={onKeyDown}
               placeholder={t('missionChat.typeMessage')}
               className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
+              disabled={mission.status === 'running' || mission.status === 'cancelling'}
             />
             <FileAttachmentButton compact />
             <MicrophoneButton onTranscript={onMicrophoneTranscript} compact />
             <button
               onClick={onSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || mission.status === 'running' || mission.status === 'cancelling'}
               className={cn(
                 compactActionButtonClass,
                 'bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed'
               )}
+              title={mission.status === 'running' ? t('missionChat.agentProcessing') : undefined}
             >
-              <Send className="w-4 h-4" />
+              {mission.status === 'running' || mission.status === 'cancelling' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </div>
-        </div>
-      )}
+        </div>}
 
       {inputError && (
         <div className="mt-2 px-1 text-xs text-red-400 flex items-center gap-1.5">
