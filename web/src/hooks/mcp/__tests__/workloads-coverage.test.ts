@@ -122,6 +122,7 @@ import {
   usePodLogs,
   subscribeWorkloadsCache,
 } from '../workloads'
+import { __resetInfrastructureCaches } from '../workloadQueries'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,6 +142,7 @@ const originalFetch = globalThis.fetch
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  __resetInfrastructureCaches()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
   mockUseDemoMode.mockReturnValue({ isDemoMode: false })
