@@ -130,7 +130,7 @@ export function useDashboardCards(
 ): UseDashboardCardsResult {
   // Convert default placements to card instances
   const defaultCardInstances = defaultCards.map((card, i) => ({
-      id: `default-${card.type}-${i}`,
+      id: card.id || `default-${card.type}-${i}`,
       card_type: card.type,
       config: card.config || {},
       title: card.title,

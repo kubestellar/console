@@ -73,6 +73,8 @@ export interface DashboardStatsConfig {
 }
 
 export interface DashboardCardPlacement {
+  /** Stable placement ID from dashboard config (used as data-card-id) */
+  id?: string
   /** Card type (references CardDefinition.type) */
   type: string
   /** Custom title override */

@@ -173,11 +173,12 @@ export function getUnifiedDashboardIds(): string[] {
  * Get default cards for a dashboard in the legacy format used by DashboardPage
  * Converts from UnifiedDashboardConfig.cards to the legacy { type, title, position } format
  */
-export function getDefaultCards(dashboardId: string): Array<{ type: string; title?: string; position: { w: number; h: number } }> {
+export function getDefaultCards(dashboardId: string): Array<{ id?: string; type: string; title?: string; position: { w: number; h: number } }> {
   const config = DASHBOARD_CONFIGS[dashboardId]
   if (!config?.cards) return []
 
   return config.cards.map(card => ({
+    ...(card.id ? { id: card.id } : {}),
     type: card.cardType,
     title: card.title,
     position: { w: card.position?.w || 4, h: card.position?.h || 2 },
