@@ -14,6 +14,8 @@ export type { FailoverTimelineData, FailoverEvent }
 
 /** Default count value when a field is missing or empty */
 const DEFAULT_COUNT = 0
+const UNKNOWN_CLUSTER = 'unknown'
+const CLUSTER_LIST_SEPARATOR = ', '
 
 /** Window (in ms) for correlating a cluster NotReady event with binding reschedules */
 const CORRELATION_WINDOW_MS = 5 * 60 * 1_000
@@ -121,6 +123,11 @@ interface BindingTransition {
   isRescheduled: boolean
 }
 
+function formatTargetClusters(clusters: string[] | undefined): string {
+  const safeClusters = clusters || []
+  return safeClusters.length > 0 ? safeClusters.join(CLUSTER_LIST_SEPARATOR) : UNKNOWN_CLUSTER
+}
+
 function parseBindingTransitions(items: CRItem[]): BindingTransition[] {
   const results: BindingTransition[] = []
   for (const item of items) {
@@ -197,13 +204,11 @@ function correlateEvents(
 
         const delta = bindingMs - transitionMs
         if (delta >= 0 && delta <= CORRELATION_WINDOW_MS) {
-          // Multi-cluster support: show all target clusters, not just the first (#16050)
-          const targetClusters = (bt.clusters || []).length > 0 ? bt.clusters.join(', ') : 'unknown'
-          const primaryCluster = (bt.clusters || []).length > 0 ? bt.clusters[0] : 'unknown'
+          const targetClusters = formatTargetClusters(bt.clusters)
           events.push({
             timestamp: bt.scheduledTime,
             eventType: 'binding_reschedule' as FailoverEventType,
-            cluster: primaryCluster,
+            cluster: targetClusters,
             workload: bt.resourceKind ? `${bt.resourceKind}/${bt.bindingName}` : bt.bindingName,
             details: `ResourceBinding rescheduled from ${ct.clusterName} to ${targetClusters}`,
             severity: 'warning' as FailoverSeverity,
@@ -235,13 +240,11 @@ function correlateEvents(
     )
     if (alreadyCorrelated) continue
 
-    // Multi-cluster support: show all target clusters, not just the first (#16050)
-    const targetClusters = (bt.clusters || []).length > 0 ? bt.clusters.join(', ') : 'unknown'
-    const primaryCluster = (bt.clusters || []).length > 0 ? bt.clusters[0] : 'unknown'
+    const targetClusters = formatTargetClusters(bt.clusters)
     events.push({
       timestamp: bt.scheduledTime,
       eventType: 'binding_reschedule' as FailoverEventType,
-      cluster: primaryCluster,
+      cluster: targetClusters,
       workload: bt.resourceKind ? `${bt.resourceKind}/${bt.bindingName}` : bt.bindingName,
       details: `ResourceBinding rescheduled to ${targetClusters}`,
       severity: 'warning' as FailoverSeverity,

@@ -65,12 +65,14 @@ const DEMO_COMMAND_HISTORY: CommandHistoryItem[] = [
   },
 ]
 
+const SINGLE_VISIBLE_CLUSTER_COUNT = 1
+
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   // Filter to only reachable & healthy clusters
-  const clusters = useMemo(() => allClusters.filter(c => c.reachable !== false && c.healthy !== false), [allClusters])
+  const clusters = useMemo(() => (allClusters || []).filter(c => c.reachable !== false && c.healthy !== false), [allClusters])
   const { isDemoMode } = useDemoMode()
   const [selectedContext, setSelectedContext] = useState<string>('')
 
@@ -110,17 +112,18 @@ export function Kubectl() {
     }
   }, [])
 
-  // Set default context when clusters are loaded — prefer the user's current-context
+  // Set a default context only when it's explicit or unambiguous.
   useEffect(() => {
-    if (!selectedContext) {
-      const currentCtx = clusters.find(c => c.isCurrent)
-      const firstCluster = clusters[0]
+    if (selectedContext) return
 
-      if (currentCtx) {
-        setSelectedContext(currentCtx.name)
-      } else if (firstCluster) {
-        setSelectedContext(firstCluster.name)
-      }
+    const currentCtx = clusters.find(c => c.isCurrent)
+    if (currentCtx) {
+      setSelectedContext(currentCtx.name)
+      return
+    }
+
+    if (clusters.length === SINGLE_VISIBLE_CLUSTER_COUNT) {
+      setSelectedContext(clusters[0].name)
     }
   }, [clusters, selectedContext])
 
@@ -377,8 +380,9 @@ export function Kubectl() {
               value={selectedContext}
               onChange={(e) => setSelectedContext(e.target.value)}
               className="text-xs bg-secondary border border-border/50 rounded px-2 py-1 text-foreground max-w-[150px] truncate"
-              title="Select cluster context"
+              title={t('selectors.selectCluster')}
             >
+              <option value="">{t('selectors.selectCluster')}</option>
               {clusters.map(cluster => (
                 <option key={cluster.name} value={cluster.name}>
                   {cluster.name}

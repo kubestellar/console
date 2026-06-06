@@ -22,6 +22,8 @@ import { ClusterSelect } from '../ui/ClusterSelect'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
+const SINGLE_VISIBLE_CLUSTER_COUNT = 1
+
 function groupDependencies(deps: ResolvedDependency[]) {
   const groups: { label: string; icon: typeof FileText; deps: ResolvedDependency[] }[] = []
 
@@ -88,13 +90,10 @@ export function ResourceMarshall() {
   // Dependency resolution
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
 
-  // Auto-select cluster, namespace, and workload in demo mode
+  // Auto-select a cluster only when demo mode leaves a single visible choice.
   useEffect(() => {
-    if (!clusters || clusters.length === 0) return
-    const firstCluster = clusters[0]
-    if (demoMode && firstCluster && !selectedCluster) {
-      setSelectedCluster(firstCluster.name)
-    }
+    if (!demoMode || selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
+    setSelectedCluster(clusters[0].name)
   }, [demoMode, clusters, selectedCluster])
 
   useEffect(() => {

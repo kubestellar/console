@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -139,6 +139,30 @@ describe('NamespaceRBAC', () => {
     })
     const { container } = render(<NamespaceRBAC />)
     expect(container).toBeTruthy()
+  })
+
+
+
+  it('does not auto-select the first cluster when demo data includes multiple clusters', () => {
+    mockNamespaces.mockReturnValue({ namespaces: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockUseClusters.mockReturnValue({
+      clusters: [
+        { name: 'cluster-a', healthy: true, reachable: true },
+        { name: 'cluster-b', healthy: true, reachable: true },
+      ],
+      deduplicatedClusters: [
+        { name: 'cluster-a', healthy: true, reachable: true },
+        { name: 'cluster-b', healthy: true, reachable: true },
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      lastRefresh: Date.now(),
+    })
+
+    render(<NamespaceRBAC />)
+
+    expect(screen.getAllByRole('combobox')[0]).toHaveValue('')
   })
 
 })

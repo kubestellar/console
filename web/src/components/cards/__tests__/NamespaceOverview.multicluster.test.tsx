@@ -137,9 +137,25 @@ describe('NamespaceOverview - Multi-cluster guards (#16050)', () => {
 
     render(<NamespaceOverview />)
 
-    // Should render cluster options
     expect(screen.getByText('cluster-1')).toBeInTheDocument()
     expect(screen.getByText('cluster-2')).toBeInTheDocument()
+  })
+
+  it('does not auto-select the first cluster when multiple clusters are visible', () => {
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'cluster-1', context: 'context-1', reachable: true },
+        { name: 'cluster-2', context: 'context-2', reachable: true },
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+    })
+
+    render(<NamespaceOverview />)
+
+    expect(screen.getAllByRole('combobox')[0]).toHaveValue('')
   })
 
   it('guards against undefined namespaces array', () => {

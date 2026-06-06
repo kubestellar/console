@@ -23,6 +23,8 @@ interface OverlayDiff {
   details: string
 }
 
+const SINGLE_VISIBLE_CLUSTER_COUNT = 1
+
 export function OverlayComparison({ config }: OverlayComparisonProps) {
   const { t } = useTranslation()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -67,13 +69,10 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
     return result
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
-  // Auto-select cluster and overlays in demo mode so card shows data immediately
+  // Auto-select a cluster only when demo mode leaves a single visible choice.
   useEffect(() => {
-    if (!clusters || clusters.length === 0) return
-    const firstCluster = clusters[0]
-    if (demoMode && firstCluster && !selectedCluster) {
-      setSelectedCluster(firstCluster.name)
-    }
+    if (!demoMode || selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
+    setSelectedCluster(clusters[0].name)
   }, [demoMode, clusters, selectedCluster])
 
   useEffect(() => {

@@ -21,6 +21,8 @@ interface NamespaceOverviewProps {
   }
 }
 
+const SINGLE_VISIBLE_CLUSTER_COUNT = 1
+
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
@@ -69,13 +71,10 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     safeSetItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace)
   }, [selectedNamespace])
 
-  // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)
+  // Auto-select a cluster only when the visible choice is unambiguous.
   useEffect(() => {
-    if (!clusters || clusters.length === 0) return
-    const firstCluster = clusters[0]
-    if (!selectedCluster && firstCluster) {
-      setSelectedCluster(firstCluster.name)
-    }
+    if (selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
+    setSelectedCluster(clusters[0].name)
   }, [clusters, selectedCluster])
 
   const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback, isRefreshing: isPodIssuesRefreshing, isFailed: podIssuesFailed, consecutiveFailures: podIssuesConsecutiveFailures, lastRefresh: podIssuesLastRefresh } = useCachedPodIssues(selectedCluster)

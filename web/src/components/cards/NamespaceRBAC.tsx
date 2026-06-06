@@ -43,6 +43,7 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
  * (Issue 9268).
  */
 const TABS_WITH_RULES_COUNT: ReadonlyArray<'roles' | 'bindings' | 'serviceaccounts'> = ['roles']
+const SINGLE_VISIBLE_CLUSTER_COUNT = 1
 
 function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -52,6 +53,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     .filter(opt => opt.value !== 'rules' || TABS_WITH_RULES_COUNT.includes(activeTab))
     .map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error, isFailed, consecutiveFailures } = useClusters()
+  const safeClusters = clusters || []
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -59,6 +61,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
   const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
+  const safeNamespaces = namespaces || []
 
   // Fetch RBAC data using cached hooks (requires a cluster to be selected)
   const { roles: k8sRoles, isLoading: rolesLoading, isRefreshing: rolesRefreshing, isDemoFallback: rolesDemoFallback } = useCachedK8sRoles(
@@ -80,26 +83,23 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   // Combine all isRefreshing values from data hooks
   const isRefreshing = clustersRefreshing || namespacesRefreshing || rolesRefreshing || bindingsRefreshing || sasRefreshing
 
-  // Auto-select first cluster and namespace in demo mode
-  useEffect(() => {
-    if (!clusters || clusters.length === 0) return
-    const firstCluster = clusters[0]
-    if (isDemoData && firstCluster && !selectedCluster) {
-      setSelectedCluster(firstCluster.name)
-    }
-  }, [isDemoData, clusters, selectedCluster])
-
-  useEffect(() => {
-    if (isDemoData && selectedCluster && namespaces.length > 0 && !selectedNamespace) {
-      setSelectedNamespace(namespaces[0])
-    }
-  }, [isDemoData, selectedCluster, namespaces, selectedNamespace])
-
   // Filter clusters based on global filter
   const filteredClusters = (() => {
-    if (isAllClustersSelected) return clusters
-    return clusters.filter(c => selectedClusters.includes(c.name))
+    if (isAllClustersSelected) return safeClusters
+    return safeClusters.filter(c => selectedClusters.includes(c.name))
   })()
+
+  // Auto-select a cluster only when demo mode leaves a single filtered choice.
+  useEffect(() => {
+    if (!isDemoData || selectedCluster || filteredClusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
+    setSelectedCluster(filteredClusters[0].name)
+  }, [filteredClusters, isDemoData, selectedCluster])
+
+  useEffect(() => {
+    if (isDemoData && selectedCluster && safeNamespaces.length > 0 && !selectedNamespace) {
+      setSelectedNamespace(safeNamespaces[0])
+    }
+  }, [isDemoData, selectedCluster, safeNamespaces, selectedNamespace])
 
   // Check if we're loading initial data or fetching RBAC data
   const isInitialLoading = clustersLoading
@@ -109,7 +109,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isInitialLoading || !!isFetchingRBAC,
     isRefreshing,
-    hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
+    hasAnyData: safeClusters.length > 0 || (k8sRoles || []).length > 0 || (k8sBindings || []).length > 0 || (k8sServiceAccounts || []).length > 0,
     isDemoData,
     isFailed,
     consecutiveFailures })
@@ -117,7 +117,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
   const rbacRoles: RBACItem[] = (() => {
     if (!selectedCluster || !selectedNamespace) return []
-    return k8sRoles
+    return (k8sRoles || [])
       .filter(r => !r.namespace || r.namespace === selectedNamespace)
       .map(r => ({
         name: r.name,
@@ -128,18 +128,18 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
 
   const rbacBindings: RBACItem[] = (() => {
     if (!selectedCluster || !selectedNamespace) return []
-    return k8sBindings
+    return (k8sBindings || [])
       .filter(b => !b.namespace || b.namespace === selectedNamespace)
       .map(b => ({
         name: b.name,
         type: 'RoleBinding' as const,
-        subjects: b.subjects.map(s => s.name),
+        subjects: (b.subjects || []).map(s => s.name),
         cluster: b.cluster }))
   })()
 
   const rbacServiceAccounts: RBACItem[] = (() => {
     if (!selectedCluster || !selectedNamespace) return []
-    return k8sServiceAccounts
+    return (k8sServiceAccounts || [])
       .filter(sa => sa.namespace === selectedNamespace)
       .map(sa => ({
         name: sa.name,
@@ -272,7 +272,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">{t('namespaceRBAC.selectNamespace')}</option>
-          {namespaces.map(ns => (
+          {safeNamespaces.map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
         </select>
