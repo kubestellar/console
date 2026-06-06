@@ -81,6 +81,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const isRefreshing = clustersRefreshing || namespacesRefreshing || rolesRefreshing || bindingsRefreshing || sasRefreshing
 
   // Auto-select first cluster and namespace in demo mode
+  // Safe: guarded by length check, only used as demo data fallback
   useEffect(() => {
     if (!clusters || clusters.length === 0) return
     const firstCluster = clusters[0]

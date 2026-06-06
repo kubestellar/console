@@ -68,6 +68,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter])
 
   // Auto-select cluster and overlays in demo mode so card shows data immediately
+  // Safe: guarded by length check, only used as demo mode fallback
   useEffect(() => {
     if (!clusters || clusters.length === 0) return
     const firstCluster = clusters[0]

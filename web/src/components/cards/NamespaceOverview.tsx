@@ -70,6 +70,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   }, [selectedNamespace])
 
   // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)
+  // Safe: guarded by length check, only used as fallback when selectedCluster is empty
   useEffect(() => {
     if (!clusters || clusters.length === 0) return
     const firstCluster = clusters[0]

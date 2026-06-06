@@ -89,6 +89,7 @@ export function ResourceMarshall() {
   const { data: depData, isLoading: depLoading, error: depError, resolve, reset } = useResolveDependencies()
 
   // Auto-select cluster, namespace, and workload in demo mode
+  // Safe: guarded by length check, only used as demo mode fallback
   useEffect(() => {
     if (!clusters || clusters.length === 0) return
     const firstCluster = clusters[0]

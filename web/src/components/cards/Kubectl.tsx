@@ -111,6 +111,7 @@ export function Kubectl() {
   }, [])
 
   // Set default context when clusters are loaded — prefer the user's current-context
+  // Safe: firstCluster is fallback when no current context, guarded by conditional check
   useEffect(() => {
     if (!selectedContext) {
       const currentCtx = clusters.find(c => c.isCurrent)
