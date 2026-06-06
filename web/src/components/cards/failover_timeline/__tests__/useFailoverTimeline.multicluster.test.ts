@@ -53,10 +53,10 @@ describe('useFailoverTimeline - Multi-cluster guards (#16050)', () => {
 
     const { result } = renderHook(() => useFailoverTimeline())
 
-    // Verify the event shows all target clusters in details, not just the first
+    // Verify the event shows all target clusters consistently in both fields.
     const event = result.current.data.events[0]
     expect(event.details).toContain('cluster-a, cluster-b, cluster-c')
-    expect(event.cluster).toBe('cluster-a') // cluster field still uses primary cluster
+    expect(event.cluster).toBe('cluster-a, cluster-b, cluster-c')
   })
 
   it('handles undefined clusters array gracefully without crashing', () => {
@@ -130,11 +130,11 @@ describe('useFailoverTimeline - Multi-cluster guards (#16050)', () => {
     expect(result.current.error).toBe(false)
   })
 
-  it('uses primary cluster (first in array) for cluster field even with multiple targets', () => {
+  it('uses the full target cluster list for the cluster field', () => {
     const multiClusterEvent: FailoverEvent = {
       timestamp: '2024-01-15T10:00:00Z',
       eventType: 'binding_reschedule',
-      cluster: 'primary-cluster',
+      cluster: 'primary-cluster, secondary-cluster',
       workload: 'Deployment/app',
       details: 'ResourceBinding rescheduled from old-cluster to primary-cluster, secondary-cluster',
       severity: 'warning',
@@ -160,9 +160,7 @@ describe('useFailoverTimeline - Multi-cluster guards (#16050)', () => {
 
     const { result } = renderHook(() => useFailoverTimeline())
 
-    // Verify cluster field uses the primary (first) cluster
-    expect(result.current.data.events[0].cluster).toBe('primary-cluster')
-    // But details show all targets
+    expect(result.current.data.events[0].cluster).toBe('primary-cluster, secondary-cluster')
     expect(result.current.data.events[0].details).toContain('primary-cluster, secondary-cluster')
   })
 

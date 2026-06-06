@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -99,6 +99,29 @@ describe('OverlayComparison', () => {
     })
     const { container } = render(<OverlayComparison />)
     expect(container).toBeTruthy()
+  })
+
+
+
+  it('does not auto-select the first cluster when multiple clusters are visible', () => {
+    mockUseClusters.mockReturnValue({
+      clusters: [
+        { name: 'cluster-a', healthy: true, reachable: true },
+        { name: 'cluster-b', healthy: true, reachable: true },
+      ],
+      deduplicatedClusters: [
+        { name: 'cluster-a', healthy: true, reachable: true },
+        { name: 'cluster-b', healthy: true, reachable: true },
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      lastRefresh: Date.now(),
+    })
+
+    render(<OverlayComparison />)
+
+    expect(screen.getByRole('combobox')).toHaveValue('')
   })
 
 })
