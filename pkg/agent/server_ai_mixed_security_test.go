@@ -2,13 +2,13 @@ package agent
 
 import "testing"
 
-func TestValidateMixedModeCommands(t *testing.T) {
+func TestValidateMixedModeCommandsBatch(t *testing.T) {
 	tests := []struct {
-		name             string
-		commands         []string
-		wantApproved     int
-		wantRejected     int
-		wantAllApproval  bool // all rejected items require approval (not hard-blocked)
+		name            string
+		commands        []string
+		wantApproved    int
+		wantRejected    int
+		wantAllApproval bool // all rejected items require approval (not hard-blocked)
 	}{
 		{
 			name:         "empty list",
@@ -35,10 +35,10 @@ func TestValidateMixedModeCommands(t *testing.T) {
 			wantRejected: 0,
 		},
 		{
-			name:         "mutating kubectl needs approval",
-			commands:     []string{"kubectl apply -f deploy.yaml"},
-			wantApproved: 0,
-			wantRejected: 1,
+			name:            "mutating kubectl needs approval",
+			commands:        []string{"kubectl apply -f deploy.yaml"},
+			wantApproved:    0,
+			wantRejected:    1,
 			wantAllApproval: true,
 		},
 		{
@@ -176,9 +176,9 @@ func TestValidateMixedModeCommand_KubectlApprovalRequired(t *testing.T) {
 
 func TestValidateMixedModeCommand_HelmVerbs(t *testing.T) {
 	tests := []struct {
-		cmd              string
-		wantBlocked      bool
-		wantApproval     bool
+		cmd          string
+		wantBlocked  bool
+		wantApproval bool
 	}{
 		{"helm list", false, false},
 		{"helm status myrelease", false, false},
@@ -271,7 +271,6 @@ func TestValidateMixedModeCommand_PathTraversal(t *testing.T) {
 			if reason == "" {
 				t.Fatalf("expected path traversal to be blocked: %q", cmd)
 			}
-			// Path traversal is a hard block, not approval
 			if requiresApproval {
 				t.Fatalf("path traversal should be hard-blocked: %q", cmd)
 			}
@@ -346,7 +345,6 @@ func TestValidateMixedModeCommand_ConfigSubcommands(t *testing.T) {
 }
 
 func TestValidateMixedModeCommand_OcAlias(t *testing.T) {
-	// 'oc' should follow the same rules as 'kubectl'
 	tests := []struct {
 		cmd     string
 		blocked bool
