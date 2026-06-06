@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,10 +9,12 @@ vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
   UnifiedDashboard: () => <div data-testid="unified-dashboard" />,
 }))
 vi.mock('../shared/DashboardHeader', () => ({
-  DashboardHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+  DashboardHeader: ({ title, subtitle, afterTitle, rightExtra }: { title: string; subtitle?: string; afterTitle?: ReactNode; rightExtra?: ReactNode }) => (
     <div>
       <h1>{title}</h1>
       {subtitle ? <p>{subtitle}</p> : null}
+      {afterTitle}
+      {rightExtra}
     </div>
   ),
 }))
@@ -69,6 +72,7 @@ describe('SBOMDashboard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('SBOM Manager')).toBeInTheDocument()
+      expect(screen.getByTestId('dashboard-health-indicator')).toBeInTheDocument()
       expect(screen.getByText('react')).toBeInTheDocument()
       expect(screen.getByText('License Compliance')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()

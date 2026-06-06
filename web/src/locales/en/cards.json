@@ -4318,7 +4318,13 @@
     "podStatusClick": "Pod {{name}} in {{status}} state - Click to view details",
     "selectClusterTitle": "Select a cluster to view namespace details",
     "selectNamespaceTitle": "Select a namespace to view details",
-    "selectClusterFirst": "Select a cluster first"
+    "selectClusterFirst": "Select a cluster first",
+    "healthPending": "Awaiting selection",
+    "healthPendingTitle": "Select a cluster and namespace to evaluate health",
+    "healthIssues": "Issues detected",
+    "healthIssuesTitle": "Namespace has active issues",
+    "healthHealthy": "Healthy",
+    "healthHealthyTitle": "Namespace is healthy"
   },
   "recentEvents": {
     "searchPlaceholder": "Search events..."

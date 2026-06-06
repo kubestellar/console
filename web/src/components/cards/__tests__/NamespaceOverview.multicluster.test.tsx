@@ -137,8 +137,10 @@ describe('NamespaceOverview - Multi-cluster guards (#16050)', () => {
 
     render(<NamespaceOverview />)
 
+    // Should render cluster options and a pending health badge
     expect(screen.getByText('cluster-1')).toBeInTheDocument()
     expect(screen.getByText('cluster-2')).toBeInTheDocument()
+    expect(screen.getByText('Awaiting selection')).toBeInTheDocument()
   })
 
   it('does not auto-select the first cluster when multiple clusters are visible', () => {

@@ -22,6 +22,8 @@ export interface DashboardCardActionsContextValue {
     degradedCards: number
     criticalCards: number
   }
+  healthState?: DashboardHealthStatus
+  healthMessage?: string
 }
 
 const DashboardCardActionsContext = createContext<DashboardCardActionsContextValue | null>(null)

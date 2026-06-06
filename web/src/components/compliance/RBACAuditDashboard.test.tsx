@@ -1,4 +1,4 @@
-import type { SelectHTMLAttributes } from 'react'
+import type { ReactNode, SelectHTMLAttributes } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,10 +17,12 @@ vi.mock('../ui/Select', () => ({
   ),
 }))
 vi.mock('../shared/DashboardHeader', () => ({
-  DashboardHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+  DashboardHeader: ({ title, subtitle, afterTitle, rightExtra }: { title: string; subtitle?: string; afterTitle?: ReactNode; rightExtra?: ReactNode }) => (
     <div>
       <h1>{title}</h1>
       {subtitle ? <p>{subtitle}</p> : null}
+      {afterTitle}
+      {rightExtra}
     </div>
   ),
 }))
@@ -97,6 +99,7 @@ describe('RBACAuditDashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('RBAC Audit & Least-Privilege Analysis')).toBeInTheDocument()
       expect(screen.getByText('User has wildcard access.')).toBeInTheDocument()
+      expect(screen.getByTestId('dashboard-health-indicator')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
       
       // Verify health status indicator is present
