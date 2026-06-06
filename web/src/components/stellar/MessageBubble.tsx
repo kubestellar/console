@@ -1,4 +1,6 @@
 import { lazy, Suspense } from 'react'
+import rehypeSanitize from 'rehype-sanitize'
+import remarkGfm from 'remark-gfm'
 
 const ReactMarkdown = lazy(() => import('react-markdown'))
 
@@ -36,7 +38,12 @@ export function MessageBubble({ msg }: { msg: Msg }) {
         ) : (
           <div className="stellar-markdown">
             <Suspense fallback={<div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</div>}>
-              <ReactMarkdown>{msg.content}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeSanitize]}
+              >
+                {msg.content}
+              </ReactMarkdown>
             </Suspense>
           </div>
         )}
