@@ -19,7 +19,7 @@ var promptInjectionReplacer = strings.NewReplacer(
 	"\n", " ",
 	"\r", " ",
 	"\t", " ",
-	"` + "``" + "`", "'''",
+	"```", "'''",
 )
 
 // PromptString neutralizes prompt-sensitive user-controlled input before it
