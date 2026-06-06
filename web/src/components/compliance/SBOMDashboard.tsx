@@ -7,13 +7,14 @@
 import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import {
   Package, CheckCircle2, Loader2, AlertTriangle,
-  XCircle, Shield, FileText
+  XCircle, Shield, FileText, Activity
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sbomDashboardConfig } from '../../config/dashboards/sbom'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { DashboardHealthIndicator } from '../dashboard/DashboardHealthIndicator'
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -269,8 +270,72 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="sbom-auto-refresh"
-        rightExtra={<RotatingTip page="compliance" />}
+        rightExtra={
+          <div className="flex items-center gap-2">
+            <DashboardHealthIndicator size="sm" />
+            <RotatingTip page="compliance" />
+          </div>
+        }
       />
+
+      {/* System Health Status */}
+      {summary && (
+        <div className="bg-card/50 border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-blue-400" />
+              <div>
+                <div className="text-sm font-medium text-foreground">Supply Chain Health</div>
+                <div className="text-xs text-muted-foreground">
+                  {summary.scan_status === 'completed'
+                    ? summary.total_vulnerabilities === 0
+                      ? 'No vulnerabilities detected'
+                      : `${summary.total_vulnerabilities} vulnerabilities (${summary.critical_vulns} critical, ${summary.high_vulns} high)`
+                    : summary.scan_status === 'in_progress'
+                    ? 'Scan in progress...'
+                    : 'Scan failed'}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {summary.scan_status === 'completed' ? (
+                summary.critical_vulns === 0 && summary.high_vulns === 0 ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                ) : summary.critical_vulns > 0 ? (
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                )
+              ) : summary.scan_status === 'in_progress' ? (
+                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-400" />
+              )}
+              <span className={`text-sm font-medium ${
+                summary.scan_status === 'completed'
+                  ? summary.critical_vulns === 0 && summary.high_vulns === 0
+                    ? 'text-green-400'
+                    : summary.critical_vulns > 0
+                    ? 'text-red-400'
+                    : 'text-yellow-400'
+                  : summary.scan_status === 'in_progress'
+                  ? 'text-blue-400'
+                  : 'text-red-400'
+              }`}>
+                {summary.scan_status === 'completed'
+                  ? summary.critical_vulns === 0 && summary.high_vulns === 0
+                    ? 'Healthy'
+                    : summary.critical_vulns > 0
+                    ? 'Critical'
+                    : 'Warning'
+                  : summary.scan_status === 'in_progress'
+                  ? 'Scanning'
+                  : 'Failed'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary stats */}
       {summary && (

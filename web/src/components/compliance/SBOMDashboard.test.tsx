@@ -16,6 +16,9 @@ vi.mock('../shared/DashboardHeader', () => ({
   ),
 }))
 vi.mock('../ui/RotatingTip', () => ({ RotatingTip: () => <div data-testid="rotating-tip" /> }))
+vi.mock('../dashboard/DashboardHealthIndicator', () => ({
+  DashboardHealthIndicator: () => <div data-testid="dashboard-health-indicator" />,
+}))
 
 import SBOMDashboard from './SBOMDashboard'
 
@@ -59,7 +62,7 @@ describe('SBOMDashboard', () => {
     })
   })
 
-  it('renders package and vulnerability views with unified dashboard', async () => {
+  it('renders package and vulnerability views with unified dashboard and health indicators', async () => {
     const user = userEvent.setup()
 
     render(<SBOMDashboard />)
@@ -69,6 +72,9 @@ describe('SBOMDashboard', () => {
       expect(screen.getByText('react')).toBeInTheDocument()
       expect(screen.getByText('License Compliance')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
+      
+      // Verify health status indicator is present
+      expect(screen.getByText('Supply Chain Health')).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: /Vulnerabilities \(1\)/ }))

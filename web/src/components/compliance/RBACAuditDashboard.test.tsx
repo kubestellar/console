@@ -25,6 +25,9 @@ vi.mock('../shared/DashboardHeader', () => ({
   ),
 }))
 vi.mock('../ui/RotatingTip', () => ({ RotatingTip: () => <div data-testid="rotating-tip" /> }))
+vi.mock('../dashboard/DashboardHealthIndicator', () => ({
+  DashboardHealthIndicator: () => <div data-testid="dashboard-health-indicator" />,
+}))
 
 import RBACAuditDashboard from './RBACAuditDashboard'
 
@@ -86,7 +89,7 @@ describe('RBACAuditDashboard', () => {
     })
   })
 
-  it('renders findings, bindings, and unified dashboard', async () => {
+  it('renders findings, bindings, and unified dashboard with health indicators', async () => {
     const user = userEvent.setup()
 
     render(<RBACAuditDashboard />)
@@ -95,6 +98,9 @@ describe('RBACAuditDashboard', () => {
       expect(screen.getByText('RBAC Audit & Least-Privilege Analysis')).toBeInTheDocument()
       expect(screen.getByText('User has wildcard access.')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
+      
+      // Verify health status indicator is present
+      expect(screen.getByText('RBAC System Status')).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: 'Bindings' }))
