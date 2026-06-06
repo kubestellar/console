@@ -16,6 +16,7 @@ export type { FailoverTimelineData, FailoverEvent }
 const DEFAULT_COUNT = 0
 const UNKNOWN_CLUSTER = 'unknown'
 const CLUSTER_LIST_SEPARATOR = ', '
+const RESCHEDULE_TARGET_PATTERN = /ResourceBinding rescheduled(?: from .*?)? to (.+)$/
 
 /** Window (in ms) for correlating a cluster NotReady event with binding reschedules */
 const CORRELATION_WINDOW_MS = 5 * 60 * 1_000
@@ -126,6 +127,40 @@ interface BindingTransition {
 function formatTargetClusters(clusters: string[] | undefined): string {
   const safeClusters = clusters || []
   return safeClusters.length > 0 ? safeClusters.join(CLUSTER_LIST_SEPARATOR) : UNKNOWN_CLUSTER
+}
+
+function extractRescheduleTargetClusters(details: string): string | null {
+  const match = details.match(RESCHEDULE_TARGET_PATTERN)
+  const targetClusters = match?.[1]?.trim() || ''
+  return targetClusters || null
+}
+
+function normalizeEventCluster(event: FailoverEvent): FailoverEvent {
+  if (event.eventType !== 'binding_reschedule') {
+    return event
+  }
+
+  const currentCluster = typeof event.cluster === 'string' ? event.cluster.trim() : ''
+  const normalizedCluster = extractRescheduleTargetClusters(event.details)
+    || currentCluster
+    || UNKNOWN_CLUSTER
+
+  return normalizedCluster === event.cluster
+    ? event
+    : { ...event, cluster: normalizedCluster }
+}
+
+function normalizeFailoverTimelineData(data: FailoverTimelineData): FailoverTimelineData {
+  let hasChanges = false
+  const normalizedEvents = (data.events || []).map(event => {
+    const normalizedEvent = normalizeEventCluster(event)
+    hasChanges = hasChanges || normalizedEvent !== event
+    return normalizedEvent
+  })
+
+  return hasChanges || !data.events
+    ? { ...data, events: normalizedEvents }
+    : data
 }
 
 function parseBindingTransitions(items: CRItem[]): BindingTransition[] {
@@ -339,8 +374,9 @@ export function useFailoverTimeline(): UseFailoverTimelineResult {
   })
 
   const effectiveIsDemoData = isDemoFallback && !isLoading
+  const normalizedData = normalizeFailoverTimelineData(data)
 
-  const hasAnyData = (data.events || []).length > 0
+  const hasAnyData = (normalizedData.events || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
@@ -352,7 +388,7 @@ export function useFailoverTimeline(): UseFailoverTimelineResult {
   })
 
   return {
-    data,
+    data: normalizedData,
     loading: isLoading,
     isRefreshing,
     error: isFailed && !hasAnyData,
