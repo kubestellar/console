@@ -33,9 +33,13 @@ vi.mock('../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => mockUseDrillDownActions(),
 }))
 
+const TRANSLATIONS: Record<string, string> = {
+  'cards:namespaceOverview.healthPending': 'Awaiting selection',
+}
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback || key,
+    t: (key: string, fallback?: string) => TRANSLATIONS[key] || fallback || key,
   }),
 }))
 
