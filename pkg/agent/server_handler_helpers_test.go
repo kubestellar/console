@@ -11,13 +11,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// testServerOption configures a test Server instance.
-type testServerOption func(*Server)
+// handlerTestOption configures a Server for handler unit tests.
+type handlerTestOption func(*Server)
 
-// newTestServer constructs a minimal Server suitable for handler unit tests.
-// The returned Server has safe zero-value defaults for all fields; use option
+// newHandlerTestServer constructs a minimal Server suitable for HTTP handler
+// unit tests. The returned Server has safe zero-value defaults; use option
 // functions to inject specific dependencies needed by the handler under test.
-func newTestServer(t *testing.T, opts ...testServerOption) *Server {
+//
+// Unlike newTestServer (in server_federation_test.go) which requires a real
+// kubeconfig, this helper creates a Server with no external dependencies,
+// making it suitable for pure handler logic tests.
+func newHandlerTestServer(t *testing.T, opts ...handlerTestOption) *Server {
 	t.Helper()
 	s := &Server{
 		config:             Config{Port: 0},
@@ -37,22 +41,22 @@ func newTestServer(t *testing.T, opts ...testServerOption) *Server {
 	return s
 }
 
-// withToken sets the agent token for auth-required handler tests.
-func withToken(token string) testServerOption {
+// withHandlerToken sets the agent token for auth-required handler tests.
+func withHandlerToken(token string) handlerTestOption {
 	return func(s *Server) {
 		s.agentToken = token
 	}
 }
 
-// withRegistry sets the AI provider registry.
-func withRegistry(r *Registry) testServerOption {
+// withHandlerRegistry sets the AI provider registry.
+func withHandlerRegistry(r *Registry) handlerTestOption {
 	return func(s *Server) {
 		s.registry = r
 	}
 }
 
-// withAllowedOrigins sets the allowed CORS origins.
-func withAllowedOrigins(origins []string) testServerOption {
+// withHandlerOrigins sets the allowed CORS origins.
+func withHandlerOrigins(origins []string) handlerTestOption {
 	return func(s *Server) {
 		s.allowedOrigins = origins
 	}
@@ -61,7 +65,7 @@ func withAllowedOrigins(origins []string) testServerOption {
 // --- handleHealth tests ---
 
 func TestHandleHealth_ReturnsOK(t *testing.T) {
-	s := newTestServer(t)
+	s := newHandlerTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
@@ -84,7 +88,7 @@ func TestHandleHealth_ReturnsOK(t *testing.T) {
 }
 
 func TestHandleHealth_CORS(t *testing.T) {
-	s := newTestServer(t, withAllowedOrigins([]string{"http://localhost", "https://example.com"}))
+	s := newHandlerTestServer(t, withHandlerOrigins([]string{"http://localhost", "https://example.com"}))
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	req.Header.Set("Origin", "https://example.com")
@@ -101,7 +105,7 @@ func TestHandleHealth_CORS(t *testing.T) {
 }
 
 func TestHandleHealth_OptionsPreflight(t *testing.T) {
-	s := newTestServer(t)
+	s := newHandlerTestServer(t)
 
 	req := httptest.NewRequest(http.MethodOptions, "/health", nil)
 	rec := httptest.NewRecorder()
@@ -113,14 +117,13 @@ func TestHandleHealth_OptionsPreflight(t *testing.T) {
 }
 
 func TestHandleHealth_DisallowedOriginNoCORS(t *testing.T) {
-	s := newTestServer(t, withAllowedOrigins([]string{"http://localhost"}))
+	s := newHandlerTestServer(t, withHandlerOrigins([]string{"http://localhost"}))
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	req.Header.Set("Origin", "https://evil.com")
 	rec := httptest.NewRecorder()
 	s.handleHealth(rec, req)
 
-	// Should still return 200 (health is unauthenticated) but no ACAO header
 	if rec.Code != http.StatusOK {
 		t.Fatalf("handleHealth status = %d, want %d", rec.Code, http.StatusOK)
 	}
@@ -133,7 +136,7 @@ func TestHandleHealth_DisallowedOriginNoCORS(t *testing.T) {
 // --- handleStatus tests ---
 
 func TestHandleStatus_Unauthorized(t *testing.T) {
-	s := newTestServer(t, withToken("secret-token"))
+	s := newHandlerTestServer(t, withHandlerToken("secret-token"))
 
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
 	rec := httptest.NewRecorder()
@@ -145,7 +148,7 @@ func TestHandleStatus_Unauthorized(t *testing.T) {
 }
 
 func TestHandleStatus_Authorized(t *testing.T) {
-	s := newTestServer(t, withToken("secret-token"), withRegistry(&Registry{
+	s := newHandlerTestServer(t, withHandlerToken("secret-token"), withHandlerRegistry(&Registry{
 		providers: make(map[string]AIProvider),
 		mu:        sync.RWMutex{},
 	}))
@@ -169,7 +172,7 @@ func TestHandleStatus_Authorized(t *testing.T) {
 }
 
 func TestHandleStatus_OptionsPreflight(t *testing.T) {
-	s := newTestServer(t, withToken("secret-token"))
+	s := newHandlerTestServer(t, withHandlerToken("secret-token"))
 
 	req := httptest.NewRequest(http.MethodOptions, "/status", nil)
 	rec := httptest.NewRecorder()
@@ -181,8 +184,7 @@ func TestHandleStatus_OptionsPreflight(t *testing.T) {
 }
 
 func TestHandleStatus_NoTokenConfigured(t *testing.T) {
-	// When no token is set, the endpoint should be accessible without auth
-	s := newTestServer(t, withRegistry(&Registry{
+	s := newHandlerTestServer(t, withHandlerRegistry(&Registry{
 		providers: make(map[string]AIProvider),
 		mu:        sync.RWMutex{},
 	}))
