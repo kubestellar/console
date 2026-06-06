@@ -5,6 +5,7 @@ import { Download, Clock, SkipForward, ChevronDown, Copy, Check, Loader2 } from 
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import rehypeSanitize from 'rehype-sanitize'
 import { BaseModal } from '../../lib/modals'
 import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
@@ -238,6 +239,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
             <div className="prose dark:prose-invert max-w-none text-sm overflow-x-auto wrap-break-word [word-break:break-word] prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
+                rehypePlugins={[rehypeSanitize]}
                 components={markdownComponents}
               >
                 {latestRelease?.releaseNotes ?? ''}
@@ -277,7 +279,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
             </div>
           ) : (
             <div className="prose dark:prose-invert max-w-none text-sm">
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>
                 {'*No release notes available. Pull the latest commits to update.*'}
               </ReactMarkdown>
             </div>
@@ -308,7 +310,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                       </button>
                       {expandedRelease === release.tag && release.releaseNotes && (
                         <div className="px-3 pb-3 prose dark:prose-invert max-w-none text-xs overflow-x-auto wrap-break-word [word-break:break-word]">
-                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]} components={markdownComponents}>
                             {release.releaseNotes}
                           </ReactMarkdown>
                         </div>
