@@ -1,4 +1,4 @@
-import type { SelectHTMLAttributes } from 'react'
+import type { ReactNode, SelectHTMLAttributes } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,14 +17,19 @@ vi.mock('../ui/Select', () => ({
   ),
 }))
 vi.mock('../shared/DashboardHeader', () => ({
-  DashboardHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+  DashboardHeader: ({ title, subtitle, afterTitle, rightExtra }: { title: string; subtitle?: string; afterTitle?: ReactNode; rightExtra?: ReactNode }) => (
     <div>
       <h1>{title}</h1>
       {subtitle ? <p>{subtitle}</p> : null}
+      {afterTitle}
+      {rightExtra}
     </div>
   ),
 }))
 vi.mock('../ui/RotatingTip', () => ({ RotatingTip: () => <div data-testid="rotating-tip" /> }))
+vi.mock('../dashboard/DashboardHealthIndicator', () => ({
+  DashboardHealthIndicator: () => <div data-testid="dashboard-health-indicator" />,
+}))
 
 import RBACAuditDashboard from './RBACAuditDashboard'
 
@@ -86,7 +91,7 @@ describe('RBACAuditDashboard', () => {
     })
   })
 
-  it('renders findings, bindings, and unified dashboard', async () => {
+  it('renders findings, bindings, and unified dashboard with health indicators', async () => {
     const user = userEvent.setup()
 
     render(<RBACAuditDashboard />)
@@ -94,7 +99,11 @@ describe('RBACAuditDashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('RBAC Audit & Least-Privilege Analysis')).toBeInTheDocument()
       expect(screen.getByText('User has wildcard access.')).toBeInTheDocument()
+      expect(screen.getByTestId('dashboard-health-indicator')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
+      
+      // Verify health status indicator is present
+      expect(screen.getByText('RBAC System Status')).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: 'Bindings' }))

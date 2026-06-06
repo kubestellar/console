@@ -1,6 +1,8 @@
 import { createContext, useContext, type KeyboardEvent, type ReactNode } from 'react'
 import type { Card } from './dashboardUtils'
 
+export type DashboardHealthStatus = 'healthy' | 'degraded' | 'critical' | 'unknown'
+
 export interface DashboardCardActionsContextValue {
   handleConfigureCard: (card: Card) => void
   handleRemoveCard: (cardId: string) => void
@@ -13,6 +15,15 @@ export interface DashboardCardActionsContextValue {
   registerCardRef?: (cardId: string, el: HTMLElement | null) => void
   registerExpandTrigger?: (cardId: string, expand: () => void) => void
   handleInsertAfter?: (index: number) => void
+  healthStatus?: DashboardHealthStatus
+  healthDetails?: {
+    totalCards: number
+    healthyCards: number
+    degradedCards: number
+    criticalCards: number
+  }
+  healthState?: DashboardHealthStatus
+  healthMessage?: string
 }
 
 const DashboardCardActionsContext = createContext<DashboardCardActionsContextValue | null>(null)

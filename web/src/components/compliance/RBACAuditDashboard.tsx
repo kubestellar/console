@@ -4,12 +4,13 @@ import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { rbacAuditDashboardConfig } from '../../config/dashboards/rbac-audit'
 import {
   Lock, CheckCircle2, XCircle, AlertTriangle, Loader2,
-  ShieldAlert, Users, Server,
+  ShieldAlert, Users, Server, Activity,
 } from 'lucide-react'
 import { authFetch } from '../../lib/api'
 import { Select } from '../ui/Select'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
+import { DashboardHealthIndicator } from '../dashboard/DashboardHealthIndicator'
 
 interface RBACBinding {
   id: string; name: string; kind: string; subject_kind: string
@@ -126,8 +127,54 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="rbac-auto-refresh"
-        rightExtra={<RotatingTip page="compliance" />}
+        rightExtra={
+          <div className="flex items-center gap-2">
+            <DashboardHealthIndicator size="sm" />
+            <RotatingTip page="compliance" />
+          </div>
+        }
       />
+
+      {/* System Health Status */}
+      {summary && (
+        <div className="bg-card/50 border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-blue-400" />
+              <div>
+                <div className="text-sm font-medium text-foreground">RBAC System Status</div>
+                <div className="text-xs text-muted-foreground">
+                  {summary.over_privileged === 0 && summary.unused_bindings === 0
+                    ? 'All bindings follow least-privilege principles'
+                    : `${summary.over_privileged} over-privileged, ${summary.unused_bindings} unused`}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {summary.over_privileged === 0 && summary.unused_bindings === 0 ? (
+                <CheckCircle2 className="w-5 h-5 text-green-400" />
+              ) : summary.over_privileged > 0 ? (
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+              )}
+              <span className={`text-sm font-medium ${
+                summary.over_privileged === 0 && summary.unused_bindings === 0
+                  ? 'text-green-400'
+                  : summary.over_privileged > 0
+                  ? 'text-red-400'
+                  : 'text-yellow-400'
+              }`}>
+                {summary.over_privileged === 0 && summary.unused_bindings === 0
+                  ? 'Healthy'
+                  : summary.over_privileged > 0
+                  ? 'Critical'
+                  : 'Warning'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {summary && (

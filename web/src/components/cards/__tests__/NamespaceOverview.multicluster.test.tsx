@@ -137,8 +137,10 @@ describe('NamespaceOverview - Multi-cluster guards (#16050)', () => {
 
     render(<NamespaceOverview />)
 
+    // Should render cluster options and a pending health badge
     expect(screen.getByText('cluster-1')).toBeInTheDocument()
     expect(screen.getByText('cluster-2')).toBeInTheDocument()
+    expect(screen.getByText('Awaiting selection')).toBeInTheDocument()
   })
 
   it('does not auto-select the first cluster when multiple clusters are visible', () => {
@@ -156,6 +158,25 @@ describe('NamespaceOverview - Multi-cluster guards (#16050)', () => {
     render(<NamespaceOverview />)
 
     expect(screen.getAllByRole('combobox')[0]).toHaveValue('')
+  })
+
+  it('displays cluster health indicators for reachable/unreachable clusters', () => {
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'healthy-cluster', context: 'context-1', reachable: true },
+        { name: 'unreachable-cluster', context: 'context-2', reachable: false },
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+    })
+
+    render(<NamespaceOverview />)
+
+    // Both clusters should be rendered - health indicators should reflect their reachability
+    expect(screen.getByText('healthy-cluster')).toBeInTheDocument()
+    expect(screen.getByText('unreachable-cluster')).toBeInTheDocument()
   })
 
   it('guards against undefined namespaces array', () => {

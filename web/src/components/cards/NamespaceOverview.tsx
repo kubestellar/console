@@ -8,6 +8,7 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { ClusterStatusBadge, getClusterState } from '../ui/ClusterStatusBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
@@ -109,9 +110,23 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   const cluster = (clusters || []).find(c => c.name === selectedCluster)
 
+  // Compute cluster state for health indicator
+  const clusterState = cluster
+    ? getClusterState(
+        cluster.reachable,
+        cluster.reachable,
+        undefined,
+        undefined,
+        undefined,
+        clustersRefreshing
+      )
+    : 'unknown'
+
   // Use the most recent refresh time of the data sources
   const isRefreshing = isPodIssuesRefreshing || isDeploymentIssuesRefreshing || isNamespacesRefreshing
   const lastRefresh = Math.max(podIssuesLastRefresh || 0, deploymentIssuesLastRefresh || 0)
+  const needsSelection = !selectedCluster || !selectedNamespace
+  const hasNamespaceIssues = podIssues.length > 0 || deploymentIssues.length > 0
 
   // Combine failure state from all data sources
   const isFailed = clustersFailed || podIssuesFailed || deploymentIssuesFailed || namespacesFailed
@@ -156,12 +171,10 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     )
   }
 
-  const needsSelection = !selectedCluster || !selectedNamespace
-
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <RefreshIndicator
           isRefreshing={isRefreshing}
           lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
@@ -169,6 +182,29 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           showLabel={true}
           staleThresholdMinutes={5}
         />
+        {cluster && (
+          <ClusterStatusBadge
+            state={clusterState}
+            size="sm"
+            showLabel={true}
+          />
+        )}
+        <StatusBadge
+          color={needsSelection ? 'gray' : hasNamespaceIssues ? 'red' : 'green'}
+          size="xs"
+          variant="outline"
+          title={needsSelection
+            ? t('cards:namespaceOverview.healthPendingTitle')
+            : hasNamespaceIssues
+            ? t('cards:namespaceOverview.healthIssuesTitle')
+            : t('cards:namespaceOverview.healthHealthyTitle')}
+        >
+          {needsSelection
+            ? t('cards:namespaceOverview.healthPending')
+            : hasNamespaceIssues
+            ? t('cards:namespaceOverview.healthIssues')
+            : t('cards:namespaceOverview.healthHealthy')}
+        </StatusBadge>
       </div>
 
       {/* Selectors */}
