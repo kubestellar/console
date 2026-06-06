@@ -164,6 +164,40 @@ describe('useFailoverTimeline - Multi-cluster guards (#16050)', () => {
     expect(result.current.data.events[0].details).toContain('primary-cluster, secondary-cluster')
   })
 
+  it('does not modify cluster field for non-reschedule events', () => {
+    const nonRescheduleEvent: FailoverEvent = {
+      timestamp: '2024-01-15T10:00:00Z',
+      eventType: 'cluster_not_ready',
+      cluster: 'node-1',
+      workload: 'Deployment/web-app',
+      details: 'Cluster node-1 became NotReady',
+      severity: 'critical',
+    }
+
+    const mockData: FailoverTimelineData = {
+      events: [nonRescheduleEvent],
+      activeClusters: 0,
+      totalClusters: 1,
+      lastFailover: '2024-01-15T10:00:00Z',
+      lastCheckTime: '2024-01-15T10:00:00Z',
+    }
+
+    mockUseCache.mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      isDemoFallback: false,
+      refetch,
+    })
+
+    const { result } = renderHook(() => useFailoverTimeline())
+
+    // Non-reschedule events should keep their original cluster value
+    expect(result.current.data.events[0].cluster).toBe('node-1')
+  })
+
   it('guards against undefined events array', () => {
     mockUseCache.mockReturnValue({
       data: {
