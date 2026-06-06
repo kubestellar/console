@@ -7,16 +7,29 @@
  */
 
 import { buildCorsHeaders, handlePreflight } from "./_shared"
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const PLAYLIST_ID = "PL1ALKGr_qZKc-xehA_8iUCdiKsCo6p6nD";
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
 export const MAX_RESPONSE_BYTES = 512_000; // 512 KB — playlist data is typically < 100 KB
+
+/** YouTube video IDs are exactly 11 alphanumeric + _ - characters */
+const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+
+/** Rate limiting — 30 requests per minute per IP (CWE-770, #17152) */
+const RATE_LIMIT_STORE_NAME = "youtube-playlist-rate-limit";
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 interface PlaylistVideo {
   id: string;
   title: string;
   description?: string;
   published?: string;
+}
+
+function isValidVideoId(id: string): boolean {
+  return YOUTUBE_VIDEO_ID_RE.test(id);
 }
 
 function parseAtomFeed(xml: string): PlaylistVideo[] {
@@ -34,7 +47,8 @@ function parseAtomFeed(xml: string): PlaylistVideo[] {
     const description = entry.match(/<media:description>([^<]*)<\/media:description>/)?.[1] ?? "";
     const published = entry.match(/<published>([^<]+)<\/published>/)?.[1] ?? "";
 
-    if (videoId) {
+    // Validate video ID before including in response
+    if (videoId && isValidVideoId(videoId)) {
       videos.push({
         id: videoId,
         title,
@@ -63,6 +77,32 @@ export default async (req: Request) => {
     });
   }
 
+  // Rate limit per IP to prevent amplification attacks on Invidious/YouTube
+  // endpoints — each request triggers up to 4 outbound HTTP calls (CWE-770, #17152).
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE_NAME,
+    prefix: "youtube-playlist:",
+    subject: clientIp,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rate.limited) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded", videos: [] }),
+      {
+        status: 429,
+        headers: {
+          ...headers,
+          "Retry-After": String(rate.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   try {
     // Primary: Invidious API (reliable, no auth required)
     const invidiousInstances = [
@@ -88,18 +128,23 @@ export default async (req: Request) => {
           }
           const data = JSON.parse(rawText) as { videos?: Array<{ videoId: string; title: string }> };
           if (data.videos && data.videos.length > 0) {
-            const videos: PlaylistVideo[] = data.videos.map((v) => ({
-              id: v.videoId,
-              title: v.title,
-            }));
-            return new Response(
-              JSON.stringify({
-                videos,
-                playlistId: PLAYLIST_ID,
-                playlistUrl: `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
-              }),
-              { status: 200, headers }
-            );
+            // Validate video IDs before forwarding to clients (#17152)
+            const videos: PlaylistVideo[] = data.videos
+              .filter((v) => isValidVideoId(v.videoId))
+              .map((v) => ({
+                id: v.videoId,
+                title: v.title,
+              }));
+            if (videos.length > 0) {
+              return new Response(
+                JSON.stringify({
+                  videos,
+                  playlistId: PLAYLIST_ID,
+                  playlistUrl: `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
+                }),
+                { status: 200, headers }
+              );
+            }
           }
         }
       } catch {

@@ -10,11 +10,12 @@
  */
 
 import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const BONUS_REPO = "kubestellar/console";
 const BONUS_LABEL = "bonus-points";
 const BONUS_AUTHORIZED_USER = "clubanderson";
-const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+\+(\d+)\s*(.*)/i;
+const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+(\d+)\s*(.*)/i;
 
 /** GitHub username validation — alphanumeric, hyphens allowed, 1-39 chars (#14500) */
 const GITHUB_LOGIN_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})?$/;
@@ -26,6 +27,11 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 const GITHUB_API_TIMEOUT_MS = 10_000;
 /** Maximum response body size (512 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
+
+/** Rate limiting — 30 requests per minute per IP (CWE-770, #17152) */
+const RATE_LIMIT_STORE_NAME = "bonus-points-rate-limit";
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 interface BonusEntry {
   issue_number: number;
@@ -119,6 +125,33 @@ export default async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return handlePreflight(req, { methods: "GET, OPTIONS" });
+  }
+
+  // Rate limit per IP to prevent GitHub API quota exhaustion (CWE-770, #17152).
+  // Module-level cache does not persist across Netlify cold starts, so every
+  // cache-miss triggers a live GitHub API call.
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE_NAME,
+    prefix: "bonus-points:",
+    subject: clientIp,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rate.limited) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded" }),
+      {
+        status: 429,
+        headers: {
+          ...headers,
+          "Retry-After": String(rate.retryAfterSeconds),
+        },
+      }
+    );
   }
 
   const url = new URL(req.url);
