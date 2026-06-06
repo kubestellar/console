@@ -3,6 +3,7 @@ package agent
 import (
 	"net"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -191,7 +192,7 @@ func TestValidateBaseURL_DNSFailureFallsClosed(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected DNS failure to be rejected (fail-closed), got nil")
 	}
-	if !contains(err.Error(), "DNS lookup failed") {
+	if !strings.Contains(err.Error(), "DNS lookup failed") {
 		t.Errorf("expected DNS failure error, got: %v", err)
 	}
 }
@@ -215,18 +216,4 @@ func TestAllowLocalProviders(t *testing.T) {
 			t.Error("should be true when env var is 'true'")
 		}
 	})
-}
-
-// contains is a test helper checking substring presence.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstr(s, substr))
-}
-
-func containsSubstr(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
