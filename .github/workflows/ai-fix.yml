@@ -12,27 +12,14 @@ on:
   pull_request_target:
     types: [opened]
 
-permissions: {}
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   ai-fix:
-    if: github.event_name != 'pull_request_target'
-    permissions:
-      issues: write
-    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
-    with:
-      issue_number: ${{ github.event.inputs.issue_number || '' }}
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
-
-  update-issue-on-pr:
-    if: >-
-      github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    permissions:
-      issues: write
-      pull-requests: read
-    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
+    uses: kubestellar/infra/.github/workflows/reusable-ai-fix.yml@main
     with:
       issue_number: ${{ github.event.inputs.issue_number || '' }}
     secrets:
