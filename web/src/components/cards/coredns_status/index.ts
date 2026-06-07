@@ -1,1 +1,0 @@
-export { CoreDNSStatus } from './CoreDNSStatus'

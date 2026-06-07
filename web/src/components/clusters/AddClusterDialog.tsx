@@ -49,6 +49,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     return () => clearTimeout(closeTimerRef.current)
   }, [])
 
+ 
+
   // Fetch cloud CLI status from the agent
   useEffect(() => {
     if (!open) return
@@ -61,6 +63,21 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   // Derived loading state — true while any async operation is in progress
   const isLoading = importState === 'previewing' || importState === 'importing' ||
     connectState === 'testing' || connectState === 'adding'
+
+
+    // add escape for dialog 
+
+    useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !isLoading) {
+      onClose()
+    }
+  }
+  if (open) {
+    document.addEventListener('keydown', handleKeyDown)
+  }
+  return () => document.removeEventListener('keydown', handleKeyDown)
+}, [open, isLoading, onClose])
 
   const resetConnectState = () => {
     setConnectStep(1)
