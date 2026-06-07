@@ -61,17 +61,18 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XXL",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #16145: Closing in favor of #16143 which covers the same scope and is further along in CI.",
-      "- PR #16141: ✅ **Security Review — APPROVED**",
-      "Simple CI addition: adds coverage threshold check using `go tool cover`. No secrets exposure, no elevated permissions, no external dependencies. Clean.",
-      "- PR #16105: Closing duplicate — #16104 is canonical (has fuller summary). Both fix #16100."
+      "- PR #17105: Closing as duplicate — superseded by #17104 which was already merged.",
+      "- PR #17058: Closing as duplicate — #17057 fixed #17056 and was merged first (all CI green).",
+      "- PR #17020: Closing in favor of #17019 which is in better shape (mergeable, no conflicts). Both address the same CWE-306 issue #17016.",
+      "- PR #17011: Closing — superseded by #17013 which fixes all issues addressed here (#16971, #17003, #17004, #16984, #16974) in a consolidated PR.",
+      "- PR #17006: Closing — superseded by #17013 which includes the #16903 fix (agent token memory-only) in a consolidated security PR."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-05-31"
+    "last_report_date": "2026-06-07"
   },
   "cncf_insights": {
     "last_scan_date": "2026-06-03",
