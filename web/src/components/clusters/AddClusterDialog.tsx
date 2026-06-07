@@ -8,8 +8,6 @@ import { isAgentConnected } from '../../hooks/useLocalAgent'
 import { CommandLineTab } from './add-cluster/CommandLineTab'
 import { ImportTab } from './add-cluster/ImportTab'
 import { ConnectTab } from './add-cluster/ConnectTab'
-import { ConnectTabProvider } from './add-cluster/ConnectTabContext'
-import { useConnectTabState } from './add-cluster/useConnectTabState'
 import type { TabId, ImportState, ConnectStep, ConnectState, PreviewContext, CloudProvider, CloudCLIInfo } from './add-cluster/types'
 
 interface AddClusterDialogProps {
@@ -51,6 +49,8 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     return () => clearTimeout(closeTimerRef.current)
   }, [])
 
+ 
+
   // Fetch cloud CLI status from the agent
   useEffect(() => {
     if (!open) return
@@ -63,6 +63,21 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   // Derived loading state — true while any async operation is in progress
   const isLoading = importState === 'previewing' || importState === 'importing' ||
     connectState === 'testing' || connectState === 'adding'
+
+
+    // add escape for dialog 
+
+    useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !isLoading) {
+      onClose()
+    }
+  }
+  if (open) {
+    document.addEventListener('keydown', handleKeyDown)
+  }
+  return () => document.removeEventListener('keydown', handleKeyDown)
+}, [open, isLoading, onClose])
 
   const resetConnectState = () => {
     setConnectStep(1)
@@ -231,42 +246,6 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
     setConnectStep(step)
   }
 
-  const connectTabState = useConnectTabState({
-    connectStep,
-    setConnectStep,
-    connectState,
-    serverUrl,
-    setServerUrl,
-    authType,
-    setAuthType,
-    token,
-    setToken,
-    certData,
-    setCertData,
-    keyData,
-    setKeyData,
-    caData,
-    setCaData,
-    skipTls,
-    setSkipTls,
-    contextName,
-    setContextName,
-    clusterName,
-    setClusterName,
-    namespace,
-    setNamespace,
-    testResult,
-    resetTestResult: () => setTestResult(null),
-    connectError,
-    showAdvanced,
-    setShowAdvanced,
-    selectedCloudProvider,
-    setSelectedCloudProvider,
-    goToConnectStep,
-    handleTestConnection,
-    handleAddCluster,
-  })
-
   // Clear stale close timers when the dialog is closed (#7593)
   // Also reset per-tab form state on close so the next open starts fresh.
   // (During a single open session, state is preserved across tab switches — see #8913.)
@@ -387,9 +366,41 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           )}
 
           {activeTab === 'connect' && (
-            <ConnectTabProvider state={connectTabState}>
-              <ConnectTab />
-            </ConnectTabProvider>
+            <ConnectTab
+              connectStep={connectStep}
+              setConnectStep={setConnectStep}
+              connectState={connectState}
+              serverUrl={serverUrl}
+              setServerUrl={setServerUrl}
+              authType={authType}
+              setAuthType={setAuthType}
+              token={token}
+              setToken={setToken}
+              certData={certData}
+              setCertData={setCertData}
+              keyData={keyData}
+              setKeyData={setKeyData}
+              caData={caData}
+              setCaData={setCaData}
+              skipTls={skipTls}
+              setSkipTls={setSkipTls}
+              contextName={contextName}
+              setContextName={setContextName}
+              clusterName={clusterName}
+              setClusterName={setClusterName}
+              namespace={namespace}
+              setNamespace={setNamespace}
+              testResult={testResult}
+              resetTestResult={() => setTestResult(null)}
+              connectError={connectError}
+              showAdvanced={showAdvanced}
+              setShowAdvanced={setShowAdvanced}
+              selectedCloudProvider={selectedCloudProvider}
+              setSelectedCloudProvider={setSelectedCloudProvider}
+              goToConnectStep={goToConnectStep}
+              handleTestConnection={handleTestConnection}
+              handleAddCluster={handleAddCluster}
+            />
           )}
         </div>
       </div>
