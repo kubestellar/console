@@ -40,12 +40,16 @@ describe('AddClusterDialog', () => {
     const { container } = render(<AddClusterDialog open={false} onClose={() => {}} />)
     expect(container).toBeTruthy()
   })
- it('closes dialog when Escape key is pressed (#17149)', () => {
-    const onClose = vi.fn()
-    render(<AddClusterDialog open={true} onClose={onClose} />)
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
+
+  it('closes dialog when Escape key is pressed (#17149)', () => {
+  const onClose = vi.fn()
+  render(<AddClusterDialog open={true} onClose={onClose} />)
+
+  const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+  document.dispatchEvent(event)
+
+  expect(onClose).toHaveBeenCalledTimes(1)
+})
 
   // Regression test for #8913 — switching tabs must not wipe the form data
   // entered in another tab. Previously, the tab onClick called resetConnectState()
