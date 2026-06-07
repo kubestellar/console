@@ -21,8 +21,9 @@ func TestPromptString_StripsPromptInjectionMarkers(t *testing.T) {
 	if strings.Contains(got, "```") {
 		t.Fatalf("expected triple-backtick code fence to be neutralized, got %q", got)
 	}
-	if !strings.Contains(got, "'''") {
-		t.Fatalf("expected triple-backtick to be replaced with single quotes, got %q", got)
+	// After replacer converts ``` → ''', html.EscapeString turns ' into &#39;
+	if !strings.Contains(got, "&#39;&#39;&#39;") {
+		t.Fatalf("expected triple-backtick to be replaced with escaped single quotes, got %q", got)
 	}
 	if !strings.Contains(got, "SYSTEM-") {
 		t.Fatalf("expected sanitized output to preserve readable role text, got %q", got)
