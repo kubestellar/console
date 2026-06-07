@@ -18,6 +18,12 @@ func TestPromptString_StripsPromptInjectionMarkers(t *testing.T) {
 	if strings.Contains(got, "\n") || strings.Contains(got, "\x00") {
 		t.Fatalf("expected control characters to be removed, got %q", got)
 	}
+	if strings.Contains(got, "```") {
+		t.Fatalf("expected triple-backtick code fence to be neutralized, got %q", got)
+	}
+	if !strings.Contains(got, "'''") {
+		t.Fatalf("expected triple-backtick to be replaced with single quotes, got %q", got)
+	}
 	if !strings.Contains(got, "SYSTEM-") {
 		t.Fatalf("expected sanitized output to preserve readable role text, got %q", got)
 	}
