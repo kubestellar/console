@@ -219,7 +219,7 @@ jobs:
 
       - name: Lint frontend
         working-directory: web
-        run: npm run lint || true
+        run: npm run lint
 
   release:
     needs: [determine_version, test]
