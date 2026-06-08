@@ -1,15 +1,3 @@
-/**
- * Netlify Edge Function: SEO Meta Tag Injection + Landing Pages
- *
- * Two responsibilities:
- * 1. Injects per-route <title>, <meta description>, Open Graph tags, and JSON-LD
- *    structured data into the HTML response for all visitors.
- * 2. Serves static landing pages (rich HTML content) to search engine crawlers
- *    instead of the empty SPA shell. Human visitors get the normal React app.
- *
- * This only runs on Netlify (not on localhost or cluster deployments).
- */
-
 import type { Context } from "https://edge.netlify.com";
 
 const SITE_URL = "https://console.kubestellar.io";
@@ -537,8 +525,20 @@ function buildJsonLd(route: string, meta: RouteMeta): string {
 }
 
 /** Build the meta tags HTML to inject into <head> */
+
+/** Escape a string for safe injection into an HTML attribute value (CWE-79, #17154). */
+function escHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 function buildMetaTags(route: string, meta: RouteMeta): string {
-  const canonicalUrl = `${SITE_URL}${route === "/" ? "" : route}`;
+  // Only allowlisted ROUTE_META paths are used here; caller must pass a safe route.
+  const rawCanonicalUrl = `${SITE_URL}${route === "/" ? "" : route}`;
+  const canonicalUrl = escHtmlAttr(rawCanonicalUrl);
 
   return [
     // Basic SEO
@@ -633,8 +633,11 @@ export default async (request: Request, context: Context) => {
   // Read HTML and inject meta tags
   let html = await response.text();
 
+  // Use only allowlisted route paths in HTML injection — unknown paths fall back to
+  // "/" to prevent injecting user-supplied pathnames into HTML attributes (CWE-79, #17154).
+  const safeRoute = Object.prototype.hasOwnProperty.call(ROUTE_META, pathname) ? pathname : "/";
   // Replace the static <title> with our per-route title and meta tags
-  const metaTags = buildMetaTags(pathname, meta);
+  const metaTags = buildMetaTags(safeRoute, meta);
   html = html.replace(
     "<title>KubeStellar Console</title>",
     metaTags

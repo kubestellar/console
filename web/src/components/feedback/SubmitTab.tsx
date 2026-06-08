@@ -23,6 +23,7 @@ import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import rehypeSanitize from 'rehype-sanitize'
 import { REWARD_ACTIONS } from '../../types/rewards'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import type { CreateFeatureRequestInput } from '../../hooks/useFeatureRequests'
@@ -647,7 +648,7 @@ export function SubmitForm({
               )}
             >
               {description.trim() ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]}>
                   {description}
                 </ReactMarkdown>
               ) : (

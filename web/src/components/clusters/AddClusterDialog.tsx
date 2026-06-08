@@ -45,10 +45,12 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [selectedCloudProvider, setSelectedCloudProvider] = useState<CloudProvider>('eks')
   const [cloudCLIs, setCloudCLIs] = useState<CloudCLIInfo[]>([])
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
-    return () => clearTimeout(closeTimerRef.current)
+    return () => {
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
+    }
   }, [])
 
   // Fetch cloud CLI status from the agent
@@ -63,6 +65,18 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   // Derived loading state — true while any async operation is in progress
   const isLoading = importState === 'previewing' || importState === 'importing' ||
     connectState === 'testing' || connectState === 'adding'
+
+    useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !isLoading) {
+      onClose()
+    }
+  }
+  if (open) {
+    document.addEventListener('keydown', handleKeyDown)
+  }
+  return () => document.removeEventListener('keydown', handleKeyDown)
+}, [open, isLoading, onClose])
 
   const resetConnectState = () => {
     setConnectStep(1)
@@ -130,7 +144,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       const count = data.importedCount ?? previewContexts.filter((c) => c.isNew).length
       setImportedCount(count)
       setImportState('done')
-      clearTimeout(closeTimerRef.current)
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
       closeTimerRef.current = setTimeout(() => {
         resetImportState()
         onClose()
@@ -192,7 +206,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
       }
       setConnectState('done')
       emitClusterCreated(clusterName, authType)
-      clearTimeout(closeTimerRef.current)
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
       closeTimerRef.current = setTimeout(() => {
         resetConnectState()
         onClose()
@@ -272,7 +286,7 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
   // (During a single open session, state is preserved across tab switches — see #8913.)
   useEffect(() => {
     if (!open) {
-      clearTimeout(closeTimerRef.current)
+      if (closeTimerRef.current !== undefined) clearTimeout(closeTimerRef.current)
       resetConnectState()
       resetImportState()
     }
