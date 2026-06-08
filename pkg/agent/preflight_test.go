@@ -189,20 +189,20 @@ func TestBuildKubeAPIPreflightGuidance_ContainsAddress(t *testing.T) {
 	if guidance == "" {
 		t.Fatal("expected non-empty guidance")
 	}
-	if !contains(guidance, "192.168.1.100:6443") {
+	if !containsPfx(guidance, "192.168.1.100:6443") {
 		t.Errorf("expected guidance to contain address, got %q", guidance)
 	}
 }
 
 func TestBuildKubeAPIPreflightGuidance_ContainsTroubleshootingDoc(t *testing.T) {
 	guidance := buildKubeAPIPreflightGuidance("localhost:6443")
-	if !contains(guidance, wslTroubleshootingDoc) {
+	if !containsPfx(guidance, wslTroubleshootingDoc) {
 		t.Errorf("expected guidance to reference troubleshooting doc, got %q", guidance)
 	}
 }
 
-// contains is a helper to avoid importing strings in the test file.
-func contains(s, substr string) bool {
+// containsPfx is a helper to avoid importing strings in the test file.
+func containsPfx(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsImpl(s, substr))
 }
 
