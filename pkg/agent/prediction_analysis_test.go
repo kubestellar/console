@@ -266,11 +266,6 @@ func TestMergePredictions(t *testing.T) {
 	})
 }
 
-// containsSubstring checks if s contains substr.
-func containsSubstring(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
-}
 
 func stringContains(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {
