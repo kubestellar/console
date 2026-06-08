@@ -98,11 +98,11 @@ func (f *handlerFakeProvider) ReadPendingJoins(_ context.Context, _ *rest.Config
 	return nil, nil
 }
 
-// newTestServer returns a *Server wired with a real (empty) k8s client and
+// newFederationTestServer returns a *Server wired with a real (empty) k8s client and
 // a shared agentToken so validateToken exercises the production code path.
 // The kubeconfigPath parameter allows tests to inject a real kubeconfig
 // YAML file so DeduplicatedClusters returns the test-authored contexts.
-func newTestServer(t *testing.T, kubeconfigPath, agentToken string) *Server {
+func newFederationTestServer(t *testing.T, kubeconfigPath, agentToken string) *Server {
 	t.Helper()
 	k8sClient, err := k8s.NewMultiClusterClient(kubeconfigPath)
 	if err != nil {
@@ -129,22 +129,6 @@ func newTestServer(t *testing.T, kubeconfigPath, agentToken string) *Server {
 // path, not the actual provider-read path.
 func writeTestKubeconfig(t *testing.T, path string, entries map[string]string) {
 	t.Helper()
-
-	type cluster struct {
-		Server string `yaml:"server"`
-	}
-	type namedCluster struct {
-		Name    string  `yaml:"name"`
-		Cluster cluster `yaml:"cluster"`
-	}
-	type ctxInfo struct {
-		Cluster string `yaml:"cluster"`
-		User    string `yaml:"user"`
-	}
-	type namedContext struct {
-		Name    string  `yaml:"name"`
-		Context ctxInfo `yaml:"context"`
-	}
 
 	// Build YAML manually to avoid pulling in a YAML dep just for tests.
 	var b strings.Builder
@@ -178,7 +162,7 @@ func writeTestKubeconfig(t *testing.T, path string, entries map[string]string) {
 // HTTP 401 Unauthorized, loudly signaling the missing identity with the
 // semantically correct status code.
 func TestHandler_MissingBearerToken_401(t *testing.T) {
-	s := newTestServer(t, "", testBearerToken)
+	s := newFederationTestServer(t, "", testBearerToken)
 
 	endpoints := []string{
 		"/federation/detect",
@@ -221,7 +205,7 @@ func TestHandler_EmptyRegistry_ReturnsEmpty(t *testing.T) {
 	writeTestKubeconfig(t, kcfg, map[string]string{
 		"hub-a": "https://hub-a.example",
 	})
-	s := newTestServer(t, kcfg, testBearerToken)
+	s := newFederationTestServer(t, kcfg, testBearerToken)
 
 	req := httptest.NewRequest(http.MethodGet, "/federation/detect", nil)
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
@@ -501,7 +485,7 @@ func TestHandler_MultiHubFanOut(t *testing.T) {
 		"hub-b": "https://hub-b.example",
 	})
 
-	s := newTestServer(t, kcfg, testBearerToken)
+	s := newFederationTestServer(t, kcfg, testBearerToken)
 
 	req := httptest.NewRequest(http.MethodGet, "/federation/clusters", nil)
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
@@ -542,7 +526,7 @@ func TestHandler_MultiHubFanOut(t *testing.T) {
 // process the request — the 500 bypass only fires when token auth is
 // configured and the caller failed validation.
 func TestRequireBearerToken_NoAuthConfigured(t *testing.T) {
-	s := newTestServer(t, "", "")
+	s := newFederationTestServer(t, "", "")
 
 	req := httptest.NewRequest(http.MethodGet, "/federation/detect", nil)
 	w := httptest.NewRecorder()
@@ -551,4 +535,3 @@ func TestRequireBearerToken_NoAuthConfigured(t *testing.T) {
 		t.Fatalf("with agentToken unset, requireBearerToken should return true")
 	}
 }
-
