@@ -86,8 +86,6 @@ func TestSummarizeEvent_ValidEvent(t *testing.T) {
 // TestForwardEventToStellar_BackendAcceptsEvent verifies that a 202 response
 // from the Stellar backend is handled without error.
 func TestForwardEventToStellar_BackendAcceptsEvent(t *testing.T) {
-	t.Parallel()
-
 	var received map[string]interface{}
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
@@ -131,8 +129,6 @@ func TestForwardEventToStellar_BackendAcceptsEvent(t *testing.T) {
 // TestForwardEventToStellar_BackendRejectsEvent verifies that a non-202
 // response from the Stellar backend is handled gracefully (no panic).
 func TestForwardEventToStellar_BackendRejectsEvent(t *testing.T) {
-	t.Parallel()
-
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
