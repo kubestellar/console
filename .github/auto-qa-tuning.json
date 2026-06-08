@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-06-06T04:22:55Z",
+  "last_updated": "2026-06-07T04:30:22Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -32,11 +32,11 @@
       "last_evaluated": "2026-06-06T04:22:55Z"
     },
     "sre": {
-      "merged": 163,
+      "merged": 164,
       "closed": 63,
       "acceptance_rate": 0.72,
       "status": "normal",
-      "last_evaluated": "2026-06-06T04:22:55Z"
+      "last_evaluated": "2026-06-07T04:30:22Z"
     },
     "features": {
       "merged": 15,
@@ -61,17 +61,18 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XXL",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #16145: Closing in favor of #16143 which covers the same scope and is further along in CI.",
-      "- PR #16141: ✅ **Security Review — APPROVED**",
-      "Simple CI addition: adds coverage threshold check using `go tool cover`. No secrets exposure, no elevated permissions, no external dependencies. Clean.",
-      "- PR #16105: Closing duplicate — #16104 is canonical (has fuller summary). Both fix #16100."
+      "- PR #17105: Closing as duplicate — superseded by #17104 which was already merged.",
+      "- PR #17058: Closing as duplicate — #17057 fixed #17056 and was merged first (all CI green).",
+      "- PR #17020: Closing in favor of #17019 which is in better shape (mergeable, no conflicts). Both address the same CWE-306 issue #17016.",
+      "- PR #17011: Closing — superseded by #17013 which fixes all issues addressed here (#16971, #17003, #17004, #16984, #16974) in a consolidated PR.",
+      "- PR #17006: Closing — superseded by #17013 which includes the #16903 fix (agent token memory-only) in a consolidated security PR."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-05-31"
+    "last_report_date": "2026-06-07"
   },
   "cncf_insights": {
     "last_scan_date": "2026-06-03",
@@ -97,13 +98,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-03-28",
-      "total_merged": 210,
-      "total_closed": 228,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-03-29",
       "total_merged": 219,
@@ -324,6 +318,13 @@
       "total_closed": 468,
       "categories_blocked": [],
       "categories_boosted": []
+    },
+    {
+      "date": "2026-06-07",
+      "total_merged": 775,
+      "total_closed": 468,
+      "categories_blocked": [],
+      "categories_boosted": []
     }
   ],
   "rotation_weights": {
@@ -341,8 +342,8 @@
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
-    "total_issues_7d": 40,
+    "total_issues_7d": 36,
     "repeat_pattern_count": 0,
-    "last_analyzed": "2026-06-06T04:22:56Z"
+    "last_analyzed": "2026-06-08T04:31:07Z"
   }
 }
