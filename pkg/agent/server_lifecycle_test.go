@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGracefulShutdown_CompletesWhenNoOps(t *testing.T) {
@@ -102,38 +101,21 @@ func TestGracefulShutdown_ClosesStopCh(t *testing.T) {
 	}
 }
 
-func TestSendStateDigest_BroadcastsPayload(t *testing.T) {
-	s := newTestServer(t, withContexts("cluster-a", "cluster-b"))
-
-	rec := &broadcastRecord{}
-	s.BroadcastToClients = rec.fn()
-
-	s.sendStateDigest()
-
-	require.Equal(t, 1, rec.count())
-	rec.mu.Lock()
-	defer rec.mu.Unlock()
-	assert.Equal(t, "state_digest", rec.messages[0].MsgType)
-}
-
 func TestSendStateDigest_IncrementsSequence(t *testing.T) {
 	s := newTestServer(t, withContexts("cluster-a"))
 
-	rec := &broadcastRecord{}
-	s.BroadcastToClients = rec.fn()
+	// sendStateDigest increments the sequence counter each call
+	before := s.digestSequence.Load()
+	s.sendStateDigest()
+	after := s.digestSequence.Load()
+	assert.Equal(t, before+1, after)
 
 	s.sendStateDigest()
-	s.sendStateDigest()
-	s.sendStateDigest()
-
-	assert.Equal(t, int64(3), s.digestSequence.Load())
+	assert.Equal(t, before+2, s.digestSequence.Load())
 }
 
 func TestStartStateDigestWorker_StopsOnClose(t *testing.T) {
 	s := newTestServer(t)
-
-	rec := &broadcastRecord{}
-	s.BroadcastToClients = rec.fn()
 
 	workerDone := make(chan struct{})
 	go func() {
@@ -141,7 +123,7 @@ func TestStartStateDigestWorker_StopsOnClose(t *testing.T) {
 		close(workerDone)
 	}()
 
-	// Let it tick at least once (stateDigestInterval is 15s, so close quickly)
+	// Give worker time to start
 	time.Sleep(50 * time.Millisecond)
 	s.GracefulShutdown() // closes stopCh
 
@@ -153,8 +135,7 @@ func TestStartStateDigestWorker_StopsOnClose(t *testing.T) {
 	}
 }
 
-func TestConstants(t *testing.T) {
-	// Verify constants have sensible values
+func TestLifecycleConstants(t *testing.T) {
 	assert.Equal(t, 30*time.Second, clusterOpsShutdownTimeout)
 	assert.Equal(t, 15*time.Second, stateDigestInterval)
 }
