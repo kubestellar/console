@@ -1,59 +1,33 @@
 package agent
 
 import (
-	"html"
-	"regexp"
-	"strings"
-
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
-var promptUnsafeControlCharsRe = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]`)
-var promptRoleMarkerRe = regexp.MustCompile(`(?i)\b(system|assistant|user|developer|tool)\s*:`)
-
-var promptInjectionReplacer = strings.NewReplacer(
-	"\n", " ",
-	"\r", " ",
-	"\t", " ",
-	"```", "'''",
-)
-
+// sanitizeK8sStringForPrompt delegates to the shared sanitize package.
 func sanitizeK8sStringForPrompt(input string) string {
-	if input == "" {
-		return ""
-	}
-
-	sanitized := promptInjectionReplacer.Replace(input)
-	sanitized = promptUnsafeControlCharsRe.ReplaceAllString(sanitized, "")
-	sanitized = html.EscapeString(sanitized)
-	sanitized = promptRoleMarkerRe.ReplaceAllString(sanitized, "$1-")
-	return strings.Join(strings.Fields(sanitized), " ")
+	return sanitize.PromptString(input)
 }
 
 // SanitizeK8sStringForPrompt neutralizes prompt-sensitive user-controlled input
 // before it is interpolated into downstream LLM prompts.
+//
+// Deprecated: Use sanitize.PromptString directly. This wrapper is retained
+// for backward compatibility during migration.
 func SanitizeK8sStringForPrompt(input string) string {
-	return sanitizeK8sStringForPrompt(input)
+	return sanitize.PromptString(input)
 }
 
 // SanitizePromptString keeps a generic alias for non-Kubernetes prompt fields.
+//
+// Deprecated: Use sanitize.PromptString directly.
 func SanitizePromptString(input string) string {
-	return sanitizeK8sStringForPrompt(input)
+	return sanitize.PromptString(input)
 }
 
 func sanitizeK8sStringsForPrompt(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	sanitized := make([]string, 0, len(values))
-	for _, value := range values {
-		cleaned := sanitizeK8sStringForPrompt(value)
-		if cleaned != "" {
-			sanitized = append(sanitized, cleaned)
-		}
-	}
-	return sanitized
+	return sanitize.PromptStrings(values)
 }
 
 func sanitizeClusterHealthForPrompt(health *k8s.ClusterHealth) *k8s.ClusterHealth {
@@ -62,11 +36,11 @@ func sanitizeClusterHealthForPrompt(health *k8s.ClusterHealth) *k8s.ClusterHealt
 	}
 
 	sanitized := *health
-	sanitized.Cluster = sanitizeK8sStringForPrompt(health.Cluster)
-	sanitized.ErrorType = sanitizeK8sStringForPrompt(health.ErrorType)
-	sanitized.ErrorMessage = sanitizeK8sStringForPrompt(health.ErrorMessage)
-	sanitized.APIServer = sanitizeK8sStringForPrompt(health.APIServer)
-	sanitized.Issues = sanitizeK8sStringsForPrompt(health.Issues)
+	sanitized.Cluster = sanitize.PromptString(health.Cluster)
+	sanitized.ErrorType = sanitize.PromptString(health.ErrorType)
+	sanitized.ErrorMessage = sanitize.PromptString(health.ErrorMessage)
+	sanitized.APIServer = sanitize.PromptString(health.APIServer)
+	sanitized.Issues = sanitize.PromptStrings(health.Issues)
 	return &sanitized
 }
 
@@ -78,12 +52,12 @@ func sanitizePodIssuesForPrompt(issues []k8s.PodIssue) []k8s.PodIssue {
 	sanitized := make([]k8s.PodIssue, 0, len(issues))
 	for _, issue := range issues {
 		sanitized = append(sanitized, k8s.PodIssue{
-			Name:      sanitizeK8sStringForPrompt(issue.Name),
-			Namespace: sanitizeK8sStringForPrompt(issue.Namespace),
-			Cluster:   sanitizeK8sStringForPrompt(issue.Cluster),
-			Status:    sanitizeK8sStringForPrompt(issue.Status),
-			Reason:    sanitizeK8sStringForPrompt(issue.Reason),
-			Issues:    sanitizeK8sStringsForPrompt(issue.Issues),
+			Name:      sanitize.PromptString(issue.Name),
+			Namespace: sanitize.PromptString(issue.Namespace),
+			Cluster:   sanitize.PromptString(issue.Cluster),
+			Status:    sanitize.PromptString(issue.Status),
+			Reason:    sanitize.PromptString(issue.Reason),
+			Issues:    sanitize.PromptStrings(issue.Issues),
 			Restarts:  issue.Restarts,
 		})
 	}
@@ -98,16 +72,16 @@ func sanitizeWarningEventsForPrompt(events []k8s.Event) []k8s.Event {
 	sanitized := make([]k8s.Event, 0, len(events))
 	for _, event := range events {
 		sanitized = append(sanitized, k8s.Event{
-			Type:      sanitizeK8sStringForPrompt(event.Type),
-			Reason:    sanitizeK8sStringForPrompt(event.Reason),
-			Message:   sanitizeK8sStringForPrompt(event.Message),
-			Object:    sanitizeK8sStringForPrompt(event.Object),
-			Namespace: sanitizeK8sStringForPrompt(event.Namespace),
-			Cluster:   sanitizeK8sStringForPrompt(event.Cluster),
+			Type:      sanitize.PromptString(event.Type),
+			Reason:    sanitize.PromptString(event.Reason),
+			Message:   sanitize.PromptString(event.Message),
+			Object:    sanitize.PromptString(event.Object),
+			Namespace: sanitize.PromptString(event.Namespace),
+			Cluster:   sanitize.PromptString(event.Cluster),
 			Count:     event.Count,
-			Age:       sanitizeK8sStringForPrompt(event.Age),
-			FirstSeen: sanitizeK8sStringForPrompt(event.FirstSeen),
-			LastSeen:  sanitizeK8sStringForPrompt(event.LastSeen),
+			Age:       sanitize.PromptString(event.Age),
+			FirstSeen: sanitize.PromptString(event.FirstSeen),
+			LastSeen:  sanitize.PromptString(event.LastSeen),
 		})
 	}
 	return sanitized
