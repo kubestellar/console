@@ -16,7 +16,7 @@ import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 const BONUS_REPO = "kubestellar/console";
 const BONUS_LABEL = "bonus-points";
 const BONUS_AUTHORIZED_USER = "clubanderson";
-const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+(\d+)\s*(.*)/i;
+const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+\+(\d+)\s*(.*)/i;
 
 /** GitHub username validation — alphanumeric, hyphens allowed, 1-39 chars (#14500) */
 const GITHUB_LOGIN_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})?$/;
@@ -167,7 +167,11 @@ export default async (req: Request) => {
       JSON.stringify({ error: "Rate limit exceeded" }),
       {
         status: 429,
-        headers: { ...headers, "Retry-After": String(rate.retryAfterSeconds) },
+        headers: {
+          ...headers,
+          "Retry-After": String(rate.retryAfterSeconds),
+          "Cache-Control": "no-store",
+        },
       }
     );
   }
