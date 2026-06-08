@@ -73,4 +73,7 @@ func TestSummarizeEvent_ValidEvent(t *testing.T) {
 	if got.Cluster != "prod" {
 		t.Errorf("Cluster: want %q got %q", "prod", got.Cluster)
 	}
+	if got.Message != "Back-off restarting failed container" {
+		t.Errorf("Message: want %q got %q", "Back-off restarting failed container", got.Message)
+	}
 }
