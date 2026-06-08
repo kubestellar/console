@@ -1,86 +1,85 @@
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+# GoReleaser config for kc-agent and console
+# Run: goreleaser release --clean
+# Test: goreleaser build --snapshot --clean
 
 version: 2
 
+project_name: kubestellar-console
+
 before:
   hooks:
-    # Generate web assets before building Go binaries
-    - cd web && npm run build
+    - go mod tidy
+    - bash -c "cd web && npm ci && npm run build"
 
 builds:
-  - id: console
-    binary: console
-    main: ./cmd/console
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    mod_timestamp: '{{ .CommitTimestamp }}'
-    env:
-      - CGO_ENABLED=0
-    ldflags:
-      - -s -w
-      - -X main.version={{ .Version }}
-      - -X main.commit={{ .Commit }}
-      - -X main.date={{ .CommitDate }}
-    hooks:
-      post:
-        - cmd: sh -c 'test -f "{{ .Path }}" && echo "Binary built: {{ .Path }}" || (echo "Build failed: {{ .Path }} not found" && exit 1)'
-
   - id: kc-agent
-    binary: kc-agent
     main: ./cmd/kc-agent
+    binary: kc-agent
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
       - darwin
     goarch:
       - amd64
       - arm64
-    mod_timestamp: '{{ .CommitTimestamp }}'
-    env:
-      - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X main.version={{ .Version }}
-      - -X main.commit={{ .Commit }}
-      - -X main.date={{ .CommitDate }}
+      - -X github.com/kubestellar/console/pkg/agent.Version={{.Version}}
+      - -X github.com/kubestellar/console/pkg/agent.CommitSHA={{.FullCommit}}
+      - -X github.com/kubestellar/console/pkg/agent.BuildTime={{.Date}}
+
+  - id: console
+    main: ./cmd/console
+    binary: console
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/kubestellar/console/pkg/api.Version={{.Version}}
 
 archives:
   - id: kc-agent
-    ids:
+    builds:
       - kc-agent
-    name_template: >-
-      kc-agent_{{ .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
     formats:
       - tar.gz
+    name_template: "kc-agent_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
   - id: console
-    ids:
+    builds:
       - console
-    name_template: >-
-      console_{{ .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
     formats:
       - tar.gz
+    name_template: "console_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
-      - src: web/dist/**
-        dst: web/dist
+      - src: "web/dist/*"
+        dst: "web/dist"
+      - src: "web/dist/**/*"
+        dst: "web/dist"
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
+changelog:
+  # Use local git log for changelog generation instead of the GitHub compare
+  # API. The GitHub API hits secondary rate limits when there are many commits
+  # between nightly releases (#10574, #10575).
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+# Homebrew tap - only runs if HOMEBREW_TAP_TOKEN is set
 brews:
   - name: kc-agent
     # Skip if token is not set
