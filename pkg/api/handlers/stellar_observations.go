@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
@@ -388,15 +389,21 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
+	// Parse userID into a UUID up-front, in the safe parent-handler scope. The
+	// SetBodyStreamWriter callback runs in a goroutine after the request ctx is
+	// recycled, so we cannot read c.Locals (or call middleware.GetUserID) there.
+	userUUID, parseErr := uuid.Parse(userID)
 	streamCtx, streamCancel := context.WithCancel(c.UserContext())
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
 		defer streamCancel()
 		connID := fmt.Sprintf("%s-%d", userID, time.Now().UnixNano())
 		clientCh := make(chan SSEEvent, 32)
 		isAdmin := false
-		if userStore, ok := h.store.(store.Store); ok {
-			resolvedUser, resolveErr := userStore.GetUser(streamCtx, userID)
-			isAdmin = resolveErr == nil && resolvedUser != nil && resolvedUser.Role == models.UserRoleAdmin
+		if parseErr == nil {
+			if userStore, ok := h.store.(store.Store); ok {
+				resolvedUser, resolveErr := userStore.GetUser(streamCtx, userUUID)
+				isAdmin = resolveErr == nil && resolvedUser != nil && resolvedUser.Role == models.UserRoleAdmin
+			}
 		}
 		h.registerSSEClient(connID, userID, isAdmin, clientCh)
 		defer h.unregisterSSEClient(connID)
