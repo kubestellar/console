@@ -107,3 +107,10 @@ console-marketplace-*/
 homebrew-tap-*/
 marketplace-fix*
 kubestellar-mcp
+
+# Agent-generated operational artifacts (write outside worktree, not to repo)
+cron_scan_log.md
+release-failure-diagnosis.md
+release-failure-summary.txt
+pr.md
+reviewer_log.md
