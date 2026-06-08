@@ -7,7 +7,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/kubestellar/console/pkg/agent/k8s"
+	"github.com/kubestellar/console/pkg/k8s"
 )
 
 // serverTestOption is a functional option for newTestServer.

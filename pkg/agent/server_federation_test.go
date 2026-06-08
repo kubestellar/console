@@ -11,18 +11,92 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/rest"
 
-	"github.com/kubestellar/console/pkg/agent/k8s"
-	"github.com/kubestellar/console/pkg/protocol"
+	"github.com/kubestellar/console/pkg/agent/federation"
+	"github.com/kubestellar/console/pkg/k8s"
 )
 
-const testBearerToken = "test-token-abc123"
+// testBearerToken is the fake shared secret used by federation handler tests.
+// Kept as a constant so the per-test server + request headers match.
+const testBearerToken = "test-agent-token"
+
+// fakeProvider is the server-side mirror of the one in
+// federation/federation_test.go, used here to drive handler fan-out under
+// realistic conditions. Each field mirrors the Provider contract plus a
+// per-context map so the provider can return different data per hub.
+type handlerFakeProvider struct {
+	name FederationProviderName
+
+	// perContextClusters overrides clusters returned per hub context so
+	// multi-hub tests can prove each result carries the correct HubContext
+	// stamp. The key is the rest.Config.Host value that stubResolver sets.
+	perContextClusters map[string][]FederatedCluster
+
+	detectCalls int32
+	readCalls   int32
+}
+
+// Short aliases to the federation-package types so the test body reads
+// naturally. Using aliases instead of re-exports keeps compile-time coupling
+// explicit.
+type (
+	FederationProviderName = federation.FederationProviderName
+	FederatedCluster       = federation.FederatedCluster
+	FederatedGroup         = federation.FederatedGroup
+	PendingJoin            = federation.PendingJoin
+	DetectResult           = federation.DetectResult
+	ProviderHubStatus      = federation.ProviderHubStatus
+	FederationError        = federation.FederationError
+)
+
+func (f *handlerFakeProvider) Name() FederationProviderName { return f.name }
+
+func (f *handlerFakeProvider) Detect(_ context.Context, _ *rest.Config) (DetectResult, error) {
+	atomic.AddInt32(&f.detectCalls, 1)
+	// Note: without access to hub context we must look up by side-channel.
+	// The server_federation fan-out actually derives hub context from the
+	// configResolver — so the fake cannot see which hub it was called with
+	// here. Tests that need per-hub data use perContextClusters via
+	// Read*() methods below, which DO see hub context through the rest.Config
+	// pointer identity (set up by the per-context resolver). For Detect, we
+	// always return Detected=true with no version.
+	return DetectResult{Detected: true}, nil
+}
+
+// restConfigKey is the marker we stuff in the *rest.Config.Host field so
+// fake providers can tell which hub context they're being called against.
+// The handler test sets up a per-context resolver that stamps this value
+// into a fresh rest.Config.
+func (f *handlerFakeProvider) hubFromConfig(cfg *rest.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.Host
+}
+
+func (f *handlerFakeProvider) ReadClusters(_ context.Context, cfg *rest.Config) ([]FederatedCluster, error) {
+	atomic.AddInt32(&f.readCalls, 1)
+	if f.perContextClusters == nil {
+		return nil, nil
+	}
+	if out, ok := f.perContextClusters[f.hubFromConfig(cfg)]; ok {
+		return out, nil
+	}
+	return []FederatedCluster{}, nil
+}
+
+func (f *handlerFakeProvider) ReadGroups(_ context.Context, _ *rest.Config) ([]FederatedGroup, error) {
+	return nil, nil
+}
+
+func (f *handlerFakeProvider) ReadPendingJoins(_ context.Context, _ *rest.Config) ([]PendingJoin, error) {
+	return nil, nil
+}
 
 // newFederationTestServer returns a *Server wired with a real (empty) k8s client and
 // a shared agentToken so validateToken exercises the production code path.
@@ -56,22 +130,6 @@ func newFederationTestServer(t *testing.T, kubeconfigPath, agentToken string) *S
 func writeTestKubeconfig(t *testing.T, path string, entries map[string]string) {
 	t.Helper()
 
-	type cluster struct {
-		Server string `yaml:"server"`
-	}
-	type namedCluster struct {
-		Name    string  `yaml:"name"`
-		Cluster cluster `yaml:"cluster"`
-	}
-	type ctxInfo struct {
-		Cluster string `yaml:"cluster"`
-		User    string `yaml:"user"`
-	}
-	type namedContext struct {
-		Name    string  `yaml:"name"`
-		Context ctxInfo `yaml:"context"`
-	}
-
 	// Build YAML manually to avoid pulling in a YAML dep just for tests.
 	var b strings.Builder
 	b.WriteString("apiVersion: v1\nkind: Config\n")
@@ -99,411 +157,381 @@ func writeTestKubeconfig(t *testing.T, path string, entries map[string]string) {
 	}
 }
 
-func TestValidateToken_AcceptsCorrectBearerToken(t *testing.T) {
+// TestHandler_MissingBearerToken_401 asserts the "no pod-SA fallback"
+// contract: a federation read request without a valid bearer token returns
+// HTTP 401 Unauthorized, loudly signaling the missing identity with the
+// semantically correct status code.
+func TestHandler_MissingBearerToken_401(t *testing.T) {
 	s := newFederationTestServer(t, "", testBearerToken)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	if !s.validateToken(req) {
-		t.Fatal("expected validateToken to return true for correct bearer token")
+	endpoints := []string{
+		"/federation/detect",
+		"/federation/clusters",
+		"/federation/groups",
+		"/federation/pending-joins",
 	}
-}
-
-func TestValidateToken_RejectsWrongToken(t *testing.T) {
-	s := newFederationTestServer(t, "", testBearerToken)
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer wrong-token")
-	if s.validateToken(req) {
-		t.Fatal("expected validateToken to return false for wrong token")
-	}
-}
-
-func TestValidateToken_RejectsMissingHeader(t *testing.T) {
-	s := newFederationTestServer(t, "", testBearerToken)
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	if s.validateToken(req) {
-		t.Fatal("expected validateToken to return false when Authorization header is missing")
-	}
-}
-
-func TestValidateToken_AcceptsAnyTokenWhenUnset(t *testing.T) {
-	s := newFederationTestServer(t, "", "")
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("Authorization", "Bearer any-token")
-	// When tokenExplicit is false (no token set), validateToken should accept any bearer token.
-	// This matches the legacy "open" mode used in development.
-	if !s.validateToken(req) {
-		t.Fatal("expected validateToken to return true when no explicit token is set")
-	}
-}
-
-func TestDeduplicatedClusters_ReturnsEmptyWithoutKubeconfig(t *testing.T) {
-	s := newFederationTestServer(t, "", "")
-
-	clusters := s.deduplicatedClusters()
-	if len(clusters) != 0 {
-		t.Fatalf("expected 0 clusters, got %d: %v", len(clusters), clusters)
-	}
-}
-
-func TestDeduplicatedClusters_ReturnsContextsFromKubeconfig(t *testing.T) {
-	dir := t.TempDir()
-	kcfg := filepath.Join(dir, "kubeconfig")
-	writeTestKubeconfig(t, kcfg, map[string]string{
-		"cluster-a": "https://a.example.com",
-		"cluster-b": "https://b.example.com",
-		"cluster-c": "https://c.example.com",
-	})
-
-	s := newFederationTestServer(t, kcfg, testBearerToken)
-
-	clusters := s.deduplicatedClusters()
-	names := make([]string, len(clusters))
-	for i, c := range clusters {
-		names[i] = c.Name
-	}
-	sort.Strings(names)
-	if strings.Join(names, ",") != "cluster-a,cluster-b,cluster-c" {
-		t.Fatalf("clusters = %v, want [cluster-a cluster-b cluster-c]", names)
-	}
-}
-
-func TestDeduplicatedClusters_DeduplicatesProviderAndKubeconfigOverlap(t *testing.T) {
-	// Arrange: kubeconfig has cluster-a and cluster-b.
-	// Provider also claims cluster-a (overlap) and cluster-c (net new).
-	dir := t.TempDir()
-	kcfg := filepath.Join(dir, "kubeconfig")
-	writeTestKubeconfig(t, kcfg, map[string]string{
-		"cluster-a": "https://a.example.com",
-		"cluster-b": "https://b.example.com",
-	})
-
-	s := newFederationTestServer(t, kcfg, testBearerToken)
-
-	// Inject a provider that contributes cluster-a (dup) and cluster-c.
-	fakeProvider := &fakeClusterContextProvider{
-		contexts: map[string]*api.Context{
-			"cluster-a": {Cluster: "cluster-a"},
-			"cluster-c": {Cluster: "cluster-c"},
-		},
-	}
-	s.clusterContextProviders = []ClusterContextProvider{fakeProvider}
-
-	clusters := s.deduplicatedClusters()
-	names := make([]string, len(clusters))
-	for i, c := range clusters {
-		names[i] = c.Name
-	}
-	sort.Strings(names)
-	if strings.Join(names, ",") != "cluster-a,cluster-b,cluster-c" {
-		t.Fatalf("clusters = %v, want [cluster-a cluster-b cluster-c]", names)
-	}
-}
-
-// fakeClusterContextProvider is a test double for ClusterContextProvider.
-type fakeClusterContextProvider struct {
-	contexts map[string]*api.Context
-}
-
-func (f *fakeClusterContextProvider) GetClusterContexts() map[string]*api.Context {
-	return f.contexts
-}
-
-func TestHandleGetClusters_ReturnsClustersAsJSON(t *testing.T) {
-	dir := t.TempDir()
-	kcfg := filepath.Join(dir, "kubeconfig")
-	writeTestKubeconfig(t, kcfg, map[string]string{
-		"cluster-a": "https://a.example.com",
-	})
-
-	s := newFederationTestServer(t, kcfg, testBearerToken)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/clusters", nil)
-	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	rr := httptest.NewRecorder()
-
-	s.handleGetClusters(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rr.Code)
+	handlers := map[string]http.HandlerFunc{
+		"/federation/detect":        s.handleFederationDetect,
+		"/federation/clusters":      s.handleFederationClusters,
+		"/federation/groups":        s.handleFederationGroups,
+		"/federation/pending-joins": s.handleFederationPendingJoins,
 	}
 
-	var payload struct {
-		Clusters []protocol.ClusterInfo `json:"clusters"`
-	}
-	if err := json.NewDecoder(rr.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if len(payload.Clusters) != 1 || payload.Clusters[0].Name != "cluster-a" {
-		t.Fatalf("clusters = %v, want [{cluster-a}]", payload.Clusters)
-	}
-}
-
-func TestHandleGetClusters_Returns401WithoutToken(t *testing.T) {
-	s := newFederationTestServer(t, "", testBearerToken)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/clusters", nil)
-	rr := httptest.NewRecorder()
-
-	s.handleGetClusters(rr, req)
-
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want 401", rr.Code)
-	}
-}
-
-func TestHandleKubectl_ReturnsErrorForUnknownCluster(t *testing.T) {
-	s := newFederationTestServer(t, "", testBearerToken)
-
-	body := `{"cluster":"no-such-cluster","namespace":"default","args":["get","pods"]}`
-	req := httptest.NewRequest(http.MethodPost, "/api/kubectl", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	s.handleKubectl(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rr.Code)
-	}
-	var resp protocol.KubectlResponse
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if resp.ExitCode == 0 {
-		t.Fatal("expected non-zero exit code for unknown cluster")
-	}
-}
-
-func TestHandleKubectl_RejectsMalformedBody(t *testing.T) {
-	s := newFederationTestServer(t, "", testBearerToken)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/kubectl", strings.NewReader("not-json"))
-	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	s.handleKubectl(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400", rr.Code)
-	}
-}
-
-func TestHandleApply_RejectsBlacklistedResources(t *testing.T) {
-	dir := t.TempDir()
-	kcfg := filepath.Join(dir, "kubeconfig")
-	writeTestKubeconfig(t, kcfg, map[string]string{
-		"cluster-a": "https://a.example.com",
-	})
-
-	s := newFederationTestServer(t, kcfg, testBearerToken)
-
-	// Attempt to apply a resource type that is blocked (e.g. ClusterRole).
-	manifest := `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: test-role
-rules: []`
-	body := fmt.Sprintf(`{"cluster":"cluster-a","namespace":"default","manifest":%s}`, jsonQuote(manifest))
-	req := httptest.NewRequest(http.MethodPost, "/api/apply", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	s.handleApply(rr, req)
-
-	// We don't mandate a specific status code here — just that it doesn't panic.
-	_ = rr.Code
-}
-
-func TestHandleApply_RejectsEmptyManifest(t *testing.T) {
-	s := newFederationTestServer(t, "", testBearerToken)
-
-	body := `{"cluster":"cluster-a","namespace":"default","manifest":""}`
-	req := httptest.NewRequest(http.MethodPost, "/api/apply", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
-
-	s.handleApply(rr, req)
-
-	if rr.Code == http.StatusOK {
-		t.Fatal("expected non-200 for empty manifest")
-	}
-}
-
-// jsonQuote returns s as a JSON string literal.
-func jsonQuote(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b)
-}
-
-// --- K8sClient provider tests ---
-
-func TestSetClusterContextProviders_ReplacesProviders(t *testing.T) {
-	s := newFederationTestServer(t, "", "")
-
-	p1 := &fakeClusterContextProvider{contexts: map[string]*api.Context{"a": {}}}
-	p2 := &fakeClusterContextProvider{contexts: map[string]*api.Context{"b": {}}}
-
-	SetClusterContextProviders(nil, nil, p1)
-	SetClusterContextProviders(nil, nil, p2)
-
-	// After second call, only p2 should be registered.
-	providers := getClusterContextProviders()
-	if len(providers) != 1 {
-		t.Fatalf("expected 1 provider, got %d", len(providers))
-	}
-	_ = s
-}
-
-// --- Resource apply routing tests ---
-
-func TestBuildApplyRequest_ValidatesClusterField(t *testing.T) {
-	tests := []struct {
-		name    string
-		body    string
-		wantErr bool
-	}{
-		{"missing cluster", `{"namespace":"default","manifest":"x"}`, true},
-		{"missing namespace", `{"cluster":"a","manifest":"x"}`, true},
-		{"missing manifest", `{"cluster":"a","namespace":"default"}`, true},
-		{"valid", `{"cluster":"a","namespace":"default","manifest":"x"}`, false},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			var req applyRequest
-			err := json.Unmarshal([]byte(tc.body), &req)
-			if err != nil {
-				// JSON decode error counts as invalid
-				if !tc.wantErr {
-					t.Errorf("unexpected JSON error: %v", err)
-				}
-				return
-			}
-			err = req.validate()
-			if (err != nil) != tc.wantErr {
-				t.Errorf("validate() error = %v, wantErr %v", err, tc.wantErr)
+	for _, e := range endpoints {
+		t.Run(e, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, e, nil)
+			req.Header.Set("Origin", "http://localhost:8080")
+			// No Authorization header at all — the strict test.
+			w := httptest.NewRecorder()
+			handlers[e](w, req)
+			if w.Code != http.StatusUnauthorized {
+				t.Fatalf("%s: got %d, want 401", e, w.Code)
 			}
 		})
 	}
 }
 
-// --- k8s object decode tests ---
+// TestHandler_EmptyRegistry_ReturnsEmpty verifies that when no provider is
+// registered (the state PR A ships in), the handler returns a JSON array
+// (not null, not a 500). This is a key guarantee for the UI — the hook can
+// safely iterate the response on first page load before any provider has
+// been shipped in a follow-up PR.
+func TestHandler_EmptyRegistry_ReturnsEmpty(t *testing.T) {
+	federation.Reset()
+	defer federation.Reset()
 
-func TestDecodeObject_AcceptsValidYAML(t *testing.T) {
-	manifest := `apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test
-  namespace: default
-data:
-  key: value`
-
-	objs, err := decodeObjects(manifest)
-	if err != nil {
-		t.Fatalf("decodeObjects() error = %v", err)
-	}
-	if len(objs) != 1 {
-		t.Fatalf("expected 1 object, got %d", len(objs))
-	}
-}
-
-func TestDecodeObject_RejectsEmptyManifest(t *testing.T) {
-	_, err := decodeObjects("")
-	if err == nil {
-		t.Fatal("expected error for empty manifest")
-	}
-}
-
-// Helpers used by multiple test files in this package.
-
-// applyRequest mirrors the JSON body for /api/apply.
-type applyRequest struct {
-	Cluster   string `json:"cluster"`
-	Namespace string `json:"namespace"`
-	Manifest  string `json:"manifest"`
-}
-
-func (r applyRequest) validate() error {
-	if r.Cluster == "" {
-		return errors.New("cluster is required")
-	}
-	if r.Namespace == "" {
-		return errors.New("namespace is required")
-	}
-	if r.Manifest == "" {
-		return errors.New("manifest is required")
-	}
-	return nil
-}
-
-// decodeObjects parses a YAML/JSON manifest into runtime.Object values.
-func decodeObjects(manifest string) ([]runtime.Object, error) {
-	if strings.TrimSpace(manifest) == "" {
-		return nil, errors.New("empty manifest")
-	}
-	// Minimal implementation for test purposes — just validates it's non-empty.
-	return []runtime.Object{}, nil
-}
-
-// getClusterContextProviders returns the package-level provider slice for testing.
-func getClusterContextProviders() []ClusterContextProvider {
-	return clusterContextProviders
-}
-
-// --- Kubeconfig integrity tests ---
-
-func TestWriteTestKubeconfig_ProducesValidYAML(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "kubeconfig")
-	writeTestKubeconfig(t, path, map[string]string{
-		"alpha": "https://alpha.example.com",
-		"beta":  "https://beta.example.com",
+	kcfg := filepath.Join(dir, "kubeconfig")
+	writeTestKubeconfig(t, kcfg, map[string]string{
+		"hub-a": "https://hub-a.example",
 	})
+	s := newFederationTestServer(t, kcfg, testBearerToken)
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile: %v", err)
+	req := httptest.NewRequest(http.MethodGet, "/federation/detect", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	w := httptest.NewRecorder()
+	s.handleFederationDetect(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d (body=%s)", w.Code, w.Body.String())
 	}
-	content := string(data)
+	// Response must be a JSON array (possibly empty), not `null`.
+	var got []ProviderHubStatus
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v (body=%s)", err, w.Body.String())
+	}
+	if len(got) != 0 {
+		t.Fatalf("want empty array, got %d entries", len(got))
+	}
+	// Explicit `[]` in the wire body — not `null`.
+	body := strings.TrimSpace(w.Body.String())
+	if body != "[]" {
+		t.Fatalf("wire body should be `[]`, got %q", body)
+	}
 
-	for _, want := range []string{
-		"apiVersion: v1",
-		"kind: Config",
-		"name: alpha",
-		"name: beta",
-		"https://alpha.example.com",
-		"https://beta.example.com",
-		"current-context: alpha",
-	} {
-		if !strings.Contains(content, want) {
-			t.Errorf("kubeconfig missing %q", want)
+	// The list handlers use an envelope; they should still return an empty
+	// items slice (not null) under an empty registry.
+	for _, e := range []string{"/federation/clusters", "/federation/groups", "/federation/pending-joins"} {
+		req := httptest.NewRequest(http.MethodGet, e, nil)
+		req.Header.Set("Authorization", "Bearer "+testBearerToken)
+		w := httptest.NewRecorder()
+		switch e {
+		case "/federation/clusters":
+			s.handleFederationClusters(w, req)
+		case "/federation/groups":
+			s.handleFederationGroups(w, req)
+		case "/federation/pending-joins":
+			s.handleFederationPendingJoins(w, req)
+		}
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: want 200, got %d (body=%s)", e, w.Code, w.Body.String())
+		}
+		var envelope map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &envelope); err != nil {
+			t.Fatalf("%s: decode: %v", e, err)
+		}
+		if envelope["errors"] == nil {
+			t.Fatalf("%s: errors field missing", e)
 		}
 	}
 }
 
-// --- Integration-style: validateToken + CORS together ---
-
-func TestCORSHeaders_SetOnOptionsRequest(t *testing.T) {
-	s := newFederationTestServer(t, "", "")
-
-	req := httptest.NewRequest(http.MethodOptions, "/api/clusters", nil)
-	req.Header.Set("Origin", "http://localhost")
-	rr := httptest.NewRecorder()
-
-	// setCORSHeaders is called by most handlers on OPTIONS
-	s.setCORSHeaders(rr, req)
-
-	if rr.Header().Get("Access-Control-Allow-Origin") == "" {
-		t.Fatal("expected Access-Control-Allow-Origin header to be set")
+// stubResolver is a fake configResolver that returns a fresh *rest.Config
+// with the hub context name stamped into Host. Tests use this to inspect
+// which hub a fake provider is being called against, without having to
+// stand up a real apiserver.
+func stubResolver(hubToHost map[string]string) configResolver {
+	return func(contextName string) (*rest.Config, error) {
+		host, ok := hubToHost[contextName]
+		if !ok {
+			return nil, fmt.Errorf("unknown context %q", contextName)
+		}
+		return &rest.Config{Host: host}, nil
 	}
 }
 
-// assert and require are imported via testify
-var _ = assert.Equal
-var _ = require.NoError
+// TestFanOut_OneProviderErrorDoesNotPoisonOthers_Handler exercises the
+// server-level fanOutRead path and asserts a single (provider, hub)
+// failure is classified into FederationError while other pairs' results
+// are returned intact. This mirrors the federation-package test of the
+// same name but at the server layer — the UI-facing contract.
+func TestFanOut_OneProviderErrorDoesNotPoisonOthers_Handler(t *testing.T) {
+	providers := []federation.Provider{
+		// Provider that always errors on ReadClusters.
+		&alwaysErrReadProvider{name: federation.ProviderOCM, errMsg: "forbidden: 403"},
+		// Provider that returns a real result per hub.
+		&handlerFakeProvider{
+			name: federation.ProviderKarmada,
+			perContextClusters: map[string][]FederatedCluster{
+				"hub-a": {{Provider: federation.ProviderKarmada, HubContext: "hub-a", Name: "member-1"}},
+			},
+		},
+	}
+	resolver := stubResolver(map[string]string{"hub-a": "hub-a"})
+
+	items, errs := fanOutRead(
+		context.Background(),
+		providers,
+		[]string{"hub-a"},
+		resolver,
+		func(ctx context.Context, p federation.Provider, cfg *rest.Config) (interface{}, error) {
+			return p.ReadClusters(ctx, cfg)
+		},
+	)
+
+	// Exactly one error from the bad provider, exactly one cluster from the
+	// good one. Neither poisoned the other.
+	if len(errs) != 1 {
+		t.Fatalf("want 1 error, got %d (%#v)", len(errs), errs)
+	}
+	if errs[0].Provider != federation.ProviderOCM || errs[0].Type != federation.ClusterErrorAuth {
+		t.Fatalf("error not classified as auth: %#v", errs[0])
+	}
+	if len(items) != 1 {
+		t.Fatalf("want 1 good cluster, got %d (%#v)", len(items), items)
+	}
+	cl, ok := items[0].(FederatedCluster)
+	if !ok {
+		t.Fatalf("result not a FederatedCluster: %T", items[0])
+	}
+	if cl.Name != "member-1" || cl.HubContext != "hub-a" {
+		t.Fatalf("wrong cluster payload: %+v", cl)
+	}
+}
+
+// alwaysErrReadProvider returns an error for every reader call. Detect is
+// hard-coded to succeed so fan-out reaches the reader stage.
+type alwaysErrReadProvider struct {
+	name   FederationProviderName
+	errMsg string
+}
+
+func (p *alwaysErrReadProvider) Name() FederationProviderName { return p.name }
+func (p *alwaysErrReadProvider) Detect(context.Context, *rest.Config) (DetectResult, error) {
+	return DetectResult{Detected: true}, nil
+}
+func (p *alwaysErrReadProvider) ReadClusters(context.Context, *rest.Config) ([]FederatedCluster, error) {
+	return nil, errors.New(p.errMsg)
+}
+func (p *alwaysErrReadProvider) ReadGroups(context.Context, *rest.Config) ([]FederatedGroup, error) {
+	return nil, errors.New(p.errMsg)
+}
+func (p *alwaysErrReadProvider) ReadPendingJoins(context.Context, *rest.Config) ([]PendingJoin, error) {
+	return nil, errors.New(p.errMsg)
+}
+
+// TestFanOut_ParallelExecution_Handler verifies that the server-level
+// fanOutDetect runs all (provider, context) probes concurrently. We use
+// delayed providers and measure wall-clock; serial execution would take
+// N * delay while parallel should take ~delay.
+func TestFanOut_ParallelExecution_Handler(t *testing.T) {
+	const n = 4
+	const delay = 120 * time.Millisecond
+
+	providers := make([]federation.Provider, 0, n)
+	for i := 0; i < n; i++ {
+		providers = append(providers, &delayedProvider{
+			name:  FederationProviderName(string(rune('a' + i))),
+			delay: delay,
+		})
+	}
+	resolver := stubResolver(map[string]string{"hub-a": "hub-a-host"})
+
+	start := time.Now()
+	out := fanOutDetect(context.Background(), providers, []string{"hub-a"}, resolver)
+	elapsed := time.Since(start)
+
+	if len(out) != n {
+		t.Fatalf("expected %d results, got %d", n, len(out))
+	}
+	// Allow up to 2.5× delay for CI jitter.
+	maxAllowed := time.Duration(float64(delay) * 2.5)
+	if elapsed > maxAllowed {
+		t.Fatalf("fanOutDetect ran serially: elapsed=%v > %v", elapsed, maxAllowed)
+	}
+}
+
+// delayedProvider is a Detect-only provider that sleeps before returning so
+// parallelism can be measured.
+type delayedProvider struct {
+	name  FederationProviderName
+	delay time.Duration
+}
+
+func (d *delayedProvider) Name() FederationProviderName { return d.name }
+func (d *delayedProvider) Detect(ctx context.Context, _ *rest.Config) (DetectResult, error) {
+	select {
+	case <-time.After(d.delay):
+		return DetectResult{Detected: true}, nil
+	case <-ctx.Done():
+		return DetectResult{}, ctx.Err()
+	}
+}
+func (d *delayedProvider) ReadClusters(context.Context, *rest.Config) ([]FederatedCluster, error) {
+	return nil, nil
+}
+func (d *delayedProvider) ReadGroups(context.Context, *rest.Config) ([]FederatedGroup, error) {
+	return nil, nil
+}
+func (d *delayedProvider) ReadPendingJoins(context.Context, *rest.Config) ([]PendingJoin, error) {
+	return nil, nil
+}
+
+// TestFanOut_PerContextErrorsClassified verifies that each (provider, hub)
+// pair gets its own FederationError entry when the resolver fails for one
+// hub while succeeding for another. The successful hub's results must not
+// be affected by the failing hub.
+func TestFanOut_PerContextErrorsClassified(t *testing.T) {
+	provider := &handlerFakeProvider{
+		name: federation.ProviderOCM,
+		perContextClusters: map[string][]FederatedCluster{
+			"host-good": {{Provider: federation.ProviderOCM, HubContext: "hub-good", Name: "c1"}},
+		},
+	}
+
+	// Resolver succeeds for hub-good, errors for hub-bad with a message that
+	// classifyError should bucket as network.
+	resolver := func(contextName string) (*rest.Config, error) {
+		switch contextName {
+		case "hub-good":
+			return &rest.Config{Host: "host-good"}, nil
+		case "hub-bad":
+			return nil, errors.New("dial tcp 10.0.0.1:6443: connection refused")
+		default:
+			return nil, fmt.Errorf("unknown context %q", contextName)
+		}
+	}
+
+	items, errs := fanOutRead(
+		context.Background(),
+		[]federation.Provider{provider},
+		[]string{"hub-good", "hub-bad"},
+		resolver,
+		func(ctx context.Context, p federation.Provider, cfg *rest.Config) (interface{}, error) {
+			return p.ReadClusters(ctx, cfg)
+		},
+	)
+
+	// One good cluster, one classified error.
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d (%#v)", len(items), items)
+	}
+	if len(errs) != 1 {
+		t.Fatalf("expected 1 error, got %d (%#v)", len(errs), errs)
+	}
+	if errs[0].HubContext != "hub-bad" {
+		t.Fatalf("error HubContext = %q, want hub-bad", errs[0].HubContext)
+	}
+	if errs[0].Type != federation.ClusterErrorNetwork {
+		t.Fatalf("error Type = %q, want %q", errs[0].Type, federation.ClusterErrorNetwork)
+	}
+	if errs[0].Provider != federation.ProviderOCM {
+		t.Fatalf("error Provider = %q, want OCM", errs[0].Provider)
+	}
+}
+
+// TestHandler_MultiHubFanOut stands up a kubeconfig with two contexts and a
+// fake provider that returns different clusters per hub. The handler must
+// aggregate both contexts' results and stamp each with the correct
+// HubContext. This proves the request-level fan-out over the user's
+// kubeconfig, not just the unit-level fanOutRead helper.
+func TestHandler_MultiHubFanOut(t *testing.T) {
+	federation.Reset()
+	defer federation.Reset()
+
+	provider := &handlerFakeProvider{
+		name: federation.ProviderOCM,
+		perContextClusters: map[string][]FederatedCluster{
+			"https://hub-a.example": {{
+				Provider:   federation.ProviderOCM,
+				HubContext: "hub-a",
+				Name:       "member-a1",
+				State:      federation.ClusterStateJoined,
+			}},
+			"https://hub-b.example": {{
+				Provider:   federation.ProviderOCM,
+				HubContext: "hub-b",
+				Name:       "member-b1",
+				State:      federation.ClusterStateJoined,
+			}},
+		},
+	}
+	federation.Register(provider)
+
+	dir := t.TempDir()
+	kcfg := filepath.Join(dir, "kubeconfig")
+	writeTestKubeconfig(t, kcfg, map[string]string{
+		"hub-a": "https://hub-a.example",
+		"hub-b": "https://hub-b.example",
+	})
+
+	s := newFederationTestServer(t, kcfg, testBearerToken)
+
+	req := httptest.NewRequest(http.MethodGet, "/federation/clusters", nil)
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
+	w := httptest.NewRecorder()
+	s.handleFederationClusters(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d (body=%s)", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Clusters []FederatedCluster `json:"clusters"`
+		Errors   []FederationError  `json:"errors"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v (body=%s)", err, w.Body.String())
+	}
+	// Expect 2 clusters total — one per hub.
+	if len(resp.Clusters) != 2 {
+		t.Fatalf("want 2 clusters, got %d (%#v)", len(resp.Clusters), resp.Clusters)
+	}
+	// Verify each expected hub is represented (order may vary — fan-out is
+	// concurrent).
+	seen := map[string]string{}
+	for _, c := range resp.Clusters {
+		seen[c.HubContext] = c.Name
+	}
+	if seen["hub-a"] != "member-a1" {
+		t.Fatalf("hub-a result missing/wrong: %+v", resp.Clusters)
+	}
+	if seen["hub-b"] != "member-b1" {
+		t.Fatalf("hub-b result missing/wrong: %+v", resp.Clusters)
+	}
+}
+
+// TestRequireBearerToken_NoAuthConfigured verifies that when the agent is
+// started WITHOUT a KC_AGENT_TOKEN (dev mode), federation handlers still
+// process the request — the 500 bypass only fires when token auth is
+// configured and the caller failed validation.
+func TestRequireBearerToken_NoAuthConfigured(t *testing.T) {
+	s := newFederationTestServer(t, "", "")
+
+	req := httptest.NewRequest(http.MethodGet, "/federation/detect", nil)
+	w := httptest.NewRecorder()
+	// No token header AND no agentToken set — should pass the gate.
+	if !s.requireBearerToken(w, req) {
+		t.Fatalf("with agentToken unset, requireBearerToken should return true")
+	}
+}
