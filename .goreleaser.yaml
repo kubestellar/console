@@ -92,10 +92,10 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/kubestellar/console"
-    description: "Local agent for KubeStellar Console - bridges browser to kubeconfig and Claude Code"
+    description: "Local agent for KubeStellar Console: browser to kubeconfig"
     license: "Apache-2.0"
     test: |
-      system "#{bin}/kc-agent", "--version"
+      system bin/"kc-agent", "--version"
     install: |
       bin.install "kc-agent"
 
