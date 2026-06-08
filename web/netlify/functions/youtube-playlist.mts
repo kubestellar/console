@@ -89,7 +89,11 @@ export default async (req: Request) => {
       JSON.stringify({ error: "Rate limit exceeded", videos: [] }),
       {
         status: 429,
-        headers: { ...headers, "Retry-After": String(rate.retryAfterSeconds) },
+        headers: {
+          ...headers,
+          "Retry-After": String(rate.retryAfterSeconds),
+          "Cache-Control": "no-store",
+        },
       }
     );
   }
