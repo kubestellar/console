@@ -107,3 +107,10 @@ console-marketplace-*/
 homebrew-tap-*/
 marketplace-fix*
 kubestellar-mcp
+
+# Operational agent logs — generated at runtime, not project source (#17181)
+cron_scan_log.md
+release-failure-diagnosis.md
+release-failure-summary.txt
+reviewer_log.md
+pr.md
