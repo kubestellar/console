@@ -274,7 +274,7 @@ jobs:
 
       - name: Run TTFI baseline comparison
         if: matrix.suite == 'ttfi' && always()
-        run: node e2e/perf/compare-ttfi.mjs || true
+        run: node e2e/perf/compare-ttfi.mjs
 
       - name: Upload artifacts
         if: always()
