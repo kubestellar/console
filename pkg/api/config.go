@@ -139,6 +139,27 @@ func LoadConfigFromEnv() Config {
 	devModeEnv := os.Getenv("DEV_MODE")
 	devMode := devModeEnv == "true"
 
+	// SECURITY (#17179): Refuse to start with DEV_MODE=true inside a Kubernetes
+	// pod unless the operator explicitly acknowledges the risk. DEV_MODE disables
+	// JWT auth on /api/mcp/clusters and WebSocket origin validation, which is
+	// safe for local development but dangerous in a production cluster.
+	//
+	// KUBERNETES_SERVICE_HOST is injected automatically into every pod by the
+	// kubelet — its presence reliably signals an in-cluster environment.
+	// Set ALLOW_DEV_MODE_IN_CLUSTER=true to override for intentional dev
+	// clusters that happen to run inside Kubernetes (e.g., kind on CI).
+	if devMode && os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("ALLOW_DEV_MODE_IN_CLUSTER") != "true" {
+		slog.Error("[Config] SECURITY: DEV_MODE=true detected inside a Kubernetes pod. "+
+			"Dev mode disables JWT authentication on cluster-discovery endpoints. "+
+			"This is unsafe in a shared or production cluster. "+
+			"Set ALLOW_DEV_MODE_IN_CLUSTER=true only if you intentionally run a dev build inside Kubernetes.",
+			"fix", "Remove DEV_MODE=true from your deployment manifest, or set ALLOW_DEV_MODE_IN_CLUSTER=true")
+		os.Exit(1)
+	}
+	if devMode {
+		slog.Warn("[Config] DEV_MODE is enabled — JWT auth bypasses are active. NEVER deploy to production.")
+	}
+
 	// SECURITY (#16615): Dev mode must be explicitly opted-in via DEV_MODE=true.
 	// Previously, missing OAuth credentials auto-activated dev mode, granting
 	// unauthenticated admin access on misconfigured deployments (CWE-489).
