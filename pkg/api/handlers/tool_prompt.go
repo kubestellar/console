@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/sanitize"
 )
 
 const toolInvocationPromptTemplate = "Please use the tool %s with args %s"
@@ -19,7 +19,7 @@ func sanitizePromptToolName(toolName string) (string, bool) {
 		return "", false
 	}
 
-	return agent.SanitizeK8sStringForPrompt(toolName), true
+	return sanitize.PromptString(toolName), true
 }
 
 func buildToolInvocationPrompt(tool string, args map[string]any) (string, error) {
@@ -33,6 +33,6 @@ func buildToolInvocationPrompt(tool string, args map[string]any) (string, error)
 		return "", err
 	}
 
-	sanitizedArgs := agent.SanitizeK8sStringForPrompt(string(argsJSON))
+	sanitizedArgs := sanitize.PromptString(string(argsJSON))
 	return fmt.Sprintf(toolInvocationPromptTemplate, sanitizedTool, sanitizedArgs), nil
 }
