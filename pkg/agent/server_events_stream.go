@@ -22,7 +22,7 @@ const (
 	sseWatchTimeout      = 10 * time.Minute // server-side watch timeout before re-establishing
 
 	// Event forwarding concurrency limits
-	maxConcurrentForwards    = 32              // max parallel event forwards to Stellar backend
+	maxConcurrentForwards    = 32               // max parallel event forwards to Stellar backend
 	forwardTimeout           = 10 * time.Second // HTTP request timeout for event forwarding
 	semaphoreAcquireTimeout  = 1 * time.Second  // max wait time to acquire semaphore before dropping event
 )
@@ -163,7 +163,7 @@ type sseEventSummary struct {
 func summarizeEvent(evt watch.Event, cluster string) sseEventSummary {
 	summary := sseEventSummary{Cluster: cluster}
 	ev, ok := evt.Object.(*corev1.Event)
-	if !ok {
+	if !ok || ev == nil {
 		return summary
 	}
 	summary.Type = ev.Type
@@ -218,9 +218,9 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 		defer func() { <-s.stellarForwardSem }() // Release semaphore when done
 	case <-ctx.Done():
 		// Timeout waiting for semaphore — drop event to prevent backlog
-		slog.Warn("stellar: dropped event (semaphore timeout)", 
-			"cluster", event.Cluster, 
-			"namespace", event.Namespace, 
+		slog.Warn("stellar: dropped event (semaphore timeout)",
+			"cluster", event.Cluster,
+			"namespace", event.Namespace,
 			"reason", event.Reason)
 		return
 	}
