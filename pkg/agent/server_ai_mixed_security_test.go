@@ -119,7 +119,7 @@ func TestValidateMixedModeCommand(t *testing.T) {
 	}
 }
 
-func TestValidateMixedModeCommands(t *testing.T) {
+func TestValidateMixedModeCommandsBatch(t *testing.T) {
 	t.Run("mixed batch separates approved and rejected", func(t *testing.T) {
 		commands := []string{
 			"kubectl get pods",
