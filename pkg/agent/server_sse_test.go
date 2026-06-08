@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -49,6 +50,19 @@ func newTestServerForSSE(t *testing.T, contexts map[string]*api.Context) (*Serve
 		agentToken:     "",
 	}
 	return srv, k8sMock
+}
+
+func TestSummarizeEventTypedNilObject(t *testing.T) {
+	var ev *corev1.Event
+
+	summary := summarizeEvent(watch.Event{Type: watch.Added, Object: ev}, "cluster-a")
+
+	if summary.Cluster != "cluster-a" {
+		t.Fatalf("Cluster = %q, want cluster-a", summary.Cluster)
+	}
+	if summary.Type != "" || summary.Reason != "" || summary.Message != "" || summary.Object != "" || summary.Namespace != "" || summary.LastSeen != "" {
+		t.Fatalf("typed-nil event should return only cluster summary, got %#v", summary)
+	}
 }
 
 func TestHandleNodesStreamSSE_StreamsEvents(t *testing.T) {
