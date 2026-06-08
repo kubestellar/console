@@ -8,16 +8,17 @@
  * Used by the docs leaderboard to show a "Social" column.
  *
  * Uses raw fetch + Web Crypto JWT (same pattern as analytics-dashboard.mts)
- * instead of the googleapis npm package — Netlify Functions don't bundle
+ * instead of the googleapis npm package -- Netlify Functions don't bundle
  * googleapis reliably and it caused a persistent 502.
  *
  * Requires Netlify env vars: GA4_SERVICE_ACCOUNT_JSON (base64), GA4_PROPERTY_ID
  */
 
 import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 import { getStore } from "@netlify/blobs";
 
-// ── Constants ─────────────────────────────────────────────────────────
+// -- Constants -----------------------------------------------------------------
 
 const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -25,7 +26,13 @@ const JWT_EXPIRY_SECONDS = 3600;
 /** Maximum response body size (512 KB) */
 const MAX_RESPONSE_BYTES = 512_000;
 
-/** Map GitHub login → utm_term for intern affiliate links */
+/** Rate-limit: 30 requests per IP per minute to prevent GA4 quota exhaustion
+ *  via cache-key enumeration (CWE-770, #17156). */
+const RATE_LIMIT_STORE_NAME = "affiliate-clicks-rate-limit";
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+/** Map GitHub login -> utm_term for intern affiliate links */
 const INTERN_MAP: Record<string, string> = {
   "rishi-jat": "intern-01",
   "ghanshyam2005singh": "intern-02",
@@ -39,13 +46,13 @@ const INTERN_MAP: Record<string, string> = {
   "Abhishek-Punhani": "intern-10",
 };
 
-/** Reverse map: utm_term → GitHub login (lowercased) */
+/** Reverse map: utm_term -> GitHub login (lowercased) */
 const TERM_TO_LOGIN: Record<string, string> = {};
 for (const [login, term] of Object.entries(INTERN_MAP)) {
   TERM_TO_LOGIN[term] = login.toLowerCase();
 }
 
-/** Cache TTL — 3 minutes. Shorter than before (was 15m) so intern shares
+/** Cache TTL -- 3 minutes. Shorter than before (was 15m) so intern shares
  *  feel responsive on the leaderboard once GA4 has processed the clicks. */
 const CACHE_TTL_MS = 3 * 60 * 1000;
 /** Days to look back for affiliate clicks */
@@ -107,7 +114,7 @@ function validateAffiliateParam(affiliate: string | null): string | null {
   return normalizedAffiliate;
 }
 
-// ── Types ─────────────────────────────────────────────────────────────
+// -- Types ---------------------------------------------------------------------
 
 interface AffiliateData {
   clicks: number;
@@ -139,7 +146,7 @@ async function readCappedJson<T>(response: Response): Promise<T> {
   return JSON.parse(rawText) as T;
 }
 
-// ── JWT / OAuth helpers (Web Crypto — no npm deps) ────────────────────
+// -- JWT / OAuth helpers (Web Crypto -- no npm deps) ---------------------------
 
 function base64url(data: Uint8Array): string {
   return btoa(String.fromCharCode(...data))
@@ -226,7 +233,7 @@ async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string
   return accessToken;
 }
 
-// ── GA4 Data API ──────────────────────────────────────────────────────
+// -- GA4 Data API --------------------------------------------------------------
 
 async function runReport(
   propertyId: string,
@@ -255,7 +262,7 @@ async function runReport(
   return data.rows || [];
 }
 
-// ── Core logic ────────────────────────────────────────────────────────
+// -- Core logic ----------------------------------------------------------------
 
 async function fetchAffiliateClicks(
   startDateParam?: string | null,
@@ -288,7 +295,7 @@ async function fetchAffiliateClicks(
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
   const dateRange = { startDate: fmt(startDate), endDate: fmt(endDate) };
 
-  // Query 1: intern_outreach campaign (intern-01..10 → GitHub login via INTERN_MAP)
+  // Query 1: intern_outreach campaign (intern-01..10 -> GitHub login via INTERN_MAP)
   const internRows = await runReport(propertyId, accessToken, {
     dateRanges: [dateRange],
     dimensions: [{ name: "sessionManualTerm" }],
@@ -372,7 +379,7 @@ async function fetchAffiliateClicks(
   return result;
 }
 
-// ── Handler ───────────────────────────────────────────────────────────
+// -- Handler -------------------------------------------------------------------
 
 export default async (req: Request) => {
   const headers: Record<string, string> = {
@@ -395,6 +402,36 @@ export default async (req: Request) => {
       status: 200,
       headers,
     });
+  }
+
+  // 2. Rate limit per IP to prevent GA4 quota exhaustion via cache-key
+  //    enumeration (CWE-770, #17156). Each cache miss triggers 2 GA4 API
+  //    calls + a token exchange; without this guard an attacker can enumerate
+  //    unique affiliate+date combos to continuously bypass the blob cache.
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE_NAME,
+    prefix: "affiliate-clicks:",
+    subject: clientIp,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rate.limited) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded", retryAfter: rate.retryAfterSeconds }),
+      {
+        status: 429,
+        headers: {
+          ...headers,
+          "Retry-After": String(rate.retryAfterSeconds),
+          "Cache-Control": "no-store",
+          "Access-Control-Expose-Headers": "Retry-After",
+        },
+      }
+    );
   }
 
   const url = new URL(req.url);
@@ -449,7 +486,7 @@ export default async (req: Request) => {
   const store = getStore("affiliate-clicks");
   const cacheKey = `clicks:${affiliate || "all"}:${startDateParam || "default"}:${endDateParam || "default"}`;
 
-  // 2. Try KV cache read
+  // 3. Try KV cache read
   let cachedEntry: { data: Record<string, AffiliateData>; fetchedAt: number } | null = null;
   try {
     const cached = await store.get(cacheKey, { type: "text" });
@@ -467,7 +504,7 @@ export default async (req: Request) => {
     });
   }
 
-  // 3. Query GA4 live and update KV store
+  // 4. Query GA4 live and update KV store
   try {
     let data = await fetchAffiliateClicks(startDateParam, endDateParam);
 
@@ -492,7 +529,7 @@ export default async (req: Request) => {
     return new Response(JSON.stringify(data), { status: 200, headers });
   } catch (err) {
     console.error("Failed to fetch affiliate clicks:", err);
-    
+
     // Serve stale cache if available
     if (cachedEntry) {
       return new Response(JSON.stringify(cachedEntry.data), {
