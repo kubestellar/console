@@ -377,6 +377,10 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	// Capture the UUID from the request context before SetBodyStreamWriter; the
+	// RequestCtx is recycled by fasthttp once the parent handler returns, so
+	// reading from it inside the stream goroutine causes a nil-pointer panic.
+	userUUID := middleware.GetUserID(c)
 
 	// Sprint 5: detect returning user and update last-seen
 	lastSeen, _ := h.store.GetUserLastSeen(c.UserContext(), userID)
@@ -396,7 +400,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 		clientCh := make(chan SSEEvent, 32)
 		isAdmin := false
 		if userStore, ok := h.store.(store.Store); ok {
-			resolvedUser, resolveErr := userStore.GetUser(streamCtx, middleware.GetUserID(c))
+			resolvedUser, resolveErr := userStore.GetUser(streamCtx, userUUID)
 			isAdmin = resolveErr == nil && resolvedUser != nil && resolvedUser.Role == models.UserRoleAdmin
 		}
 		h.registerSSEClient(connID, userID, isAdmin, clientCh)

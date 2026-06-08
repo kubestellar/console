@@ -81,23 +81,31 @@ func TestGenerateRandomSecret(t *testing.T) {
 }
 
 func TestDetectInstallMethod(t *testing.T) {
-	tests := []struct {
-		name      string
-		inCluster bool
-		want      string
-	}{
-		{"in-cluster returns helm", true, "helm"},
-		// When not in-cluster and go.mod exists (which it does in this repo)
-		{"dev with go.mod", false, "dev"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := detectInstallMethod(tt.inCluster)
-			if got != tt.want {
-				t.Errorf("detectInstallMethod(%v) = %q, want %q", tt.inCluster, got, tt.want)
-			}
-		})
-	}
+	t.Run("in-cluster returns helm", func(t *testing.T) {
+		got := detectInstallMethod(true)
+		if got != "helm" {
+			t.Errorf("detectInstallMethod(true) = %q, want %q", got, "helm")
+		}
+	})
+
+	// dev: chdir to a temp dir that contains a go.mod so the detection is
+	// independent of where 'go test' sets the working directory.
+	t.Run("dev with go.mod", func(t *testing.T) {
+		devDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(devDir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		orig, _ := os.Getwd()
+		if err := os.Chdir(devDir); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Chdir(orig) //nolint:errcheck
+
+		got := detectInstallMethod(false)
+		if got != "dev" {
+			t.Errorf("detectInstallMethod(false) with go.mod = %q, want %q", got, "dev")
+		}
+	})
 }
 
 func TestDetectInstallMethod_Binary(t *testing.T) {

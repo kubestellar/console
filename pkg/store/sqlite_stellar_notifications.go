@@ -258,7 +258,7 @@ func (s *SQLiteStore) NotificationExistsByDedup(ctx context.Context, userID, ded
 
 func (s *SQLiteStore) CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error) {
 	var count int64
-	since := time.Now().Add(-window).UTC().Format(time.RFC3339)
+	since := time.Now().Add(-window).UTC()
 	err := s.db.QueryRowContext(ctx, `
         SELECT COUNT(*) FROM stellar_notifications
         WHERE cluster = ? AND namespace = ? AND title LIKE ?
