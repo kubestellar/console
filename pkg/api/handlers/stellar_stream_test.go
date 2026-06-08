@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -100,19 +99,3 @@ func TestStellarStream_Unauthenticated(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
-func isTimeoutError(err error) bool {
-	if err == nil {
-		return false
-	}
-	// net.Error timeout check
-	type timeoutErr interface {
-		Timeout() bool
-	}
-	if te, ok := err.(timeoutErr); ok {
-		return te.Timeout()
-	}
-	return false
-}
-
-// Silence the unused import warning for time package.
-var _ = time.Now
