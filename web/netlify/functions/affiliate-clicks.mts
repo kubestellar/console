@@ -427,6 +427,8 @@ export default async (req: Request) => {
         headers: {
           ...headers,
           "Retry-After": String(rate.retryAfterSeconds),
+          "Cache-Control": "no-store",
+          "Access-Control-Expose-Headers": "Retry-After",
         },
       }
     );
