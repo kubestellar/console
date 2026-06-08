@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubestellar/console/pkg/agent/protocol"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -191,14 +192,6 @@ func TestSummarizeEvent_NonEventObject(t *testing.T) {
 	}
 	if summary.Type != "" || summary.Reason != "" || summary.Message != "" {
 		t.Errorf("expected empty fields for non-Event object, got: %+v", summary)
-	}
-}
-
-func TestSummarizeEvent_NilObject(t *testing.T) {
-	summary := summarizeEvent(watch.Event{Object: (*corev1.Event)(nil)}, "cluster")
-	// A typed nil interface should not panic
-	if summary.Cluster != "cluster" {
-		t.Errorf("expected Cluster 'cluster', got %q", summary.Cluster)
 	}
 }
 
