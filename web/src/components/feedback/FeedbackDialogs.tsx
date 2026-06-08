@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import rehypeSanitize from 'rehype-sanitize'
 import { useRef, useEffect } from 'react'
 import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 
@@ -274,7 +275,10 @@ export function FullscreenPreview({ description, onClose }: FullscreenPreviewPro
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-4 ghmd">
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkBreaks]}
+            rehypePlugins={[rehypeSanitize]}
+          >
             {description}
           </ReactMarkdown>
         </div>
