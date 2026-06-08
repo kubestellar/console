@@ -136,6 +136,7 @@ func TestMarkStellarNotificationRead(t *testing.T) {
 
 	got, err := s.GetStellarNotification(ctx, testNotifUserID, n.ID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	assert.True(t, got.Read)
 	assert.NotNil(t, got.ReadAt)
 }

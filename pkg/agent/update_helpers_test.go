@@ -156,7 +156,7 @@ func TestFetchGitHubReleases_Success(t *testing.T) {
 		t.Fatalf("failed to decode releases: %v", err)
 	}
 	if len(got) != 2 {
-		t.Errorf("expected 2 releases, got %d", len(got))
+		t.Fatalf("expected 2 releases, got %d", len(got))
 	}
 	if got[0].TagName != "v1.0.0" {
 		t.Errorf("expected tag v1.0.0, got %q", got[0].TagName)
