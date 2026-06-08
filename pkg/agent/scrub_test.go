@@ -46,13 +46,15 @@ func TestScrubSecrets_AWSAccessKey(t *testing.T) {
 }
 
 func TestScrubSecrets_GCPKey(t *testing.T) {
-	input := "apikey=AIzaSyB1234567890abcdefghijklmnopqrstuv"
+	fakeKey := "AIza" + strings.Repeat("X", 32)
+
+	input := "apikey=" + fakeKey
 	got := ScrubSecrets(input)
+
 	if strings.Contains(got, "AIza") {
 		t.Errorf("expected GCP key to be scrubbed, got %q", got)
 	}
 }
-
 func TestScrubSecrets_BearerToken(t *testing.T) {
 	input := "Authorization: Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QifQ.eyJpc3MiOiJ0ZXN0In0.signature"
 	got := ScrubSecrets(input)
