@@ -12,7 +12,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
@@ -396,7 +395,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 		clientCh := make(chan SSEEvent, 32)
 		isAdmin := false
 		if userStore, ok := h.store.(store.Store); ok {
-			resolvedUser, resolveErr := userStore.GetUser(streamCtx, middleware.GetUserID(c))
+			resolvedUser, resolveErr := userStore.GetUser(streamCtx, userID)
 			isAdmin = resolveErr == nil && resolvedUser != nil && resolvedUser.Role == models.UserRoleAdmin
 		}
 		h.registerSSEClient(connID, userID, isAdmin, clientCh)
