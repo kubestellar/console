@@ -9,7 +9,9 @@
  * Query: GET /api/rewards/bonus?login=rishi-jat
  */
 
+import { getStore } from "@netlify/blobs";
 import { buildCorsHeaders, handlePreflight } from "./_shared";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
 
 const BONUS_REPO = "kubestellar/console";
 const BONUS_LABEL = "bonus-points";
@@ -19,8 +21,17 @@ const BONUS_TITLE_REGEX = /^\[bonus\]\s+@(\S+)\s+\+(\d+)\s*(.*)/i;
 /** GitHub username validation — alphanumeric, hyphens allowed, 1-39 chars (#14500) */
 const GITHUB_LOGIN_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,38})?$/;
 
+/** Blob cache store name */
+const CACHE_STORE_NAME = "bonus-points-cache";
+/** Cache key for all bonus issues */
+const CACHE_KEY = "all-bonus-issues";
 /** Cache TTL — 15 minutes */
 const CACHE_TTL_MS = 15 * 60 * 1000;
+
+/** Rate limit store and config */
+const RATE_LIMIT_STORE_NAME = "bonus-points-rate-limit";
+const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 /** Timeout for GitHub API requests */
 const GITHUB_API_TIMEOUT_MS = 10_000;
@@ -35,13 +46,10 @@ interface BonusEntry {
   state: string;
 }
 
-interface CachedBonusData {
-  /** Map of login -> entries */
+interface BlobCacheEntry {
   byLogin: Record<string, BonusEntry[]>;
   fetchedAt: number;
 }
-
-let cache: CachedBonusData | null = null;
 
 async function readCappedJson<T>(response: Response): Promise<T> {
   const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
@@ -60,8 +68,6 @@ async function readCappedJson<T>(response: Response): Promise<T> {
 async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
   const byLogin: Record<string, BonusEntry[]> = {};
 
-  // Use GitHub API without auth — bonus-points issues are public
-  // Fall back to GITHUB_TOKEN if available for higher rate limits
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3+json",
   };
@@ -110,6 +116,29 @@ async function fetchAllBonusIssues(): Promise<Record<string, BonusEntry[]>> {
   return byLogin;
 }
 
+async function readBlobCache(): Promise<Record<string, BonusEntry[]> | null> {
+  try {
+    const store = getStore(CACHE_STORE_NAME);
+    const raw = await store.get(CACHE_KEY, { type: "json" }) as BlobCacheEntry | null;
+    if (raw && raw.fetchedAt && Date.now() - raw.fetchedAt < CACHE_TTL_MS) {
+      return raw.byLogin;
+    }
+  } catch {
+    // cache miss — proceed to fetch
+  }
+  return null;
+}
+
+async function writeBlobCache(byLogin: Record<string, BonusEntry[]>): Promise<void> {
+  try {
+    const store = getStore(CACHE_STORE_NAME);
+    const entry: BlobCacheEntry = { byLogin, fetchedAt: Date.now() };
+    await store.setJSON(CACHE_KEY, entry);
+  } catch {
+    // best-effort
+  }
+}
+
 export default async (req: Request) => {
   const headers: Record<string, string> = {
     ...buildCorsHeaders(req, { methods: "GET, OPTIONS" }),
@@ -119,6 +148,32 @@ export default async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return handlePreflight(req, { methods: "GET, OPTIONS" });
+  }
+
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+
+  const rate = await enforceSimpleRateLimit({
+    storeName: RATE_LIMIT_STORE_NAME,
+    prefix: "bonus-points:",
+    subject: clientIp,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (rate.limited) {
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded" }),
+      {
+        status: 429,
+        headers: {
+          ...headers,
+          "Retry-After": String(rate.retryAfterSeconds),
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   }
 
   const url = new URL(req.url);
@@ -139,13 +194,16 @@ export default async (req: Request) => {
   }
 
   try {
-    // Check cache
-    if (!cache || Date.now() - cache.fetchedAt > CACHE_TTL_MS) {
-      const byLogin = await fetchAllBonusIssues();
-      cache = { byLogin, fetchedAt: Date.now() };
+    // Try Netlify Blobs cache first (persists across Lambda containers)
+    let byLogin = await readBlobCache();
+    if (!byLogin) {
+      byLogin = await fetchAllBonusIssues();
+      writeBlobCache(byLogin).catch((err) => {
+        console.warn("[bonus-points] blob cache write failed:", err instanceof Error ? err.message : err);
+      });
     }
 
-    const entries = cache.byLogin[login] || [];
+    const entries = byLogin[login] || [];
     const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
 
     return new Response(
@@ -174,7 +232,4 @@ export const _testOnly = {
   MAX_RESPONSE_BYTES,
   GITHUB_LOGIN_REGEX,
   CACHE_TTL_MS,
-  resetCache: () => {
-    cache = null;
-  },
 };
