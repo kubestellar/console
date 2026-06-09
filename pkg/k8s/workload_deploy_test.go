@@ -45,14 +45,15 @@ func TestNormalizeImageRef_GCR(t *testing.T) {
 }
 
 func TestNormalizeImageRef_EmptyString(t *testing.T) {
-	// Edge case: empty string treated as single-name
+	// Documents current behavior: empty string is treated as single-name.
+	// The function does not validate inputs — callers should skip empty images.
 	assert.Equal(t, "docker.io/library/", normalizeImageRef(""))
 }
 
 func TestNormalizeImageRef_DigestRef(t *testing.T) {
-	// Image with digest should be handled the same way as tagged
-	result := normalizeImageRef("nginx@sha256:abc123")
-	assert.Equal(t, "docker.io/library/nginx@sha256:abc123", result)
+	// Use a realistic 64-char hex digest
+	result := normalizeImageRef("nginx@sha256:e4429a43042d2681656771c3adde72f7b26c8f0db0eb05e4a0b2b2d4a2b97395")
+	assert.Equal(t, "docker.io/library/nginx@sha256:e4429a43042d2681656771c3adde72f7b26c8f0db0eb05e4a0b2b2d4a2b97395", result)
 }
 
 func TestNormalizeImageRef_NestedPath(t *testing.T) {
