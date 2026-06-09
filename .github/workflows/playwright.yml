@@ -1,6 +1,10 @@
 name: Playwright E2E Tests
 
 on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/playwright.yml'
   push:
     branches: [main, dev]
     paths:
