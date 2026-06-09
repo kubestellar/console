@@ -21,10 +21,11 @@ func TestGenerateClusterQuery_PromptTooLong(t *testing.T) {
 	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
 	env.App.Post("/api/cluster-groups/ai-query", handler.GenerateClusterQuery)
 
-	// Register Mock AI — should never be called for oversized prompts
+	// Register Mock AI — uses same response format as TestGenerateClusterQuery
+	// to avoid polluting the shared package-level registry with a different mock.
 	registry := agent.GetRegistry()
 	mockAI := &MockAIProvider{
-		Response: `{"suggestedName":"x","query":{"filters":[]}}`,
+		Response: `{"suggestedName": "west-cpu-group", "query": {"labelSelector": "region=us-west", "filters": [{"field": "cpuCores", "operator": "gte", "value": "4"}]}}`,
 	}
 	registry.Register(mockAI)
 	registry.SetDefault("mock-ai")
