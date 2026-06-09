@@ -132,12 +132,21 @@ func getRoleRefKind(obj map[string]interface{}) string {
 }
 
 func isSystemClusterRole(name string) bool {
+	// Exact-match names: these are well-known Kubernetes built-in ClusterRoles.
+	// Use exact matching so that user-defined roles like "viewer" or "administrator"
+	// are not incorrectly filtered out as system roles.
+	exactNames := map[string]bool{
+		"admin": true, "cluster-admin": true, "edit": true, "view": true,
+	}
+	if exactNames[name] {
+		return true
+	}
+	// Prefix-match for namespaced system role families.
 	systemPrefixes := []string{
-		"system:", "admin", "cluster-admin", "edit", "view",
-		"kubeadm:", "calico", "flannel", "kindnet",
+		"system:", "kubeadm:", "calico", "flannel", "kindnet",
 	}
 	for _, prefix := range systemPrefixes {
-		if strings.HasPrefix(name, prefix) || name == prefix {
+		if strings.HasPrefix(name, prefix) {
 			return true
 		}
 	}
