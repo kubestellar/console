@@ -1,0 +1,394 @@
+package handlers
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/store"
+)
+
+// streamTestTimeoutMs is the timeout for Stream() test requests. Long enough to
+// receive the initial send() call (immediate) but short enough not to wait for
+// the 10-second ticker.
+const streamTestTimeoutMs = 3_000
+
+// TestStellarStream_SetsSSEHeaders verifies that the Stream endpoint returns the
+// correct SSE response headers (Content-Type: text/event-stream, etc.).
+func TestStellarStream_SetsSSEHeaders(t *testing.T) {
+	app, _ := newStellarTestApp(t)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+	assert.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
+	assert.Equal(t, "keep-alive", resp.Header.Get("Connection"))
+}
+
+// TestStellarStream_ReturnsUnauthorizedWithoutUser verifies that Stream() returns
+// HTTP 401 when no authenticated user is present in the request context.
+func TestStellarStream_ReturnsUnauthorizedWithoutUser(t *testing.T) {
+	app := fiber.New()
+	h := NewStellarHandler(nil, nil)
+	app.Get("/api/stellar/stream", h.Stream)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, 2000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+// TestStellarStream_SendsHeartbeat is the primary regression guard for the
+// nil-pointer panic fixed in #17227. It verifies that Stream() correctly captures
+// userID before SetBodyStreamWriter (not inside the goroutine from a recycled
+// fiber.Ctx), and that the stream emits at least a heartbeat SSE event.
+//
+// Prior to the fix, calling middleware.GetUserID(c) inside the goroutine would
+// dereference a recycled *RequestCtx and trigger SIGSEGV.
+func TestStellarStream_SendsHeartbeat(t *testing.T) {
+	app, _ := newStellarTestApp(t)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	bodyStr := string(body)
+
+	// The initial send() call fires immediately and must include a heartbeat event.
+	assert.Contains(t, bodyStr, "event: heartbeat", "stream must emit a heartbeat on first send")
+	assert.Contains(t, bodyStr, `"ts"`, "heartbeat payload must contain a timestamp")
+}
+
+// TestStellarStream_SendsInitialUnreadNotifications verifies that unread notifications
+// created before the stream connects are pushed in the initial batch, in
+// chronological order (oldest first, per the reverse-iteration in Stream()).
+func TestStellarStream_SendsInitialUnreadNotifications(t *testing.T) {
+	app, sqlStore := newStellarTestApp(t)
+
+	// Determine the test user ID from the store (stream uses the injected userID local).
+	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, users)
+	userID := users[0].ID.String()
+
+	notif := &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "warning",
+		Title:     "stream-test-notification",
+		Body:      "triggered for stream test",
+		Cluster:   "test-cluster",
+		Namespace: "default",
+		DedupeKey: "stream-test-key",
+	}
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), notif))
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	bodyStr := string(body)
+
+	assert.Contains(t, bodyStr, "event: notification", "initial unread notifications must be streamed")
+	assert.Contains(t, bodyStr, "stream-test-notification", "notification title must appear in stream")
+}
+
+// TestStellarStream_SendsInitialState verifies that Stream() emits a state event
+// in the initial batch, regardless of whether notifications are present.
+func TestStellarStream_SendsInitialState(t *testing.T) {
+	app, sqlStore := newStellarTestApp(t)
+
+	// Seed a notification so the initial-batch block (which also emits state) is entered.
+	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, users)
+	userID := users[0].ID.String()
+
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "info",
+		Title:     "state-test-notif",
+		DedupeKey: "state-test-key",
+	}))
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	bodyStr := string(body)
+
+	assert.Contains(t, bodyStr, "event: state", "stream must emit a state event in initial batch")
+	assert.Contains(t, bodyStr, `"unreadCount"`, "state event must include unreadCount field")
+}
+
+// TestStellarStream_UserIDCapturedBeforeGoroutine is a focused regression test for
+// the nil-pointer bug fixed in #17227. It verifies that the stream goroutine uses
+// the userID captured in the parent handler scope (not re-derived from a recycled
+// fiber context), by asserting that the stream emits well-formed events for a user
+// with a valid UUID — which would fail/panic if userID were empty or userUUID
+// unparseable inside the goroutine.
+func TestStellarStream_UserIDCapturedBeforeGoroutine(t *testing.T) {
+	app, sqlStore := newStellarTestApp(t)
+
+	// Seed a notification to trigger the admin-check path (isAdmin logic uses userUUID).
+	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, users)
+	userID := users[0].ID.String()
+
+	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), &store.StellarNotification{
+		UserID:    userID,
+		Type:      "event",
+		Severity:  "critical",
+		Title:     "uuid-goroutine-test",
+		DedupeKey: "uuid-goroutine-test-key",
+	}))
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+
+	// If userID were not captured before SetBodyStreamWriter, the goroutine would
+	// either panic (nil dereference) or emit no events. Either way this test fails.
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err, "stream must not panic — regression guard for #17227")
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.NotEmpty(t, string(body), "goroutine must emit events with pre-captured userID")
+}
+
+// TestStellarListObservations_EmptyReturnsEmptyList verifies that the
+// ListObservations endpoint returns an empty list (not an error) when no
+// observations have been created.
+func TestStellarListObservations_EmptyReturnsEmptyList(t *testing.T) {
+	app, _ := newStellarTestApp(t)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/observations", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	items, ok := result["items"]
+	require.True(t, ok, "response must contain 'items' key")
+	assert.IsType(t, []any{}, items, "items must be a JSON array")
+	assert.Len(t, items, 0, "items must be empty when no observations exist")
+}
+
+// TestStellarListObservations_AppliesLimitParam verifies that the ?limit= query
+// parameter is honoured and reflected in the response.
+func TestStellarListObservations_AppliesLimitParam(t *testing.T) {
+	app, _ := newStellarTestApp(t)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/observations?limit=7", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, stellarTestFiberTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	limit, ok := result["limit"]
+	require.True(t, ok, "response must contain 'limit' key")
+	assert.EqualValues(t, 7, limit, "limit in response must match query parameter")
+}
+
+// TestStellarIngestEvent_RequiresAuth verifies that IngestEvent rejects
+// requests from users who do not have editor or admin role with HTTP 403.
+// When a userStore is configured, the role check is enforced.
+func TestStellarIngestEvent_RequiresAuth(t *testing.T) {
+	// Build a fresh SQLite store but do NOT inject a user into the fiber context,
+	// so middleware.GetUserID returns uuid.Nil and GetUser returns nil → 403 Forbidden.
+	s := newInMemoryStellarStore(t)
+	sqlStore, err := store.NewSQLiteStore(t.TempDir() + "/ingest-auth.db")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqlStore.Close() })
+
+	app := fiber.New()
+	// Deliberately do NOT inject a userID into the context.
+	h := NewStellarHandler(s, nil, WithUserStore(sqlStore))
+	app.Post("/api/stellar/events", h.IngestEvent)
+
+	body := `{"cluster":"c1","namespace":"ns","name":"pod-a","type":"Warning","reason":"CrashLoop","message":"back-off"}`
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/events", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, 2000)
+	require.NoError(t, err)
+	// No user in context → GetUser(uuid.Nil) → nil → 403 Forbidden.
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+// TestStellarIngestEvent_MissingFieldsReturnsBadRequest verifies that IngestEvent
+// rejects payloads missing required fields with HTTP 400.
+func TestStellarIngestEvent_MissingFieldsReturnsBadRequest(t *testing.T) {
+	_, sqlStore := newStellarTestApp(t)
+
+	// Elevate the test user to editor so the auth check passes.
+	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, users)
+	u := users[0]
+	u.Role = models.UserRoleEditor
+	require.NoError(t, sqlStore.UpdateUser(context.Background(), &u))
+
+	// Override injected user role in the app middleware.
+	editorApp := fiber.New()
+	editorApp.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", u.ID)
+		c.Locals("githubLogin", u.GitHubLogin)
+		return c.Next()
+	})
+	h := NewStellarHandler(sqlStore, nil)
+	editorApp.Post("/api/stellar/events", h.IngestEvent)
+
+	// Missing required fields: cluster is empty.
+	body := `{"cluster":"","namespace":"ns","name":"pod","type":"Warning","reason":"x","message":"y"}`
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/events", bytes.NewReader([]byte(body)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := editorApp.Test(req, 2000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+// TestStellarIngestEvent_AcceptsValidEvent verifies that a valid IngestEvent
+// request is accepted asynchronously with HTTP 202 Accepted.
+func TestStellarIngestEvent_AcceptsValidEvent(t *testing.T) {
+	_, sqlStore := newStellarTestApp(t)
+
+	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, users)
+	u := users[0]
+	u.Role = models.UserRoleAdmin
+	require.NoError(t, sqlStore.UpdateUser(context.Background(), &u))
+
+	adminApp := fiber.New()
+	adminApp.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", u.ID)
+		c.Locals("githubLogin", u.GitHubLogin)
+		return c.Next()
+	})
+	h := NewStellarHandler(sqlStore, nil)
+	adminApp.Post("/api/stellar/events", h.IngestEvent)
+
+	payload := map[string]string{
+		"cluster":   "prod-a",
+		"namespace": "default",
+		"name":      "api-pod",
+		"type":      "Warning",
+		"reason":    "CrashLoopBackOff",
+		"message":   "back-off 5m0s restarting failed container",
+	}
+	raw, _ := json.Marshal(payload)
+	req, err := http.NewRequest(http.MethodPost, "/api/stellar/events", bytes.NewReader(raw))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := adminApp.Test(req, 2000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+
+	var result map[string]any
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	assert.Equal(t, "accepted", result["status"])
+
+	// Give async goroutine a moment; test completes without verifying async
+	// side effects since ProcessEvent depends on external provider.
+	time.Sleep(10 * time.Millisecond)
+}
+
+// TestStellarStream_UpsertLastSeenCalledOnConnect verifies that connecting to the
+// stream updates the user's last-seen timestamp.
+func TestStellarStream_UpsertLastSeenCalledOnConnect(t *testing.T) {
+	app, sqlStore := newStellarTestApp(t)
+
+	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	require.NoError(t, err)
+	require.NotEmpty(t, users)
+	userUUID := users[0].ID
+
+	// Confirm no last-seen before connect.
+	before, err := sqlStore.GetUserLastSeen(context.Background(), userUUID.String())
+	require.NoError(t, err)
+	assert.Nil(t, before, "last-seen must be nil before first stream connect")
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	_, _ = io.ReadAll(resp.Body)
+
+	after, err := sqlStore.GetUserLastSeen(context.Background(), userUUID.String())
+	require.NoError(t, err)
+	require.NotNil(t, after, "last-seen must be set after stream connect")
+	assert.WithinDuration(t, time.Now(), *after, 5*time.Second)
+}
+
+// TestStellarStream_InvalidUserIDStillConnects verifies that a stream request from
+// a user whose ID cannot be parsed as a UUID still connects (parseErr != nil path)
+// without panicking. This covers the isAdmin=false fallback branch in Stream().
+// When only a GitHub login (not a UUID) is available, resolveStellarUserID returns
+// the login string, which fails uuid.Parse — the stream must still serve events.
+func TestStellarStream_InvalidUserIDStillConnects(t *testing.T) {
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		// Do NOT inject "userID" (uuid.UUID). Only set githubLogin so that
+		// resolveStellarUserID returns the login string (a non-UUID), triggering
+		// the parseErr != nil branch inside Stream's SetBodyStreamWriter goroutine.
+		c.Locals("githubLogin", "stellar-github-only-user")
+		return c.Next()
+	})
+	h := NewStellarHandler(newInMemoryStellarStore(t), nil)
+	app.Get("/api/stellar/stream", h.Stream)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
+	require.NoError(t, err)
+	resp, err := app.Test(req, streamTestTimeoutMs)
+	require.NoError(t, err)
+	// Stream must still connect and emit SSE headers even without admin resolution.
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+}
+
+// newInMemoryStellarStore creates a minimal SQLiteStore backed by a temp DB.
+func newInMemoryStellarStore(t *testing.T) StellarStore {
+	t.Helper()
+	s, err := store.NewSQLiteStore(t.TempDir() + "/stellar-inline.db")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+	return s
+}
