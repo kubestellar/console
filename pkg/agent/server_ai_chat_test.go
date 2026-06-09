@@ -230,3 +230,4 @@ func TestServer_ErrorResponseChatHelpers(t *testing.T) {
 	assert.Equal(t, "prompt_too_large", payload.Code)
 	assert.Equal(t, "too many characters", payload.Message)
 }
+
