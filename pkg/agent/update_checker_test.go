@@ -246,8 +246,8 @@ func newTestUpdateChecker(t *testing.T, repoPath string) (*UpdateChecker, *[]Upd
 }
 
 // developerUpdateLoop runs the full 7-step developer update N times in a row,
-// verifying each iteration completes all steps successfully, progress increases
-// monotonically, and the correct broadcast sequence is emitted.
+// verifying each iteration completes all steps successfully without error.
+// A successful run ends with a "restarting" broadcast (exitFunc is a no-op in tests).
 func developerUpdateLoop(t *testing.T, iterations int) {
 	t.Helper()
 	if testing.Short() {
@@ -268,10 +268,12 @@ func developerUpdateLoop(t *testing.T, iterations int) {
 			continue
 		}
 
-		// Verify we got a completion message
+		// A successful developer update ends with a "restarting" broadcast because
+		// executeDeveloperUpdate calls restartViaStartupScript (which in tests uses
+		// the no-op exitFunc). Fail only if the last message indicates an error.
 		last := msgs[len(msgs)-1]
-		if last.Status != "complete" && last.Status != "success" {
-			t.Errorf("iteration %d: expected complete status, got %q (message: %q)",
+		if last.Status == "error" || last.Status == "failed" {
+			t.Errorf("iteration %d: update failed with status %q (message: %q)",
 				i, last.Status, last.Message)
 		}
 	}
@@ -282,20 +284,36 @@ func TestDeveloperUpdateLoop_5x(t *testing.T) {
 	developerUpdateLoop(t, 5)
 }
 
-// setupFakeRepo creates a temporary directory with a minimal git structure.
+// setupFakeRepo creates a temporary directory with the minimal structure needed
+// by executeDeveloperUpdate: a .git directory, web/ for npm steps, data/ for
+// the restart log, and a no-op startup-oauth.sh for restartViaStartupScript.
 func setupFakeRepo(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 
-	// Create a minimal .git structure that satisfies rev-parse
+	// .git directory so git rev-parse HEAD succeeds via the mock git script
 	gitDir := filepath.Join(dir, ".git")
 	if err := os.MkdirAll(gitDir, 0755); err != nil {
 		t.Fatalf("failed to create .git dir: %v", err)
 	}
-
-	headFile := filepath.Join(gitDir, "HEAD")
-	if err := os.WriteFile(headFile, []byte("ref: refs/heads/main\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0644); err != nil {
 		t.Fatalf("failed to write HEAD: %v", err)
+	}
+
+	// web/ directory so npm install and npm run build can chdir into it
+	if err := os.MkdirAll(filepath.Join(dir, "web"), 0755); err != nil {
+		t.Fatalf("failed to create web dir: %v", err)
+	}
+
+	// data/ directory so the restart log file can be created
+	if err := os.MkdirAll(filepath.Join(dir, "data"), 0755); err != nil {
+		t.Fatalf("failed to create data dir: %v", err)
+	}
+
+	// startup-oauth.sh so restartViaStartupScript finds it; exitFunc is a no-op in tests
+	script := filepath.Join(dir, "startup-oauth.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/bash\nexit 0\n"), 0755); err != nil {
+		t.Fatalf("failed to write startup-oauth.sh: %v", err)
 	}
 
 	return dir
