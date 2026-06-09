@@ -9,11 +9,11 @@ import (
 )
 
 func fakeProviderCLICommandContext(ctx context.Context, _ string, _ ...string) *exec.Cmd {
-	const stderrFloodCommand = `printf 'cluster summary ready\n'; python - <<'PY'
-import sys
-sys.stderr.write('tool progress: inspecting cluster contexts\n' * 20000)
-PY`
-	return exec.CommandContext(ctx, "bash", "-lc", stderrFloodCommand)
+	// Use a non-login shell (-c, not -lc) to avoid sourcing /etc/profile and
+	// ~/.bash_profile which can add seconds of latency on some CI runners.
+	// Use python3 explicitly; the bare "python" symlink is absent on many modern distros.
+	const stderrFloodCommand = `printf 'cluster summary ready\n'; python3 -c "import sys; sys.stderr.write('tool progress: inspecting cluster contexts\n' * 20000)"`
+	return exec.CommandContext(ctx, "bash", "-c", stderrFloodCommand)
 }
 
 func TestCodexProvider_StreamChatDrainsStderr(t *testing.T) {
@@ -21,7 +21,7 @@ func TestCodexProvider_StreamChatDrainsStderr(t *testing.T) {
 	execCommandContext = fakeProviderCLICommandContext
 
 	provider := &CodexProvider{cliPath: "codex"}
-	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
 	resp, err := provider.StreamChat(ctx, &ChatRequest{Prompt: "tell me about my clusters"}, nil)
@@ -41,7 +41,7 @@ func TestGeminiCLIProvider_StreamChatDrainsStderr(t *testing.T) {
 	execCommandContext = fakeProviderCLICommandContext
 
 	provider := &GeminiCLIProvider{cliPath: "gemini"}
-	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
 	resp, err := provider.StreamChat(ctx, &ChatRequest{Prompt: "tell me about my clusters"}, nil)
