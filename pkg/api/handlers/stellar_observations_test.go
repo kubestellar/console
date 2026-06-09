@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -20,24 +21,54 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-// streamTestTimeoutMs is the timeout for Stream() test requests. Long enough to
-// receive the initial send() call (immediate) but short enough not to wait for
-// the 10-second ticker.
-const streamTestTimeoutMs = 3_000
+// sseReadDuration is how long sseGet reads from the SSE stream before cancelling.
+// Must be long enough to receive the initial flush (sent immediately by send()),
+// but short enough not to wait for the 10-second ticker.
+const sseReadDuration = 2 * time.Second
+
+// sseGet makes a real HTTP GET to a streaming SSE endpoint by starting the Fiber
+// app on a random TCP port.  It reads whatever the server flushes within dur,
+// then cancels the request.  Unlike fiber.App.Test, this works correctly for
+// long-lived streams that never return an EOF within a test timeout.
+func sseGet(t *testing.T, app *fiber.App, path string, dur time.Duration) (statusCode int, header http.Header, body string) {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	go func() { _ = app.Listener(ln) }()
+	t.Cleanup(func() { _ = app.ShutdownWithTimeout(200 * time.Millisecond) })
+
+	ctx, cancel := context.WithTimeout(context.Background(), dur)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+ln.Addr().String()+path, nil)
+	require.NoError(t, err)
+
+	// Use a client with disabled keep-alives so each test gets a clean connection.
+	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
+	resp, err := client.Do(req)
+	if err != nil {
+		// Context expired before headers arrived.
+		return 0, nil, ""
+	}
+	defer resp.Body.Close()
+
+	// Read body until context fires or stream closes.
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, resp.Body)
+	return resp.StatusCode, resp.Header, buf.String()
+}
 
 // TestStellarStream_SetsSSEHeaders verifies that the Stream endpoint returns the
 // correct SSE response headers (Content-Type: text/event-stream, etc.).
 func TestStellarStream_SetsSSEHeaders(t *testing.T) {
 	app, _ := newStellarTestApp(t)
-
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
-	assert.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
-	assert.Equal(t, "keep-alive", resp.Header.Get("Connection"))
+	statusCode, header, _ := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, "text/event-stream", header.Get("Content-Type"))
+	assert.Equal(t, "no-cache", header.Get("Cache-Control"))
+	assert.Equal(t, "keep-alive", header.Get("Connection"))
 }
 
 // TestStellarStream_ReturnsUnauthorizedWithoutUser verifies that Stream() returns
@@ -63,16 +94,8 @@ func TestStellarStream_ReturnsUnauthorizedWithoutUser(t *testing.T) {
 // dereference a recycled *RequestCtx and trigger SIGSEGV.
 func TestStellarStream_SendsHeartbeat(t *testing.T) {
 	app, _ := newStellarTestApp(t)
-
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	bodyStr := string(body)
+	statusCode, _, bodyStr := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	require.Equal(t, http.StatusOK, statusCode)
 
 	// The initial send() call fires immediately and must include a heartbeat event.
 	assert.Contains(t, bodyStr, "event: heartbeat", "stream must emit a heartbeat on first send")
@@ -103,15 +126,8 @@ func TestStellarStream_SendsInitialUnreadNotifications(t *testing.T) {
 	}
 	require.NoError(t, sqlStore.CreateStellarNotification(context.Background(), notif))
 
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	bodyStr := string(body)
+	statusCode, _, bodyStr := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	require.Equal(t, http.StatusOK, statusCode)
 
 	assert.Contains(t, bodyStr, "event: notification", "initial unread notifications must be streamed")
 	assert.Contains(t, bodyStr, "stream-test-notification", "notification title must appear in stream")
@@ -136,15 +152,8 @@ func TestStellarStream_SendsInitialState(t *testing.T) {
 		DedupeKey: "state-test-key",
 	}))
 
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	bodyStr := string(body)
+	statusCode, _, bodyStr := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	require.Equal(t, http.StatusOK, statusCode)
 
 	assert.Contains(t, bodyStr, "event: state", "stream must emit a state event in initial batch")
 	assert.Contains(t, bodyStr, `"unreadCount"`, "state event must include unreadCount field")
@@ -173,18 +182,11 @@ func TestStellarStream_UserIDCapturedBeforeGoroutine(t *testing.T) {
 		DedupeKey: "uuid-goroutine-test-key",
 	}))
 
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-
 	// If userID were not captured before SetBodyStreamWriter, the goroutine would
 	// either panic (nil dereference) or emit no events. Either way this test fails.
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err, "stream must not panic — regression guard for #17227")
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	assert.NotEmpty(t, string(body), "goroutine must emit events with pre-captured userID")
+	statusCode, _, bodyStr := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	require.Equal(t, http.StatusOK, statusCode, "stream must not panic — regression guard for #17227")
+	assert.NotEmpty(t, bodyStr, "goroutine must emit events with pre-captured userID")
 }
 
 // TestStellarListObservations_EmptyReturnsEmptyList verifies that the
@@ -338,6 +340,8 @@ func TestStellarIngestEvent_AcceptsValidEvent(t *testing.T) {
 
 // TestStellarStream_UpsertLastSeenCalledOnConnect verifies that connecting to the
 // stream updates the user's last-seen timestamp.
+// Note: UpsertUserLastSeen is called in the handler before SetBodyStreamWriter,
+// so it completes before the HTTP response headers are sent to the client.
 func TestStellarStream_UpsertLastSeenCalledOnConnect(t *testing.T) {
 	app, sqlStore := newStellarTestApp(t)
 
@@ -351,12 +355,8 @@ func TestStellarStream_UpsertLastSeenCalledOnConnect(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, before, "last-seen must be nil before first stream connect")
 
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	_, _ = io.ReadAll(resp.Body)
+	statusCode, _, _ := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	require.Equal(t, http.StatusOK, statusCode)
 
 	after, err := sqlStore.GetUserLastSeen(context.Background(), userUUID.String())
 	require.NoError(t, err)
@@ -381,13 +381,10 @@ func TestStellarStream_InvalidUserIDStillConnects(t *testing.T) {
 	h := NewStellarHandler(newInMemoryStellarStore(t), nil)
 	app.Get("/api/stellar/stream", h.Stream)
 
-	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
-	require.NoError(t, err)
-	resp, err := app.Test(req, streamTestTimeoutMs)
-	require.NoError(t, err)
 	// Stream must still connect and emit SSE headers even without admin resolution.
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+	statusCode, header, _ := sseGet(t, app, "/api/stellar/stream", sseReadDuration)
+	assert.Equal(t, http.StatusOK, statusCode)
+	assert.Equal(t, "text/event-stream", header.Get("Content-Type"))
 }
 
 // newInMemoryStellarStore creates a minimal SQLiteStore backed by a temp DB.
