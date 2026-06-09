@@ -74,7 +74,7 @@
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "clsx": "^2.1.1",
-    "dompurify": "^3.4.5",
+    "dompurify": "^3.4.8",
     "echarts": "^6.1.0",
     "framer-motion": "^12.40.0",
     "i18next": "^26.2.0",
