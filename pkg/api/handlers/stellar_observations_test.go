@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -253,55 +255,59 @@ func TestStellarIngestEvent_RequiresAuth(t *testing.T) {
 // TestStellarIngestEvent_MissingFieldsReturnsBadRequest verifies that IngestEvent
 // rejects payloads missing required fields with HTTP 400.
 func TestStellarIngestEvent_MissingFieldsReturnsBadRequest(t *testing.T) {
-	_, sqlStore := newStellarTestApp(t)
-
-	// Elevate the test user to editor so the auth check passes.
-	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	// Use a fresh concrete store so it can be passed as handlers.StellarStore.
+	s, err := store.NewSQLiteStore(filepath.Join(t.TempDir(), "ingest-bad.db"))
 	require.NoError(t, err)
-	require.NotEmpty(t, users)
-	u := users[0]
-	u.Role = models.UserRoleEditor
-	require.NoError(t, sqlStore.UpdateUser(context.Background(), &u))
+	t.Cleanup(func() { _ = s.Close() })
 
-	// Override injected user role in the app middleware.
+	userID := uuid.New()
+	require.NoError(t, s.CreateUser(context.Background(), &models.User{
+		ID:          userID,
+		GitHubLogin: "editor-user",
+		Role:        models.UserRoleEditor,
+	}))
+
 	editorApp := fiber.New()
 	editorApp.Use(func(c *fiber.Ctx) error {
-		c.Locals("userID", u.ID)
-		c.Locals("githubLogin", u.GitHubLogin)
+		c.Locals("userID", userID)
+		c.Locals("githubLogin", "editor-user")
 		return c.Next()
 	})
-	h := NewStellarHandler(sqlStore, nil)
+	h := NewStellarHandler(s, nil, WithUserStore(s))
 	editorApp.Post("/api/stellar/events", h.IngestEvent)
 
 	// Missing required fields: cluster is empty.
 	body := `{"cluster":"","namespace":"ns","name":"pod","type":"Warning","reason":"x","message":"y"}`
-	req, err := http.NewRequest(http.MethodPost, "/api/stellar/events", bytes.NewReader([]byte(body)))
-	require.NoError(t, err)
+	req, err2 := http.NewRequest(http.MethodPost, "/api/stellar/events", bytes.NewReader([]byte(body)))
+	require.NoError(t, err2)
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := editorApp.Test(req, 2000)
-	require.NoError(t, err)
+	resp, err2 := editorApp.Test(req, 2000)
+	require.NoError(t, err2)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 // TestStellarIngestEvent_AcceptsValidEvent verifies that a valid IngestEvent
 // request is accepted asynchronously with HTTP 202 Accepted.
 func TestStellarIngestEvent_AcceptsValidEvent(t *testing.T) {
-	_, sqlStore := newStellarTestApp(t)
-
-	users, err := sqlStore.ListUsers(context.Background(), 1, 0)
+	// Use a fresh concrete store so it can be passed as handlers.StellarStore.
+	s, err := store.NewSQLiteStore(filepath.Join(t.TempDir(), "ingest-ok.db"))
 	require.NoError(t, err)
-	require.NotEmpty(t, users)
-	u := users[0]
-	u.Role = models.UserRoleAdmin
-	require.NoError(t, sqlStore.UpdateUser(context.Background(), &u))
+	t.Cleanup(func() { _ = s.Close() })
+
+	userID := uuid.New()
+	require.NoError(t, s.CreateUser(context.Background(), &models.User{
+		ID:          userID,
+		GitHubLogin: "admin-user",
+		Role:        models.UserRoleAdmin,
+	}))
 
 	adminApp := fiber.New()
 	adminApp.Use(func(c *fiber.Ctx) error {
-		c.Locals("userID", u.ID)
-		c.Locals("githubLogin", u.GitHubLogin)
+		c.Locals("userID", userID)
+		c.Locals("githubLogin", "admin-user")
 		return c.Next()
 	})
-	h := NewStellarHandler(sqlStore, nil)
+	h := NewStellarHandler(s, nil, WithUserStore(s))
 	adminApp.Post("/api/stellar/events", h.IngestEvent)
 
 	payload := map[string]string{
@@ -313,12 +319,12 @@ func TestStellarIngestEvent_AcceptsValidEvent(t *testing.T) {
 		"message":   "back-off 5m0s restarting failed container",
 	}
 	raw, _ := json.Marshal(payload)
-	req, err := http.NewRequest(http.MethodPost, "/api/stellar/events", bytes.NewReader(raw))
-	require.NoError(t, err)
+	req, err2 := http.NewRequest(http.MethodPost, "/api/stellar/events", bytes.NewReader(raw))
+	require.NoError(t, err2)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := adminApp.Test(req, 2000)
-	require.NoError(t, err)
+	resp, err2 := adminApp.Test(req, 2000)
+	require.NoError(t, err2)
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 
 	var result map[string]any
