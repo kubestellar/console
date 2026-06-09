@@ -56,8 +56,12 @@ func TestCSP_NoWildcardSchemes(t *testing.T) {
 	require.NotEmpty(t, csp, "Content-Security-Policy header must be present")
 
 	// Bare scheme wildcards grant access to ANY host on that scheme — too broad.
+	// Check space-delimited form (mid-directive).
 	assert.NotContains(t, csp, " wss: ", "connect-src must not contain bare wss: wildcard")
 	assert.NotContains(t, csp, " ws: ", "connect-src must not contain bare ws: wildcard")
+	// Check semicolon-adjacent form (e.g. "wss:;" or "ws:;").
+	assert.NotContains(t, csp, "wss:;", "connect-src must not contain bare wss: wildcard (semicolon form)")
+	assert.NotContains(t, csp, "ws:;", "connect-src must not contain bare ws: wildcard (semicolon form)")
 	// Also disallow trailing position (e.g. "connect-src ... wss:")
 	assert.False(t, strings.HasSuffix(strings.TrimSpace(csp), "wss:"), "CSP must not end with bare wss:")
 	assert.False(t, strings.HasSuffix(strings.TrimSpace(csp), "ws:"), "CSP must not end with bare ws:")
@@ -113,8 +117,10 @@ func TestCSP_LoopbackAgentConnectSrc(t *testing.T) {
 	assert.Contains(t, csp, "ws://localhost:8585", "connect-src must include localhost kc-agent WebSocket")
 }
 
-// TestCSP_CustomKCAgentURL_InjectsHTTPAndWS verifies that KC_AGENT_URL env var correctly
-// adds both HTTP and WebSocket variants of a custom agent URL to connect-src.
+// TestCSP_CustomKCAgentURL_InjectsHTTPAndWS verifies that a custom agent base URL is
+// correctly expanded into both HTTP and WebSocket connect-src entries.
+// The URL is injected by overriding the package-level kcAgentBaseURL, which is the same
+// path taken at runtime when the KC_AGENT_URL environment variable is set.
 func TestCSP_CustomKCAgentURL_InjectsHTTPAndWS(t *testing.T) {
 	customURL := "http://custom-agent.example.com:9090"
 	s := newCSPTestServer(t, customURL)
