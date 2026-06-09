@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
-	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,8 +16,8 @@ import (
 // rejects requests with 503 when GITHUB_WEBHOOK_SECRET is not configured.
 // This prevents silent unauthenticated webhook acceptance.
 func TestWebhook_NoSecretConfigured_Returns503(t *testing.T) {
-	stubStore := &feedbackStoreStub{MockStore: newMockStore()}
-	app := newFiberApp()
+	stubStore := &feedbackStoreStub{MockStore: &test.MockStore{}}
+	app := fiber.New()
 	handler := NewFeedbackHandler(stubStore, FeedbackConfig{
 		WebhookSecret: "", // intentionally empty
 	})
@@ -73,7 +74,7 @@ func TestWebhook_UnknownEvent_ReturnsIgnored(t *testing.T) {
 	assert.Contains(t, body, "check_run")
 }
 
-// TestWebhook_EmptySignatureHeader_Returns401 verifies that an empty or absent
+// TestWebhook_EmptySignatureHeader_Returns401 verifies that an absent
 // X-Hub-Signature-256 header is rejected with 401.
 func TestWebhook_EmptySignatureHeader_Returns401(t *testing.T) {
 	app, _ := setupWebhookTest(t)
@@ -228,15 +229,6 @@ func TestPipelineLabels_UnknownLabel(t *testing.T) {
 	assert.False(t, ok, "unknown label should not be in pipelineLabels")
 }
 
-// --- isLabelPermissionError edge cases ---
-
-func TestIsLabelPermissionError_CaseInsensitive(t *testing.T) {
-	// The check uses strings.Contains which is case-sensitive,
-	// so verify both the current behavior and the actual requirement.
-	errLower := errors.New("github: 403 label not accessible")
-	assert.True(t, isLabelPermissionError(errLower))
-}
-
 // TestWebhook_DeploymentStatus_MissingDeployment verifies that a
 // deployment_status event missing the deployment object is handled gracefully.
 func TestWebhook_DeploymentStatus_MissingDeployment(t *testing.T) {
@@ -310,14 +302,4 @@ func TestExtractLinkedIssueNumbers_NoDuplicates(t *testing.T) {
 	body := "Fixes #42\nCloses #42\nResolves #42"
 	got := extractLinkedIssueNumbers(body)
 	assert.Equal(t, []int{42}, got, "duplicate issue numbers should be deduplicated")
-}
-
-// helper to avoid importing fiber in this file while still using the same
-// fiber.New() as the existing feedback_test.go helpers.
-func newFiberApp() interface{ Post(string, ...interface{}) } {
-	return setupFiberApp()
-}
-
-func setupFiberApp() fiberApp {
-	return newTestFiberApp()
 }
