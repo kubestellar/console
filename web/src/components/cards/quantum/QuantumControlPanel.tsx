@@ -8,6 +8,7 @@ import { CustomQASMModal } from './CustomQASMModal'
 import { useQASMFiles } from '../../../hooks/useQASMFiles'
 import { useAuth } from '../../../lib/auth'
 import { useDrillDown } from '../../../hooks/useDrillDown'
+import { useModal } from '../../../hooks/useModal'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 import { classifyApiError } from '../../../lib/errorHandling'
 import {
@@ -87,7 +88,7 @@ export const QuantumControlPanel: React.FC = () => {
   const [sessionValidatedAt, setSessionValidatedAt] = useState<number | null>(null)
 
   // Custom QASM support
-  const [showCustomQasmModal, setShowCustomQasmModal] = useState(false)
+  const customQasmModal = useModal()
   const [customQasmContent, setCustomQasmContent] = useState<string>('')
   const [previousQasmFile, setPreviousQasmFile] = useState<string>(DEMO_DATA.qasm_file)
 
@@ -399,14 +400,14 @@ export const QuantumControlPanel: React.FC = () => {
   const handleCustomQasmSubmit = useCallback((content: string) => {
     setCustomQasmContent(content)
     setControl(prev => ({ ...prev, qasm_file: 'custom' }))
-    setShowCustomQasmModal(false)
+    customQasmModal.close()
     showToast(t('quantumControlPanel.customQasmSaved'), 'success')
-  }, [showToast, t])
+  }, [customQasmModal, showToast, t])
 
   const handleCustomQasmCancel = useCallback(() => {
     setControl(prev => ({ ...prev, qasm_file: previousQasmFile }))
-    setShowCustomQasmModal(false)
-  }, [previousQasmFile])
+    customQasmModal.close()
+  }, [customQasmModal, previousQasmFile])
 
   const displayStatus = status || DEMO_STATUS
   const isHealthy = displayStatus.status === 'ready' || displayStatus.loop_running === true
@@ -633,7 +634,7 @@ export const QuantumControlPanel: React.FC = () => {
                   const val = e.target.value
                   if (val === 'custom') {
                     setPreviousQasmFile(control.qasm_file)
-                    setShowCustomQasmModal(true)
+                    customQasmModal.open()
                   } else {
                     const newBackend =
                       val === LARGE_CIRCUIT_QASM && control.backend === 'aer_noise'
@@ -662,7 +663,7 @@ export const QuantumControlPanel: React.FC = () => {
               </select>
               {control.qasm_file === 'custom' && customQasmContent && (
                 <button
-                  onClick={() => setShowCustomQasmModal(true)}
+                  onClick={customQasmModal.open}
                   disabled={control.executing}
                   className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
                   title="Edit custom QASM"
@@ -838,7 +839,7 @@ export const QuantumControlPanel: React.FC = () => {
 
       {/* Custom QASM Modal */}
       <CustomQASMModal
-          isOpen={showCustomQasmModal}
+          isOpen={customQasmModal.isOpen}
           initialContent={customQasmContent}
           onSubmit={handleCustomQasmSubmit}
           onCancel={handleCustomQasmCancel}
