@@ -1,0 +1,160 @@
+package api
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// newCSPTestServer creates a minimal server with only middleware applied so we
+// can inspect security headers without needing a full route setup.
+func newCSPTestServer(t *testing.T, kcAgentURL string) *Server {
+	t.Helper()
+
+	// Override the package-level kcAgentBaseURL for the duration of this test.
+	orig := kcAgentBaseURL
+	kcAgentBaseURL = kcAgentURL
+	t.Cleanup(func() { kcAgentBaseURL = orig })
+
+	s := &Server{
+		app:    fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
+		config: Config{},
+		auth:   newAuthRuntime(),
+	}
+	s.setupMiddleware()
+	// Register a catch-all so the middleware chain can complete.
+	s.app.Get("/*", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+	return s
+}
+
+// cspHeader fetches a GET / response and returns the Content-Security-Policy header value.
+func cspHeader(t *testing.T, s *Server) string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	resp, err := s.app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	return resp.Header.Get("Content-Security-Policy")
+}
+
+// TestCSP_NoWildcardSchemes guards against reintroduction of bare wss: / ws: wildcards
+// in the connect-src directive (regression for PR #17301).
+func TestCSP_NoWildcardSchemes(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	csp := cspHeader(t, s)
+
+	require.NotEmpty(t, csp, "Content-Security-Policy header must be present")
+
+	// Bare scheme wildcards grant access to ANY host on that scheme — too broad.
+	assert.NotContains(t, csp, " wss: ", "connect-src must not contain bare wss: wildcard")
+	assert.NotContains(t, csp, " ws: ", "connect-src must not contain bare ws: wildcard")
+	// Also disallow trailing position (e.g. "connect-src ... wss:")
+	assert.False(t, strings.HasSuffix(strings.TrimSpace(csp), "wss:"), "CSP must not end with bare wss:")
+	assert.False(t, strings.HasSuffix(strings.TrimSpace(csp), "ws:"), "CSP must not end with bare ws:")
+}
+
+// TestCSP_RequiredDirectivesPresent verifies that all security-critical directives exist.
+func TestCSP_RequiredDirectivesPresent(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	csp := cspHeader(t, s)
+
+	require.NotEmpty(t, csp, "Content-Security-Policy header must be present")
+
+	directives := []string{
+		"default-src",
+		"script-src",
+		"connect-src",
+		"style-src",
+		"img-src",
+		"object-src",
+		"base-uri",
+	}
+	for _, d := range directives {
+		assert.Contains(t, csp, d, "CSP must contain %s directive", d)
+	}
+}
+
+// TestCSP_DefaultSrcSelf ensures the default-src fallback is 'self' (not a wildcard).
+func TestCSP_DefaultSrcSelf(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	csp := cspHeader(t, s)
+
+	assert.Contains(t, csp, "default-src 'self'", "default-src must be 'self'")
+}
+
+// TestCSP_ObjectSrcNone blocks plugin content (Flash, PDFs in plugin context).
+func TestCSP_ObjectSrcNone(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	csp := cspHeader(t, s)
+
+	assert.Contains(t, csp, "object-src 'none'", "object-src must be 'none' to block plugin execution")
+}
+
+// TestCSP_LoopbackAgentConnectSrc verifies that the default loopback kc-agent origins are
+// present in connect-src so local agent communication is allowed.
+func TestCSP_LoopbackAgentConnectSrc(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	csp := cspHeader(t, s)
+
+	// The loopback constants from middleware_setup.go
+	assert.Contains(t, csp, "http://127.0.0.1:8585", "connect-src must include loopback kc-agent HTTP")
+	assert.Contains(t, csp, "ws://127.0.0.1:8585", "connect-src must include loopback kc-agent WebSocket")
+	assert.Contains(t, csp, "http://localhost:8585", "connect-src must include localhost kc-agent HTTP")
+	assert.Contains(t, csp, "ws://localhost:8585", "connect-src must include localhost kc-agent WebSocket")
+}
+
+// TestCSP_CustomKCAgentURL_InjectsHTTPAndWS verifies that KC_AGENT_URL env var correctly
+// adds both HTTP and WebSocket variants of a custom agent URL to connect-src.
+func TestCSP_CustomKCAgentURL_InjectsHTTPAndWS(t *testing.T) {
+	customURL := "http://custom-agent.example.com:9090"
+	s := newCSPTestServer(t, customURL)
+	csp := cspHeader(t, s)
+
+	assert.Contains(t, csp, customURL, "connect-src must include custom kc-agent HTTP URL")
+	assert.Contains(t, csp, "ws://custom-agent.example.com:9090", "connect-src must include custom kc-agent WebSocket URL")
+}
+
+// TestCSP_CustomKCAgentURL_HTTPSInjectsWSS verifies that an HTTPS custom agent URL
+// correctly injects a wss:// WebSocket URL (not ws://).
+func TestCSP_CustomKCAgentURL_HTTPSInjectsWSS(t *testing.T) {
+	customURL := "https://secure-agent.example.com:443"
+	s := newCSPTestServer(t, customURL)
+	csp := cspHeader(t, s)
+
+	assert.Contains(t, csp, customURL, "connect-src must include secure custom agent HTTPS URL")
+	assert.Contains(t, csp, "wss://secure-agent.example.com:443", "connect-src must include wss:// for https custom agent")
+	assert.NotContains(t, csp, "ws://secure-agent.example.com", "connect-src must NOT have plain ws:// for https custom agent")
+}
+
+// TestCSP_FrameAncestorsBlockedViaXFrame verifies that X-Frame-Options is set to DENY
+// for regular paths (not /embed/*) to block framing.
+func TestCSP_XFrameOptions_DenyOnRegularPaths(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	req := httptest.NewRequest(http.MethodGet, "/some/page", nil)
+	resp, err := s.app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, "DENY", resp.Header.Get("X-Frame-Options"),
+		"X-Frame-Options must be DENY for non-embed paths")
+}
+
+// TestCSP_XFrameOptions_AllowedOnEmbedPaths verifies that /embed/* routes omit
+// X-Frame-Options so they can be rendered in an iframe.
+func TestCSP_XFrameOptions_AllowedOnEmbedPaths(t *testing.T) {
+	s := newCSPTestServer(t, defaultKCAgentBaseURL)
+	req := httptest.NewRequest(http.MethodGet, "/embed/ci-status", nil)
+	resp, err := s.app.Test(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Empty(t, resp.Header.Get("X-Frame-Options"),
+		"X-Frame-Options must be absent for /embed/* paths to allow iframe embedding")
+}
