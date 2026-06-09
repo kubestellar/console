@@ -2,18 +2,20 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	fakek8s "k8s.io/client-go/kubernetes/fake"
-	k8stesting "k8s.io/client-go/testing"
-
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	fakek8s "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -362,6 +364,13 @@ func TestDeleteRoleBindingHTTP_MissingNamespaceForNamespaced(t *testing.T) {
 func TestDeleteRoleBindingHTTP_NamespacedBinding_Success(t *testing.T) {
 	srv, k8sMock := newRBACTestServer(t)
 	fakeCS := fakek8s.NewSimpleClientset()
+	if _, err := fakeCS.RbacV1().RoleBindings("default").Create(
+		context.Background(),
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "alice-view-default", Namespace: "default"}},
+		metav1.CreateOptions{},
+	); err != nil {
+		t.Fatalf("pre-create role binding: %v", err)
+	}
 	k8sMock.SetClient("cluster-a", fakeCS)
 
 	rr := doRoleBindingsRequest(t, srv, http.MethodDelete, "cluster=cluster-a&name=alice-view-default&namespace=default", nil)
@@ -381,6 +390,13 @@ func TestDeleteRoleBindingHTTP_NamespacedBinding_Success(t *testing.T) {
 func TestDeleteRoleBindingHTTP_ClusterBinding_Success(t *testing.T) {
 	srv, k8sMock := newRBACTestServer(t)
 	fakeCS := fakek8s.NewSimpleClientset()
+	if _, err := fakeCS.RbacV1().ClusterRoleBindings().Create(
+		context.Background(),
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "bob-admin"}},
+		metav1.CreateOptions{},
+	); err != nil {
+		t.Fatalf("pre-create cluster role binding: %v", err)
+	}
 	k8sMock.SetClient("cluster-a", fakeCS)
 
 	// isCluster=true: namespace not required
