@@ -25,7 +25,8 @@ func newCSPTestServer(t *testing.T, kcAgentURL string) *Server {
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		// FrontendURL must be a specific origin (not empty) because CORS rejects
 		// AllowCredentials=true combined with AllowOrigins="*".
-		config: Config{FrontendURL: "http://localhost:3000"},
+		// FrontendURL lives in IntegrationsConfig (embedded); use qualified form in literals.
+		config: Config{IntegrationsConfig: IntegrationsConfig{FrontendURL: "http://localhost:3000"}},
 		auth:   newAuthRuntime(),
 	}
 	s.setupMiddleware()
