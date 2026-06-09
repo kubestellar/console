@@ -123,6 +123,10 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       .slice(0, MAX_RECENT_BUILDS),
     [buildItems]
   )
+  const maxFramework = useMemo(
+    () => Object.entries(stats.frameworks).sort((a, b) => b[1] - a[1]),
+    [stats.frameworks]
+  )
 
   if (showSkeleton) {
     return (
@@ -149,11 +153,6 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
       </div>
     )
   }
-
-  const maxFramework = useMemo(
-    () => Object.entries(stats.frameworks).sort((a, b) => b[1] - a[1]),
-    [stats.frameworks]
-  )
 
   return (
     <div className="space-y-3 p-1">

@@ -17,6 +17,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { useEffect, useState } from 'react'
 
 // ── Hoisted mocks ──────────────────────────────────────────────────
 
@@ -103,7 +104,6 @@ describe('useDemoDataHook mode transitions', () => {
   // Simulate useDemoDataHook exactly as source
   function useSimulatedDemoDataHook<T>(demoData: T[]) {
     const { isDemoMode: demoMode } = mockUseDemoMode()
-    const { useState, useEffect } = require('react')
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {

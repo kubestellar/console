@@ -34,7 +34,7 @@ export async function readCappedRequestBuffer(
 
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
+  let bytesRead = 0;
 
   try {
     while (true) {
@@ -46,10 +46,10 @@ export async function readCappedRequestBuffer(
         continue;
       }
 
-      totalBytes += value.byteLength;
-      if (totalBytes > maxBytes) {
+      bytesRead += value.byteLength;
+      if (bytesRead > maxBytes) {
         await reader.cancel();
-        throw new RequestBodyTooLargeError(label, maxBytes, totalBytes);
+        throw new RequestBodyTooLargeError(label, maxBytes, bytesRead);
       }
       chunks.push(value);
     }
@@ -57,7 +57,7 @@ export async function readCappedRequestBuffer(
     if (error instanceof RequestBodyTooLargeError) {
       throw error;
     }
-    throw new Error(`Failed to read ${label} body: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to read ${label} body: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   } finally {
     reader.releaseLock();
   }
@@ -69,6 +69,7 @@ export async function readCappedRequestBuffer(
     return chunks[0];
   }
 
+  const totalBytes = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
   const combined = new Uint8Array(totalBytes);
   let offset = 0;
   for (const chunk of chunks) {

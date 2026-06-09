@@ -1,5 +1,5 @@
 import React, { createRef } from 'react'
-import { use, getInstanceByDom, init } from 'echarts/core'
+import { use as registerEChartsModules, getInstanceByDom, init } from 'echarts/core'
 import {
   GridComponent,
   LegendComponent,
@@ -23,7 +23,7 @@ import type { EChartsReactProps, EChartsEventHandler } from './lib/types'
 
 // Register only the chart types/components used by the console to avoid pulling
 // the full ECharts bundle into the app.
-use([
+registerEChartsModules([
   GridComponent,
   LegendComponent,
   TooltipComponent,
@@ -42,7 +42,7 @@ use([
 ])
 
 // Create a minimal echarts module object with the functions we need
-const echartsCore = { use, getInstanceByDom, init }
+const echartsCore = { use: registerEChartsModules, getInstanceByDom, init }
 
 interface RegisteredEvents {
   [eventName: string]: EChartsEventHandler

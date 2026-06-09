@@ -520,10 +520,7 @@ test.describe('Mission Control Journey Tests', () => {
 
     test('complete mission lifecycle: trigger → pending → running → streaming → completed', async ({ page }) => {
       await setupHTTPMocks(page)
-      let wsHandler: ((ws: WebSocketRoute) => void) | null = null
-
       await page.routeWebSocket(WS_URL_PATTERN, ws => {
-        if (wsHandler) wsHandler(ws)
         ws.onMessage(async msg => {
           const parsed: WSMessage = JSON.parse(msg.toString())
           if (parsed.type === 'chat') {

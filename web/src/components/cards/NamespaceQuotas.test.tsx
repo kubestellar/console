@@ -31,7 +31,7 @@ vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
   useResourceQuotas: (c?: string, ns?: string) => mockUseResourceQuotas(c, ns),
   useLimitRanges: (c?: string, ns?: string) => mockUseLimitRanges(c, ns),
-  createOrUpdateResourceQuota: (spec: any) => mockCreateOrUpdateResourceQuota(spec),
+  createOrUpdateResourceQuota: (spec: unknown) => mockCreateOrUpdateResourceQuota(spec),
   deleteResourceQuota: (cluster: string, namespace: string, name: string) => mockDeleteResourceQuota(cluster, namespace, name),
   COMMON_RESOURCE_TYPES: [
     { key: 'requests.cpu', label: 'CPU Requests', description: 'Total CPU requests allowed' },
@@ -59,7 +59,7 @@ vi.mock('../../hooks/useDemoMode', async (importOriginal) => {
 
 const mockUseCardLoadingState = vi.fn()
 vi.mock('./CardDataContext', () => ({
-  useCardLoadingState: (opts: any) => mockUseCardLoadingState(opts),
+  useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
 }))
 
 vi.mock('../ui/Skeleton', () => ({
@@ -69,13 +69,13 @@ vi.mock('../ui/Skeleton', () => ({
 }))
 
 function setupMocks(overrides: {
-  clusters?: any[]
+  clusters?: Array<Record<string, unknown>>
   clustersLoading?: boolean
   clustersFailed?: boolean
   clustersFailures?: number
-  resourceQuotas?: any[]
+  resourceQuotas?: Array<Record<string, unknown>>
   quotasLoading?: boolean
-  limitRanges?: any[]
+  limitRanges?: Array<Record<string, unknown>>
   limitsLoading?: boolean
   namespaces?: string[]
   namespacesLoading?: boolean

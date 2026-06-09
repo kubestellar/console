@@ -161,8 +161,8 @@ describe('stellarApi.getNotifications', () => {
 // Helper to test typical read endpoints that return items or safe defaults on error (resolves Copilot review on duplication)
 const testReadEndpoint = (
   name: string,
-  callEndpoint: () => Promise<any[]>,
-  mockItems: any[],
+  callEndpoint: () => Promise<unknown[]>,
+  mockItems: unknown[],
   expectedUrl: string
 ) => {
   describe(name, () => {

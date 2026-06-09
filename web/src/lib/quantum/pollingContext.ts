@@ -14,7 +14,7 @@ export function useQuantumPolling() {
   return useContext(QuantumPollingContext)
 }
 
-let globalQuantumPollingPaused = false
+const globalQuantumPollingPaused = false
 
 export function isGlobalQuantumPollingPaused(): boolean {
   return globalQuantumPollingPaused

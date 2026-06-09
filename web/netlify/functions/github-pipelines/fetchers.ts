@@ -64,7 +64,6 @@ export async function readCappedText(res: Response): Promise<string> {
     const remaining = MAX_RESPONSE_BYTES - totalBytes;
     if (value.byteLength > remaining) {
       chunks.push(value.slice(0, remaining));
-      totalBytes += remaining;
       break;
     }
     chunks.push(value);

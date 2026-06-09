@@ -160,12 +160,9 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
   }, {} as Record<string, number>)
 
   const sortedGpuTypes = Object.entries(gpuTypesMap).sort((a, b) => {
-    let compare = 0
-    if (sorting.sortBy === 'count') {
-      compare = a[1] - b[1]
-    } else {
-      compare = a[0].localeCompare(b[0])
-    }
+    const compare = sorting.sortBy === 'count'
+      ? a[1] - b[1]
+      : a[0].localeCompare(b[0])
     return sorting.sortDirection === 'asc' ? compare : -compare
   })
 

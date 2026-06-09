@@ -381,8 +381,7 @@ test.describe('Mission Control Dry-Run Tests', () => {
         if (btn) { (btn as HTMLElement).click(); return true }
         return false
       })
-      if (clicked) {
-      }
+      expect(clicked).toBe(true)
 
       // Wait for dry-run to complete — look for completion indicators in the UI
       await expect(
@@ -426,8 +425,7 @@ test.describe('Mission Control Dry-Run Tests', () => {
         if (btn) { (btn as HTMLElement).click(); return true }
         return false
       })
-      if (clicked) {
-      }
+      expect(clicked).toBe(true)
 
       // Wait for dry-run to complete — look for completion indicators in the UI
       await expect(

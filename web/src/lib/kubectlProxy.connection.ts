@@ -102,7 +102,7 @@ export class KubectlProxyConnection {
         throw new Error('Local agent unavailable (cooldown)')
       }
 
-      return new Promise<void>(async (resolve, reject) => {
+      return new Promise<void>((resolve, reject) => {
         let settled = false
         let connectTimeout: ReturnType<typeof setTimeout> | null = null
         const finalize = (cb: () => void) => {
@@ -111,106 +111,108 @@ export class KubectlProxyConnection {
           if (connectTimeout) clearTimeout(connectTimeout)
           cb()
         }
-        try {
-          const { url, protocols } = await getWsAuthParams(wsURL)
-          this.ws = new WebSocket(url, protocols)
-          connectTimeout = setTimeout(() => {
-            try {
-              this.ws?.close()
-            } catch {
-              /* ignore */
-            }
-            this.lastConnectionFailureAt = Date.now()
-            this.isConnecting = false
-            this.connectPromise = null
-            finalize(() =>
-              reject(
-                new Error(
-                  `Connection timeout after ${WS_CONNECT_TIMEOUT_MS}ms`,
-                ),
-              ),
-            )
-          }, WS_CONNECT_TIMEOUT_MS)
-
-          this.ws.onopen = () => {
-            this.isConnecting = false
-            this.lastConnectionFailureAt = 0
-            this.wsMode = wsURL === LOCAL_AGENT_WS_URL ? 'local' : 'backend'
-            if (this.wsMode === 'backend') {
-              reportBackendAvailable('ws')
-            }
-            finalize(() => resolve())
-          }
-
-          this.ws.onmessage = (event) => {
-            try {
-              const message: Message = JSON.parse(event.data)
-              const pending = this.pendingRequests.get(message.id)
-              if (pending) {
-                clearTimeout(pending.timeout)
-                this.pendingRequests.delete(message.id)
-
-                if (message.type === 'error') {
-                  const errorPayload = message.payload as {
-                    code: string
-                    message: string
-                  }
-                  pending.reject(
-                    new Error(errorPayload.message || 'Unknown error'),
-                  )
-                } else {
-                  pending.resolve(message.payload as KubectlResponse)
-                }
+        void (async () => {
+          try {
+            const { url, protocols } = await getWsAuthParams(wsURL)
+            this.ws = new WebSocket(url, protocols)
+            connectTimeout = setTimeout(() => {
+              try {
+                this.ws?.close()
+              } catch {
+                /* ignore */
               }
-            } catch (e: unknown) {
-              console.error('[KubectlProxy] Failed to parse message:', e)
-            }
-          }
-
-          this.ws.onclose = () => {
-            const wasBackendSocket = this.wsMode === 'backend'
-            this.ws = null
-            this.connectPromise = null
-            this.isConnecting = false
-            this.lastConnectionFailureAt = Date.now()
-            this.wsMode = 'unknown'
-            if (wasBackendSocket) {
-              reportBackendUnavailable('ws')
-            }
-
-            this.pendingRequests.forEach((pending, id) => {
-              clearTimeout(pending.timeout)
-              pending.reject(new Error('Connection closed'))
-              this.pendingRequests.delete(id)
-            })
-          }
-
-          this.ws.onerror = (err) => {
-            console.error('[KubectlProxy] WebSocket error:', err)
-            this.isConnecting = false
-            this.connectPromise = null
-            this.lastConnectionFailureAt = Date.now()
-            this.wsMode = 'unknown'
-            if (!isLocalTarget) {
-              reportBackendUnavailable('ws')
-            }
-            finalize(() =>
-              reject(
-                new Error(
-                  isLocalTarget
-                    ? 'Failed to connect to local agent'
-                    : 'Failed to connect to backend WebSocket',
+              this.lastConnectionFailureAt = Date.now()
+              this.isConnecting = false
+              this.connectPromise = null
+              finalize(() =>
+                reject(
+                  new Error(
+                    `Connection timeout after ${WS_CONNECT_TIMEOUT_MS}ms`,
+                  ),
                 ),
-              ),
-            )
+              )
+            }, WS_CONNECT_TIMEOUT_MS)
+
+            this.ws.onopen = () => {
+              this.isConnecting = false
+              this.lastConnectionFailureAt = 0
+              this.wsMode = wsURL === LOCAL_AGENT_WS_URL ? 'local' : 'backend'
+              if (this.wsMode === 'backend') {
+                reportBackendAvailable('ws')
+              }
+              finalize(() => resolve())
+            }
+
+            this.ws.onmessage = (event) => {
+              try {
+                const message: Message = JSON.parse(event.data)
+                const pending = this.pendingRequests.get(message.id)
+                if (pending) {
+                  clearTimeout(pending.timeout)
+                  this.pendingRequests.delete(message.id)
+
+                  if (message.type === 'error') {
+                    const errorPayload = message.payload as {
+                      code: string
+                      message: string
+                    }
+                    pending.reject(
+                      new Error(errorPayload.message || 'Unknown error'),
+                    )
+                  } else {
+                    pending.resolve(message.payload as KubectlResponse)
+                  }
+                }
+              } catch (e: unknown) {
+                console.error('[KubectlProxy] Failed to parse message:', e)
+              }
+            }
+
+            this.ws.onclose = () => {
+              const wasBackendSocket = this.wsMode === 'backend'
+              this.ws = null
+              this.connectPromise = null
+              this.isConnecting = false
+              this.lastConnectionFailureAt = Date.now()
+              this.wsMode = 'unknown'
+              if (wasBackendSocket) {
+                reportBackendUnavailable('ws')
+              }
+
+              this.pendingRequests.forEach((pending, id) => {
+                clearTimeout(pending.timeout)
+                pending.reject(new Error('Connection closed'))
+                this.pendingRequests.delete(id)
+              })
+            }
+
+            this.ws.onerror = (err) => {
+              console.error('[KubectlProxy] WebSocket error:', err)
+              this.isConnecting = false
+              this.connectPromise = null
+              this.lastConnectionFailureAt = Date.now()
+              this.wsMode = 'unknown'
+              if (!isLocalTarget) {
+                reportBackendUnavailable('ws')
+              }
+              finalize(() =>
+                reject(
+                  new Error(
+                    isLocalTarget
+                      ? 'Failed to connect to local agent'
+                      : 'Failed to connect to backend WebSocket',
+                  ),
+                ),
+              )
+            }
+          } catch (err: unknown) {
+            this.isConnecting = false
+            this.connectPromise = null
+            this.lastConnectionFailureAt = Date.now()
+            this.wsMode = 'unknown'
+            finalize(() => reject(err))
           }
-        } catch (err: unknown) {
-          this.isConnecting = false
-          this.connectPromise = null
-          this.lastConnectionFailureAt = Date.now()
-          this.wsMode = 'unknown'
-          finalize(() => reject(err))
-        }
+        })()
       })
     })().catch((err) => {
       this.isConnecting = false

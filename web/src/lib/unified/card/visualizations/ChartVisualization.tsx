@@ -474,27 +474,32 @@ function SparklineRenderer({
   data,
   series,
   height }: Omit<ChartRendererProps, 'xAxis' | 'yAxis' | 'showLegend'>) {
-  if (series.length === 0) {
-    return <div className="text-muted-foreground text-sm">No series configured</div>
-  }
-
   const primarySeries = series[0]
   const typedData = data as Record<string, unknown>[]
+  const option = useMemo(() => {
+    if (!primarySeries) {
+      return null
+    }
 
-  const option = useMemo(() => ({
-    backgroundColor: 'transparent',
-    grid: { left: 0, right: 0, top: 0, bottom: 0 },
-    xAxis: { type: 'category' as const, show: false, data: typedData.map((_, i) => i) },
-    yAxis: { type: 'value' as const, show: false },
-    series: [{
-      type: 'line',
-      data: typedData.map(d => d[primarySeries.field]),
-      smooth: true,
-      showSymbol: false,
-      lineStyle: { color: primarySeries.color ?? DEFAULT_COLORS[0], width: 2 },
-      itemStyle: { color: primarySeries.color ?? DEFAULT_COLORS[0] },
-    }],
-  }), [typedData, primarySeries])
+    return {
+      backgroundColor: 'transparent',
+      grid: { left: 0, right: 0, top: 0, bottom: 0 },
+      xAxis: { type: 'category' as const, show: false, data: typedData.map((_, i) => i) },
+      yAxis: { type: 'value' as const, show: false },
+      series: [{
+        type: 'line',
+        data: typedData.map(d => d[primarySeries.field]),
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { color: primarySeries.color ?? DEFAULT_COLORS[0], width: 2 },
+        itemStyle: { color: primarySeries.color ?? DEFAULT_COLORS[0] },
+      }],
+    }
+  }, [typedData, primarySeries])
+
+  if (!option) {
+    return <div className="text-muted-foreground text-sm">No series configured</div>
+  }
 
   return (
     <div style={{ width: '100%', height }}>

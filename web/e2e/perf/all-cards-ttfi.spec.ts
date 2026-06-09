@@ -491,10 +491,14 @@ test.afterAll(async () => {
 
   // ── Issue 9232: in-test TTFI budget assertions ───────────────────────────
   // Use try/catch for atomic read (avoids existsSync → readFileSync TOCTOU).
-  let baselineContent: string | null = null
-  try {
-    baselineContent = fs.readFileSync(TTFI_BASELINE_PATH, 'utf-8')
-  } catch {
+  const baselineContent = (() => {
+    try {
+      return fs.readFileSync(TTFI_BASELINE_PATH, 'utf-8')
+    } catch {
+      return null
+    }
+  })()
+  if (!baselineContent) {
     // Baseline intentionally absent — skip the gate rather than fail. The spec
     // is still useful as a reporting tool in that case; CI will regenerate
     // the baseline on the next run.

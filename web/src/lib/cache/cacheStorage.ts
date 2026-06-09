@@ -405,7 +405,9 @@ export async function migrateFromLocalStorage(): Promise<void> {
         localStorage.setItem(newKey, value)
       }
       localStorage.removeItem(oldKey)
-    } catch {}
+    } catch {
+      // intentionally empty
+    }
   }
 
   const OLD_PREFIX = 'kc_cache:'
@@ -466,7 +468,9 @@ export async function migrateIDBToSQLite(): Promise<void> {
         try {
           const meta = JSON.parse(localStorage.getItem(lsKey)!) as CacheMeta
           metaEntries.push({ key: lsKey.replace(META_PREFIX, ''), meta })
-        } catch {}
+        } catch {
+          // intentionally empty
+        }
       }
     }
 
@@ -484,7 +488,9 @@ export async function migrateIDBToSQLite(): Promise<void> {
 
     try {
       indexedDB.deleteDatabase(DB_NAME)
-    } catch {}
+    } catch {
+      // intentionally empty
+    }
   } catch (e: unknown) {
     console.error('[Cache] IDB→SQLite migration failed:', e)
   }
@@ -502,7 +508,9 @@ async function migrateLocalStorageMetaToSQLite(): Promise<void> {
         const meta = JSON.parse(localStorage.getItem(lsKey)!) as CacheMeta
         metaEntries.push({ key: lsKey.replace(META_PREFIX, ''), meta })
         keysToRemove.push(lsKey)
-      } catch {}
+      } catch {
+        // intentionally empty
+      }
     }
   }
 

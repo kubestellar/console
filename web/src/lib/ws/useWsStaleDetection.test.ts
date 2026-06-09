@@ -11,11 +11,10 @@ describe('createWsStaleDetection', () => {
   })
 
   it('calls onStale after the timeout when the socket stays disconnected', () => {
-    let connected = false
     const onStale = vi.fn()
     const staleDetection = createWsStaleDetection({
       onStale,
-      isConnected: () => connected,
+      isConnected: () => false,
       shouldCheck: () => true,
     })
 

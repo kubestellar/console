@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { useEffect, useState } from 'react'
 
 // ── Hoisted mocks ──────────────────────────────────────────────────
 
@@ -96,7 +97,6 @@ describe('useDemoDataHook deep branches', () => {
   // Simulate the useDemoDataHook logic exactly as the source does it
   function useDemoDataHookSimulation<T>(demoData: T[]) {
     const { isDemoMode: demoMode } = mockUseDemoMode()
-    const { useState, useEffect } = require('react')
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {

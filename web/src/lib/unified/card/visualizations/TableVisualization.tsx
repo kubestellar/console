@@ -62,14 +62,11 @@ export function TableVisualization({
       if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1
 
       // Compare values
-      let comparison = 0
-      if (typeof aVal === 'number' && typeof bVal === 'number') {
-        comparison = aVal - bVal
-      } else if (typeof aVal === 'string' && typeof bVal === 'string') {
-        comparison = aVal.localeCompare(bVal)
-      } else {
-        comparison = String(aVal).localeCompare(String(bVal))
-      }
+      const comparison = typeof aVal === 'number' && typeof bVal === 'number'
+        ? aVal - bVal
+        : typeof aVal === 'string' && typeof bVal === 'string'
+          ? aVal.localeCompare(bVal)
+          : String(aVal).localeCompare(String(bVal))
 
       return sortDirection === 'asc' ? comparison : -comparison
     })

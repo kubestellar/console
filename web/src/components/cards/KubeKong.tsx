@@ -134,6 +134,7 @@ export function KubeKong(_props: CardComponentProps) {
   // Persist high score when game ends and current score beats stored best.
   useEffect(() => {
     if (gameOver && score > highScore) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- persists the newly earned best score at game-over time
       setHighScore(score)
       safeSet(KUBE_KONG_HIGHSCORE_KEY, score.toString())
     }
@@ -598,7 +599,6 @@ export function KubeKong(_props: CardComponentProps) {
                 newY += 20
                 newVy = 2
                 newVx = 0
-                onPlatform = false
                 break
               }
             }

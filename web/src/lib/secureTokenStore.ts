@@ -82,18 +82,18 @@ export function getToken(key: string, storage?: Storage): string | null {
     return null
   }
 
-  let rawValue: string | null = null
+  let storedValue: string | null
   try {
-    rawValue = activeStorage.getItem(key)
+    storedValue = activeStorage.getItem(key)
   } catch {
     return null
   }
 
-  if (!rawValue) {
+  if (!storedValue) {
     return null
   }
 
-  const parsedValue = parseStoredValue(rawValue)
+  const parsedValue = parseStoredValue(storedValue)
   if (typeof parsedValue === 'string') {
     setToken(key, parsedValue, DEFAULT_TOKEN_TTL_MS, activeStorage)
     return parsedValue

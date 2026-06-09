@@ -225,6 +225,7 @@ export function HardwareHealthCard() {
     const validFields = (viewMode === 'alerts' ? ALERTS_SORT_OPTIONS : INVENTORY_SORT_OPTIONS).map(o => o.value)
     // If current sort field is not valid for the new view, reset to default
     if (!validFields.includes(sortField)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizes sort state when the active tab changes
       setSortField(defaultSort)
     }
   }, [viewMode]) // eslint-disable-line react-hooks/exhaustive-deps -- intentionally only reacts to viewMode changes
@@ -240,22 +241,19 @@ export function HardwareHealthCard() {
     const severityOrder: Record<string, number> = { critical: 0, warning: 1 }
 
     return [...filteredAlerts].sort((a, b) => {
-      let cmp = 0
-      switch (sortField) {
-        case 'nodeName':
-          cmp = a.nodeName.localeCompare(b.nodeName)
-          break
-        case 'cluster':
-          cmp = (a.cluster || '').localeCompare(b.cluster || '')
-          break
-        case 'deviceType':
-          cmp = a.deviceType.localeCompare(b.deviceType)
-          break
-        case 'severity':
-        default:
-          cmp = (severityOrder[a.severity] ?? UNKNOWN_SEVERITY_SORT_ORDER) - (severityOrder[b.severity] ?? UNKNOWN_SEVERITY_SORT_ORDER)
-          break
-      }
+      const cmp = (() => {
+        switch (sortField) {
+          case 'nodeName':
+            return a.nodeName.localeCompare(b.nodeName)
+          case 'cluster':
+            return (a.cluster || '').localeCompare(b.cluster || '')
+          case 'deviceType':
+            return a.deviceType.localeCompare(b.deviceType)
+          case 'severity':
+          default:
+            return (severityOrder[a.severity] ?? UNKNOWN_SEVERITY_SORT_ORDER) - (severityOrder[b.severity] ?? UNKNOWN_SEVERITY_SORT_ORDER)
+        }
+      })()
       return sortDirection === 'asc' ? cmp : -cmp
     })
   }, [filteredAlerts, sortField, sortDirection])
@@ -273,6 +271,7 @@ export function HardwareHealthCard() {
 
   // Reset page when filters or view mode change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- keeps pagination aligned with the active filters
     setCurrentPage(1)
   }, [search, localClusterFilter, sortField, viewMode])
 
@@ -330,23 +329,21 @@ export function HardwareHealthCard() {
   // Sort inventory
   const sortedInventory = useMemo(() => {
     return [...filteredInventory].sort((a, b) => {
-      let cmp = 0
-      switch (sortField) {
-        case 'nodeName':
-          cmp = a.nodeName.localeCompare(b.nodeName)
-          break
-        case 'cluster':
-          cmp = (a.cluster || '').localeCompare(b.cluster || '')
-          break
-        case 'totalDevices':
-        default: {
-          // Sort by total device count for inventory (GPUs prioritized via weight)
-          const aTotal = getTotalDevices(a.devices) + (a.devices.gpuCount * GPU_SORT_WEIGHT)
-          const bTotal = getTotalDevices(b.devices) + (b.devices.gpuCount * GPU_SORT_WEIGHT)
-          cmp = aTotal - bTotal
-          break
+      const cmp = (() => {
+        switch (sortField) {
+          case 'nodeName':
+            return a.nodeName.localeCompare(b.nodeName)
+          case 'cluster':
+            return (a.cluster || '').localeCompare(b.cluster || '')
+          case 'totalDevices':
+          default: {
+            // Sort by total device count for inventory (GPUs prioritized via weight)
+            const aTotal = getTotalDevices(a.devices) + (a.devices.gpuCount * GPU_SORT_WEIGHT)
+            const bTotal = getTotalDevices(b.devices) + (b.devices.gpuCount * GPU_SORT_WEIGHT)
+            return aTotal - bTotal
+          }
         }
-      }
+      })()
       return sortDirection === 'asc' ? cmp : -cmp
     })
   }, [filteredInventory, sortField, sortDirection])
@@ -373,6 +370,7 @@ export function HardwareHealthCard() {
   // Only depend on currentTotalPages — including currentPage risks infinite loop.
   useEffect(() => {
     if (currentTotalPages > 0 && currentPage > currentTotalPages) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clamps page after list size changes
       setCurrentPage(currentTotalPages)
     }
   }, [currentTotalPages]) // eslint-disable-line react-hooks/exhaustive-deps
