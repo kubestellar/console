@@ -366,9 +366,13 @@ func writeMockScript(t *testing.T, dir, name, script string) {
 // TestDeveloperUpdate_BuildTimeout verifies that a build that exceeds the timeout
 // is cancelled and an error is broadcast.
 //
-// The mock 'go' script sleeps indefinitely (600s). We give the UpdateChecker a
-// short updateCtx (3s) so runBuildCmd inherits it as its parent context and
-// cancels the sleeping process well within the 15-second outer test deadline.
+// The mock 'go' script sleeps indefinitely on its first invocation (simulating a
+// stuck build). On subsequent invocations (rollback builds in executeDeveloperUpdate)
+// it exits immediately — without this the rollback go-build would also sleep 600s.
+// We give the UpdateChecker a short updateCtx (3s) so runBuildCmd inherits it as
+// its parent context and cancels the sleeping process. Note: runBuildCmd also sets
+// cmd.WaitDelay=3s so the build phase takes ~6s (3s context + 3s I/O drain), still
+// well within the 15-second outer test deadline.
 func TestDeveloperUpdate_BuildTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping build timeout test in short mode")
@@ -387,7 +391,14 @@ case "$1" in
 esac
 `)
 	writeMockScript(t, mockBin, "npm", `exit 0`)
-	writeMockScript(t, mockBin, "go", `sleep 600`)
+	// First invocation sleeps to simulate a timeout; rollback calls exit immediately.
+	writeMockScript(t, mockBin, "go", `CALLED="$0.called"
+if [ ! -f "$CALLED" ]; then
+  touch "$CALLED"
+  sleep 600
+fi
+exit 0
+`)
 	t.Setenv("PATH", mockBin+":"+os.Getenv("PATH"))
 
 	uc, broadcasts := newTestUpdateChecker(t, repoPath)
