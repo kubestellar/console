@@ -10,7 +10,8 @@ import (
 // Gateway API, CRDs, workloads, cluster groups, and related endpoints.
 // The workload handlers are stored in the background service group because they
 // have startup side effects (cache refresh, persisted groups).
-func (s *Server) setupK8sResourceRoutes(api fiber.Router) {
+// aiLimiter is a per-user rate limiter applied to AI-calling endpoints (#17294).
+func (s *Server) setupK8sResourceRoutes(api fiber.Router, aiLimiter fiber.Handler) {
 	// MCS (Multi-Cluster Service) routes
 	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)
 	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
@@ -75,7 +76,7 @@ func (s *Server) setupK8sResourceRoutes(api fiber.Router) {
 	api.Post("/cluster-groups", workloadHandlers.CreateClusterGroup)
 	api.Post("/cluster-groups/sync", workloadHandlers.SyncClusterGroups)
 	api.Post("/cluster-groups/evaluate", workloadHandlers.EvaluateClusterQuery)
-	api.Post("/cluster-groups/ai-query", workloadHandlers.GenerateClusterQuery)
+	api.Post("/cluster-groups/ai-query", aiLimiter, workloadHandlers.GenerateClusterQuery)
 	api.Put("/cluster-groups/:name", workloadHandlers.UpdateClusterGroup)
 	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
 }

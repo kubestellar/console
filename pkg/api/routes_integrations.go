@@ -34,7 +34,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	}
 	s.setupMCPRoutes(api, namespaces)
 	s.setupGitOpsRoutes(api)
-	s.setupK8sResourceRoutes(api)
+	s.setupK8sResourceRoutes(api, routes.aiLimiter)
 
 	benchmarkHandlers := handlers.NewBenchmarkHandlers(s.config.BenchmarkGoogleDriveAPIKey, s.config.BenchmarkFolderID)
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)

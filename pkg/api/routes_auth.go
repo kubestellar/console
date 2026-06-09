@@ -25,6 +25,7 @@ type routeSetupContext struct {
 	bodyGuard          fiber.Handler
 	feedback           *handlers.FeedbackHandler
 	namespaces         *handlers.NamespaceHandler
+	aiLimiter          fiber.Handler // per-user rate limit for AI-calling endpoints (#17294)
 }
 
 // oauthConfigured reports whether the server has a usable GitHub OAuth configuration.
@@ -231,6 +232,21 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		}
 		return c.Next()
 	}
+
+	// aiLimiter enforces a strict per-user ceiling on AI-calling endpoints to
+	// prevent denial-of-wallet attacks from compromised or rogue sessions (#17294).
+	// 20 requests/minute is generous for interactive use but prevents bulk abuse.
+	const aiLimiterMaxRequests = 20
+	aiLimiterWindow := 1 * time.Minute
+	aiLimiter := limiter.New(limiter.Config{
+		Max:          aiLimiterMaxRequests,
+		Expiration:   aiLimiterWindow,
+		KeyGenerator: middleware.CompositeKey,
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(aiLimiterWindow.Seconds())))
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "AI rate limit exceeded, try again later"})
+		},
+	})
 	bodyGuard := func(c *fiber.Ctx) error {
 		if c.Method() == fiber.MethodPost && c.Path() == "/api/feedback/requests" {
 			return c.Next()
@@ -276,5 +292,6 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		api:                api,
 		bodyGuard:          bodyGuard,
 		feedback:           feedback,
+		aiLimiter:          aiLimiter,
 	}
 }

@@ -311,6 +311,11 @@ func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
 	if req.Prompt == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "prompt is required"})
 	}
+	// Cap prompt length to limit token consumption per call (#17294).
+	const maxPromptLen = 4000
+	if len(req.Prompt) > maxPromptLen {
+		return c.Status(400).JSON(fiber.Map{"error": "prompt exceeds maximum length of 4000 characters"})
+	}
 
 	// Build cluster context for the AI
 	var clusterContext string
