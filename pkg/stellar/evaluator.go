@@ -53,6 +53,19 @@ func NewStellarEvaluator(reg *providers.Registry) *StellarEvaluator {
 	return &StellarEvaluator{providerRegistry: reg}
 }
 
+// sanitizeEventField truncates an event field to maxLen and collapses newlines
+// to spaces, preventing user-controlled event content from breaking the prompt
+// structure (prompt injection / CWE-77).
+func sanitizeEventField(s string, maxLen int) string {
+	s = strings.ReplaceAll(s, "\r\n", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	if len(s) > maxLen {
+		return s[:maxLen] + "…"
+	}
+	return s
+}
+
 const evaluatorMaxTokens = 200
 const evaluatorTemperature = 0.1
 
@@ -92,12 +105,12 @@ Respond ONLY with valid JSON. Examples:
 {"should_show":true,"severity":"critical","reasoning":"crash loop","action_hints":["investigate","restart"],"recommended_action":{"type":"RestartDeployment","reasoning":"3+ crash restarts suggest stuck rollout"}}
 {"should_show":false,"severity":"ignore","reasoning":"normal rolling update"}
 {"should_show":true,"severity":"warning","reasoning":"liveness probe failing","action_hints":["investigate"]}`,
-		event.Reason,
-		event.Namespace, event.Name, event.Kind,
-		event.Cluster,
-		event.Message,
+		sanitizeEventField(event.Reason, 128),
+		sanitizeEventField(event.Namespace, 128), sanitizeEventField(event.Name, 128), sanitizeEventField(event.Kind, 64),
+		sanitizeEventField(event.Cluster, 128),
+		sanitizeEventField(event.Message, 512),
 		event.Count,
-		event.Type,
+		sanitizeEventField(event.Type, 32),
 	)
 
 	resp, err := resolved.Provider.Generate(ctx, providers.GenerateRequest{
