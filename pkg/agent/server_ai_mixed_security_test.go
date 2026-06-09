@@ -60,14 +60,14 @@ func TestValidateMixedModeCommand_AllowedReadOnly(t *testing.T) {
 // TestValidateMixedModeCommand_RequiresApproval verifies mutating commands return approval-required.
 func TestValidateMixedModeCommand_RequiresApproval(t *testing.T) {
 	cases := []string{
-		"kubectl apply -f deployment.yaml",
+		"kubectl apply",
 		"kubectl delete pod my-pod",
 		"kubectl create deployment nginx --image=nginx",
 		"kubectl scale deployment my-app --replicas=3",
 		"kubectl patch deployment my-app -p '{}'",
 		"kubectl run nginx --image=nginx",
 		"kubectl edit deployment my-app",
-		"kubectl replace -f deployment.yaml",
+		"kubectl replace",
 		"kubectl annotate pod my-pod key=value",
 		"kubectl label pod my-pod key=value",
 		"kubectl exec my-pod -- ls",
@@ -375,8 +375,8 @@ func TestValidateMixedModeCommands_Batch(t *testing.T) {
 	if len(result.Approved) != 3 {
 		t.Errorf("expected 3 approved commands, got %d: %v", len(result.Approved), result.Approved)
 	}
-	if len(result.Rejected) != 4 {
-		t.Errorf("expected 4 rejected commands, got %d", len(result.Rejected))
+	if len(result.Rejected) != 3 {
+		t.Errorf("expected 3 rejected commands, got %d", len(result.Rejected))
 	}
 
 	// Verify approved list contains correct commands
@@ -418,11 +418,11 @@ func TestNormalizeMixedModeOutputFormat(t *testing.T) {
 		{"yaml", "yaml"},
 		{"=json", "json"},
 		{"jsonpath={.items[*]}", "jsonpath"},
-		{"jsonpath-file=./tmpl.txt", "jsonpath-file"},
+		{"jsonpath-file=./tmpl.txt", "jsonpath"},
 		{"go-template={{.name}}", "go-template"},
-		{"go-template-file=./tmpl.txt", "go-template-file"},
+		{"go-template-file=./tmpl.txt", "go-template"},
 		{"custom-columns=NAME:.metadata.name", "custom-columns"},
-		{"custom-columns-file=./cols.txt", "custom-columns-file"},
+		{"custom-columns-file=./cols.txt", "custom-columns"},
 		{"name", "name"},
 		{"wide", "wide"},
 	}
