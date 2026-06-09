@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/stretchr/testify/assert"
@@ -265,4 +269,125 @@ func TestHasGPUFilter(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// TestGenerateClusterQuery_AIRateLimiter verifies that the AI rate limiter
+// returns 429 after 20 requests/minute and sets the Retry-After header (#17294 / #17296).
+func TestGenerateClusterQuery_AIRateLimiter(t *testing.T) {
+	const aiLimiterMaxRequests = 20
+	aiLimiterWindow := 1 * time.Minute
+
+	// Build a dedicated app with the production-equivalent rate limiter wired in
+	// front of the handler, matching the setup in routes_auth.go.
+	env := setupTestEnv(t)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
+
+	registry := agent.GetRegistry()
+	mockAI := &MockAIProvider{
+		Response: `{"suggestedName":"test-group","query":{"filters":[]}}`,
+	}
+	registry.Register(mockAI)
+	registry.SetDefault("mock-ai")
+
+	aiLimiter := limiter.New(limiter.Config{
+		Max:        aiLimiterMaxRequests,
+		Expiration: aiLimiterWindow,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(aiLimiterWindow.Seconds())))
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "AI rate limit exceeded, try again later"})
+		},
+	})
+	env.App.Post("/api/cluster-groups/ai-query", aiLimiter, handler.GenerateClusterQuery)
+
+	makeRequest := func() *http.Response {
+		payload, _ := json.Marshal(map[string]string{"prompt": "list healthy clusters"})
+		req, err := http.NewRequest(http.MethodPost, "/api/cluster-groups/ai-query", bytes.NewReader(payload))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		return resp
+	}
+
+	// Exhaust the allowance — each request should not be rate-limited.
+	for i := 0; i < aiLimiterMaxRequests; i++ {
+		resp := makeRequest()
+		resp.Body.Close()
+		assert.NotEqual(t, fiber.StatusTooManyRequests, resp.StatusCode,
+			"request %d of %d should not be rate-limited", i+1, aiLimiterMaxRequests)
+	}
+
+	// The (maxRequests+1)-th request must be rate-limited.
+	limitedResp := makeRequest()
+	defer limitedResp.Body.Close()
+
+	assert.Equal(t, fiber.StatusTooManyRequests, limitedResp.StatusCode,
+		"request beyond limit should return 429")
+
+	retryAfter := limitedResp.Header.Get("Retry-After")
+	assert.NotEmpty(t, retryAfter, "429 response must include Retry-After header")
+	retryAfterSec, err := strconv.Atoi(retryAfter)
+	require.NoError(t, err, "Retry-After must be a numeric value")
+	assert.Equal(t, int(aiLimiterWindow.Seconds()), retryAfterSec,
+		"Retry-After should match the limiter window (%d s)", int(aiLimiterWindow.Seconds()))
+
+	var body map[string]interface{}
+	raw, _ := io.ReadAll(limitedResp.Body)
+	json.Unmarshal(raw, &body)
+	assert.Contains(t, body["error"], "rate limit", "429 body should describe rate limiting")
+}
+
+// TestGenerateClusterQuery_AIRateLimiter_IndependentPerIP verifies that different
+// source IPs get independent rate-limit buckets (#17294 / #17296).
+func TestGenerateClusterQuery_AIRateLimiter_IndependentPerIP(t *testing.T) {
+	const aiLimiterMaxRequests = 20
+	aiLimiterWindow := 1 * time.Minute
+
+	env := setupTestEnv(t)
+	handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
+
+	registry := agent.GetRegistry()
+	mockAI := &MockAIProvider{
+		Response: `{"suggestedName":"test-group","query":{"filters":[]}}`,
+	}
+	registry.Register(mockAI)
+	registry.SetDefault("mock-ai")
+
+	aiLimiter := limiter.New(limiter.Config{
+		Max:        aiLimiterMaxRequests,
+		Expiration: aiLimiterWindow,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(aiLimiterWindow.Seconds())))
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{"error": "AI rate limit exceeded, try again later"})
+		},
+	})
+	env.App.Post("/api/cluster-groups/ai-query", aiLimiter, handler.GenerateClusterQuery)
+
+	makeRequest := func() *http.Response {
+		payload, _ := json.Marshal(map[string]string{"prompt": "list healthy clusters"})
+		req, err := http.NewRequest(http.MethodPost, "/api/cluster-groups/ai-query", bytes.NewReader(payload))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		return resp
+	}
+
+	// Exhaust the allowance from the default test IP.
+	for i := 0; i < aiLimiterMaxRequests; i++ {
+		resp := makeRequest()
+		resp.Body.Close()
+	}
+
+	// Confirm the default IP is now rate-limited.
+	limitedResp := makeRequest()
+	limitedResp.Body.Close()
+	assert.Equal(t, fiber.StatusTooManyRequests, limitedResp.StatusCode,
+		"default IP should be rate-limited after exhausting quota")
 }
