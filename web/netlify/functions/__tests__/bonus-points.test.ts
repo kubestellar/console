@@ -14,6 +14,15 @@ import {
 } from "./netlify-handler-helpers";
 import handler, { _testOnly } from "../bonus-points.mts";
 
+// ── Mock rate-limit (prevents MissingBlobsEnvironmentError in unit tests) ──
+const { mockEnforceRateLimit } = vi.hoisted(() => ({
+  mockEnforceRateLimit: vi.fn().mockResolvedValue({ limited: false, retryAfterSeconds: 0 }),
+}));
+
+vi.mock("../_shared/rate-limit", () => ({
+  enforceSimpleRateLimit: mockEnforceRateLimit,
+}));
+
 const { MAX_RESPONSE_BYTES, resetCache } = _testOnly;
 
 // Named constants for HTTP status codes to avoid magic numbers

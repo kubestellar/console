@@ -15,6 +15,15 @@ import {
 
 import handler, { MAX_RESPONSE_BYTES } from "../youtube-playlist.mts";
 
+// ── Mock rate-limit (prevents MissingBlobsEnvironmentError in unit tests) ──
+const { mockEnforceRateLimit } = vi.hoisted(() => ({
+  mockEnforceRateLimit: vi.fn().mockResolvedValue({ limited: false, retryAfterSeconds: 0 }),
+}));
+
+vi.mock("../_shared/rate-limit", () => ({
+  enforceSimpleRateLimit: mockEnforceRateLimit,
+}));
+
 // Named constants for HTTP status codes to prevent magic numbers
 const HTTP_STATUS_OK = 200;
 const HTTP_STATUS_NO_CONTENT = 204;
@@ -38,8 +47,8 @@ const mockFetch = vi.fn();
  * Simulates a valid Invidious API JSON response */
 const SAMPLE_INVIDIOUS_RESPONSE = {
   videos: [
-    { videoId: "abc123", title: "Getting Started with KubeStellar" },
-    { videoId: "def456", title: "KubeStellar Architecture Deep Dive" },
+    { videoId: "abcDEFGHij1", title: "Getting Started with KubeStellar" },
+    { videoId: "defGHIJKlm2", title: "KubeStellar Architecture Deep Dive" },
   ],
 };
 
@@ -50,13 +59,13 @@ const SAMPLE_ATOM_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"
       xmlns:media="http://search.yahoo.com/mrss/">
   <entry>
-    <yt:videoId>rss001</yt:videoId>
+    <yt:videoId>rss001ABCDE</yt:videoId>
     <title>KubeStellar Demo</title>
     <media:description>A demo video</media:description>
     <published>2026-05-20T10:00:00Z</published>
   </entry>
   <entry>
-    <yt:videoId>rss002</yt:videoId>
+    <yt:videoId>rss002FGHIJ</yt:videoId>
     <title>KubeStellar Tutorial</title>
     <published>2026-05-21T10:00:00Z</published>
   </entry>
@@ -133,9 +142,9 @@ describe("youtube-playlist", () => {
 
       const body = await readJson<PlaylistSuccessResponse>(res);
       expect(body.videos).toHaveLength(2);
-      expect(body.videos[0].id).toBe("abc123");
+      expect(body.videos[0].id).toBe("abcDEFGHij1");
       expect(body.videos[0].title).toBe("Getting Started with KubeStellar");
-      expect(body.videos[1].id).toBe("def456");
+      expect(body.videos[1].id).toBe("defGHIJKlm2");
       expect(body.playlistId).toBeTruthy();
       expect(body.playlistUrl).toContain("youtube.com/playlist");
     });
@@ -164,7 +173,7 @@ describe("youtube-playlist", () => {
 
       const body = await readJson<PlaylistSuccessResponse>(res);
       expect(body.videos).toHaveLength(2);
-      expect(body.videos[0].id).toBe("rss001");
+      expect(body.videos[0].id).toBe("rss001ABCDE");
       expect(body.videos[0].title).toBe("KubeStellar Demo");
     });
 
@@ -191,7 +200,7 @@ describe("youtube-playlist", () => {
       expect(res.status).toBe(HTTP_STATUS_OK);
 
       const body = await readJson<PlaylistSuccessResponse>(res);
-      expect(body.videos[0].id).toBe("rss001");
+      expect(body.videos[0].id).toBe("rss001ABCDE");
     });
   });
 
@@ -222,7 +231,7 @@ describe("youtube-playlist", () => {
 
       const body = await readJson<PlaylistSuccessResponse>(res);
       expect(body.videos).toHaveLength(2);
-      expect(body.videos[0].id).toBe("rss001");
+      expect(body.videos[0].id).toBe("rss001ABCDE");
       expect(body.videos[0].title).toBe("KubeStellar Demo");
       expect(body.videos[0].description).toBe("A demo video");
       expect(body.videos[0].published).toBe("2026-05-20T10:00:00Z");

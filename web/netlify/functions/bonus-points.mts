@@ -51,6 +51,9 @@ interface BlobCacheEntry {
   fetchedAt: number;
 }
 
+/** In-memory cache for within-container request de-duplication */
+let _memCache: { byLogin: Record<string, BonusEntry[]>; fetchedAt: number } | null = null;
+
 async function readCappedJson<T>(response: Response): Promise<T> {
   const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
   if (contentLength > MAX_RESPONSE_BYTES) {
@@ -194,7 +197,14 @@ export default async (req: Request) => {
   }
 
   try {
-    // Try Netlify Blobs cache first (persists across Lambda containers)
+    // In-memory cache first (within-container de-duplication)
+    if (_memCache && Date.now() - _memCache.fetchedAt < CACHE_TTL_MS) {
+      const entries = _memCache.byLogin[login] || [];
+      const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
+      return new Response(JSON.stringify({ login, total_bonus_points: totalPoints, entries }), { status: 200, headers });
+    }
+
+    // Try Netlify Blobs cache next (persists across Lambda containers)
     let byLogin = await readBlobCache();
     if (!byLogin) {
       byLogin = await fetchAllBonusIssues();
@@ -202,6 +212,7 @@ export default async (req: Request) => {
         console.warn("[bonus-points] blob cache write failed:", err instanceof Error ? err.message : err);
       });
     }
+    _memCache = { byLogin, fetchedAt: Date.now() };
 
     const entries = byLogin[login] || [];
     const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
@@ -232,4 +243,5 @@ export const _testOnly = {
   MAX_RESPONSE_BYTES,
   GITHUB_LOGIN_REGEX,
   CACHE_TTL_MS,
+  resetCache: () => { _memCache = null; },
 };

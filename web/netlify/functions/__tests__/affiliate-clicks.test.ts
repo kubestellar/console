@@ -8,6 +8,15 @@ import handler, { _testOnly } from "../affiliate-clicks.mts";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
+// ── Mock rate-limit (prevents MissingBlobsEnvironmentError in unit tests) ──
+const { mockEnforceRateLimit } = vi.hoisted(() => ({
+  mockEnforceRateLimit: vi.fn().mockResolvedValue({ limited: false, retryAfterSeconds: 0 }),
+}));
+
+vi.mock("../_shared/rate-limit", () => ({
+  enforceSimpleRateLimit: mockEnforceRateLimit,
+}));
+
 // ── Mock @netlify/blobs ─────────────────────────────────────────────────
 const mockGet = vi.fn();
 const mockSet = vi.fn();
