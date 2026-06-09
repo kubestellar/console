@@ -290,8 +290,8 @@ func newTestUpdateChecker(t *testing.T, repoPath string) (*UpdateChecker, *[]Upd
 				broadcasts = append(broadcasts, p)
 			}
 		},
-		restartBackend: func() {},
-		killBackend:    func(string) {},
+		restartBackend: func() error { return nil },
+		killBackend:    func() bool { return true },
 	}
 	return uc, &broadcasts
 }
@@ -633,8 +633,8 @@ esac
 				broadcasts = append(broadcasts, p)
 			}
 		},
-		restartBackend: func() {},
-		killBackend:    func(string) {},
+		restartBackend: func() error { return nil },
+		killBackend:    func() bool { return true },
 	}
 
 	start := time.Now()
