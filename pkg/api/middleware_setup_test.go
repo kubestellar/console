@@ -22,8 +22,10 @@ func newCSPTestServer(t *testing.T, kcAgentURL string) *Server {
 	t.Cleanup(func() { kcAgentBaseURL = orig })
 
 	s := &Server{
-		app:    fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
-		config: Config{},
+		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
+		// FrontendURL must be a specific origin (not empty) because CORS rejects
+		// AllowCredentials=true combined with AllowOrigins="*".
+		config: Config{FrontendURL: "http://localhost:3000"},
 		auth:   newAuthRuntime(),
 	}
 	s.setupMiddleware()
