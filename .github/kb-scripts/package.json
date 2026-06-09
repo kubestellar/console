@@ -1,0 +1,10 @@
+{
+  "name": "kb-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KB validation helper dependencies for GitHub Actions workflows",
+  "dependencies": {
+    "ajv-cli": "5.0.0",
+    "ajv-formats": "2.1.1"
+  }
+}

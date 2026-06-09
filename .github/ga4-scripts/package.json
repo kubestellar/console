@@ -1,0 +1,9 @@
+{
+  "name": "ga4-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GA4 analytics helper dependencies for GitHub Actions workflows",
+  "dependencies": {
+    "googleapis": "144.0.0"
+  }
+}
