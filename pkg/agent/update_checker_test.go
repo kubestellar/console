@@ -365,6 +365,10 @@ func writeMockScript(t *testing.T, dir, name, script string) {
 
 // TestDeveloperUpdate_BuildTimeout verifies that a build that exceeds the timeout
 // is cancelled and an error is broadcast.
+//
+// The mock 'go' script sleeps indefinitely (600s). We give the UpdateChecker a
+// short updateCtx (3s) so runBuildCmd inherits it as its parent context and
+// cancels the sleeping process well within the 15-second outer test deadline.
 func TestDeveloperUpdate_BuildTimeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping build timeout test in short mode")
@@ -387,6 +391,13 @@ esac
 	t.Setenv("PATH", mockBin+":"+os.Getenv("PATH"))
 
 	uc, broadcasts := newTestUpdateChecker(t, repoPath)
+
+	// Give the UpdateChecker a short parent context so runBuildCmd inherits it
+	// and the sleeping go command is cancelled after ~3s instead of waiting the
+	// full goBuildTimeout (5 minutes), which would exceed the CI test deadline.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	uc.updateCtx = ctx
 
 	done := make(chan struct{})
 	go func() {
@@ -468,7 +479,12 @@ case "$1" in
   *)         exit 0 ;;
 esac
 `)
-	// npm fails 3 times then succeeds
+	// npm fails first 3 calls then succeeds. resilientNpmInstall also calls
+	// "npm cache clean --force" between retries, so the effective call count is:
+	//   call 1: npm install → fail; call 2: npm cache clean → fail (ignored)
+	//   call 3: npm install → fail; call 4: npm cache clean → pass
+	//   call 5: npm install → pass  (attempt 3 succeeds)
+	//   call 6: npm run build → pass
 	callFile := filepath.Join(mockBin, "npm_calls")
 	writeMockScript(t, mockBin, "npm", fmt.Sprintf(`
 CALLS=$(cat %s 2>/dev/null || echo 0)
