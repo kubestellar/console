@@ -152,7 +152,7 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	atomic.StoreInt32(&uc.updateCancelled, 0)
 
 	if !atomic.CompareAndSwapInt32(&uc.updating, 0, 1) {
-		slog.Info("[AutoUpdate] Update already in progress, ignoring duplicate trigger")
+		slog.Debug("[AutoUpdate] Update already in progress, ignoring duplicate trigger")
 		return false
 	}
 
