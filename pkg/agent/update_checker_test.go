@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -587,6 +588,29 @@ exit 0
 		t.Error("expected at least one heartbeat message with elapsed time")
 	}
 	t.Logf("received %d heartbeat messages over %s", heartbeats, elapsed)
+}
+
+// runBuildCmd is a lightweight test helper that runs a named command (resolved
+// via PATH) in dir with a hard timeout and returns the combined stdout+stderr
+// as buildResult.output. It is the test-local equivalent of
+// UpdateChecker.runBuildCmd without WebSocket broadcast or step-tracking.
+func runBuildCmd(dir, name string, timeout time.Duration) buildResult {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name)
+	cmd.Dir = dir
+
+	out, err := cmd.CombinedOutput()
+	output := string(out)
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return buildResult{
+			err:    fmt.Errorf("timed out after %s", timeout),
+			output: output,
+		}
+	}
+	return buildResult{err: err, output: output}
 }
 
 // TestRunBuildCmd_OutputCapture verifies build output is captured in errors.
