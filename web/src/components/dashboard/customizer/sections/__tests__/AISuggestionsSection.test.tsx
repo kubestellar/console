@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 // ---- mocks ----
@@ -35,6 +35,10 @@ describe('AISuggestionsSection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
   })
 
   it('renders query input and generate button', () => {

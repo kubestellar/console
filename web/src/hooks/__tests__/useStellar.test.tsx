@@ -785,26 +785,29 @@ describe('StellarProvider — SSE lifecycle (#14220)', () => {
   it('dispatches stellar:mission_trigger custom event from SSE', async () => {
     const handler = vi.fn()
     window.addEventListener(STELLAR_MISSION_TRIGGER_EVENT, handler)
-    renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-    const es = eventSourceInstances[0]
-    const payload = {
-      solveId: 'solve-1',
-      eventId: 'evt-1',
-      cluster: 'c1',
-      namespace: 'ns',
-      workload: 'wl',
-      reason: 'crash',
-      message: 'pod failed',
-      title: 'Fix pod',
-      prompt: 'repair it',
+    try {
+      renderWithProvider()
+      await act(async () => { await Promise.resolve() })
+      const es = eventSourceInstances[0]
+      const payload = {
+        solveId: 'solve-1',
+        eventId: 'evt-1',
+        cluster: 'c1',
+        namespace: 'ns',
+        workload: 'wl',
+        reason: 'crash',
+        message: 'pod failed',
+        title: 'Fix pod',
+        prompt: 'repair it',
+      }
+      await act(async () => {
+        es._triggerEvent('mission_trigger', payload)
+      })
+      expect(handler).toHaveBeenCalledTimes(1)
+      expect((handler.mock.calls[0][0] as CustomEvent).detail).toEqual(payload)
+    } finally {
+      window.removeEventListener(STELLAR_MISSION_TRIGGER_EVENT, handler)
     }
-    await act(async () => {
-      es._triggerEvent('mission_trigger', payload)
-    })
-    expect(handler).toHaveBeenCalledTimes(1)
-    expect((handler.mock.calls[0][0] as CustomEvent).detail).toEqual(payload)
-    window.removeEventListener(STELLAR_MISSION_TRIGGER_EVENT, handler)
   })
 
   it('skips init when no auth credentials are present', async () => {
