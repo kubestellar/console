@@ -134,9 +134,11 @@ export function NavigationShell({
             />
           )}
           <NavigationProgress pathname={pathname} />
-          <div key={pathname} className="contents">
-            <Outlet />
-          </div>
+          <PageErrorBoundary>
+            <div key={pathname} className="contents">
+              <Outlet />
+            </div>
+          </PageErrorBoundary>
         </main>
         <Suspense fallback={null}>
           <StellarSidebar />
