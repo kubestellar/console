@@ -178,6 +178,9 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	if channelOverride != "" {
 		safego.GoWith("auto-update-override", func() {
 			defer cleanup()
+			if uc.onUpdateStart != nil {
+				uc.onUpdateStart()
+			}
 
 			uc.mu.Lock()
 			origChannel := uc.channel
@@ -193,6 +196,9 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	} else {
 		safego.GoWith("auto-update", func() {
 			defer cleanup()
+			if uc.onUpdateStart != nil {
+				uc.onUpdateStart()
+			}
 			uc.checkAndUpdate()
 		})
 	}

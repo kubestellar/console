@@ -81,6 +81,12 @@ type UpdateChecker struct {
 	// exitFunc terminates the process after spawning the restart script.
 	// Defaults to os.Exit. Overridden in tests to prevent the test runner from exiting.
 	exitFunc func(code int)
+
+	// onUpdateStart is called at the very start of the goroutine spawned by
+	// TriggerNow, before checkAndUpdate runs. Only used in tests to block the
+	// goroutine long enough to verify concurrent-exclusion semantics. Always
+	// nil in production code.
+	onUpdateStart func()
 }
 
 // UpdateCheckerConfig holds initialization parameters.

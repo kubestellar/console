@@ -33,6 +33,9 @@ func waitNotUpdating(t *testing.T, uc *UpdateChecker, timeout time.Duration) {
 // TestTriggerNowRejectsConcurrent verifies that only one update can run at a time.
 // Rapid successive calls to TriggerNow should return false when an update is in progress.
 func TestTriggerNowRejectsConcurrent(t *testing.T) {
+	// hold keeps the update goroutine alive so the second TriggerNow call sees
+	// updating=1 regardless of how fast checkAndUpdate runs.
+	hold := make(chan struct{})
 	var broadcastCount int32
 	uc := &UpdateChecker{
 		channel:       "developer",
@@ -43,17 +46,19 @@ func TestTriggerNowRejectsConcurrent(t *testing.T) {
 		},
 		restartBackend: func() error { return nil },
 		killBackend:    func() bool { return true },
+		onUpdateStart:  func() { <-hold },
 	}
 
 	// Start first goroutine — should succeed
 	if !uc.TriggerNow("") {
 		t.Fatal("first TriggerNow should return true")
 	}
-	// Immediately try again — should be rejected
-	time.Sleep(10 * time.Millisecond)
+	// Second call must be rejected — update goroutine is still blocked on hold
 	if uc.TriggerNow("") {
 		t.Error("second concurrent TriggerNow should return false while first is running")
 	}
+	close(hold) // release the goroutine
+	waitNotUpdating(t, uc, 2*time.Second)
 }
 
 // TestTriggerNowReleasesOnCompletion verifies that TriggerNow releases the
@@ -144,11 +149,17 @@ func TestStatusIncludesUpdateInProgress(t *testing.T) {
 // TestTriggerNowConcurrentStress fires 100 goroutines simultaneously and verifies
 // exactly one succeeds, with all others returning false.
 func TestTriggerNowConcurrentStress(t *testing.T) {
+	// hold blocks the update goroutine until all 100 test goroutines have
+	// finished calling TriggerNow. Without this, the goroutine can complete
+	// (developer channel + no repo = instant return) before all callers run,
+	// allowing multiple sequential successes.
+	hold := make(chan struct{})
 	uc := &UpdateChecker{
 		channel:       "developer",
 		installMethod: "dev",
 		repoPath:      "",
 		broadcast:     func(string, interface{}) {},
+		onUpdateStart: func() { <-hold },
 	}
 
 	var accepted int32
@@ -166,10 +177,12 @@ func TestTriggerNowConcurrentStress(t *testing.T) {
 	}
 	close(start)
 	wg.Wait()
+	close(hold) // release the update goroutine after all 100 have tried
 
 	if accepted != 1 {
 		t.Errorf("expected exactly 1 accepted trigger, got %d", accepted)
 	}
+	waitNotUpdating(t, uc, 2*time.Second)
 }
 
 // TestTriggerNowChannelOverride verifies that a channelOverride temporarily
