@@ -10,6 +10,7 @@ import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { clearAgentToken, setAgentToken } from '../hooks/mcp/agentFetch'
 import { DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
+import { safeGet, safeRemove, safeSetJSON } from './safeLocalStorage'
 import { AUTH_TOKEN_SYNC_KEY, clearStoredAuthToken, getStoredAuthToken, parseAuthTokenSyncEvent, setStoredAuthToken } from './authToken'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
@@ -158,9 +159,9 @@ function getCachedUser(): User | null {
 
 function cacheUser(userData: User | null) {
   if (userData) {
-    localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(userData))
+    safeSetJSON(AUTH_USER_CACHE_KEY, userData)
   } else {
-    localStorage.removeItem(AUTH_USER_CACHE_KEY)
+    safeRemove(AUTH_USER_CACHE_KEY)
   }
 }
 
@@ -207,8 +208,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // session.
     clearStoredAuthToken()
     clearAgentToken()
-    localStorage.removeItem(AUTH_USER_CACHE_KEY)
-    localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
+    safeRemove(AUTH_USER_CACHE_KEY)
+    safeRemove(STORAGE_KEY_HAS_SESSION)
     try {
       sessionStorage.removeItem(AUTH_USER_CACHE_KEY)
       // Rotate the presence session ID so the next login is tracked as a
@@ -238,13 +239,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setDemoMode = useCallback(() => {
     // If user explicitly disabled demo mode, respect their choice.
     // They want AI mode (agent) or live mode (backend) — not demo fallback.
-    const userExplicitlyDisabledDemo = localStorage.getItem(STORAGE_KEY_DEMO_MODE) === 'false'
+    const userExplicitlyDisabledDemo = safeGet(STORAGE_KEY_DEMO_MODE) === 'false'
     if (userExplicitlyDisabledDemo) return
 
     const isNetlifyPreview = import.meta.env.VITE_DEMO_MODE === 'true' ||
       window.location.hostname.includes('netlify.app') ||
       window.location.hostname.includes('deploy-preview-')
-    const demoOnboarded = isNetlifyPreview || localStorage.getItem(STORAGE_KEY_ONBOARDED) === 'true'
+    const demoOnboarded = isNetlifyPreview || safeGet(STORAGE_KEY_ONBOARDED) === 'true'
     setStoredAuthToken(DEMO_TOKEN_VALUE)
     setTokenState(DEMO_TOKEN_VALUE)
     const demoUser: User = {
@@ -285,7 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // session. The HttpOnly cookie is invisible to JS, so we check the
         // kc-has-session localStorage hint set during the OAuth callback.
         // Without this gate, fresh visitors see a spurious 401 in DevTools.
-        const hadPriorSession = !!localStorage.getItem(STORAGE_KEY_HAS_SESSION)
+        const hadPriorSession = !!safeGet(STORAGE_KEY_HAS_SESSION)
         if (!hadPriorSession) {
           // No prior session — go straight to login page, no network call
           return
@@ -382,8 +383,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // no-token branch above can try restoring from the HttpOnly cookie.
     if (effectiveToken !== DEMO_TOKEN_VALUE && isJWTExpired(effectiveToken)) {
       clearStoredAuthToken()
-      localStorage.removeItem(AUTH_USER_CACHE_KEY)
-      localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
+      safeRemove(AUTH_USER_CACHE_KEY)
+      safeRemove(AUTH_USER_CACHE_VALIDATED_KEY)
       setTokenState(null)
       setUser(null)
       await refreshUser()
@@ -395,7 +396,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // the backend is available. Otherwise, clear the stale demo token so the user
     // can authenticate with a real JWT.
     if (effectiveToken === DEMO_TOKEN_VALUE) {
-      const userExplicitlyEnabledDemo = localStorage.getItem(STORAGE_KEY_DEMO_MODE) === 'true'
+      const userExplicitlyEnabledDemo = safeGet(STORAGE_KEY_DEMO_MODE) === 'true'
       if (!userExplicitlyEnabledDemo) {
         const { backendUp, oauthConfigured } = await checkOAuthConfigured()
         if (backendUp) {

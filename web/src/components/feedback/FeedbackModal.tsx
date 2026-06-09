@@ -36,6 +36,7 @@ import {
   isFeedbackRequestBodyTooLarge,
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
+import { safeRemove, safeSetJSON } from '../../lib/safeLocalStorage'
 
 type FeedbackType = 'bug' | 'feature'
 
@@ -184,9 +185,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   useEffect(() => {
     if (title || description) {
       const draft: DraftState = { type, title, description }
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+      safeSetJSON(DRAFT_KEY, draft)
     } else {
-      localStorage.removeItem(DRAFT_KEY)
+      safeRemove(DRAFT_KEY)
     }
   }, [type, title, description])
 
@@ -280,7 +281,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
       awardCoins(action as 'bug_report' | 'feature_suggestion', { title, type })
 
       // Clear draft on successful submit
-      localStorage.removeItem(DRAFT_KEY)
+      safeRemove(DRAFT_KEY)
       setSuccess({
         issueUrl: result.github_issue_url,
         screenshotsUploaded: result.screenshots_uploaded,
@@ -301,7 +302,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   const forceClose = () => {
     setShowDiscardConfirm(false)
-    localStorage.removeItem(DRAFT_KEY)
+    safeRemove(DRAFT_KEY)
     setSuccess(null)
     setSubmitError(null)
     setValidationErrors({})
