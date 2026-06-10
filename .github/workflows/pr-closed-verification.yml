@@ -185,6 +185,11 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          # Pass step output through env to prevent template-expansion shell injection
+          ERROR_SUMMARY: ${{ steps.errors.outputs.error_summary }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           CHANGED_FILES=$(cat /tmp/changed-files.txt)
 
@@ -201,13 +206,13 @@ jobs:
             printf '| **Merge commit** | `%s` |\n' "$MERGE_SHA"
             printf '| **Detected at** | %s |\n\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
             printf '## Build Errors\n\n'
-            printf '%s\n\n' "${{ steps.errors.outputs.error_summary }}"
+            printf '%s\n\n' "$ERROR_SUMMARY"
             printf '## Files Changed in PR\n\n'
             printf '<details>\n<summary>Click to expand file list</summary>\n\n'
             printf '```\n%s\n```\n\n' "$CHANGED_FILES"
             printf '</details>\n\n'
             printf '## Next Steps\n\n'
-            printf '1. Check the [workflow run](%s/%s/actions/runs/%s) for full logs\n' "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}"
+            printf '1. Check the [workflow run](%s/%s/actions/runs/%s) for full logs\n' "$SERVER_URL" "$REPO" "$RUN_ID"
             printf '2. Identify the breaking change from the files listed above\n'
             printf '3. Submit a fix PR or revert the merge commit\n\n'
             printf -- '---\n'
