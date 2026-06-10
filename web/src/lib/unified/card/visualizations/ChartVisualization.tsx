@@ -8,7 +8,7 @@
 import { useMemo } from 'react'
 import { LazyEChart } from '../../../../components/charts/LazyEChart'
 import type { CardContentChart, CardChartSeries, CardAxisConfig } from '../../types'
-import { CHART_TOOLTIP_CONTENT_STYLE_GRAY } from '../../../constants'
+import { CHART_TOOLTIP_CONTENT_STYLE_GRAY, EMPHASIS_SHADOW_COLOR } from '../../../constants'
 
 export interface ChartVisualizationProps {
   /** Content configuration */
@@ -409,7 +409,7 @@ function DonutChartRenderer({
       })),
       label: { show: false },
       emphasis: {
-        itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' },
+        itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: EMPHASIS_SHADOW_COLOR },
       },
     }],
   }), [typedData, showLegend])

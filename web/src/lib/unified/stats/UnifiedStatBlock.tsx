@@ -17,6 +17,9 @@ import type { UnifiedStatBlockProps } from '../types'
 import { resolveStatValue } from './valueResolvers'
 import { useIsModeSwitching } from '../demo'
 
+/** Tailwind arbitrary shadow class for demo-mode glow (yellow-500 at 15% opacity) */
+const DEMO_GLOW_SHADOW = 'shadow-[0_0_12px_rgba(234,179,8,0.15)]'
+
 // Icon mapping for dynamic rendering
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Server, CheckCircle2, XCircle, WifiOff, Box, Cpu, MemoryStick, HardDrive, Zap, Layers,
@@ -107,7 +110,7 @@ export function UnifiedStatBlock({
         relative glass p-4 rounded-lg transition-colors
         ${showPulse ? 'animate-pulse' : ''}
         ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''}
-        ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''}
+        ${isDemo ? `border border-yellow-500/30 bg-yellow-500/5 ${DEMO_GLOW_SHADOW}` : ''}
       `}
       onClick={() => {
         if (isClickable && config.onClick) {

@@ -94,12 +94,15 @@ export function isJWTExpired(token: string): boolean {
 function showExpiryWarningBanner(onRefresh: () => void): void {
   if (document.getElementById('session-expiry-warning')) return
 
-  /* Spacing constants for DOM-based banner (Tailwind unavailable in imperative DOM) */
+  /* Spacing & color constants for DOM-based banner (Tailwind unavailable in imperative DOM) */
   const BANNER_BOTTOM_PX = '24px'
   const BANNER_GAP_PX = '12px'
   const BANNER_PAD_V_PX = '12px'
   const BANNER_PAD_H_PX = '20px'
   const BANNER_RADIUS_PX = '8px'
+  const WARN_BG = 'rgba(234,179,8,0.15)'       // yellow-500 at 15% opacity
+  const WARN_BORDER = 'rgba(234,179,8,0.4)'     // yellow-500 at 40% opacity
+  const WARN_TEXT = '#fbbf24'                    // amber-400 text
   const BTN_MARGIN_LEFT_PX = '8px'
   const BTN_PAD_V_PX = '4px'
   const BTN_PAD_H_PX = '12px'
@@ -110,10 +113,10 @@ function showExpiryWarningBanner(onRefresh: () => void): void {
     position: fixed; bottom: ${BANNER_BOTTOM_PX}; left: 50%; transform: translateX(-50%); z-index: 99999;
     display: flex; align-items: center; gap: ${BANNER_GAP_PX};
     padding: ${BANNER_PAD_V_PX} ${BANNER_PAD_H_PX};
-    background: rgba(234,179,8,0.15);
-    border: 1px solid rgba(234,179,8,0.4);
+    background: ${WARN_BG};
+    border: 1px solid ${WARN_BORDER};
     border-radius: ${BANNER_RADIUS_PX}; backdrop-filter: blur(8px);
-    color: #fbbf24; font-family: system-ui, sans-serif; font-size: 14px;
+    color: ${WARN_TEXT}; font-family: system-ui, sans-serif; font-size: 14px;
     animation: slideUp 0.3s ease-out;
   `
   banner.innerHTML = `

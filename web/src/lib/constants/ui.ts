@@ -38,6 +38,8 @@ export const CHART_TOOLTIP_CONTENT_STYLE_GRAY: React.CSSProperties = {
   border: `1px solid ${UNIFIED_CHART_TOOLTIP_BORDER}`,
   borderRadius: UNIFIED_CHART_TOOLTIP_RADIUS,
 }
+/** Semi-transparent black used for chart emphasis shadows */
+export const EMPHASIS_SHADOW_COLOR = 'rgba(0,0,0,0.5)'
 export const CHART_GRID_STROKE = '#333'
 export const CHART_AXIS_STROKE = '#333'
 export const CHART_TICK_COLOR = '#888'
