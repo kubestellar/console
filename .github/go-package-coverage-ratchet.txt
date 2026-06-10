@@ -19,7 +19,6 @@ pkg/sanitize 0.0
 pkg/store 0.0
 
 # --- Tier 3: Supporting packages ---
-pkg/client 0.0
 pkg/kagent 0.0
 pkg/mcp 0.0
 pkg/models 0.0
