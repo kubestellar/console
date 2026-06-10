@@ -10,6 +10,7 @@ import {
   makeNetlifyRequest,
   readJson,
 } from "./netlify-handler-helpers";
+import { ALLOWED_PATHS } from "../quantum-proxy.mts";
 
 // Named constants for HTTP status codes to avoid magic numbers
 const HTTP_STATUS_OK = 200;
@@ -372,7 +373,7 @@ describe("quantum-proxy", () => {
       expect(body.error).toBe("Quantum service not configured");
     });
 
-    it("returns demo isDemoData flag in response for POST /execute in demo mode", async () => {
+    it("returns demo execute response with job_id, status, and result in demo mode", async () => {
       const bearerToken = await createSignedJwt();
       const req = new Request("https://example.test/.netlify/functions/quantum-proxy/execute", {
         method: "POST",
@@ -385,6 +386,11 @@ describe("quantum-proxy", () => {
       });
       const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
       expect(res.status).toBe(HTTP_STATUS_OK);
+      const body = await readJson<{ job_id: string; status: string; result: { counts: Record<string, number> } }>(res);
+      expect(body.job_id).toBe("demo-job-123");
+      expect(body.status).toBe("completed");
+      expect(body.result).toBeDefined();
+      expect(typeof body.result.counts).toBe("object");
     });
   });
 
@@ -712,101 +718,93 @@ describe("quantum-proxy", () => {
   // ─────────────────────────────────────────────────────────────────────────
   // Allowlist parity: Netlify ↔ Go
   //
-  // These constants MUST stay in sync with both implementations:
-  //   Netlify: ALLOWED_PATHS in web/netlify/functions/quantum-proxy.mts
-  //   Go:      allowedQuantumPaths in pkg/api/handlers/quantum_proxy.go
+  // NETLIFY_PATHS_STRIPPED is derived from the exported ALLOWED_PATHS Set in
+  // quantum-proxy.mts — this ensures parity tests automatically reflect any
+  // additions to the Netlify allowlist without requiring manual updates here.
   //
-  // If you add a path on one side, update the matching list below.
+  // GO_PREFIXES mirrors allowedQuantumPaths in pkg/api/handlers/quantum_proxy.go
+  // and MUST be kept in sync manually (Go is not importable from TypeScript tests).
+  //
   // The Go backend intentionally exposes cluster-internal prefixes
   // (circuit, health, job) that are not browser-reachable via Netlify;
   // these are tracked in GO_INTERNAL_ONLY_PREFIXES below.
   // ─────────────────────────────────────────────────────────────────────────
   describe("Allowlist parity: Netlify ↔ Go", () => {
-    // Mirrors ALLOWED_PATHS in quantum-proxy.mts (stripped of leading /)
-    const NETLIFY_PATHS_STRIPPED = [
-      "status",
-      "qubits/simple",
-      "execute",
-      "loop/start",
-      "loop/stop",
-      "qasm/circuit/ascii",
-      "qasm/file",
-      "qasm/listfiles",
-      "auth",
-      "auth/status",
-      "auth/save",
-      "auth/clear",
-      "result/histogram",
-    ];
+   // Derived from the exported ALLOWED_PATHS constant in quantum-proxy.mts
+   // (strips the leading "/" from each entry so we can match Go prefixes).
+   const NETLIFY_PATHS_STRIPPED = [...ALLOWED_PATHS].map((p) => p.replace(/^\//, ""));
 
-    // Mirrors allowedQuantumPaths in quantum_proxy.go (prefix-match list)
-    const GO_PREFIXES = [
-      "auth",
-      "circuit",
-      "execute",
-      "health",
-      "job",
-      "loop",
-      "qasm",
-      "qubits",
-      "result",
-      "status",
-    ];
+   // Mirrors allowedQuantumPaths in quantum_proxy.go (prefix-match list).
+   // Update this when pkg/api/handlers/quantum_proxy.go changes.
+   const GO_PREFIXES = [
+     "auth",
+     "circuit",
+     "execute",
+     "health",
+     "job",
+     "loop",
+     "qasm",
+     "qubits",
+     "result",
+     "status",
+   ];
 
-    // Go-backend-only prefixes that are intentionally NOT exposed via Netlify.
-    // These are cluster-internal endpoints not needed by the browser client.
-    // Before adding an entry here, confirm the exclusion is deliberate.
-    const GO_INTERNAL_ONLY_PREFIXES = new Set(["circuit", "health", "job"]);
+   // Go-backend-only prefixes that are intentionally NOT exposed via Netlify.
+   // These are cluster-internal endpoints not needed by the browser client.
+   // Before adding an entry here, confirm the exclusion is deliberate.
+   const GO_INTERNAL_ONLY_PREFIXES = new Set(["circuit", "health", "job"]);
 
-    it("every Netlify ALLOWED_PATHS entry has a matching Go allowedQuantumPaths prefix (Netlify→Go direction)", () => {
-      for (const path of NETLIFY_PATHS_STRIPPED) {
-        const covered = GO_PREFIXES.some(
-          (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-        );
-        expect(
-          covered,
-          `Netlify path "/${path}" has no matching Go prefix — add it to ` +
-            `allowedQuantumPaths in pkg/api/handlers/quantum_proxy.go`,
-        ).toBe(true);
-      }
-    });
+   it("every Netlify ALLOWED_PATHS entry has a matching Go allowedQuantumPaths prefix (Netlify→Go direction)", () => {
+     for (const path of NETLIFY_PATHS_STRIPPED) {
+       const covered = GO_PREFIXES.some(
+         (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+       );
+       expect(
+         covered,
+         `Netlify path "/${path}" has no matching Go prefix — add it to ` +
+           `allowedQuantumPaths in pkg/api/handlers/quantum_proxy.go`,
+       ).toBe(true);
+     }
+   });
 
-    it("every Go allowedQuantumPaths prefix is either in Netlify ALLOWED_PATHS or documented as intentionally internal-only (Go→Netlify direction)", () => {
-      for (const prefix of GO_PREFIXES) {
-        if (GO_INTERNAL_ONLY_PREFIXES.has(prefix)) {
-          // Intentionally internal-only — skip Netlify coverage check.
-          continue;
-        }
-        const covered = NETLIFY_PATHS_STRIPPED.some(
-          (path) => path === prefix || path.startsWith(`${prefix}/`),
-        );
-        expect(
-          covered,
-          `Go prefix "${prefix}" is not covered by any Netlify ALLOWED_PATHS entry and is not in ` +
-            `GO_INTERNAL_ONLY_PREFIXES — either add it to Netlify or document the intentional gap`,
-        ).toBe(true);
-      }
-    });
+   it("every Go allowedQuantumPaths prefix is either in Netlify ALLOWED_PATHS or documented as intentionally internal-only (Go→Netlify direction)", () => {
+     for (const prefix of GO_PREFIXES) {
+       if (GO_INTERNAL_ONLY_PREFIXES.has(prefix)) {
+         // Intentionally internal-only — skip Netlify coverage check.
+         continue;
+       }
+       const covered = NETLIFY_PATHS_STRIPPED.some(
+         (path) => path === prefix || path.startsWith(`${prefix}/`),
+       );
+       expect(
+         covered,
+         `Go prefix "${prefix}" is not covered by any Netlify ALLOWED_PATHS entry and is not in ` +
+           `GO_INTERNAL_ONLY_PREFIXES — either add it to Netlify or document the intentional gap`,
+       ).toBe(true);
+     }
+   });
 
-    it.each(NETLIFY_PATHS_STRIPPED)(
-      "GET /%s is allowed (returns non-400/405) in demo mode",
-      async (path) => {
-        const req = makeNetlifyRequest(
-          `/.netlify/functions/quantum-proxy/${path}`,
-        );
-        const res = await handler(req, makeContext());
-        expect(res.status).not.toBe(HTTP_STATUS_BAD_REQUEST);
-        expect(res.status).not.toBe(HTTP_STATUS_METHOD_NOT_ALLOWED);
-      },
-    );
+   it.each(NETLIFY_PATHS_STRIPPED)(
+     "GET /%s is allowed (returns non-400/405) in demo mode",
+     async (path) => {
+       const req = makeNetlifyRequest(
+         `/.netlify/functions/quantum-proxy/${path}`,
+       );
+       const res = await handler(req, makeContext());
+       expect(res.status).not.toBe(HTTP_STATUS_BAD_REQUEST);
+       expect(res.status).not.toBe(HTTP_STATUS_METHOD_NOT_ALLOWED);
+     },
+   );
   });
 
   // ─────────────────────────────────────────────────────────────────────────
   // Path-traversal corpus (Netlify isAllowedPath hardening)
   //
   // Reproduces the encoding/normalisation variants documented in #17335.
-  // The Go side already covers traversal in TestIsAllowedQuantumPath;
-  // this suite brings Netlify to parity.
+  // The Go TestIsAllowedQuantumPath covers literal parent-directory sequences
+  // (e.g. "../auth", "auth/../status") but does NOT cover the percent-encoded
+  // or double-encoded variants below. This suite brings Netlify's isAllowedPath
+  // to parity on the full encoding/normalisation attack surface.
   // ─────────────────────────────────────────────────────────────────────────
   describe("Path-traversal corpus (isAllowedPath hardening)", () => {
     const traversalCases: Array<{ label: string; path: string }> = [
@@ -835,6 +833,8 @@ describe("quantum-proxy", () => {
       { label: "Unicode fullwidth dots %EF%BC%8E%EF%BC%8E",    path: "/%EF%BC%8E%EF%BC%8E/status" },
       // Null-byte injection (percent-encoded %00 does not match any allowlisted path)
       { label: "null byte %00 between path segments",           path: "/status%00.evil" },
+      // Single-encoded backslash (%5C alone, no ..) blocked by allowlist
+      { label: "backslash-only %5C path injection",             path: "/%5Cstatus" },
     ];
 
     it.each(traversalCases)(

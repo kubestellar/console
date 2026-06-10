@@ -64,7 +64,7 @@ c: 5/═════════╩══╩══╩══╩═
 </html>`;
 
 // Allowlist of valid proxy path prefixes — reject anything not matching
-const ALLOWED_PATHS = new Set([
+export const ALLOWED_PATHS = new Set([
   "/status",
   "/qubits/simple",
   "/execute",
