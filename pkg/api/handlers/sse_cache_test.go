@@ -1,35 +1,30 @@
 package handlers
 
 import (
-	"sync"
 	"testing"
 	"time"
 )
 
-// resetSSECache reinitialises the package-level SSE cache state between tests
-// so they are independent of one another.
-func resetSSECache(t *testing.T) {
+// clearCacheForTest clears all SSE cache entries without touching the evictor
+// goroutine or its done channel.  Reassigning sseCacheEvictDone while the
+// evictor goroutine is running causes a data race, so we only ever clear
+// entries between tests.
+func clearCacheForTest(t *testing.T) {
 	t.Helper()
-	sseCacheMu.Lock()
-	sseCache = make(map[string]*sseCacheEntry)
-	sseCacheMu.Unlock()
-	// Reset the once so startSSECacheEvictor can be called again.
-	sseCacheOnce = sync.Once{}
-	// Create a fresh evictor-done channel.
-	sseCacheEvictDone = make(chan struct{})
+	ClearSSECache()
 }
 
 // ---------- sseCacheGet ----------
 
 func TestSSECacheGet_MissingKey(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	if got := sseCacheGet("nonexistent"); got != nil {
 		t.Fatalf("expected nil for missing key, got %v", got)
 	}
 }
 
 func TestSSECacheGet_FreshEntry(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	want := []string{"a", "b"}
 	sseCacheSet("k1", want)
 	got := sseCacheGet("k1")
@@ -39,7 +34,7 @@ func TestSSECacheGet_FreshEntry(t *testing.T) {
 }
 
 func TestSSECacheGet_ExpiredEntry(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	// Insert an entry that is already past the TTL.
 	sseCacheMu.Lock()
 	sseCache["old"] = &sseCacheEntry{
@@ -63,7 +58,7 @@ func TestSSECacheGet_ExpiredEntry(t *testing.T) {
 func TestSSECacheGet_EntryRefreshedBetweenLocks(t *testing.T) {
 	// Covers the race-safe re-check: the entry may be refreshed between the
 	// RLock expiry detection and the write-lock delete.
-	resetSSECache(t)
+	clearCacheForTest(t)
 	sseCacheMu.Lock()
 	sseCache["race"] = &sseCacheEntry{
 		data:      "refreshed",
@@ -80,7 +75,7 @@ func TestSSECacheGet_EntryRefreshedBetweenLocks(t *testing.T) {
 // ---------- sseCacheSet ----------
 
 func TestSSECacheSet_StoresData(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	sseCacheSet("setkey", 42)
 	sseCacheMu.RLock()
 	e, ok := sseCache["setkey"]
@@ -97,7 +92,7 @@ func TestSSECacheSet_StoresData(t *testing.T) {
 }
 
 func TestSSECacheSet_OverwritesExisting(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	sseCacheSet("dup", "first")
 	sseCacheSet("dup", "second")
 	got := sseCacheGet("dup")
@@ -109,7 +104,7 @@ func TestSSECacheSet_OverwritesExisting(t *testing.T) {
 // ---------- ClearSSECache ----------
 
 func TestClearSSECache_EmptiesCache(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	sseCacheSet("a", 1)
 	sseCacheSet("b", 2)
 	ClearSSECache()
@@ -124,7 +119,7 @@ func TestClearSSECache_EmptiesCache(t *testing.T) {
 // ---------- StopSSECacheEvictor ----------
 
 func TestStopSSECacheEvictor_IdempotentSecondCall(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	StopSSECacheEvictor()
 	// Second call must not panic (closing an already-closed channel would panic
 	// without the guard in StopSSECacheEvictor).
@@ -132,7 +127,7 @@ func TestStopSSECacheEvictor_IdempotentSecondCall(t *testing.T) {
 }
 
 func TestStopSSECacheEvictor_ClosesChannel(t *testing.T) {
-	resetSSECache(t)
+	clearCacheForTest(t)
 	StopSSECacheEvictor()
 	select {
 	case <-sseCacheEvictDone:
