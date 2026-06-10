@@ -33,9 +33,7 @@ env:
   # Absolute weekly threshold: flag any category exceeding this even if WoW trend is flat
   ABSOLUTE_WEEKLY_THRESHOLD: 200
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: ga4-error-regression
@@ -43,6 +41,9 @@ concurrency:
 
 jobs:
   regression-check:
+    permissions:
+      contents: read
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 10

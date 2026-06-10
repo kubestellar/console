@@ -25,9 +25,7 @@ env:
   NODE_VERSION: '22'
   PREVIEW_PORT: 4174
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   build:

@@ -37,9 +37,7 @@ env:
   DAILY_LOOKBACK_HOURS: 24
   DAILY_ERROR_THRESHOLD: 50
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: ga4-error-monitor
@@ -47,6 +45,9 @@ concurrency:
 
 jobs:
   monitor:
+    permissions:
+      contents: read
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 5

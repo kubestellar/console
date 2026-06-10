@@ -24,10 +24,7 @@ on:
 env:
   GO_VERSION: "1.26.4"
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   # ── PR Check: Block new nil-safety violations ──────────────────────

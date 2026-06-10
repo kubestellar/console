@@ -11,10 +11,7 @@ on:
       - 'web/**'
       - 'pkg/**'
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: post-merge-verify

@@ -25,9 +25,7 @@ on:
     types:
       - completed
 
-permissions:
-  issues: write
-  actions: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   open-issue:
@@ -39,6 +37,9 @@ jobs:
        github.event.workflow_run.event == 'workflow_dispatch' ||
        (github.event.workflow_run.name == 'Build and Deploy KC' &&
         github.event.workflow_run.head_branch == 'main'))
+    permissions:
+      issues: write
+      actions: read
     steps:
       - name: Check for existing open issue
         id: check

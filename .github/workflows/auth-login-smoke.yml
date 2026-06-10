@@ -39,9 +39,7 @@ on:
     - cron: "0 * * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: auth-login-smoke
@@ -55,6 +53,9 @@ jobs:
     timeout-minutes: 5
     env:
       KC_AGENT_TOKEN: smoke-test-agent-token-do-not-use-in-prod
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 

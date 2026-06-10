@@ -35,9 +35,7 @@ on:
         description: Why the actor passed or failed the gate
         value: ${{ jobs.evaluate.outputs.trust-reason }}
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   evaluate:
@@ -46,6 +44,9 @@ jobs:
     outputs:
       is-trusted: ${{ steps.trust.outputs.is-trusted }}
       trust-reason: ${{ steps.trust.outputs.trust-reason }}
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Evaluate commenter trust
         id: trust

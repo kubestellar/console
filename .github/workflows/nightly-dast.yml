@@ -26,9 +26,7 @@ on:
 env:
   TARGET_URL: ${{ inputs.target_url || 'https://console.kubestellar.io' }}
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   zap-baseline:

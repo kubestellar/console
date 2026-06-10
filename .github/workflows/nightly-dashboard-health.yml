@@ -23,9 +23,7 @@ env:
   CI: true
   NODE_VERSION: '22'
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: nightly-dashboard-health
