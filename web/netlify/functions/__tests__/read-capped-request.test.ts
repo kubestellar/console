@@ -18,12 +18,33 @@ import {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const TEXT_ENCODER = new TextEncoder();
+const TEXT_DECODER = new TextDecoder();
+const HELPER_PATH = "https://console.kubestellar.io/api/test-read-capped-request";
+
 function makeRequest(body: BodyInit | null, method = "POST"): Request {
-  return new Request("https://example.com/api", { method, body });
+  return new Request(HELPER_PATH, { method, body });
 }
 
 function makeGetRequest(): Request {
-  return new Request("https://example.com/api", { method: "GET" });
+  return new Request(HELPER_PATH, { method: "GET" });
+}
+
+function makeStreamingRequest(chunks: readonly string[]): Request {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(TEXT_ENCODER.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+
+  return new Request(HELPER_PATH, {
+    method: "POST",
+    body: stream,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
 }
 
 // ── RequestBodyTooLargeError ─────────────────────────────────────────────────
@@ -59,14 +80,14 @@ describe("readCappedRequestBuffer", () => {
   it("reads body within limit", async () => {
     const req = makeRequest("hello world");
     const buffer = await readCappedRequestBuffer(req, 1000);
-    expect(new TextDecoder().decode(buffer)).toBe("hello world");
+    expect(TEXT_DECODER.decode(buffer)).toBe("hello world");
   });
 
   it("reads body exactly at limit", async () => {
-    const body = "x".repeat(50);
+    const body = "1234567890ABCDEF";
     const req = makeRequest(body);
-    const buffer = await readCappedRequestBuffer(req, 50);
-    expect(new TextDecoder().decode(buffer)).toBe(body);
+    const buffer = await readCappedRequestBuffer(req, 16);
+    expect(TEXT_DECODER.decode(buffer)).toBe(body);
   });
 
   it("throws RequestBodyTooLargeError when body exceeds limit", async () => {
@@ -75,6 +96,19 @@ describe("readCappedRequestBuffer", () => {
     await expect(readCappedRequestBuffer(req, 50, "upload")).rejects.toThrow(
       RequestBodyTooLargeError,
     );
+  });
+
+  it("reads chunked streaming bodies by counting actual bytes", async () => {
+    const req = makeStreamingRequest(["stream-", "body-", "works"]);
+    const buffer = await readCappedRequestBuffer(req, 64, "streaming request");
+    expect(TEXT_DECODER.decode(buffer)).toBe("stream-body-works");
+  });
+
+  it("throws when streamed body exceeds the configured byte limit", async () => {
+    const req = makeStreamingRequest(["12345", "67890", "X"]);
+    await expect(
+      readCappedRequestBuffer(req, 10, "chunked request"),
+    ).rejects.toThrow("chunked request body too large (read 11 bytes, limit 10)");
   });
 
   it("error message includes the label", async () => {
@@ -93,7 +127,7 @@ describe("readCappedRequestBuffer", () => {
 
   it("enforces limit regardless of Content-Length header", async () => {
     // Simulate chunked encoding bypass: Content-Length says small, body is large
-    const req = new Request("https://example.com", {
+    const req = new Request(HELPER_PATH, {
       method: "POST",
       body: "x".repeat(200),
       headers: { "Content-Length": "10" },
@@ -125,16 +159,22 @@ describe("readCappedRequestText", () => {
       RequestBodyTooLargeError,
     );
   });
+
+  it("throws with exact message for streamed oversize", async () => {
+    const req = makeStreamingRequest(["12345", "67890", "X"]);
+    await expect(
+      readCappedRequestText(req, 10, "chunked request"),
+    ).rejects.toThrow("chunked request body too large (read 11 bytes, limit 10)");
+  });
 });
 
 // ── readCappedRequestJson ────────────────────────────────────────────────────
 
 describe("readCappedRequestJson", () => {
   it("parses valid JSON", async () => {
-    const req = makeRequest(JSON.stringify({ key: "value", num: 42 }));
-    const data = await readCappedRequestJson<{ key: string; num: number }>(req, 1000);
-    expect(data.key).toBe("value");
-    expect(data.num).toBe(42);
+    const req = makeRequest(JSON.stringify({ ok: true, value: "safe" }));
+    const data = await readCappedRequestJson<{ ok: boolean; value: string }>(req, 128);
+    expect(data).toEqual({ ok: true, value: "safe" });
   });
 
   it("throws on invalid JSON", async () => {
