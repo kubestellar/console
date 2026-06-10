@@ -278,6 +278,8 @@ test.describe('Marketplace Deep Tests (/marketplace)', () => {
       // In grid mode, items are in a grid container; in list mode, they are rows
       // Look for any card with a name (h3 inside card)
       const cards = page.locator('.bg-card').filter({ has: page.locator('h3') })
+      // Wait for at least one card to appear (items load asynchronously via mocked fetch)
+      await expect(cards.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
       const count = await cards.count()
       // Demo mode should have at least one marketplace item
       expect(count).toBeGreaterThanOrEqual(1)

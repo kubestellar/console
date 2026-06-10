@@ -33,9 +33,9 @@ test.describe('AI Mode Settings', () => {
       await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
       // Should show all three mode buttons (low, medium, high)
-      const lowButton = page.getByRole('button', { name: /^low$/i })
-      const mediumButton = page.getByRole('button', { name: /^medium$/i })
-      const highButton = page.getByRole('button', { name: /^high$/i })
+      const lowButton = page.getByRole('button', { name: /^low/i })
+      const mediumButton = page.getByRole('button', { name: /^medium/i })
+      const highButton = page.getByRole('button', { name: /^high/i })
       
       // All three mode options should be visible
       await expect(lowButton.first()).toBeVisible({ timeout: 5000 })
