@@ -11,6 +11,9 @@ import { ComparisonTable, type ComparisonRow } from '../components/landing/Compa
 import { HighlightGrid, type HighlightFeature } from '../components/landing/HighlightGrid'
 import { InstallStepCard, type InstallStep } from '../components/landing/InstallStepCard'
 
+/** Approximate setup time advertised in the "Get started" section */
+const SETUP_TIME_SECONDS = 60
+
 interface MigrationItem {
   from: string
   to: string
@@ -222,7 +225,7 @@ export function FromHolmesGPT() {
       <section className="max-w-5xl mx-auto px-6 py-16">
         <h2 className="text-3xl font-bold text-center mb-4">
           Get started in{' '}
-          <span className="text-purple-400">60 seconds</span>
+          <span className="text-purple-400">{SETUP_TIME_SECONDS} seconds</span>
         </h2>
         <div className="text-muted-foreground text-center mb-12">
           No sign-up, no license file. Just curl and a kubeconfig.
