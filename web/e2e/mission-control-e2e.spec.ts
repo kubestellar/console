@@ -458,12 +458,12 @@ function getMissionTreeButton(page: Page, name: RegExp) {
 }
 
 async function expandSampleRunbooks(page: Page) {
-  // Set watched repos
+  // Set watched repos in localStorage before navigating to the mission browser.
+  // Using page.evaluate + page.goto (instead of reload) ensures the component
+  // mounts fresh and reads the updated localStorage on the new navigation.
   await page.evaluate((repo) => {
     localStorage.setItem('kc_mission_watched_repos', JSON.stringify([repo]))
   }, SAMPLE_REPO)
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
 
   // Track all requests/responses for debugging CI failures
   const allRequests: string[] = []
@@ -487,6 +487,7 @@ async function expandSampleRunbooks(page: Page) {
     browserErrors.push(`PAGE_ERROR: ${err.message}`)
   })
 
+  // Navigate to the mission browser — full navigation picks up updated localStorage
   await openMissionBrowser(page)
 
   // Expand GitHub Repositories — click the button containing that text
