@@ -805,7 +805,8 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await page.waitForLoadState('domcontentloaded')
 
       // The error banner should be visible with red styling
-      const errorBanner = page.locator('.bg-red-500\\/10')
+      // Use .first() to avoid strict-mode violation when multiple elements match (see #17406)
+      const errorBanner = page.locator('.bg-red-500\\/10').first()
       await expect(errorBanner).toBeVisible({ timeout: 15000 })
 
       // Error banner should contain meaningful error text
