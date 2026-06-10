@@ -12,7 +12,6 @@ pkg/api 60.5
 pkg/k8s 68.5
 
 # --- Tier 2: Critical integrations ---
-pkg/compliance 0.0
 pkg/notifications 0.0
 pkg/kagentiprovider 0.0
 pkg/sanitize 0.0
