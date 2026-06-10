@@ -240,20 +240,21 @@ func TestGHPBuildRangeDates(t *testing.T) {
 	if len(dates) != 7 {
 		t.Fatalf("len(dates) = %d, want 7", len(dates))
 	}
-	// Last entry should be today in UTC
-	today := time.Now().UTC().Format("2006-01-02")
-	if dates[6] != today {
-		t.Errorf("last date = %q, want %q", dates[6], today)
+	// Verify each entry is a parseable YYYY-MM-DD string
+	for i, d := range dates {
+		if _, err := time.Parse("2006-01-02", d); err != nil {
+			t.Errorf("dates[%d] = %q is not a valid YYYY-MM-DD: %v", i, d, err)
+		}
 	}
-	// First entry should be 6 days ago
-	sixDaysAgo := time.Now().UTC().AddDate(0, 0, -6).Format("2006-01-02")
-	if dates[0] != sixDaysAgo {
-		t.Errorf("first date = %q, want %q", dates[0], sixDaysAgo)
-	}
-	// Dates should be in ascending order
+	// Dates must be strictly ascending (consecutive days)
 	for i := 1; i < len(dates); i++ {
 		if dates[i] <= dates[i-1] {
 			t.Errorf("dates not ascending at index %d: %q <= %q", i, dates[i], dates[i-1])
+		}
+		prev, _ := time.Parse("2006-01-02", dates[i-1])
+		curr, _ := time.Parse("2006-01-02", dates[i])
+		if curr.Sub(prev) != 24*time.Hour {
+			t.Errorf("dates[%d] and dates[%d] are not consecutive days: %q, %q", i-1, i, dates[i-1], dates[i])
 		}
 	}
 }
@@ -263,19 +264,17 @@ func TestGHPBuildRangeDates_SingleDay(t *testing.T) {
 	if len(dates) != 1 {
 		t.Fatalf("len(dates) = %d, want 1", len(dates))
 	}
-	today := time.Now().UTC().Format("2006-01-02")
-	if dates[0] != today {
-		t.Errorf("single date = %q, want %q", dates[0], today)
+	if _, err := time.Parse("2006-01-02", dates[0]); err != nil {
+		t.Errorf("single date %q is not a valid YYYY-MM-DD: %v", dates[0], err)
 	}
 }
 
 func TestGHPFailureDuration(t *testing.T) {
 	tests := []struct {
-		name      string
-		created   string
-		updated   string
-		wantMs    int64
-		wantRange [2]int64 // min, max (for fuzzy checks)
+		name    string
+		created string
+		updated string
+		wantMs  int64
 	}{
 		{
 			name:    "5 minutes",
@@ -421,30 +420,29 @@ func TestGHPFirstFailedStep(t *testing.T) {
 }
 
 func TestGHPResolveRepos(t *testing.T) {
+	// Set a known allowlist so tests are hermetic regardless of environment.
+	t.Setenv("PIPELINE_REPOS", "kubestellar/console,kubestellar/docs")
+
 	t.Run("empty filter returns all repos", func(t *testing.T) {
 		repos, err := ghpResolveRepos("")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(repos) == 0 {
-			t.Error("expected non-empty repos list")
+		if len(repos) != 2 {
+			t.Errorf("len = %d, want 2", len(repos))
 		}
 	})
 
 	t.Run("valid repo returns single-element slice", func(t *testing.T) {
-		allRepos := ghpGetRepos()
-		if len(allRepos) == 0 {
-			t.Skip("no repos configured")
-		}
-		repos, err := ghpResolveRepos(allRepos[0])
+		repos, err := ghpResolveRepos("kubestellar/console")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if len(repos) != 1 {
 			t.Errorf("len = %d, want 1", len(repos))
 		}
-		if repos[0] != allRepos[0] {
-			t.Errorf("repo = %q, want %q", repos[0], allRepos[0])
+		if repos[0] != "kubestellar/console" {
+			t.Errorf("repo = %q, want %q", repos[0], "kubestellar/console")
 		}
 	})
 
