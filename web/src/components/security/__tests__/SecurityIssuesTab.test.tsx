@@ -13,8 +13,12 @@ vi.mock('react-i18next', () => ({
         'security.noIssuesFound': 'No issues found',
         'security.bestPractices': 'Following best practices',
         'security.privileged': 'Privileged',
+        'security.privilegedContainers': 'Privileged Containers',
+        'security.runAsRoot': 'Run as Root',
+        'security.noSecurityContext': 'No Security Context',
         'security.root': 'Root',
         'security.hostNetwork': 'Host Network',
+        'common.all': 'All',
       }
       return map[key] ?? key
     },
@@ -31,11 +35,11 @@ import { SecurityIssuesTab } from '../SecurityIssuesTab'
 import type { SecurityIssue } from '../../../mocks/securityData'
 
 const baseStats = {
-  total: 5,
-  high: 2,
-  medium: 2,
+  total: 8,
+  high: 3,
+  medium: 4,
   low: 1,
-  typeCounts: { privileged: 2, root: 2, noSecurityContext: 1 },
+  typeCounts: { privileged: 3, root: 4, noSecurityContext: 1 },
 }
 
 const mockIssues: SecurityIssue[] = [
@@ -77,8 +81,9 @@ describe('SecurityIssuesTab', () => {
 
   it('renders severity stat cards', () => {
     render(<SecurityIssuesTab {...defaultProps} />)
-    expect(screen.getByText('5')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('8')).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByText('4')).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 
@@ -101,6 +106,7 @@ describe('SecurityIssuesTab', () => {
     render(<SecurityIssuesTab {...defaultProps} setSelectedIssueType={setSelectedIssueType} />)
     const buttons = screen.getAllByRole('button')
     const privilegedBtn = buttons.find(b => b.textContent?.includes('Privileged'))
+    expect(privilegedBtn).toBeDefined()
     if (privilegedBtn) fireEvent.click(privilegedBtn)
     expect(setSelectedIssueType).toHaveBeenCalled()
   })
