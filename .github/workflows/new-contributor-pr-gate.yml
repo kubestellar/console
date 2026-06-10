@@ -13,7 +13,8 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    # Note: intentionally runs for fork PRs — that is the primary use-case for this gate.
+    # Bot and established-contributor checks inside the script handle the safe-path early exits.
     steps:
       - name: Check contributor history
         env:
