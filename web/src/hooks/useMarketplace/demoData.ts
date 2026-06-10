@@ -1,4 +1,8 @@
-import { createCachedHook } from '@/lib/cache'
+// The marketplace registry is a public GitHub raw URL — no auth needed — so
+// the fetcher must run in demo mode too.  Use useCache directly with
+// liveInDemoMode: true (same pattern as useGitHubPipelines) rather than
+// createCachedHook, which does not expose that flag.
+import { useCache } from '@/lib/cache'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 import { mergeRegistryItems } from './actions'
 import type { MarketplaceItem, MarketplaceRegistry } from './types'
@@ -15,9 +19,12 @@ async function fetchMarketplaceItems(): Promise<MarketplaceItem[]> {
   return mergeRegistryItems(data)
 }
 
-export const useCachedMarketplaceItems = createCachedHook<MarketplaceItem[]>({
-  key: MARKETPLACE_CACHE_KEY,
-  category: 'costs',
-  initialData: INITIAL_MARKETPLACE_ITEMS,
-  fetcher: fetchMarketplaceItems,
-})
+export function useCachedMarketplaceItems() {
+  return useCache<MarketplaceItem[]>({
+    key: MARKETPLACE_CACHE_KEY,
+    category: 'costs',
+    initialData: INITIAL_MARKETPLACE_ITEMS,
+    fetcher: fetchMarketplaceItems,
+    liveInDemoMode: true, // registry is public; no auth required
+  })
+}
