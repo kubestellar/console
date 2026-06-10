@@ -3,7 +3,7 @@
 // Real-backend JWT revocation is covered by auth/token-refresh.spec.ts.
 
 import { test, expect, type Page } from '@playwright/test'
-import { mockApiFallback, mockApiMe, ELEMENT_VISIBLE_TIMEOUT_MS } from '../helpers/setup'
+import { mockApiFallback, mockApiMe, mockLocalAgentUnavailable, ELEMENT_VISIBLE_TIMEOUT_MS } from '../helpers/setup'
 
 const LOGOUT_TIMEOUT_MS = 15_000
 
@@ -48,6 +48,7 @@ test.describe('Logout flow (mocked backend)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     testInfo.setTimeout(LOGOUT_TIMEOUT_MS)
     await mockApiFallback(page)
+    await mockLocalAgentUnavailable(page)
     await mockApiMe(page)
   })
 

@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockLocalAgentUnavailable } from './helpers/setup'
 
 /**
  * E2E tests for ClusterResourceTree performance and render limits.
@@ -200,21 +201,37 @@ async function setupClusterResourceTreeTest(page: Page, options: SetupOptions = 
     })
   })
 
-  // Mock local agent
-  await page.route('**/127.0.0.1:8585/**', (route) =>
-    route.fulfill({
+  // Mock local agent as unavailable to prevent settings sync interference (#17406)
+  await mockLocalAgentUnavailable(page)
+
+  // Mock /health so the app has proper configuration
+  await page.route('**/health', (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname !== '/health') return route.fallback()
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ events: [], clusters: [], health: { hasClaude: false, hasBob: false } }),
+      body: JSON.stringify({
+        status: 'ok',
+        version: 'dev',
+        oauth_configured: false,
+        in_cluster: false,
+        no_local_agent: true,
+        install_method: 'dev',
+      }),
     })
-  )
+  })
 
   // Set auth token and navigate
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'test-token')
+  await page.addInitScript(() => {
+    localStorage.setItem('token', 'demo-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')

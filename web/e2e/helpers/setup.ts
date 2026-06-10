@@ -605,23 +605,25 @@ export async function mockApiFallbackStrict(page: Page) {
 
 export async function setupDemoMode(page: Page) {
   await mockApiFallback(page)
+  // #17406 — Mock local agent as unavailable so usePersistedSettings cannot
+  // restore settings from the agent and overwrite test-set localStorage values.
+  await mockLocalAgentUnavailable(page)
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
-  await page.addInitScript(async () => {
+  // NOTE: The init script must be synchronous to guarantee all setItem calls
+  // complete before page scripts execute. IndexedDB delete is fire-and-forget.
+  await page.addInitScript(() => {
     // Only clear storage if demo mode is not already set up — prevents wiping
     // user settings (like toggle states) on internal navigation (#16177).
     if (!localStorage.getItem('kc-demo-mode')) {
-      await (async () => {
-        sessionStorage.clear()
-        localStorage.clear()
-        const deletePromise = new Promise<void>((resolve) => {
-          const req = indexedDB.deleteDatabase('kc_cache')
-          req.onsuccess = () => resolve()
-          req.onerror = () => resolve()
-          req.onblocked = () => resolve()
-        })
-        await deletePromise
-      })()
+      sessionStorage.clear()
+      localStorage.clear()
+      // Fire-and-forget IndexedDB delete — must not block localStorage seeding
+      try {
+        indexedDB.deleteDatabase('kc_cache')
+      } catch {
+        // IndexedDB may not be available in all test contexts
+      }
     }
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')

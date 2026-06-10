@@ -44,7 +44,22 @@ async function setupClustersDialogTest(page: Page) {
     })
   })
 
-  // Mock local agent — prevent cross-origin errors
+  // Mock local agent — return healthy status so isConnected=true (needed for rename button)
+  await page.route('**/127.0.0.1:8585/health', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'ok', clusters: 3, hasClaude: false, hasBob: false }),
+    })
+  )
+  await page.route('**/127.0.0.1:8585/providers/health', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ providers: [] }),
+    })
+  )
+  // Other agent endpoints return 503
   await page.route('**/127.0.0.1:8585/**', (route) =>
     route.fulfill({
       status: 503,
