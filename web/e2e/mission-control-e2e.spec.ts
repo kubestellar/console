@@ -359,6 +359,11 @@ async function setupGitHubMocks(page: Page) {
   await page.route('**/api/github/repos/clubanderson/sample-runbooks/contents/*', (route) => {
     const url = route.request().url()
     const fileName = url.split('/contents/').pop()?.split('?')[0] || ''
+    // Empty fileName means directory listing — fall through to the broader mock above
+    if (!fileName) {
+      route.fallback()
+      return
+    }
     const content = MOCK_FILE_CONTENTS[fileName]
     if (content) {
       route.fulfill({
