@@ -45,9 +45,6 @@ export async function readCappedBodyBuffer(
     if (done) {
       break;
     }
-    if (!value) {
-      continue;
-    }
 
     totalBytes += value.byteLength;
     if (totalBytes > maxBytes) {

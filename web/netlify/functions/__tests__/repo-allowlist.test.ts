@@ -6,7 +6,7 @@
  * GitHub API calls from being directed at arbitrary repositories (SSRF-like
  * attack vector). Every code path needs regression coverage.
  */
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 
 import {
   DEFAULT_ALLOWED_REPOS,

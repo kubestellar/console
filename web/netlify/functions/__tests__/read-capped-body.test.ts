@@ -5,7 +5,7 @@
  * This module prevents resource exhaustion (CWE-400) by enforcing body
  * size limits on incoming requests. Tests cover all paths: content-length
  * pre-check, streaming body reads, body too large during stream, null body,
- * empty chunks, and JSON parsing.
+ * and JSON parsing.
  */
 import { describe, expect, it } from "vitest";
 
