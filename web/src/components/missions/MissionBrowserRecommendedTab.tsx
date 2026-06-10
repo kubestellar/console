@@ -117,7 +117,7 @@ export function MissionBrowserRecommendedTab({
               <p className="text-muted-foreground">
                 The fix browser needs a GitHub personal access token to fetch missions. Add one to
                 your{' '}
-                <code className="px-1.5 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code>{' '}
+                <code className="px-1.5 py-0.5 bg-gray-200 dark:bg-white/10 rounded text-xs font-mono">.env</code>{' '}
                 file and restart the console:
               </p>
               <ol className="text-muted-foreground list-decimal list-inside space-y-1.5 ml-1">
@@ -131,14 +131,14 @@ export function MissionBrowserRecommendedTab({
                     Create a GitHub personal access token
                   </a>{' '}
                   (only{' '}
-                  <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">
+                  <code className="px-1 py-0.5 bg-gray-200 dark:bg-white/10 rounded text-xs font-mono">
                     public_repo
                   </code>{' '}
                   scope needed)
                 </li>
                 <li>
                   Add it to your{' '}
-                  <code className="px-1 py-0.5 bg-white/10 rounded text-xs font-mono">.env</code>{' '}
+                  <code className="px-1 py-0.5 bg-gray-200 dark:bg-white/10 rounded text-xs font-mono">.env</code>{' '}
                   file:
                   <pre className="mt-1 px-3 py-2 bg-black/40 rounded text-xs font-mono text-purple-300 select-all">
                     GITHUB_TOKEN=ghp_your_token_here

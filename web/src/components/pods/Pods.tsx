@@ -330,7 +330,7 @@ export function Pods() {
                         disabled={backendActionUnavailable}
                         className={backendActionUnavailable
                           ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
-                          : 'p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors'}
+                          : 'p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors'}
                         aria-label={t('common.restart', 'Restart')}
                         title={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}
                       >
@@ -341,7 +341,7 @@ export function Pods() {
                     <PortalTooltip content={t('common.logs', 'Logs')}>
                       <button
                         onClick={(e) => issue.cluster && handleShowLogs(e, issue.cluster, issue.namespace, issue.name)}
-                        className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
+                        className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
                         aria-label="View logs"
                       >
                         <Terminal className="w-4 h-4" />
@@ -354,7 +354,7 @@ export function Pods() {
                         disabled={backendActionUnavailable}
                         className={backendActionUnavailable
                           ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
-                          : 'p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors'}
+                          : 'p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors'}
                         aria-label={t('common.delete', 'Delete')}
                         title={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}
                       >
