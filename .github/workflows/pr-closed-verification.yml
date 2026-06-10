@@ -4,10 +4,7 @@ on:
   pull_request:
     types: [closed]
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: post-merge-verify-${{ github.event.pull_request.number }}
@@ -20,6 +17,9 @@ env:
 
 jobs:
   verify:
+    permissions:
+      issues: write
+      pull-requests: write
     name: Verify build after merge
     # Only run when PR was actually merged, not just closed
     if: >-

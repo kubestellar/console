@@ -20,9 +20,7 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: console-app-smoke
@@ -31,6 +29,8 @@ concurrency:
 jobs:
   # ── 1. GitHub App credential health ──────────────────────────────
   credential-smoke:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: App Credential Smoke
     runs-on: ubuntu-latest
@@ -145,6 +145,8 @@ jobs:
 
   # ── 2. Rewards classifier unit tests ────────────────────────────
   classifier-contract:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Rewards Classifier Contract
     runs-on: ubuntu-latest

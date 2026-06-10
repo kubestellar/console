@@ -15,9 +15,7 @@ on:
     - cron: "0 5 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: nightly-ux-journeys
@@ -29,6 +27,8 @@ env:
 
 jobs:
   ux-journeys:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: UX Journey Tests
     runs-on: ubuntu-latest
@@ -104,6 +104,8 @@ jobs:
           fi
 
   ux-mobile:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: UX Mobile Tests
     runs-on: ubuntu-latest

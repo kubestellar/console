@@ -4,12 +4,13 @@ on:
   pull_request_target:
     types: [opened]
 
-permissions:
-  pull-requests: write
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   check-contributor:
+    permissions:
+      pull-requests: write
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}

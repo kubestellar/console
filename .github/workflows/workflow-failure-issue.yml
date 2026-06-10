@@ -25,12 +25,12 @@ on:
     types:
       - completed
 
-permissions:
-  issues: write
-  actions: read
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   open-issue:
+    permissions:
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: >-

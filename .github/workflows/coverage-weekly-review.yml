@@ -8,15 +8,15 @@ on:
     - cron: '0 9 * * 1'  # Monday 9 AM UTC
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 env:
   REVIEW_DAYS: 7
 
 jobs:
   weekly-review:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 10

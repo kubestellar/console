@@ -24,14 +24,14 @@ on:
 env:
   GO_VERSION: "1.26.4"
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   # ── PR Check: Block new nil-safety violations ──────────────────────
   pr-check:
+    permissions:
+      issues: write
+      pull-requests: write
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -121,6 +121,9 @@ jobs:
 
   # ── Nightly: Full scan with issue creation ─────────────────────────
   nightly-scan:
+    permissions:
+      issues: write
+      pull-requests: write
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -294,6 +297,9 @@ jobs:
 
   # ── TypeScript: Catch unsafe optional chaining patterns ────────────
   ts-null-safety:
+    permissions:
+      issues: write
+      pull-requests: write
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5

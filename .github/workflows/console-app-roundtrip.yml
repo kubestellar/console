@@ -17,9 +17,7 @@ on:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: console-app-roundtrip
@@ -37,6 +35,8 @@ env:
 
 jobs:
   roundtrip:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: App Roundtrip
     runs-on: ubuntu-latest

@@ -5,12 +5,12 @@ on:
     - cron: '0 6 * * *' # 6am UTC daily
   workflow_dispatch: {}
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   check-version:
+    permissions:
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

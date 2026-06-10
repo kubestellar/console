@@ -4,11 +4,12 @@ on:
   issues:
     types: [opened]
 
-permissions:
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   label:
+    permissions:
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: >-

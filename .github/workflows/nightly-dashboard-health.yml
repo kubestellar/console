@@ -23,9 +23,7 @@ env:
   CI: true
   NODE_VERSION: '22'
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: nightly-dashboard-health
@@ -37,6 +35,8 @@ jobs:
   # that AuthCallback.tsx depends on. Catches regressions like commit
   # 25e464fa which removed the token field and broke login for 24h.
   auth-contract:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Auth Login Contract
     runs-on: ubuntu-latest
@@ -125,6 +125,8 @@ jobs:
 
   # ── Dashboard health checks ──────────────────────────────────────
   health-check:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Dashboard Health Check
     runs-on: ubuntu-latest

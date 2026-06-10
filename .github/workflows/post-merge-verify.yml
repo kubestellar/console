@@ -11,10 +11,7 @@ on:
       - 'web/**'
       - 'pkg/**'
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: post-merge-verify
@@ -31,6 +28,9 @@ env:
 jobs:
   # ── Job 1: Wait for Netlify to deploy the merged code ──────────────
   wait-for-deploy:
+    permissions:
+      issues: write
+      pull-requests: write
     name: Wait for Netlify deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -69,6 +69,9 @@ jobs:
 
   # ── Job 2: Extract PR context and select tests ─────────────────────
   extract-context:
+    permissions:
+      issues: write
+      pull-requests: write
     name: Select tests from PR context
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -146,6 +149,9 @@ jobs:
 
   # ── Job 3: Run Playwright tests ────────────────────────────────────
   run-tests:
+    permissions:
+      issues: write
+      pull-requests: write
     name: Run Playwright E2E
     needs: [wait-for-deploy, extract-context]
     if: needs.extract-context.outputs.spec_files != ''
@@ -223,6 +229,9 @@ jobs:
 
   # ── Job 4: Report results ──────────────────────────────────────────
   report:
+    permissions:
+      issues: write
+      pull-requests: write
     name: Report verification results
     needs: [extract-context, run-tests]
     if: always() && needs.extract-context.outputs.pr_number != ''

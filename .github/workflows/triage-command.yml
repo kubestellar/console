@@ -10,13 +10,13 @@ on:
   issues:
     types: [labeled]
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   # ── Path A: /triage accepted comment ──────────────────────────────────
   handle-triage-comment:
+    permissions:
+      issues: write
     if: |
       github.event_name == 'issue_comment' &&
       !github.event.issue.pull_request &&
@@ -225,6 +225,8 @@ jobs:
 
   # ── Path B: triage/accepted label added ───────────────────────────────
   handle-triage-label:
+    permissions:
+      issues: write
     if: |
       github.event_name == 'issues' &&
       github.event.action == 'labeled' &&

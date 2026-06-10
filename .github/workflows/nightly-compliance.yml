@@ -25,12 +25,12 @@ env:
   NODE_VERSION: '22'
   PREVIEW_PORT: 4174
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   build:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Build
     runs-on: ubuntu-latest
@@ -66,6 +66,8 @@ jobs:
   # ── Compliance Suites ────────────────────────────────────────────────
 
   compliance:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Compliance (${{ matrix.suite }})
     needs: build
@@ -195,6 +197,8 @@ jobs:
   # ── Performance Suites ───────────────────────────────────────────────
 
   perf:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     name: Perf (${{ matrix.suite }})
     needs: build
@@ -319,6 +323,8 @@ jobs:
   # When a suite that previously failed now passes, its issue is auto-closed.
 
   report:
+    permissions:
+      issues: write
     name: Report & Create Issues
     needs: [compliance, perf]
     if: always() && github.repository == 'kubestellar/console'

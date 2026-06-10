@@ -4,12 +4,12 @@ on:
     - cron: '0 4 * * *'  # 4 AM UTC daily
   workflow_dispatch:
 
-permissions:
-  contents: read
-  issues: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   validate-kb:
+    permissions:
+      issues: write
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 10
