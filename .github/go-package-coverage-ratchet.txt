@@ -27,3 +27,21 @@ pkg/settings 0.0
 pkg/rewards 0.0
 pkg/safego 0.0
 pkg/fileutil 0.0
+
+# --- Compliance engines (start at 0, ratchet up as evaluation tests land) ---
+pkg/compliance/fedramp 0.0
+pkg/compliance/hipaa 0.0
+pkg/compliance/nist80053 0.0
+pkg/compliance/slsa 0.0
+pkg/compliance/sbom 0.0
+pkg/compliance/signing 0.0
+pkg/compliance/licenses 0.0
+pkg/compliance/stig 0.0
+pkg/compliance/baa 0.0
+pkg/compliance/airgap 0.0
+pkg/compliance/sod 0.0
+pkg/compliance/gxp 0.0
+pkg/compliance/changecontrol 0.0
+pkg/compliance/residency 0.0
+pkg/compliance/frameworks 0.0
+pkg/compliance/reports 0.0
