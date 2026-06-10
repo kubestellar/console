@@ -13,11 +13,15 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /kc-agent ./cmd/kc-age
 # Stage 2: Minimal runtime image
 FROM alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
 
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates \
+    && addgroup -g 65532 -S nonroot \
+    && adduser -u 65532 -S nonroot -G nonroot
 
 COPY --from=builder /kc-agent /usr/local/bin/kc-agent
 
 EXPOSE 8585
+
+USER nonroot:nonroot
 
 ENTRYPOINT ["kc-agent"]
 CMD []
