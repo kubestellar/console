@@ -232,7 +232,7 @@ describe("quantum-proxy", () => {
         },
         body: oversizedBody,
       });
-      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET, QUANTUM_SERVICE_URL: "https://quantum.example.com" }));
       expect(res.status).toBe(HTTP_STATUS_REQUEST_TOO_LARGE);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Request body too large");
@@ -249,7 +249,7 @@ describe("quantum-proxy", () => {
         },
         body: "not-json{{",
       });
-      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET, QUANTUM_SERVICE_URL: "https://quantum.example.com" }));
       expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Invalid JSON in request body");
@@ -266,7 +266,7 @@ describe("quantum-proxy", () => {
         },
         body: JSON.stringify([{ circuit: "OPENQASM 2.0;" }]),
       });
-      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET }));
+      const res = await handler(req, makeContext({ JWT_SECRET: TEST_JWT_SECRET, QUANTUM_SERVICE_URL: "https://quantum.example.com" }));
       expect(res.status).toBe(HTTP_STATUS_BAD_REQUEST);
       const body = await readJson<{ error: string }>(res);
       expect(body.error).toBe("Request body must be a JSON object");
@@ -414,7 +414,7 @@ describe("quantum-proxy", () => {
       expect(res.status).toBe(HTTP_STATUS_OK);
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [calledURL] = fetchMock.mock.calls[0] as [string, ...unknown[]];
-      expect(calledURL).toBe("https://quantum.example.com/api/status");
+      expect(calledURL).toBe("https://quantum.example.com/status");
     });
 
     it("proxies POST /execute with bearer token to upstream", async () => {
