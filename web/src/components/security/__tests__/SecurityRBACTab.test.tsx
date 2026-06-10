@@ -29,8 +29,8 @@ import type { RBACBinding } from '../../../mocks/securityData'
 const baseStats = {
   rbacTotal: 10,
   rbacHighRisk: 3,
-  rbacMedRisk: 4,
-  rbacLowRisk: 3,
+  rbacMedRisk: 5,
+  rbacLowRisk: 2,
 }
 
 const mockBindings: RBACBinding[] = [
@@ -69,7 +69,8 @@ describe('SecurityRBACTab', () => {
     render(<SecurityRBACTab stats={baseStats} filteredRBAC={mockBindings} />)
     expect(screen.getByText('10')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
-    expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
   })
 
   it('renders binding names', () => {
