@@ -9,6 +9,7 @@ import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { Select } from '../ui/Select'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 interface SoDRule {
   id: string; name: string; description: string; role_a: string; role_b: string
@@ -101,7 +102,7 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
     <div className="space-y-6">
       <DashboardHeader
         title="Segregation of Duties"
-        subtitle="Detect conflicting privilege assignments across RBAC roles"
+        subtitle={<>Detect conflicting privilege assignments across <TechnicalAcronym term="RBAC" /> roles</>}
         isFetching={loading}
         onRefresh={fetchData}
         autoRefresh={autoRefresh}

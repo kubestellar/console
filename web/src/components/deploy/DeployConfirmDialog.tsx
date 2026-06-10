@@ -26,6 +26,7 @@ import {
 } from '../../hooks/useDependencies'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 
 interface DeployConfirmDialogProps {
   isOpen: boolean
@@ -231,7 +232,7 @@ export function DeployConfirmDialog({
                         ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
                         : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />}
                       <GroupIcon className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                      <span className="text-sm text-foreground flex-1">{group.label}</span>
+                      <span className="text-sm text-foreground flex-1">{wrapAbbreviations(group.label)}</span>
                       <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">
                         {group.deps.length}
                       </span>

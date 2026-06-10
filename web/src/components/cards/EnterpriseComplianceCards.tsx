@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { authFetch, safeJson } from '../../lib/api'
 import { useCache } from '../../lib/cache'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // ── Shared helpers ──────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ export function ScoreRing({ score, size = 64 }: { score: number; size?: number }
 }
 
 function CardShell({ title, icon: Icon, children, onClick }: {
-  title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode; onClick?: () => void
+  title: React.ReactNode; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode; onClick?: () => void
 }) {
   return (
     <div
@@ -462,7 +463,7 @@ export function RBACAuditCard() {
   const nav = useNavigate()
   const { data, error } = useSummaryData<Record<string, number>>('/api/identity/rbac/summary')
   return (
-    <CardShell title="RBAC Audit" icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
+    <CardShell title={<><TechnicalAcronym term="RBAC" /> Audit</>} icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
       {data ? (
         <div className="flex items-center gap-4">
           <ScoreRing score={data.compliance_score ?? 0} />

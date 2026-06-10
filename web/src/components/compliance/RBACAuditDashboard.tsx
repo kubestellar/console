@@ -11,6 +11,7 @@ import { Select } from '../ui/Select'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { DashboardHealthIndicator } from '../dashboard/DashboardHealthIndicator'
+import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 interface RBACBinding {
   id: string; name: string; kind: string; subject_kind: string
@@ -121,7 +122,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
   return (
     <div className="space-y-6 p-6">
       <DashboardHeader
-        title="RBAC Audit & Least-Privilege Analysis"
+        title={<><TechnicalAcronym term="RBAC" /> Audit & Least-Privilege Analysis</>}
         subtitle="Role binding audit, over-privilege detection, and compliance scoring"
         isFetching={loading}
         onRefresh={fetchData}
@@ -143,7 +144,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
             <div className="flex items-center gap-3">
               <Activity className="w-5 h-5 text-blue-400" />
               <div>
-                <div className="text-sm font-medium text-foreground">RBAC System Status</div>
+                <div className="text-sm font-medium text-foreground"><TechnicalAcronym term="RBAC" /> System Status</div>
                 <div className="text-xs text-muted-foreground">
                   {summary.over_privileged === 0 && summary.unused_bindings === 0
                     ? 'All bindings follow least-privilege principles'

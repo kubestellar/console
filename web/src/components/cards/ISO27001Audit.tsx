@@ -15,6 +15,7 @@ import { CardClusterFilter, CardSearchInput, CardSkeleton } from '../../lib/card
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
+import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import { useState } from 'react'
 
 // ── Demo Data ──────────────────────────────────────────────────────
@@ -309,7 +310,7 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
                     }`}>{f.severity}</span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
-                    <span className="truncate">{f.category}</span>
+                    <span className="truncate">{wrapAbbreviations(f.category)}</span>
                     <span>·</span>
                     <span className="text-blue-400">{f.cluster}</span>
                   </div>
