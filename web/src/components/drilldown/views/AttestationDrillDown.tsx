@@ -120,19 +120,7 @@ export function AttestationDrillDown({ data }: Props) {
   const cluster = data.cluster as ClusterAttestationScore | undefined
   const [searchQuery, setSearchQuery] = useState('')
 
-  if (!cluster) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <ShieldCheck className="w-10 h-10 text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">
-          {t('runtimeAttestation.noData')}
-        </p>
-      </div>
-    )
-  }
-
-  const signals: AttestationSignal[] = cluster.signals || []
-  const allWorkloads: NonCompliantWorkload[] = cluster.nonCompliantWorkloads || []
+  const allWorkloads: NonCompliantWorkload[] = cluster?.nonCompliantWorkloads ?? []
 
   const filteredWorkloads = useMemo(() => {
     if (!searchQuery.trim()) return allWorkloads
@@ -145,6 +133,19 @@ export function AttestationDrillDown({ data }: Props) {
         w.reason.toLowerCase().includes(q),
     )
   }, [allWorkloads, searchQuery])
+
+  if (!cluster) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center">
+        <ShieldCheck className="w-10 h-10 text-muted-foreground mb-3" />
+        <p className="text-sm text-muted-foreground">
+          {t('runtimeAttestation.noData')}
+        </p>
+      </div>
+    )
+  }
+
+  const signals: AttestationSignal[] = cluster.signals || []
 
   return (
     <div className="space-y-6 p-4">

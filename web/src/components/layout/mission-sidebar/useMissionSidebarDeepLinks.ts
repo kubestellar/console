@@ -255,6 +255,7 @@ export function useDirectImport(
       const controller = new AbortController()
       const timeoutSignal = AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS)
       const combinedSignal = AbortSignal.any([controller.signal, timeoutSignal])
+      // eslint-disable-next-line no-useless-assignment
       let found: MissionExport | null = null
       try {
         found = await Promise.any(paths.map(async (path) => {

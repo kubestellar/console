@@ -89,4 +89,24 @@ export default tseslint.config(
       ],
     },
   },
+  // Test and spec files — relax strict TypeScript rules that are impractical
+  // in test code (mocking often requires `any`, require() imports, etc.).
+  {
+    files: [
+      '**/__tests__/**/*.{ts,tsx}',
+      '**/*.test.{ts,tsx}',
+      '**/*.spec.{ts,tsx}',
+      'e2e/**/*.{ts,tsx}',
+      'netlify/**/__tests__/**/*.{ts,tsx}',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn',
+      '@typescript-eslint/no-this-alias': 'warn',
+      '@typescript-eslint/no-require-imports': 'warn',
+      '@typescript-eslint/no-unused-expressions': 'warn',
+      'no-empty-pattern': 'warn',
+      'react-hooks/rules-of-hooks': 'warn',
+    },
+  },
 )

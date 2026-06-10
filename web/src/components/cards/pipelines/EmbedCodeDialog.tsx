@@ -46,7 +46,6 @@ interface EmbedCodeDialogProps {
 }
 
 export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClose }: EmbedCodeDialogProps) {
-  if (!open) return null
   const { t } = useTranslation()
   const [repo, setRepo] = useState(currentRepo ?? '')
   const [copiedField, setCopiedField] = useState<string | null>(null)
@@ -101,6 +100,7 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
   // closeOnBackdropClick={false} — the repo input holds user-entered text the
   // user may not want to lose to a stray click. Close is reachable via the
   // explicit X button in the header.
+  if (!open) return null
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"

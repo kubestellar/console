@@ -43,7 +43,7 @@ function mergeRegistryDomains() {
     for (const [cardType, component] of Object.entries(registry.components)) {
       const existing = seenCardTypes.get(cardType)
       if (existing) {
-        throw new Error(`Duplicate card type \"${cardType}\" in ${existing} and ${domainName}`)
+        throw new Error(`Duplicate card type "${cardType}" in ${existing} and ${domainName}`)
       }
       seenCardTypes.set(cardType, domainName)
       components[cardType] = component

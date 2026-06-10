@@ -392,6 +392,7 @@ export function PodPitfall(_props: CardComponentProps) {
           // Jump
           if ((keys.has(' ') || keys.has('ArrowUp') || keys.has('w') || keys.has('W')) && onGround) {
             newVy = JUMP_FORCE
+            // eslint-disable-next-line no-useless-assignment
             onGround = false
           }
 

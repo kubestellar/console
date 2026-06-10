@@ -81,8 +81,9 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
       if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load GxP data')
     } finally {
-      if (cancelledRef.current) return
-      setLoading(false)
+      if (!cancelledRef.current) {
+        setLoading(false)
+      }
     }
   }
 

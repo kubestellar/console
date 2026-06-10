@@ -230,7 +230,6 @@ export function DraftsTab({
                     </button>
                   </span>
                 ) : (
-                  /* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
                   <button
                     type="button"
                     className={cn('inline-flex items-center justify-center gap-1 px-2 text-xs text-muted-foreground transition-colors hover:text-red-400', TOUCH_TARGET_SIZE_CLASS)}

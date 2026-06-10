@@ -79,8 +79,9 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
       if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load RBAC data')
     } finally {
-      if (cancelledRef.current) return
-      setLoading(false)
+      if (!cancelledRef.current) {
+        setLoading(false)
+      }
     }
   }
 

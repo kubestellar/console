@@ -101,8 +101,9 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
       if (cancelledRef.current) return
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
-      if (cancelledRef.current) return
-      setLoading(false)
+      if (!cancelledRef.current) {
+        setLoading(false)
+      }
     }
   }
 

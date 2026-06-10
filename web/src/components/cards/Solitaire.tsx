@@ -379,10 +379,12 @@ export function Solitaire(_props: CardComponentProps) {
     if (!isPlaying) return
 
     let card: PlayingCard | null = null
+    // eslint-disable-next-line no-useless-assignment
     let cards: PlayingCard[] = []
 
     if (source === 'waste' && game.waste.length > 0) {
       card = game.waste[game.waste.length - 1]
+      // eslint-disable-next-line no-useless-assignment
       cards = [card]
     } else if (source.startsWith('tableau-')) {
       const col = parseInt(source.split('-')[1])
@@ -394,6 +396,7 @@ export function Solitaire(_props: CardComponentProps) {
       const idx = parseInt(source.split('-')[1])
       if (game.foundations[idx].length > 0) {
         card = game.foundations[idx][game.foundations[idx].length - 1]
+        // eslint-disable-next-line no-useless-assignment
         cards = [card]
       }
     }

@@ -144,8 +144,9 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
       if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
-      if (cancelledRef.current) return
-      setLoading(false)
+      if (!cancelledRef.current) {
+        setLoading(false)
+      }
     }
   }, [])
 

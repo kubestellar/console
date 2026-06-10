@@ -55,6 +55,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
   const handleSaveT1 = () => {
     if (!t1Title.trim()) return
 
+    // eslint-disable-next-line no-useless-assignment
     let staticData: Record<string, unknown>[] = []
     try {
       staticData = JSON.parse(t1DataJson)

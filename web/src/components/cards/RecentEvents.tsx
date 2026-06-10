@@ -131,21 +131,6 @@ export function RecentEvents() {
         object: commonComparators.string<ClusterEvent>('object') } },
     defaultLimit: 5 })
 
-  if (showSkeleton) {
-    return <CardSkeleton rows={3} type="list" showHeader={false} />
-  }
-
-  if (showEmptyState) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No events</p>
-        <p className="text-xs mt-1">Recent events will appear here</p>
-      </div>
-    )
-  }
-
-  const warningCount = recentEventsCandidates.filter(e => e.type === 'Warning').length
-
   const clusterFilter = useMemo(() => ({
     availableClusters: filters.availableClusters,
     selectedClusters: filters.localClusterFilter,
@@ -189,6 +174,21 @@ export function RecentEvents() {
     sorting.sortDirection,
     sorting.setSortDirection,
   ])
+
+  if (showSkeleton) {
+    return <CardSkeleton rows={3} type="list" showHeader={false} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <p className="text-sm">No events</p>
+        <p className="text-xs mt-1">Recent events will appear here</p>
+      </div>
+    )
+  }
+
+  const warningCount = recentEventsCandidates.filter(e => e.type === 'Warning').length
 
   return (
     <div className="space-y-3">

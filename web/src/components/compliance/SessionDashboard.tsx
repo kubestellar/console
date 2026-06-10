@@ -64,8 +64,9 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
       if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load session data')
     } finally {
-      if (cancelledRef.current) return
-      setLoading(false)
+      if (!cancelledRef.current) {
+        setLoading(false)
+      }
     }
   }
 

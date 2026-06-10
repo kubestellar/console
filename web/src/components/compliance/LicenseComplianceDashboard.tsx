@@ -93,8 +93,9 @@ export default function LicenseComplianceDashboard() {
       if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : t('compliance.licenseFailedToLoad'))
     } finally {
-      if (!mountedRef.current) return
-      setLoading(false)
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
   }
 

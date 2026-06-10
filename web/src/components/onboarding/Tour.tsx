@@ -30,6 +30,7 @@ function getTooltipPosition(
   const vw = document.documentElement.clientWidth
   const vh = window.innerHeight
 
+  // eslint-disable-next-line no-useless-assignment
   let position: TooltipPosition = {}
 
   switch (placement) {

@@ -91,8 +91,9 @@ export default function SigningStatusDashboard() {
       if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load signing data')
     } finally {
-      if (!mountedRef.current) return
-      setLoading(false)
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
   }
 

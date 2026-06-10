@@ -149,24 +149,6 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     defaultLimit: 5,
   })
 
-  if (showSkeleton) {
-    return (
-      <div className="h-full flex flex-col min-h-card p-3">
-        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-          <Skeleton variant="text" width={120} height={16} />
-          <Skeleton variant="rounded" width={80} height={28} />
-        </div>
-        <Skeleton variant="rounded" height={32} className="mb-2" />
-        <Skeleton variant="rounded" height={48} className="mb-2" />
-        <div className="space-y-2">
-          <Skeleton variant="rounded" height={70} />
-          <Skeleton variant="rounded" height={70} />
-          <Skeleton variant="rounded" height={70} />
-        </div>
-      </div>
-    )
-  }
-
   const clusterIndicatorProps = useMemo(() => ({
     selectedCount: localClusterFilter.length,
     totalCount: availableClusters.length,
@@ -194,6 +176,24 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     sortDirection,
     onSortDirectionChange: setSortDirection,
   }), [itemsPerPage, setItemsPerPage, sortBy, onSortChange, sortDirection, setSortDirection])
+
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex flex-col min-h-card p-3">
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
+          <Skeleton variant="text" width={120} height={16} />
+          <Skeleton variant="rounded" width={80} height={28} />
+        </div>
+        <Skeleton variant="rounded" height={32} className="mb-2" />
+        <Skeleton variant="rounded" height={48} className="mb-2" />
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={70} />
+          <Skeleton variant="rounded" height={70} />
+          <Skeleton variant="rounded" height={70} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-full flex flex-col">

@@ -100,6 +100,7 @@ export function ReplaceCardModal({ isOpen, card, onClose, onReplace }: ReplaceCa
 
     // Match keywords in the description and suggest a card type
     const prompt = nlPrompt.toLowerCase()
+    // eslint-disable-next-line no-useless-assignment
     let suggestion: typeof aiSuggestion = null
 
     if (prompt.includes('cpu') || prompt.includes('memory') || prompt.includes('resource') || prompt.includes('usage')) {

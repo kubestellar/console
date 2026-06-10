@@ -129,6 +129,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     setPendingChanges(null)
     await new Promise((resolve) => setTimeout(resolve, NAV_AFTER_ANIMATION_MS))
 
+    // eslint-disable-next-line no-useless-assignment
     let navHistory: string[] = []
     try {
       navHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_NAV_HISTORY) || '[]')
