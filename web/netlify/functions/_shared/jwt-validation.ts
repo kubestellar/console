@@ -162,7 +162,7 @@ export async function validateBearerToken(
     return { valid: false, error: "Authorization header is required" };
   }
 
-  const trimmed = authHeader.trim();
+  const trimmed = authHeader.trimStart();
   const bearerPrefix = "Bearer ";
 
   if (!trimmed.startsWith(bearerPrefix)) {

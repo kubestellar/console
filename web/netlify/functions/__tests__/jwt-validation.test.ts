@@ -218,18 +218,16 @@ describe("validateBearerToken", () => {
       expect(result.error).toMatch(/Bearer/i);
     });
 
-    it("rejects header with empty Bearer token (trims to no space)", async () => {
-      // "Bearer " trims trailing space → "Bearer" → doesn't start with "Bearer <space>"
+    it("rejects header with empty Bearer token", async () => {
       const result = await validateBearerToken("Bearer ", TEST_SECRET);
       expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/must start with/i);
+      expect(result.error).toMatch(/empty/i);
     });
 
-    it("rejects header that trims to bearer keyword only", async () => {
-      // Multiple trailing spaces all get removed by trim() → same as "Bearer "
+    it("rejects header that has only whitespace after the Bearer prefix", async () => {
       const result = await validateBearerToken("Bearer    ", TEST_SECRET);
       expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/must start with/i);
+      expect(result.error).toMatch(/empty/i);
     });
   });
 
