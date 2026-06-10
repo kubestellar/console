@@ -12,8 +12,11 @@ import { wrapIdentityDemoResponse } from "../_shared/identity-demo-request";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeRequest(method: string, url = "https://example.com/api"): Request {
-  return new Request(url, { method });
+function makeRequest(method: string, url = "https://console.kubestellar.io/api"): Request {
+  return new Request(url, {
+    method,
+    headers: { Origin: "https://console.kubestellar.io" },
+  });
 }
 
 async function parseJson(res: Response): Promise<unknown> {
@@ -36,6 +39,12 @@ describe("wrapIdentityDemoResponse — preflight", () => {
     });
     const res = await wrapIdentityDemoResponse(req, {});
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("GET");
+  });
+
+  it("returns 403 for OPTIONS without allowed origin", async () => {
+    const req = new Request("https://example.com/api", { method: "OPTIONS" });
+    const res = await wrapIdentityDemoResponse(req, { test: true });
+    expect(res.status).toBe(403);
   });
 });
 
@@ -87,25 +96,25 @@ describe("wrapIdentityDemoResponse — method validation", () => {
 
 describe("wrapIdentityDemoResponse — cluster param", () => {
   it("accepts valid cluster names", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=my-cluster");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=my-cluster");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(200);
   });
 
   it("accepts cluster with dots and underscores", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=k8s.cluster_v2");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=k8s.cluster_v2");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(200);
   });
 
   it("accepts numeric cluster names", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=123");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=123");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(200);
   });
 
   it("rejects cluster with path traversal characters", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=../etc/passwd");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=../etc/passwd");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(400);
     const data = (await parseJson(res)) as { error: string };
@@ -113,31 +122,31 @@ describe("wrapIdentityDemoResponse — cluster param", () => {
   });
 
   it("rejects cluster with spaces", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=my%20cluster");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=my%20cluster");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(400);
   });
 
   it("rejects cluster starting with dot", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=.hidden");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=.hidden");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(400);
   });
 
   it("rejects cluster starting with hyphen", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=-invalid");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=-invalid");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(400);
   });
 
   it("allows absent cluster parameter", async () => {
-    const req = makeRequest("GET", "https://example.com/api");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(200);
   });
 
   it("allows empty cluster parameter", async () => {
-    const req = makeRequest("GET", "https://example.com/api?cluster=");
+    const req = makeRequest("GET", "https://console.kubestellar.io/api?cluster=");
     const res = await wrapIdentityDemoResponse(req, { ok: true });
     expect(res.status).toBe(200);
   });
