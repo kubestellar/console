@@ -18,7 +18,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="relative flex items-center justify-center" style={{ minHeight: 200, padding: 80 }}>
+      <div className="relative flex min-h-[200px] items-center justify-center p-20">
         <div className="relative inline-block">
           <div className="px-4 py-2 bg-secondary rounded-lg text-sm text-foreground border border-border">
             Anchor Element
@@ -85,7 +85,7 @@ export const LongMessage: Story = {
 export const AllPlacements: Story = {
   args: { message: 'Hint tooltip' },
   render: () => (
-    <div className="grid grid-cols-2 gap-16" style={{ padding: 120 }}>
+    <div className="grid grid-cols-2 gap-16 p-[120px]">
       {(['top', 'bottom', 'left', 'right'] as const).map((placement) => (
         <div key={placement} className="flex flex-col items-center gap-2">
           <span className="text-xs text-muted-foreground mb-4">{placement}</span>

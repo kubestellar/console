@@ -321,7 +321,7 @@ export function EventsPanel({
               </span>
               <span style={{ fontSize: 11, color: 'var(--s-text-dim)' }}>→</span>
             </div>
-            <div className="text-xs" style={{ color: 'var(--s-text)', marginTop: 4, lineHeight: 1.5 }}>
+            <div className="mt-1 text-xs leading-normal" style={{ color: 'var(--s-text)' }}>
               {t('stellar.batch.viewBatchMonitor')} — {currentBatch.solvingCount} event{currentBatch.solvingCount === 1 ? '' : 's'} actively solving
             </div>
           </button>
@@ -492,15 +492,7 @@ function Group({
 
 function EmptyState({ icon, text }: { icon: string; text: string }) {
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      color: 'var(--s-text-dim)',
-    }}>
+    <div className="flex flex-1 flex-col items-center justify-center gap-2" style={{ color: 'var(--s-text-dim)' }}>
       <span style={{ fontSize: 22, opacity: 0.4 }}>{icon}</span>
       <span style={{ fontSize: 12 }}>{text}</span>
     </div>

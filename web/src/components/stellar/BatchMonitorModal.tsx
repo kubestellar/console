@@ -9,11 +9,7 @@ const SECONDS_PER_MINUTE = 60
 const MS_PER_SECOND = 1000
 
 const FLEX_MIN_WIDTH_STYLE = { flex: 1, minWidth: 0 } as const
-const BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-} as const
+const BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS = 'flex items-center gap-2'
 const BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE = {
   fontFamily: 'var(--s-mono)',
   fontSize: 11,
@@ -688,7 +684,7 @@ export function BatchMonitorModal({
           {/* Breakdown */}
           <div className="flex flex-wrap gap-4">
             {batch.summary.resolved > 0 && (
-              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
+              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
                 <span aria-hidden="true" style={{ color: 'var(--s-success)', fontSize: 14 }}>✓</span>
                 <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.resolved} {t('stellar.batch.resolved')}
@@ -696,7 +692,7 @@ export function BatchMonitorModal({
               </div>
             )}
             {batch.summary.failed > 0 && (
-              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
+              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
                 <span aria-hidden="true" style={{ color: 'var(--s-critical)', fontSize: 14 }}>✗</span>
                 <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.failed} {t('stellar.batch.failed')}
@@ -704,7 +700,7 @@ export function BatchMonitorModal({
               </div>
             )}
             {batch.summary.skipped > 0 && (
-              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
+              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
                 <span aria-hidden="true" style={{ color: 'var(--s-text-muted)', fontSize: 14 }}>–</span>
                 <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.skipped} {t('stellar.batch.skipped')}
@@ -712,7 +708,7 @@ export function BatchMonitorModal({
               </div>
             )}
             {batch.summary.inProgress > 0 && (
-              <div style={BATCH_SUMMARY_BREAKDOWN_ITEM_STYLE}>
+              <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
                 <span aria-hidden="true" style={{ color: 'var(--s-info)', fontSize: 14 }}>⊙</span>
                 <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
                   {batch.summary.inProgress} {t('stellar.batch.inProgress')}

@@ -76,7 +76,7 @@ const ACTION_CONFIG: Record<string, { labelKey: string; icon: string; color: str
   solve: { labelKey: 'stellar.eventCard.actions.solve', icon: '✦', color: 'var(--s-success)' },
 }
 
-const EVENT_CARD_ACTIONS_STYLE = { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } as const
+const EVENT_CARD_ACTIONS_CLASS = 'flex flex-wrap gap-2 mt-2'
 const EVENT_CARD_BUTTON_STYLE = { background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', color: 'var(--s-text-muted)', cursor: 'pointer' } as const
 
 function buildActionPrompt(hint: string, notification: StellarNotification): string {
@@ -251,9 +251,7 @@ export function EventCard({
       )}
       {solveStatus && (
         <div className="mt-1.5">
-          <div className="mb-1" style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
+          <div className="mb-1 flex items-center gap-2">
             <span className="text-[11px] font-mono" style={{
               fontWeight: 600,
               color: solveStatus.color, flex: 1, minWidth: 0,
@@ -342,7 +340,7 @@ export function EventCard({
               e.stopPropagation()
             }
           }}
-          style={EVENT_CARD_ACTIONS_STYLE}
+          className={EVENT_CARD_ACTIONS_CLASS}
         >
           <button className="px-2 py-0.5 text-[11px]" onClick={onDismiss} style={EVENT_CARD_BUTTON_STYLE}>{t('actions.dismiss')}</button>
           {showRollback && onRollback && (

@@ -113,7 +113,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
               Stellar is watching. Nothing to report yet.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div className="flex flex-col gap-0.5">
               {visible.slice(0, 60).map(entry => {
                 const k = describeKind(entry.kind)
                 // A row is clickable iff it carries an eventId AND a handler

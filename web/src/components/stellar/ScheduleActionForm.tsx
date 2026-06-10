@@ -19,7 +19,7 @@ export function ScheduleActionForm() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<string | null>(null)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="flex flex-col gap-2">
       <input value={cluster} onChange={(e) => setCluster(e.target.value)} placeholder="Cluster" />
       <select value={actionType} onChange={(e) => setActionType(e.target.value)}>
         {Object.entries(ACTION_CONFIGS).map(([key, cfg]) => <option key={key} value={key}>{cfg.label}</option>)}
