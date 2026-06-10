@@ -51,39 +51,49 @@ vi.mock('../../components/cards/cardRegistry', () => ({
 vi.mock('@/lib/cache', async () => {
   const React = await import('react')
   return {
-    createCachedHook: <T>(config: { fetcher: () => Promise<T>; initialData: T }) => {
-      const { fetcher, initialData } = config
-      return function useMockCachedHook() {
-        const [state, setState] = React.useState<{
-          data: T; isLoading: boolean; error: string | null
-        }>({ data: initialData, isLoading: true, error: null })
-        const refetch = React.useCallback(async () => {
-          setState(s => ({ ...s, isLoading: true, error: null }))
-          try {
-            const data = await fetcher()
-            setState({ data, isLoading: false, error: null })
-          } catch (e) {
-            setState(s => ({
-              ...s,
-              isLoading: false,
-              error: e instanceof Error ? e.message : 'Failed to load marketplace',
-            }))
-          }
-        }, []) // eslint-disable-line react-hooks/exhaustive-deps
-        React.useEffect(() => { void refetch() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-        return {
-          data: state.data,
-          isLoading: state.isLoading,
-          error: state.error,
-          refetch,
-          isDemoData: false,
-          isRefreshing: false,
-          isFailed: false,
-          consecutiveFailures: 0,
-          lastRefresh: null,
+    useCache: <T>({ fetcher, initialData }: { key: string; category?: string; fetcher: () => Promise<T>; initialData: T; liveInDemoMode?: boolean }) => {
+      const [state, setState] = React.useState<{
+        data: T; isLoading: boolean; error: string | null
+      }>({ data: initialData, isLoading: true, error: null })
+      const refetch = React.useCallback(async () => {
+        setState(s => ({ ...s, isLoading: true, error: null }))
+        try {
+          const data = await fetcher()
+          setState({ data, isLoading: false, error: null })
+        } catch (e) {
+          setState(s => ({
+            ...s,
+            isLoading: false,
+            error: e instanceof Error ? e.message : 'Failed to load marketplace',
+          }))
         }
+      }, []) // eslint-disable-line react-hooks/exhaustive-deps
+      React.useEffect(() => { void refetch() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+      return {
+        data: state.data,
+        isLoading: state.isLoading,
+        error: state.error,
+        refetch,
+        retryFetch: refetch,
+        clearAndRefetch: refetch,
+        isDemoFallback: false,
+        isRefreshing: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        lastRefresh: null,
       }
     },
+    createCachedHook: () => () => ({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      refetch: async () => {},
+      isDemoData: false,
+      isRefreshing: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+    }),
   }
 })
 
