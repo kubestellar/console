@@ -56,8 +56,24 @@ func (s *Server) setupMiddleware() {
 		c.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
 		// Content-Security-Policy: restrict script/style sources to self and
-		// known analytics/CDN origins. 'unsafe-inline' is required for Vite
-		// dev mode injected styles and inline event handlers in the SPA.
+		// known analytics/CDN origins.
+		//
+		// Dev mode (DEV_MODE=true): adds 'unsafe-inline' to script-src for
+		// Vite HMR injected module scripts. Never set in production.
+		//
+		// Production: uses 'unsafe-eval' (not 'unsafe-inline') in script-src
+		// to support the Tier 2 dynamic cards feature, which compiles
+		// user-authored card modules at runtime via new Function() in
+		// web/src/lib/dynamic-cards/compiler.ts. 'unsafe-inline' is removed
+		// to harden against XSS — inline <script> injection no longer executes.
+		// See: netlify.toml CSP for the equivalent Netlify production policy.
+		//
+		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
+		// worker compiles a WebAssembly module at runtime; without it the
+		// worker aborts, logs a noisy CompileError, and forces an IndexedDB
+		// fallback on every page load. 'wasm-unsafe-eval' is a narrower
+		// permission than 'unsafe-eval' — it allows WebAssembly.instantiate
+		// but still blocks JS eval/Function.
 		//
 		// connect-src includes the local kc-agent (port 8585) for both HTTP
 		// and WebSocket on 127.0.0.1 and localhost. Without these, the
@@ -78,13 +94,6 @@ func (s *Server) setupMiddleware() {
 			}
 		}
 
-		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
-		// worker compiles a WebAssembly module at runtime; without it the
-		// worker aborts, logs a noisy CompileError, and forces an IndexedDB
-		// fallback on every page load. 'wasm-unsafe-eval' is a narrower
-		// permission than 'unsafe-eval' — it allows WebAssembly.instantiate
-		// but still blocks JS eval/Function.
-		//
 		// connect-src includes https://cdn.jsdelivr.net because the login
 		// page's Three.js globe renders cluster labels via troika-three-text,
 		// which fetches a unicode font resolver from jsdelivr at runtime.
@@ -95,9 +104,14 @@ func (s *Server) setupMiddleware() {
 		// connect-src includes https://raw.githubusercontent.com because the
 		// Marketplace page fetches registry.json from the console-marketplace
 		// repo on GitHub (#10653). Without it the browser blocks the request.
+		scriptSrc := "'self' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
+		if s.config.DevMode {
+			// In dev mode, add 'unsafe-inline' to allow Vite HMR injected scripts.
+			scriptSrc = "'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
+		}
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; "+
+				"script-src "+scriptSrc+"; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+

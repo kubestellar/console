@@ -15,6 +15,12 @@ import (
 // can inspect security headers without needing a full route setup.
 func newCSPTestServer(t *testing.T, kcAgentURL string) *Server {
 	t.Helper()
+	return newCSPTestServerWithDevMode(t, kcAgentURL, false)
+}
+
+// newCSPTestServerWithDevMode creates a minimal server with configurable DevMode.
+func newCSPTestServerWithDevMode(t *testing.T, kcAgentURL string, devMode bool) *Server {
+	t.Helper()
 
 	// Override the package-level kcAgentBaseURL for the duration of this test.
 	orig := kcAgentBaseURL
@@ -26,8 +32,11 @@ func newCSPTestServer(t *testing.T, kcAgentURL string) *Server {
 		// FrontendURL must be a specific origin (not empty) because CORS rejects
 		// AllowCredentials=true combined with AllowOrigins="*".
 		// FrontendURL lives in IntegrationsConfig (embedded); use qualified form in literals.
-		config: Config{IntegrationsConfig: IntegrationsConfig{FrontendURL: "http://localhost:3000"}},
-		auth:   newAuthRuntime(),
+		config: Config{
+			IntegrationsConfig: IntegrationsConfig{FrontendURL: "http://localhost:3000"},
+			ServerConfig:       ServerConfig{DevMode: devMode},
+		},
+		auth: newAuthRuntime(),
 	}
 	s.setupMiddleware()
 	// Register a catch-all so the middleware chain can complete.
@@ -166,4 +175,54 @@ func TestCSP_XFrameOptions_AllowedOnEmbedPaths(t *testing.T) {
 
 	assert.Empty(t, resp.Header.Get("X-Frame-Options"),
 		"X-Frame-Options must be absent for /embed/* paths to allow iframe embedding")
+}
+
+// TestCSP_ProductionMode_NoUnsafeInlineInScriptSrc verifies that 'unsafe-inline' is
+// absent from script-src in production mode (DevMode=false). This is the key XSS
+// hardening — inline <script> execution is blocked in production deployments.
+func TestCSP_ProductionMode_NoUnsafeInlineInScriptSrc(t *testing.T) {
+	s := newCSPTestServerWithDevMode(t, defaultKCAgentBaseURL, false)
+	csp := cspHeader(t, s)
+
+	require.NotEmpty(t, csp, "Content-Security-Policy header must be present")
+
+	// Extract only the script-src directive value.
+	scriptSrc := ""
+	for _, part := range strings.Split(csp, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "script-src ") {
+			scriptSrc = part
+			break
+		}
+	}
+	require.NotEmpty(t, scriptSrc, "script-src directive must be present")
+
+	assert.NotContains(t, scriptSrc, "'unsafe-inline'",
+		"script-src must NOT contain 'unsafe-inline' in production mode")
+	assert.Contains(t, scriptSrc, "'unsafe-eval'",
+		"script-src must contain 'unsafe-eval' for dynamic cards feature in production")
+	assert.Contains(t, scriptSrc, "'wasm-unsafe-eval'",
+		"script-src must contain 'wasm-unsafe-eval' for SQLite WASM worker")
+}
+
+// TestCSP_DevMode_HasUnsafeInlineInScriptSrc verifies that 'unsafe-inline' is present
+// in script-src when DevMode=true to allow Vite HMR injected scripts.
+func TestCSP_DevMode_HasUnsafeInlineInScriptSrc(t *testing.T) {
+	s := newCSPTestServerWithDevMode(t, defaultKCAgentBaseURL, true)
+	csp := cspHeader(t, s)
+
+	require.NotEmpty(t, csp, "Content-Security-Policy header must be present")
+
+	scriptSrc := ""
+	for _, part := range strings.Split(csp, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "script-src ") {
+			scriptSrc = part
+			break
+		}
+	}
+	require.NotEmpty(t, scriptSrc, "script-src directive must be present")
+
+	assert.Contains(t, scriptSrc, "'unsafe-inline'",
+		"script-src must contain 'unsafe-inline' in dev mode for Vite HMR")
 }
