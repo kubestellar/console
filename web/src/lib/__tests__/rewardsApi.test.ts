@@ -44,6 +44,7 @@ import {
   claimDailyBonus,
   RewardsUnauthenticatedError,
   DailyBonusUnavailableError,
+  type UserRewardsRecord,
 } from '../rewardsApi'
 
 const FAKE_REWARDS = {
@@ -217,7 +218,7 @@ describe('rewardsApi', () => {
     })
 
     it('DailyBonusUnavailableError carries rewards when provided', () => {
-      const err = new DailyBonusUnavailableError(FAKE_REWARDS as any)
+      const err = new DailyBonusUnavailableError(FAKE_REWARDS as UserRewardsRecord)
       expect(err.rewards).toEqual(FAKE_REWARDS)
     })
 

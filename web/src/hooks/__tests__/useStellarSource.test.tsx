@@ -52,8 +52,8 @@ const mockLocalStorage = {
 }
 
 vi.mock('../../lib/utils/localStorage', () => ({
-  safeGetItem: (...args: any[]) => mockLocalStorage.safeGetItem(...args),
-  safeSetItem: (...args: any[]) => mockLocalStorage.safeSetItem(...args),
+  safeGetItem: (...args: unknown[]) => mockLocalStorage.safeGetItem(...args),
+  safeSetItem: (...args: unknown[]) => mockLocalStorage.safeSetItem(...args),
 }))
 
 // ---------------------------------------------------------------------------
@@ -63,14 +63,14 @@ let eventSourceInstances: MockEventSource[] = []
 
 class MockEventSource {
   url: string
-  options: any
+  options: EventSourceInit | undefined
   onopen: ((e: Event) => void) | null = null
   onerror: ((e: Event) => void) | null = null
   readyState: number = 0
   close = vi.fn()
   _listeners: Record<string, EventListener[]> = {}
 
-  constructor(url: string, options?: any) {
+  constructor(url: string, options?: EventSourceInit) {
     this.url = url
     this.options = options
     eventSourceInstances.push(this)
@@ -422,12 +422,12 @@ describe('useStellarSource — Optimistic mutations', () => {
     })
     expect(result.current.notifications).toHaveLength(1)
 
-    let resolvePromise: any
+    let resolvePromise: ((value: unknown) => void) | undefined
     mockStellarApi.acknowledgeNotification.mockImplementation(() => new Promise((resolve) => {
       resolvePromise = resolve
     }))
 
-    let ackPromise: any
+    let ackPromise: Promise<void> | undefined
     await act(async () => {
       ackPromise = result.current.acknowledgeNotification('n-ack')
     })

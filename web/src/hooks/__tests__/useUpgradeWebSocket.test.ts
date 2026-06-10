@@ -23,8 +23,8 @@ const { mockSafeLocalStorage } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../lib/safeLocalStorage', () => ({
-  safeGetJSON: (...args: any[]) => mockSafeLocalStorage.safeGetJSON(...args),
-  safeSetJSON: (...args: any[]) => mockSafeLocalStorage.safeSetJSON(...args),
+  safeGetJSON: (...args: unknown[]) => mockSafeLocalStorage.safeGetJSON(...args),
+  safeSetJSON: (...args: unknown[]) => mockSafeLocalStorage.safeSetJSON(...args),
 }))
 
 // ---------------------------------------------------------------------------
@@ -178,8 +178,8 @@ describe('useUpgradeWebSocket — Version cache utilities', () => {
 
   it('clearCachedVersions is a no-op for cluster names not in cache', () => {
     expect(() => clearCachedVersions(['non-existent-cluster'])).not.toThrow()
-    expect(() => clearCachedVersions(null as any)).not.toThrow()
-    expect(() => clearCachedVersions(undefined as any)).not.toThrow()
+    expect(() => clearCachedVersions(null as unknown as string[])).not.toThrow()
+    expect(() => clearCachedVersions(undefined as unknown as string[])).not.toThrow()
   })
 })
 

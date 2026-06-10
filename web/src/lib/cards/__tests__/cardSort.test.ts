@@ -33,16 +33,14 @@ describe('commonComparators', () => {
     })
 
     it('coerces null/undefined to empty string', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cmp = commonComparators.string<{ name: any }>('name')
+      const cmp = commonComparators.string<{ name: string | null | undefined }>('name')
       expect(cmp({ name: null }, { name: 'a' })).toBeLessThan(0)
       expect(cmp({ name: undefined }, { name: undefined })).toBe(0)
       expect(cmp({ name: '' }, { name: '' })).toBe(0)
     })
 
     it('handles falsy values in field', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cmp = commonComparators.string<{ name: any }>('name')
+      const cmp = commonComparators.string<{ name: string | number }>('name')
       expect(cmp({ name: 0 }, { name: 1 })).toBeLessThan(0) // 0 coerces to '' and sorts before '1'
     })
   })
@@ -71,8 +69,7 @@ describe('commonComparators', () => {
     })
 
     it('coerces non-numeric fields to 0', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cmp = commonComparators.number<{ count: any }>('count')
+      const cmp = commonComparators.number<{ count: number | string | null | undefined }>('count')
       expect(cmp({ count: 'abc' }, { count: 5 })).toBeLessThan(0) // 0 < 5
       expect(cmp({ count: null }, { count: null })).toBe(0)
       expect(cmp({ count: undefined }, { count: undefined })).toBe(0)
@@ -264,8 +261,7 @@ describe('useCardSort', () => {
   })
 
   it('handles undefined config gracefully (returns items copy)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { result } = renderHook(() => useCardSort(ITEMS, undefined as any))
+    const { result } = renderHook(() => useCardSort(ITEMS, undefined as unknown as Parameters<typeof useCardSort<Item>>[1]))
     expect(result.current.sorted).toHaveLength(3)
   })
 

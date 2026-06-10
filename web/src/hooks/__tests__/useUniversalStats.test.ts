@@ -176,7 +176,7 @@ describe('useUniversalStats', () => {
 
   describe('empty / null-safe data handling', () => {
     it('handles null deduplicatedClusters gracefully', () => {
-      mockUseClusters.mockReturnValue({ deduplicatedClusters: null as any, clusters: [], isLoading: false })
+      mockUseClusters.mockReturnValue({ deduplicatedClusters: null as unknown as ReturnType<typeof mockUseClusters>['deduplicatedClusters'], clusters: [], isLoading: false })
       const stat = getStatValue('clusters')
       expect(stat?.value).toBe(0)
     })

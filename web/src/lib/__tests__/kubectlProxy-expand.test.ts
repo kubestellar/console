@@ -115,6 +115,17 @@ vi.stubGlobal('WebSocket', FakeWebSocket)
 // Import AFTER mocks
 import { kubectlProxy } from '../kubectlProxy'
 
+/** Internal fields exposed for test-only reset / inspection. */
+interface KubectlProxyInternals {
+  lastConnectionFailureAt: number
+  isConnecting: boolean
+  messageId: number
+  pendingRequests: Map<number, { timeout: ReturnType<typeof setTimeout> }>
+  connectPromise: Promise<unknown> | null
+  requestQueue: unknown[]
+  activeRequests: number
+}
+
 // ---------------------------------------------------------------------------
 // Setup / Teardown
 // ---------------------------------------------------------------------------
@@ -128,8 +139,7 @@ beforeEach(() => {
   // Force-reset private fields that persist across close() calls to prevent
   // state leaking between tests (cooldown, connection flags, pending requests,
   // lingering connectPromise from prior test's in-flight connect).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const proxy = kubectlProxy as any
+  const proxy = kubectlProxy as unknown as KubectlProxyInternals
   proxy.lastConnectionFailureAt = 0
   proxy.isConnecting = false
   proxy.messageId = 0
@@ -146,8 +156,7 @@ afterEach(() => {
   // but before teardown, they reject promises that no test is awaiting,
   // which vitest surfaces as "Unhandled Rejection" warnings. Clearing
   // timers and pending requests here prevents that cross-test bleed.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const proxy = kubectlProxy as any
+  const proxy = kubectlProxy as unknown as KubectlProxyInternals
   proxy.pendingRequests.forEach((pending: { timeout: ReturnType<typeof setTimeout> }) => {
     clearTimeout(pending.timeout)
   })
