@@ -1,6 +1,6 @@
 import {
   Activity, AlertTriangle, CheckCircle, XCircle,
-  Clock, RefreshCw, Loader2, Play, Pause } from 'lucide-react'
+  Clock, RefreshCw, Play, Pause } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -206,9 +206,7 @@ export function ProwCIMonitor({ config: _config }: ProwCIMonitorProps) {
           className="p-1 rounded hover:bg-secondary transition-colors"
           title={t('common.refresh')}
         >
-          {isRefreshing
-            ? <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'text-blue-400 animate-spin' : 'text-muted-foreground'}`} />
         </button>
       </div>
 

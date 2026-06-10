@@ -280,9 +280,7 @@ export function LogsDrillDown({ data }: Props) {
             disabled={isLoading}
             className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm flex items-center gap-2 disabled:opacity-50"
           >
-            {isLoading
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <RefreshCw className="w-4 h-4" />}
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             {t('drilldown.logs.refresh')}
           </button>
         </div>

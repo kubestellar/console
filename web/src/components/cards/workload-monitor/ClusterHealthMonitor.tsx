@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   Server, AlertTriangle, CheckCircle, XCircle,
-  RefreshCw, Loader2, ChevronDown, ChevronRight,
+  RefreshCw, ChevronDown, ChevronRight,
   Box, Activity } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useClusters } from '../../../hooks/useMCP'
@@ -232,9 +232,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
           className="p-1 rounded hover:bg-secondary transition-colors"
           title={t('common:common.refresh')}
         >
-          {isRefreshing
-            ? <Loader2 className="w-3.5 h-3.5 text-green-400 animate-spin" />
-            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'text-green-400 animate-spin' : 'text-muted-foreground'}`} />
         </button>
       </div>
 

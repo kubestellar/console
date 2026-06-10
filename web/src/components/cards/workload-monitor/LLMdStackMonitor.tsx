@@ -7,7 +7,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Cpu, Network, Activity, Layers, Server,
-  RefreshCw, Loader2, ChevronDown, ChevronRight, Filter,
+  RefreshCw, ChevronDown, ChevronRight, Filter,
   AlertTriangle
 } from 'lucide-react'
 import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
@@ -593,9 +593,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
           className="p-1 rounded hover:bg-secondary transition-colors"
           title={t('common.refresh')}
         >
-          {isRefreshing
-            ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-            : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'text-purple-400 animate-spin' : 'text-muted-foreground'}`} />
         </button>
       </div>
 

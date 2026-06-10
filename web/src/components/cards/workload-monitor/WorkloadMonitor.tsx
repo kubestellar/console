@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Package, RefreshCw, Loader2, AlertTriangle, Search } from 'lucide-react'
+import { Package, RefreshCw, AlertTriangle, Search } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
@@ -267,9 +267,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               className="p-1 rounded hover:bg-secondary transition-colors"
               title={t('common.refresh')}
             >
-              {monitorRefreshing
-                ? <Loader2 className="w-3.5 h-3.5 text-purple-400 animate-spin" />
-                : <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />}
+              <RefreshCw className={`w-3.5 h-3.5 ${monitorRefreshing ? 'text-purple-400 animate-spin' : 'text-muted-foreground'}`} />
             </button>
           </div>
 
