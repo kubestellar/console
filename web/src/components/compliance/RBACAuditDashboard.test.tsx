@@ -11,13 +11,16 @@ vi.mock('../../lib/api', () => ({ authFetch: vi.fn() }))
 vi.mock('../../lib/unified/dashboard/UnifiedDashboard', () => ({
   UnifiedDashboard: () => <div data-testid="unified-dashboard" />,
 }))
+vi.mock('../shared/TechnicalAcronym', () => ({
+  TechnicalAcronym: ({ term, children }: { term: string; children?: ReactNode }) => <span>{children || term}</span>,
+}))
 vi.mock('../ui/Select', () => ({
   Select: ({ value, onChange, children }: SelectHTMLAttributes<HTMLSelectElement>) => (
     <select value={value} onChange={onChange}>{children}</select>
   ),
 }))
 vi.mock('../shared/DashboardHeader', () => ({
-  DashboardHeader: ({ title, subtitle, afterTitle, rightExtra }: { title: string; subtitle?: string; afterTitle?: ReactNode; rightExtra?: ReactNode }) => (
+  DashboardHeader: ({ title, subtitle, afterTitle, rightExtra }: { title: ReactNode; subtitle?: string; afterTitle?: ReactNode; rightExtra?: ReactNode }) => (
     <div>
       <h1>{title}</h1>
       {subtitle ? <p>{subtitle}</p> : null}
@@ -97,13 +100,15 @@ describe('RBACAuditDashboard', () => {
     render(<RBACAuditDashboard />)
 
     await waitFor(() => {
-      expect(screen.getByText('RBAC Audit & Least-Privilege Analysis')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /RBAC.*Audit.*Least-Privilege/ })).toBeInTheDocument()
       expect(screen.getByText('User has wildcard access.')).toBeInTheDocument()
       expect(screen.getByTestId('dashboard-health-indicator')).toBeInTheDocument()
       expect(screen.getByTestId('unified-dashboard')).toBeInTheDocument()
       
-      // Verify health status indicator is present
-      expect(screen.getByText('RBAC System Status')).toBeInTheDocument()
+      // Verify health status indicator is present (text split across TechnicalAcronym span)
+      expect(screen.getByText((_content, element) => {
+        return element?.tagName === 'DIV' && element?.textContent === 'RBAC System Status'
+      })).toBeInTheDocument()
     })
 
     await user.click(screen.getByRole('button', { name: 'Bindings' }))
