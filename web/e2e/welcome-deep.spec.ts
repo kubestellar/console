@@ -60,8 +60,8 @@ test.describe('Welcome Page Deep Tests (/welcome)', () => {
   })
 
   test('displays subtitle about AI-powered dashboard', async ({ page }) => {
-    // The subtitle paragraph mentions "AI troubleshooting" and "open-source"
-    const subtitle = page.locator('p').filter({ hasText: 'open-source' }).first()
+    // The subtitle text "open-source" lives in a <div>, not a <p>
+    const subtitle = page.locator('div').filter({ hasText: 'open-source' }).first()
     await expect(subtitle).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 
