@@ -46,13 +46,12 @@ vi.mock('../../../../hooks/useGlobalFilters', () => ({
 }))
 
 let mockIsRefreshing = false
-let mockIsLoading = false
 
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedProwJobs: () => ({
-    jobs: [],
+    jobs: [{ id: 'job-1', name: 'e2e-test', state: 'success', cluster: 'cluster-1', startedAt: '2025-01-01T00:00:00Z', completedAt: '2025-01-01T00:01:00Z', duration: 60, url: '', type: 'periodic' }],
     status: 'idle',
-    isLoading: mockIsLoading,
+    isLoading: false,
     isRefreshing: mockIsRefreshing,
     isFailed: false,
     consecutiveFailures: 0,
@@ -63,10 +62,10 @@ vi.mock('../../../../hooks/useCachedData', () => ({
 
 vi.mock('../../../../lib/cards/cardHooks', () => ({
   useCardData: () => ({
-    items: [],
-    totalItems: 0,
+    items: [{ id: 'job-1', name: 'e2e-test', state: 'success', cluster: 'cluster-1', startedAt: '2025-01-01T00:00:00Z', completedAt: '2025-01-01T00:01:00Z', duration: 60, url: '', type: 'periodic' }],
+    totalItems: 1,
     currentPage: 1,
-    totalPages: 0,
+    totalPages: 1,
     itemsPerPage: 5,
     goToPage: vi.fn(),
     needsPagination: false,
@@ -118,7 +117,6 @@ describe('ProwCIMonitor', () => {
 
   it('does not show animate-spin when not refreshing', () => {
     mockIsRefreshing = false
-    mockIsLoading = false
     const { container } = render(<ProwCIMonitor />)
     const refreshIcon = container.querySelector('.animate-spin')
     expect(refreshIcon).toBeNull()

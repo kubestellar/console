@@ -3,7 +3,7 @@ import { render, fireEvent } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  useTranslation: () => ({ t: (key: string, opts?: Record<string, unknown>) => opts && opts.count !== undefined ? `${key}:${opts.count}` : key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
@@ -100,7 +100,7 @@ describe('EventCard', () => {
     const { container } = render(
       <EventCard {...defaultProps} attemptCount={3} />
     )
-    // Should show "Tried 3×" or similar
+    // Should show "Tried 3\u00d7" or similar — mock t() interpolates count
     expect(container.textContent).toContain('3')
   })
 

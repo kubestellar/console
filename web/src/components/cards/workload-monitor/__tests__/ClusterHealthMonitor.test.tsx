@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, fireEvent, waitFor } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -45,38 +45,38 @@ vi.mock('../../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
 }))
 
-let mockIsRefreshing = false
-let mockIsLoading = false
+// Create a refetch that never resolves so isRefreshing stays true during assertion
+const hangingRefetch = () => new Promise(() => {})
 
 vi.mock('../../../../hooks/useMCP', () => ({
   useClusters: () => ({
     deduplicatedClusters: [{ name: 'cluster-1', status: 'Ready' }],
-    isLoading: mockIsLoading,
-    isRefreshing: mockIsRefreshing,
+    isLoading: false,
+    isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
-    refetch: vi.fn(),
+    refetch: hangingRefetch,
   }),
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => ({
     issues: [],
-    isLoading: mockIsLoading,
-    isRefreshing: mockIsRefreshing,
+    isLoading: false,
+    isRefreshing: false,
     isDemoFallback: null,
     isFailed: false,
     consecutiveFailures: 0,
-    refetch: vi.fn(),
+    refetch: hangingRefetch,
   }),
   useCachedDeploymentIssues: () => ({
     issues: [],
-    isLoading: mockIsLoading,
-    isRefreshing: mockIsRefreshing,
+    isLoading: false,
+    isRefreshing: false,
     isDemoFallback: null,
     isFailed: false,
     consecutiveFailures: 0,
-    refetch: vi.fn(),
+    refetch: hangingRefetch,
   }),
 }))
 
@@ -89,27 +89,32 @@ describe('ClusterHealthMonitor', () => {
   })
 
   it('does not show animate-spin when not refreshing', () => {
-    mockIsRefreshing = false
-    mockIsLoading = false
     const { container } = render(<ClusterHealthMonitor />)
     const refreshIcon = container.querySelector('.animate-spin')
     expect(refreshIcon).toBeNull()
   })
 
-  it('shows animate-spin class on RefreshCw during refresh', () => {
-    mockIsRefreshing = true
+  it('shows animate-spin class on RefreshCw during refresh', async () => {
     const { container } = render(<ClusterHealthMonitor />)
-    const spinningElements = container.querySelectorAll('.animate-spin')
-    // When refreshing, the RefreshCw icon should have animate-spin
-    expect(spinningElements.length).toBeGreaterThanOrEqual(1)
-    mockIsRefreshing = false
+    // Click the refresh button to trigger local isRefreshing state
+    const refreshButton = container.querySelector('button[title="common:common.refresh"]')
+    expect(refreshButton).not.toBeNull()
+    fireEvent.click(refreshButton!)
+    // The component sets local isRefreshing=true which triggers animate-spin
+    await waitFor(() => {
+      const spinningElements = container.querySelectorAll('.animate-spin')
+      expect(spinningElements.length).toBeGreaterThanOrEqual(1)
+    })
   })
 
-  it('applies text-green-400 color during refresh', () => {
-    mockIsRefreshing = true
+  it('applies text-green-400 color during refresh', async () => {
     const { container } = render(<ClusterHealthMonitor />)
-    const greenRefresh = container.querySelector('.text-green-400.animate-spin')
-    expect(greenRefresh).not.toBeNull()
-    mockIsRefreshing = false
+    const refreshButton = container.querySelector('button[title="common:common.refresh"]')
+    expect(refreshButton).not.toBeNull()
+    fireEvent.click(refreshButton!)
+    await waitFor(() => {
+      const greenRefresh = container.querySelector('.text-green-400.animate-spin')
+      expect(greenRefresh).not.toBeNull()
+    })
   })
 })
