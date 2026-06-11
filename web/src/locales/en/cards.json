@@ -234,7 +234,8 @@
     "loopModeToggleFailed": "Failed to toggle loop mode",
     "unknownError": "Unknown error",
     "ibmUpstreamUnavailable": "IBM Quantum is temporarily unavailable. We'll keep retrying — your saved credentials are unaffected.",
-    "customQasmSaved": "Custom QASM configuration saved"
+    "customQasmSaved": "Custom QASM configuration saved",
+    "qasmFileLabel": "QASM File (use 'Custom QASM' to paste or upload code)"
   },
   "titles": {
     "cluster_health": "Cluster Health",
@@ -4900,5 +4901,23 @@
     "addBookmark": "Add bookmark",
     "bookmarked": "Bookmarked",
     "tabs": "Tabs"
+  },
+  "quantumWorkloadBanner": {
+    "workloadRunning": "quantum-kc-demo is running",
+    "liveDataAvailable": "Live quantum data available",
+    "circuitComposer": "Circuit Composer",
+    "learningHub": "Learning Hub",
+    "learnMore": "Learn more about quantum on IBM Cloud (for free!)",
+    "workloadNotDetected": "Quantum workload not detected",
+    "demoDataMessage": "Cards are showing demo data. To run live quantum circuits, deploy quantum-kc-demo to your cluster.",
+    "notDetectedHelp": "If quantum-kc-demo is running but not detected, or commands are not being accepted, try signing out and back into the console.",
+    "viewRepository": "View Repository",
+    "setupInstructions": "Setup Instructions",
+    "dismiss": "Dismiss"
+  },
+  "quantumQubitGrid": {
+    "displayMask": "Display Mask",
+    "lockMask": "Lock mask selection",
+    "unlockMask": "Unlock mask selection"
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import DOMPurify from 'dompurify'
-import { AlertCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, RefreshCw, Lock, Unlock } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useReportCardDataState } from '../CardDataContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
@@ -167,9 +168,11 @@ function renderQubitSVG(pattern: string, displayPattern: readonly (readonly numb
 }
 
 export const QuantumQubitGrid: React.FC = () => {
+  const { t } = useTranslation(['cards'])
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
   const [refreshInterval, setRefreshInterval] = useState(QUBIT_GRID_DEFAULT_POLL_MS)
   const [selectedMask, setSelectedMask] = useState<MaskKey>('ibm_qx5')
+  const [maskLocked, setMaskLocked] = useState(false)
   const forceDemo = isQuantumForcedToDemo()
   const {
     data,
@@ -202,13 +205,13 @@ export const QuantumQubitGrid: React.FC = () => {
 
   // Auto-select smallest valid mask for current qubit count
   useEffect(() => {
-    if (qubitData) {
+    if (qubitData && !maskLocked) {
       const best = MASK_OPTIONS.find(m => m.maxQubits >= qubitData.num_qubits)
       if (best) {
         setSelectedMask(best.key)
       }
     }
-  }, [qubitData])
+  }, [qubitData, maskLocked])
 
   // Emit pattern changes to trigger histogram refresh.
   // This includes empty patterns (cleared results, reset circuit, or fetch errors)
@@ -288,13 +291,24 @@ export const QuantumQubitGrid: React.FC = () => {
 
         {/* Display Mask Selector */}
         <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-            Display Mask
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              {t('cards:quantumQubitGrid.displayMask')}
+            </label>
+            <button
+              onClick={() => setMaskLocked(!maskLocked)}
+              className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+              aria-label={maskLocked ? t('cards:quantumQubitGrid.unlockMask') : t('cards:quantumQubitGrid.lockMask')}
+              title={maskLocked ? t('cards:quantumQubitGrid.unlockMask') : t('cards:quantumQubitGrid.lockMask')}
+            >
+              {maskLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+            </button>
+          </div>
           <select
             value={selectedMask}
             onChange={e => setSelectedMask(e.target.value as MaskKey)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+            disabled={maskLocked}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {MASK_OPTIONS.map(opt => (
               <option

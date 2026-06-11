@@ -625,7 +625,7 @@ export const QuantumControlPanel: React.FC = () => {
           {/* QASM File */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              QASM File
+              {t('cards:quantumControlPanel.qasmFileLabel')}
             </label>
             <div className="flex gap-2">
               <select
