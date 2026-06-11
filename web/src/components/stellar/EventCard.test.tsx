@@ -13,7 +13,7 @@ vi.mock('./lib/derive', () => ({
   countRelated: () => 0,
   deriveImportance: () => ({ label: 'medium', score: 50 }),
   deriveShortReason: () => 'Pod CrashLoopBackOff',
-  deriveTags: () => [{ label: 'pod', color: '#aaa' }],
+  deriveTags: () => ['pod'],
   importanceColor: () => 'var(--s-warning)',
   countSolveAttempts: () => 0,
   getSolveStatus: () => null,
@@ -67,7 +67,7 @@ describe('EventCard', () => {
         onOpenDetail={onOpenDetail}
       />
     )
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(screen.getByLabelText('Open details for Pod CrashLoopBackOff'))
     expect(onOpenDetail).toHaveBeenCalledWith(baseNotification)
   })
 
@@ -80,7 +80,7 @@ describe('EventCard', () => {
         onOpenDetail={onOpenDetail}
       />
     )
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' })
+    fireEvent.keyDown(screen.getByLabelText('Open details for Pod CrashLoopBackOff'), { key: 'Enter' })
     expect(onOpenDetail).toHaveBeenCalledWith(baseNotification)
   })
 
@@ -123,7 +123,7 @@ describe('EventCard', () => {
         onDismiss={() => {}}
       />
     )
-    // Attempt count badge should exist
-    expect(screen.getByText(/3/)).toBeInTheDocument()
+    // The t() mock returns the key; attemptCount badge uses 'stellar.eventCard.attemptCount'
+    expect(screen.getByText(/attemptCount/)).toBeInTheDocument()
   })
 })

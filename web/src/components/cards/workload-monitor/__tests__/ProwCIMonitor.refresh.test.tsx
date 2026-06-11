@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '', hash: '', state: null }),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+}))
+
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -39,6 +45,7 @@ vi.mock('../../../../lib/cn', () => ({
 
 vi.mock('../../CardDataContext', () => ({
   useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: 'none' }),
 }))
 
 vi.mock('../../../../hooks/useGlobalFilters', () => ({

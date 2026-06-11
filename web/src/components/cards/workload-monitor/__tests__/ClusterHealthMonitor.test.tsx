@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent, waitFor } from '@testing-library/react'
 
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/', search: '', hash: '', state: null }),
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+}))
+
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
