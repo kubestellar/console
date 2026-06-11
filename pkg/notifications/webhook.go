@@ -17,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 const (
@@ -75,6 +77,12 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 	if err := checkWebhookHostAllowed(u.Hostname()); err != nil {
 		return nil, err
 	}
+	// SSRF protection: resolve hostname and reject private/internal IPs.
+	// This prevents webhook URLs from reaching cloud metadata, RFC 1918,
+	// CGNAT, and other internal services (#17532).
+	if err := ssrf.ValidateHost(u.Hostname()); err != nil {
+		return nil, fmt.Errorf("webhook URL blocked: %w", err)
+	}
 	return &WebhookNotifier{
 		URL: webhookURL,
 		HTTPClient: &http.Client{
@@ -83,7 +91,10 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 			// redirect hop. Without this a permitted host could 30x to
 			// an internal endpoint and the request would still be sent.
 			CheckRedirect: func(req *http.Request, _ []*http.Request) error {
-				return checkWebhookHostAllowed(req.URL.Hostname())
+				if err := checkWebhookHostAllowed(req.URL.Hostname()); err != nil {
+					return err
+				}
+				return ssrf.ValidateHost(req.URL.Hostname())
 			},
 		},
 	}, nil

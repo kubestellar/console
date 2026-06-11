@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // elasticBulkTimeout bounds every outbound _bulk POST. Bulk requests are
@@ -63,6 +65,10 @@ type elasticBulkIndexMeta struct {
 func NewElasticDestination(url, index string, client *http.Client) (*ElasticDestination, error) {
 	if url == "" {
 		return nil, errors.New("elastic destination: url is required")
+	}
+	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
+	if err := ssrf.ValidateURL(url); err != nil {
+		return nil, fmt.Errorf("elastic destination: %w", err)
 	}
 	if index == "" {
 		index = elasticDefaultIndex

@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // helmOperationTimeout bounds any single helm subprocess invocation. The
@@ -76,6 +79,25 @@ func validateHelmChartArg(chart string) error {
 		}
 	}
 	return nil
+}
+
+// validateHelmChartHost checks OCI chart references for SSRF. When the chart
+// starts with "oci://", the host portion is resolved and validated against
+// blocked IP ranges to prevent in-cluster network probing (#17530).
+func validateHelmChartHost(chart string) error {
+	if !strings.HasPrefix(chart, "oci://") {
+		return nil
+	}
+	// Parse as URL to extract host.
+	u, err := url.Parse(chart)
+	if err != nil {
+		return fmt.Errorf("invalid OCI chart reference: %w", err)
+	}
+	host := u.Hostname()
+	if host == "" {
+		return fmt.Errorf("OCI chart reference must include a host")
+	}
+	return ssrf.ValidateHost(host)
 }
 
 // validateHelmChartVersion mirrors the backend validateHelmVersion validator.
@@ -331,6 +353,12 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 		slog.Error("invalid Helm chart", "chart", req.Chart, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
+		return
+	}
+	if err := validateHelmChartHost(req.Chart); err != nil {
+		slog.Error("Helm chart host blocked (SSRF)", "chart", req.Chart, "error", err)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]string{"error": "chart registry host is not allowed"})
 		return
 	}
 	if err := validateHelmChartVersion(req.Version); err != nil {

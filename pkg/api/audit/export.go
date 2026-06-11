@@ -27,6 +27,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // DestinationProvider identifies the SIEM platform type.
@@ -132,6 +134,10 @@ type WebhookPayload struct {
 func NewWebhookDestination(url string, client *http.Client) (*WebhookDestination, error) {
 	if url == "" {
 		return nil, errors.New("webhook destination: url is required")
+	}
+	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
+	if err := ssrf.ValidateURL(url); err != nil {
+		return nil, fmt.Errorf("webhook destination: %w", err)
 	}
 	if client == nil {
 		client = &http.Client{Timeout: siemWebhookTimeout}
