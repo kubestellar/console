@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/benchmarks"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
 )
@@ -36,7 +37,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	s.setupGitOpsRoutes(api)
 	s.setupK8sResourceRoutes(api, routes.aiLimiter)
 
-	benchmarkHandlers := handlers.NewBenchmarkHandlers(s.config.BenchmarkGoogleDriveAPIKey, s.config.BenchmarkFolderID)
+	benchmarkHandlers := benchmarks.NewBenchmarkHandlers(s.config.BenchmarkGoogleDriveAPIKey, s.config.BenchmarkFolderID)
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
