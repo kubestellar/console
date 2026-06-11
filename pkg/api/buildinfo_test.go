@@ -51,6 +51,59 @@ func TestNormalizeKCAgentBaseURL_FromEnv(t *testing.T) {
 	}
 }
 
+// Security: CSP injection prevention — path/query/fragment stripped
+
+func TestNormalizeKCAgentBaseURL_PathStripped(t *testing.T) {
+	got := normalizeKCAgentBaseURL("http://10.0.0.1:9090/some/path")
+	if got != "http://10.0.0.1:9090" {
+		t.Errorf("expected path stripped, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_QueryStripped(t *testing.T) {
+	got := normalizeKCAgentBaseURL("http://10.0.0.1:9090?foo=bar")
+	if got != "http://10.0.0.1:9090" {
+		t.Errorf("expected query stripped, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_CSPInjectionRejected(t *testing.T) {
+	// Whitespace-separated extra origins would expand the CSP allow-list.
+	got := normalizeKCAgentBaseURL("http://evil.com https://attacker.com")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for CSP-injection attempt, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_CSPDirectiveInjectionRejected(t *testing.T) {
+	// Semicolon + new directive would break the CSP policy.
+	got := normalizeKCAgentBaseURL("http://evil.com; script-src 'unsafe-inline'")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for CSP directive injection attempt, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_InvalidSchemeRejected(t *testing.T) {
+	got := normalizeKCAgentBaseURL("ftp://agent.example.com:8585")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for non-http(s) scheme, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_NoSchemeRejected(t *testing.T) {
+	got := normalizeKCAgentBaseURL("agent.example.com:8585")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default when scheme is missing, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_HTTPSAccepted(t *testing.T) {
+	got := normalizeKCAgentBaseURL("https://agent.example.com:443")
+	if got != "https://agent.example.com:443" {
+		t.Errorf("expected https URL preserved, got %q", got)
+	}
+}
+
 // ---------- kcAgentWebSocketBaseURL ----------
 
 func TestKCAgentWebSocketBaseURL_HTTPtoWS(t *testing.T) {
