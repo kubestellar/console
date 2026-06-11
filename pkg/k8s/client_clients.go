@@ -11,7 +11,7 @@ import (
 
 func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface, error) {
 	m.mu.RLock()
-	if client, ok := m.clients[contextName]; ok {
+	if client, ok := m.clients[contextName]; ok && client != nil {
 		m.mu.RUnlock()
 		return client, nil
 	}
@@ -60,7 +60,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 	// caller beat us to it, reuse the existing entry (#9334).
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if existing, ok := m.clients[contextName]; ok {
+	if existing, ok := m.clients[contextName]; ok && existing != nil {
 		return existing, nil
 	}
 	m.clients[contextName] = client
@@ -92,7 +92,7 @@ func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, er
 // final insertion.
 func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Interface, error) {
 	m.mu.RLock()
-	if client, ok := m.dynamicClients[contextName]; ok {
+	if client, ok := m.dynamicClients[contextName]; ok && client != nil {
 		m.mu.RUnlock()
 		return client, nil
 	}
@@ -142,7 +142,7 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 	// caller beat us to it, reuse the existing entry (#10255).
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if existing, ok := m.dynamicClients[contextName]; ok {
+	if existing, ok := m.dynamicClients[contextName]; ok && existing != nil {
 		return existing, nil
 	}
 	m.dynamicClients[contextName] = client
