@@ -358,7 +358,7 @@ func TestPostGitHubIssue_ErrorHandling(t *testing.T) {
 	}
 }
 
-func TestLinkIssueAsSubIssue_Success(t *testing.T) {
+func TestLinkIssueAsSubIssue_Success_Comprehensive(t *testing.T) {
 	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "test-token"})
 	handler.appTokenProvider = nil
 	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {

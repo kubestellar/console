@@ -468,7 +468,7 @@ func TestCAPIReadPendingJoins_NoPending(t *testing.T) {
 
 // ---------- CAPI safeInt64ToInt32 ----------
 
-func TestSafeInt64ToInt32(t *testing.T) {
+func TestSafeInt64ToInt32_ReadIntegration(t *testing.T) {
 	tests := []struct {
 		input    int64
 		expected int32

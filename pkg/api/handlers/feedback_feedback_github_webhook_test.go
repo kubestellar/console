@@ -162,7 +162,7 @@ func TestVerifyWebhookSignature_TamperedPayload(t *testing.T) {
 
 // --- isLabelPermissionError unit tests ---
 
-func TestIsLabelPermissionError_NilError(t *testing.T) {
+func TestIsLabelPermissionError_NilError_Webhook(t *testing.T) {
 	assert.False(t, isLabelPermissionError(nil))
 }
 
@@ -185,7 +185,7 @@ func TestIsLabelPermissionError_LabelWithout403(t *testing.T) {
 
 // --- isInsufficientIssuePermissionError unit tests ---
 
-func TestIsInsufficientIssuePermissionError_EmptyString(t *testing.T) {
+func TestIsInsufficientIssuePermissionError_EmptyString_Webhook(t *testing.T) {
 	assert.False(t, isInsufficientIssuePermissionError(""))
 }
 

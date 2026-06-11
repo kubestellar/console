@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsLabelPermissionError_NilError(t *testing.T) {
+func TestIsLabelPermissionError_NilError_Helpers(t *testing.T) {
 	assert.False(t, isLabelPermissionError(nil), "should return false for nil error")
 }
 
@@ -22,7 +22,7 @@ func TestIsLabelPermissionError_Contains403AndLabel(t *testing.T) {
 	assert.True(t, result || !result, "function should handle label permission errors")
 }
 
-func TestIsInsufficientIssuePermissionError_EmptyString(t *testing.T) {
+func TestIsInsufficientIssuePermissionError_EmptyString_Helpers(t *testing.T) {
 	assert.False(t, isInsufficientIssuePermissionError(""), "should return false for empty string")
 }
 

@@ -327,7 +327,7 @@ func TestPostGitHubIssue_ProxyFallback(t *testing.T) {
 
 // --- linkIssueAsSubIssue tests ---
 
-func TestLinkIssueAsSubIssue_Success(t *testing.T) {
+func TestLinkIssueAsSubIssue_Success_Integration(t *testing.T) {
 	handler := &FeedbackHandler{
 		repoOwner: "kubestellar",
 		repoName:  "console",

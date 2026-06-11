@@ -210,7 +210,7 @@ func TestCapiControlPlaneReady(t *testing.T) {
 	}
 }
 
-func TestSafeInt64ToInt32(t *testing.T) {
+func TestSafeInt64ToInt32_CapiHelpers(t *testing.T) {
 	tests := []struct {
 		name  string
 		input int64
