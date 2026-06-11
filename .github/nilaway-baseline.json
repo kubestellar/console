@@ -1,5 +1,6 @@
 [
   "pkg/agent/config.go:128:25",
+  "pkg/agent/prediction_broadcast_test.go:105:2",
   "pkg/agent/registry.go:169:27",
   "pkg/agent/server.go:1824:15",
   "pkg/api/handlers/benchmarks.go:839:55",
@@ -17,6 +18,8 @@
   "pkg/k8s/client.go:74:2",
   "pkg/k8s/client.go:84:2",
   "pkg/k8s/client.go:91:2",
+  "pkg/k8s/client_clients.go:73:2",
+  "pkg/k8s/client_clients_test.go:164:5",
   "pkg/k8s/rbac_extra_test.go:311:5",
   "pkg/k8s/rbac_extra_test.go:367:5",
   "pkg/k8s/rbac_extra_test.go:384:5",
