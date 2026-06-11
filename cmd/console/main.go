@@ -12,6 +12,8 @@ import (
 
 	"github.com/joho/godotenv"
 
+	_ "github.com/kubestellar/console/pkg/agent" // Initialize AI providers
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/api"
 	"github.com/kubestellar/console/pkg/safego"
 )
@@ -60,6 +62,11 @@ func main() {
 	// Ensure data directory exists
 	if cfg.DatabasePath != "" {
 		ensureDir(cfg.DatabasePath)
+	}
+
+	// Initialize AI providers early so they're available when the server starts
+	if err := ai.InitializeProviders(); err != nil {
+		slog.Warn("AI features disabled — add API keys in Settings to enable", "error", err)
 	}
 
 	// Create and start server — starts HTTP listener immediately with a loading

@@ -7,12 +7,14 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ai"
 )
 
 // Registry manages available AI providers
 type Registry struct {
 	mu               sync.RWMutex
-	providers        map[string]AIProvider
+	providers        map[string]ai.Provider
 	defaultAgent     string
 	selectedAgent    map[string]string    // sessionID -> agentName
 	selectedAgentLRU map[string]time.Time // sessionID -> last access time
@@ -37,7 +39,7 @@ func GetRegistry() *Registry {
 }
 
 // Register adds a provider to the registry
-func (r *Registry) Register(provider AIProvider) error {
+func (r *Registry) Register(provider ai.Provider) error {
 	if r == nil {
 		return fmt.Errorf("registry is nil")
 	}
@@ -60,7 +62,7 @@ func (r *Registry) Register(provider AIProvider) error {
 }
 
 // Get retrieves a provider by name
-func (r *Registry) Get(name string) (AIProvider, error) {
+func (r *Registry) Get(name string) (ai.Provider, error) {
 	if r == nil {
 		return nil, fmt.Errorf("registry is nil")
 	}
@@ -75,7 +77,7 @@ func (r *Registry) Get(name string) (AIProvider, error) {
 }
 
 // GetDefault returns the default provider
-func (r *Registry) GetDefault() (AIProvider, error) {
+func (r *Registry) GetDefault() (ai.Provider, error) {
 	if r == nil {
 		return nil, fmt.Errorf("registry is nil")
 	}
@@ -218,16 +220,16 @@ func (r *Registry) RemoveSelectedAgent(sessionID string) {
 }
 
 // List returns all registered providers
-func (r *Registry) List() []ProviderInfo {
+func (r *Registry) List() []ai.ProviderInfo {
 	if r == nil {
 		return nil
 	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	result := make([]ProviderInfo, 0, len(r.providers))
+	result := make([]ai.ProviderInfo, 0, len(r.providers))
 	for _, provider := range r.providers {
-		result = append(result, ProviderInfo{
+		result = append(result, ai.ProviderInfo{
 			Name:         provider.Name(),
 			DisplayName:  provider.DisplayName(),
 			Description:  provider.Description(),
@@ -274,12 +276,12 @@ func (r *Registry) promoteExecutingDefault() {
 }
 
 // ListAvailable returns only providers that are configured and ready
-func (r *Registry) ListAvailable() []ProviderInfo {
+func (r *Registry) ListAvailable() []ai.ProviderInfo {
 	if r == nil {
 		return nil
 	}
 	all := r.List()
-	available := make([]ProviderInfo, 0)
+	available := make([]ai.ProviderInfo, 0)
 	for _, info := range all {
 		if info.Available {
 			available = append(available, info)
@@ -305,16 +307,6 @@ func (r *Registry) HasAvailableProviders() bool {
 		}
 	}
 	return false
-}
-
-// ProviderInfo contains metadata about a provider
-type ProviderInfo struct {
-	Name         string `json:"name"`
-	DisplayName  string `json:"displayName"`
-	Description  string `json:"description"`
-	Provider     string `json:"provider"`
-	Available    bool   `json:"available"`
-	Capabilities int    `json:"capabilities"` // bitmask of ProviderCapability
 }
 
 // InitializeProviders registers all available providers

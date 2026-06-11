@@ -11,7 +11,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -181,11 +181,6 @@ func NewServer(cfg Config) (*Server, error) {
 		}
 	}
 
-	// Initialize AI providers
-	if err := agent.InitializeProviders(); err != nil {
-		slog.Warn("AI features disabled — add API keys in Settings to enable", "error", err)
-	}
-
 	// Initialize MCP bridge (starts in background)
 	var bridge *mcp.Bridge
 	if cfg.KubestellarOpsPath != "" || cfg.KubestellarDeployPath != "" {
@@ -206,7 +201,8 @@ func NewServer(cfg Config) (*Server, error) {
 		})
 	}
 
-	agent.SetClusterContextProviders(bridge, k8sClient)
+	// Set cluster context for AI providers
+	ai.SetClusterContextProviders(bridge, k8sClient)
 
 	// Initialize notification service
 	notificationService := notifications.NewService()
@@ -222,7 +218,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Initialize persistent settings manager
 	settingsManager := settings.GetSettingsManager()
-	if err := settingsManager.MigrateFromConfigYaml(agent.GetConfigManager()); err != nil {
+	if err := settingsManager.MigrateFromConfigYaml(ai.GetConfigManager()); err != nil {
 		slog.Error("[Server] failed to migrate settings from config.yaml", "error", err)
 	}
 	slog.Info("[Server] settings manager initialized", "path", settingsManager.GetSettingsPath())

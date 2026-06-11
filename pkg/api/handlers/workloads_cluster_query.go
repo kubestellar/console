@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/labels"
@@ -327,7 +327,7 @@ func (h *WorkloadHandlers) GenerateClusterQuery(c *fiber.Ctx) error {
 	}
 
 	// Get the default AI provider
-	registry := agent.GetRegistry()
+	registry := ai.GetRegistry()
 	provider, err := registry.GetDefault()
 	if err != nil {
 		slog.Info("[Workloads] no AI provider available", "error", err)
