@@ -77,6 +77,7 @@ vi.mock('../../pollingManager', () => ({
 
 describe('workloadQueries/index.ts', () => {
   beforeEach(() => {
+    vi.resetModules()
     vi.clearAllMocks()
   })
 

@@ -26,7 +26,10 @@ vi.mock('../../../../lib/modeTransition', () => ({
   registerCacheReset: vi.fn(),
   unregisterCacheReset: vi.fn(),
 }))
-vi.mock('../../../../lib/demoMode', () => ({ isDemoMode: vi.fn(() => false) }))
+vi.mock('../../../../lib/demoMode', async () => {
+  const actual = await vi.importActual<typeof import('../../../../lib/demoMode')>('../../../../lib/demoMode')
+  return { ...actual, isDemoMode: vi.fn(() => false) }
+})
 vi.mock('../../../../lib/api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
 vi.mock('../../../../lib/errorClassifier', () => ({ classifyError: vi.fn(() => 'unknown') }))
 vi.mock('../../../../lib/kubectlProxy', () => ({ kubectlProxy: vi.fn() }))
@@ -50,8 +53,8 @@ vi.mock('../shared', () => ({
   clusterCacheRef: { current: null },
   fetchWithRetry: vi.fn(),
 }))
-vi.mock('../pollingManager', () => ({ subscribePolling: vi.fn(() => () => {}) }))
-vi.mock('../workloadSubscriptions', () => ({
+vi.mock('../../pollingManager', () => ({ subscribePolling: vi.fn(() => () => {}) }))
+vi.mock('../../workloadSubscriptions', () => ({
   subscribeWorkloadsCache: vi.fn(() => () => {}),
 }))
 

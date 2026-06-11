@@ -105,7 +105,7 @@ export function clusterDisplayName(name: string): string {
   if (base.length > 24) {
     const segments = base.split(/[-_.]/)
     if (segments.length > 2) return segments.slice(0, 3).join('-')
-    return base.slice(0, 22) + '…'
+    return base.slice(0, 23) + '…'
   }
   return base
 }
