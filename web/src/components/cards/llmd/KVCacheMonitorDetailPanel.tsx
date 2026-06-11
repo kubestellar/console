@@ -56,7 +56,7 @@ export const KVCacheMonitorDetailPanel = memo(function KVCacheMonitorDetailPanel
               <span className="text-sm font-medium text-white">{getDisplayPodName(t, selectedStat.podName, 14)}</span>
               {isDemoData && <StatusBadge color="yellow" size="xs">{t('common:common.demo')}</StatusBadge>}
             </div>
-            <button className="p-1 text-xs text-muted-foreground hover:text-white" onClick={onClose} type="button">
+            <button className="p-1 text-xs text-muted-foreground hover:text-white" onClick={onClose} type="button" aria-label="Close detail panel">
               ✕
             </button>
           </div>
