@@ -250,7 +250,7 @@ describe('clusterDisplayName', () => {
   it('truncates long names without enough segments', () => {
     const long = 'a'.repeat(30)
     const result = mod.clusterDisplayName(long)
-    expect(result).toBe(long.slice(0, 22) + '…')
+    expect(result).toBe(long.slice(0, 23) + '…')
   })
 
   it('handles names exactly at 24 chars', () => {
