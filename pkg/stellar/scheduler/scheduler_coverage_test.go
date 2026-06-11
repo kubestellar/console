@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -253,6 +254,20 @@ func TestDispatchMissingReplicas(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "missing replicas") {
 		t.Fatalf("error = %q, want 'missing replicas'", err.Error())
+	}
+}
+
+func TestDispatchNilK8sClient(t *testing.T) {
+	action := store.StellarAction{
+		ActionType: "RestartDeployment",
+		Cluster:    "prod",
+		Namespace:  "default",
+		Parameters: `{"name":"nginx"}`,
+	}
+
+	_, err := Dispatch(context.Background(), nil, action)
+	if err != k8s.ErrNoClusterConfigured {
+		t.Fatalf("error = %v, want %v", err, k8s.ErrNoClusterConfigured)
 	}
 }
 

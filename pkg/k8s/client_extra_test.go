@@ -324,3 +324,31 @@ func TestGetRestConfig(t *testing.T) {
 		t.Error("Expected error for invalid context")
 	}
 }
+
+func TestNilMultiClusterClientAccessors(t *testing.T) {
+	var m *MultiClusterClient
+
+	client, err := m.GetClient("in-cluster")
+	if err != ErrNoClusterConfigured {
+		t.Fatalf("GetClient() error = %v, want %v", err, ErrNoClusterConfigured)
+	}
+	if client != nil {
+		t.Fatal("GetClient() returned unexpected client")
+	}
+
+	dynamicClient, err := m.GetDynamicClient("in-cluster")
+	if err != ErrNoClusterConfigured {
+		t.Fatalf("GetDynamicClient() error = %v, want %v", err, ErrNoClusterConfigured)
+	}
+	if dynamicClient != nil {
+		t.Fatal("GetDynamicClient() returned unexpected client")
+	}
+
+	cfg, err := m.GetRestConfig("in-cluster")
+	if err != ErrNoClusterConfigured {
+		t.Fatalf("GetRestConfig() error = %v, want %v", err, ErrNoClusterConfigured)
+	}
+	if cfg != nil {
+		t.Fatal("GetRestConfig() returned unexpected config")
+	}
+}

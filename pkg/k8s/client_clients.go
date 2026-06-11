@@ -10,6 +10,9 @@ import (
 )
 
 func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	m.mu.RLock()
 	if client, ok := m.clients[contextName]; ok && client != nil {
 		m.mu.RUnlock()
@@ -71,6 +74,9 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 // GetRestConfig returns the REST config for the specified cluster context.
 // Ensures the client (and config) is initialized first by calling GetClient.
 func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	if _, err := m.GetClient(contextName); err != nil {
 		return nil, err
 	}
@@ -91,6 +97,9 @@ func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, er
 // We build the client OUTSIDE the lock and only take the write lock for the short
 // final insertion.
 func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Interface, error) {
+	if m == nil {
+		return nil, ErrNoClusterConfigured
+	}
 	m.mu.RLock()
 	if client, ok := m.dynamicClients[contextName]; ok && client != nil {
 		m.mu.RUnlock()
