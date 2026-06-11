@@ -38,7 +38,7 @@ export interface CardFetchOptions {
 /** Safely read from localStorage — returns null if unavailable (sandboxed iframes, etc.) */
 function safeGetToken(): string | null {
   try {
-    return getStoredAuthToken()
+    return getStoredAuthTokenSync()
   } catch {
     return null
   }

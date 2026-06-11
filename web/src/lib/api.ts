@@ -165,7 +165,7 @@ function performSessionExpiry(): void {
   // We pass credentials:'include' so the browser sends the cookie. We don't
   // await the response and we ignore failures — the client-side clear below
   // is the source of truth for logout.
-  const expiredToken = getStoredAuthToken()
+  const expiredToken = getStoredAuthTokenSync()
   try {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (expiredToken && expiredToken !== DEMO_TOKEN_VALUE) {

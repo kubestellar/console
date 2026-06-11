@@ -56,7 +56,7 @@ export function getClusterModeBaseUrl(): string {
 // ============================================================================
 
 export const getToken = () => {
-  const secure = getStoredAuthToken()
+  const secure = getStoredAuthTokenSync()
   if (secure) return secure
   try { return localStorage.getItem(STORAGE_KEY_TOKEN) } catch { return null }
 }

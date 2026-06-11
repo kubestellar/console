@@ -113,7 +113,7 @@ function handleStorageEvent(e: StorageEvent) {
 // Initialize from localStorage or environment
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
-  const hasDemoToken = await await getStoredAuthToken() === DEMO_TOKEN
+  const hasDemoToken = await getStoredAuthToken() === DEMO_TOKEN
   const userExplicitlyDisabled = stored === 'false'
 
   // Priority: Netlify > explicit preference > demo token fallback
