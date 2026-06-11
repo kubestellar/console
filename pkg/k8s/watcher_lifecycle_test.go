@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"

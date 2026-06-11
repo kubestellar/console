@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

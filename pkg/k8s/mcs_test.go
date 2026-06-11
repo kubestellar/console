@@ -16,7 +16,7 @@ import (
 	typedfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 )
 
 func setupScheme() *runtime.Scheme {

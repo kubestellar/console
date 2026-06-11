@@ -10,7 +10,7 @@ import (
 	dynfake "k8s.io/client-go/dynamic/fake"
 	k8stesting "k8s.io/client-go/testing"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 )
 
 // Shared hot-reload regression tests for #6657 — "a cluster added to the

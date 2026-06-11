@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 )
 
 func BenchmarkBuildTopologyGraph(b *testing.B) {

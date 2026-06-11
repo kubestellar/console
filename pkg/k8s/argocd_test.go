@@ -12,7 +12,7 @@ import (
 	dynfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 )
 
 // newArgoApp builds a minimal unstructured ArgoCD Application object.

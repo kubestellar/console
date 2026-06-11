@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/safego"
 )
 

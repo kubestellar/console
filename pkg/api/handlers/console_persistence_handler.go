@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 	"log/slog"
