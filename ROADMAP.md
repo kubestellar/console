@@ -77,6 +77,31 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 - **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update
 - **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
 
+### Tech Debt Unblocking Strategy
+
+As the codebase scales past 160+ dashboard cards and 10,000+ unit tests, technical debt items that were previously deprioritized ("hold" status) now represent scaling risks. This section defines the unblocking strategy to address accumulated tech debt before it impacts delivery velocity.
+
+**Priority 1: Performance & Scalability**
+- **Card render optimization** — Audit and fix cards with >500ms initial render time; establish performance budgets per card type
+- **Cache eviction policy** — Implement LRU eviction for SQLite WASM cache to prevent unbounded growth; target <50MB cache size
+- **Test parallelization** — Reduce CI test suite runtime from current baseline; investigate Jest worker memory limits
+
+**Priority 2: Code Health**
+- **TypeScript strict mode** — Enable `strict: true` incrementally, starting with new files; eliminate remaining `any` types in card components
+- **Dependency updates** — Unblock Vite 6, React 19, and Tailwind 4 upgrades currently held due to breaking changes; allocate dedicated sprint
+- **Bundle size** — Audit and tree-shake unused dependencies; target <2MB initial JS bundle (currently ~2.8MB)
+
+**Priority 3: Developer Experience**
+- **Storybook coverage** — Achieve 80% component coverage in Storybook (currently ~40%); prioritize cards with complex state
+- **E2E test stability** — Fix flaky Playwright tests in `nightly-e2e` workflow; define retry/timeout standards
+- **Documentation debt** — Update outdated API docs in `pkg/api/`, particularly for Stellar subsystem endpoints
+
+**Execution Model**
+- Allocate 20% of each sprint cycle to tech debt work (approximately 1 issue per developer per 2-week sprint)
+- Tag tech debt issues with `tech-debt` label and priority tier (`p1-perf`, `p2-health`, `p3-dx`)
+- Track tech debt ratio (tech debt issues / total issues) as a key health metric; target <15%
+- Block new feature work if tech debt ratio exceeds 25% or any P1 item is open >30 days
+
 ## Near-Term (Q2–Q3 2026)
 
 ## Mid-Term (Q3–Q4 2026)
