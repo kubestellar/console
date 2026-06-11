@@ -2,78 +2,79 @@ import type { CardComponent } from './cardRegistry.types'
 import { createElement } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { getCardConfig } from '../../config/cards'
-import {
-  AirGapCard,
-  AirGapDashboardCard,
-  AlertRulesCard,
-  BAACard,
-  BAADashboardCard,
-  CertManager,
-  ChangeControlCard,
-  ChangeControlDashboardCard,
-  CloudCustodianStatus,
-  ComplianceDrift,
-  ComplianceFrameworksCard,
-  ComplianceFrameworksDashboardCard,
-  ComplianceReportsCard,
-  ComplianceReportsDashboardCard,
-  ComplianceScore,
-  CrossClusterPolicyComparison,
-  DNSTraceCard,
-  DataResidencyCard,
-  DataResidencyDashboardCard,
-  DeploymentRiskScore,
-  ExternalSecrets,
-  FalcoAlerts,
-  FedRAMPCard,
-  FedRAMPDashboardCard,
-  FleetComplianceHeatmap,
-  GxPCard,
-  GxPDashboardCard,
-  HIPAACard,
-  HIPAADashboardCard,
-  ISO27001Audit,
-  IncidentResponseCard,
-  IntotoSupplyChain,
-  KeycloakStatus,
-  KubescapeScan,
-  KyvernoPolicies,
-  NISTCard,
-  NISTDashboardCard,
-  NamespaceRBAC,
-  NetworkPolicyCoverage,
-  NetworkTraceCard,
-  OIDCDashboardCard,
-  OIDCFederationCard,
-  OPAPolicies,
-  OpenfgaStatus,
-  PolicyViolations,
-  ProcessTraceCard,
-  RBACAuditCard,
-  RBACAuditDashboardCard,
-  RecommendedPolicies,
-  RiskAppetiteCard,
-  RiskMatrixCard,
-  RiskRegisterCard,
-  RuntimeAttestationCard,
-  SBOMManagerCard,
-  SIEMIntegrationCard,
-  SLSAProvenanceCard,
-  STIGCard,
-  STIGDashboardCard,
-  SecurityAuditCard,
-  SecurityIssues,
-  SegregationOfDutiesCard,
-  SegregationOfDutiesDashboardCard,
-  SessionDashboardCard,
-  SessionManagementCard,
-  SigstoreVerifyCard,
-  ThreatIntelCard,
-  TrestleScan,
-  TrivyScan,
-  TufStatus,
-  VaultSecrets,
-} from './cardRegistry.imports'
+const _enterpriseComplianceBundle = import('./EnterpriseComplianceCards').catch(() => undefined as never)
+const AirGapCard = safeLazy(() => _enterpriseComplianceBundle, 'AirGapCard')
+const AirGapDashboardCard = safeLazy(() => import('../compliance/AirGapDashboard'), 'AirGapDashboardContent')
+const AlertRulesCard = safeLazy(() => import('./AlertRules'), 'AlertRulesCard')
+const BAACard = safeLazy(() => _enterpriseComplianceBundle, 'BAACard')
+const BAADashboardCard = safeLazy(() => import('../compliance/BAADashboard'), 'BAADashboardContent')
+const CertManager = safeLazy(() => import('./DataComplianceCards'), 'CertManager')
+const ChangeControlCard = safeLazy(() => _enterpriseComplianceBundle, 'ChangeControlCard')
+const ChangeControlDashboardCard = safeLazy(() => import('../compliance/ChangeControlAudit'), 'ChangeControlAuditContent')
+const CloudCustodianStatus = safeLazy(() => import('./cloud_custodian_status'), 'CloudCustodianStatus')
+const ComplianceDrift = safeLazy(() => import('./ComplianceDrift'), 'ComplianceDrift')
+const ComplianceFrameworksCard = safeLazy(() => _enterpriseComplianceBundle, 'ComplianceFrameworksCard')
+const ComplianceFrameworksDashboardCard = safeLazy(() => import('../compliance/ComplianceFrameworks'), 'ComplianceFrameworksContent')
+const ComplianceReportsCard = safeLazy(() => _enterpriseComplianceBundle, 'ComplianceReportsCard')
+const ComplianceReportsDashboardCard = safeLazy(() => import('../compliance/ComplianceReports'), 'ComplianceReportsContent')
+const _complianceBundle = import('./ComplianceCards').catch(() => undefined as never)
+const ComplianceScore = safeLazy(() => _complianceBundle, 'ComplianceScore')
+const CrossClusterPolicyComparison = safeLazy(() => import('./CrossClusterPolicyComparison'), 'CrossClusterPolicyComparison')
+const DNSTraceCard = safeLazy(() => import('./gadget/DNSTraceCard'), 'DNSTraceCard')
+const DataResidencyCard = safeLazy(() => _enterpriseComplianceBundle, 'DataResidencyCard')
+const DataResidencyDashboardCard = safeLazy(() => import('../compliance/DataResidency'), 'DataResidencyContent')
+const DeploymentRiskScore = safeLazy(() => import('./DeploymentRiskScore'), 'DeploymentRiskScore')
+const ExternalSecrets = safeLazy(() => import('./DataComplianceCards'), 'ExternalSecrets')
+const FalcoAlerts = safeLazy(() => _complianceBundle, 'FalcoAlerts')
+const FedRAMPCard = safeLazy(() => _enterpriseComplianceBundle, 'FedRAMPCard')
+const FedRAMPDashboardCard = safeLazy(() => import('../compliance/FedRAMPDashboard'), 'FedRAMPDashboardContent')
+const FleetComplianceHeatmap = safeLazy(() => import('./FleetComplianceHeatmap'), 'FleetComplianceHeatmap')
+const GxPCard = safeLazy(() => _enterpriseComplianceBundle, 'GxPCard')
+const GxPDashboardCard = safeLazy(() => import('../compliance/GxPDashboard'), 'GxPDashboardContent')
+const HIPAACard = safeLazy(() => _enterpriseComplianceBundle, 'HIPAACard')
+const HIPAADashboardCard = safeLazy(() => import('../compliance/HIPAADashboard'), 'HIPAADashboardContent')
+const ISO27001Audit = safeLazy(() => import('./ISO27001Audit'), 'ISO27001Audit')
+const IncidentResponseCard = safeLazy(() => _enterpriseComplianceBundle, 'IncidentResponseCard')
+const IntotoSupplyChain = safeLazy(() => import('./intoto_supply_chain'), 'IntotoSupplyChain')
+const KeycloakStatus = safeLazy(() => import('./keycloak_status'), 'KeycloakStatus')
+const KubescapeScan = safeLazy(() => _complianceBundle, 'KubescapeScan')
+const KyvernoPolicies = safeLazy(() => import('./KyvernoPolicies'), 'KyvernoPolicies')
+const NISTCard = safeLazy(() => _enterpriseComplianceBundle, 'NISTCard')
+const NISTDashboardCard = safeLazy(() => import('../compliance/NISTDashboard'), 'NISTDashboardContent')
+const NamespaceRBAC = safeLazy(() => import('./NamespaceRBAC'), 'NamespaceRBAC')
+const _clusterAdminBundle = import('./cluster-admin-bundle').catch(() => undefined as never)
+const NetworkPolicyCoverage = safeLazy(() => _clusterAdminBundle, 'NetworkPolicyCoverage')
+const NetworkTraceCard = safeLazy(() => import('./gadget/NetworkTraceCard'), 'NetworkTraceCard')
+const OIDCDashboardCard = safeLazy(() => import('../compliance/OIDCDashboard'), 'OIDCDashboardContent')
+const OIDCFederationCard = safeLazy(() => _enterpriseComplianceBundle, 'OIDCFederationCard')
+const OPAPolicies = safeLazy(() => import('./OPAPolicies'), 'OPAPolicies')
+const OpenfgaStatus = safeLazy(() => import('./openfga_status'), 'OpenfgaStatus')
+const PolicyViolations = safeLazy(() => _complianceBundle, 'PolicyViolations')
+const ProcessTraceCard = safeLazy(() => import('./gadget/ProcessTraceCard'), 'ProcessTraceCard')
+const RBACAuditCard = safeLazy(() => _enterpriseComplianceBundle, 'RBACAuditCard')
+const RBACAuditDashboardCard = safeLazy(() => import('../compliance/RBACAuditDashboard'), 'RBACAuditDashboardContent')
+const RecommendedPolicies = safeLazy(() => import('./RecommendedPolicies'), 'RecommendedPolicies')
+const RiskAppetiteCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskAppetiteCard')
+const RiskMatrixCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskMatrixCard')
+const RiskRegisterCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskRegisterCard')
+const RuntimeAttestationCard = safeLazy(() => import('./RuntimeAttestationCard'), 'RuntimeAttestationCard')
+const SBOMManagerCard = safeLazy(() => _enterpriseComplianceBundle, 'SBOMManagerCard')
+const SIEMIntegrationCard = safeLazy(() => _enterpriseComplianceBundle, 'SIEMIntegrationCard')
+const SLSAProvenanceCard = safeLazy(() => _enterpriseComplianceBundle, 'SLSAProvenanceCard')
+const STIGCard = safeLazy(() => _enterpriseComplianceBundle, 'STIGCard')
+const STIGDashboardCard = safeLazy(() => import('../compliance/STIGDashboard'), 'STIGDashboardContent')
+const SecurityAuditCard = safeLazy(() => import('./gadget/SecurityAuditCard'), 'SecurityAuditCard')
+const SecurityIssues = safeLazy(() => import('./SecurityIssues'), 'SecurityIssues')
+const SegregationOfDutiesCard = safeLazy(() => _enterpriseComplianceBundle, 'SegregationOfDutiesCard')
+const SegregationOfDutiesDashboardCard = safeLazy(() => import('../compliance/SegregationOfDuties'), 'SegregationOfDutiesContent')
+const SessionDashboardCard = safeLazy(() => import('../compliance/SessionDashboard'), 'SessionDashboardContent')
+const SessionManagementCard = safeLazy(() => _enterpriseComplianceBundle, 'SessionManagementCard')
+const SigstoreVerifyCard = safeLazy(() => _enterpriseComplianceBundle, 'SigstoreVerifyCard')
+const ThreatIntelCard = safeLazy(() => _enterpriseComplianceBundle, 'ThreatIntelCard')
+const TrestleScan = safeLazy(() => import('./TrestleScan'), 'TrestleScan')
+const TrivyScan = safeLazy(() => _complianceBundle, 'TrivyScan')
+const TufStatus = safeLazy(() => import('./tuf_status'), 'TufStatus')
+const VaultSecrets = safeLazy(() => import('./DataComplianceCards'), 'VaultSecrets')
 
 /**
  * Compliance and security cards.

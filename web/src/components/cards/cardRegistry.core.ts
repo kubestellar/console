@@ -2,59 +2,60 @@ import type { CardComponent } from './cardRegistry.types'
 import { createElement } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { getCardConfig } from '../../config/cards'
-import {
-  AppStatus,
-  CRDHealth,
-  ClusterComparison,
-  ClusterCosts,
-  ClusterFocus,
-  ClusterHealth,
-  ClusterHealthMonitor,
-  ClusterLocations,
-  ClusterMetrics,
-  ClusterNetwork,
-  ClusterResourceTree,
-  ComputeOverview,
-  DeploymentIssues,
-  DeploymentProgress,
-  DeploymentStatus,
-  EventStream,
-  EventSummary,
-  EventsTimeline,
-  GPUInventory,
-  GPUInventoryHistory,
-  GPUNamespaceAllocations,
-  GPUOverview,
-  GPUStatus,
-  GPUUsageTrend,
-  GPUUtilization,
-  GPUWorkloads,
-  HardwareHealthCard,
-  KubecostOverview,
-  NamespaceEvents,
-  NamespaceMonitor,
-  NamespaceOverview,
-  NamespaceQuotas,
-  NetworkOverview,
-  OpenCostOverview,
-  OperatorStatus,
-  OperatorSubscriptions,
-  PVCStatus,
-  PodHealthTrend,
-  PodIssues,
-  PodLogs,
-  ProactiveGPUNodeHealthMonitor,
-  RecentEvents,
-  ResourceCapacity,
-  ResourceTrend,
-  ResourceUsage,
-  ServiceStatus,
-  StorageOverview,
-  TopPods,
-  UpgradeStatus,
-  WarningEvents,
-  WorkloadMonitor,
-} from './cardRegistry.imports'
+import { ClusterHealth } from './ClusterHealth'
+import { ClusterMetrics } from './ClusterMetrics'
+import { DeploymentStatus } from './DeploymentStatus'
+import { EventStream } from './EventStream'
+import { HardwareHealthCard } from './HardwareHealthCard'
+import { PodIssues } from './PodIssues'
+import { ResourceUsage } from './ResourceUsage'
+
+const AppStatus = safeLazy(() => import('./AppStatus'), 'AppStatus')
+const CRDHealth = safeLazy(() => import('./CRDHealth'), 'CRDHealth')
+const ClusterComparison = safeLazy(() => import('./ClusterComparison'), 'ClusterComparison')
+const ClusterCosts = safeLazy(() => import('./ClusterCosts'), 'ClusterCosts')
+const ClusterFocus = safeLazy(() => import('./ClusterFocus'), 'ClusterFocus')
+const _workloadMonitorBundle = import('./workload-monitor').catch(() => undefined as never)
+const ClusterHealthMonitor = safeLazy(() => _workloadMonitorBundle, 'ClusterHealthMonitor')
+const ClusterLocations = safeLazy(() => import('./ClusterLocations'), 'ClusterLocations')
+const ClusterNetwork = safeLazy(() => import('./ClusterNetwork'), 'ClusterNetwork')
+const ClusterResourceTree = safeLazy(() => import('./cluster-resource-tree/ClusterResourceTree'), 'ClusterResourceTree')
+const ComputeOverview = safeLazy(() => import('./ComputeOverview'), 'ComputeOverview')
+const _deployBundle = import('./deploy-bundle').catch(() => undefined as never)
+const DeploymentIssues = safeLazy(() => _deployBundle, 'DeploymentIssues')
+const DeploymentProgress = safeLazy(() => _deployBundle, 'DeploymentProgress')
+const EventSummary = safeLazy(() => import('./EventSummary'), 'EventSummary')
+const EventsTimeline = safeLazy(() => import('./EventsTimeline'), 'EventsTimeline')
+const GPUInventory = safeLazy(() => import('./GPUInventory'), 'GPUInventory')
+const GPUInventoryHistory = safeLazy(() => import('./GPUInventoryHistory'), 'GPUInventoryHistory')
+const GPUNamespaceAllocations = safeLazy(() => import('./GPUNamespaceAllocations'), 'GPUNamespaceAllocations')
+const GPUOverview = safeLazy(() => import('./GPUOverview'), 'GPUOverview')
+const GPUStatus = safeLazy(() => import('./GPUStatus'), 'GPUStatus')
+const GPUUsageTrend = safeLazy(() => import('./GPUUsageTrend'), 'GPUUsageTrend')
+const GPUUtilization = safeLazy(() => import('./GPUUtilization'), 'GPUUtilization')
+const GPUWorkloads = safeLazy(() => import('./GPUWorkloads'), 'GPUWorkloads')
+const KubecostOverview = safeLazy(() => import('./KubecostOverview'), 'KubecostOverview')
+const NamespaceEvents = safeLazy(() => import('./NamespaceEvents'), 'NamespaceEvents')
+const NamespaceMonitor = safeLazy(() => import('./NamespaceMonitor'), 'NamespaceMonitor')
+const NamespaceOverview = safeLazy(() => import('./NamespaceOverview'), 'NamespaceOverview')
+const NamespaceQuotas = safeLazy(() => import('./NamespaceQuotas'), 'NamespaceQuotas')
+const NetworkOverview = safeLazy(() => import('./NetworkOverview'), 'NetworkOverview')
+const OpenCostOverview = safeLazy(() => import('./OpenCostOverview'), 'OpenCostOverview')
+const OperatorStatus = safeLazy(() => import('./OperatorStatus'), 'OperatorStatus')
+const OperatorSubscriptions = safeLazy(() => import('./OperatorSubscriptions'), 'OperatorSubscriptions')
+const PVCStatus = safeLazy(() => import('./PVCStatus'), 'PVCStatus')
+const PodHealthTrend = safeLazy(() => import('./PodHealthTrend'), 'PodHealthTrend')
+const PodLogs = safeLazy(() => import('./PodLogs'), 'PodLogs')
+const ProactiveGPUNodeHealthMonitor = safeLazy(() => import('./ProactiveGPUNodeHealthMonitor'), 'ProactiveGPUNodeHealthMonitor')
+const RecentEvents = safeLazy(() => import('./RecentEvents'), 'RecentEvents')
+const ResourceCapacity = safeLazy(() => import('./ResourceCapacity'), 'ResourceCapacity')
+const ResourceTrend = safeLazy(() => import('./ResourceTrend'), 'ResourceTrend')
+const ServiceStatus = safeLazy(() => import('./ServiceStatus'), 'ServiceStatus')
+const StorageOverview = safeLazy(() => import('./StorageOverview'), 'StorageOverview')
+const TopPods = safeLazy(() => import('./TopPods'), 'TopPods')
+const UpgradeStatus = safeLazy(() => import('./UpgradeStatus'), 'UpgradeStatus')
+const WarningEvents = safeLazy(() => import('./WarningEvents'), 'WarningEvents')
+const WorkloadMonitor = safeLazy(() => _workloadMonitorBundle, 'WorkloadMonitor')
 
 /**
  * Core infrastructure cards.

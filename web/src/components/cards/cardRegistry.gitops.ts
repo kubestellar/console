@@ -1,28 +1,31 @@
 import type { CardComponent } from './cardRegistry.types'
-import {
-  ArgoCDApplicationSets,
-  ArgoCDApplications,
-  ArgoCDHealth,
-  ArgoCDSyncStatus,
-  ChartVersions,
-  ClusterGroups,
-  FluxStatus,
-  GitHubCIMonitor,
-  GitOpsDrift,
-  HelmHistory,
-  HelmReleaseStatus,
-  HelmValuesDiff,
-  KustomizationStatus,
-  Missions,
-  NightlyReleasePulse,
-  OverlayComparison,
-  PipelineFlow,
-  ProwCIMonitor,
-  RecentFailures,
-  ResourceMarshall,
-  WorkflowMatrix,
-  WorkloadDeployment,
-} from './cardRegistry.imports'
+import { safeLazy } from '../../lib/safeLazy'
+
+const _deployBundle = import('./deploy-bundle').catch(() => undefined as never)
+const ArgoCDApplicationSets = safeLazy(() => _deployBundle, 'ArgoCDApplicationSets')
+const ArgoCDApplications = safeLazy(() => _deployBundle, 'ArgoCDApplications')
+const ArgoCDHealth = safeLazy(() => _deployBundle, 'ArgoCDHealth')
+const ArgoCDSyncStatus = safeLazy(() => _deployBundle, 'ArgoCDSyncStatus')
+const ChartVersions = safeLazy(() => _deployBundle, 'ChartVersions')
+const ClusterGroups = safeLazy(() => _deployBundle, 'ClusterGroups')
+const FluxStatus = safeLazy(() => import('./flux_status'), 'FluxStatus')
+const _workloadMonitorBundle = import('./workload-monitor').catch(() => undefined as never)
+const GitHubCIMonitor = safeLazy(() => _workloadMonitorBundle, 'GitHubCIMonitor')
+const GitOpsDrift = safeLazy(() => _deployBundle, 'GitOpsDrift')
+const HelmHistory = safeLazy(() => _deployBundle, 'HelmHistory')
+const HelmReleaseStatus = safeLazy(() => _deployBundle, 'HelmReleaseStatus')
+const HelmValuesDiff = safeLazy(() => import('./HelmValuesDiff'), 'HelmValuesDiff')
+const KustomizationStatus = safeLazy(() => _deployBundle, 'KustomizationStatus')
+const Missions = safeLazy(() => _deployBundle, 'Missions')
+const _pipelinesBundle = import('./pipelines').catch(() => undefined as never)
+const NightlyReleasePulse = safeLazy(() => _pipelinesBundle, 'NightlyReleasePulse')
+const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
+const PipelineFlow = safeLazy(() => _pipelinesBundle, 'PipelineFlow')
+const ProwCIMonitor = safeLazy(() => _workloadMonitorBundle, 'ProwCIMonitor')
+const RecentFailures = safeLazy(() => _pipelinesBundle, 'RecentFailures')
+const ResourceMarshall = safeLazy(() => _deployBundle, 'ResourceMarshall')
+const WorkflowMatrix = safeLazy(() => _pipelinesBundle, 'WorkflowMatrix')
+const WorkloadDeployment = safeLazy(() => _deployBundle, 'WorkloadDeployment')
 
 /**
  * GitOps and deployment cards.

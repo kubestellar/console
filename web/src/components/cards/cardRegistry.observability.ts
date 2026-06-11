@@ -1,27 +1,27 @@
 import type { CardComponent } from './cardRegistry.types'
-import {
-  BackstageStatus,
-  CniStatus,
-  ContainerdStatus,
-  ContourStatus,
-  CoreDNSStatus,
-  CortexStatus,
-  DaprStatus,
-  EnvoyStatus,
-  FluentdStatus,
-  GrpcStatus,
-  HarborStatus,
-  JaegerStatus,
-  LinkerdStatus,
-  LonghornStatus,
-  NatsStatus,
-  OtelStatus,
-  RookStatus,
-  SpiffeStatus,
-  SpireStatus,
-  TikvStatus,
-  VitessStatus,
-} from './cardRegistry.imports'
+import { safeLazy } from '../../lib/safeLazy'
+
+const BackstageStatus = safeLazy(() => import('./backstage_status'), 'BackstageStatus')
+const CniStatus = safeLazy(() => import('./cni_status'), 'CniStatus')
+const ContainerdStatus = safeLazy(() => import('./containerd_status'), 'ContainerdStatus')
+const ContourStatus = safeLazy(() => import('./contour_status'), 'ContourStatus')
+const CoreDNSStatus = safeLazy(() => import('./coredns_status'), 'CoreDNSStatus')
+const CortexStatus = safeLazy(() => import('./cortex_status'), 'CortexStatus')
+const DaprStatus = safeLazy(() => import('./dapr_status'), 'DaprStatus')
+const EnvoyStatus = safeLazy(() => import('./envoy_status'), 'EnvoyStatus')
+const FluentdStatus = safeLazy(() => import('./fluentd_status'), 'FluentdStatus')
+const GrpcStatus = safeLazy(() => import('./grpc_status'), 'GrpcStatus')
+const HarborStatus = safeLazy(() => import('./harbor_status'), 'HarborStatus')
+const JaegerStatus = safeLazy(() => import('./jaeger_status'), 'JaegerStatus')
+const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus')
+const LonghornStatus = safeLazy(() => import('./longhorn_status'), 'LonghornStatus')
+const NatsStatus = safeLazy(() => import('./nats_status'), 'NatsStatus')
+const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
+const RookStatus = safeLazy(() => import('./rook_status'), 'RookStatus')
+const SpiffeStatus = safeLazy(() => import('./spiffe_status'), 'SpiffeStatus')
+const SpireStatus = safeLazy(() => import('./spire_status'), 'SpireStatus')
+const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
+const VitessStatus = safeLazy(() => import('./vitess_status'), 'VitessStatus')
 
 /**
  * Observability and platform telemetry cards.

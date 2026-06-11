@@ -1,88 +1,92 @@
 import type { CardComponent } from './cardRegistry.types'
-import {
-  AdmissionWebhooks,
-  ArtifactHubStatus,
-  BuildpacksStatus,
-  CascadeImpactMap,
-  ChangeTimeline,
-  ChaosMeshStatus,
-  Checkers,
-  CloudEventsStatus,
-  ClusterChangelog,
-  ClusterDeltaDetector,
-  ConfigDriftHeatmap,
-  ContainerTetris,
-  ControlPlaneHealth,
-  CrioStatus,
-  CrossClusterEventCorrelation,
-  CrossplaneManagedResources,
-  CubefsStatus,
-  DeploymentRolloutTracker,
-  DragonflyStatus,
-  DrasiReactiveGraph,
-  DynamicCard,
-  EtcdStatus,
-  FailoverTimeline,
-  FlappyPod,
-  FlatcarStatus,
-  FluidStatus,
-  Game2048,
-  GatewayStatus,
-  GitHubActivity,
-  IframeEmbed,
-  IssueActivityChart,
-  KServeStatus,
-  KarmadaStatus,
-  KedaStatus,
-  KnativeStatus,
-  KubeBert,
-  KubeChess,
-  KubeDoom,
-  KubeGalaga,
-  KubeKart,
-  KubeKong,
-  KubeMan,
-  KubePong,
-  KubeRayFleet,
-  KubeSnake,
-  KubeVelaStatus,
-  Kubectl,
-  Kubedle,
-  LimaStatus,
-  MaintenanceWindows,
-  MatchGame,
-  MissileCommand,
-  MobileBrowser,
-  NetworkUtils,
-  NodeConditions,
-  NodeDebug,
-  NodeInvaders,
-  OpenFeatureStatus,
-  OpenKruiseStatus,
-  OpenYurtStatus,
-  PodBrothers,
-  PodCrosser,
-  PodPitfall,
-  PodSweeper,
-  PredictiveHealth,
-  QuotaHeatmap,
-  RBACExplorer,
-  RSSFeed,
-  ResourceImbalanceDetector,
-  RestartCorrelationMatrix,
-  RightSizeAdvisor,
-  SLOCompliance,
-  ServiceExports,
-  ServiceImports,
-  ServiceTopology,
-  Solitaire,
-  StrimziStatus,
-  SudokuGame,
-  TrinoGateway,
-  UserManagement,
-  VolcanoStatus,
-  WasmcloudStatus,
-} from './cardRegistry.imports'
+import { safeLazy } from '../../lib/safeLazy'
+
+const _clusterAdminBundle = import('./cluster-admin-bundle').catch(() => undefined as never)
+const AdmissionWebhooks = safeLazy(() => _clusterAdminBundle, 'AdmissionWebhooks')
+const ArtifactHubStatus = safeLazy(() => import('./artifact_hub_status'), 'ArtifactHubStatus')
+const BuildpacksStatus = safeLazy(() => import('./buildpacks-status'), 'BuildpacksStatus')
+const _insightsBundle = import('./insights').catch(() => undefined as never)
+const CascadeImpactMap = safeLazy(() => _insightsBundle, 'CascadeImpactMap')
+const ChangeTimeline = safeLazy(() => import('./change_timeline/ChangeTimeline'), 'ChangeTimeline')
+const ChaosMeshStatus = safeLazy(() => import('./chaos_mesh_status'), 'ChaosMeshStatus')
+const _arcadeBundle = import('./arcade-bundle').catch(() => undefined as never)
+const Checkers = safeLazy(() => _arcadeBundle, 'Checkers')
+const CloudEventsStatus = safeLazy(() => import('./cloudevents_status'), 'CloudEventsStatus')
+const ClusterChangelog = safeLazy(() => _clusterAdminBundle, 'ClusterChangelog')
+const ClusterDeltaDetector = safeLazy(() => _insightsBundle, 'ClusterDeltaDetector')
+const ConfigDriftHeatmap = safeLazy(() => _insightsBundle, 'ConfigDriftHeatmap')
+const ContainerTetris = safeLazy(() => _arcadeBundle, 'ContainerTetris')
+const ControlPlaneHealth = safeLazy(() => _clusterAdminBundle, 'ControlPlaneHealth')
+const CrioStatus = safeLazy(() => import('./crio_status'), 'CrioStatus')
+const CrossClusterEventCorrelation = safeLazy(() => _insightsBundle, 'CrossClusterEventCorrelation')
+const CrossplaneManagedResources = safeLazy(() => import('./crossplane-status/CrossplaneManagedResources'), 'CrossplaneManagedResources')
+const CubefsStatus = safeLazy(() => import('./cubefs_status'), 'CubefsStatus')
+const DeploymentRolloutTracker = safeLazy(() => _insightsBundle, 'DeploymentRolloutTracker')
+const DragonflyStatus = safeLazy(() => import('./dragonfly_status'), 'DragonflyStatus')
+const _drasiBundle = import('./drasi').catch(() => undefined as never)
+const DrasiReactiveGraph = safeLazy(() => _drasiBundle, 'DrasiReactiveGraph')
+const DynamicCard = safeLazy(() => import('./DynamicCard'), 'DynamicCard')
+const EtcdStatus = safeLazy(() => _clusterAdminBundle, 'EtcdStatus')
+const FailoverTimeline = safeLazy(() => import('./failover_timeline'), 'FailoverTimeline')
+const FlappyPod = safeLazy(() => _arcadeBundle, 'FlappyPod')
+const FlatcarStatus = safeLazy(() => import('./flatcar_status'), 'FlatcarStatus')
+const FluidStatus = safeLazy(() => import('./fluid_status'), 'FluidStatus')
+const Game2048 = safeLazy(() => _arcadeBundle, 'Game2048')
+const GatewayStatus = safeLazy(() => import('./GatewayStatus'), 'GatewayStatus')
+const GitHubActivity = safeLazy(() => import('./GitHubActivity'), 'GitHubActivity')
+const IframeEmbed = safeLazy(() => import('./IframeEmbed'), 'IframeEmbed')
+const IssueActivityChart = safeLazy(() => import('./IssueActivityChart'), 'IssueActivityChart')
+const KServeStatus = safeLazy(() => import('./kserve_status'), 'KServeStatus')
+const KarmadaStatus = safeLazy(() => import('./karmada_status'), 'KarmadaStatus')
+const KedaStatus = safeLazy(() => import('./keda_status'), 'KedaStatus')
+const KnativeStatus = safeLazy(() => import('./knative_status'), 'KnativeStatus')
+const KubeBert = safeLazy(() => _arcadeBundle, 'KubeBert')
+const KubeChess = safeLazy(() => _arcadeBundle, 'KubeChess')
+const KubeDoom = safeLazy(() => _arcadeBundle, 'KubeDoom')
+const KubeGalaga = safeLazy(() => _arcadeBundle, 'KubeGalaga')
+const KubeKart = safeLazy(() => _arcadeBundle, 'KubeKart')
+const KubeKong = safeLazy(() => _arcadeBundle, 'KubeKong')
+const KubeMan = safeLazy(() => _arcadeBundle, 'KubeMan')
+const KubePong = safeLazy(() => _arcadeBundle, 'KubePong')
+const KubeRayFleet = safeLazy(() => import('./kuberay_fleet'), 'KubeRayFleet')
+const KubeSnake = safeLazy(() => _arcadeBundle, 'KubeSnake')
+const KubeVelaStatus = safeLazy(() => import('./kubevela_status'), 'KubeVelaStatus')
+const Kubectl = safeLazy(() => import('./Kubectl'), 'Kubectl')
+const Kubedle = safeLazy(() => _arcadeBundle, 'Kubedle')
+const LimaStatus = safeLazy(() => import('./lima_status'), 'LimaStatus')
+const MaintenanceWindows = safeLazy(() => _clusterAdminBundle, 'MaintenanceWindows')
+const MatchGame = safeLazy(() => _arcadeBundle, 'MatchGame')
+const MissileCommand = safeLazy(() => _arcadeBundle, 'MissileCommand')
+const MobileBrowser = safeLazy(() => import('./MobileBrowser'), 'MobileBrowser')
+const NetworkUtils = safeLazy(() => import('./NetworkUtils'), 'NetworkUtils')
+const NodeConditions = safeLazy(() => _clusterAdminBundle, 'NodeConditions')
+const NodeDebug = safeLazy(() => _clusterAdminBundle, 'NodeDebug')
+const NodeInvaders = safeLazy(() => _arcadeBundle, 'NodeInvaders')
+const OpenFeatureStatus = safeLazy(() => import('./openfeature_status'), 'OpenFeatureStatus')
+const OpenKruiseStatus = safeLazy(() => import('./openkruise_status'), 'OpenKruiseStatus')
+const OpenYurtStatus = safeLazy(() => import('./openyurt_status'), 'OpenYurtStatus')
+const PodBrothers = safeLazy(() => _arcadeBundle, 'PodBrothers')
+const PodCrosser = safeLazy(() => _arcadeBundle, 'PodCrosser')
+const PodPitfall = safeLazy(() => _arcadeBundle, 'PodPitfall')
+const PodSweeper = safeLazy(() => _arcadeBundle, 'PodSweeper')
+const PredictiveHealth = safeLazy(() => _clusterAdminBundle, 'PredictiveHealth')
+const QuotaHeatmap = safeLazy(() => _clusterAdminBundle, 'QuotaHeatmap')
+const RBACExplorer = safeLazy(() => _clusterAdminBundle, 'RBACExplorer')
+const RSSFeed = safeLazy(() => import('./rss'), 'RSSFeed')
+const ResourceImbalanceDetector = safeLazy(() => _insightsBundle, 'ResourceImbalanceDetector')
+const RestartCorrelationMatrix = safeLazy(() => _insightsBundle, 'RestartCorrelationMatrix')
+const RightSizeAdvisor = safeLazy(() => _insightsBundle, 'RightSizeAdvisor')
+const SLOCompliance = safeLazy(() => import('./slo_compliance'), 'SLOCompliance')
+const ServiceExports = safeLazy(() => import('./ServiceExports'), 'ServiceExports')
+const ServiceImports = safeLazy(() => import('./ServiceImports'), 'ServiceImports')
+const ServiceTopology = safeLazy(() => import('./ServiceTopology'), 'ServiceTopology')
+const Solitaire = safeLazy(() => _arcadeBundle, 'Solitaire')
+const StrimziStatus = safeLazy(() => import('./strimzi_status'), 'StrimziStatus')
+const SudokuGame = safeLazy(() => _arcadeBundle, 'SudokuGame')
+const TrinoGateway = safeLazy(() => import('./trino_gateway'), 'TrinoGateway')
+const UserManagement = safeLazy(() => import('./UserManagement'), 'UserManagement')
+const VolcanoStatus = safeLazy(() => import('./volcano_status'), 'VolcanoStatus')
+const WasmcloudStatus = safeLazy(() => import('./wasmcloud_status'), 'WasmcloudStatus')
 
 /**
  * Miscellaneous cards.

@@ -1,51 +1,56 @@
 import type { CardComponent } from './cardRegistry.types'
-import {
-  ACMMFeedbackLoops,
-  ACMMLevel,
-  ACMMRecommendations,
-  BenchmarkHero,
-  ConsoleHealthCheckCard,
-  ConsoleIssuesCard,
-  ConsoleKubeconfigAuditCard,
-  ConsoleOfflineDetectionCard,
-  EPPRouting,
-  HardwareLeaderboard,
-  KVCacheMonitor,
-  KagentAgentDiscovery,
-  KagentAgentFleet,
-  KagentModelProviders,
-  KagentSecurity,
-  KagentStatusCard,
-  KagentToolRegistry,
-  KagentTopology,
-  KagentiAgentDiscovery,
-  KagentiAgentFleet,
-  KagentiBuildPipeline,
-  KagentiSecurity,
-  KagentiSecurityPosture,
-  KagentiStatusCard,
-  KagentiToolRegistry,
-  KagentiTopology,
-  LLMInference,
-  LLMModels,
-  LLMdAIInsights,
-  LLMdConfigurator,
-  LLMdFlow,
-  LLMdStackMonitor,
-  LatencyBreakdown,
-  MLJobs,
-  MLNotebooks,
-  NightlyE2EStatus,
-  PDDisaggregation,
-  ParetoFrontier,
-  PerformanceTimeline,
-  ProviderHealth,
-  ProwHistory,
-  ProwJobs,
-  ProwStatus,
-  ResourceUtilization,
-  ThroughputComparison,
-} from './cardRegistry.imports'
+import { safeLazy } from '../../lib/safeLazy'
+
+const ACMMFeedbackLoops = safeLazy(() => import('./ACMMFeedbackLoops'), 'ACMMFeedbackLoops')
+const ACMMLevel = safeLazy(() => import('./ACMMLevel'), 'ACMMLevel')
+const ACMMRecommendations = safeLazy(() => import('./ACMMRecommendations'), 'ACMMRecommendations')
+const _llmdBundle = import('./llmd').catch(() => undefined as never)
+const BenchmarkHero = safeLazy(() => _llmdBundle, 'BenchmarkHero')
+const ConsoleHealthCheckCard = safeLazy(() => import('./console-missions/ConsoleHealthCheckCard'), 'ConsoleHealthCheckCard')
+const ConsoleIssuesCard = safeLazy(() => import('./console-missions/ConsoleIssuesCard'), 'ConsoleIssuesCard')
+const ConsoleKubeconfigAuditCard = safeLazy(() => import('./console-missions/ConsoleKubeconfigAuditCard'), 'ConsoleKubeconfigAuditCard')
+const ConsoleOfflineDetectionCard = safeLazy(() => import('./console-missions/ConsoleOfflineDetectionCard'), 'ConsoleOfflineDetectionCard')
+const EPPRouting = safeLazy(() => _llmdBundle, 'EPPRouting')
+const HardwareLeaderboard = safeLazy(() => _llmdBundle, 'HardwareLeaderboard')
+const KVCacheMonitor = safeLazy(() => _llmdBundle, 'KVCacheMonitor')
+const _kagentBundle = import('./kagent').catch(() => undefined as never)
+const KagentAgentDiscovery = safeLazy(() => _kagentBundle, 'KagentAgentDiscovery')
+const KagentAgentFleet = safeLazy(() => _kagentBundle, 'KagentAgentFleet')
+const KagentModelProviders = safeLazy(() => _kagentBundle, 'KagentModelProviders')
+const KagentSecurity = safeLazy(() => _kagentBundle, 'KagentSecurity')
+const KagentStatusCard = safeLazy(() => import('./KagentStatusCard'), 'KagentStatusCard')
+const KagentToolRegistry = safeLazy(() => _kagentBundle, 'KagentToolRegistry')
+const KagentTopology = safeLazy(() => _kagentBundle, 'KagentTopology')
+const _kagentiBundle = import('./kagenti').catch(() => undefined as never)
+const KagentiAgentDiscovery = safeLazy(() => _kagentiBundle, 'KagentiAgentDiscovery')
+const KagentiAgentFleet = safeLazy(() => _kagentiBundle, 'KagentiAgentFleet')
+const KagentiBuildPipeline = safeLazy(() => _kagentiBundle, 'KagentiBuildPipeline')
+const KagentiSecurity = safeLazy(() => _kagentiBundle, 'KagentiSecurity')
+const KagentiSecurityPosture = safeLazy(() => _kagentiBundle, 'KagentiSecurityPosture')
+const KagentiStatusCard = safeLazy(() => import('./KagentiStatusCard'), 'KagentiStatusCard')
+const KagentiToolRegistry = safeLazy(() => _kagentiBundle, 'KagentiToolRegistry')
+const KagentiTopology = safeLazy(() => _kagentiBundle, 'KagentiTopology')
+const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
+const LLMInference = safeLazy(() => _workloadDetectionBundle, 'LLMInference')
+const LLMModels = safeLazy(() => _workloadDetectionBundle, 'LLMModels')
+const LLMdAIInsights = safeLazy(() => _llmdBundle, 'LLMdAIInsights')
+const LLMdConfigurator = safeLazy(() => _llmdBundle, 'LLMdConfigurator')
+const LLMdFlow = safeLazy(() => _llmdBundle, 'LLMdFlow')
+const _workloadMonitorBundle = import('./workload-monitor').catch(() => undefined as never)
+const LLMdStackMonitor = safeLazy(() => _workloadMonitorBundle, 'LLMdStackMonitor')
+const LatencyBreakdown = safeLazy(() => _llmdBundle, 'LatencyBreakdown')
+const MLJobs = safeLazy(() => _workloadDetectionBundle, 'MLJobs')
+const MLNotebooks = safeLazy(() => _workloadDetectionBundle, 'MLNotebooks')
+const NightlyE2EStatus = safeLazy(() => _llmdBundle, 'NightlyE2EStatus')
+const PDDisaggregation = safeLazy(() => _llmdBundle, 'PDDisaggregation')
+const ParetoFrontier = safeLazy(() => _llmdBundle, 'ParetoFrontier')
+const PerformanceTimeline = safeLazy(() => _llmdBundle, 'PerformanceTimeline')
+const ProviderHealth = safeLazy(() => import('./ProviderHealth'), 'ProviderHealth')
+const ProwHistory = safeLazy(() => _workloadDetectionBundle, 'ProwHistory')
+const ProwJobs = safeLazy(() => _workloadDetectionBundle, 'ProwJobs')
+const ProwStatus = safeLazy(() => _workloadDetectionBundle, 'ProwStatus')
+const ResourceUtilization = safeLazy(() => _llmdBundle, 'ResourceUtilization')
+const ThroughputComparison = safeLazy(() => _llmdBundle, 'ThroughputComparison')
 
 /**
  * AI/ML workload and agent cards.

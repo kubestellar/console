@@ -1,14 +1,15 @@
 import type { CardComponent } from './cardRegistry.types'
-import {
-  K3sStatus,
-  KubeflexStatus,
-  KubevirtStatus,
-  MultiTenancyOverview,
-  OvnStatus,
-  TenantIsolationSetup,
-  TenantTopology,
-  VClusterStatus,
-} from './cardRegistry.imports'
+import { safeLazy } from '../../lib/safeLazy'
+
+const _multiTenancyBundle = import('./multi-tenancy').catch(() => undefined as never)
+const K3sStatus = safeLazy(() => _multiTenancyBundle, 'K3sStatus')
+const KubeflexStatus = safeLazy(() => _multiTenancyBundle, 'KubeflexStatus')
+const KubevirtStatus = safeLazy(() => _multiTenancyBundle, 'KubevirtStatus')
+const MultiTenancyOverview = safeLazy(() => _multiTenancyBundle, 'MultiTenancyOverview')
+const OvnStatus = safeLazy(() => _multiTenancyBundle, 'OvnStatus')
+const TenantIsolationSetup = safeLazy(() => _multiTenancyBundle, 'TenantIsolationSetup')
+const TenantTopology = safeLazy(() => _multiTenancyBundle, 'TenantTopology')
+const VClusterStatus = safeLazy(() => import('./VClusterStatus'), 'VClusterStatus')
 
 /**
  * Multi-tenancy and virtualization cards.
