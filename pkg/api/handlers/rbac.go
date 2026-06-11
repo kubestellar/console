@@ -26,14 +26,30 @@ func parseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
 }
 
+// rbacK8sClient defines the narrow interface for RBAC handler operations.
+// *k8s.MultiClusterClient satisfies this implicitly (Go structural typing).
+type rbacK8sClient interface {
+	HealthyClusters(ctx context.Context) ([]k8s.ClusterInfo, []k8s.ClusterInfo, error)
+	CountServiceAccountsAllClusters(ctx context.Context) (int, []string, error)
+	GetAllClusterPermissions(ctx context.Context) ([]models.ClusterPermissions, error)
+	GetAllK8sUsers(ctx context.Context, contextName string) ([]models.K8sUser, error)
+	ListClusterRoleBindings(ctx context.Context, contextName string, includeSystem bool) ([]models.K8sRoleBinding, error)
+	ListClusterRoles(ctx context.Context, contextName string, includeSystem bool) ([]models.K8sRole, error)
+	ListOpenShiftUsers(ctx context.Context, contextName string) ([]models.OpenShiftUser, error)
+	ListRoleBindings(ctx context.Context, contextName, namespace string) ([]models.K8sRoleBinding, error)
+	ListRoles(ctx context.Context, contextName, namespace string) ([]models.K8sRole, error)
+	ListServiceAccounts(ctx context.Context, contextName, namespace string) ([]models.K8sServiceAccount, error)
+}
+
 // RBACHandler handles RBAC and user management operations
 type RBACHandler struct {
 	store     store.Store
-	k8sClient *k8s.MultiClusterClient
+	k8sClient rbacK8sClient
 }
 
-// NewRBACHandler creates a new RBAC handler
-func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandler {
+// NewRBACHandler creates a new RBAC handler.
+// Accepts *k8s.MultiClusterClient or any implementation of rbacK8sClient.
+func NewRBACHandler(s store.Store, k8sClient rbacK8sClient) *RBACHandler {
 	return &RBACHandler{store: s, k8sClient: k8sClient}
 }
 
