@@ -97,8 +97,8 @@ func TestSummaryWithEmptySafeguards(t *testing.T) {
 	}
 }
 
-// TestSummaryPartialOnly verifies score is 50 when all safeguards are partial.
-func TestSummaryPartialOnly(t *testing.T) {
+// TestSummaryPartialOnly_AllPartial verifies score is 50 when all safeguards are partial.
+func TestSummaryPartialOnly_AllPartial(t *testing.T) {
 	e := &Engine{
 		safeguards: []Safeguard{
 			{ID: "s1", Status: "partial"},
@@ -141,7 +141,7 @@ func TestPHINamespaceComplianceCount(t *testing.T) {
 // TestDataFlowEncryptionCount verifies encrypted flow counting.
 func TestDataFlowEncryptionCount(t *testing.T) {
 	e := &Engine{
-		safeguards: []Safeguard{{ID: "s1", Status: "pass"}},
+		safeguards:    []Safeguard{{ID: "s1", Status: "pass"}},
 		phiNamespaces: nil,
 		dataFlows: []DataFlow{
 			{Source: "a", Destination: "b", Encrypted: true},
