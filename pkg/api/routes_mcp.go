@@ -4,6 +4,7 @@ import (
 "github.com/gofiber/fiber/v2"
 
 "github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 )
 
 // setupMCPRoutes registers all /mcp/* routes including SSE streaming
@@ -11,7 +12,7 @@ import (
 // is shared with setupRoutes for the /api/namespaces endpoint.
 func (s *Server) setupMCPRoutes(api fiber.Router, namespaces *handlers.NamespaceHandler) {
 // MCP handlers (cluster operations via kubestellar tools and direct k8s)
-mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
+mcpHandlers := mcp.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
 
 // MCP routes — SECURITY: All MCP routes require authentication.
 // NOTE: /mcp/clusters and /mcp/clusters/health are registered as

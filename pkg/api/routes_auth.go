@@ -12,6 +12,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
@@ -65,7 +67,7 @@ func (s *Server) reloadOAuth(clientID, clientSecret string) {
 		s.auth.handler.Stop()
 	}
 
-	s.auth.handler = handlers.NewAuthHandler(s.store, handlers.AuthConfig{
+	s.auth.handler = auth.NewAuthHandler(s.store, auth.AuthConfig{
 		GitHubClientID: clientID,
 		GitHubSecret:   clientSecret,
 		GitHubURL:      s.config.GitHubURL,
@@ -85,7 +87,7 @@ func (s *Server) reloadOAuth(clientID, clientSecret string) {
 
 // setupAuthRoutes registers auth, OAuth manifest, and shared rate-limiter setup.
 func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
-	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
+	auth := auth.NewAuthHandler(s.store, auth.AuthConfig{
 		GitHubClientID: s.config.GitHubClientID,
 		GitHubSecret:   s.config.GitHubSecret,
 		GitHubURL:      s.config.GitHubURL,
@@ -127,7 +129,7 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 	}
 
 	auth.SetHub(s.hub)
-	currentAuthHandler := func() *handlers.AuthHandler {
+	currentAuthHandler := func() *auth.AuthHandler {
 		s.auth.oauthMu.RLock()
 		defer s.auth.oauthMu.RUnlock()
 		return s.auth.handler

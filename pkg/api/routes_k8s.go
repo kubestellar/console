@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/workloads"
 )
 
 // setupK8sResourceRoutes registers Kubernetes resource routes including MCS,
@@ -52,7 +53,7 @@ func (s *Server) setupK8sResourceRoutes(api fiber.Router, aiLimiter fiber.Handle
 	api.Get("/topology", topologyHandlers.GetTopology)
 
 	// Workload routes
-	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
+	workloadHandlers := workloads.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
 	// Reload persisted cluster groups on startup (#7013) and start periodic
 	// refresh so multi-instance deployments converge on DB state (#10007).
 	workloadHandlers.LoadPersistedClusterGroups()

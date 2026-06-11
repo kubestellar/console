@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	"github.com/kubestellar/console/pkg/api/handlers/workloads"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -27,14 +29,14 @@ type serverLifecycle struct {
 }
 
 type authRuntime struct {
-	handler        *handlers.AuthHandler
+	handler        *auth.AuthHandler
 	failureTracker *middleware.FailureTracker
 	oauthMu        sync.RWMutex
 }
 
 type backgroundServices struct {
 	gpuUtilWorker    *GPUUtilizationWorker
-	workloadHandlers *handlers.WorkloadHandlers
+	workloadHandlers *workloads.WorkloadHandlers
 	rewardsHandler   *handlers.RewardsHandler
 }
 
