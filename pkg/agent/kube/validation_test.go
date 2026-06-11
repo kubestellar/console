@@ -1,4 +1,4 @@
-package agent
+package kube
 
 import (
 	"strings"
@@ -58,9 +58,9 @@ func TestValidateDNS1123Label(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateDNS1123Label(tt.field, tt.value)
+			err := ValidateDNS1123Label(tt.field, tt.value)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateDNS1123Label() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateDNS1123Label() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -121,9 +121,9 @@ func TestValidateKubeContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateKubeContext(tt.value)
+			err := ValidateKubeContext(tt.value)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateKubeContext() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateKubeContext() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

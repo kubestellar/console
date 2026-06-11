@@ -88,13 +88,13 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// opaque 500. Reject malformed input at the HTTP boundary so the UI can
 	// render a specific error and so we don't lean on the apiserver for
 	// validation.
-	if err := validateKubeContext(req.Cluster); err != nil {
+	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
 		slog.Error("invalid cluster for create namespace request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateDNS1123Label("name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
 		slog.Error("invalid namespace name for create request", "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})

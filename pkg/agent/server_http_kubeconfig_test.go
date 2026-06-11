@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
@@ -70,7 +71,7 @@ func TestHandleRenameContextHTTP_EmptyNames(t *testing.T) {
 
 func TestHandleRenameContextHTTP_InvalidOldContext(t *testing.T) {
 	s := newTestServer(t)
-	// Use a name with shell metacharacters that validateKubeContext rejects
+	// Use a name with shell metacharacters that kube.ValidateKubeContext rejects
 	req := httptest.NewRequest(http.MethodPost, "/rename-context", strings.NewReader(`{"oldName":"ctx;whoami","newName":"valid-name"}`))
 	rec := serveAndRecord(s.handleRenameContextHTTP, req)
 	if rec.Code != http.StatusBadRequest {

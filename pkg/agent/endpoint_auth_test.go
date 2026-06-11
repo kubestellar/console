@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -241,7 +242,7 @@ func newAuthTestServerWithToken() *Server {
 	}
 
 	return &Server{
-		kubectl:        &KubectlProxy{config: config},
+		kubectl:        &kube.KubectlProxy{config: config},
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     testTokenValue,
 		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
@@ -258,7 +259,7 @@ func newAuthTestServerNoToken() *Server {
 	}
 
 	return &Server{
-		kubectl:        &KubectlProxy{config: config},
+		kubectl:        &kube.KubectlProxy{config: config},
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     "", // No token — all requests pass validateToken
 		registry:       &Registry{providers: make(map[string]AIProvider)},

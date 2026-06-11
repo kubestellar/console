@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
@@ -148,7 +149,7 @@ type wsClient struct {
 type Server struct {
 	config         Config
 	upgrader       websocket.Upgrader
-	kubectl        *KubectlProxy
+	kubectl        *kube.KubectlProxy
 	k8sClient      *k8s.MultiClusterClient // For rich cluster data queries
 	registry       *Registry
 	clients        map[*websocket.Conn]*wsClient

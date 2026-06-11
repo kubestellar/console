@@ -1,4 +1,4 @@
-package agent
+package kube
 
 // kc-agent exec handler — Phase 3d-A of #7993.
 //

@@ -84,12 +84,12 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 
 	// SECURITY: Validate cluster and namespace against safe character sets to
 	// prevent SSRF and path-traversal via crafted query parameters (#7175).
-	if err := validateKubeContext(cluster); err != nil {
+	if err := kube.ValidateKubeContext(cluster); err != nil {
 		slog.Error("[Prometheus] invalid cluster parameter", "error", err)
 		writePrometheusError(w, http.StatusBadRequest, "invalid cluster parameter")
 		return
 	}
-	if err := validateDNS1123Label("namespace", namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", namespace); err != nil {
 		slog.Error("[Prometheus] invalid namespace parameter", "error", err)
 		writePrometheusError(w, http.StatusBadRequest, "invalid namespace parameter")
 		return
@@ -111,7 +111,7 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 		serviceName = prometheusServiceName
 	}
 	// SECURITY: Validate service name to prevent path traversal (#7175).
-	if err := validateDNS1123Label("service", serviceName); err != nil {
+	if err := kube.ValidateDNS1123Label("service", serviceName); err != nil {
 		slog.Error("[Prometheus] invalid service parameter", "error", err)
 		writePrometheusError(w, http.StatusBadRequest, "invalid service parameter")
 		return

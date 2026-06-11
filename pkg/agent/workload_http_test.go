@@ -131,7 +131,7 @@ func TestHandleScaleHTTP_RejectsInvalidNamespace(t *testing.T) {
 
 // TestHandleScaleHTTP_RejectsPathTraversalCluster guards against
 // targetClusters entries containing ".." path-traversal sequences slipping
-// past validateKubeContext.
+// past kube.ValidateKubeContext.
 func TestHandleScaleHTTP_RejectsPathTraversalCluster(t *testing.T) {
 	s := newWorkloadTestServer()
 
@@ -210,7 +210,7 @@ func TestHandleDeleteWorkloadHTTP_CORSMethodsHeader(t *testing.T) {
 }
 
 // TestHandleDeployWorkloadHTTP_RejectsInvalidSourceCluster confirms
-// validateKubeContext runs on sourceCluster.
+// kube.ValidateKubeContext runs on sourceCluster.
 func TestHandleDeployWorkloadHTTP_RejectsInvalidSourceCluster(t *testing.T) {
 	s := newWorkloadTestServer()
 
@@ -227,7 +227,7 @@ func TestHandleDeployWorkloadHTTP_RejectsInvalidSourceCluster(t *testing.T) {
 }
 
 // TestHandleDeleteWorkloadHTTP_RejectsInvalidCluster confirms
-// validateKubeContext runs on cluster.
+// kube.ValidateKubeContext runs on cluster.
 func TestHandleDeleteWorkloadHTTP_RejectsInvalidCluster(t *testing.T) {
 	s := newWorkloadTestServer()
 

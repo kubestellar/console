@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 )
@@ -117,20 +118,20 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateDNS1123Label("namespace", namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", namespace); err != nil {
 		slog.Error("invalid namespace for scale request", "namespace", namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateDNS1123Label("workloadName", name); err != nil {
+	if err := kube.ValidateDNS1123Label("workloadName", name); err != nil {
 		slog.Error("invalid workload name for scale request", "workloadName", name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range targetClusters {
-		if err := validateKubeContext(tc); err != nil {
+		if err := kube.ValidateKubeContext(tc); err != nil {
 			slog.Error("invalid target cluster for scale request", "targetCluster", tc, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
@@ -256,26 +257,26 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := validateDNS1123Label("workloadName", req.WorkloadName); err != nil {
+	if err := kube.ValidateDNS1123Label("workloadName", req.WorkloadName); err != nil {
 		slog.Error("invalid workload name for deploy request", "workloadName", req.WorkloadName, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 		slog.Error("invalid namespace for deploy request", "namespace", req.Namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateKubeContext(req.SourceCluster); err != nil {
+	if err := kube.ValidateKubeContext(req.SourceCluster); err != nil {
 		slog.Error("invalid source cluster for deploy request", "sourceCluster", req.SourceCluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range req.TargetClusters {
-		if err := validateKubeContext(tc); err != nil {
+		if err := kube.ValidateKubeContext(tc); err != nil {
 			slog.Error("invalid target cluster for deploy request", "targetCluster", tc, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
@@ -387,19 +388,19 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := validateKubeContext(req.Cluster); err != nil {
+	if err := kube.ValidateKubeContext(req.Cluster); err != nil {
 		slog.Error("invalid cluster for delete workload request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 		slog.Error("invalid namespace for delete workload request", "namespace", req.Namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateDNS1123Label("name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
 		slog.Error("invalid workload name for delete request", "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})

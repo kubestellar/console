@@ -20,7 +20,7 @@ const (
 	loopbackHostname            = "localhost"
 )
 
-func runKubeAPIPreflightChecks(kubectl *KubectlProxy) {
+func runKubeAPIPreflightChecks(kubectl *kube.KubectlProxy) {
 	if kubectl == nil {
 		return
 	}

@@ -135,7 +135,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// SECURITY: Validate cluster name against DNS-1123 to prevent command
 		// injection via crafted names that flow into exec.Command args (#7171).
-		if err := validateDNS1123Label("cluster name", req.Name); err != nil {
+		if err := kube.ValidateDNS1123Label("cluster name", req.Name); err != nil {
 			slog.Warn("[LocalClusters] invalid cluster name", "name", req.Name, "error", err)
 			http.Error(w, "invalid cluster name", http.StatusBadRequest)
 			return
@@ -196,7 +196,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// SECURITY: Validate cluster name against DNS-1123 (#7171).
-		if err := validateDNS1123Label("cluster name", name); err != nil {
+		if err := kube.ValidateDNS1123Label("cluster name", name); err != nil {
 			slog.Warn("[LocalClusters] invalid cluster name", "name", name, "error", err)
 			http.Error(w, "invalid cluster name", http.StatusBadRequest)
 			return
@@ -287,7 +287,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	// SECURITY: Validate cluster name against DNS-1123 (#7171).
-	if err := validateDNS1123Label("cluster name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("cluster name", req.Name); err != nil {
 		slog.Warn("[LocalClusters] invalid cluster name", "name", req.Name, "error", err)
 		http.Error(w, "invalid cluster name", http.StatusBadRequest)
 		return
@@ -406,12 +406,12 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
-	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
 		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
-	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
 		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
@@ -484,12 +484,12 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
-	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
 		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
-	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
 		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
@@ -558,12 +558,12 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 		return
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
-	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
 		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
-	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
 		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
@@ -632,12 +632,12 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
-	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("vcluster name", req.Name); err != nil {
 		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
 		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
-	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+	if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
 		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
