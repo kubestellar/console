@@ -1,0 +1,59 @@
+name: Lint Warning Gate
+
+# Prevents React Compiler lint warnings from regressing.
+# Tracks warning count against a checked-in baseline and fails PRs that exceed it.
+# See issue #17491 for context.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'web/eslint.config.*'
+      - '.github/workflows/lint-warning-gate.yml'
+      - '.lint-warning-baseline'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-warnings:
+    name: Lint warning regression check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci --ignore-scripts
+
+      - name: Count lint warnings
+        id: count
+        run: |
+          set +e
+          RESULT=$(npx eslint . --format json 2>/dev/null)
+          WARNINGS=$(echo "$RESULT" | jq '[.[].messages[] | select(.severity == 1)] | length')
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+          echo "ℹ️ Current lint warning count: $WARNINGS"
+
+      - name: Check against baseline
+        run: |
+          BASELINE=$(cat ../.lint-warning-baseline 2>/dev/null || echo 800)
+          WARNINGS=${{ steps.count.outputs.warnings }}
+          echo "Baseline: $BASELINE | Current: $WARNINGS"
+          if [ "$WARNINGS" -gt "$BASELINE" ]; then
+            echo "::error::Lint warning count regressed: $WARNINGS > $BASELINE"
+            echo "If you've fixed warnings, update .lint-warning-baseline to the new count."
+            exit 1
+          fi
+          if [ "$WARNINGS" -lt "$BASELINE" ]; then
+            echo "::notice::🎉 Warnings decreased ($WARNINGS < $BASELINE). Consider updating .lint-warning-baseline to $WARNINGS."
+          fi
