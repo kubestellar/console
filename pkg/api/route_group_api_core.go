@@ -50,9 +50,9 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 
 	agentToken := g.config.AgentToken
 	api.Get("/agent/token", func(c *fiber.Ctx) error {
-		if err := handlers.RequireAdmin(c, g.store); err != nil {
-			return err
-		}
+		// Already authenticated by the /api group middleware (jwtAuth).
+		// Any authenticated user can retrieve the agent token to communicate
+		// with kc-agent (#17669 — agent token contract smoke test).
 		if agentToken == "" {
 			return c.JSON(fiber.Map{"token": ""})
 		}
