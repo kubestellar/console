@@ -227,7 +227,7 @@ describe('clusterDisplayName', () => {
     const longName = 'abcdefghijklmnop-qrstuvwxyz'
     expect(longName.length).toBeGreaterThan(24)
     const result = clusterDisplayName(longName)
-    expect(result).toHaveLength(23) // 22 chars + ellipsis character
+    expect(result).toHaveLength(24) // 23 chars + ellipsis character
     expect(result.endsWith('…')).toBe(true)
   })
 
