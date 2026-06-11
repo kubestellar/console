@@ -1,4 +1,4 @@
-package k8s
+package gpu
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubestellar/console/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,7 +20,7 @@ var gpuOperatorNamespaces = []string{
 
 // GetGPUNodeHealth returns proactive health status for all GPU nodes in a cluster.
 // It checks node readiness, scheduling, GPU operator pod health, stuck pods, and GPU reset events.
-func (m *MultiClusterClient) GetGPUNodeHealth(ctx context.Context, contextName string) ([]GPUNodeHealthStatus, error) {
+func (m *k8s.MultiClusterClient) GetGPUNodeHealth(ctx context.Context, contextName string) ([]GPUNodeHealthStatus, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err

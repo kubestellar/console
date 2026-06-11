@@ -1,20 +1,21 @@
-package k8s
+package gpu
 
 import (
 "context"
 "strings"
 
+"github.com/kubestellar/console/pkg/k8s"
 metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (m *MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contextName string) (*NVIDIAOperatorStatus, error) {
+func (m *k8s.MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contextName string) (*k8s.NVIDIAOperatorStatus, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
 	}
 
-	status := &NVIDIAOperatorStatus{
+	status := &k8s.NVIDIAOperatorStatus{
 		Cluster: contextName,
 	}
 
@@ -29,7 +30,7 @@ func (m *MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contex
 	clusterPolicies, err := dynamicClient.Resource(clusterPolicyGVR).List(ctx, metav1.ListOptions{})
 	if err == nil && len(clusterPolicies.Items) > 0 {
 		cp := clusterPolicies.Items[0]
-		gpuInfo := &GPUOperatorInfo{
+		gpuInfo := &k8s.GPUOperatorInfo{
 			Installed: true,
 		}
 
@@ -71,7 +72,7 @@ func (m *MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contex
 		if conditions, found, _ := unstructuredNestedSlice(cp.Object, "status", "conditions"); found {
 			for _, cond := range conditions {
 				if condMap, ok := cond.(map[string]interface{}); ok {
-					component := OperatorComponent{}
+					component := k8s.OperatorComponent{}
 					if t, ok := condMap["type"].(string); ok {
 						component.Name = t
 					}
@@ -106,7 +107,7 @@ func (m *MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contex
 	nicPolicies, err := dynamicClient.Resource(nicClusterPolicyGVR).List(ctx, metav1.ListOptions{})
 	if err == nil && len(nicPolicies.Items) > 0 {
 		ncp := nicPolicies.Items[0]
-		netInfo := &NetworkOperatorInfo{
+		netInfo := &k8s.NetworkOperatorInfo{
 			Installed: true,
 		}
 
@@ -133,7 +134,7 @@ func (m *MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contex
 		if conditions, found, _ := unstructuredNestedSlice(ncp.Object, "status", "conditions"); found {
 			for _, cond := range conditions {
 				if condMap, ok := cond.(map[string]interface{}); ok {
-					component := OperatorComponent{}
+					component := k8s.OperatorComponent{}
 					if t, ok := condMap["type"].(string); ok {
 						component.Name = t
 					}

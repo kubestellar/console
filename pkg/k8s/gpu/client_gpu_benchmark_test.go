@@ -1,10 +1,11 @@
-package k8s
+package gpu
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +64,7 @@ func BenchmarkGetGPUNodes(b *testing.B) {
 		_, _ = client.CoreV1().Pods("default").Create(context.Background(), &pod, metav1.CreateOptions{})
 	}
 
-	m := &MultiClusterClient{}
+	m := &k8s.MultiClusterClient{}
 	m.InjectClient("test-cluster", client)
 
 	ctx := context.Background()
