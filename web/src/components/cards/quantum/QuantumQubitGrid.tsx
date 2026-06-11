@@ -210,6 +210,10 @@ export const QuantumQubitGrid: React.FC = () => {
   //   - Locked: keep the user's choice. EXCEPTION: if the new qubit count
   //     exceeds the locked mask's capacity, auto-release the lock and pick
   //     the next-larger mask so qubits aren't silently truncated.
+  //   - If the qubit count exceeds even the largest mask in MASK_OPTIONS,
+  //     fall back to the largest available mask. This prevents leaving a
+  //     stale (smaller) selectedMask which would silently truncate; the
+  //     "(too small)" option label communicates the overflow to the user.
   useEffect(() => {
     if (!qubitData) return
 
@@ -222,6 +226,13 @@ export const QuantumQubitGrid: React.FC = () => {
     const best = MASK_OPTIONS.find(m => m.maxQubits >= qubitData.num_qubits)
     if (best) {
       setSelectedMask(best.key)
+      return
+    }
+
+    // No mask fits — pick the largest as the least-truncating fallback.
+    const largest = MASK_OPTIONS.reduce((a, b) => (b.maxQubits > a.maxQubits ? b : a))
+    if (largest && largest.key !== selectedMask) {
+      setSelectedMask(largest.key)
     }
   }, [qubitData, maskLocked, selectedMask])
 
@@ -303,11 +314,12 @@ export const QuantumQubitGrid: React.FC = () => {
 
         {/* Display Mask Selector */}
         <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+          <label htmlFor="quantum-qubit-grid-mask-select" className="text-xs font-semibold text-gray-600 dark:text-gray-400">
             {t('cards:quantumQubitGrid.displayMask')}
           </label>
           <div className="flex items-center gap-2">
             <select
+              id="quantum-qubit-grid-mask-select"
               value={selectedMask}
               onChange={e => setSelectedMask(e.target.value as MaskKey)}
               disabled={maskLocked}

@@ -90,12 +90,7 @@ test.describe('Quantum dashboard cards', () => {
     await expectCardScreenshot(circuitCard, 'app-quantum-circuit-card-zoom-15.png')
   })
 
-  // TODO: add `workload banner (not detected) renders amber state with IBM
-  // Quantum learn-more links` — deferred because the visual-baseline regen
-  // path is blocked: upstream main has 34 TS errors in src/lib/sseClient.ts,
-  // src/lib/api.ts, and src/routes/AppRoutes.tsx (await/async mismatches)
-  // that prevent `npm run build` from succeeding, which in turn prevents
-  // Playwright's webServer from starting. The banner DOM has the
-  // `data-testid="quantum-workload-banner-not-detected"` attribute ready
-  // for the test once the upstream blocker is resolved.
+  // TODO(#17750): add visual test for the amber QuantumWorkloadBanner state
+  // (data-testid="quantum-workload-banner-not-detected" already present).
+  // Deferred until the upstream build-on-main blocker is resolved.
 })
