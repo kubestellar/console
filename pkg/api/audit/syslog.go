@@ -19,8 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"log/syslog"
+	"net"
 	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // syslogDialTimeout bounds the initial network dial to the syslog collector.
@@ -53,6 +56,10 @@ type SyslogDestination struct {
 	w       *syslog.Writer
 }
 
+// syslogHostValidator can be replaced in tests to bypass the SSRF check for
+// loopback test servers. Production code always uses ssrf.ValidateHost.
+var syslogHostValidator = ssrf.ValidateHost
+
 // NewSyslogDestination builds a SyslogDestination and opens the initial
 // connection. The addr is required; network defaults to "udp" and accepts
 // "udp" or "tcp". An empty tag falls back to syslogDefaultTag.
@@ -71,6 +78,16 @@ func NewSyslogDestination(network, addr, tag string) (*SyslogDestination, error)
 	}
 	if tag == "" {
 		tag = syslogDefaultTag
+	}
+	// SSRF protection: reject addresses that resolve to private/internal IPs.
+	// Mirrors the guard applied by the Webhook, Splunk, and Elastic adapters (#17536).
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// addr has no port component — treat the whole value as the host.
+		host = addr
+	}
+	if err := syslogHostValidator(host); err != nil {
+		return nil, fmt.Errorf("syslog destination: %w", err)
 	}
 	w, err := syslog.Dial(network, addr, syslogDefaultPriority, tag)
 	if err != nil {

@@ -15,6 +15,12 @@ import (
 )
 
 func TestSyslogDestination_Send(t *testing.T) {
+	// Bypass SSRF guard for the loopback test server — production code uses
+	// ssrf.ValidateHost; this override is scoped to the test only.
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
 	// Start a local TCP server to act as the syslog receiver
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
