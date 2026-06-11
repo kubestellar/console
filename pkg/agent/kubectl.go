@@ -1,3 +1,7 @@
+// Deprecated: This file is being migrated to pkg/agent/kube/ as part of the
+// pkg/agent decomposition (#17124). New code should import
+// "github.com/kubestellar/console/pkg/agent/kube" directly.
+// See pkg/agent/kube/doc.go for the sub-package documentation.
 package agent
 
 import (
