@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/gpu"
 )
 
 // GetGPUNodes returns nodes with GPU resources
@@ -29,7 +30,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 			}
 
 			allNodes, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
-				func(ctx context.Context, clusterName string) ([]k8s.GPUNode, error) {
+				func(ctx context.Context, clusterName string) ([]gpu.GPUNode, error) {
 					return h.k8sClient.GetGPUNodes(ctx, clusterName)
 				})
 			return c.JSON(errTracker.annotate(fiber.Map{"nodes": allNodes, "source": "k8s"}))
@@ -43,7 +44,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 			return handleK8sError(c, err)
 		}
 		if nodes == nil {
-			nodes = make([]k8s.GPUNode, 0)
+			nodes = make([]gpu.GPUNode, 0)
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -70,7 +71,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 			}
 
 			allNodes, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
-				func(ctx context.Context, clusterName string) ([]k8s.GPUNodeHealthStatus, error) {
+				func(ctx context.Context, clusterName string) ([]gpu.GPUNodeHealthStatus, error) {
 					return h.k8sClient.GetGPUNodeHealth(ctx, clusterName)
 				})
 			return c.JSON(errTracker.annotate(fiber.Map{"nodes": allNodes, "source": "k8s"}))
@@ -84,7 +85,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 			return handleK8sError(c, err)
 		}
 		if nodes == nil {
-			nodes = make([]k8s.GPUNodeHealthStatus, 0)
+			nodes = make([]gpu.GPUNodeHealthStatus, 0)
 		}
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
@@ -95,7 +96,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 // GetGPUHealthCronJobStatus returns the installation status of the GPU health CronJob
 func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 	if isDemoMode(c) {
-		return c.JSON(fiber.Map{"status": k8s.GPUHealthCronJobStatus{CanInstall: true}})
+		return c.JSON(fiber.Map{"status": gpu.GPUHealthCronJobStatus{CanInstall: true}})
 	}
 
 	cluster := c.Query("cluster")
@@ -132,7 +133,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 // This is the endpoint used by the AlertsContext to evaluate gpu_health_cronjob conditions.
 func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 	if isDemoMode(c) {
-		return c.JSON(fiber.Map{"results": []k8s.GPUHealthCheckResult{}})
+		return c.JSON(fiber.Map{"results": []gpu.GPUHealthCheckResult{}})
 	}
 
 	cluster := c.Query("cluster")
@@ -178,13 +179,13 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 			}
 
 			allStatus, errTracker := queryAllClusters(c.Context(), clusters,
-				func(ctx context.Context, clusterName string) ([]*k8s.NVIDIAOperatorStatus, error) {
+				func(ctx context.Context, clusterName string) ([]*gpu.NVIDIAOperatorStatus, error) {
 					status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, clusterName)
 					if err != nil {
 						return nil, err
 					}
 					if status.GPUOperator != nil || status.NetworkOperator != nil {
-						return []*k8s.NVIDIAOperatorStatus{status}, nil
+						return []*gpu.NVIDIAOperatorStatus{status}, nil
 					}
 					return nil, nil
 				})
@@ -198,7 +199,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 		if err != nil {
 			return handleK8sError(c, err)
 		}
-		return c.JSON(fiber.Map{"operators": []*k8s.NVIDIAOperatorStatus{status}, "source": "k8s"})
+		return c.JSON(fiber.Map{"operators": []*gpu.NVIDIAOperatorStatus{status}, "source": "k8s"})
 	}
 
 	return errNoClusterAccess(c)

@@ -1,4 +1,4 @@
-package k8s
+package gpu
 
 // AcceleratorType represents the category of accelerator (GPU, TPU, AIU, XPU)
 type AcceleratorType string

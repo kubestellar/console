@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/gpu"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -27,7 +28,7 @@ func (s *Server) handleNodesStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 // handleGPUNodesStreamSSE streams GPU node data per cluster via Server-Sent Events.
 func (s *Server) handleGPUNodesStreamSSE(w http.ResponseWriter, r *http.Request) {
-	handleClusterResourceStreamSSE(s, w, r, "gpu-nodes", "nodes", func(ctx context.Context, cluster string) ([]k8s.GPUNode, error) {
+	handleClusterResourceStreamSSE(s, w, r, "gpu-nodes", "nodes", func(ctx context.Context, cluster string) ([]gpu.GPUNode, error) {
 		return s.k8sClient.GetGPUNodes(ctx, cluster)
 	})
 }

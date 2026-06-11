@@ -11,6 +11,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/gpu"
 )
 
 const (
@@ -116,7 +117,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 	defer cancel()
 
-	allNodes := make([]k8s.GPUNode, 0)
+	allNodes := make([]gpu.GPUNode, 0)
 	const resourceName = "gpu-nodes"
 
 	if cluster != "" {
@@ -142,7 +143,7 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		allNodes = fanOutClusters(s, ctx, resourceName, clusters, func(clusterCtx context.Context, clusterName string) ([]k8s.GPUNode, error) {
+		allNodes = fanOutClusters(s, ctx, resourceName, clusters, func(clusterCtx context.Context, clusterName string) ([]gpu.GPUNode, error) {
 			return s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
 		})
 	}

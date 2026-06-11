@@ -1,14 +1,52 @@
-package k8s
+package gpu
 
 import (
-"context"
-"strings"
+	"context"
+	"strings"
 
-metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/kubestellar/console/pkg/k8s"
 )
 
-func (m *MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contextName string) (*NVIDIAOperatorStatus, error) {
+// NVIDIAOperatorStatus represents the status of NVIDIA GPU and Network operators
+type NVIDIAOperatorStatus struct {
+	Cluster         string               `json:"cluster"`
+	GPUOperator     *GPUOperatorInfo     `json:"gpuOperator,omitempty"`
+	NetworkOperator *NetworkOperatorInfo `json:"networkOperator,omitempty"`
+}
+
+// GPUOperatorInfo represents NVIDIA GPU Operator ClusterPolicy status
+type GPUOperatorInfo struct {
+	Installed     bool                `json:"installed"`
+	Version       string              `json:"version,omitempty"`
+	State         string              `json:"state,omitempty"` // ready, notReady, disabled
+	Ready         bool                `json:"ready"`
+	Components    []OperatorComponent `json:"components,omitempty"`
+	DriverVersion string              `json:"driverVersion,omitempty"`
+	CUDAVersion   string              `json:"cudaVersion,omitempty"`
+	Namespace     string              `json:"namespace,omitempty"`
+}
+
+// NetworkOperatorInfo represents NVIDIA Network Operator NicClusterPolicy status
+type NetworkOperatorInfo struct {
+	Installed  bool                `json:"installed"`
+	Version    string              `json:"version,omitempty"`
+	State      string              `json:"state,omitempty"` // ready, notReady, disabled
+	Ready      bool                `json:"ready"`
+	Components []OperatorComponent `json:"components,omitempty"`
+	Namespace  string              `json:"namespace,omitempty"`
+}
+
+// OperatorComponent represents a component of the NVIDIA operators
+type OperatorComponent struct {
+	Name   string `json:"name"`
+	Status string `json:"status"` // ready, pending, error, disabled
+	Reason string `json:"reason,omitempty"`
+}
+
+func (m *k8s.MultiClusterClient) GetNVIDIAOperatorStatus(ctx context.Context, contextName string) (*NVIDIAOperatorStatus, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err

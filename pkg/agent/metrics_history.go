@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/gpu"
 	"github.com/kubestellar/console/pkg/safego"
 )
 

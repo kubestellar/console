@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/gpu"
 )
 
 // isDemoMode checks if the request has the X-Demo-Mode header set to "true"
@@ -310,8 +311,8 @@ func getDemoNetworkPolicies() []k8s.NetworkPolicy {
 }
 
 // Demo GPU nodes
-func getDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
-	return []k8s.GPUNodeHealthStatus{
+func getDemoGPUNodeHealth() []gpu.GPUNodeHealthStatus {
+	return []gpu.GPUNodeHealthStatus{
 		{
 			NodeName: "gpu-node-1", Cluster: "vllm-gpu-cluster", Status: "healthy",
 			GPUCount: 8, GPUType: "NVIDIA A100-SXM4-80GB",
@@ -360,8 +361,8 @@ func getDemoGPUNodeHealth() []k8s.GPUNodeHealthStatus {
 	}
 }
 
-func getDemoGPUNodes() []k8s.GPUNode {
-	return []k8s.GPUNode{
+func getDemoGPUNodes() []gpu.GPUNode {
+	return []gpu.GPUNode{
 		{Name: "gpu-node-1", Cluster: "vllm-gpu-cluster", GPUCount: 8, GPUType: "nvidia.com/gpu", GPUAllocated: 6, GPUMemoryMB: 81920, GPUFamily: "ampere", Manufacturer: "NVIDIA"},
 		{Name: "gpu-node-2", Cluster: "vllm-gpu-cluster", GPUCount: 8, GPUType: "nvidia.com/gpu", GPUAllocated: 4, GPUMemoryMB: 81920, GPUFamily: "ampere", Manufacturer: "NVIDIA"},
 		{Name: "gpu-node-3", Cluster: "eks-prod-us-east-1", GPUCount: 4, GPUType: "nvidia.com/gpu", GPUAllocated: 2, GPUMemoryMB: 16384, GPUFamily: "volta", Manufacturer: "NVIDIA"},
@@ -435,8 +436,8 @@ func getDemoLimaInstances() []LimaInstanceSummary {
 }
 
 // Demo NVIDIA Operator Status
-func getDemoNVIDIAOperatorStatus() []*k8s.NVIDIAOperatorStatus {
-	return []*k8s.NVIDIAOperatorStatus{
+func getDemoNVIDIAOperatorStatus() []*gpu.NVIDIAOperatorStatus {
+	return []*gpu.NVIDIAOperatorStatus{
 		{
 			Cluster: "vllm-gpu-cluster",
 			GPUOperator: &k8s.GPUOperatorInfo{
