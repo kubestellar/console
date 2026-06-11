@@ -26,6 +26,8 @@ type Mission struct {
 	ProviderPolicy string     `json:"providerPolicy"`
 	MemoryScope    string     `json:"memoryScope"`
 	Enabled        bool       `json:"enabled"`
+	ExecutionMode  string     `json:"executionMode,omitempty"`
+	Tools          []string   `json:"tools,omitempty"`
 	ToolBindings   []string   `json:"toolBindings"`
 	LastRunAt      *time.Time `json:"lastRunAt,omitempty"`
 	NextRunAt      *time.Time `json:"nextRunAt,omitempty"`

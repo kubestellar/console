@@ -366,7 +366,7 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 
 ` + clusterContext
 
-	chatReq := &agent.ChatRequest{
+	chatReq := &ai.ChatRequest{
 		Prompt:       req.Prompt,
 		SystemPrompt: systemPrompt,
 	}

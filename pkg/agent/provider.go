@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"context"
 
 	"github.com/kubestellar/console/pkg/ai"
 )

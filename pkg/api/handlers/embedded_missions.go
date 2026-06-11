@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"io/fs"
 	"net/http"
 	"path"
 	"strings"

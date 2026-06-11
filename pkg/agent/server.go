@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"github.com/kubestellar/console/pkg/agent/updater"
-	"github.com/kubestellar/console/pkg/agent/workers"
 	"context"
 	"fmt"
 	"log/slog"

@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
-	"github.com/kubestellar/console/pkg/api/handlers/stellar"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
@@ -15,13 +14,13 @@ import (
 // stellarRouteGroup wires the Stellar handler with only the dependencies its
 // routes and background workers need.
 type stellarRouteGroup struct {
-	store     stellar.Store
+	store     handlers.Store
 	userStore store.Store
 	k8sClient *k8s.MultiClusterClient
 	done      <-chan struct{}
 }
 
-func newStellarRouteGroup(stelStore stellar.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
+func newStellarRouteGroup(stelStore handlers.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
 	return &stellarRouteGroup{
 		store:     stelStore,
 		userStore: userStore,
@@ -31,7 +30,7 @@ func newStellarRouteGroup(stelStore stellar.Store, k8sClient *k8s.MultiClusterCl
 }
 
 func (g *stellarRouteGroup) Register(api fiber.Router) {
-	handler := stellar.NewHandler(g.store, g.k8sClient, stellar.WithUserStore(g.userStore))
+	handler := handlers.NewHandler(g.store, g.k8sClient, handlers.WithUserStore(g.userStore))
 	g.startWorkers(handler)
 
 	api.Get("/stellar/preferences", handler.GetPreferences)
@@ -101,7 +100,7 @@ func (g *stellarRouteGroup) Register(api fiber.Router) {
 	api.Get("/stellar/health", handler.Health)
 }
 
-func (g *stellarRouteGroup) startWorkers(handler *stellar.Handler) {
+func (g *stellarRouteGroup) startWorkers(handler *handlers.Handler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	safego.GoWith("stellar-done-watcher", func() {
 		<-g.done

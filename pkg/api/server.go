@@ -218,7 +218,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Initialize persistent settings manager
 	settingsManager := settings.GetSettingsManager()
-	if err := settingsManager.MigrateFromConfigYaml(ai.GetConfigManager()); err != nil {
+	if err := settingsManager.MigrateFromConfigYaml(ai.GetConfigManager().(settings.ConfigProvider)); err != nil {
 		slog.Error("[Server] failed to migrate settings from config.yaml", "error", err)
 	}
 	slog.Info("[Server] settings manager initialized", "path", settingsManager.GetSettingsPath())

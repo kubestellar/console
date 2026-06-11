@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/fileutil"
+	"github.com/kubestellar/console/pkg/ai"
 )
 
 func (s *Server) checkClaudeAvailable() bool {
@@ -360,7 +361,7 @@ type KeyStatus struct {
 type KeysStatusResponse struct {
 	Keys                []KeyStatus    `json:"keys"`
 	ConfigPath          string         `json:"configPath"`
-	RegisteredProviders []ProviderInfo `json:"registeredProviders"`
+	RegisteredProviders []ai.ProviderInfo `json:"registeredProviders"`
 }
 
 // SetKeyRequest is the request body for POST /settings/keys.
