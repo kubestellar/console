@@ -699,6 +699,13 @@ func (s *SQLiteStore) migrate() error {
 			PRIMARY KEY (user_id, observation_id)
 		)`,
 		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_seen_user ON stellar_observation_seen(user_id, seen_at DESC)",
+
+		// #17593: Encrypt OAuth client_secret at rest using AES-256-GCM.
+		// Store encrypted data in separate columns; the old plaintext column
+		// is kept for backward compatibility during migration but will be
+		// cleared after successful encryption.
+		"ALTER TABLE oauth_credentials ADD COLUMN client_secret_ciphertext TEXT",
+		"ALTER TABLE oauth_credentials ADD COLUMN client_secret_iv TEXT",
 	}
 	for i, migration := range migrations {
 		version := i + 1
