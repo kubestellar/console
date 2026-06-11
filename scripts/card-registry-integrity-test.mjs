@@ -8,6 +8,7 @@
  *   3. Domain demo-data sets reference registered card types
  *   4. DEMO_EXEMPT_CARDS entries reference registered card types
  *   5. The barrel export remains in place for backward compatibility
+ *   6. Component identifiers resolve to imports or local constants
  */
 
 import path from 'path'
@@ -33,7 +34,6 @@ const DOMAIN_FILES = [
 
 const INDEX_FILE = resolve(CARDS_DIR, 'cardRegistry.index.ts')
 const BARREL_FILE = resolve(CARDS_DIR, 'cardRegistry.ts')
-const IMPORTS_FILE = resolve(CARDS_DIR, 'cardRegistry.imports.ts')
 const METADATA_FILE = resolve(CARDS_DIR, 'cardMetadata.ts')
 const DESCRIPTORS_FILE = resolve(CARDS_DIR, 'cardDescriptors.registry.ts')
 const QUANTUM_FILE = resolve(CARDS_DIR, 'cardRegistry.quantum.ts')
@@ -56,20 +56,19 @@ function extractQuotedStrings(text) {
   return [...text.matchAll(/'([^']+)'/g)].map(match => match[1])
 }
 
-function extractImportsExportNames(text) {
-  const block = extractBlock(text, 'export {', '}')
-  return new Set([...block.matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)].map(match => match[1]))
-}
-
 function extractLocalConstNames(text) {
   return new Set([...text.matchAll(/const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/g)].map(match => match[1]))
 }
 
-function extractImportedComponentNames(text) {
-  const block = extractBlock(text, "} from './cardRegistry.imports'", '')
-  const match = text.match(/import \{([\s\S]*?)\} from '\.\/cardRegistry\.imports'/)
-  if (!match) return new Set()
-  return new Set([...match[1].matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)].map(m => m[1]))
+function extractDirectImportNames(text) {
+  // Match standard imports: import { Foo } from './Foo'
+  const names = new Set()
+  for (const match of text.matchAll(/import\s+\{([^}]+)\}\s+from\s+'/g)) {
+    for (const name of match[1].matchAll(/\b([A-Z][A-Za-z0-9_]*)\b/g)) {
+      names.add(name[1])
+    }
+  }
+  return names
 }
 
 function extractObjectBody(text, objectName) {
@@ -137,10 +136,10 @@ function resolveImportTarget(fromFile, relativeImport) {
   return candidates.find(existsSync)
 }
 
-function validateDomainFile(fileName, availableImportNames) {
+function validateDomainFile(fileName) {
   const filePath = resolve(CARDS_DIR, fileName)
   const text = read(filePath)
-  const importedNames = extractImportedComponentNames(text)
+  const importedNames = extractDirectImportNames(text)
   const localConstNames = extractLocalConstNames(text)
   const componentEntries = extractComponentEntries(text)
 
@@ -148,9 +147,6 @@ function validateDomainFile(fileName, availableImportNames) {
     if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
       if (!(importedNames.has(value) || localConstNames.has(value))) {
         errors.push(`${fileName}: component '${key}' references unknown identifier '${value}'`)
-      }
-      if (importedNames.has(value) && !availableImportNames.has(value)) {
-        errors.push(`${fileName}: component '${key}' imports '${value}' which is not exported by cardRegistry.imports.ts`)
       }
     }
 
@@ -179,14 +175,13 @@ function validateDomainFile(fileName, availableImportNames) {
   }
 }
 
-const availableImportNames = extractImportsExportNames(read(IMPORTS_FILE))
 const registered = new Set()
 const demoKeys = new Set()
 const liveKeys = new Set()
 const perDomainCounts = []
 
 for (const fileName of DOMAIN_FILES) {
-  const { componentKeys, demoKeys: fileDemoKeys, liveKeys: fileLiveKeys } = validateDomainFile(fileName, availableImportNames)
+  const { componentKeys, demoKeys: fileDemoKeys, liveKeys: fileLiveKeys } = validateDomainFile(fileName)
   perDomainCounts.push(`${fileName}:${componentKeys.length}`)
   for (const key of componentKeys) {
     if (registered.has(key)) {
