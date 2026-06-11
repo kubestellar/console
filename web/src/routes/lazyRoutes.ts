@@ -24,13 +24,11 @@ import { Clusters } from '../components/clusters/Clusters'
 // the blank full-screen placeholder that nightly UX tests caught on cold loads.
 import { MissionLandingPage } from '../components/missions/MissionLandingPage'
 import { EmbedCard } from '../pages/EmbedCard'
-import { Welcome } from '../pages/Welcome'
 import { FromLens } from '../pages/FromLens'
 import { FromHeadlamp } from '../pages/FromHeadlamp'
 import { FromHolmesGPT } from '../pages/FromHolmesGPT'
 import { FeatureInspektorGadget } from '../pages/FeatureInspektorGadget'
 import { FeatureKagent } from '../pages/FeatureKagent'
-import { WhiteLabel } from '../pages/WhiteLabel'
 import NotFound from '../components/NotFound'
 
 export {
@@ -40,15 +38,18 @@ export {
   Clusters,
   MissionLandingPage,
   EmbedCard,
-  Welcome,
   FromLens,
   FromHeadlamp,
   FromHolmesGPT,
   FeatureInspektorGadget,
   FeatureKagent,
-  WhiteLabel,
   NotFound,
 }
+
+// Lazy-load Welcome (363 lines) and WhiteLabel (629 lines) — these are
+// non-critical public pages that benefit from code-splitting.
+export const Welcome = safeLazy(() => import('../pages/Welcome'), 'Welcome')
+export const WhiteLabel = safeLazy(() => import('../pages/WhiteLabel'), 'WhiteLabel')
 
 // Lazy-load DrillDownModal — the drilldown views (~64 KB) are only needed
 // when a user clicks into a card detail, not on initial page render.
