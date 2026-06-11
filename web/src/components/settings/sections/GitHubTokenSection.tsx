@@ -75,7 +75,7 @@ export function buildGitHubTokenSaveError(status: number, detail?: string | null
 
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

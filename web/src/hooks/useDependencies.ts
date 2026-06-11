@@ -45,7 +45,7 @@ export class DependencyResolutionRateLimitError extends Error {
 }
 
 function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

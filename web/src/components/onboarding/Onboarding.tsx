@@ -136,7 +136,7 @@ export function Onboarding() {
     const fallbackErrorMessage = t('onboarding.errorFallback', {
       defaultValue: 'Failed to complete onboarding. Please try again.',
     })
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     const isDemoMode = token === DEMO_TOKEN_VALUE
 
     setIsSubmitting(true)

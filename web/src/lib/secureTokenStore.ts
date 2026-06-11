@@ -94,6 +94,39 @@ export async function setToken(key: string, value: string, ttlMs: number = DEFAU
   }
 }
 
+export function getTokenSync(key: string, storage?: Storage): string | null {
+  const activeStorage = getStorage(storage)
+  if (!activeStorage) {
+    return null
+  }
+
+  let storedValue: string | null
+  try {
+    storedValue = activeStorage.getItem(key)
+  } catch {
+    return null
+  }
+
+  if (!storedValue) {
+    return null
+  }
+
+  const parsedValue = parseStoredValue(storedValue)
+  if (typeof parsedValue === 'string') {
+    return parsedValue
+  }
+
+  if (!parsedValue) {
+    return null
+  }
+
+  if (parsedValue.expiresAt <= Date.now()) {
+    return null
+  }
+
+  return parsedValue.token
+}
+
 export async function getToken(key: string, storage?: Storage): Promise<string | null> {
   const activeStorage = getStorage(storage)
   if (!activeStorage) {

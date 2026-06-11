@@ -85,7 +85,7 @@ export interface UseWorkloadsResult {
 }
 
 export function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

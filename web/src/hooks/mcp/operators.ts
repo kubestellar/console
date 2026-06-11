@@ -140,7 +140,7 @@ export function useOperators(cluster?: string) {
       setIsRefreshing(true)
 
       // Try SSE streaming first for progressive rendering
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const sseAvailable = token && token !== 'demo-token'
 
       if (sseAvailable) {
@@ -320,7 +320,7 @@ export function useOperatorSubscriptions(cluster?: string) {
       setIsRefreshing(true)
 
       // Try SSE streaming first — backend handles multi-cluster parallelism
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const sseAvailable = token && token !== 'demo-token'
 
       if (sseAvailable) {

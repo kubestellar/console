@@ -143,7 +143,7 @@ function saveToCache<T>(key: string, data: T): void {
 // ============================================================================
 
 function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

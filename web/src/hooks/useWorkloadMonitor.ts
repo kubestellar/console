@@ -7,7 +7,7 @@ import type {
 import { DEFAULT_REFRESH_MS } from '../types/workloadMonitor'
 import { getStoredAuthToken } from '../lib/authToken'
 function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

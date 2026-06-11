@@ -41,19 +41,19 @@ describe('token retrieval fallback behavior', () => {
     it('returns token when secure store contains a valid token', () => {
       setStoredAuthToken('secure-stored-token')
 
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       expect(token).toBe('secure-stored-token')
     })
 
     it('returns null when no token is stored anywhere', () => {
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       expect(token).toBeNull()
     })
 
     it('falls back to legacy localStorage token when secure store is empty', () => {
       localStorage.setItem(STORAGE_KEY_TOKEN, 'legacy-token')
 
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       expect(token).toBe('legacy-token')
     })
   })

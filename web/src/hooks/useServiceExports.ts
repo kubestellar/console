@@ -57,7 +57,7 @@ interface CachedData {
 // ============================================================================
 
 function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   const headers: Record<string, string> = { 'Accept': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

@@ -82,7 +82,7 @@ function saveGroups(groups: ClusterGroup[]) {
 }
 
 function authHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

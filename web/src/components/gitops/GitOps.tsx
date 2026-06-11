@@ -197,7 +197,7 @@ export function GitOps() {
       // sequential requests, reducing total latency significantly.
       // #7993 Phase 4: drift detection moved to kc-agent — calls go to the
       // local agent process running under the user's kubeconfig.
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const agentAuthHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',

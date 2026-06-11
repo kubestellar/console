@@ -51,7 +51,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       }
     }
     // Try SSE streaming for progressive display
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (token && token !== 'demo-token') {
       try {
         const sseParams: Record<string, string> = {}
@@ -175,7 +175,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
       }
     }
     // Try SSE streaming for progressive display
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (token && token !== 'demo-token') {
       try {
         const sseParams: Record<string, string> = {}

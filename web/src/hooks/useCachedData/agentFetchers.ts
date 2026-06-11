@@ -184,7 +184,7 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
 export async function fetchCiliumStatus(): Promise<CiliumStatus | null> {
   if (isAgentUnavailable()) return null
 
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   if (!token || token === 'demo-token') return null
 
   try {
@@ -214,7 +214,7 @@ export async function fetchJaegerStatus(): Promise<any | null> {
   if (isAgentUnavailable()) return null
 
   // Rule: Authorization via bearer token
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   if (!token || token === 'demo-token') return null
 
   try {

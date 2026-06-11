@@ -1,5 +1,5 @@
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_TOKEN } from './constants/storage'
-import { clearToken, getToken, setToken } from './secureTokenStore'
+import { clearToken, getToken, getTokenSync, setToken } from './secureTokenStore'
 
 export const AUTH_TOKEN_SYNC_KEY = 'kc-auth-token-sync'
 const LEGACY_TEST_STORAGE_KEYS = [STORAGE_KEY_TOKEN, 'kc_token'] as const
@@ -36,6 +36,26 @@ interface AuthTokenSyncEvent {
 
 let inMemorySessionToken: string | null = null
 let inMemoryDemoToken: string | null = null
+
+function readSessionAuthTokenSync(): string | null {
+  try {
+    const token = getTokenSync(STORAGE_KEY_TOKEN, sessionStorage)
+    return token ?? readLegacyTestAuthToken(sessionStorage)
+  } catch {
+    return inMemorySessionToken ?? readLegacyTestAuthToken(sessionStorage)
+  }
+}
+
+function readLocalAuthTokenSync(): string | null {
+  try {
+    const token = getTokenSync(STORAGE_KEY_TOKEN, localStorage)
+    if (token) return token
+
+    return readLegacyTestAuthToken(localStorage)
+  } catch {
+    return inMemoryDemoToken ?? readLegacyTestAuthToken(localStorage)
+  }
+}
 
 async function readSessionAuthToken(): Promise<string | null> {
   try {
@@ -89,6 +109,20 @@ function writeAuthTokenSyncEvent(state: AuthTokenSyncState): void {
   } catch {
     // localStorage may be unavailable in embedded contexts.
   }
+}
+
+export function getStoredAuthTokenSync(): string | null {
+  const sessionToken = readSessionAuthTokenSync()
+  if (sessionToken) {
+    return sessionToken
+  }
+
+  const localToken = readLocalAuthTokenSync()
+  if (localToken) {
+    return localToken
+  }
+
+  return null
 }
 
 export async function getStoredAuthToken(): Promise<string | null> {

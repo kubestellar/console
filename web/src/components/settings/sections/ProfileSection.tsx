@@ -118,7 +118,7 @@ export function ProfileSection({ initialEmail, initialSlackId, githubLogin, refr
     setIsSaving(true)
     setError(null)
     try {
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const response = await fetch('/api/me', {
         method: 'PUT',
         headers: {

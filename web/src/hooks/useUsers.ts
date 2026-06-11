@@ -26,7 +26,7 @@ import type {
 // Authorization header when no token is configured. Mirrors authHeaders() in
 // useWorkloads.ts.
 function agentAuthHeaders(): Record<string, string> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

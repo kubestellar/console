@@ -197,7 +197,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       const url = `/api/gitops/drifts?${params}`
 
       // Skip API calls when using demo token
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       if (isDemoMode()) {
         const demoData = getDemoGitOpsDrifts()
         setDrifts(demoData)
