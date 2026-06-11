@@ -384,7 +384,7 @@ export function DrasiPipelineCanvas({
                 {hasResults && (
                   <ResultsTable
                     results={liveResults}
-                    isDemo={!isLive}
+                    isDemoData={!isLive}
                     onRowClick={onSelectRow}
                     headerAction={
                       <div className="flex items-center gap-1">
@@ -453,7 +453,7 @@ interface DrasiOverlaysProps {
   onCloseSelectedRow: () => void
   showStreamSamples: boolean
   streamEndpoint: string
-  isDemo: boolean
+  isDemoData: boolean
   onCloseStreamSamples: () => void
   showConnectionsModal: boolean
   connections: DrasiConnection[]
@@ -481,7 +481,7 @@ export function DrasiOverlays({
   onCloseSelectedRow,
   showStreamSamples,
   streamEndpoint,
-  isDemo,
+  isDemoData,
   onCloseStreamSamples,
   showConnectionsModal,
   connections,
@@ -512,7 +512,7 @@ export function DrasiOverlays({
         {showStreamSamples && (
           <StreamSampleDrawer
             endpoint={streamEndpoint}
-            isDemo={isDemo}
+            isDemoData={isDemoData}
             onClose={onCloseStreamSamples}
           />
         )}

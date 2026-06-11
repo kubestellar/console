@@ -152,11 +152,11 @@ interface StreamSampleDrawerProps {
   /** Endpoint the snippets should point at. Demo mode uses a placeholder
    *  with a banner; live mode uses the real proxy URL. */
   endpoint: string
-  isDemo: boolean
+  isDemoData: boolean
   onClose: () => void
 }
 
-export function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDrawerProps) {
+export function StreamSampleDrawer({ endpoint, isDemoData, onClose }: StreamSampleDrawerProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState(STREAM_SAMPLES[0].lang)
   const [copied, setCopied] = useState(false)
@@ -205,7 +205,7 @@ export function StreamSampleDrawer({ endpoint, isDemo, onClose }: StreamSampleDr
         </button>
       </div>
 
-      {isDemo && (
+      {isDemoData && (
         <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/30 text-[10px] text-yellow-200">
           {t('drasi.streamDemoHint')}
         </div>

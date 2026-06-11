@@ -1,6 +1,9 @@
 /**
  * Node card components for the Drasi Reactive Graph.
  *
+ * Pure UI components — render props provided by parent; no data fetching.
+ * Demo data support provided by DrasiReactiveGraph via useDrasiResources.
+ *
  * Exports: NodeCard, NodeControls, StatusDot, SourceIconEl, ReactionIconEl
  */
 import React from 'react'

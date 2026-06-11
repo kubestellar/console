@@ -1,6 +1,9 @@
 /**
  * SVG flow line with animated dots for the Drasi Reactive Graph.
  *
+ * Pure UI component — renders SVG paths based on props; no data fetching.
+ * Demo data support provided by DrasiReactiveGraph via useDrasiResources.
+ *
  * Exports: FlowLine, flowStateColors, seededRand, TRAFFIC_PATTERNS
  */
 import { useReducedMotion } from 'framer-motion'

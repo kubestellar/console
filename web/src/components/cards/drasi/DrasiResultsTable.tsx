@@ -67,7 +67,7 @@ export function KPIBox({ label, value, accent }: { label: string; value: number;
 
 interface ResultsTableProps {
   results: LiveResultRow[]
-  isDemo: boolean
+  isDemoData: boolean
   /** Row click opens the detail drawer in the parent. */
   onRowClick?: (row: LiveResultRow) => void
   /** Optional CTA rendered in the header bar (right-aligned). Used by the
@@ -75,7 +75,7 @@ interface ResultsTableProps {
   headerAction?: React.ReactNode
 }
 
-export function ResultsTable({ results, isDemo, onRowClick, headerAction }: ResultsTableProps) {
+export function ResultsTable({ results, isDemoData, onRowClick, headerAction }: ResultsTableProps) {
   const { t } = useTranslation()
   const [sortCol, setSortCol] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
@@ -94,7 +94,7 @@ export function ResultsTable({ results, isDemo, onRowClick, headerAction }: Resu
   }, [results, sortCol, sortDir])
   const displayResults = sortedResults.slice(0, MAX_RESULT_ROWS)
   const totalRows = results.length
-  const label = isDemo ? t('drasi.demoResultsLabel') : t('drasi.liveResultsLabel')
+  const label = isDemoData ? t('drasi.demoResultsLabel') : t('drasi.liveResultsLabel')
 
   const handleHeaderClick = (col: string) => {
     if (sortCol !== col) {

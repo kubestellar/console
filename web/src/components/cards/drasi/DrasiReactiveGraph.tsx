@@ -727,7 +727,7 @@ export function DrasiReactiveGraph() {
         onCloseSelectedRow={() => setSelectedRow(null)}
         showStreamSamples={showStreamSamples}
         streamEndpoint={buildStreamEndpoint(activeConnection, isLive ? liveData : null, selectedQueryId)}
-        isDemo={!isLive}
+        isDemoData={!isLive}
         onCloseStreamSamples={closeStreamSamples}
         showConnectionsModal={showConnectionsModal}
         connections={drasiConnections}

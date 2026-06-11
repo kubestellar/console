@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { shouldShowFailureBanner } from './card-wrapper/badgeVisibility'
 
+// Pure error boundary component — no data fetching; demo data not applicable
 const REMOVE_CARD_FAILURE_THRESHOLD = 3
 
 type RetryLabelFactory = NonNullable<ComponentProps<typeof DynamicCardErrorBoundary>['fallbackRetryLabel']>
