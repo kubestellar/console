@@ -18,6 +18,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// isDemoMode checks if the request has the X-Demo-Mode header set to "true"
+func isDemoMode(c *fiber.Ctx) bool {
+	return c.Get("X-Demo-Mode") == "true"
+}
+
 // maxBenchmarkReportBytes caps the size of a single benchmark report we will
 // buffer from Google Drive. #7963 — previously downloadDriveFile called
 // io.ReadAll directly on the upstream body, so a huge or malicious file id
