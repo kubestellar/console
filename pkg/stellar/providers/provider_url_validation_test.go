@@ -18,7 +18,7 @@ func TestValidateProviderURL(t *testing.T) {
 		{name: "valid http URL", url: "http://localhost:8080", wantErr: false},
 		{name: "valid https with path", url: "https://api.example.com/v1/chat", wantErr: false},
 		{name: "invalid scheme ftp", url: "ftp://files.example.com", wantErr: true, errMsg: "URL scheme must be http or https"},
-		{name: "missing scheme", url: "example.com", wantErr: true, errMsg: "URL must have a host"},
+		{name: "missing scheme", url: "example.com", wantErr: true, errMsg: "URL scheme must be http or https"},
 		{name: "scheme only no host", url: "https://", wantErr: true, errMsg: "URL must have a host"},
 	}
 

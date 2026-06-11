@@ -2,7 +2,7 @@ package watcher
 
 import "testing"
 
-func TestDedupKeyEvent(t *testing.T) {
+func TestDedupKeyEvent_TableDriven(t *testing.T) {
 	tests := []struct {
 		cluster, namespace, resource, reason string
 		want                                 string
@@ -20,7 +20,7 @@ func TestDedupKeyEvent(t *testing.T) {
 	}
 }
 
-func TestDedupKeyCrash(t *testing.T) {
+func TestDedupKeyCrash_TableDriven(t *testing.T) {
 	tests := []struct {
 		cluster, namespace, pod, container string
 		want                              string
@@ -37,7 +37,7 @@ func TestDedupKeyCrash(t *testing.T) {
 	}
 }
 
-func TestDedupKeyNodeNotReady(t *testing.T) {
+func TestDedupKeyNodeNotReady_TableDriven(t *testing.T) {
 	tests := []struct {
 		cluster, nodeName string
 		want              string
