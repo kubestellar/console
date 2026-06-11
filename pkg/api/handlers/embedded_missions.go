@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"embed"
 	"encoding/json"
 	"io/fs"
 	"net/http"
@@ -9,19 +8,8 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/kb"
 )
-
-const embeddedKBRoot = "embedded_kb"
-
-//go:embed embedded_kb
-var embeddedKB embed.FS
-
-func embeddedKBPath(repoPath string) string {
-	if repoPath == "" {
-		return embeddedKBRoot
-	}
-	return path.Join(embeddedKBRoot, repoPath)
-}
 
 func embeddedHiddenMissionEntry(name string) bool {
 	if strings.HasPrefix(name, ".") {
@@ -31,7 +19,7 @@ func embeddedHiddenMissionEntry(name string) bool {
 }
 
 func (h *MissionsHandler) embeddedMissionFile(repoPath string) (*githubFetchResult, bool) {
-	body, err := embeddedKB.ReadFile(embeddedKBPath(repoPath))
+	body, err := kb.ReadFile(repoPath)
 	if err != nil {
 		return nil, false
 	}
@@ -44,15 +32,14 @@ func (h *MissionsHandler) embeddedMissionFile(repoPath string) (*githubFetchResu
 }
 
 func (h *MissionsHandler) embeddedBrowse(repoPath string) (*githubFetchResult, bool) {
-	embeddedPath := embeddedKBPath(repoPath)
-	info, err := fs.Stat(embeddedKB, embeddedPath)
+	info, err := kb.Stat(repoPath)
 	if err != nil {
 		return nil, false
 	}
 
 	entries := make([]fiber.Map, 0)
 	if info.IsDir() {
-		dirEntries, err := fs.ReadDir(embeddedKB, embeddedPath)
+		dirEntries, err := kb.ReadDir(repoPath)
 		if err != nil {
 			return nil, false
 		}
