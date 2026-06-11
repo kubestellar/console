@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback } from 'react'
 import { safeLazy } from '../../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -29,6 +29,7 @@ import { AgentStatusIndicator } from './AgentStatusIndicator'
 import { RotatingTagline } from './RotatingTagline'
 import { UpdateIndicator } from './UpdateIndicator'
 import { StreakBadge } from './StreakBadge'
+import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { ROUTES } from '../../../config/routes'
 import { NAVBAR_HEIGHT_PX } from '../../../lib/constants/ui'
 
@@ -58,6 +59,21 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
     setShowMobileMore(false)
     setShowMobileSearch(false)
   }, [location.pathname])
+
+  // Keyboard navigation for overflow menu
+  const closeOverflowMenu = useCallback(() => setShowMobileMore(false), [])
+  const { containerRef: overflowMenuRef, focusMatchingItem: focusFirstOverflowItem, handleKeyDown: handleOverflowKeyDown } = useKeyboardNav({
+    orientation: 'vertical',
+    onEscape: closeOverflowMenu,
+  })
+
+  // Focus first item when overflow menu opens
+  useEffect(() => {
+    if (showMobileMore) {
+      // Allow DOM to render before focusing
+      requestAnimationFrame(() => focusFirstOverflowItem())
+    }
+  }, [showMobileMore, focusFirstOverflowItem])
 
   useEffect(() => {
     if (!isMobile) {
@@ -243,6 +259,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             onClick={() => setShowMobileMore(!showMobileMore)}
             className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors cursor-pointer"
             aria-label={t('navbar.moreOptions')}
+            aria-haspopup="menu"
+            aria-expanded={showMobileMore}
           >
             <MoreVertical className="w-5 h-5 text-muted-foreground" />
           </button>
@@ -254,7 +272,12 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
-              <div className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh] max-h-[60dvh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
+              <div
+                ref={overflowMenuRef as React.RefObject<HTMLDivElement>}
+                role="menu"
+                aria-label={t('navbar.moreOptions')}
+                onKeyDown={handleOverflowKeyDown}
+                className={`fixed ${isMobile ? 'inset-x-0 bottom-0 rounded-t-2xl max-h-[60vh] max-h-[60dvh]' : 'right-4 w-64 rounded-lg'} bg-card border border-border shadow-xl z-modal overflow-hidden`} style={isMobile ? undefined : { top: topOffset + NAVBAR_HEIGHT_PX }}>
                 {/* Drag handle for mobile */}
                 {isMobile && (
                   <div className="flex justify-center py-2">
