@@ -49,17 +49,35 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 - **Learn dropdown** — Auto-populated from YouTube playlist with video tutorials
 - **Claude Code GitHub Action** — AI-assisted PR review and issue triage via Claude Opus 4.6
 
-## Near-Term (Q2–Q3 2026)
+## v0.4 — AI-Native Observability (Target: Q3 2026)
+
+This milestone crystallizes the near-term roadmap items into a cohesive theme: establishing KubeStellar Console as the canonical AI/ML workload visibility and operations layer for Kubernetes.
+
+### Core Scope
 
 - **llm-d stack monitoring** — First-class support for llm-d inference serving: EPP routing, model endpoint health, autoscaler status, disaggregated serving topology
 - **Drasi reactive pipelines** — Real-time change-feed dashboard for Drasi continuous queries, sources, and reactions across deployment modes (drasi-server, drasi-platform, CRD-based)
+- **kagent/kagenti integration** — Full agent lifecycle management through MCP-compatible interfaces
+
+### Quality & Testing
+
 - **Nightly E2E expansion** — Automated end-to-end testing across all 8 llm-d deployment guides on OpenShift
 - **Marketplace v2** — Require live data hooks, unified controls, demo data, and install links for all card presets; community review process
-- **kagent/kagenti integration** — Full agent lifecycle management through MCP-compatible interfaces
+
+### UX & Accessibility
+
 - **i18n completeness** — Eliminate all hardcoded English strings; prepare for community localization contributions
 - **Accessibility audit** — Replace remaining `window.confirm()` dialogs, add ARIA labels, keyboard navigation for all interactive elements
 - **GA4 UX funnel** — Measure conversion from landing to agent install to first mission; identify and fix drop-off points
 - **Component consistency** — Migrate remaining raw HTML elements to shared UI components (Button, Modal, Dialog); standardize modal visibility patterns
+
+### Community Health
+
+- **Adopters program** — Populate ADOPTERS.MD with confirmed production users; define maturity tiers (install-mission vs. production deployment)
+- **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update
+- **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
+
+## Near-Term (Q2–Q3 2026)
 
 ## Mid-Term (Q3–Q4 2026)
 
@@ -69,7 +87,8 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 - **Helm operator** — Kubernetes operator for fleet-wide Console deployment and lifecycle management
 - **Enhanced AI missions** — AI-assisted troubleshooting missions that diagnose cluster issues and suggest remediation steps
 - **Offline/air-gapped mode** — Full Console functionality without internet connectivity for restricted environments
-- **CNCF incubation preparation** — Governance documentation, adopters program, security audit, and community growth metrics
+- **CNCF incubation preparation** — Governance documentation, adopters program, and community growth metrics; target Q4 2026 TOC application
+- **Third-party security audit** — Engage CNCF-sponsored auditors (e.g., ADA Logics) for a formal code security audit; required gate for CNCF incubation
 - **Multi-model AI backend** — Support for multiple LLM providers (OpenAI, Ollama, vLLM) behind a unified mission interface, reducing vendor lock-in
 - **Webhook-driven card updates** — Push-based card refresh via Kubernetes webhooks instead of polling, reducing API server load on large clusters
 - **Custom alert rules** — User-defined threshold alerts on any card metric, with notification channels (Slack, email, PagerDuty)
