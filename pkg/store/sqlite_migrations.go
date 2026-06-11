@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+
+	"github.com/kubestellar/console/pkg/store/migrations"
 )
 
 func migrationLogID(version int, migration string) string {
@@ -749,6 +751,13 @@ func (s *SQLiteStore) migrate() error {
 	}
 
 	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
+
+	// Run file-based migrations (158+). New schema changes should be added
+	// as numbered .sql files in pkg/store/migrations/ instead of appending
+	// to the inline slice above.
+	if err := migrations.Run(ctx, s.db); err != nil {
+		return fmt.Errorf("file-based migrations: %w", err)
+	}
 
 	// Data migration: "pending" status is eliminated — reservations are now
 	// provisioned synchronously and go straight to "active". Flip any
