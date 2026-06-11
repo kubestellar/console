@@ -47,6 +47,12 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 		}
 	}
 
+	// Guard against nil config — nilaway cannot prove config is non-nil through
+	// the conditional branches above (e.g. if rest.CopyConfig returns nil).
+	if config == nil {
+		return nil, fmt.Errorf("failed to resolve REST config for context %s", contextName)
+	}
+
 	// Set reasonable timeouts — large OpenShift clusters (18+ nodes) can return
 	// 800KB+ node payloads that take >10s over higher-latency links
 	config.Timeout = k8sClientTimeout
@@ -131,6 +137,12 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 			}
 		}
 		config.Timeout = k8sClientTimeout
+	}
+
+	// Guard against nil config — nilaway flags this as a potential nil dereference
+	// when cachedConfig is nil or rest.CopyConfig returns nil.
+	if config == nil {
+		return nil, fmt.Errorf("failed to resolve REST config for context %s", contextName)
 	}
 
 	client, err := dynamic.NewForConfig(config)
