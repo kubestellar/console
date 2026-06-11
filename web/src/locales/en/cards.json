@@ -187,6 +187,21 @@
       }
     }
   },
+  "quantumWorkloadBanner": {
+    "greenBannerTitle": "quantum-kc-demo is running",
+    "greenBannerDesc": "Live quantum data available",
+    "amberBannerTitle": "Quantum workload not detected",
+    "amberBannerDesc": "Cards are showing demo data. To run live quantum circuits, deploy quantum-kc-demo to your cluster.",
+    "reconnectHint": "If quantum-kc-demo is running but not detected, or commands are not being accepted, try signing out and back into the console.",
+    "learnMore": "Learn more about quantum on IBM Cloud (for free!)",
+    "composerLink": "Circuit Composer",
+    "learningHubLink": "Learning Hub",
+    "viewRepository": "View Repository",
+    "setupInstructions": "Setup Instructions"
+  },
+  "quantumQubitGrid": {
+    "displayMaskLabel": "Display Mask"
+  },
   "quantumHistogram": {
     "title": "Execution Histogram",
     "refresh": "Refresh histogram",
@@ -214,6 +229,7 @@
       "loadingFiles": "Loading files...",
       "customQasm": "Custom QASM..."
     },
+    "qasmFileLabel": "QASM File (use 'Custom QASM' to paste or upload code)",
     "credsConfigured": "Configured",
     "credsStored": "Stored",
     "credsNone": "Not configured",

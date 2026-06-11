@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import DOMPurify from 'dompurify'
-import { AlertCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, RefreshCw, Lock, LockOpen } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useReportCardDataState } from '../CardDataContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
@@ -167,9 +168,11 @@ function renderQubitSVG(pattern: string, displayPattern: readonly (readonly numb
 }
 
 export const QuantumQubitGrid: React.FC = () => {
+  const { t } = useTranslation('cards')
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
   const [refreshInterval, setRefreshInterval] = useState(QUBIT_GRID_DEFAULT_POLL_MS)
   const [selectedMask, setSelectedMask] = useState<MaskKey>('ibm_qx5')
+  const [maskLocked, setMaskLocked] = useState(false)
   const forceDemo = isQuantumForcedToDemo()
   const {
     data,
@@ -288,13 +291,34 @@ export const QuantumQubitGrid: React.FC = () => {
 
         {/* Display Mask Selector */}
         <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
-          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-            Display Mask
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              {t('quantumQubitGrid.displayMaskLabel')}
+            </label>
+            <button
+              onClick={() => setMaskLocked(!maskLocked)}
+              className={`p-1.5 rounded-md transition-colors ${
+                maskLocked
+                  ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                  : 'hover:bg-secondary/50 text-muted-foreground'
+              }`}
+              title={maskLocked ? 'Unlock Display Mask' : 'Lock Display Mask'}
+              aria-label={maskLocked ? 'Unlock Display Mask' : 'Lock Display Mask'}
+            >
+              {maskLocked ? (
+                <Lock className="w-4 h-4" />
+              ) : (
+                <LockOpen className="w-4 h-4" />
+              )}
+            </button>
+          </div>
           <select
             value={selectedMask}
-            onChange={e => setSelectedMask(e.target.value as MaskKey)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+            onChange={e => !maskLocked && setSelectedMask(e.target.value as MaskKey)}
+            disabled={maskLocked}
+            className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm ${
+              maskLocked ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
           >
             {MASK_OPTIONS.map(opt => (
               <option
