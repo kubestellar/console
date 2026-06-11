@@ -123,7 +123,7 @@ describe('EventCard', () => {
         onDismiss={() => {}}
       />
     )
-    // The t() mock returns the key; attemptCount badge uses 'stellar.eventCard.attemptCount'
-    expect(screen.getByText(/attemptCount/)).toBeInTheDocument()
+    // The t() mock returns the key as-is; assert the full i18n key to avoid false positives
+    expect(screen.getByText("stellar.eventCard.attemptCount")).toBeInTheDocument()
   })
 })
