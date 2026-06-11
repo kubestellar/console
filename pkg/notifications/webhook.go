@@ -75,6 +75,14 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 	if err := checkWebhookHostAllowed(u.Hostname()); err != nil {
 		return nil, err
 	}
+	// #17532: SSRF protection — resolve the hostname and reject private/internal
+	// IPs (cloud-metadata, RFC1918, CGNAT, link-local). Without this, an
+	// authenticated user can point webhooks at 169.254.169.254, 10.x.x.x, etc.
+	if !isLoopbackHost(u.Hostname()) {
+		if err := checkWebhookIPNotBlocked(u.Hostname()); err != nil {
+			return nil, err
+		}
+	}
 	return &WebhookNotifier{
 		URL: webhookURL,
 		HTTPClient: &http.Client{
@@ -83,7 +91,10 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 			// redirect hop. Without this a permitted host could 30x to
 			// an internal endpoint and the request would still be sent.
 			CheckRedirect: func(req *http.Request, _ []*http.Request) error {
-				return checkWebhookHostAllowed(req.URL.Hostname())
+				if err := checkWebhookHostAllowed(req.URL.Hostname()); err != nil {
+					return err
+				}
+				return checkWebhookIPNotBlocked(req.URL.Hostname())
 			},
 		},
 	}, nil
@@ -137,6 +148,48 @@ func checkWebhookHostAllowed(host string) error {
 		}
 	}
 	return fmt.Errorf("webhook host %q not in %s allowlist", host, webhookAllowedHostsEnv)
+}
+
+// Blocked IP ranges for webhook SSRF protection (#17532).
+var (
+	_, webhookBlockedCGNATNet, _     = net.ParseCIDR("100.64.0.0/10")
+	_, webhookBlockedCloudMetaNet, _ = net.ParseCIDR("169.254.169.254/32")
+)
+
+// isWebhookBlockedIP returns true if the IP must not be contacted by
+// webhook notifications. Blocks loopback, private (RFC1918), link-local,
+// CGNAT (RFC6598), and cloud-metadata ranges (AWS/GCP/Azure IMDS).
+func isWebhookBlockedIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		webhookBlockedCGNATNet.Contains(ip) || webhookBlockedCloudMetaNet.Contains(ip)
+}
+
+// checkWebhookIPNotBlocked resolves the hostname and rejects any private or
+// internal IP addresses. Fail-closed: if DNS resolution fails, the webhook is
+// rejected to prevent SSRF via DNS rebinding or transient failures.
+func checkWebhookIPNotBlocked(host string) error {
+	// If the host is an IP literal, check directly.
+	if ip := net.ParseIP(host); ip != nil {
+		if isWebhookBlockedIP(ip) {
+			return fmt.Errorf("webhook URL resolves to a blocked IP address (%s)", ip)
+		}
+		return nil
+	}
+
+	addrs, err := net.LookupHost(host)
+	if err != nil {
+		return fmt.Errorf("DNS lookup failed for webhook host %q — cannot verify safety: %w", host, err)
+	}
+	for _, addr := range addrs {
+		ip := net.ParseIP(addr)
+		if ip == nil {
+			continue
+		}
+		if isWebhookBlockedIP(ip) {
+			return fmt.Errorf("webhook host %q resolves to blocked IP %s (private/internal address)", host, ip)
+		}
+	}
+	return nil
 }
 
 // Send POSTs the alert as JSON to the configured webhook URL.

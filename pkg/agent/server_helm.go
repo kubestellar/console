@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -56,6 +58,9 @@ func validateHelmK8sName(name, field string) error {
 }
 
 // validateHelmChartArg mirrors the backend validateHelmChart validator.
+// For OCI chart references (oci://host/...) it also performs SSRF validation
+// by resolving the registry hostname and rejecting private/internal IPs,
+// mirroring the protection already in validateBaseURL (#17530).
 func validateHelmChartArg(chart string) error {
 	if chart == "" {
 		return fmt.Errorf("chart is required")
@@ -73,6 +78,51 @@ func validateHelmChartArg(chart string) error {
 			(ch >= '0' && ch <= '9') ||
 			ch == '-' || ch == '_' || ch == '.' || ch == '/' || ch == ':') {
 			return fmt.Errorf("chart contains invalid character: %c", ch)
+		}
+	}
+	// SSRF protection for OCI chart references: resolve the registry host
+	// and reject private/internal IPs (CWE-918). This closes the gap where
+	// validateBaseURL protects AI-provider URLs but OCI refs were unchecked.
+	if strings.HasPrefix(chart, "oci://") {
+		if err := validateHelmOCIHost(chart); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateHelmOCIHost extracts the registry hostname from an OCI chart
+// reference and ensures it does not resolve to a private/internal IP.
+func validateHelmOCIHost(chart string) error {
+	u, err := url.Parse(chart)
+	if err != nil {
+		return fmt.Errorf("invalid OCI chart reference: %w", err)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("OCI chart reference must include a registry host")
+	}
+	hostname := u.Hostname()
+
+	// If it's an IP literal, check directly.
+	if ip := net.ParseIP(hostname); ip != nil {
+		if isPrivateIP(ip) {
+			return fmt.Errorf("OCI chart registry %q resolves to a private/internal IP address", hostname)
+		}
+		return nil
+	}
+
+	// Resolve hostname and check all resulting IPs.
+	const helmOCIDNSTimeout = 3 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), helmOCIDNSTimeout)
+	defer cancel()
+
+	ips, err := net.DefaultResolver.LookupHost(ctx, hostname)
+	if err != nil {
+		return fmt.Errorf("DNS lookup failed for OCI registry %q — cannot verify safety: %w", hostname, err)
+	}
+	for _, ipStr := range ips {
+		if ip := net.ParseIP(ipStr); ip != nil && isPrivateIP(ip) {
+			return fmt.Errorf("OCI chart registry %q resolves to a private/internal IP address", hostname)
 		}
 	}
 	return nil
