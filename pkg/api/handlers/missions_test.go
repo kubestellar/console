@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/kbdata"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -1086,7 +1087,7 @@ func TestGetMissionScore_ExactIDMatch(t *testing.T) {
 }
 
 func TestGetMissionScore_UpstreamError(t *testing.T) {
-	embeddedIndexBody, err := embeddedKB.ReadFile("embedded_kb/fixes/index.json")
+	embeddedIndexBody, err := kbdata.ReadFile("fixes/index.json")
 	require.NoError(t, err)
 
 	var embeddedIndex indexJsonFormat
