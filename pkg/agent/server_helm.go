@@ -333,6 +333,13 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
 	}
+	// SSRF protection: block OCI chart refs that resolve to private IPs (#17530).
+	if err := validateHelmOCIChartRef(req.Chart); err != nil {
+		slog.Error("blocked Helm OCI chart SSRF", "chart", req.Chart, "error", err)
+		w.WriteHeader(http.StatusBadRequest)
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
+		return
+	}
 	if err := validateHelmChartVersion(req.Version); err != nil {
 		slog.Error("invalid Helm chart version", "version", req.Version, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
