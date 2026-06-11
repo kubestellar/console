@@ -5,6 +5,10 @@
  * Alerts users that cards are in demo mode and provides a link to installation instructions.
  *
  * When quantum workload IS detected, banner is hidden (live data is available).
+ *
+ * Both states include a learn-more section linking to free IBM Quantum
+ * resources (Circuit Composer + Learning Hub) so users coming from the
+ * demo have an immediate path to hands-on quantum work.
  */
 
 import { useState, useEffect } from 'react'
@@ -14,6 +18,40 @@ import { isQuantumWorkloadAvailable, subscribeDemoMode } from '../../lib/demoMod
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 const STORAGE_KEY_QUANTUM_BANNER_DISMISSED = 'kc-quantum-banner-dismissed'
+
+const IBM_COMPOSER_URL = 'https://quantum.cloud.ibm.com/composer'
+const IBM_LEARNING_URL = 'https://quantum.cloud.ibm.com/learning'
+
+function IBMQuantumLinks() {
+  const { t } = useTranslation(['cards'])
+  return (
+    <div className="mt-3 pt-3 border-t border-border/40">
+      <p className="text-xs font-semibold text-foreground">
+        {t('cards:quantumWorkloadBanner.learnMore')}
+      </p>
+      <div className="flex gap-2 mt-1.5">
+        <a
+          href={IBM_COMPOSER_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+        >
+          {t('cards:quantumWorkloadBanner.circuitComposer')}
+          <ExternalLink className="w-3 h-3" />
+        </a>
+        <a
+          href={IBM_LEARNING_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+        >
+          {t('cards:quantumWorkloadBanner.learningHub')}
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+    </div>
+  )
+}
 
 export function QuantumWorkloadBanner() {
   const { t } = useTranslation(['cards'])
@@ -42,42 +80,21 @@ export function QuantumWorkloadBanner() {
 
   // Show appropriate banner based on workload state
   if (workloadAvailable) {
-    // Workload detected — show green success banner
+    // Workload detected — show green success banner with IBM learning links
     return (
-      <div className="mb-4 rounded-xl border border-green-500/20 bg-linear-to-br from-green-500/5 via-emerald-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
+      <div data-testid="quantum-workload-banner-running" className="mb-4 rounded-xl border border-green-500/20 bg-linear-to-br from-green-500/5 via-emerald-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <div>
             <h3 className="text-sm font-semibold text-foreground">
               {t('cards:quantumWorkloadBanner.workloadRunning')}
             </h3>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground">
               {t('cards:quantumWorkloadBanner.liveDataAvailable')}
-            </p>
-            <div className="flex gap-2 mt-2">
-              <a
-                href="https://quantum.cloud.ibm.com/composer"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
-              >
-                {t('cards:quantumWorkloadBanner.circuitComposer')}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-              <a
-                href="https://quantum.cloud.ibm.com/learning"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
-              >
-                {t('cards:quantumWorkloadBanner.learningHub')}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {t('cards:quantumWorkloadBanner.learnMore')}
             </p>
           </div>
         </div>
+        <IBMQuantumLinks />
       </div>
     )
   }
@@ -86,7 +103,7 @@ export function QuantumWorkloadBanner() {
   if (dismissed) return null
 
   return (
-    <div className="mb-4 rounded-xl border border-amber-500/20 bg-linear-to-br from-amber-500/5 via-orange-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
+    <div data-testid="quantum-workload-banner-not-detected" className="mb-4 rounded-xl border border-amber-500/20 bg-linear-to-br from-amber-500/5 via-orange-500/5 to-transparent p-4 animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-foreground">
@@ -118,29 +135,7 @@ export function QuantumWorkloadBanner() {
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
-          <div className="flex gap-2 mt-2">
-            <a
-              href="https://quantum.cloud.ibm.com/composer"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
-            >
-              {t('cards:quantumWorkloadBanner.circuitComposer')}
-              <ExternalLink className="w-3 h-3" />
-            </a>
-            <a
-              href="https://quantum.cloud.ibm.com/learning"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
-            >
-              {t('cards:quantumWorkloadBanner.learningHub')}
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {t('cards:quantumWorkloadBanner.learnMore')}
-          </p>
+          <IBMQuantumLinks />
         </div>
         <button
           onClick={handleDismiss}

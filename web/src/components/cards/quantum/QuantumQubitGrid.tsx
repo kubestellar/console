@@ -203,15 +203,27 @@ export const QuantumQubitGrid: React.FC = () => {
 
   const displayData = shouldShowEmpty ? { num_qubits: 8, pattern: '' } : (qubitData || DEMO_DATA)
 
-  // Auto-select smallest valid mask for current qubit count
+  // Mask selection policy:
+  //   - Unlocked: always auto-pick the smallest mask that fits the current
+  //     qubit count, on every poll. Manual upsizing only sticks while the
+  //     mask is locked — that's what the lock is for.
+  //   - Locked: keep the user's choice. EXCEPTION: if the new qubit count
+  //     exceeds the locked mask's capacity, auto-release the lock and pick
+  //     the next-larger mask so qubits aren't silently truncated.
   useEffect(() => {
-    if (qubitData && !maskLocked) {
-      const best = MASK_OPTIONS.find(m => m.maxQubits >= qubitData.num_qubits)
-      if (best) {
-        setSelectedMask(best.key)
-      }
+    if (!qubitData) return
+
+    if (maskLocked) {
+      const current = MASK_OPTIONS.find(m => m.key === selectedMask)
+      if (current && qubitData.num_qubits <= current.maxQubits) return
+      setMaskLocked(false)
     }
-  }, [qubitData, maskLocked])
+
+    const best = MASK_OPTIONS.find(m => m.maxQubits >= qubitData.num_qubits)
+    if (best) {
+      setSelectedMask(best.key)
+    }
+  }, [qubitData, maskLocked, selectedMask])
 
   // Emit pattern changes to trigger histogram refresh.
   // This includes empty patterns (cleared results, reset circuit, or fetch errors)
@@ -291,35 +303,40 @@ export const QuantumQubitGrid: React.FC = () => {
 
         {/* Display Mask Selector */}
         <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-              {t('cards:quantumQubitGrid.displayMask')}
-            </label>
-            <button
-              onClick={() => setMaskLocked(!maskLocked)}
-              className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
-              aria-label={maskLocked ? t('cards:quantumQubitGrid.unlockMask') : t('cards:quantumQubitGrid.lockMask')}
-              title={maskLocked ? t('cards:quantumQubitGrid.unlockMask') : t('cards:quantumQubitGrid.lockMask')}
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+            {t('cards:quantumQubitGrid.displayMask')}
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedMask}
+              onChange={e => setSelectedMask(e.target.value as MaskKey)}
+              disabled={maskLocked}
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {maskLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+              {MASK_OPTIONS.map(opt => (
+                <option
+                  key={opt.key}
+                  value={opt.key}
+                  disabled={displayData.num_qubits > opt.maxQubits}
+                >
+                  {opt.label}{displayData.num_qubits > opt.maxQubits ? ' (too small)' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setMaskLocked(prev => !prev)}
+              aria-label={maskLocked ? t('cards:quantumQubitGrid.unlockMask') : t('cards:quantumQubitGrid.lockMask')}
+              aria-pressed={maskLocked}
+              title={maskLocked ? t('cards:quantumQubitGrid.unlockMask') : t('cards:quantumQubitGrid.lockMask')}
+              className="shrink-0 p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+            >
+              {maskLocked
+                ? <Lock className="w-4 h-4" aria-hidden="true" />
+                : <Unlock className="w-4 h-4" aria-hidden="true" />
+              }
             </button>
           </div>
-          <select
-            value={selectedMask}
-            onChange={e => setSelectedMask(e.target.value as MaskKey)}
-            disabled={maskLocked}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {MASK_OPTIONS.map(opt => (
-              <option
-                key={opt.key}
-                value={opt.key}
-                disabled={displayData.num_qubits > opt.maxQubits}
-              >
-                {opt.label}{displayData.num_qubits > opt.maxQubits ? ' (too small)' : ''}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* Legend */}

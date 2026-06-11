@@ -753,7 +753,11 @@ else
 
     write_stage "parallel_build"
     echo -e "${GREEN}Building frontend...${NC}"
-    if ! (cd web && npm run build); then
+    # tsc -b is memory-hungry: netlify.toml comments say ~3 GB heap, but
+    # local-build OOMs were hitting 4 GB on 2026-06-11. Use 8 GB headroom
+    # so the typecheck step doesn't crash the whole startup. Honors any
+    # pre-set NODE_OPTIONS in the environment.
+    if ! (cd web && NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" npm run build); then
         echo ""
         echo -e "${RED}========================================${NC}"
         echo -e "${RED}  Frontend build failed.${NC}"
