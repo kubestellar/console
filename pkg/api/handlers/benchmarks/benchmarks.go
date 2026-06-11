@@ -97,6 +97,11 @@ func isAfterCutoff(f driveFile, cutoff time.Time) bool {
 	return !created.Before(cutoff)
 }
 
+// isDemoMode checks if the request has the X-Demo-Mode header set to "true"
+func isDemoMode(c *fiber.Ctx) bool {
+	return c.Get("X-Demo-Mode") == "true"
+}
+
 // BenchmarkHandlers provides endpoints for llm-d benchmark data from Google Drive.
 type BenchmarkHandlers struct {
 	apiKey   string
