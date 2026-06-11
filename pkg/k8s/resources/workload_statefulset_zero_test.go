@@ -1,6 +1,7 @@
-package k8s
+package resources
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"

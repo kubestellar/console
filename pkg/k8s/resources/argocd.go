@@ -1,6 +1,7 @@
-package k8s
+package resources
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
 	"log/slog"
@@ -35,7 +36,7 @@ var argoTimestampLayouts = []string{
 
 // ListArgoApplications lists all ArgoCD Application resources across all clusters.
 // If ArgoCD CRDs are not installed on a cluster, that cluster is silently skipped.
-func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha1.ArgoApplicationList, error) {
+func (m *k8s.MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha1.ArgoApplicationList, error) {
 	// Use DeduplicatedClusters so newly-added kubeconfig contexts (hot reload)
 	// are picked up immediately, instead of snapshotting m.clients which only
 	// contains contexts whose clients have already been lazily created (#6476).
@@ -80,7 +81,7 @@ func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha
 
 // ListArgoApplicationsForCluster lists ArgoCD Application resources in a specific cluster.
 // Returns an empty list (not an error) if ArgoCD CRDs are not installed.
-func (m *MultiClusterClient) ListArgoApplicationsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ArgoApplication, error) {
+func (m *k8s.MultiClusterClient) ListArgoApplicationsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ArgoApplication, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
@@ -107,7 +108,7 @@ func (m *MultiClusterClient) ListArgoApplicationsForCluster(ctx context.Context,
 }
 
 // parseArgoApplicationsFromList parses ArgoCD Applications from an unstructured list
-func (m *MultiClusterClient) parseArgoApplicationsFromList(list interface{}, contextName string) ([]v1alpha1.ArgoApplication, error) {
+func (m *k8s.MultiClusterClient) parseArgoApplicationsFromList(list interface{}, contextName string) ([]v1alpha1.ArgoApplication, error) {
 	apps := make([]v1alpha1.ArgoApplication, 0)
 
 	uList, ok := list.(*unstructured.UnstructuredList)
@@ -195,7 +196,7 @@ func parseArgoTimeAgo(timeStr string) string {
 
 // ListArgoApplicationSets lists all ArgoCD ApplicationSet resources across all clusters.
 // If ArgoCD CRDs are not installed on a cluster, that cluster is silently skipped.
-func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1alpha1.ArgoApplicationSetList, error) {
+func (m *k8s.MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1alpha1.ArgoApplicationSetList, error) {
 	// Use DeduplicatedClusters so newly-added kubeconfig contexts (hot reload)
 	// are picked up immediately, instead of snapshotting m.clients which only
 	// contains contexts whose clients have already been lazily created (#6476).
@@ -240,7 +241,7 @@ func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1al
 
 // ListArgoApplicationSetsForCluster lists ArgoCD ApplicationSet resources in a specific cluster.
 // Returns an empty list (not an error) if ArgoCD CRDs are not installed.
-func (m *MultiClusterClient) ListArgoApplicationSetsForCluster(ctx context.Context, contextName string) ([]v1alpha1.ArgoApplicationSet, error) {
+func (m *k8s.MultiClusterClient) ListArgoApplicationSetsForCluster(ctx context.Context, contextName string) ([]v1alpha1.ArgoApplicationSet, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
@@ -260,7 +261,7 @@ func (m *MultiClusterClient) ListArgoApplicationSetsForCluster(ctx context.Conte
 }
 
 // parseArgoApplicationSetsFromList parses ArgoCD ApplicationSets from an unstructured list
-func (m *MultiClusterClient) parseArgoApplicationSetsFromList(list interface{}, contextName string) []v1alpha1.ArgoApplicationSet {
+func (m *k8s.MultiClusterClient) parseArgoApplicationSetsFromList(list interface{}, contextName string) []v1alpha1.ArgoApplicationSet {
 	appSets := make([]v1alpha1.ArgoApplicationSet, 0)
 
 	uList, ok := list.(*unstructured.UnstructuredList)

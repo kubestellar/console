@@ -1,6 +1,7 @@
-package k8s
+package deps
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
 	"strings"
@@ -8,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (m *MultiClusterClient) resolveRBACForSA(
+func (m *k8s.MultiClusterClient) resolveRBACForSA(
 	ctx context.Context, cluster, namespace, saName string,
 ) ([]Dependency, []string) {
 	var deps []Dependency

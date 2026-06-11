@@ -1,13 +1,14 @@
-package k8s
+package deps
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func (m *MultiClusterClient) findRelatedCRDs(
+func (m *k8s.MultiClusterClient) findRelatedCRDs(
 	ctx context.Context, cluster, namespace string, serviceNames []string,
 ) []Dependency {
 	var deps []Dependency
@@ -49,7 +50,7 @@ func (m *MultiClusterClient) findRelatedCRDs(
 	return deps
 }
 
-func (m *MultiClusterClient) findMatchingWebhookConfigs(
+func (m *k8s.MultiClusterClient) findMatchingWebhookConfigs(
 	ctx context.Context, cluster, namespace string, serviceNames []string, mutating bool,
 ) []Dependency {
 	var deps []Dependency

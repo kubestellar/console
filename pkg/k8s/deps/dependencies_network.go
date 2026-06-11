@@ -1,6 +1,7 @@
-package k8s
+package deps
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
 
@@ -8,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func (m *MultiClusterClient) findMatchingServices(
+func (m *k8s.MultiClusterClient) findMatchingServices(
 	ctx context.Context, cluster, namespace string, podLabels map[string]string,
 ) ([]Dependency, []string) {
 	var deps []Dependency
@@ -44,7 +45,7 @@ func (m *MultiClusterClient) findMatchingServices(
 	return deps, warnings
 }
 
-func (m *MultiClusterClient) findMatchingIngresses(
+func (m *k8s.MultiClusterClient) findMatchingIngresses(
 	ctx context.Context, cluster, namespace string, serviceNames []string,
 ) []Dependency {
 	var deps []Dependency
@@ -124,7 +125,7 @@ func ingressReferencesServices(obj map[string]interface{}, svcSet map[string]boo
 	return false
 }
 
-func (m *MultiClusterClient) findMatchingNetworkPolicies(
+func (m *k8s.MultiClusterClient) findMatchingNetworkPolicies(
 	ctx context.Context, cluster, namespace string, podLabels map[string]string,
 ) []Dependency {
 	var deps []Dependency

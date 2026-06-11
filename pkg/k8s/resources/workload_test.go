@@ -1,6 +1,8 @@
-package k8s
+package resources
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/deps"
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
 	"strings"
@@ -481,7 +483,7 @@ func TestDeployWorkload(t *testing.T) {
 	m.dynamicClients["src"] = sourceClient
 	m.dynamicClients["tgt"] = targetClient
 
-	opts := &DeployOptions{DeployedBy: "test-user"}
+	opts := &deps.DeployOptions{DeployedBy: "test-user"}
 	resp, err := m.DeployWorkload(context.Background(), "src", "default", "dep1", []string{"tgt"}, 5, opts)
 	if err != nil {
 		t.Fatalf("DeployWorkload failed: %v", err)
@@ -609,7 +611,7 @@ func TestDeployWorkloadWithFailingDependency(t *testing.T) {
 	m.dynamicClients["src"] = sourceClient
 	m.dynamicClients["tgt"] = targetClient
 
-	opts := &DeployOptions{DeployedBy: "test-user"}
+	opts := &deps.DeployOptions{DeployedBy: "test-user"}
 	resp, err := m.DeployWorkload(context.Background(), "src", "default", "dep1", []string{"tgt"}, 5, opts)
 	if err != nil {
 		t.Fatalf("DeployWorkload returned an error instead of handling partial failure: %v", err)

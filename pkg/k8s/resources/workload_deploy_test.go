@@ -1,6 +1,7 @@
-package k8s
+package resources
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/deps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -165,7 +166,7 @@ func TestCleanManifestForDeploy_StripsClusterFields(t *testing.T) {
 		{Name: "parent", UID: types.UID("xyz")},
 	})
 
-	opts := &DeployOptions{DeployedBy: "testuser", GroupName: "mygroup"}
+	opts := &deps.DeployOptions{DeployedBy: "testuser", GroupName: "mygroup"}
 	result := cleanManifestForDeploy(obj, "source-cluster", opts)
 
 	// Cluster-specific fields cleared
@@ -205,7 +206,7 @@ func TestCleanManifestForDeploy_DeepCopy(t *testing.T) {
 		},
 	}
 
-	opts := &DeployOptions{}
+	opts := &deps.DeployOptions{}
 	_ = cleanManifestForDeploy(obj, "cluster-a", opts)
 
 	// Original should be untouched
@@ -223,7 +224,7 @@ func TestCleanManifestForDeploy_MinimalOptions(t *testing.T) {
 		},
 	}
 
-	opts := &DeployOptions{} // No DeployedBy, no GroupName
+	opts := &deps.DeployOptions{} // No DeployedBy, no GroupName
 	result := cleanManifestForDeploy(obj, "src", opts)
 
 	labels := result.GetLabels()
@@ -248,7 +249,7 @@ func TestCleanManifestForDeploy_PreservesExistingLabels(t *testing.T) {
 		},
 	}
 
-	opts := &DeployOptions{DeployedBy: "admin"}
+	opts := &deps.DeployOptions{DeployedBy: "admin"}
 	result := cleanManifestForDeploy(obj, "cluster-b", opts)
 
 	labels := result.GetLabels()

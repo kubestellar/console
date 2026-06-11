@@ -1,4 +1,4 @@
-package k8s
+package deps
 
 import (
 	"sync"
@@ -116,4 +116,10 @@ type DependencyBundle struct {
 	Workload     *unstructured.Unstructured
 	Dependencies []Dependency
 	Warnings     []string
+}
+
+// DeployOptions configures how a workload is deployed across clusters
+type DeployOptions struct {
+	DeployedBy string
+	GroupName  string
 }

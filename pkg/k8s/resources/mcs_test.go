@@ -1,6 +1,7 @@
-package k8s
+package resources
 
 import (
+	"github.com/kubestellar/console/pkg/k8s"
 	"context"
 	"fmt"
 	"testing"
