@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X gi
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X main.version=${APP_VERSION}" -o kc-watcher ./cmd/watcher
 
 # Build stage - MCP binaries
-FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS mcp-binaries
+FROM alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e893909057601 AS mcp-binaries
 
 ARG TARGETARCH
 ARG KUBESTELLAR_MCP_RELEASE_TAG=v0.8.18-nightly.20260509
@@ -82,7 +82,7 @@ RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
     fi
 
 # Final stage
-FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+FROM alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e893909057601
 
 WORKDIR /app
 
