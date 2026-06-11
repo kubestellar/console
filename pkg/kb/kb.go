@@ -8,7 +8,7 @@ import (
 
 const dataRoot = "data"
 
-//go:embed data
+//go:embed all:data
 var embeddedData embed.FS
 
 // ReadFile reads a file from the embedded knowledge base at the given path.
