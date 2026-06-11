@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"github.com/kubestellar/console/pkg/compliance/residency"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -76,7 +77,7 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 	g.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnailProxy)
 	g.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
 
-	missions := handlers.NewMissionsHandler().WithStore(g.store)
+	missions := missions.NewMissionsHandler().WithStore(g.store)
 	missions.RegisterPublicRoutes(g.app.Group("/api/missions"))
 
 	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)

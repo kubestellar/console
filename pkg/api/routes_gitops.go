@@ -1,9 +1,10 @@
 package api
 
 import (
-"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 
-"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/gitops"
 )
 
 // setupGitOpsRoutes registers GitOps, ArgoCD, and self-upgrade routes.
@@ -11,7 +12,7 @@ import (
 func (s *Server) setupGitOpsRoutes(api fiber.Router) {
 // GitOps routes (drift detection and sync)
 // SECURITY: All GitOps routes require authentication in both dev and production modes
-gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient, s.store)
+gitopsHandlers := gitops.NewGitOpsHandlers(s.bridge, s.k8sClient, s.store)
 api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
 api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
 api.Get("/gitops/helm-history", gitopsHandlers.ListHelmHistory)
