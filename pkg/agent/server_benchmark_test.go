@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func BenchmarkServerRouting(b *testing.B) {
 	// Initialize non-nil dependencies to avoid panics in handlers
-	proxy, _ := NewKubectlProxy("")
+	proxy, _ := kube.NewKubectlProxy("")
 	reg := GetRegistry()
 
 	s := &Server{

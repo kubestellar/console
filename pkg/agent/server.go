@@ -20,6 +20,7 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 const (
@@ -150,7 +151,7 @@ type wsClient struct {
 type Server struct {
 	config         Config
 	upgrader       websocket.Upgrader
-	kubectl        *KubectlProxy
+	kubectl        *kube.KubectlProxy
 	k8sClient      *k8s.MultiClusterClient // For rich cluster data queries
 	registry       *Registry
 	clients        map[*websocket.Conn]*wsClient
@@ -231,7 +232,7 @@ type Server struct {
 
 // NewServer creates a new agent server
 func NewServer(cfg Config) (*Server, error) {
-	kubectl, err := NewKubectlProxy(cfg.Kubeconfig)
+	kubectl, err := kube.NewKubectlProxy(cfg.Kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize kubectl proxy: %w", err)
 	}

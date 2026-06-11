@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // serverTestOption is a functional option for newTestServer.
@@ -34,7 +35,7 @@ func withContexts(names ...string) serverTestOption {
 		path := filepath.Join(dir, "kubeconfig")
 		writeTestKubeconfig2(path, entries)
 
-		kp, err := NewKubectlProxy(path)
+		kp, err := kube.NewKubectlProxy(path)
 		if err != nil {
 			panic("withContexts: NewKubectlProxy: " + err.Error())
 		}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	kagentiprovider "github.com/kubestellar/console/pkg/kagentiprovider"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 const (
@@ -225,8 +226,8 @@ func (p *KagentiProvider) buildPrompt(req *ChatRequest) string {
 		sb.WriteString("\n\n")
 		sb.WriteString(kagentiReadOnlyContextInstruction)
 		sb.WriteString("\n")
-		sb.WriteString(UntrustedDataSystemPrompt)
-		sb.WriteString(WrapUntrustedData("k8s-readonly-context", k8sContext))
+		sb.WriteString(kube.UntrustedDataSystemPrompt)
+		sb.WriteString(kube.WrapUntrustedData("k8s-readonly-context", k8sContext))
 	}
 
 	sb.WriteString("\n\nUser request:\n")

@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/dynamic/fake"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleHealth(t *testing.T) {
@@ -59,7 +60,7 @@ func TestServer_HandleHealth_CORS(t *testing.T) {
 	server := &Server{
 		allowedOrigins: []string{"http://allowed.com"},
 		registry:       &Registry{providers: make(map[string]AIProvider)},
-		kubectl:        &KubectlProxy{config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
 	}
 
 	// Case 1: Allowed Origin
@@ -89,7 +90,7 @@ func TestServer_HandleStatus(t *testing.T) {
 		},
 	}
 	server := &Server{
-		kubectl:        &KubectlProxy{config: config},
+		kubectl:        &kube.KubectlProxy{config: config},
 		allowedOrigins: []string{"http://allowed.com"},
 		agentToken:     "test-token",
 		tokenExplicit:  true,
@@ -224,7 +225,7 @@ func TestServer_HandleClustersHTTP(t *testing.T) {
 			"c1": {Server: "https://c1.com"},
 		},
 	}
-	mockProxy := &KubectlProxy{config: config}
+	mockProxy := &kube.KubectlProxy{config: config}
 	server := &Server{
 		kubectl:        mockProxy,
 		allowedOrigins: []string{"*"},
@@ -270,7 +271,7 @@ func TestServer_HandleRenameContextHTTP(t *testing.T) {
 	execCommandContext = fakeExecCommandContext
 
 	// Setup proxy
-	proxy := &KubectlProxy{
+	proxy := &kube.KubectlProxy{
 		kubeconfig: "/tmp/config",
 		config:     &api.Config{},
 	}
@@ -322,7 +323,7 @@ func TestServer_ResourceHandlers(t *testing.T) {
 	config := &api.Config{
 		CurrentContext: "ctx-1",
 	}
-	proxy := &KubectlProxy{
+	proxy := &kube.KubectlProxy{
 		config:     config,
 		kubeconfig: "/tmp/config",
 	}
@@ -972,7 +973,7 @@ func TestMatchOrigin(t *testing.T) {
 
 func TestServer_HandleClustersHTTP_Unauthorized(t *testing.T) {
 	server := &Server{
-		kubectl:        &KubectlProxy{config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
 		agentToken:     "secret", // require token
 		allowedOrigins: []string{"*"},
 	}
@@ -991,7 +992,7 @@ func TestServer_HandleClustersHTTP_Unauthorized(t *testing.T) {
 
 func TestServer_HandleClustersHTTP_OPTIONS(t *testing.T) {
 	server := &Server{
-		kubectl:        &KubectlProxy{config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
 		allowedOrigins: []string{"http://allowed.com"},
 	}
 
@@ -1433,7 +1434,7 @@ func (fakeFileInfo) Sys() interface{}   { return nil }
 
 func TestServer_HandleRenameContextHTTP_Unauthorized(t *testing.T) {
 	server := &Server{
-		kubectl:        &KubectlProxy{config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
 		agentToken:     "secret",
 		allowedOrigins: []string{"*"},
 	}
@@ -1451,7 +1452,7 @@ func TestServer_HandleRenameContextHTTP_Unauthorized(t *testing.T) {
 
 func TestServer_HandleRenameContextHTTP_WrongMethod(t *testing.T) {
 	server := &Server{
-		kubectl:        &KubectlProxy{config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
 		allowedOrigins: []string{"*"},
 	}
 
@@ -1471,7 +1472,7 @@ func TestServer_HandleRenameContextHTTP_MissingNames(t *testing.T) {
 	execCommandContext = fakeExecCommandContext
 
 	server := &Server{
-		kubectl: &KubectlProxy{
+		kubectl: &kube.KubectlProxy{
 			config:     &api.Config{},
 			kubeconfig: "/tmp/config",
 		},
@@ -1498,7 +1499,7 @@ func TestServer_HandleRenameContextHTTP_FlagInjection(t *testing.T) {
 	execCommandContext = fakeExecCommandContext
 
 	server := &Server{
-		kubectl: &KubectlProxy{
+		kubectl: &kube.KubectlProxy{
 			config:     &api.Config{},
 			kubeconfig: "/tmp/config",
 		},
@@ -2129,7 +2130,7 @@ func TestServer_ValidateAPIKeyValue_EmptyKey(t *testing.T) {
 
 func TestServer_HandleHealth_OPTIONS(t *testing.T) {
 	server := &Server{
-		kubectl:        &KubectlProxy{config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{config: &api.Config{}},
 		registry:       &Registry{providers: make(map[string]AIProvider)},
 		allowedOrigins: []string{"http://localhost"},
 	}

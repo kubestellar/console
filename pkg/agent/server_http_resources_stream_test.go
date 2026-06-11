@@ -12,6 +12,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/client-go/tools/clientcmd/api"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // TestHandleClusterResourceStreamSSE_OPTIONS verifies that preflight requests
@@ -282,8 +283,8 @@ func TestHandleGPUNodesStreamSSE_OPTIONS(t *testing.T) {
 
 // --- Test helpers ---
 
-// newTestKubectlProxy creates a KubectlProxy with in-memory cluster contexts.
-func newTestKubectlProxy(clusterNames ...string) *KubectlProxy {
+// newTestKubectlProxy creates a kube.KubectlProxy with in-memory cluster contexts.
+func newTestKubectlProxy(clusterNames ...string) *kube.KubectlProxy {
 	cfg := &api.Config{
 		Contexts:  make(map[string]*api.Context),
 		Clusters:  make(map[string]*api.Cluster),
@@ -302,7 +303,7 @@ func newTestKubectlProxy(clusterNames ...string) *KubectlProxy {
 	if len(clusterNames) > 0 {
 		cfg.CurrentContext = clusterNames[0]
 	}
-	return &KubectlProxy{
+	return &kube.KubectlProxy{
 		kubeconfig: "/dev/null",
 		config:     cfg,
 	}

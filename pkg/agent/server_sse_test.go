@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // newTestServerForSSE creates a Server with the given kubeconfig contexts and
@@ -38,7 +39,7 @@ func newTestServerForSSE(t *testing.T, contexts map[string]*api.Context) (*Serve
 		cfg.AuthInfos[name] = &api.AuthInfo{}
 	}
 
-	proxy := &KubectlProxy{
+	proxy := &kube.KubectlProxy{
 		kubeconfig: "/dev/null",
 		config:     cfg,
 	}
@@ -561,7 +562,7 @@ func TestHandleJobsStreamSSE_Unauthorized(t *testing.T) {
 
 func TestHandleJobsStreamSSE_NilK8sClient(t *testing.T) {
 	srv := &Server{
-		kubectl:        &KubectlProxy{kubeconfig: "/dev/null", config: &api.Config{}},
+		kubectl:        &kube.KubectlProxy{kubeconfig: "/dev/null", config: &api.Config{}},
 		k8sClient:      nil,
 		allowedOrigins: []string{"*"},
 		agentToken:     "",

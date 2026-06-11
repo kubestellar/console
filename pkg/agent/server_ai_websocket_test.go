@@ -12,6 +12,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleWebSocket_Upgrade(t *testing.T) {
@@ -125,7 +126,7 @@ func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
 }
 
 func TestServer_HandleWebSocket_MessageRouting(t *testing.T) {
-	mockProxy := &KubectlProxy{
+	mockProxy := &kube.KubectlProxy{
 		config: &clientcmdapi.Config{
 			Contexts: map[string]*clientcmdapi.Context{"c1": {Cluster: "c1"}},
 		},

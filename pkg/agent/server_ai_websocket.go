@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/safego"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // wsGoroutineDrainTimeout is the maximum time handleWebSocket waits for
@@ -546,7 +547,7 @@ func (s *Server) handleKubectlMessage(ctx context.Context, msg protocol.Message)
 		}
 	}
 	if req.Namespace != "" {
-		if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		if err := kube.ValidateDNS1123Label("namespace", req.Namespace); err != nil {
 			return protocol.Message{
 				ID:   msg.ID,
 				Type: protocol.TypeError,

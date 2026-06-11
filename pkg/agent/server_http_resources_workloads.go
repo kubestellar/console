@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 // handleNamespacesHTTP serves namespace operations for a cluster. GET lists
@@ -94,7 +95,7 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
-	if err := validateDNS1123Label("name", req.Name); err != nil {
+	if err := kube.ValidateDNS1123Label("name", req.Name); err != nil {
 		slog.Error("invalid namespace name for create request", "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})

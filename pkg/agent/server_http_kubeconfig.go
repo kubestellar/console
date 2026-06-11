@@ -81,7 +81,7 @@ type kubeconfigImportResponse struct {
 
 // kubeconfigPreviewResponse is the response from kubeconfig preview
 type kubeconfigPreviewResponse struct {
-	Contexts []KubeconfigPreviewEntry `json:"contexts"`
+	Contexts []kube.KubeconfigPreviewEntry `json:"contexts"`
 }
 
 // handleKubeconfigPreviewHTTP returns a dry-run preview of which contexts would be imported
@@ -250,7 +250,7 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var req AddClusterRequest
+	var req kube.AddClusterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
@@ -289,7 +289,7 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var req TestConnectionRequest
+	var req kube.TestConnectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, protocol.ErrorPayload{Code: "invalid_request", Message: "Invalid JSON"})
@@ -300,7 +300,7 @@ func (s *Server) handleKubeconfigTestHTTP(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		slog.Error("test connection error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, TestConnectionResult{Reachable: false, Error: "connection test failed"})
+		writeJSON(w, kube.TestConnectionResult{Reachable: false, Error: "connection test failed"})
 		return
 	}
 

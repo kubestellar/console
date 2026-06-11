@@ -1,4 +1,4 @@
-package agent
+package kube
 
 import (
 	"fmt"
@@ -10,12 +10,12 @@ import (
 // must start and end with an alphanumeric character.
 var dns1123LabelRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 
-// validateDNS1123Label checks that name conforms to Kubernetes DNS-1123 label
+// ValidateDNS1123Label checks that name conforms to Kubernetes DNS-1123 label
 // rules. Returns nil if valid, or an error describing the violation.
 // This MUST be called on all user-supplied cluster names, namespace names,
 // and similar identifiers before they are used in exec.Command arguments,
 // URL path construction, or kubeconfig context lookups (#7171, #7175).
-func validateDNS1123Label(field, value string) error {
+func ValidateDNS1123Label(field, value string) error {
 	if value == "" {
 		return fmt.Errorf("%s must not be empty", field)
 	}
@@ -30,14 +30,14 @@ func validateDNS1123Label(field, value string) error {
 // This is used for cluster context names which may contain dots.
 var dns1123SubdomainRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$`)
 
-// validateKubeContext checks that a kubeconfig context name is safe for use
+// ValidateKubeContext checks that a kubeconfig context name is safe for use
 // in command arguments and URL paths. Context names follow DNS-1123 subdomain
 // rules but may also contain colons, slashes, and underscores (common in
 // kubeconfig contexts like "arn:aws:..." or "gke_project_zone_cluster").
 // We reject path-traversal sequences and control characters.
 var unsafeContextChars = regexp.MustCompile(`[^a-zA-Z0-9._:/@-]`)
 
-func validateKubeContext(value string) error {
+func ValidateKubeContext(value string) error {
 	if value == "" {
 		return fmt.Errorf("context must not be empty")
 	}
