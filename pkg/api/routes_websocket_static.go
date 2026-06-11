@@ -9,17 +9,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
 // setupWebSocketStaticRoutes registers webhook, websocket, and static/frontend routes.
 func (s *Server) setupWebSocketStaticRoutes(routes *routeSetupContext) {
-	feedback := routes.feedback
-	if feedback == nil {
-		feedback = handlers.NewFeedbackHandler(s.store, handlers.LoadFeedbackConfig())
-		routes.feedback = feedback
+	feedbackHandler := routes.feedback
+	if feedbackHandler == nil {
+		feedbackHandler = feedback.NewFeedbackHandler(s.store, feedback.LoadFeedbackConfig())
+		routes.feedback = feedbackHandler
 	}
-	s.app.Post("/webhooks/github", feedback.HandleGitHubWebhook)
+	s.app.Post("/webhooks/github", feedbackHandler.HandleGitHubWebhook)
 
 	s.app.Use("/ws", routes.publicLimiter, middleware.ValidateWebSocketOrigin(s.config.DevMode), middleware.WebSocketUpgrade())
 	s.app.Get("/ws", websocket.New(func(c *websocket.Conn) {

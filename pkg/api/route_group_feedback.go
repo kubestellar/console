@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -27,26 +28,26 @@ func newFeedbackRouteGroup(app *fiber.App, store store.Store, githubToken string
 
 func (g *feedbackRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
-	feedback := routes.feedback
-	if feedback == nil {
-		feedback = handlers.NewFeedbackHandler(g.store, handlers.LoadFeedbackConfig())
-		routes.feedback = feedback
+	feedbackHandler := routes.feedback
+	if feedbackHandler == nil {
+		feedbackHandler = feedback.NewFeedbackHandler(g.store, feedback.LoadFeedbackConfig())
+		routes.feedback = feedbackHandler
 	}
 
-	api.Get("/feedback/requests", feedback.ListFeatureRequests)
-	api.Get("/feedback/issue-link-capabilities", feedback.GetIssueLinkCapabilities)
-	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
-	api.Get("/feedback/requests/:id", feedback.GetFeatureRequest)
-	api.Post("/feedback/requests/:id/feedback", feedback.SubmitFeedback)
-	api.Post("/feedback/requests/:id/close", feedback.CloseRequest)
-	api.Patch("/feedback/:id/close", feedback.CloseRequest)
-	api.Post("/feedback/requests/:id/request-update", feedback.RequestUpdate)
-	api.Post("/feedback/:id/reopen", feedback.ReopenRequest)
-	api.Get("/feedback/preview/:pr_number", feedback.CheckPreviewStatus)
-	api.Get("/notifications", feedback.GetNotifications)
-	api.Get("/notifications/unread-count", feedback.GetUnreadCount)
-	api.Post("/notifications/:id/read", feedback.MarkNotificationRead)
-	api.Post("/notifications/read-all", feedback.MarkAllNotificationsRead)
+	api.Get("/feedback/requests", feedbackHandler.ListFeatureRequests)
+	api.Get("/feedback/issue-link-capabilities", feedbackHandler.GetIssueLinkCapabilities)
+	api.Get("/feedback/queue", feedbackHandler.ListAllFeatureRequests)
+	api.Get("/feedback/requests/:id", feedbackHandler.GetFeatureRequest)
+	api.Post("/feedback/requests/:id/feedback", feedbackHandler.SubmitFeedback)
+	api.Post("/feedback/requests/:id/close", feedbackHandler.CloseRequest)
+	api.Patch("/feedback/:id/close", feedbackHandler.CloseRequest)
+	api.Post("/feedback/requests/:id/request-update", feedbackHandler.RequestUpdate)
+	api.Post("/feedback/:id/reopen", feedbackHandler.ReopenRequest)
+	api.Get("/feedback/preview/:pr_number", feedbackHandler.CheckPreviewStatus)
+	api.Get("/notifications", feedbackHandler.GetNotifications)
+	api.Get("/notifications/unread-count", feedbackHandler.GetUnreadCount)
+	api.Post("/notifications/:id/read", feedbackHandler.MarkNotificationRead)
+	api.Post("/notifications/read-all", feedbackHandler.MarkAllNotificationsRead)
 
 	rewardsHandler := handlers.NewRewardsHandler(handlers.RewardsConfig{
 		GitHubToken: g.githubToken,

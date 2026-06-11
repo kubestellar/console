@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/mcp"
 	"github.com/kubestellar/console/pkg/api/handlers/benchmarks"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
@@ -20,7 +21,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Get("/timeline", timeline.GetTimeline)
 	timeline.StartEventCollector(s.lifecycle.done)
 
-	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
+	mcpHandlers := mcp.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
 	clusterDiscoveryAuth := routes.jwtAuth
 	if s.config.DevMode {
 		clusterDiscoveryAuth = func(c *fiber.Ctx) error { return c.Next() }

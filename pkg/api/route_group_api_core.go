@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	githubhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/settings"
@@ -111,7 +112,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 		return c.Status(resp.StatusCode).Send(body)
 	})
 
-	githubProxy := handlers.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
+	githubProxy := githubhandlers.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
 	githubTokenAdminOnly := func(c *fiber.Ctx) error {
 		if err := handlers.RequireAdmin(c, g.store); err != nil {
 			return err
@@ -122,7 +123,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/github/token", githubTokenAdminOnly, githubProxy.SaveToken)
 	api.Delete("/github/token", githubTokenAdminOnly, githubProxy.DeleteToken)
 
-	githubPipelines := handlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
+	githubPipelines := githubhandlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
 	api.Get("/github-pipelines", githubPipelines.Serve)
 	api.Post("/github-pipelines", githubPipelines.Serve)
 	api.Get("/github-pipelines/health", githubPipelines.HandleHealth)
