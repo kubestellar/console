@@ -1,6 +1,8 @@
 package api
 
 import (
+	"github.com/kubestellar/console/pkg/api/handlers/github"
+	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"bytes"
 	"io"
 	"log/slog"
@@ -111,7 +113,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 		return c.Status(resp.StatusCode).Send(body)
 	})
 
-	githubProxy := handlers.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
+	githubProxy := github.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
 	githubTokenAdminOnly := func(c *fiber.Ctx) error {
 		if err := handlers.RequireAdmin(c, g.store); err != nil {
 			return err
@@ -122,7 +124,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/github/token", githubTokenAdminOnly, githubProxy.SaveToken)
 	api.Delete("/github/token", githubTokenAdminOnly, githubProxy.DeleteToken)
 
-	githubPipelines := handlers.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
+	githubPipelines := github.NewGitHubPipelinesHandler(g.config.GitHubToken, g.store)
 	api.Get("/github-pipelines", githubPipelines.Serve)
 	api.Post("/github-pipelines", githubPipelines.Serve)
 	api.Get("/github-pipelines/health", githubPipelines.HandleHealth)
@@ -184,7 +186,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/events", events.RecordEvent)
 	api.Get("/events", events.GetEvents)
 
-	missions := handlers.NewMissionsHandler().WithStore(g.store)
+	missions := missions.NewMissionsHandler().WithStore(g.store)
 	missions.RegisterRoutes(api.Group("/missions"))
 
 	orbitDataDir := filepath.Dir(g.config.DatabasePath)
