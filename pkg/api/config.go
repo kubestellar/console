@@ -51,7 +51,8 @@ type ServerConfig struct {
 	SkipOnboarding    bool
 	EnabledDashboards string // Comma-separated list of dashboard IDs to show in sidebar (empty = all)
 	ConsoleProject    string // White-label project context (e.g., "kubestellar", "crossplane", "istio")
-	NoLocalAgent      bool   // Suppress local kc-agent connections in in-cluster deployments
+	NoLocalAgent        bool // Suppress local kc-agent connections in in-cluster deployments
+	DisableDynamicCards bool // Remove 'unsafe-eval' from CSP by disabling the dynamic cards feature
 }
 
 // AuthConfig holds authentication and authorization configuration
@@ -228,7 +229,8 @@ func LoadConfigFromEnv() Config {
 			SkipOnboarding:    os.Getenv("SKIP_ONBOARDING") == "true",
 			EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
 			ConsoleProject:    getEnvOrDefault("CONSOLE_PROJECT", "kubestellar"),
-			NoLocalAgent:      os.Getenv("NO_LOCAL_AGENT") == "true",
+			NoLocalAgent:        os.Getenv("NO_LOCAL_AGENT") == "true",
+			DisableDynamicCards: os.Getenv("DISABLE_DYNAMIC_CARDS") == "true",
 		},
 		AuthConfig: AuthConfig{
 			GitHubClientID: githubClientID,

@@ -21,6 +21,12 @@ func newCSPTestServer(t *testing.T, kcAgentURL string) *Server {
 // newCSPTestServerWithDevMode creates a minimal server with configurable DevMode.
 func newCSPTestServerWithDevMode(t *testing.T, kcAgentURL string, devMode bool) *Server {
 	t.Helper()
+	return newCSPTestServerWithConfig(t, kcAgentURL, ServerConfig{DevMode: devMode})
+}
+
+// newCSPTestServerWithConfig creates a minimal server with full ServerConfig control.
+func newCSPTestServerWithConfig(t *testing.T, kcAgentURL string, serverCfg ServerConfig) *Server {
+	t.Helper()
 
 	// Override the package-level kcAgentBaseURL for the duration of this test.
 	orig := kcAgentBaseURL
@@ -31,10 +37,9 @@ func newCSPTestServerWithDevMode(t *testing.T, kcAgentURL string, devMode bool) 
 		app: fiber.New(fiber.Config{ErrorHandler: customErrorHandler}),
 		// FrontendURL must be a specific origin (not empty) because CORS rejects
 		// AllowCredentials=true combined with AllowOrigins="*".
-		// FrontendURL lives in IntegrationsConfig (embedded); use qualified form in literals.
 		config: Config{
 			IntegrationsConfig: IntegrationsConfig{FrontendURL: "http://localhost:3000"},
-			ServerConfig:       ServerConfig{DevMode: devMode},
+			ServerConfig:       serverCfg,
 		},
 		auth: newAuthRuntime(),
 	}
@@ -200,9 +205,35 @@ func TestCSP_ProductionMode_NoUnsafeInlineInScriptSrc(t *testing.T) {
 	assert.NotContains(t, scriptSrc, "'unsafe-inline'",
 		"script-src must NOT contain 'unsafe-inline' in production mode")
 	assert.Contains(t, scriptSrc, "'unsafe-eval'",
-		"script-src must contain 'unsafe-eval' for dynamic cards feature in production")
+		"script-src must contain 'unsafe-eval' for dynamic cards feature in production (default)")
 	assert.Contains(t, scriptSrc, "'wasm-unsafe-eval'",
 		"script-src must contain 'wasm-unsafe-eval' for SQLite WASM worker")
+}
+
+// TestCSP_DisableDynamicCards_NoUnsafeEval verifies that 'unsafe-eval' is absent
+// from script-src when DisableDynamicCards=true, hardening the CSP.
+func TestCSP_DisableDynamicCards_NoUnsafeEval(t *testing.T) {
+	s := newCSPTestServerWithConfig(t, defaultKCAgentBaseURL, ServerConfig{
+		DisableDynamicCards: true,
+	})
+	csp := cspHeader(t, s)
+
+	require.NotEmpty(t, csp)
+
+	scriptSrc := ""
+	for _, part := range strings.Split(csp, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "script-src ") {
+			scriptSrc = part
+			break
+		}
+	}
+	require.NotEmpty(t, scriptSrc, "script-src directive must be present")
+
+	assert.NotContains(t, scriptSrc, "'unsafe-eval'",
+		"script-src must NOT contain 'unsafe-eval' when dynamic cards are disabled")
+	assert.Contains(t, scriptSrc, "'wasm-unsafe-eval'",
+		"script-src must still contain 'wasm-unsafe-eval' for SQLite WASM worker")
 }
 
 // TestCSP_DevMode_HasUnsafeInlineInScriptSrc verifies that 'unsafe-inline' is present

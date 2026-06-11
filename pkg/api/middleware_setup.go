@@ -104,7 +104,14 @@ func (s *Server) setupMiddleware() {
 		// connect-src includes https://raw.githubusercontent.com because the
 		// Marketplace page fetches registry.json from the console-marketplace
 		// repo on GitHub (#10653). Without it the browser blocks the request.
-		scriptSrc := "'self' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
+		scriptSrc := "'self' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
+		if !s.config.DisableDynamicCards {
+			// Dynamic cards feature requires 'unsafe-eval' for new Function() in
+			// web/src/lib/dynamic-cards/compiler.ts. When DISABLE_DYNAMIC_CARDS=true,
+			// this directive is omitted, hardening the CSP against XSS payloads
+			// that leverage eval()/Function().
+			scriptSrc = "'self' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
+		}
 		if s.config.DevMode {
 			// In dev mode, add 'unsafe-inline' to allow Vite HMR injected scripts.
 			scriptSrc = "'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com"
