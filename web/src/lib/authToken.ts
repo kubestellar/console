@@ -91,6 +91,28 @@ function writeAuthTokenSyncEvent(state: AuthTokenSyncState): void {
   }
 }
 
+export function getStoredAuthTokenSync(): string | null {
+  if (inMemorySessionToken) {
+    return inMemorySessionToken
+  }
+
+  if (inMemoryDemoToken) {
+    return inMemoryDemoToken
+  }
+
+  const legacySession = readLegacyTestAuthToken(sessionStorage)
+  if (legacySession) {
+    return legacySession
+  }
+
+  const legacyLocal = readLegacyTestAuthToken(localStorage)
+  if (legacyLocal) {
+    return legacyLocal
+  }
+
+  return null
+}
+
 export async function getStoredAuthToken(): Promise<string | null> {
   const sessionToken = await readSessionAuthToken()
   if (sessionToken) {

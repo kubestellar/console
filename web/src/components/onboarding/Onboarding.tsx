@@ -6,7 +6,7 @@ import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
-import { getStoredAuthToken } from '../../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../../lib/authToken'
 import { safeSetItem, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 import { Button } from '../ui/Button'
 
@@ -136,7 +136,7 @@ export function Onboarding() {
     const fallbackErrorMessage = t('onboarding.errorFallback', {
       defaultValue: 'Failed to complete onboarding. Please try again.',
     })
-    const token = getStoredAuthToken()
+    const token = getStoredAuthTokenSync()
     const isDemoMode = token === DEMO_TOKEN_VALUE
 
     setIsSubmitting(true)

@@ -4,7 +4,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { fetchSSE } from '../../lib/sseClient'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
-import { getStoredAuthToken } from '../../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../../lib/authToken'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
 import { deduplicateClustersByServer } from './dedup'
 import type { Operator, OperatorSubscription } from './types'
@@ -140,7 +140,7 @@ export function useOperators(cluster?: string) {
       setIsRefreshing(true)
 
       // Try SSE streaming first for progressive rendering
-      const token = getStoredAuthToken()
+      const token = getStoredAuthTokenSync()
       const sseAvailable = token && token !== 'demo-token'
 
       if (sseAvailable) {
@@ -320,7 +320,7 @@ export function useOperatorSubscriptions(cluster?: string) {
       setIsRefreshing(true)
 
       // Try SSE streaming first — backend handles multi-cluster parallelism
-      const token = getStoredAuthToken()
+      const token = getStoredAuthTokenSync()
       const sseAvailable = token && token !== 'demo-token'
 
       if (sseAvailable) {
