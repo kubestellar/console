@@ -42,6 +42,45 @@ func TestNormalizeKCAgentBaseURL_CleanURL(t *testing.T) {
 	}
 }
 
+func TestNormalizeKCAgentBaseURL_HTTPSAccepted(t *testing.T) {
+	got := normalizeKCAgentBaseURL("https://agent.example.com:8585")
+	if got != "https://agent.example.com:8585" {
+		t.Errorf("expected https URL accepted, got %q", got)
+	}
+}
+
+// Security: CSP injection via semicolon in KC_AGENT_URL must be rejected.
+func TestNormalizeKCAgentBaseURL_CSPInjectionRejected(t *testing.T) {
+	got := normalizeKCAgentBaseURL("http://attacker.com; script-src *")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for CSP injection attempt, got %q", got)
+	}
+}
+
+// Security: bare hostname without scheme must fall back to default.
+func TestNormalizeKCAgentBaseURL_NoSchemeRejected(t *testing.T) {
+	got := normalizeKCAgentBaseURL("attacker.com:8585")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for schemeless URL, got %q", got)
+	}
+}
+
+// Security: non-http/https scheme (e.g. file://) must be rejected.
+func TestNormalizeKCAgentBaseURL_FileSchemeRejected(t *testing.T) {
+	got := normalizeKCAgentBaseURL("file:///etc/passwd")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for file:// scheme, got %q", got)
+	}
+}
+
+// Security: URL with no host must be rejected.
+func TestNormalizeKCAgentBaseURL_NoHostRejected(t *testing.T) {
+	got := normalizeKCAgentBaseURL("http://")
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for URL with empty host, got %q", got)
+	}
+}
+
 func TestNormalizeKCAgentBaseURL_FromEnv(t *testing.T) {
 	t.Setenv(kcAgentURLEnvVar, "http://agent.svc:8585/")
 	// Re-run the normalizer logic directly (init is already done; test the function)

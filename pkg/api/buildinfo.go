@@ -56,9 +56,18 @@ func init() {
 	}
 }
 
+// normalizeKCAgentBaseURL sanitises KC_AGENT_URL before it is embedded in
+// the Content-Security-Policy header. Only http:// and https:// URLs with a
+// non-empty host are accepted; anything else falls back to the default loopback
+// address. This prevents CSP header injection if the env var is set to a
+// crafted value (e.g. "http://x; script-src *") by a compromised deployment.
 func normalizeKCAgentBaseURL(raw string) string {
 	trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
 	if trimmed == "" {
+		return defaultKCAgentBaseURL
+	}
+	u, err := url.Parse(trimmed)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return defaultKCAgentBaseURL
 	}
 	return trimmed
