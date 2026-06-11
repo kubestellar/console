@@ -84,7 +84,7 @@ function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
     return JSON.parse(raw) as T
   } catch (err) {
     // Non-critical: malformed optional cache data; log for debugging and fall back to default
-    console.warn(`[useTrestle] Failed to parse ${context}, using default`, err)
+    console.error(`[useTrestle] Failed to parse ${context}, using default`, err)
     return fallback
   }
 }

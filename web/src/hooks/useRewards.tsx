@@ -284,7 +284,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
         })
         .catch((refreshErr: unknown) => {
           if (refreshErr instanceof RewardsUnauthenticatedError) return
-          console.warn('[useRewards] cross-tab server refresh failed:', refreshErr)
+          console.error('[useRewards] cross-tab server refresh failed:', refreshErr)
         })
     }
     window.addEventListener('storage', handleStorage)
@@ -361,7 +361,7 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     if (!isDemoSession) {
       apiIncrementCoins(rewardConfig.coins).catch((err: unknown) => {
         if (err instanceof RewardsUnauthenticatedError) return
-        console.warn('[useRewards] failed to persist coin delta to backend:', err)
+        console.error('[useRewards] failed to persist coin delta to backend:', err)
       })
     }
 

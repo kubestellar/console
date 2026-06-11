@@ -8,7 +8,7 @@ function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
   try {
     return JSON.parse(raw) as T
   } catch (err) {
-    console.warn(`[usePredictionSettings] Failed to parse ${context}, using default`, err)
+    console.error(`[usePredictionSettings] Failed to parse ${context}, using default`, err)
     return fallback
   }
 }
