@@ -88,7 +88,7 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 - **Enhanced AI missions** — AI-assisted troubleshooting missions that diagnose cluster issues and suggest remediation steps
 - **Offline/air-gapped mode** — Full Console functionality without internet connectivity for restricted environments
 - **CNCF incubation preparation** — Governance documentation, adopters program, and community growth metrics; target Q4 2026 TOC application
-- **Third-party security audit** — Engage CNCF-sponsored auditors (e.g., ADA Logics) for a formal code security audit; required gate for CNCF incubation
+- **Third-party security audit (Q3 2026)** — Engage CNCF-sponsored auditors (ADA Logics or CNCF Security Audit program) for formal code security audit; required gate for CNCF incubation. **Owner:** clubanderson. **Timeline:** Open CNCF Security Audit request at https://github.com/cncf/toc/issues in Q2 2026; schedule audit completion for Q3 2026. This positions the project for Q4 2026 incubation application with completed security due-diligence.
 - **Multi-model AI backend** — Support for multiple LLM providers (OpenAI, Ollama, vLLM) behind a unified mission interface, reducing vendor lock-in
 - **Webhook-driven card updates** — Push-based card refresh via Kubernetes webhooks instead of polling, reducing API server load on large clusters
 - **Custom alert rules** — User-defined threshold alerts on any card metric, with notification channels (Slack, email, PagerDuty)
