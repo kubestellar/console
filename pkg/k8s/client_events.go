@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"github.com/kubestellar/console/pkg/k8s/resources"
 	"context"
 	"fmt"
 	"sort"
@@ -43,7 +42,7 @@ func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespa
 	// Sort by effective event time descending (prefers modern EventTime,
 	// falls back to LastTimestamp for older clusters). See issue #6042.
 	sort.Slice(events.Items, func(i, j int) bool {
-		return resources.EffectiveEventTime(&events.Items[i]).After(resources.EffectiveEventTime(&events.Items[j]))
+		return EffectiveEventTime(&events.Items[i]).After(EffectiveEventTime(&events.Items[j]))
 	})
 
 	var result []Event
@@ -52,7 +51,7 @@ func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespa
 			break
 		}
 		evt := event
-		lastSeen := resources.EffectiveEventTime(&evt)
+		lastSeen := EffectiveEventTime(&evt)
 		e := Event{
 			Type:      event.Type,
 			Reason:    event.Reason,
@@ -92,7 +91,7 @@ func (m *MultiClusterClient) GetWarningEvents(ctx context.Context, contextName, 
 	// Sort by effective event time descending (prefers modern EventTime,
 	// falls back to LastTimestamp for older clusters). See issue #6042.
 	sort.Slice(events.Items, func(i, j int) bool {
-		return resources.EffectiveEventTime(&events.Items[i]).After(resources.EffectiveEventTime(&events.Items[j]))
+		return EffectiveEventTime(&events.Items[i]).After(EffectiveEventTime(&events.Items[j]))
 	})
 
 	var result []Event
@@ -101,7 +100,7 @@ func (m *MultiClusterClient) GetWarningEvents(ctx context.Context, contextName, 
 			break
 		}
 		evt := event
-		lastSeen := resources.EffectiveEventTime(&evt)
+		lastSeen := EffectiveEventTime(&evt)
 		e := Event{
 			Type:      event.Type,
 			Reason:    event.Reason,
