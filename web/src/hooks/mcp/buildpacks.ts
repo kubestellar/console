@@ -182,7 +182,7 @@ export function useBuildpackImages(cluster?: string) {
           return
         }
 
-        const token = getStoredAuthToken()
+        const token = await getStoredAuthToken()
         const headers: Record<string, string> = {
           'Content-Type': 'application/json' }
         if (token) {

@@ -247,7 +247,7 @@ function stopPresenceConnection() {
 function startPresenceConnection() {
   if (presenceStarted) return
 
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   if (!token) return
 
   // Set flag AFTER token check so a missing token doesn't permanently block

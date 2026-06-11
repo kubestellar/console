@@ -151,7 +151,7 @@ describe('setDemoToken', () => {
 
   it('stores demo-token in auth storage', () => {
     setDemoToken()
-    expect(getStoredAuthToken()).toBe('demo-token')
+    expect(await getStoredAuthToken()).toBe('demo-token')
   })
 })
 
@@ -169,7 +169,7 @@ describe('activatePublicDemoMode', () => {
 
     expect(localStorage.getItem('kc-demo-mode')).toBe('true')
     expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
-    expect(getStoredAuthToken()).toBe('demo-token')
+    expect(await getStoredAuthToken()).toBe('demo-token')
     expect(localStorage.getItem('kc-user-cache')).toBeNull()
     expect(localStorage.getItem('kc-has-session')).toBeNull()
   })
@@ -182,7 +182,7 @@ describe('activatePublicDemoMode', () => {
 
     expect(localStorage.getItem('kc-demo-mode')).toBe('true')
     expect(localStorage.getItem('demo-user-onboarded')).toBe('true')
-    expect(getStoredAuthToken()).toBe('real-jwt-token')
+    expect(await getStoredAuthToken()).toBe('real-jwt-token')
     expect(localStorage.getItem('kc-user-cache')).toBe(JSON.stringify({ id: 'real-user' }))
   })
 })

@@ -91,6 +91,32 @@ function writeAuthTokenSyncEvent(state: AuthTokenSyncState): void {
   }
 }
 
+/**
+ * Synchronous version of getStoredAuthToken for use in useState initialization
+ * and other sync contexts. Returns in-memory cache or legacy test tokens only.
+ * For full async token retrieval with crypto verification, use getStoredAuthToken().
+ */
+export function getStoredAuthTokenSync(): string | null {
+  // Try in-memory cache first
+  if (inMemorySessionToken) {
+    return inMemorySessionToken
+  }
+  if (inMemoryDemoToken) {
+    return inMemoryDemoToken
+  }
+
+  // Fall back to legacy test tokens (test environment only)
+  try {
+    const sessionToken = readLegacyTestAuthToken(sessionStorage)
+    if (sessionToken) {
+      return sessionToken
+    }
+    return readLegacyTestAuthToken(localStorage)
+  } catch {
+    return null
+  }
+}
+
 export async function getStoredAuthToken(): Promise<string | null> {
   const sessionToken = await readSessionAuthToken()
   if (sessionToken) {

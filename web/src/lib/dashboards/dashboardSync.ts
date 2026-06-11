@@ -74,7 +74,7 @@ class DashboardSyncService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!getStoredAuthToken()
+    return !!await getStoredAuthToken()
   }
 
   /**

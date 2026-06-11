@@ -185,7 +185,7 @@ export function useClusters() {
       }
 
       // Don't attempt WebSocket if not authenticated
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       if (!token) {
         return
       }

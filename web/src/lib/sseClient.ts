@@ -146,7 +146,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   // SECURITY: Include the current auth token in the cache key so that data
   // fetched under one user session is never served to a different user within
   // the cache TTL window (#4712).
-  const currentTokenForKey = getStoredAuthToken() || ''
+  const currentTokenForKey = await getStoredAuthToken() || ''
   const cacheKey = `${fullUrl}::${currentTokenForKey}`
 
   // Check result cache — if fresh, replay cached data via callbacks and resolve

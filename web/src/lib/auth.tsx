@@ -11,7 +11,7 @@ import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { clearAgentToken, setAgentToken } from '../hooks/mcp/agentFetch'
 import { DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
 import { safeGet, safeRemove, safeSetJSON } from './safeLocalStorage'
-import { AUTH_TOKEN_SYNC_KEY, clearStoredAuthToken, getStoredAuthToken, parseAuthTokenSyncEvent, setStoredAuthToken } from './authToken'
+import { AUTH_TOKEN_SYNC_KEY, clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync, parseAuthTokenSyncEvent, setStoredAuthToken } from './authToken'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
@@ -172,12 +172,12 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getCachedUser)
-  const [token, setTokenState] = useState<string | null>(getStoredAuthToken)
+  const [token, setTokenState] = useState<string | null>(getStoredAuthTokenSync)
   // Start loading until refreshUser() resolves — this prevents a flash of the login
   // page while we check whether to auto-enable demo mode (Helm installs / from-lens).
   // Exception: if we already have a token AND cached user, skip loading (stale-while-revalidate).
   const [isLoading, setIsLoading] = useState(() => {
-    const hasToken = !!getStoredAuthToken()
+    const hasToken = !!getStoredAuthTokenSync()
     const hasCachedUser = !!getCachedUser()
     // No token: still loading — refreshUser() will check OAuth and may auto-demo
     // Has token + no cache: loading — refreshUser() will fetch user
@@ -185,13 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !hasToken || (hasToken && !hasCachedUser)
   })
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     emitLogout()
 
     // Invalidate the server-side session before clearing client state (#4751).
     // Fire-and-forget: even if the backend call fails, we still clear local state
     // so the user is logged out on the client side.
-    const currentToken = getStoredAuthToken()
+    const currentToken = await getStoredAuthToken()
     if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
       fetch('/auth/logout', {
         method: 'POST',
@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // now lives in memory with expiring sessionStorage fallback, so explicitly
     // wipe both session-scoped stores on logout to avoid leaking into the next
     // session.
-    clearStoredAuthToken()
+    await clearStoredAuthToken()
     clearAgentToken()
     safeRemove(AUTH_USER_CACHE_KEY)
     safeRemove(STORAGE_KEY_HAS_SESSION)
@@ -239,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     disconnectPresence()
   }, [])
 
-  const setDemoMode = useCallback(() => {
+  const setDemoMode = useCallback(async () => {
     // If user explicitly disabled demo mode, respect their choice.
     // They want AI mode (agent) or live mode (backend) — not demo fallback.
     const userExplicitlyDisabledDemo = safeGet(STORAGE_KEY_DEMO_MODE) === 'false'
@@ -249,7 +249,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.hostname.includes('netlify.app') ||
       window.location.hostname.includes('deploy-preview-')
     const demoOnboarded = isNetlifyPreview || safeGet(STORAGE_KEY_ONBOARDED) === 'true'
-    setStoredAuthToken(DEMO_TOKEN_VALUE)
+    await setStoredAuthToken(DEMO_TOKEN_VALUE)
     setTokenState(DEMO_TOKEN_VALUE)
     const demoUser: User = {
       id: 'demo-user',
@@ -270,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refreshUser = useCallback(async (overrideToken?: string) => {
-    const effectiveToken = overrideToken || getStoredAuthToken()
+    const effectiveToken = overrideToken || await getStoredAuthToken()
     if (!effectiveToken) {
       // #6055 — Retry the OAuth-configured probe during backend startup so we
       // don't race the backend into demo mode when the server is still coming
@@ -577,8 +577,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!token || token === DEMO_TOKEN_VALUE) return
 
-    const checkExpiry = () => {
-      const currentToken = getStoredAuthToken()
+    const checkExpiry = async () => {
+      const currentToken = await getStoredAuthToken()
       if (!currentToken || currentToken === DEMO_TOKEN_VALUE) return
 
       const expiryMs = getJwtExpiryMs(currentToken)
@@ -591,7 +591,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // returns 401.
       if (timeUntilExpiry <= 0) {
         document.getElementById('session-expiry-warning')?.remove()
-        logout()
+        await logout()
         return
       }
       if (timeUntilExpiry > EXPIRY_WARNING_THRESHOLD_MS) {
@@ -603,7 +603,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Re-read the token at click time instead of using the stale closure
         // value — the token may have been silently refreshed since the banner
         // was shown (#3909).
-        const freshToken = getStoredAuthToken()
+        const freshToken = await getStoredAuthToken()
         if (!freshToken || freshToken === DEMO_TOKEN_VALUE) return
         try {
           // #8108 — Do NOT send Authorization to /auth/refresh. Backend
@@ -655,7 +655,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // real session tokens now live in expiring browser storage wrappers instead
   // of plain localStorage entries.
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
+    const handleStorageChange = async (e: StorageEvent) => {
       if (e.key !== AUTH_TOKEN_SYNC_KEY) return
       const syncState = parseAuthTokenSyncEvent(e.newValue)
       if (syncState === 'cleared') {
@@ -679,7 +679,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       if (syncState === 'session') {
-        const syncedToken = getStoredAuthToken()
+        const syncedToken = await getStoredAuthToken()
         if (syncedToken) {
           setTokenState(syncedToken)
           document.getElementById('session-expiry-warning')?.remove()

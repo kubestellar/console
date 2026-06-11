@@ -171,7 +171,7 @@ export function useHelmReleases(cluster?: string) {
       const url = `/api/gitops/helm-releases?${params}`
 
       // Skip API calls when using demo token — provide demo releases
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       if (isDemoMode()) {
         const demoReleases = getDemoHelmReleases()
         if (!cluster) {
@@ -396,7 +396,7 @@ export function useHelmHistory(cluster?: string, release?: string, namespace?: s
       const url = `/api/gitops/helm-history?${params}`
 
       // Skip API calls when using demo token — provide demo history
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       if (isDemoMode()) {
         const demoHistory = getDemoHelmHistory()
         setHistory(demoHistory)
@@ -546,7 +546,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       const url = `/api/gitops/helm-values?${params}`
 
       // Skip API calls when using demo token — provide demo values
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       if (isDemoMode()) {
         const demoValues = getDemoHelmValues()
         setValues(demoValues)
@@ -650,7 +650,7 @@ export function useHelmValues(cluster?: string, release?: string, namespace?: st
       // No cache - fetch fresh data using direct fetch (bypasses circuit breaker)
       const doFetch = async () => {
         // Skip API calls when using demo token — provide demo values
-        const token = getStoredAuthToken()
+        const token = await getStoredAuthToken()
         if (isDemoMode()) {
           const demoValues = getDemoHelmValues()
           setValues(demoValues)

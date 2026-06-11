@@ -18,7 +18,7 @@ const FEEDBACK_ATTACHMENT_LIMIT_ERROR = 'Attachments are too large to submit. Ke
 // signal that a real user is logged in even with an empty localStorage token.
 function isDemoUser(): boolean {
   if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return false
-  const token = getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = await await getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === DEMO_TOKEN_VALUE
 }
 

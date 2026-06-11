@@ -278,7 +278,7 @@ export function useServices(cluster?: string, namespace?: string) {
       const url = `${LOCAL_AGENT_HTTP_URL}/services?${params}`
 
       // Use direct fetch with timeout to prevent hanging
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       headers['Authorization'] = `Bearer ${token}`
       const controller = new AbortController()
@@ -458,7 +458,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       }
     }
     // Skip REST fallback when no token to prevent GA4 auth errors (#9957)
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (!token) {
       // Only clear data if we never had any; preserve stale data otherwise (#11540)
       if (!hasReceivedLiveDataRef.current) {

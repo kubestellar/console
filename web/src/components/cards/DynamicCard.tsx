@@ -187,7 +187,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     persist: true,
     enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint && isSafeEndpoint,
     fetcher: async () => {
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const res = await fetch(apiEndpoint, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),

@@ -141,7 +141,7 @@ export function updateGPUNodeCache(updates: Partial<GPUNodeCache>) {
 // Fetch GPU nodes (shared across all consumers)
 let gpuFetchInProgress = false
 async function fetchGPUNodes(cluster?: string, _source?: string) {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   // GPU data is always live — try real sources first, fall back to demo only if all fail
 
   if (gpuFetchInProgress) return
@@ -638,7 +638,7 @@ export function useNVIDIAOperators(cluster?: string) {
       }
 
       // Try SSE streaming first
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       if ((token && token !== 'demo-token') || isInClusterMode()) {
         try {
           const accumulated: NVIDIAOperatorStatus[] = []

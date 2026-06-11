@@ -135,7 +135,7 @@ export function SyncDialog({
     try {
       // #7993 Phase 4: detect-drift moved to kc-agent. Runs under the
       // user's kubeconfig instead of the backend pod SA.
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
         method: 'POST',
         headers: {
@@ -235,7 +235,7 @@ export function SyncDialog({
     try {
       // #7993 Phase 4: gitops sync moved to kc-agent. Runs under the
       // user's kubeconfig instead of the backend pod SA.
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/sync`, {
         method: 'POST',
         headers: {

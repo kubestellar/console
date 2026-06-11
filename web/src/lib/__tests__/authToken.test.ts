@@ -14,19 +14,19 @@ describe('authToken', () => {
   it('reads legacy raw session tokens in test environments', () => {
     sessionStorage.setItem(STORAGE_KEY_TOKEN, 'legacy-session-token')
 
-    expect(getStoredAuthToken()).toBe('legacy-session-token')
+    expect(await getStoredAuthToken()).toBe('legacy-session-token')
   })
 
   it('reads legacy raw kc_token values in test environments', () => {
     localStorage.setItem('kc_token', 'legacy-kc-token')
 
-    expect(getStoredAuthToken()).toBe('legacy-kc-token')
+    expect(await getStoredAuthToken()).toBe('legacy-kc-token')
   })
 
   it('still prefers secure token storage writes', () => {
     setStoredAuthToken('secure-token')
 
-    expect(getStoredAuthToken()).toBe('secure-token')
+    expect(await getStoredAuthToken()).toBe('secure-token')
   })
 })
 
@@ -41,32 +41,32 @@ describe('token retrieval fallback behavior', () => {
     it('returns token when secure store contains a valid token', () => {
       setStoredAuthToken('secure-stored-token')
 
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       expect(token).toBe('secure-stored-token')
     })
 
     it('returns null when no token is stored anywhere', () => {
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       expect(token).toBeNull()
     })
 
     it('falls back to legacy localStorage token when secure store is empty', () => {
       localStorage.setItem(STORAGE_KEY_TOKEN, 'legacy-token')
 
-      const token = getStoredAuthToken()
+      const token = await getStoredAuthToken()
       expect(token).toBe('legacy-token')
     })
   })
 
   describe('getToken() from fetcherUtils', () => {
-    it('returns secure token when getStoredAuthToken() has a value', () => {
+    it('returns secure token when await getStoredAuthToken() has a value', () => {
       setStoredAuthToken('secure-token-from-store')
 
       const token = getToken()
       expect(token).toBe('secure-token-from-store')
     })
 
-    it('falls back to localStorage when getStoredAuthToken() returns empty', () => {
+    it('falls back to localStorage when await getStoredAuthToken() returns empty', () => {
       // Set only the raw localStorage token, not the secure store
       localStorage.setItem(STORAGE_KEY_TOKEN, 'fallback-token-from-storage')
 

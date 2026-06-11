@@ -48,7 +48,7 @@ export async function fullFetchClusters() {
   // On forced demo mode deployments (Netlify), skip fetching entirely to avoid flicker.
   // Demo data is already in the initial cache state, so no loading indicators needed.
   if (isNetlifyDeployment) {
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (!token || token === 'demo-token') {
       // Only update if cache is empty (first load) - otherwise preserve existing demo data
       if (clusterCache.clusters.length === 0) {
@@ -163,7 +163,7 @@ export async function fullFetchClusters() {
     }
 
     // Skip backend if not authenticated
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (!token) {
       await finishWithMinDuration({ isLoading: false, isRefreshing: false })
       return

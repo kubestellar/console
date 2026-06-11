@@ -578,7 +578,7 @@ class ApiClient {
       // (POST/PUT/DELETE/PATCH) without this header. Harmless on GET.
       'X-Requested-With': 'XMLHttpRequest',
     }
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
@@ -586,7 +586,7 @@ class ApiClient {
   }
 
   private hasToken(): boolean {
-    const token = getStoredAuthToken()
+    const token = await getStoredAuthToken()
     if (token && token !== DEMO_TOKEN_VALUE) return true
     // #6590 / #8087 — A cookie-only session has no JS-readable token, only
     // the HttpOnly kc_auth cookie. The kc-has-session marker is set after
@@ -952,7 +952,7 @@ export async function safeJson<T = unknown>(response: Response): Promise<T> {
 }
 
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = getStoredAuthToken()
+  const token = await getStoredAuthToken()
   const headers = new Headers(init?.headers)
 
   if (token && token !== DEMO_TOKEN_VALUE && !headers.has('Authorization')) {
