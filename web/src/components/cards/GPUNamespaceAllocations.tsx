@@ -230,7 +230,6 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
           <div
             key={ns.namespace}
             role="button"
-            aria-label={`View GPU details for namespace ${ns.namespace}`}
             tabIndex={0}
             onClick={() => drillToGPUNamespace(ns.namespace, {
               gpuRequested: ns.gpuRequested,
