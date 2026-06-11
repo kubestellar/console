@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bytes"
@@ -260,7 +260,7 @@ func TestStellarIngestEvent_RequiresAuth(t *testing.T) {
 // TestStellarIngestEvent_MissingFieldsReturnsBadRequest verifies that IngestEvent
 // rejects payloads missing required fields with HTTP 400.
 func TestStellarIngestEvent_MissingFieldsReturnsBadRequest(t *testing.T) {
-	// Use a fresh concrete store so it can be passed as handlers.StellarStore.
+	// Use a fresh concrete store so it can be passed as stellar.Store.
 	s, err := store.NewSQLiteStore(filepath.Join(t.TempDir(), "ingest-bad.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = s.Close() })
@@ -294,7 +294,7 @@ func TestStellarIngestEvent_MissingFieldsReturnsBadRequest(t *testing.T) {
 // TestStellarIngestEvent_AcceptsValidEvent verifies that a valid IngestEvent
 // request is accepted asynchronously with HTTP 202 Accepted.
 func TestStellarIngestEvent_AcceptsValidEvent(t *testing.T) {
-	// Use a fresh concrete store so it can be passed as handlers.StellarStore.
+	// Use a fresh concrete store so it can be passed as stellar.Store.
 	s, err := store.NewSQLiteStore(filepath.Join(t.TempDir(), "ingest-ok.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = s.Close() })

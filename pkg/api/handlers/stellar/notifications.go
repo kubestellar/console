@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type notificationStateRequest struct {
 	InvestigationSummary string `json:"investigationSummary"`
 }
 
-func (h *StellarHandler) ListNotifications(c *fiber.Ctx) error {
+func (h *Handler) ListNotifications(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func (h *StellarHandler) ListNotifications(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items, "limit": limit})
 }
 
-func (h *StellarHandler) MarkNotificationRead(c *fiber.Ctx) error {
+func (h *Handler) MarkNotificationRead(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (h *StellarHandler) MarkNotificationRead(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *StellarHandler) MarkNotificationInvestigating(c *fiber.Ctx) error {
+func (h *Handler) MarkNotificationInvestigating(c *fiber.Ctx) error {
 	var req notificationStateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
@@ -62,7 +62,7 @@ func (h *StellarHandler) MarkNotificationInvestigating(c *fiber.Ctx) error {
 	return h.updateNotificationState(c, stellarNotificationStatusInvestigating, strings.TrimSpace(req.InvestigationSummary))
 }
 
-func (h *StellarHandler) ResolveNotification(c *fiber.Ctx) error {
+func (h *Handler) ResolveNotification(c *fiber.Ctx) error {
 	var req notificationStateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
@@ -70,7 +70,7 @@ func (h *StellarHandler) ResolveNotification(c *fiber.Ctx) error {
 	return h.updateNotificationState(c, stellarNotificationStatusResolved, strings.TrimSpace(req.ResolutionNote))
 }
 
-func (h *StellarHandler) DismissNotification(c *fiber.Ctx) error {
+func (h *Handler) DismissNotification(c *fiber.Ctx) error {
 	var req notificationStateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
@@ -78,7 +78,7 @@ func (h *StellarHandler) DismissNotification(c *fiber.Ctx) error {
 	return h.updateNotificationState(c, stellarNotificationStatusDismissed, strings.TrimSpace(req.DismissalReason))
 }
 
-func (h *StellarHandler) updateNotificationState(c *fiber.Ctx, status, note string) error {
+func (h *Handler) updateNotificationState(c *fiber.Ctx, status, note string) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (h *StellarHandler) updateNotificationState(c *fiber.Ctx, status, note stri
 	return c.JSON(updated)
 }
 
-func (h *StellarHandler) logNotificationStateChange(ctx context.Context, userID string, before, after *store.StellarNotification, note string) {
+func (h *Handler) logNotificationStateChange(ctx context.Context, userID string, before, after *store.StellarNotification, note string) {
 	if auditable, ok := h.store.(interface {
 		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
 	}); ok {

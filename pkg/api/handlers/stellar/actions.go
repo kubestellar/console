@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -27,7 +27,7 @@ type createStellarActionRequest struct {
 	CronExpr    string         `json:"cronExpr"`
 }
 
-func (h *StellarHandler) ListActions(c *fiber.Ctx) error {
+func (h *Handler) ListActions(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (h *StellarHandler) ListActions(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items, "limit": limit})
 }
 
-func (h *StellarHandler) GetAction(c *fiber.Ctx) error {
+func (h *Handler) GetAction(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (h *StellarHandler) GetAction(c *fiber.Ctx) error {
 	return c.JSON(item)
 }
 
-func (h *StellarHandler) CreateAction(c *fiber.Ctx) error {
+func (h *Handler) CreateAction(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -123,7 +123,7 @@ func (h *StellarHandler) CreateAction(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(created)
 }
 
-func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
+func (h *Handler) ApproveAction(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ type rejectActionRequest struct {
 	Reason string `json:"reason"`
 }
 
-func (h *StellarHandler) RejectAction(c *fiber.Ctx) error {
+func (h *Handler) RejectAction(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func (h *StellarHandler) RejectAction(c *fiber.Ctx) error {
 	return c.JSON(item)
 }
 
-func (h *StellarHandler) DeleteAction(c *fiber.Ctx) error {
+func (h *Handler) DeleteAction(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -266,7 +266,7 @@ var knownDispatchableActions = map[string]bool{
 // ExecuteAction creates and immediately executes a Stellar action.
 // For known K8s action types, dispatches directly via the scheduler.
 // For "investigate" or unknown types, falls back to an LLM call.
-func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
+func (h *Handler) ExecuteAction(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -325,7 +325,7 @@ func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
 	return h.executeLLMAction(c, userID, body)
 }
 
-func (h *StellarHandler) executeDirectAction(c *fiber.Ctx, userID string, body executeActionRequest, params map[string]any) error {
+func (h *Handler) executeDirectAction(c *fiber.Ctx, userID string, body executeActionRequest, params map[string]any) error {
 	parametersJSON, err := json.Marshal(params)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid parameters"})
@@ -444,7 +444,7 @@ func (h *StellarHandler) executeDirectAction(c *fiber.Ctx, userID string, body e
 	})
 }
 
-func (h *StellarHandler) executeLLMAction(c *fiber.Ctx, userID string, body executeActionRequest) error {
+func (h *Handler) executeLLMAction(c *fiber.Ctx, userID string, body executeActionRequest) error {
 	prompt := body.Prompt
 	if prompt == "" {
 		prompt = body.Description

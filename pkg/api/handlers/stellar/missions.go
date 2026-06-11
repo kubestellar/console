@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"strings"
@@ -8,7 +8,7 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func (h *StellarHandler) ListMissions(c *fiber.Ctx) error {
+func (h *Handler) ListMissions(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func (h *StellarHandler) ListMissions(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": missions, "limit": limit})
 }
 
-func (h *StellarHandler) GetMission(c *fiber.Ctx) error {
+func (h *Handler) GetMission(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ type upsertStellarMissionRequest struct {
 	ToolBindings   []string `json:"toolBindings"`
 }
 
-func (h *StellarHandler) CreateMission(c *fiber.Ctx) error {
+func (h *Handler) CreateMission(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (h *StellarHandler) CreateMission(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(created)
 }
 
-func (h *StellarHandler) UpdateMission(c *fiber.Ctx) error {
+func (h *Handler) UpdateMission(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (h *StellarHandler) UpdateMission(c *fiber.Ctx) error {
 	return c.JSON(updated)
 }
 
-func (h *StellarHandler) DeleteMission(c *fiber.Ctx) error {
+func (h *Handler) DeleteMission(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

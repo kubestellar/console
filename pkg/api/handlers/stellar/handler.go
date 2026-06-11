@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bufio"
@@ -63,7 +63,7 @@ var stellarAllowedTriggerTypes = map[string]bool{
 	"chained-completion": true,
 }
 
-type StellarOperationalState struct {
+type OperationalState struct {
 	GeneratedAt      time.Time            `json:"generatedAt"`
 	ClustersWatching []string             `json:"clustersWatching"`
 	EventCounts      map[string]int       `json:"eventCounts"`
@@ -73,7 +73,7 @@ type StellarOperationalState struct {
 	PendingActionIDs []string             `json:"pendingActionIds"`
 }
 
-type StellarDigest struct {
+type Digest struct {
 	GeneratedAt        time.Time `json:"generatedAt"`
 	WindowHours        int       `json:"windowHours"`
 	OverallHealth      string    `json:"overallHealth"`
@@ -83,7 +83,7 @@ type StellarDigest struct {
 }
 
 // StellarStore is the storage contract used by StellarHandler.
-type StellarStore interface {
+type Store interface {
 	// GetUser retrieves a user by ID for authorization checks (#16709).
 	GetUser(ctx context.Context, userID uuid.UUID) (*models.User, error)
 
@@ -171,7 +171,7 @@ type StellarStore interface {
 }
 
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
-type StellarHandler struct {
+type Handler struct {
 	store            StellarStore
 	userStore        store.Store // for admin role checks on sensitive endpoints
 	k8sClient        *k8s.MultiClusterClient
@@ -187,7 +187,7 @@ type stellarSSEClient struct {
 	ch      chan SSEEvent
 }
 
-func (h *StellarHandler) registerSSEClient(connID, userID string, isAdmin bool, ch chan SSEEvent) {
+func (h *Handler) registerSSEClient(connID, userID string, isAdmin bool, ch chan SSEEvent) {
 	h.sseClientsMu.Lock()
 	defer h.sseClientsMu.Unlock()
 	if h.sseClients == nil {
@@ -196,7 +196,7 @@ func (h *StellarHandler) registerSSEClient(connID, userID string, isAdmin bool, 
 	h.sseClients[connID] = stellarSSEClient{userID: userID, isAdmin: isAdmin, ch: ch}
 }
 
-func (h *StellarHandler) unregisterSSEClient(connID string) {
+func (h *Handler) unregisterSSEClient(connID string) {
 	h.sseClientsMu.Lock()
 	defer h.sseClientsMu.Unlock()
 	delete(h.sseClients, connID)
@@ -211,7 +211,7 @@ func shouldDeliverStellarSSEEvent(client stellarSSEClient, event SSEEvent) bool 
 
 // broadcastToClients sends an event to SSE clients scoped by the resolved
 // audience metadata and optionally narrowed to a specific user connection set.
-func (h *StellarHandler) broadcastToClients(event SSEEvent) {
+func (h *Handler) broadcastToClients(event SSEEvent) {
 	resolvedEvent := h.resolveSSEEventAudience(event)
 	h.sseClientsMu.RLock()
 	defer h.sseClientsMu.RUnlock()
@@ -229,7 +229,7 @@ func (h *StellarHandler) broadcastToClients(event SSEEvent) {
 	}
 }
 
-func (h *StellarHandler) Broadcast(event SSEEvent) {
+func (h *Handler) Broadcast(event SSEEvent) {
 	h.broadcastToClients(event)
 }
 
@@ -255,7 +255,7 @@ func newUserScopedSSEEvent(userID, eventType string, data interface{}) SSEEvent 
 	}
 }
 
-func (h *StellarHandler) resolveSSEEventAudience(event SSEEvent) SSEEvent {
+func (h *Handler) resolveSSEEventAudience(event SSEEvent) SSEEvent {
 	if event.TargetUserID != "" && event.UserID == "" {
 		event.UserID = event.TargetUserID
 	}
@@ -341,7 +341,7 @@ func stellarSSEAudienceFromUserID(userID string) (string, bool, bool) {
 	return trimmedUserID, false, true
 }
 
-func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient, opts ...StellarHandlerOption) *StellarHandler {
+func NewHandler(s StellarStore, k8sClient *k8s.MultiClusterClient, opts ...HandlerOption) *Handler {
 	h := &StellarHandler{
 		store:            s,
 		k8sClient:        k8sClient,
@@ -353,30 +353,30 @@ func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient, opts .
 	return h
 }
 
-// StellarHandlerOption configures optional dependencies for StellarHandler.
-type StellarHandlerOption func(*StellarHandler)
+// HandlerOption configures optional dependencies for StellarHandler.
+type HandlerOption func(*Handler)
 
 // WithUserStore sets the user store for admin role checks on sensitive endpoints.
-func WithUserStore(us store.Store) StellarHandlerOption {
-	return func(h *StellarHandler) {
+func WithUserStore(us store.Store) HandlerOption {
+	return func(h *Handler) {
 		h.userStore = us
 	}
 }
 
-func (h *StellarHandler) SetProviderRegistry(reg *providers.Registry) {
+func (h *Handler) SetProviderRegistry(reg *providers.Registry) {
 	if reg != nil {
 		h.providerRegistry = reg
 	}
 }
 
-func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
+func (h *Handler) SetBroadcaster(b SSEBroadcaster) {
 	h.broadcaster = b
 }
 
 // SetUserStore wires user role lookups for authorization checks on mutating
 // endpoints (e.g., IngestEvent #16709). Optional — if unset, role checks are
 // skipped for backward compatibility in tests.
-func (h *StellarHandler) SetUserStore(us store.Store) {
+func (h *Handler) SetUserStore(us store.Store) {
 	h.userStore = us
 }
 
@@ -384,7 +384,7 @@ func (h *StellarHandler) SetUserStore(us store.Store) {
 // Currently just the due-task reminder loop; future workers (digest generator,
 // scheduled mission firer) belong here too. Safe to call multiple times — each
 // call spawns a new ticker, but the dedup-key gate prevents duplicate notifs.
-func (h *StellarHandler) StartBackgroundWorkers(ctx context.Context) {
+func (h *Handler) StartBackgroundWorkers(ctx context.Context) {
 	safego.GoWith("stellar-due-task-reminder", func() { h.dueTaskReminderLoop(ctx) })
 }
 
@@ -392,7 +392,7 @@ func (h *StellarHandler) StartBackgroundWorkers(ctx context.Context) {
 // one-time reminder notification per task. "Stellar follows the schedule" —
 // when a recommended task's deadline arrives, the user gets a toast and the
 // task surfaces in the events column.
-func (h *StellarHandler) dueTaskReminderLoop(ctx context.Context) {
+func (h *Handler) dueTaskReminderLoop(ctx context.Context) {
 	const tickInterval = 30 * time.Second
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
@@ -408,7 +408,7 @@ func (h *StellarHandler) dueTaskReminderLoop(ctx context.Context) {
 	}
 }
 
-func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
+func (h *Handler) fireDueTaskReminders(ctx context.Context) {
 	tasks, err := h.store.GetOverdueOpenTasks(ctx, time.Now().UTC())
 	if err != nil {
 		slog.Warn("stellar: GetOverdueOpenTasks failed", "error", err)
@@ -442,7 +442,7 @@ func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
 	}
 }
 
-func (h *StellarHandler) processDueActions(ctx context.Context, userID string) error {
+func (h *Handler) processDueActions(ctx context.Context, userID string) error {
 	completed, err := h.store.CompleteDueStellarActions(ctx, time.Now().UTC())
 	if err != nil {
 		return err
@@ -466,7 +466,7 @@ func (h *StellarHandler) processDueActions(ctx context.Context, userID string) e
 	return nil
 }
 
-func (h *StellarHandler) syncTimelineNotifications(ctx context.Context, userID string) error {
+func (h *Handler) syncTimelineNotifications(ctx context.Context, userID string) error {
 	since := time.Now().UTC().Add(-stellarRecentEventLookbackMin * time.Minute).Format(time.RFC3339)
 	events, err := h.store.QueryTimeline(ctx, store.TimelineFilter{
 		Since: since,
@@ -502,7 +502,7 @@ func (h *StellarHandler) syncTimelineNotifications(ctx context.Context, userID s
 	return nil
 }
 
-func (h *StellarHandler) buildState(ctx context.Context, userID string) (*StellarOperationalState, error) {
+func (h *Handler) buildState(ctx context.Context, userID string) (*StellarOperationalState, error) {
 	state, err := h.buildOperationalState(ctx, userID, "")
 	if err != nil {
 		return nil, err
@@ -515,7 +515,7 @@ func (h *StellarHandler) buildState(ctx context.Context, userID string) (*Stella
 	return state, nil
 }
 
-func (h *StellarHandler) buildOperationalState(ctx context.Context, userID, focusCluster string) (*StellarOperationalState, error) {
+func (h *Handler) buildOperationalState(ctx context.Context, userID, focusCluster string) (*StellarOperationalState, error) {
 	state := &StellarOperationalState{
 		GeneratedAt:      time.Now().UTC(),
 		ClustersWatching: []string{},
@@ -594,7 +594,7 @@ func (h *StellarHandler) buildOperationalState(ctx context.Context, userID, focu
 	return state, nil
 }
 
-func (h *StellarHandler) buildDigest(ctx context.Context, userID string) (*StellarDigest, error) {
+func (h *Handler) buildDigest(ctx context.Context, userID string) (*StellarDigest, error) {
 	since := time.Now().UTC().Add(-stellarDigestLookbackHours * time.Hour).Format(time.RFC3339)
 	events, err := h.store.QueryTimeline(ctx, store.TimelineFilter{
 		Since: since,
@@ -755,7 +755,7 @@ func firstOrUnknown(items []string) string {
 	return items[0]
 }
 
-func (h *StellarHandler) resolveProviderAndModel(ctx context.Context, userID, preferredProvider, preferredModel string) (providers.ResolvedProvider, error) {
+func (h *Handler) resolveProviderAndModel(ctx context.Context, userID, preferredProvider, preferredModel string) (providers.ResolvedProvider, error) {
 	if h.providerRegistry == nil {
 		h.providerRegistry = providers.NewRegistry()
 	}
@@ -766,7 +766,7 @@ func (h *StellarHandler) resolveProviderAndModel(ctx context.Context, userID, pr
 	return h.providerRegistry.Resolve(preferredProvider, preferredModel, userCfg), nil
 }
 
-func (h *StellarHandler) resolveUserProvider(ctx context.Context, userID string) (*providers.ResolvedUserProvider, error) {
+func (h *Handler) resolveUserProvider(ctx context.Context, userID string) (*providers.ResolvedUserProvider, error) {
 	providerStore, ok := h.store.(interface {
 		GetUserDefaultProvider(context.Context, string) (*store.StellarProviderConfig, error)
 	})

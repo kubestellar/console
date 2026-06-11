@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -31,7 +31,7 @@ const (
 // StartStellarV2Workers launches the v2 background loops (digest + stale review).
 // Called from server.go alongside StartBackgroundWorkers; kept separate so the
 // route registration site stays the one place that wires v2 features in.
-func (h *StellarHandler) StartStellarV2Workers(ctx context.Context) {
+func (h *Handler) StartStellarV2Workers(ctx context.Context) {
 	safego.GoWith("stellar/stale-approval-review-loop", func() {
 		h.staleApprovalReviewLoop(ctx)
 	})
@@ -47,7 +47,7 @@ func (h *StellarHandler) StartStellarV2Workers(ctx context.Context) {
 //
 // Without this, the operator returns to a stale queue of approvals that no
 // longer represent reality — JARVIS would never let that happen.
-func (h *StellarHandler) staleApprovalReviewLoop(ctx context.Context) {
+func (h *Handler) staleApprovalReviewLoop(ctx context.Context) {
 	tick := time.NewTicker(staleApprovalReviewTick)
 	defer tick.Stop()
 	// First sweep on startup so a fresh boot reconciles immediately.
@@ -62,7 +62,7 @@ func (h *StellarHandler) staleApprovalReviewLoop(ctx context.Context) {
 	}
 }
 
-func (h *StellarHandler) runStaleApprovalSweep(ctx context.Context) {
+func (h *Handler) runStaleApprovalSweep(ctx context.Context) {
 	full, ok := h.fullStore()
 	if !ok {
 		return
@@ -144,7 +144,7 @@ func getOptsMeta() metav1.GetOptions { return metav1.GetOptions{} }
 
 // isResourceHealthy implements the spec's health definition: ready, no recent
 // restarts. We use the deployment's ready-replica count as the cheap proxy.
-func (h *StellarHandler) isResourceHealthy(ctx context.Context, cluster, namespace, deployment string) bool {
+func (h *Handler) isResourceHealthy(ctx context.Context, cluster, namespace, deployment string) bool {
 	if h.k8sClient == nil {
 		return false
 	}
@@ -164,7 +164,7 @@ func (h *StellarHandler) isResourceHealthy(ctx context.Context, cluster, namespa
 
 // dailyDigestLoop wakes hourly, checks whether the configured digest hour has
 // arrived, and if so fires one digest per user (dedup by UTC date).
-func (h *StellarHandler) dailyDigestLoop(ctx context.Context) {
+func (h *Handler) dailyDigestLoop(ctx context.Context) {
 	tick := time.NewTicker(digestCheckTick)
 	defer tick.Stop()
 	for {
@@ -177,7 +177,7 @@ func (h *StellarHandler) dailyDigestLoop(ctx context.Context) {
 	}
 }
 
-func (h *StellarHandler) maybeFireDigests(ctx context.Context) {
+func (h *Handler) maybeFireDigests(ctx context.Context) {
 	full, ok := h.fullStore()
 	if !ok {
 		return
@@ -202,7 +202,7 @@ func (h *StellarHandler) maybeFireDigests(ctx context.Context) {
 	}
 }
 
-func (h *StellarHandler) fireDigestForUser(ctx context.Context, full solveFullStore, userID string, now time.Time) {
+func (h *Handler) fireDigestForUser(ctx context.Context, full solveFullStore, userID string, now time.Time) {
 	dateStr := now.Format("2006-01-02")
 	dedup := fmt.Sprintf(digestNotifDedupFn, userID, dateStr)
 	if exists, _ := full.GetMemoryDedupeKey(ctx, userID, digestMemCategory, dedup); exists {

@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/stellar"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
@@ -14,13 +15,13 @@ import (
 // stellarRouteGroup wires the Stellar handler with only the dependencies its
 // routes and background workers need.
 type stellarRouteGroup struct {
-	store     handlers.StellarStore
+	store     stellar.Store
 	userStore store.Store
 	k8sClient *k8s.MultiClusterClient
 	done      <-chan struct{}
 }
 
-func newStellarRouteGroup(stelStore handlers.StellarStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
+func newStellarRouteGroup(stelStore stellar.Store, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
 	return &stellarRouteGroup{
 		store:     stelStore,
 		userStore: userStore,
@@ -30,82 +31,82 @@ func newStellarRouteGroup(stelStore handlers.StellarStore, k8sClient *k8s.MultiC
 }
 
 func (g *stellarRouteGroup) Register(api fiber.Router) {
-	stellar := handlers.NewStellarHandler(g.store, g.k8sClient, handlers.WithUserStore(g.userStore))
-	g.startWorkers(stellar)
+	handler := stellar.NewHandler(g.store, g.k8sClient, stellar.WithUserStore(g.userStore))
+	g.startWorkers(handler)
 
-	api.Get("/stellar/preferences", stellar.GetPreferences)
-	api.Put("/stellar/preferences", stellar.UpdatePreferences)
+	api.Get("/stellar/preferences", handler.GetPreferences)
+	api.Put("/stellar/preferences", handler.UpdatePreferences)
 
-	api.Get("/stellar/state", stellar.GetState)
-	api.Get("/stellar/digest", stellar.GetDigest)
+	api.Get("/stellar/state", handler.GetState)
+	api.Get("/stellar/digest", handler.GetDigest)
 
-	api.Get("/stellar/stream", stellar.Stream)
+	api.Get("/stellar/stream", handler.Stream)
 
-	api.Post("/stellar/ask", stellar.Ask)
+	api.Post("/stellar/ask", handler.Ask)
 
-	api.Get("/stellar/notifications", stellar.ListNotifications)
-	api.Post("/stellar/notifications/:id/read", stellar.MarkNotificationRead)
-	api.Post("/stellar/notifications/:id/investigate", stellar.MarkNotificationInvestigating)
-	api.Post("/stellar/notifications/:id/resolve", stellar.ResolveNotification)
-	api.Post("/stellar/notifications/:id/dismiss", stellar.DismissNotification)
+	api.Get("/stellar/notifications", handler.ListNotifications)
+	api.Post("/stellar/notifications/:id/read", handler.MarkNotificationRead)
+	api.Post("/stellar/notifications/:id/investigate", handler.MarkNotificationInvestigating)
+	api.Post("/stellar/notifications/:id/resolve", handler.ResolveNotification)
+	api.Post("/stellar/notifications/:id/dismiss", handler.DismissNotification)
 
-	api.Get("/stellar/missions", stellar.ListMissions)
-	api.Post("/stellar/missions", stellar.CreateMission)
-	api.Get("/stellar/missions/:id", stellar.GetMission)
-	api.Put("/stellar/missions/:id", stellar.UpdateMission)
-	api.Delete("/stellar/missions/:id", stellar.DeleteMission)
-	api.Get("/stellar/missions/:id/executions", stellar.ListExecutions)
+	api.Get("/stellar/missions", handler.ListMissions)
+	api.Post("/stellar/missions", handler.CreateMission)
+	api.Get("/stellar/missions/:id", handler.GetMission)
+	api.Put("/stellar/missions/:id", handler.UpdateMission)
+	api.Delete("/stellar/missions/:id", handler.DeleteMission)
+	api.Get("/stellar/missions/:id/executions", handler.ListExecutions)
 
-	api.Get("/stellar/executions/:id", stellar.GetExecution)
+	api.Get("/stellar/executions/:id", handler.GetExecution)
 
-	api.Post("/stellar/actions/execute", stellar.ExecuteAction)
-	api.Get("/stellar/actions", stellar.ListActions)
-	api.Post("/stellar/actions", stellar.CreateAction)
-	api.Get("/stellar/actions/:id", stellar.GetAction)
-	api.Post("/stellar/actions/:id/approve", stellar.ApproveAction)
-	api.Post("/stellar/actions/:id/reject", stellar.RejectAction)
-	api.Delete("/stellar/actions/:id", stellar.DeleteAction)
+	api.Post("/stellar/actions/execute", handler.ExecuteAction)
+	api.Get("/stellar/actions", handler.ListActions)
+	api.Post("/stellar/actions", handler.CreateAction)
+	api.Get("/stellar/actions/:id", handler.GetAction)
+	api.Post("/stellar/actions/:id/approve", handler.ApproveAction)
+	api.Post("/stellar/actions/:id/reject", handler.RejectAction)
+	api.Delete("/stellar/actions/:id", handler.DeleteAction)
 
-	api.Get("/stellar/tasks", stellar.ListTasks)
-	api.Post("/stellar/tasks", stellar.CreateTask)
-	api.Post("/stellar/tasks/:id/status", stellar.UpdateTaskStatus)
+	api.Get("/stellar/tasks", handler.ListTasks)
+	api.Post("/stellar/tasks", handler.CreateTask)
+	api.Post("/stellar/tasks/:id/status", handler.UpdateTaskStatus)
 
-	api.Get("/stellar/providers", stellar.ListProviders)
-	api.Post("/stellar/providers", stellar.CreateProvider)
-	api.Delete("/stellar/providers/:id", stellar.DeleteProvider)
-	api.Post("/stellar/providers/:id/default", stellar.SetDefaultProvider)
-	api.Post("/stellar/providers/:id/test", stellar.TestProvider)
+	api.Get("/stellar/providers", handler.ListProviders)
+	api.Post("/stellar/providers", handler.CreateProvider)
+	api.Delete("/stellar/providers/:id", handler.DeleteProvider)
+	api.Post("/stellar/providers/:id/default", handler.SetDefaultProvider)
+	api.Post("/stellar/providers/:id/test", handler.TestProvider)
 
-	api.Get("/stellar/watches", stellar.ListWatches)
-	api.Post("/stellar/watches", stellar.CreateWatch)
-	api.Post("/stellar/watches/:id/resolve", stellar.ResolveWatch)
-	api.Delete("/stellar/watches/:id", stellar.DismissWatch)
-	api.Post("/stellar/watches/:id/snooze", stellar.SnoozeWatch)
+	api.Get("/stellar/watches", handler.ListWatches)
+	api.Post("/stellar/watches", handler.CreateWatch)
+	api.Post("/stellar/watches/:id/resolve", handler.ResolveWatch)
+	api.Delete("/stellar/watches/:id", handler.DismissWatch)
+	api.Post("/stellar/watches/:id/snooze", handler.SnoozeWatch)
 
-	api.Get("/stellar/memory", stellar.ListMemory)
-	api.Get("/stellar/memory/search", stellar.SearchMemory)
-	api.Delete("/stellar/memory/:id", stellar.DeleteMemory)
+	api.Get("/stellar/memory", handler.ListMemory)
+	api.Get("/stellar/memory/search", handler.SearchMemory)
+	api.Delete("/stellar/memory/:id", handler.DeleteMemory)
 
-	api.Get("/stellar/observations", stellar.ListObservations)
-	api.Post("/stellar/events", handlers.RequireEditorOrAdminMiddleware(g.userStore), stellar.IngestEvent)
+	api.Get("/stellar/observations", handler.ListObservations)
+	api.Post("/stellar/events", handlers.RequireEditorOrAdminMiddleware(g.userStore), handler.IngestEvent)
 
-	api.Get("/stellar/audit", stellar.ListAuditLog)
+	api.Get("/stellar/audit", handler.ListAuditLog)
 
-	api.Post("/stellar/solve/:id", stellar.StartSolve)
-	api.Post("/stellar/solve/:solveID/complete", stellar.CompleteAutoMission)
-	api.Get("/stellar/solves", stellar.ListSolves)
+	api.Post("/stellar/solve/:id", handler.StartSolve)
+	api.Post("/stellar/solve/:solveID/complete", handler.CompleteAutoMission)
+	api.Get("/stellar/solves", handler.ListSolves)
 
-	api.Get("/stellar/activity", stellar.ListActivity)
+	api.Get("/stellar/activity", handler.ListActivity)
 
-	api.Get("/stellar/health", stellar.Health)
+	api.Get("/stellar/health", handler.Health)
 }
 
-func (g *stellarRouteGroup) startWorkers(stellar *handlers.StellarHandler) {
+func (g *stellarRouteGroup) startWorkers(handler *stellar.Handler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	safego.GoWith("stellar-done-watcher", func() {
 		<-g.done
 		cancel()
 	})
-	stellar.StartBackgroundWorkers(ctx)
-	stellar.StartStellarV2Workers(ctx)
+	handler.StartBackgroundWorkers(ctx)
+	handler.StartStellarV2Workers(ctx)
 }

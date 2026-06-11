@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func (h *StellarHandler) ListTasks(c *fiber.Ctx) error {
+func (h *Handler) ListTasks(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func (h *StellarHandler) ListTasks(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items})
 }
 
-func (h *StellarHandler) CreateTask(c *fiber.Ctx) error {
+func (h *Handler) CreateTask(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (h *StellarHandler) CreateTask(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(task)
 }
 
-func (h *StellarHandler) UpdateTaskStatus(c *fiber.Ctx) error {
+func (h *Handler) UpdateTaskStatus(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

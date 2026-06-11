@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bufio"
@@ -20,7 +20,7 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func (h *StellarHandler) GetState(c *fiber.Ctx) error {
+func (h *Handler) GetState(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (h *StellarHandler) GetState(c *fiber.Ctx) error {
 	return c.JSON(state)
 }
 
-func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
+func (h *Handler) GetDigest(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ func parseWatchLine(content string) (string, *watchSuggestion) {
 	}
 }
 
-func (h *StellarHandler) Ask(c *fiber.Ctx) error {
+func (h *Handler) Ask(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -357,7 +357,7 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		"state":          state,
 	})
 }
-func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
+func (h *Handler) ListObservations(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -372,7 +372,7 @@ func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items, "limit": limit})
 }
 
-func (h *StellarHandler) Stream(c *fiber.Ctx) error {
+func (h *Handler) Stream(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -514,7 +514,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 // IngestEvent receives k8s events from the agent and forwards them to ProcessEvent.
 // This is the HTTP bridge that connects the agent process to Stellar's notification system.
 // Only editor and admin users may inject events to prevent forged system events (CWE-285, #16709).
-func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
+func (h *Handler) IngestEvent(c *fiber.Ctx) error {
 	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
 		return err
 	}
@@ -543,7 +543,7 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 
 // Health returns a snapshot of Stellar's operational status so operators can
 // verify SSE connectivity, provider availability, and background goroutine health.
-func (h *StellarHandler) Health(c *fiber.Ctx) error {
+func (h *Handler) Health(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 
 	h.sseClientsMu.RLock()
@@ -592,7 +592,7 @@ type catchUpPayload struct {
 	Highlights []string `json:"highlights,omitempty"`
 }
 
-func (h *StellarHandler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer, userID string, since time.Time) {
+func (h *Handler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer, userID string, since time.Time) {
 	// Give the SSE stream time to establish before pushing the handoff.
 	time.Sleep(catchUpStreamEstablishDelay)
 

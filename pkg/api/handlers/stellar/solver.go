@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -30,7 +30,7 @@ var safeAutoActions = map[string]bool{
 // broadcastSolveProgress emits a structured phase update over SSE. The event
 // card uses it to render the live progress bar; the activity log uses the
 // matching kind to record the same step. Phase strings are stable contract.
-func (h *StellarHandler) broadcastSolveProgress(userID, solveID, eventID, phase, message string, percent int) {
+func (h *Handler) broadcastSolveProgress(userID, solveID, eventID, phase, message string, percent int) {
 	h.broadcastToClients(SSEEvent{Type: "solve_progress", Data: map[string]interface{}{
 		"userId":       userID,
 		"solveId":      solveID,
@@ -98,7 +98,7 @@ func formatBatchTimestamp(ts *time.Time) string {
 	return ts.UTC().Format(time.RFC3339)
 }
 
-func (h *StellarHandler) isLatestEventBatch(ctx context.Context, notif *store.StellarNotification) (bool, *time.Time, error) {
+func (h *Handler) isLatestEventBatch(ctx context.Context, notif *store.StellarNotification) (bool, *time.Time, error) {
 	latestBatchTimestamp, err := h.store.GetLatestEventBatchTimestamp(ctx)
 	if err != nil {
 		return false, nil, err
@@ -114,7 +114,7 @@ func (h *StellarHandler) isLatestEventBatch(ctx context.Context, notif *store.St
 // logActivity is the single write-and-broadcast helper for Stellar's activity
 // log. UI subscribes via the SSE `activity` channel and renders the entries in
 // the dedicated StellarActivityPanel — not the chat, not the events column.
-func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivity) {
+func (h *Handler) logActivity(ctx context.Context, a *store.StellarActivity) {
 	full, ok := h.fullStore()
 	if !ok {
 		return
@@ -131,7 +131,7 @@ func (h *StellarHandler) logActivity(ctx context.Context, a *store.StellarActivi
 
 // ListActivity is the GET /api/stellar/activity handler — returns recent
 // entries from Stellar's first-person activity log scoped to the authenticated user.
-func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
+func (h *Handler) ListActivity(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func (h *StellarHandler) ListActivity(c *fiber.Ctx) error {
 // AutoSolveCooldown. Cluster-client availability is *not* gated — the AI
 // mission runs through the user's agent connection, not the backend's direct
 // client, so demo-mode and partial setups still get a useful narrative.
-func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEvent, notif *store.StellarNotification, eval *stellar.EvaluationResult) {
+func (h *Handler) autoTriggerSolve(ctx context.Context, event IncomingEvent, notif *store.StellarNotification, eval *stellar.EvaluationResult) {
 	full, ok := h.fullStore()
 	if !ok {
 		return
@@ -483,7 +483,7 @@ type CompleteAutoMissionRequest struct {
 // CompleteAutoMission is POST /api/stellar/solve/:solveID/complete — closes
 // the loop on a mission Stellar triggered. The frontend bridge calls this when
 // the mission reports done (or when the user manually marks it resolved).
-func (h *StellarHandler) CompleteAutoMission(c *fiber.Ctx) error {
+func (h *Handler) CompleteAutoMission(c *fiber.Ctx) error {
 	full, ok := h.fullStore()
 	if !ok {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "store unavailable"})
@@ -577,7 +577,7 @@ func (a *solverStorageAdapter) CreateStellarNotification(ctx context.Context, n 
 // handler's local SSEEvent envelope (the types are identical-shaped but
 // distinct so the solver package can avoid importing handlers).
 type solverBroadcasterAdapter struct {
-	h *StellarHandler
+	h *Handler
 }
 
 func (a *solverBroadcasterAdapter) Broadcast(ev solver.SSEEvent) {
@@ -585,7 +585,7 @@ func (a *solverBroadcasterAdapter) Broadcast(ev solver.SSEEvent) {
 }
 
 // fullStore returns the wider store surface if the embedded store supports it.
-func (h *StellarHandler) fullStore() (solveFullStore, bool) {
+func (h *Handler) fullStore() (solveFullStore, bool) {
 	full, ok := h.store.(solveFullStore)
 	return full, ok
 }
@@ -593,7 +593,7 @@ func (h *StellarHandler) fullStore() (solveFullStore, bool) {
 // StartSolve spawns a headless solve loop for the notification id in the URL.
 // Idempotent: if a running solve already exists for that event id, returns
 // the existing solve id. Async — returns 202 with the solve id immediately.
-func (h *StellarHandler) StartSolve(c *fiber.Ctx) error {
+func (h *Handler) StartSolve(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -718,7 +718,7 @@ Don't ask me first — act. I trust you.`,
 
 // ListSolves returns recent solves for the current user. The frontend uses
 // this to render attempt history and the "Stellar's actions" section.
-func (h *StellarHandler) ListSolves(c *fiber.Ctx) error {
+func (h *Handler) ListSolves(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

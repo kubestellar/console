@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func (h *StellarHandler) ListProviders(c *fiber.Ctx) error {
+func (h *Handler) ListProviders(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func validateStellarProviderBaseURL(provider, rawBaseURL string) (string, error)
 	return strings.TrimRight(baseURL, "/"), nil
 }
 
-func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
+func (h *Handler) CreateProvider(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(cfg)
 }
 
-func (h *StellarHandler) DeleteProvider(c *fiber.Ctx) error {
+func (h *Handler) DeleteProvider(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -226,7 +226,7 @@ func (h *StellarHandler) DeleteProvider(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *StellarHandler) SetDefaultProvider(c *fiber.Ctx) error {
+func (h *Handler) SetDefaultProvider(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -244,7 +244,7 @@ func (h *StellarHandler) SetDefaultProvider(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *StellarHandler) TestProvider(c *fiber.Ctx) error {
+func (h *Handler) TestProvider(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

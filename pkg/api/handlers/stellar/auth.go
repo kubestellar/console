@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 // requireUser extracts and validates the Stellar user identity from the request.
 // Returns the userID or sends a 401 response and returns an empty string.
-func (h *StellarHandler) requireUser(c *fiber.Ctx) (string, error) {
+func (h *Handler) requireUser(c *fiber.Ctx) (string, error) {
 	userID := resolveStellarUserID(c)
 	if userID == "" {
 		return "", fiber.NewError(fiber.StatusUnauthorized, "not authenticated")
@@ -24,7 +24,7 @@ type stellarUserReader interface {
 	GetUser(context.Context, uuid.UUID) (*models.User, error)
 }
 
-func (h *StellarHandler) isAdminUser(c *fiber.Ctx) bool {
+func (h *Handler) isAdminUser(c *fiber.Ctx) bool {
 	userReader, ok := h.store.(stellarUserReader)
 	if !ok {
 		return false

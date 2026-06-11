@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func (h *StellarHandler) ListMemory(c *fiber.Ctx) error {
+func (h *Handler) ListMemory(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ type searchMemoryRequest struct {
 	Limit int    `json:"limit"`
 }
 
-func (h *StellarHandler) SearchMemory(c *fiber.Ctx) error {
+func (h *Handler) SearchMemory(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (h *StellarHandler) SearchMemory(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items, "limit": limit})
 }
 
-func (h *StellarHandler) DeleteMemory(c *fiber.Ctx) error {
+func (h *Handler) DeleteMemory(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

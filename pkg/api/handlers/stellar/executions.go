@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func (h *StellarHandler) ListExecutions(c *fiber.Ctx) error {
+func (h *Handler) ListExecutions(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -22,7 +22,7 @@ func (h *StellarHandler) ListExecutions(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": items, "limit": limit})
 }
 
-func (h *StellarHandler) GetExecution(c *fiber.Ctx) error {
+func (h *Handler) GetExecution(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

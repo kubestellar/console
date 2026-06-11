@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"strings"
@@ -8,7 +8,7 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func (h *StellarHandler) GetPreferences(c *fiber.Ctx) error {
+func (h *Handler) GetPreferences(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ type putStellarPreferencesRequest struct {
 	PinnedClusters  []string `json:"pinnedClusters"`
 }
 
-func (h *StellarHandler) UpdatePreferences(c *fiber.Ctx) error {
+func (h *Handler) UpdatePreferences(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err

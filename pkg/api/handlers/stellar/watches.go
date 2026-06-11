@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 )
 
 // Watch handlers
-func (h *StellarHandler) ListWatches(c *fiber.Ctx) error {
+func (h *Handler) ListWatches(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ type createWatchRequest struct {
 	Reason       string `json:"reason"`
 }
 
-func (h *StellarHandler) CreateWatch(c *fiber.Ctx) error {
+func (h *Handler) CreateWatch(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (h *StellarHandler) CreateWatch(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(watch)
 }
 
-func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
+func (h *Handler) ResolveWatch(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
 	})
 }
 
-func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
+func (h *Handler) DismissWatch(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -123,7 +123,7 @@ func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
 
 // ─── Sprint 5: Snooze watch ───────────────────────────────────────────────────
 
-func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
+func (h *Handler) SnoozeWatch(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
 
 // ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
 
-func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
+func (h *Handler) ListAuditLog(c *fiber.Ctx) error {
 	userID, err := h.requireUser(c)
 	if err != nil {
 		return err
@@ -236,7 +236,7 @@ func narrateEventFast(e IncomingEvent, recurring bool, recentCount int64) string
 
 // ProcessEvent processes an incoming k8s event from the console's event pipeline.
 // 5-step pipeline: dedup → classify → recurring check → narrate → store + broadcast.
-func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) {
+func (h *Handler) ProcessEvent(ctx context.Context, event IncomingEvent) {
 	// STEP 1 — DEDUP: cluster:namespace:name:reason keyed, 5-minute TTL via DB
 	dedupKey := fmt.Sprintf("ev:%s:%s:%s:%s",
 		event.Cluster, event.Namespace, event.Name, event.Reason)
@@ -490,7 +490,7 @@ func recommendedTypeOrEmpty(r *stellar.RecommendedAction) string {
 // and a prominent notification telling the user what Stellar just did. If the
 // same issue recurs, the caller falls back to queueAutoTendAction so the user
 // gets a chance to intervene before Stellar repeats a fix that didn't hold.
-func (h *StellarHandler) autoExecuteAction(ctx context.Context, e IncomingEvent, rec *stellar.RecommendedAction, notifID string) {
+func (h *Handler) autoExecuteAction(ctx context.Context, e IncomingEvent, rec *stellar.RecommendedAction, notifID string) {
 	if rec.Type != "RestartDeployment" {
 		// Only restart is safe to auto-execute today. Scale/Delete etc. always go
 		// through approval — wider safety review needed before adding them here.
@@ -628,7 +628,7 @@ func (h *StellarHandler) autoExecuteAction(ctx context.Context, e IncomingEvent,
 // queueAutoTendAction creates a pending_approval StellarAction so the user can
 // one-click execute the evaluator's recommended remediation. Never auto-executes —
 // the existing approval card UI gates dispatch.
-func (h *StellarHandler) queueAutoTendAction(ctx context.Context, e IncomingEvent, rec *stellar.RecommendedAction, notifID string) {
+func (h *Handler) queueAutoTendAction(ctx context.Context, e IncomingEvent, rec *stellar.RecommendedAction, notifID string) {
 	// Map K8s event resource → Deployment for restart actions. The event Name is
 	// usually a Pod; we derive the deployment via the controller chain in production.
 	// For the demo path we accept any Name — dispatch will look up by name in the namespace.
@@ -758,7 +758,7 @@ func looksLikeRSHash(s string) bool {
 
 // autoCreateWatch creates a standing watch for a resource that has critical or
 // recurring events, so the observer goroutine will track it and report recovery.
-func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
+func (h *Handler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
 	lastEventAt := time.Now().UTC()
 	lastUpdate := fmt.Sprintf("%s: %s", e.Reason, truncateString(e.Message, 200))
 	existing, _ := h.store.GetWatchByResource(ctx, "system", e.Cluster, e.Namespace, e.Kind, e.Name)
