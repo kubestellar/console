@@ -18,7 +18,11 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // react-hooks core rules (from recommended, pinned explicitly so that
+      // the v7 flat-config recommended object cannot re-escalate compiler
+      // rules to 'error' by merging after our overrides).
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       // React Compiler rules (new in eslint-plugin-react-hooks v7) —
       // downgrade to warnings until codebase is incrementally migrated.
       'react-hooks/purity': 'warn',
