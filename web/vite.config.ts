@@ -267,7 +267,7 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/__tests__/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/__tests__/*.{test,spec}.{ts,tsx}', 'netlify/edge-functions/__tests__/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
     // Retry flaky tests up to 2 times in CI to reduce false-positive workflow failures (#11872)
     retry: process.env.CI ? 2 : 0,
