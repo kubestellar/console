@@ -4,11 +4,10 @@ on:
   issue_comment:
     types: [created]
 
-permissions: read-all  # default read; writes scoped to job below
+permissions:
+  issues: write
+  pull-requests: write
 
 jobs:
   label-helper:
-    permissions:
-      issues: write
-      pull-requests: write
     uses: kubestellar/infra/.github/workflows/reusable-label-helper.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
