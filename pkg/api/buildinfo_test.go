@@ -51,6 +51,86 @@ func TestNormalizeKCAgentBaseURL_FromEnv(t *testing.T) {
 	}
 }
 
+// ---------- Security: URL Validation ----------
+
+func TestNormalizeKCAgentBaseURL_RejectsCSPInjection(t *testing.T) {
+	// Attempt to inject arbitrary CSP directive
+	malicious := "http://attacker.com; script-src *"
+	got := normalizeKCAgentBaseURL(malicious)
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for CSP injection attempt, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_RejectsHeaderInjection(t *testing.T) {
+	// Attempt to inject HTTP response header via newline
+	malicious := "http://x\nX-Injected: value"
+	got := normalizeKCAgentBaseURL(malicious)
+	if got != defaultKCAgentBaseURL {
+		t.Errorf("expected default for header injection attempt, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_RejectsInvalidScheme(t *testing.T) {
+	cases := []string{
+		"ftp://bad.com:8585",
+		"javascript:alert(1)",
+		"data:text/html,<script>alert(1)</script>",
+		"file:///etc/passwd",
+	}
+	for _, tc := range cases {
+		got := normalizeKCAgentBaseURL(tc)
+		if got != defaultKCAgentBaseURL {
+			t.Errorf("expected default for invalid scheme %q, got %q", tc, got)
+		}
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_RejectsMissingHost(t *testing.T) {
+	cases := []string{
+		"http://",
+		"https://",
+		"http://:8585",
+	}
+	for _, tc := range cases {
+		got := normalizeKCAgentBaseURL(tc)
+		if got != defaultKCAgentBaseURL {
+			t.Errorf("expected default for missing host %q, got %q", tc, got)
+		}
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_RejectsMalformedURL(t *testing.T) {
+	cases := []string{
+		"://bad-url",
+		"not-a-url",
+		"http//missing-colon.com",
+		"http:///no-host",
+	}
+	for _, tc := range cases {
+		got := normalizeKCAgentBaseURL(tc)
+		if got != defaultKCAgentBaseURL {
+			t.Errorf("expected default for malformed URL %q, got %q", tc, got)
+		}
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_AcceptsValidHTTP(t *testing.T) {
+	valid := "http://10.0.0.1:8585"
+	got := normalizeKCAgentBaseURL(valid)
+	if got != valid {
+		t.Errorf("expected valid HTTP URL unchanged, got %q", got)
+	}
+}
+
+func TestNormalizeKCAgentBaseURL_AcceptsValidHTTPS(t *testing.T) {
+	valid := "https://agent.example.com:443"
+	got := normalizeKCAgentBaseURL(valid)
+	if got != valid {
+		t.Errorf("expected valid HTTPS URL unchanged, got %q", got)
+	}
+}
+
 // ---------- kcAgentWebSocketBaseURL ----------
 
 func TestKCAgentWebSocketBaseURL_HTTPtoWS(t *testing.T) {

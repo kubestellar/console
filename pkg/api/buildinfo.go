@@ -61,6 +61,11 @@ func normalizeKCAgentBaseURL(raw string) string {
 	if trimmed == "" {
 		return defaultKCAgentBaseURL
 	}
+	// Validate the URL to prevent CSP header injection attacks
+	u, err := url.Parse(trimmed)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return defaultKCAgentBaseURL
+	}
 	return trimmed
 }
 
