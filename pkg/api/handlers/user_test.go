@@ -128,15 +128,11 @@ func TestUpdateCurrentUser_NotFound(t *testing.T) {
 
 func TestUpdateCurrentUser_InvalidBody(t *testing.T) {
 	userID := uuid.New()
-	app, mockStore, handler := setupUserTest(userID)
+	app, _, handler := setupUserTest(userID)
 	app.Put("/api/user", handler.UpdateCurrentUser)
 
-	existingUser := &models.User{
-		ID:          userID,
-		GitHubLogin: "testuser",
-	}
-	mockStore.On("GetUser", userID).Return(existingUser, nil).Once()
-
+	// Body parsing happens before the service is invoked, so no store
+	// calls are expected.
 	req, err := http.NewRequest("PUT", "/api/user", strings.NewReader("not-json"))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")

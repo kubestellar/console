@@ -1,39 +1,36 @@
 package handlers
 
 import (
-	"net/mail"
-	"regexp"
+	"errors"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
+	userservice "github.com/kubestellar/console/pkg/services/user"
 	"github.com/kubestellar/console/pkg/store"
 )
 
-// emailDomainRegexp requires a domain with at least one dot and a TLD of 2+ chars.
-// This complements net/mail.ParseAddress which handles RFC 5322 structure but
-// accepts bare domains like "user@localhost".
-var emailDomainRegexp = regexp.MustCompile(`^[^@]+@[^@]+\.[a-zA-Z]{2,}$`)
-
-// UserHandler handles user operations
+// UserHandler handles user HTTP operations, delegating business logic to the
+// user service layer.
 type UserHandler struct {
-	store store.Store
+	svc userservice.Service
 }
 
-// NewUserHandler creates a new user handler
+// NewUserHandler creates a new user handler. It accepts a store.Store for
+// backward compatibility and instantiates the service internally.
 func NewUserHandler(s store.Store) *UserHandler {
-	return &UserHandler{store: s}
+	return &UserHandler{svc: userservice.New(s)}
 }
 
 // GetCurrentUser returns the current user
 func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	user, err := h.store.GetUser(c.UserContext(), userID)
+	user, err := h.svc.GetByID(c.UserContext(), userID)
 	if err != nil {
+		if errors.Is(err, userservice.ErrNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "User not found")
+		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
-	}
-	if user == nil {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
 	}
 	return c.JSON(user)
 }
@@ -41,15 +38,7 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 // UpdateCurrentUser updates the current user
 func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	user, err := h.store.GetUser(c.UserContext(), userID)
-	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
-	}
-	if user == nil {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
-	}
 
-	// Only allow updating certain fields
 	var updates struct {
 		Email   string `json:"email"`
 		SlackID string `json:"slackId"`
@@ -58,22 +47,17 @@ func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
 	}
 
-	if updates.Email != "" {
-		// RFC 5322 structural validation
-		if _, err := mail.ParseAddress(updates.Email); err != nil {
+	user, err := h.svc.UpdateProfile(c.UserContext(), userID, userservice.UpdateParams{
+		Email:   updates.Email,
+		SlackID: updates.SlackID,
+	})
+	if err != nil {
+		if errors.Is(err, userservice.ErrNotFound) {
+			return fiber.NewError(fiber.StatusNotFound, "User not found")
+		}
+		if errors.Is(err, userservice.ErrInvalidEmail) {
 			return fiber.NewError(fiber.StatusBadRequest, "invalid email format")
 		}
-		// Require a real domain with a TLD (e.g. "user@example.com", not "user@localhost")
-		if !emailDomainRegexp.MatchString(updates.Email) {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid email format")
-		}
-		user.Email = updates.Email
-	}
-	if updates.SlackID != "" {
-		user.SlackID = updates.SlackID
-	}
-
-	if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update user")
 	}
 
