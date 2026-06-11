@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Compass, Home, Rocket, MessageSquarePlus, ArrowLeft, Sparkles, LayoutDashboard, Shield, Server, Zap } from 'lucide-react'
 import { ROUTES } from '../config/routes'
 import { activatePublicDemoMode } from '../lib/demoMode'
+import { Button } from './ui/Button'
 import type { CSSProperties } from 'react'
 
 // Inline style constants
@@ -94,34 +95,37 @@ export default function NotFound() {
           <p className="text-zinc-500 text-xs uppercase tracking-wider font-medium">Popular pages</p>
           <div className="grid grid-cols-3 gap-2">
             {QUICK_LINKS.map(({ label, path: to, icon: Icon }) => (
-              <button
+              <Button
                 key={to}
+                variant="ghost"
                 onClick={() => navigateToDemo(to)}
                 className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 hover:border-zinc-600 transition-colors group"
               >
                 <Icon className="w-4 h-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
                 <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-center gap-3 pt-2">
-          <button
+          <Button
+            variant="ghost"
+            icon={<ArrowLeft className="w-3.5 h-3.5" />}
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
+            className="border border-zinc-700 hover:border-zinc-600"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
             Go back
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            icon={<Home className="w-3.5 h-3.5" />}
             onClick={() => navigateToDemo(ROUTES.HOME)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
+            className="border border-zinc-700 hover:border-zinc-600"
           >
-            <Home className="w-3.5 h-3.5" />
             Home
-          </button>
+          </Button>
         </div>
       </div>
     </div>
