@@ -149,7 +149,7 @@ export function RequestApprovalModal({
       isOpen={isOpen}
       onClose={handleClose}
       size="md"
-      closeOnBackdrop
+      closeOnBackdrop={false}
       closeOnEscape
     >
       <BaseModal.Header

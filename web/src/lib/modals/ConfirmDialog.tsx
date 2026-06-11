@@ -79,7 +79,7 @@ export function ConfirmDialog({
   const Icon = config.icon
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="sm">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="sm" closeOnBackdrop={false}>
       <div className="p-6">
         {/* Icon */}
         <div className={`w-12 h-12 rounded-full ${config.iconBg} flex items-center justify-center mb-4 mx-auto`}>

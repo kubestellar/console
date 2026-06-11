@@ -114,7 +114,7 @@ export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel 
   const allSelected = searchableOnlineClusters.length > 0 && selected.size === searchableOnlineClusters.length
 
   return (
-    <BaseModal isOpen={open} onClose={onCancel} size="md">
+    <BaseModal isOpen={open} onClose={onCancel} size="md" closeOnBackdrop={false}>
       <BaseModal.Header title={t('missions.browser.clusterSelection.title')} description={missionTitle} icon={Server} onClose={onCancel} />
 
       <BaseModal.Content noPadding>
