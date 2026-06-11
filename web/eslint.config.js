@@ -19,6 +19,11 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // React Compiler rules (new in eslint-plugin-react-hooks v7) —
+      // downgrade to warnings until codebase is incrementally migrated.
+      'react-hooks/purity': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/static-components': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
