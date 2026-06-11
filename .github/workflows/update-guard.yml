@@ -8,11 +8,11 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'pkg/agent/update_checker.go'
-      - 'pkg/agent/update_build.go'
-      - 'pkg/agent/update_helpers.go'
-      - 'pkg/agent/update_poller.go'
-      - 'pkg/agent/update_checker_test.go'
+      - 'pkg/agent/updater_checker.go'
+      - 'pkg/agent/updater_build.go'
+      - 'pkg/agent/updater_helpers.go'
+      - 'pkg/agent/updater_poller.go'
+      - 'pkg/agent/updater_checker_test.go'
       - 'pkg/agent/server.go'
       - 'web/src/hooks/useUpdateProgress.ts'
       - 'startup-oauth.sh'
@@ -75,7 +75,7 @@ jobs:
       - name: Verify update invariants in source
         run: |
           echo "=== Verifying critical update invariants ==="
-          UPDATE_FILES="pkg/agent/update_checker.go pkg/agent/update_build.go pkg/agent/update_build_helpers.go pkg/agent/update_download.go pkg/agent/update_execute.go pkg/agent/update_git.go pkg/agent/update_helpers.go pkg/agent/update_poller.go"
+          UPDATE_FILES="pkg/agent/updater_checker.go pkg/agent/updater_build.go pkg/agent/updater_build_helpers.go pkg/agent/updater_download.go pkg/agent/updater_execute.go pkg/agent/updater_git.go pkg/agent/updater_helpers.go pkg/agent/updater_poller.go"
           ERRORS=0
 
           # 1. Atomic flag for mutual exclusion
