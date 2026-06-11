@@ -539,6 +539,9 @@ jobs:
               echo "::error::Helm rollback failed — release may need manual intervention"
               exit 1
             fi
+          fi
+
+      - name: Pre-deploy cluster health check
         run: |
           echo "::group::Current pod status in kubestellar-console"
           kubectl get pods -n kubestellar-console -o wide || true
