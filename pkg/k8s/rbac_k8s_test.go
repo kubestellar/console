@@ -102,28 +102,6 @@ func TestBuildProbeNamespaces_DefaultsOnly(t *testing.T) {
 	}
 }
 
-func TestBuildProbeNamespaces_UserNamespaceFirst(t *testing.T) {
-	t.Setenv(probeNamespacesEnvVar, "")
-	got := buildProbeNamespaces("my-team")
-	if got[0] != "my-team" {
-		t.Errorf("expected user namespace first, got %q", got[0])
-	}
-}
-
-func TestBuildProbeNamespaces_UserNamespaceDeduplicated(t *testing.T) {
-	t.Setenv(probeNamespacesEnvVar, "")
-	// "default" is in defaultProbeNamespaces — should not appear twice.
-	got := buildProbeNamespaces("default")
-	count := 0
-	for _, ns := range got {
-		if ns == "default" {
-			count++
-		}
-	}
-	if count != 1 {
-		t.Errorf("expected 'default' exactly once, got %d times: %v", count, got)
-	}
-}
 
 func TestBuildProbeNamespaces_EnvVarAdded(t *testing.T) {
 	t.Setenv(probeNamespacesEnvVar, "team-a,team-b")

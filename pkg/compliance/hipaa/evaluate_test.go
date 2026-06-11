@@ -97,8 +97,8 @@ func TestSummaryWithEmptySafeguards(t *testing.T) {
 	}
 }
 
-// TestSummaryPartialOnly verifies score is 50 when all safeguards are partial.
-func TestSummaryPartialOnly(t *testing.T) {
+// TestSummaryPartialOnly_FourSafeguards verifies score is 50 when all safeguards are partial.
+func TestSummaryPartialOnly_FourSafeguards(t *testing.T) {
 	e := &Engine{
 		safeguards: []Safeguard{
 			{ID: "s1", Status: "partial"},

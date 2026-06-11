@@ -283,7 +283,7 @@ func TestGetClient_InCluster(t *testing.T) {
 	m.mu.RUnlock()
 }
 
-func TestGetDynamicClient_InCluster(t *testing.T) {
+func TestGetDynamicClient_InCluster_Legacy(t *testing.T) {
 	m, _ := NewMultiClusterClient("")
 
 	// Simulate in-cluster config

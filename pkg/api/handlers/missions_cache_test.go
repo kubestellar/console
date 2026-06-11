@@ -77,7 +77,7 @@ func TestSanitizePath_TooLong(t *testing.T) {
 	}
 }
 
-func TestValidateKBBrowsePath(t *testing.T) {
+func TestValidateKBBrowsePath_BasicPatterns(t *testing.T) {
 	tests := []struct {
 		path    string
 		wantErr bool
