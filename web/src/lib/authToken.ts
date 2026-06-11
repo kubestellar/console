@@ -37,18 +37,18 @@ interface AuthTokenSyncEvent {
 let inMemorySessionToken: string | null = null
 let inMemoryDemoToken: string | null = null
 
-function readSessionAuthToken(): string | null {
+async function readSessionAuthToken(): Promise<string | null> {
   try {
-    const token = getToken(STORAGE_KEY_TOKEN, sessionStorage)
+    const token = await getToken(STORAGE_KEY_TOKEN, sessionStorage)
     return token ?? readLegacyTestAuthToken(sessionStorage)
   } catch {
     return inMemorySessionToken ?? readLegacyTestAuthToken(sessionStorage)
   }
 }
 
-function readLocalAuthToken(): string | null {
+async function readLocalAuthToken(): Promise<string | null> {
   try {
-    const token = getToken(STORAGE_KEY_TOKEN, localStorage)
+    const token = await getToken(STORAGE_KEY_TOKEN, localStorage)
     if (token) return token
 
     return readLegacyTestAuthToken(localStorage)
@@ -57,10 +57,10 @@ function readLocalAuthToken(): string | null {
   }
 }
 
-function writeSessionAuthToken(token: string | null): void {
+async function writeSessionAuthToken(token: string | null): Promise<void> {
   try {
     if (token && token !== DEMO_TOKEN_VALUE) {
-      setToken(STORAGE_KEY_TOKEN, token, undefined, sessionStorage)
+      await setToken(STORAGE_KEY_TOKEN, token, undefined, sessionStorage)
     } else {
       clearToken(STORAGE_KEY_TOKEN, sessionStorage)
     }
@@ -70,10 +70,10 @@ function writeSessionAuthToken(token: string | null): void {
   }
 }
 
-function writeLocalAuthToken(token: string | null): void {
+async function writeLocalAuthToken(token: string | null): Promise<void> {
   try {
     if (token === DEMO_TOKEN_VALUE) {
-      setToken(STORAGE_KEY_TOKEN, token, undefined, localStorage)
+      await setToken(STORAGE_KEY_TOKEN, token, undefined, localStorage)
     } else {
       clearToken(STORAGE_KEY_TOKEN, localStorage)
     }
@@ -91,13 +91,13 @@ function writeAuthTokenSyncEvent(state: AuthTokenSyncState): void {
   }
 }
 
-export function getStoredAuthToken(): string | null {
-  const sessionToken = readSessionAuthToken()
+export async function getStoredAuthToken(): Promise<string | null> {
+  const sessionToken = await readSessionAuthToken()
   if (sessionToken) {
     return sessionToken
   }
 
-  const localToken = readLocalAuthToken()
+  const localToken = await readLocalAuthToken()
   if (localToken) {
     return localToken
   }
@@ -105,9 +105,9 @@ export function getStoredAuthToken(): string | null {
   return null
 }
 
-export function setStoredAuthToken(token: string | null): void {
-  writeSessionAuthToken(token)
-  writeLocalAuthToken(token)
+export async function setStoredAuthToken(token: string | null): Promise<void> {
+  await writeSessionAuthToken(token)
+  await writeLocalAuthToken(token)
 
   if (token === DEMO_TOKEN_VALUE) {
     writeAuthTokenSyncEvent('demo')
@@ -118,8 +118,8 @@ export function setStoredAuthToken(token: string | null): void {
   }
 }
 
-export function clearStoredAuthToken(): void {
-  setStoredAuthToken(null)
+export async function clearStoredAuthToken(): Promise<void> {
+  await setStoredAuthToken(null)
 }
 
 export function parseAuthTokenSyncEvent(rawValue: string | null): AuthTokenSyncState | null {
