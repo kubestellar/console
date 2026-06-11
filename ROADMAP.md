@@ -104,11 +104,16 @@ As the codebase scales past 160+ dashboard cards and 10,000+ unit tests, technic
 
 ## Near-Term (Q2–Q3 2026)
 
+See **v0.4 — AI-Native Observability** milestone above for the full near-term feature scope, quality gates, and community health targets.
+
+**Branch Stability Covenant (effective immediately):** Main branch must remain green at all times. A post-merge integration smoke gate (combining TS build, auth smoke, and workflow startup checks) is required before new feature PRs are merged. See issue [#17756](https://github.com/kubestellar/console/issues/17756) for tracking.
+
 ## Mid-Term (Q3–Q4 2026)
 
+- **Stellar subsystem GA** — Graduate the Stellar persistent AI runtime from alpha to GA: finalize CRD versioning (v1 stability), complete Mission Operator test coverage, publish upgrade path documentation, and achieve at least one confirmed non-demo deployment. GA criteria tracked in [#17757](https://github.com/kubestellar/console/issues/17757). Stellar GA is the strategic milestone that moves Console from a dashboard to a production AI operations runtime.
 - **GitOps integration milestone** — First-class Flux + Argo CD support with observability parity, declarative Console configuration, and Mission Control deep links; see `docs/plans/GITOPS-INTEGRATION-RFC.md`
 - **Multi-tenant RBAC** — Role-based access control for teams sharing a Console instance, with namespace-scoped permissions
-- **Plugin architecture** — Extensible card and mission system allowing third-party developers to build custom dashboard components
+- **Plugin architecture** — Extensible card and mission system allowing third-party developers to build custom dashboard components; see `docs/plans/PLUGIN-ARCHITECTURE-RFC.md` (RFC to be authored — tracked in [#17760](https://github.com/kubestellar/console/issues/17760))
 - **Helm operator** — Kubernetes operator for fleet-wide Console deployment and lifecycle management
 - **Enhanced AI missions** — AI-assisted troubleshooting missions that diagnose cluster issues and suggest remediation steps
 - **Offline/air-gapped mode** — Full Console functionality without internet connectivity for restricted environments
