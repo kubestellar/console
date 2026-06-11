@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 
@@ -83,7 +84,7 @@ func TestFindRelatedCRDs(t *testing.T) {
 			}
 
 			fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, crdGVRListKinds, objs...)
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.InjectDynamicClient("c1", fakeDyn)
 
 			deps := m.findRelatedCRDs(context.Background(), "c1", tc.namespace, tc.serviceNames)
@@ -104,7 +105,7 @@ func TestFindRelatedCRDs(t *testing.T) {
 }
 
 func TestFindRelatedCRDs_NoDynamicClient(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	deps := m.findRelatedCRDs(context.Background(), "nonexistent", "default", []string{"svc"})
 	if len(deps) != 0 {
@@ -159,7 +160,7 @@ func TestFindMatchingWebhookConfigs_Validating(t *testing.T) {
 			}
 
 			fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, crdGVRListKinds, objs...)
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.InjectDynamicClient("c1", fakeDyn)
 
 			deps := m.findMatchingWebhookConfigs(context.Background(), "c1", tc.namespace, tc.serviceNames, false)
@@ -184,7 +185,7 @@ func TestFindMatchingWebhookConfigs_Mutating(t *testing.T) {
 
 	webhook := makeWebhookConfig("my-mwc", "my-svc", "default", true)
 	fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, crdGVRListKinds, &webhook)
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.InjectDynamicClient("c1", fakeDyn)
 
 	deps := m.findMatchingWebhookConfigs(context.Background(), "c1", "default", []string{"my-svc"}, true)
@@ -201,7 +202,7 @@ func TestFindMatchingWebhookConfigs_Mutating(t *testing.T) {
 }
 
 func TestFindMatchingWebhookConfigs_NoDynamicClient(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	deps := m.findMatchingWebhookConfigs(context.Background(), "nonexistent", "default", []string{"svc"}, false)
 	if len(deps) != 0 {

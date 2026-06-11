@@ -9,13 +9,14 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 )
 
 func TestServer_HandleGPUHealthCronJob(t *testing.T) {
 	// Setup dependencies
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},

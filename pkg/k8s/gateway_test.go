@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 	"time"
@@ -117,7 +118,7 @@ func TestListGateways(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.rawConfig = &api.Config{Contexts: map[string]*api.Context{tt.contextName: {Cluster: "cluster1"}}}
 
 			scheme := runtime.NewScheme()
@@ -221,7 +222,7 @@ func TestListHTTPRoutes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.rawConfig = &api.Config{Contexts: map[string]*api.Context{tt.contextName: {Cluster: "cluster1"}}}
 
 			scheme := runtime.NewScheme()
@@ -351,7 +352,7 @@ func TestDetermineHTTPRouteStatus(t *testing.T) {
 }
 
 func TestParseGatewaysFromList_NonUnstructuredList(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	// Pass nil to trigger the fallback branch
 	result, err := m.parseGatewaysFromList(nil, "c1")
@@ -364,7 +365,7 @@ func TestParseGatewaysFromList_NonUnstructuredList(t *testing.T) {
 }
 
 func TestParseHTTPRoutesFromList_NonUnstructuredList(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	result, err := m.parseHTTPRoutesFromList(nil, "c1")
 	if err != nil {

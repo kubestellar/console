@@ -10,6 +10,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 const (
@@ -63,7 +64,7 @@ func newQuantumWorkloadCache() *quantumWorkloadCache {
 	return &quantumWorkloadCache{}
 }
 
-func (q *quantumWorkloadCache) isRunning(k8sClient *k8s.MultiClusterClient) bool {
+func (q *quantumWorkloadCache) isRunning(k8sClient *client.MultiClusterClient) bool {
 	if os.Getenv("QUANTUM_WORKLOAD_DISABLED") == "true" {
 		return false
 	}

@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"time"
 
@@ -18,7 +19,7 @@ var OpenShiftUserGVR = schema.GroupVersionResource{
 }
 
 // ListOpenShiftUsers returns all OpenShift users (users.user.openshift.io) from a cluster
-func (m *MultiClusterClient) ListOpenShiftUsers(ctx context.Context, contextName string) ([]models.OpenShiftUser, error) {
+func (m *client.MultiClusterClient) ListOpenShiftUsers(ctx context.Context, contextName string) ([]models.OpenShiftUser, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err

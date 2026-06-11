@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"sync"
@@ -258,7 +259,7 @@ func checkHPAHealth(obj *unstructured.Unstructured) (ResourceHealthStatus, strin
 
 // MonitorWorkload resolves a workload's dependencies, fetches each resource,
 // checks its health status, and detects issues.
-func (m *MultiClusterClient) MonitorWorkload(
+func (m *client.MultiClusterClient) MonitorWorkload(
 	ctx context.Context,
 	cluster, namespace, name string,
 ) (*WorkloadMonitorResult, error) {

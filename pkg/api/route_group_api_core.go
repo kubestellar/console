@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
@@ -24,11 +25,11 @@ type apiCoreRouteGroup struct {
 	hub                 *handlers.Hub
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
-	k8sClient           *k8s.MultiClusterClient
+	k8sClient           *client.MultiClusterClient
 	done                <-chan struct{}
 }
 
-func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *handlers.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
+func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *handlers.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *client.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
 	return &apiCoreRouteGroup{
 		app:                 app,
 		store:               store,

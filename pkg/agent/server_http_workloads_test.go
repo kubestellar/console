@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 func TestServer_HandleScaleHTTP(t *testing.T) {
 	// 1. Setup server with mock k8s client
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},
@@ -65,7 +66,7 @@ func TestServer_HandleDeployWorkloadHTTP_Validation(t *testing.T) {
 }
 
 func TestServer_HandlePodsHTTP(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},

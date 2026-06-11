@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -70,12 +71,12 @@ type StellarEventSink interface {
 // background event journal collector goroutine.
 type TimelineHandler struct {
 	store        store.Store
-	k8sClient    *k8s.MultiClusterClient
+	k8sClient    *client.MultiClusterClient
 	stellarSink  StellarEventSink
 }
 
 // NewTimelineHandler creates a TimelineHandler.
-func NewTimelineHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *TimelineHandler {
+func NewTimelineHandler(s store.Store, k8sClient *client.MultiClusterClient) *TimelineHandler {
 	return &TimelineHandler{store: s, k8sClient: k8sClient}
 }
 
@@ -186,7 +187,7 @@ func (h *TimelineHandler) collectAll() {
 	wg.Wait()
 }
 
-func (h *TimelineHandler) collectCluster(ci k8s.ClusterInfo) {
+func (h *TimelineHandler) collectCluster(ci client.ClusterInfo) {
 	ctx, cancel := context.WithTimeout(context.Background(), eventCollectTimeout)
 	defer cancel()
 

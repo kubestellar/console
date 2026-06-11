@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"testing"
@@ -63,7 +64,7 @@ func BenchmarkGetGPUNodes(b *testing.B) {
 		_, _ = client.CoreV1().Pods("default").Create(context.Background(), &pod, metav1.CreateOptions{})
 	}
 
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 	m.InjectClient("test-cluster", client)
 
 	ctx := context.Background()

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
@@ -26,7 +27,7 @@ func TestServer_HandlePrometheusQuery(t *testing.T) {
 	defer promServer.Close()
 
 	// 2. Setup Server with mocked k8sClient
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	
 	// Inject a fake typed client so GetRestConfig doesn't early-return with error
 	k8sClient.InjectClient("test-cluster", fake.NewSimpleClientset())

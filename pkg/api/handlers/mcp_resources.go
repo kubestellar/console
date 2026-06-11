@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
@@ -29,7 +30,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "configmaps", getDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "configmaps", getDemoConfigMaps(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ConfigMap, error) {
 			return client.GetConfigMaps(ctx, clusterName, namespace)
 		})
@@ -54,7 +55,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "secrets", getDemoSecrets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "secrets", getDemoSecrets(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Secret, error) {
 			return client.GetSecrets(ctx, clusterName, namespace)
 		})
@@ -74,7 +75,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "serviceAccounts", getDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "serviceAccounts", getDemoServiceAccounts(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ServiceAccount, error) {
 			return client.GetServiceAccounts(ctx, clusterName, namespace)
 		})
@@ -94,7 +95,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvcs", getDemoPVCs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvcs", getDemoPVCs(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PVC, error) {
 			return client.GetPVCs(ctx, clusterName, namespace)
 		})
@@ -112,7 +113,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvs", getDemoPVs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvs", getDemoPVs(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PV, error) {
 			return client.GetPVs(ctx, clusterName)
 		})
@@ -132,7 +133,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "resourceQuotas", getDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "resourceQuotas", getDemoResourceQuotas(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ResourceQuota, error) {
 			return client.GetResourceQuotas(ctx, clusterName, namespace)
 		})
@@ -152,7 +153,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "limitRanges", getDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "limitRanges", getDemoLimitRanges(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.LimitRange, error) {
 			return client.GetLimitRanges(ctx, clusterName, namespace)
 		})
@@ -510,7 +511,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "nodes", getDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "nodes", getDemoFlatcarNodes(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.FlatcarNodeInfo, error) {
 			return client.GetFlatcarNodes(ctx, clusterName)
 		})
@@ -530,7 +531,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "ingresses", getDemoIngresses(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "ingresses", getDemoIngresses(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Ingress, error) {
 			return client.GetIngresses(ctx, clusterName, namespace)
 		})
@@ -550,7 +551,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "networkpolicies", getDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "networkpolicies", getDemoNetworkPolicies(), func(client *client.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.NetworkPolicy, error) {
 			return client.GetNetworkPolicies(ctx, clusterName, namespace)
 		})

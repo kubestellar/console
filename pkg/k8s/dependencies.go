@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"sort"
@@ -12,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (m *MultiClusterClient) ResolveDependencies(
+func (m *client.MultiClusterClient) ResolveDependencies(
 	ctx context.Context,
 	sourceCluster string,
 	namespace string,

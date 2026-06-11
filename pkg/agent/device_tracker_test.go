@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 
 func TestDeviceTracker(t *testing.T) {
 	// 1. Setup mock k8s client
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.SetRawConfig(&api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 		Clusters: map[string]*api.Cluster{"cl1": {Server: "s1"}},

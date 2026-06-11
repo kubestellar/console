@@ -14,6 +14,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -29,11 +30,11 @@ func parseUUID(s string) (uuid.UUID, error) {
 // RBACHandler handles RBAC and user management operations
 type RBACHandler struct {
 	store     store.Store
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // NewRBACHandler creates a new RBAC handler
-func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandler {
+func NewRBACHandler(s store.Store, k8sClient *client.MultiClusterClient) *RBACHandler {
 	return &RBACHandler{store: s, k8sClient: k8sClient}
 }
 

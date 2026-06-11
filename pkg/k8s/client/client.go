@@ -1,4 +1,4 @@
-// Package k8s provides the multi-cluster k8s client used by both the Go
+// Package client provides the multi-cluster k8s client used by both the Go
 // backend (cmd/console) and kc-agent (cmd/kc-agent). The underlying type
 // is MultiClusterClient; post-#7993 it is ALSO exported as PrivilegedClient
 // to signal — at the type name — that in the Go backend's context it
@@ -25,7 +25,7 @@
 // kubeconfig, so the name "PrivilegedClient" is a slight overstatement
 // there — but the type alias is only a hint, not a runtime check, and
 // kc-agent's only k8s surface is user-initiated work anyway.
-package k8s
+package client
 
 import (
 	"context"

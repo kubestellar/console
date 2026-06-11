@@ -11,6 +11,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -26,11 +27,11 @@ const nsDefaultTimeout = 15 * time.Second
 // ServiceAccount. See pkg/agent/server_http.go.
 type NamespaceHandler struct {
 	store     store.Store
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // NewNamespaceHandler creates a new namespace handler
-func NewNamespaceHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *NamespaceHandler {
+func NewNamespaceHandler(s store.Store, k8sClient *client.MultiClusterClient) *NamespaceHandler {
 	return &NamespaceHandler{store: s, k8sClient: k8sClient}
 }
 

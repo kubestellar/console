@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 
@@ -15,8 +16,8 @@ import (
 )
 
 func TestResolveDependencies(t *testing.T) {
-	// 1. Setup Mock MultiClusterClient
-	m, _ := NewMultiClusterClient("")
+	// 1. Setup Mock client.MultiClusterClient
+	m, _ := client.NewMultiClusterClient("")
 
 	// 2. Setup Fake Dynamic Client with resources
 	// Create a local scheme and register necessary types
@@ -252,7 +253,7 @@ func TestWalkVolumeRefs(t *testing.T) {
 }
 
 func TestResolveRBACForSA(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	// Convert typed objects to unstructured
 	toUnstructured := func(obj interface{}) *unstructured.Unstructured {

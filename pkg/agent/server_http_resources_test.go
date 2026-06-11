@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +19,7 @@ import (
 func TestServer_HandleNodesHTTP(t *testing.T) {
 	// 1. Setup fake kubernetes client
 	fakeClientset := fake.NewSimpleClientset()
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := &Server{
@@ -44,7 +45,7 @@ func TestServer_HandleNodesHTTP(t *testing.T) {
 }
 
 func TestServer_HandleEventsHTTP_Limit(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},
@@ -89,7 +90,7 @@ func TestServer_ClusterResourceRetryBackoff(t *testing.T) {
 }
 
 func TestServer_HandleGPUNodesHTTP_Returns503DuringRetryBackoff(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:          k8sClient,
 		allowedOrigins:     []string{"*"},
@@ -108,7 +109,7 @@ func TestServer_HandleGPUNodesHTTP_Returns503DuringRetryBackoff(t *testing.T) {
 }
 
 func TestServer_HandleNodesHTTP_SkipsBackoffedClusters(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetRawConfig(&api.Config{
 		CurrentContext: "cluster-a",
 		Contexts: map[string]*api.Context{

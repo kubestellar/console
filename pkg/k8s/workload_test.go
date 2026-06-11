@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"strings"
@@ -83,7 +84,7 @@ func TestResolveWorkloadDependencies(t *testing.T) {
 		}, nil
 	})
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 	m.dynamicClients["c1"] = fakeDyn
 
@@ -259,7 +260,7 @@ func TestListWorkloads(t *testing.T) {
 		return true, &unstructured.UnstructuredList{Items: []unstructured.Unstructured{}}, nil
 	})
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 	m.dynamicClients["c1"] = fakeDyn
 	m.clients["c1"] = k8sfake.NewSimpleClientset() // safe inject, not nil
@@ -404,7 +405,7 @@ func TestListWorkloadsForCluster(t *testing.T) {
 				}
 			})
 
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 			m.dynamicClients["c1"] = fakeDyn
 
@@ -473,7 +474,7 @@ func TestDeployWorkload(t *testing.T) {
 		return true, createdObj, nil
 	})
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"src": {Cluster: "source"},
 		"tgt": {Cluster: "target"},
@@ -601,7 +602,7 @@ func TestDeployWorkloadWithFailingDependency(t *testing.T) {
 		return true, nil, fmt.Errorf("simulated admission webhook failure for secret")
 	})
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"src": {Cluster: "source"},
 		"tgt": {Cluster: "target"},

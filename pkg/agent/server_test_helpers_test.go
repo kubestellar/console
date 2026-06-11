@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // serverTestOption is a functional option for newTestServer.
@@ -40,7 +41,7 @@ func withContexts(names ...string) serverTestOption {
 		}
 		s.kubectl = kp
 
-		kc, err := k8s.NewMultiClusterClient(path)
+		kc, err := client.NewMultiClusterClient(path)
 		if err != nil {
 			panic("withContexts: NewMultiClusterClient: " + err.Error())
 		}

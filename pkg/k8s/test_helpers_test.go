@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -10,7 +11,7 @@ import (
 // returns them without attempting to load real kubeconfig from disk. Used
 // by multi-cluster list tests (MCS, Gateway, Workload capability, etc.)
 // that rely on the DeduplicatedClusters hot-reload fix (#6659, #6661–#6663).
-func injectTestClusters(m *MultiClusterClient, names ...string) {
+func injectTestClusters(m *client.MultiClusterClient, names ...string) {
 	cfg := &api.Config{
 		Contexts: map[string]*api.Context{},
 		Clusters: map[string]*api.Cluster{},

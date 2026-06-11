@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 
@@ -38,7 +39,7 @@ func TestScaleWorkload(t *testing.T) {
 
 	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap, deployObj)
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients["c1"] = fakeDyn
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 
@@ -88,7 +89,7 @@ func TestDeleteWorkload(t *testing.T) {
 
 	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap, deployObj)
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients["c1"] = fakeDyn
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 
@@ -99,7 +100,7 @@ func TestDeleteWorkload(t *testing.T) {
 }
 
 func TestGetClusterCapabilities(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	node1 := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -168,7 +169,7 @@ func TestGetClusterCapabilities(t *testing.T) {
 }
 
 func TestGetClusterCapabilities_ZeroNodeCluster(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	// c1 has nodes — should be available
 	node := &corev1.Node{
@@ -237,7 +238,7 @@ func TestNodeLabels_AddAndRemove(t *testing.T) {
 
 	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap, nodeObj)
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients["c1"] = fakeDyn
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 
@@ -305,7 +306,7 @@ func TestNodeLabels_AddAndRemove(t *testing.T) {
 }
 
 func TestListBindingPolicies(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	bp, err := m.ListBindingPolicies(context.Background())
 	if err != nil {
 		t.Fatalf("ListBindingPolicies failed: %v", err)

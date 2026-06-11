@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,11 +25,11 @@ var serviceExportGVR = schema.GroupVersionResource{
 
 // ServiceExportHandlers handles MCS ServiceExport API endpoints
 type ServiceExportHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // NewServiceExportHandlers creates a new ServiceExport handlers instance
-func NewServiceExportHandlers(k8sClient *k8s.MultiClusterClient) *ServiceExportHandlers {
+func NewServiceExportHandlers(k8sClient *client.MultiClusterClient) *ServiceExportHandlers {
 	return &ServiceExportHandlers{
 		k8sClient: k8sClient,
 	}

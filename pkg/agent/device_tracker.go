@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -63,7 +64,7 @@ type DeviceAlertsResponse struct {
 
 // DeviceTracker tracks hardware device counts over time to detect disappearances
 type DeviceTracker struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 
 	// Historical snapshots per node (key: "cluster/nodeName")
 	history map[string][]DeviceSnapshot
@@ -87,7 +88,7 @@ type DeviceTracker struct {
 
 // NewDeviceTracker creates a new device tracker.
 // Returns nil if k8sClient is nil so the caller can skip starting it (#4723).
-func NewDeviceTracker(k8sClient *k8s.MultiClusterClient, broadcast func(string, interface{})) *DeviceTracker {
+func NewDeviceTracker(k8sClient *client.MultiClusterClient, broadcast func(string, interface{})) *DeviceTracker {
 	if k8sClient == nil {
 		slog.Warn("[DeviceTracker] created with nil k8s client — device tracking disabled")
 		return nil

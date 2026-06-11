@@ -19,6 +19,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/federation"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // testBearerToken is the fake shared secret used by federation handler tests.
@@ -104,7 +105,7 @@ func (f *handlerFakeProvider) ReadPendingJoins(_ context.Context, _ *rest.Config
 // YAML file so DeduplicatedClusters returns the test-authored contexts.
 func newFederationTestServer(t *testing.T, kubeconfigPath, agentToken string) *Server {
 	t.Helper()
-	k8sClient, err := k8s.NewMultiClusterClient(kubeconfigPath)
+	k8sClient, err := client.NewMultiClusterClient(kubeconfigPath)
 	if err != nil {
 		t.Fatalf("NewMultiClusterClient: %v", err)
 	}

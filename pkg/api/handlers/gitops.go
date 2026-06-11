@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
@@ -74,7 +75,7 @@ type driftCacheEntry struct {
 // GitOpsHandlers handles GitOps-related API endpoints
 type GitOpsHandlers struct {
 	bridge    *mcp.Bridge
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 	// userStore is consulted by the shared requireEditorOrAdmin /
 	// requireViewerOrAbove helpers to enforce RBAC on GitOps endpoints
 	// (#6022). May be nil in dev/demo mode or in unit tests that don't
@@ -94,7 +95,7 @@ type GitOpsHandlers struct {
 // (sync, helm mutations, argocd sync) and viewer-or-above on drift detection
 // (#6022). Pass nil to skip role checks — this is intended for dev/demo mode
 // and unit tests that are not exercising RBAC.
-func NewGitOpsHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, userStore store.Store) *GitOpsHandlers {
+func NewGitOpsHandlers(bridge *mcp.Bridge, k8sClient *client.MultiClusterClient, userStore store.Store) *GitOpsHandlers {
 	return &GitOpsHandlers{
 		bridge:     bridge,
 		k8sClient:  k8sClient,

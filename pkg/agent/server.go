@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
@@ -149,7 +150,7 @@ type Server struct {
 	config         Config
 	upgrader       websocket.Upgrader
 	kubectl        *KubectlProxy
-	k8sClient      *k8s.MultiClusterClient // For rich cluster data queries
+	k8sClient      *client.MultiClusterClient // For rich cluster data queries
 	registry       *Registry
 	clients        map[*websocket.Conn]*wsClient
 	clientsMux     sync.RWMutex
@@ -235,7 +236,7 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	// Initialize k8s client for rich cluster data queries
-	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
+	k8sClient, err := client.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
 		slog.Error("failed to initialize k8s client", "error", err)
 		// Don't fail - kubectl functionality still works

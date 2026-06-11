@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestQueryAllClusters_Success(t *testing.T) {
-	clusters := []k8s.ClusterInfo{
+	clusters := []client.ClusterInfo{
 		{Name: "cluster-1"},
 		{Name: "cluster-2"},
 	}
@@ -29,7 +30,7 @@ func TestQueryAllClusters_Success(t *testing.T) {
 }
 
 func TestQueryAllClusters_WithErrors(t *testing.T) {
-	clusters := []k8s.ClusterInfo{
+	clusters := []client.ClusterInfo{
 		{Name: "cluster-1"},
 		{Name: "cluster-2"},
 		{Name: "cluster-3"},
@@ -54,7 +55,7 @@ func TestQueryAllClusters_WithErrors(t *testing.T) {
 }
 
 func TestQueryAllClusters_Timeout(t *testing.T) {
-	clusters := []k8s.ClusterInfo{
+	clusters := []client.ClusterInfo{
 		{Name: "cluster-1"},
 		{Name: "cluster-2"},
 	}
@@ -96,9 +97,9 @@ func TestQueryAllClusters_EmptyClusters(t *testing.T) {
 
 func TestQueryAllClusters_Concurrency(t *testing.T) {
 	// Ensure that queries actually run in parallel
-	clusters := make([]k8s.ClusterInfo, 10)
+	clusters := make([]client.ClusterInfo, 10)
 	for i := 0; i < 10; i++ {
-		clusters[i] = k8s.ClusterInfo{Name: "cluster"}
+		clusters[i] = client.ClusterInfo{Name: "cluster"}
 	}
 
 	start := time.Now()
@@ -117,7 +118,7 @@ func TestQueryAllClusters_Concurrency(t *testing.T) {
 
 func TestWaitWithDeadline_Integration(t *testing.T) {
 	// Let's just verify queryAllClustersWithTimeout returns when waitWithDeadline times out
-	clusters := []k8s.ClusterInfo{{Name: "slow-cluster"}}
+	clusters := []client.ClusterInfo{{Name: "slow-cluster"}}
 	queryFn := func(ctx context.Context, clusterName string) ([]string, error) {
 		<-time.After(1 * time.Second)
 		return []string{"ok"}, nil

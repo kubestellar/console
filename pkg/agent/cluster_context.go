@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/mcp"
 )
 
@@ -23,11 +24,11 @@ const (
 var providerClusterContextState struct {
 	mu        sync.RWMutex
 	bridge    *mcp.Bridge
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // SetClusterContextProviders wires live cluster data sources into AI providers.
-func SetClusterContextProviders(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient) {
+func SetClusterContextProviders(bridge *mcp.Bridge, k8sClient *client.MultiClusterClient) {
 	providerClusterContextState.mu.Lock()
 	defer providerClusterContextState.mu.Unlock()
 	providerClusterContextState.bridge = bridge
@@ -118,7 +119,7 @@ func resolveScopedNamespace(req *ChatRequest) string {
 	return strings.TrimSpace(req.Context["namespace"])
 }
 
-func listScopedClusters(ctx context.Context, bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient) []string {
+func listScopedClusters(ctx context.Context, bridge *mcp.Bridge, k8sClient *client.MultiClusterClient) []string {
 	if bridge != nil {
 		clusters, err := bridge.ListClusters(ctx)
 		if err == nil {
@@ -148,7 +149,7 @@ func listScopedClusters(ctx context.Context, bridge *mcp.Bridge, k8sClient *k8s.
 	return nil
 }
 
-func appendClusterHealth(sb *strings.Builder, ctx context.Context, bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, cluster string) {
+func appendClusterHealth(sb *strings.Builder, ctx context.Context, bridge *mcp.Bridge, k8sClient *client.MultiClusterClient, cluster string) {
 	if bridge != nil {
 		health, err := bridge.GetClusterHealth(ctx, cluster)
 		if err == nil && health != nil {
@@ -176,7 +177,7 @@ func appendClusterHealth(sb *strings.Builder, ctx context.Context, bridge *mcp.B
 	sb.WriteString("Health: unavailable\n")
 }
 
-func appendPodIssues(sb *strings.Builder, ctx context.Context, bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, cluster, namespace string) {
+func appendPodIssues(sb *strings.Builder, ctx context.Context, bridge *mcp.Bridge, k8sClient *client.MultiClusterClient, cluster, namespace string) {
 	if bridge != nil {
 		issues, err := bridge.FindPodIssues(ctx, cluster, namespace)
 		if err == nil {
@@ -252,7 +253,7 @@ func appendFormattedPodIssues(sb *strings.Builder, issues []k8s.PodIssue) {
 	}
 }
 
-func appendWarningEvents(sb *strings.Builder, ctx context.Context, bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, cluster, namespace string) {
+func appendWarningEvents(sb *strings.Builder, ctx context.Context, bridge *mcp.Bridge, k8sClient *client.MultiClusterClient, cluster, namespace string) {
 	if bridge != nil {
 		events, err := bridge.GetWarningEvents(ctx, cluster, namespace, providerClusterContextEventLimit)
 		if err == nil {

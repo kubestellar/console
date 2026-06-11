@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
@@ -12,7 +13,7 @@ import (
 // as Running (idle), not Pending. Previously `readyReplicas == replicas &&
 // replicas > 0` never matched 0/0 and the default Pending case fired.
 func TestParseStatefulSetsZeroReplicasIsRunning(t *testing.T) {
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	zeroReplicaItem := unstructured.Unstructured{Object: map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -41,7 +42,7 @@ func TestParseStatefulSetsZeroReplicasIsRunning(t *testing.T) {
 // TestParseStatefulSetsFullyReadyIsRunning guards against regression in the
 // common path: ready==replicas>0 must still map to Running.
 func TestParseStatefulSetsFullyReadyIsRunning(t *testing.T) {
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	item := unstructured.Unstructured{Object: map[string]interface{}{
 		"metadata": map[string]interface{}{
@@ -64,7 +65,7 @@ func TestParseStatefulSetsFullyReadyIsRunning(t *testing.T) {
 
 // TestParseStatefulSetsPartialReadyIsDegraded guards the Degraded path.
 func TestParseStatefulSetsPartialReadyIsDegraded(t *testing.T) {
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	item := unstructured.Unstructured{Object: map[string]interface{}{
 		"metadata": map[string]interface{}{

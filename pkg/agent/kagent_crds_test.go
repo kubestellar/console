@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,7 +45,7 @@ func TestServer_HandleKagentCRDAgents(t *testing.T) {
 	scheme := runtime.NewScheme()
 	fakeDyn := fake.NewSimpleDynamicClient(scheme, agent)
 
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetDynamicClient("cluster1", fakeDyn)
 
 	s := &Server{
@@ -90,7 +91,7 @@ func TestServer_HandleKagentCRDSummary(t *testing.T) {
 	}
 	fakeDyn := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, listKinds)
 
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetDynamicClient("cluster1", fakeDyn)
 
 	s := &Server{

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -66,7 +67,7 @@ type MetricsHistoryResponse struct {
 
 // MetricsHistory manages historical metrics snapshots
 type MetricsHistory struct {
-	k8sClient          *k8s.MultiClusterClient
+	k8sClient          *client.MultiClusterClient
 	snapshots          []MetricsSnapshot
 	mu                 sync.RWMutex
 	diskMu             sync.Mutex // serializes saveToDisk calls (#7017)
@@ -85,7 +86,7 @@ func (mh *MetricsHistory) setLastPersistError(err error) {
 }
 
 // NewMetricsHistory creates a new metrics history manager
-func NewMetricsHistory(k8sClient *k8s.MultiClusterClient, dataDir string) *MetricsHistory {
+func NewMetricsHistory(k8sClient *client.MultiClusterClient, dataDir string) *MetricsHistory {
 	if dataDir == "" {
 		// Store in ~/.kc/
 		homeDir, _ := os.UserHomeDir()

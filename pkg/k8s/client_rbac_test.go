@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 	"time"
@@ -25,7 +26,7 @@ func TestGetServiceAccounts_ParsesSecretsAndMetadata(t *testing.T) {
 		ImagePullSecrets: []corev1.LocalObjectReference{{Name: "registry-creds"}},
 	}
 
-	client := &MultiClusterClient{}
+	client := &client.MultiClusterClient{}
 	client.SetClient("cluster-a", k8sfake.NewSimpleClientset(sa))
 
 	serviceAccounts, err := client.GetServiceAccounts(context.Background(), "cluster-a", "team-a")

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -49,7 +50,7 @@ func TestHandleConfigMapsHTTP_NilK8sClient(t *testing.T) {
 }
 
 func TestHandleConfigMapsHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/configmaps", nil)
@@ -68,7 +69,7 @@ func TestHandleConfigMapsHTTP_Success(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset(&corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-cm", Namespace: "default"},
 	})
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := newTestServer(t)
@@ -90,7 +91,7 @@ func TestHandleConfigMapsHTTP_Success(t *testing.T) {
 }
 
 func TestHandleConfigMapsHTTP_FetchError(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/configmaps?cluster=bad-cluster&namespace=default", nil)
@@ -136,7 +137,7 @@ func TestHandleSecretsHTTP_NilK8sClient(t *testing.T) {
 }
 
 func TestHandleSecretsHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/secrets", nil)
@@ -155,7 +156,7 @@ func TestHandleSecretsHTTP_Success(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset(&corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-secret", Namespace: "default"},
 	})
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := newTestServer(t)
@@ -174,7 +175,7 @@ func TestHandleSecretsHTTP_Success(t *testing.T) {
 }
 
 func TestHandleSecretsHTTP_FetchError(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/secrets?cluster=bad-cluster&namespace=default", nil)
@@ -197,7 +198,7 @@ func TestHandleServiceAccountsHTTP_GETNilK8sClient(t *testing.T) {
 }
 
 func TestHandleServiceAccountsHTTP_GETMissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/serviceaccounts", nil)
@@ -216,7 +217,7 @@ func TestHandleServiceAccountsHTTP_GETSuccess(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset(&corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "default", Namespace: "default"},
 	})
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := newTestServer(t)
@@ -236,7 +237,7 @@ func TestHandleServiceAccountsHTTP_GETSuccess(t *testing.T) {
 
 func TestCreateServiceAccountHTTP_Success(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset()
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := newTestServer(t)
@@ -254,7 +255,7 @@ func TestDeleteServiceAccountHTTP_Success(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset(&corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-sa", Namespace: "default"},
 	})
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := newTestServer(t)
@@ -308,7 +309,7 @@ func TestHandleJobsHTTP_NilK8sClient(t *testing.T) {
 }
 
 func TestHandleJobsHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/jobs", nil)
@@ -324,7 +325,7 @@ func TestHandleJobsHTTP_MissingCluster(t *testing.T) {
 }
 
 func TestHandleJobsHTTP_FetchError(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/jobs?cluster=bad-cluster&namespace=default", nil)
@@ -370,7 +371,7 @@ func TestHandleHPAsHTTP_NilK8sClient(t *testing.T) {
 }
 
 func TestHandleHPAsHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/hpas", nil)
@@ -386,7 +387,7 @@ func TestHandleHPAsHTTP_MissingCluster(t *testing.T) {
 }
 
 func TestHandleHPAsHTTP_FetchError(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t)
 	s.k8sClient = k8sClient
 	req := httptest.NewRequest(http.MethodGet, "/hpas?cluster=bad-cluster&namespace=default", nil)

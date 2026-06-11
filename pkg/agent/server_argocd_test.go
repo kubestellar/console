@@ -11,6 +11,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -21,7 +22,7 @@ import (
 
 func TestServer_HandleArgoCDSync(t *testing.T) {
 	// Setup dependencies
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},
@@ -143,7 +144,7 @@ func TestTryArgoRESTSync(t *testing.T) {
 }
 
 func TestServer_DiscoverArgoServerURL(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{k8sClient: k8sClient}
 
 	// 1. Env override

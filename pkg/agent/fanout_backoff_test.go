@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +18,7 @@ func TestFanOutClusters_EmptyList(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	clusters := make([]k8s.ClusterInfo, 0)
+	clusters := make([]client.ClusterInfo, 0)
 
 	fetchFn := func(ctx context.Context, clusterName string) ([]string, error) {
 		return []string{"result"}, nil
@@ -33,7 +34,7 @@ func TestFanOutClusters_SuccessfulFetch(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	clusters := []k8s.ClusterInfo{
+	clusters := []client.ClusterInfo{
 		{Name: "cluster-1", Healthy: true},
 		{Name: "cluster-2", Healthy: true},
 	}
@@ -59,7 +60,7 @@ func TestFanOutClusters_PartialFailure(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	clusters := []k8s.ClusterInfo{
+	clusters := []client.ClusterInfo{
 		{Name: "cluster-success", Healthy: true},
 		{Name: "cluster-fail", Healthy: true},
 	}
@@ -84,9 +85,9 @@ func TestFanOutClusters_MaxConcurrency(t *testing.T) {
 	ctx := context.Background()
 
 	clusterCount := 50
-	clusters := make([]k8s.ClusterInfo, 0, clusterCount)
+	clusters := make([]client.ClusterInfo, 0, clusterCount)
 	for i := 0; i < clusterCount; i++ {
-		clusters = append(clusters, k8s.ClusterInfo{
+		clusters = append(clusters, client.ClusterInfo{
 			Name:    "cluster-" + string(rune('0'+i)),
 			Healthy: true,
 		})

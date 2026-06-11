@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,7 @@ func BenchmarkMetricsCapture(b *testing.B) {
 	numNodesPerCluster := 20
 	numPodsPerCluster := 100
 
-	m := &k8s.MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	for i := 0; i < numClusters; i++ {
 		clusterName := fmt.Sprintf("cluster-%d", i)

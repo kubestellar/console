@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +67,7 @@ func TestServer_HandleNvidiaOperatorsHTTP(t *testing.T) {
 	fakeClientset := fake.NewSimpleClientset(ns, dep, ds)
 
 	// 2. Setup server with mock k8s client
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetClient("cluster1", fakeClientset)
 
 	s := &Server{

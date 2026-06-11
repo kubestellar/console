@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 	"log/slog"
 	"strings"
@@ -78,7 +79,7 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 }
 
 // clusterMatchesFilters checks if a cluster matches all filters
-func (h *ConsolePersistenceHandlers) clusterMatchesFilters(cluster k8s.ClusterInfo, health *k8s.ClusterHealth, nodes []k8s.NodeInfo, filters []v1alpha1.ClusterFilter) bool {
+func (h *ConsolePersistenceHandlers) clusterMatchesFilters(cluster client.ClusterInfo, health *client.ClusterHealth, nodes []k8s.NodeInfo, filters []v1alpha1.ClusterFilter) bool {
 	for _, filter := range filters {
 		if !h.clusterMatchesFilter(cluster, health, nodes, filter) {
 			return false
@@ -88,7 +89,7 @@ func (h *ConsolePersistenceHandlers) clusterMatchesFilters(cluster k8s.ClusterIn
 }
 
 // clusterMatchesFilter checks if a cluster matches a single filter
-func (h *ConsolePersistenceHandlers) clusterMatchesFilter(cluster k8s.ClusterInfo, health *k8s.ClusterHealth, nodes []k8s.NodeInfo, filter v1alpha1.ClusterFilter) bool {
+func (h *ConsolePersistenceHandlers) clusterMatchesFilter(cluster client.ClusterInfo, health *client.ClusterHealth, nodes []k8s.NodeInfo, filter v1alpha1.ClusterFilter) bool {
 	switch filter.Field {
 	case "name":
 		return matchString(cluster.Name, filter.Operator, filter.Value)

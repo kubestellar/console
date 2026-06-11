@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +14,7 @@ import (
 )
 
 // listAllNamespaces returns all namespace names in a cluster
-func (m *MultiClusterClient) listAllNamespaces(ctx context.Context, contextName string) ([]string, error) {
+func (m *client.MultiClusterClient) listAllNamespaces(ctx context.Context, contextName string) ([]string, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func (m *MultiClusterClient) listAllNamespaces(ctx context.Context, contextName 
 // Permissions panel (#6512). Now driven by buildProbeNamespaces which
 // honors the user's claimed namespace, KC_PROBE_NAMESPACES env var, and a
 // broader default list.
-func (m *MultiClusterClient) getAccessibleNamespaces(ctx context.Context, contextName string) ([]string, error) {
+func (m *client.MultiClusterClient) getAccessibleNamespaces(ctx context.Context, contextName string) ([]string, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func (m *MultiClusterClient) getAccessibleNamespaces(ctx context.Context, contex
 }
 
 // ListNamespacesWithDetails returns namespaces with details for a cluster
-func (m *MultiClusterClient) ListNamespacesWithDetails(ctx context.Context, contextName string) ([]models.NamespaceDetails, error) {
+func (m *client.MultiClusterClient) ListNamespacesWithDetails(ctx context.Context, contextName string) ([]models.NamespaceDetails, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -87,7 +88,7 @@ func (m *MultiClusterClient) ListNamespacesWithDetails(ctx context.Context, cont
 }
 
 // CreateNamespace creates a new namespace in a cluster
-func (m *MultiClusterClient) CreateNamespace(ctx context.Context, contextName, name string, labels map[string]string) (*models.NamespaceDetails, error) {
+func (m *client.MultiClusterClient) CreateNamespace(ctx context.Context, contextName, name string, labels map[string]string) (*models.NamespaceDetails, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func (m *MultiClusterClient) CreateNamespace(ctx context.Context, contextName, n
 }
 
 // DeleteNamespace deletes a namespace from a cluster
-func (m *MultiClusterClient) DeleteNamespace(ctx context.Context, contextName, name string) error {
+func (m *client.MultiClusterClient) DeleteNamespace(ctx context.Context, contextName, name string) error {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return err
@@ -125,7 +126,7 @@ func (m *MultiClusterClient) DeleteNamespace(ctx context.Context, contextName, n
 }
 
 // GrantNamespaceAccess creates a RoleBinding to grant access to a namespace
-func (m *MultiClusterClient) GrantNamespaceAccess(ctx context.Context, contextName, namespace string, req models.GrantNamespaceAccessRequest) (string, error) {
+func (m *client.MultiClusterClient) GrantNamespaceAccess(ctx context.Context, contextName, namespace string, req models.GrantNamespaceAccessRequest) (string, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return "", err

@@ -4,7 +4,7 @@ package agent
 //
 // This is the kc-agent side of the pod exec WebSocket endpoint. It runs
 // `kubectl exec`-equivalent SPDY streams against a target cluster using the
-// *user's* kubeconfig (via the shared *k8s.MultiClusterClient), rather than
+// *user's* kubeconfig (via the shared *client.MultiClusterClient), rather than
 // the backend's pod ServiceAccount. That means the apiserver enforces RBAC
 // against the real caller — no SubjectAccessReview (SAR) dance is required
 // on this path, and the #5406 SECURITY WARNING that lives in the backend's
@@ -334,7 +334,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("[AgentExec] full exec command", "command", init.Command)
 
 	// Resolve clientset + REST config for the target cluster. These come
-	// from the user's kubeconfig via the shared *k8s.MultiClusterClient; the
+	// from the user's kubeconfig via the shared *client.MultiClusterClient; the
 	// apiserver will enforce RBAC against whatever identity that kubeconfig
 	// presents when we open the stream, so the #5406 SECURITY WARNING that
 	// applies to the backend handler does NOT apply here.

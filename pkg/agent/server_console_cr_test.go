@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
@@ -20,7 +21,7 @@ func TestServer_HandleConsoleCRManagedWorkloads(t *testing.T) {
 	fakeDyn := fake.NewSimpleDynamicClient(scheme)
 
 	// 2. Setup server with mock dependencies
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetDynamicClient("persistence-cluster", fakeDyn)
 
 	s := &Server{
@@ -81,7 +82,7 @@ func TestServer_HandleConsoleCRManagedWorkloads(t *testing.T) {
 func TestServer_HandleConsoleCRClusterGroups(t *testing.T) {
 	fakeDyn := fake.NewSimpleDynamicClient(runtime.NewScheme())
 
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.SetDynamicClient("persistence-cluster", fakeDyn)
 
 	s := &Server{

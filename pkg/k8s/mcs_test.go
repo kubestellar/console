@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"testing"
@@ -160,7 +161,7 @@ func TestMCS_ListServiceExports(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 
 			// Setup fake clients
 			scheme := setupScheme()
@@ -294,7 +295,7 @@ func TestMCS_ListServiceImports(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 
 			scheme := setupScheme()
 			fakeDyn := dynamicfake.NewSimpleDynamicClient(scheme)
@@ -335,7 +336,7 @@ func TestMCS_CreateServiceExport(t *testing.T) {
 	scheme := setupScheme()
 	fakeDyn := dynamicfake.NewSimpleDynamicClient(scheme)
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients = map[string]dynamic.Interface{"c1": fakeDyn}
 
 	err := m.CreateServiceExport(context.Background(), "c1", "default", "svc1")
@@ -371,7 +372,7 @@ func TestMCS_DeleteServiceExport(t *testing.T) {
 	}
 	fakeDyn.Tracker().Add(export)
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients = map[string]dynamic.Interface{"c1": fakeDyn}
 
 	err := m.DeleteServiceExport(context.Background(), "c1", "default", "svc1")
@@ -419,7 +420,7 @@ func TestMCS_IsMCSAvailable(t *testing.T) {
 				tt.setup(fakeDyn)
 			}
 
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.dynamicClients = map[string]dynamic.Interface{"c1": fakeDyn}
 
 			if got := m.IsMCSAvailable(context.Background(), "c1"); got != tt.expected {
@@ -462,7 +463,7 @@ func TestMCS_ParsePorts(t *testing.T) {
 		}, nil
 	})
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients = map[string]dynamic.Interface{"c1": fakeDyn}
 	m.clients = map[string]kubernetes.Interface{"c1": typedfake.NewSimpleClientset()}
 
@@ -524,7 +525,7 @@ func TestMCS_ParseConditions(t *testing.T) {
 		}, nil
 	})
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients = map[string]dynamic.Interface{"c1": fakeDyn}
 	m.clients = map[string]kubernetes.Interface{"c1": typedfake.NewSimpleClientset()}
 
@@ -672,7 +673,7 @@ func TestDetermineServiceExportStatus_EdgeCases(t *testing.T) {
 
 func TestParseServiceExportsFromList_NonUnstructuredList(t *testing.T) {
 	// Test the fallback branch when input is not *unstructured.UnstructuredList
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	// Pass nil — should return empty and no error
 	result, err := m.parseServiceExportsFromList(nil, "c1")
@@ -695,7 +696,7 @@ func TestParseServiceExportsFromList_NonUnstructuredList(t *testing.T) {
 
 func TestParseServiceImportsFromList_NonUnstructuredList(t *testing.T) {
 	// Test the fallback branch when input is not *unstructured.UnstructuredList
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	result, err := m.parseServiceImportsFromList(nil, "c1")
 	if err != nil {

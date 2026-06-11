@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"log/slog"
@@ -67,7 +68,7 @@ var (
 )
 
 // ListWorkloads lists all workloads across clusters
-func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespace, workloadType string) (*v1alpha1.WorkloadList, error) {
+func (m *client.MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespace, workloadType string) (*v1alpha1.WorkloadList, error) {
 	var clusterNames []string
 	if cluster != "" {
 		clusterNames = []string{cluster}
@@ -134,7 +135,7 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 // instead of silently dropping the whole cluster (#6659). NotFound/NoMatch
 // errors (type simply not registered on the cluster) are treated as empty
 // lists for that kind, matching the Argo/MCS "CRD not installed" pattern.
-func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contextName, namespace, workloadType string) ([]v1alpha1.Workload, error) {
+func (m *client.MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contextName, namespace, workloadType string) ([]v1alpha1.Workload, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, fmt.Errorf("GetDynamicClient(%s): %w", contextName, err)
@@ -218,7 +219,7 @@ func (m *MultiClusterClient) ListWorkloadsForCluster(ctx context.Context, contex
 }
 
 // parseDeploymentsAsWorkloads parses deployments from unstructured list
-func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
+func (m *client.MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
 	workloads := make([]v1alpha1.Workload, 0)
 
 	uList, ok := list.(*unstructured.UnstructuredList)
@@ -368,7 +369,7 @@ func (m *MultiClusterClient) parseDeploymentsAsWorkloads(list interface{}, conte
 }
 
 // parseStatefulSetsAsWorkloads parses statefulsets from unstructured list
-func (m *MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
+func (m *client.MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
 	workloads := make([]v1alpha1.Workload, 0)
 
 	uList, ok := list.(*unstructured.UnstructuredList)
@@ -435,7 +436,7 @@ func (m *MultiClusterClient) parseStatefulSetsAsWorkloads(list interface{}, cont
 }
 
 // parseDaemonSetsAsWorkloads parses daemonsets from unstructured list
-func (m *MultiClusterClient) parseDaemonSetsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
+func (m *client.MultiClusterClient) parseDaemonSetsAsWorkloads(list interface{}, contextName string) []v1alpha1.Workload {
 	workloads := make([]v1alpha1.Workload, 0)
 
 	uList, ok := list.(*unstructured.UnstructuredList)
@@ -497,7 +498,7 @@ func (m *MultiClusterClient) parseDaemonSetsAsWorkloads(list interface{}, contex
 // returns on the first hit (#6509). The linear-search path is preserved as
 // a fallback in case a Get returns an unexpected non-NotFound error so
 // callers never regress on correctness.
-func (m *MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace, name string) (*v1alpha1.Workload, error) {
+func (m *client.MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace, name string) (*v1alpha1.Workload, error) {
 	if namespace == "" {
 		// Namespaced Get requires a namespace. Fall back to the list path,
 		// which can scan across all namespaces.
@@ -554,7 +555,7 @@ func (m *MultiClusterClient) GetWorkload(ctx context.Context, cluster, namespace
 
 // getWorkloadByList is the legacy O(N) path preserved as a fallback for
 // GetWorkload when the direct-Get optimization cannot proceed (#6509).
-func (m *MultiClusterClient) getWorkloadByList(ctx context.Context, cluster, namespace, name string) (*v1alpha1.Workload, error) {
+func (m *client.MultiClusterClient) getWorkloadByList(ctx context.Context, cluster, namespace, name string) (*v1alpha1.Workload, error) {
 	workloads, err := m.ListWorkloadsForCluster(ctx, cluster, namespace, "")
 	if err != nil {
 		return nil, err

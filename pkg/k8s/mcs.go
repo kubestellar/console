@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"strings"
@@ -44,7 +45,7 @@ func isCRDNotInstalled(err error) bool {
 // kubeconfig contexts are picked up immediately on hot-reload, matching the
 // fix landed in argocd.go (#6476). Without this, freshly-loaded contexts
 // whose clients had not yet been lazily created were silently dropped (#6662).
-func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.ServiceExportList, error) {
+func (m *client.MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.ServiceExportList, error) {
 	dedupClusters, err := m.DeduplicatedClusters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %w", err)
@@ -98,7 +99,7 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 }
 
 // ListServiceExportsForCluster lists ServiceExport resources in a specific cluster
-func (m *MultiClusterClient) ListServiceExportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceExport, error) {
+func (m *client.MultiClusterClient) ListServiceExportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceExport, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
@@ -125,7 +126,7 @@ func (m *MultiClusterClient) ListServiceExportsForCluster(ctx context.Context, c
 }
 
 // parseServiceExportsFromList parses ServiceExports from an unstructured list
-func (m *MultiClusterClient) parseServiceExportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceExport, error) {
+func (m *client.MultiClusterClient) parseServiceExportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceExport, error) {
 	exports := make([]v1alpha1.ServiceExport, 0)
 	// The dynamic client returns *unstructured.UnstructuredList
 	if uList, ok := list.(*unstructured.UnstructuredList); ok {
@@ -156,7 +157,7 @@ func (m *MultiClusterClient) parseServiceExportsFromList(list interface{}, conte
 
 // ListServiceImports lists all ServiceImport resources across all clusters.
 // See ListServiceExports for the DeduplicatedClusters rationale (#6662).
-func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.ServiceImportList, error) {
+func (m *client.MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.ServiceImportList, error) {
 	dedupClusters, err := m.DeduplicatedClusters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %w", err)
@@ -207,7 +208,7 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 }
 
 // ListServiceImportsForCluster lists ServiceImport resources in a specific cluster
-func (m *MultiClusterClient) ListServiceImportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceImport, error) {
+func (m *client.MultiClusterClient) ListServiceImportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceImport, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
@@ -234,7 +235,7 @@ func (m *MultiClusterClient) ListServiceImportsForCluster(ctx context.Context, c
 }
 
 // parseServiceImportsFromList parses ServiceImports from an unstructured list
-func (m *MultiClusterClient) parseServiceImportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceImport, error) {
+func (m *client.MultiClusterClient) parseServiceImportsFromList(list interface{}, contextName string) ([]v1alpha1.ServiceImport, error) {
 	imports := make([]v1alpha1.ServiceImport, 0)
 
 	if uList, ok := list.(*unstructured.UnstructuredList); ok {
@@ -287,7 +288,7 @@ func (m *MultiClusterClient) parseServiceImportsFromList(list interface{}, conte
 }
 
 // CreateServiceExport creates a new ServiceExport to export an existing service
-func (m *MultiClusterClient) CreateServiceExport(ctx context.Context, contextName, namespace, serviceName string) error {
+func (m *client.MultiClusterClient) CreateServiceExport(ctx context.Context, contextName, namespace, serviceName string) error {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return err
@@ -310,7 +311,7 @@ func (m *MultiClusterClient) CreateServiceExport(ctx context.Context, contextNam
 }
 
 // DeleteServiceExport deletes a ServiceExport by name
-func (m *MultiClusterClient) DeleteServiceExport(ctx context.Context, contextName, namespace, name string) error {
+func (m *client.MultiClusterClient) DeleteServiceExport(ctx context.Context, contextName, namespace, name string) error {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return err
@@ -320,7 +321,7 @@ func (m *MultiClusterClient) DeleteServiceExport(ctx context.Context, contextNam
 }
 
 // IsMCSAvailable checks if MCS CRDs are installed in a cluster
-func (m *MultiClusterClient) IsMCSAvailable(ctx context.Context, contextName string) bool {
+func (m *client.MultiClusterClient) IsMCSAvailable(ctx context.Context, contextName string) bool {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return false

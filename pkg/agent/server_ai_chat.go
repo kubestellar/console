@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -55,7 +56,7 @@ func validateChatPromptSize(req protocol.ChatRequest) error {
 type kagentiClusterSnapshot struct {
 	Name          string             `json:"name"`
 	Context       string             `json:"context"`
-	Health        *k8s.ClusterHealth `json:"health,omitempty"`
+	Health        *client.ClusterHealth `json:"health,omitempty"`
 	PodIssues     []k8s.PodIssue     `json:"podIssues,omitempty"`
 	WarningEvents []k8s.Event        `json:"warningEvents,omitempty"`
 	Errors        []string           `json:"errors,omitempty"`
@@ -135,9 +136,9 @@ func (s *Server) buildKagentiK8sContext(ctx context.Context, clusterContext stri
 	return string(data), nil
 }
 
-func (s *Server) resolveKagentiClusterScope(ctx context.Context, clusterContext string) ([]k8s.ClusterInfo, error) {
+func (s *Server) resolveKagentiClusterScope(ctx context.Context, clusterContext string) ([]client.ClusterInfo, error) {
 	if clusterContext != "" {
-		return []k8s.ClusterInfo{{Name: clusterContext, Context: clusterContext}}, nil
+		return []client.ClusterInfo{{Name: clusterContext, Context: clusterContext}}, nil
 	}
 
 	clusters, err := s.k8sClient.ListClusters(ctx)
@@ -146,7 +147,7 @@ func (s *Server) resolveKagentiClusterScope(ctx context.Context, clusterContext 
 	}
 
 	seen := make(map[string]struct{}, len(clusters))
-	result := make([]k8s.ClusterInfo, 0, len(clusters))
+	result := make([]client.ClusterInfo, 0, len(clusters))
 	for _, cluster := range clusters {
 		contextName := cluster.Context
 		if contextName == "" {
@@ -168,7 +169,7 @@ func (s *Server) resolveKagentiClusterScope(ctx context.Context, clusterContext 
 	return result, nil
 }
 
-func (s *Server) collectKagentiClusterSnapshot(ctx context.Context, cluster k8s.ClusterInfo) kagentiClusterSnapshot {
+func (s *Server) collectKagentiClusterSnapshot(ctx context.Context, cluster client.ClusterInfo) kagentiClusterSnapshot {
 	contextName := cluster.Context
 	if contextName == "" {
 		contextName = cluster.Name

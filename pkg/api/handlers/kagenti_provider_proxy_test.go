@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
@@ -36,8 +37,8 @@ func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagent
 	return s.status, nil
 }
 
-func newKagentiTestK8sClient() *k8s.MultiClusterClient {
-	client := &k8s.MultiClusterClient{}
+func newKagentiTestK8sClient() *client.MultiClusterClient {
+	client := &client.MultiClusterClient{}
 	client.SetRawConfig(&clientcmdapi.Config{
 		Clusters: map[string]*clientcmdapi.Cluster{
 			"prod-a":  {Server: "https://prod-a.example.com"},

@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // isDemoMode checks if the request has the X-Demo-Mode header set to "true"
@@ -26,8 +27,8 @@ func errNoClusterAccess(c *fiber.Ctx) error {
 }
 
 // Demo cluster data - matches frontend getDemoClusters() for consistency
-func getDemoClusters() []k8s.ClusterInfo {
-	return []k8s.ClusterInfo{
+func getDemoClusters() []client.ClusterInfo {
+	return []client.ClusterInfo{
 		{Name: "kind-local", Context: "kind-local", Healthy: true, Source: "kubeconfig", NodeCount: 1, PodCount: 15},
 		{Name: "minikube", Context: "minikube", Healthy: true, Source: "kubeconfig", NodeCount: 1, PodCount: 12},
 		{Name: "k3s-edge", Context: "k3s-edge", Healthy: true, Source: "kubeconfig", NodeCount: 3, PodCount: 28},
@@ -44,8 +45,8 @@ func getDemoClusters() []k8s.ClusterInfo {
 }
 
 // Demo cluster health data
-func getDemoClusterHealth(cluster string) *k8s.ClusterHealth {
-	healthMap := map[string]*k8s.ClusterHealth{
+func getDemoClusterHealth(cluster string) *client.ClusterHealth {
+	healthMap := map[string]*client.ClusterHealth{
 		"kind-local":           {Cluster: "kind-local", Healthy: true, Reachable: true, NodeCount: 1, PodCount: 15, CpuCores: 4, MemoryGB: 8},
 		"minikube":             {Cluster: "minikube", Healthy: true, Reachable: true, NodeCount: 1, PodCount: 12, CpuCores: 2, MemoryGB: 4},
 		"k3s-edge":             {Cluster: "k3s-edge", Healthy: true, Reachable: true, NodeCount: 3, PodCount: 28, CpuCores: 6, MemoryGB: 12},
@@ -63,7 +64,7 @@ func getDemoClusterHealth(cluster string) *k8s.ClusterHealth {
 		return health
 	}
 	// Return default health for unknown clusters
-	return &k8s.ClusterHealth{Cluster: cluster, Healthy: true, Reachable: true, NodeCount: 3, PodCount: 25, CpuCores: 12, MemoryGB: 48}
+	return &client.ClusterHealth{Cluster: cluster, Healthy: true, Reachable: true, NodeCount: 3, PodCount: 25, CpuCores: 12, MemoryGB: 48}
 }
 
 // Demo pod data
@@ -475,9 +476,9 @@ func getDemoPodLogs() string {
 }
 
 // getDemoAllClusterHealth returns health for all demo clusters
-func getDemoAllClusterHealth() []k8s.ClusterHealth {
+func getDemoAllClusterHealth() []client.ClusterHealth {
 	clusters := getDemoClusters()
-	health := make([]k8s.ClusterHealth, 0)
+	health := make([]client.ClusterHealth, 0)
 	for _, c := range clusters {
 		h := getDemoClusterHealth(c.Name)
 		health = append(health, *h)

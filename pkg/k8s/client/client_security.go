@@ -1,4 +1,4 @@
-package k8s
+package client
 
 // SecurityIssue represents a security misconfiguration
 type SecurityIssue struct {

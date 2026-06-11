@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"errors"
 	"fmt"
@@ -40,7 +41,7 @@ func isGatewayCRDNotInstalled(err error) bool {
 // Uses DeduplicatedClusters (not the lazy m.clients snapshot) so newly-added
 // kubeconfig contexts are picked up immediately on hot reload (#6663, same
 // class as #6476).
-func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.GatewayList, error) {
+func (m *client.MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.GatewayList, error) {
 	dedupClusters, err := m.DeduplicatedClusters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %w", err)
@@ -89,7 +90,7 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 }
 
 // ListGatewaysForCluster lists Gateway resources in a specific cluster
-func (m *MultiClusterClient) ListGatewaysForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.Gateway, error) {
+func (m *client.MultiClusterClient) ListGatewaysForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.Gateway, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
@@ -124,7 +125,7 @@ func (m *MultiClusterClient) ListGatewaysForCluster(ctx context.Context, context
 }
 
 // parseGatewaysFromList parses Gateways from an unstructured list
-func (m *MultiClusterClient) parseGatewaysFromList(list interface{}, contextName string) ([]v1alpha1.Gateway, error) {
+func (m *client.MultiClusterClient) parseGatewaysFromList(list interface{}, contextName string) ([]v1alpha1.Gateway, error) {
 	gateways := make([]v1alpha1.Gateway, 0)
 	if uList, ok := list.(*unstructured.UnstructuredList); ok {
 		for i := range uList.Items {
@@ -185,7 +186,7 @@ func (m *MultiClusterClient) parseGatewaysFromList(list interface{}, contextName
 //
 // Uses DeduplicatedClusters so hot-reloaded kubeconfig contexts are seen
 // immediately instead of waiting for a lazy client to be materialized (#6663).
-func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTPRouteList, error) {
+func (m *client.MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTPRouteList, error) {
 	dedupClusters, err := m.DeduplicatedClusters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %w", err)
@@ -234,7 +235,7 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 }
 
 // ListHTTPRoutesForCluster lists HTTPRoute resources in a specific cluster
-func (m *MultiClusterClient) ListHTTPRoutesForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.HTTPRoute, error) {
+func (m *client.MultiClusterClient) ListHTTPRoutesForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.HTTPRoute, error) {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return nil, err
@@ -265,7 +266,7 @@ func (m *MultiClusterClient) ListHTTPRoutesForCluster(ctx context.Context, conte
 }
 
 // parseHTTPRoutesFromList parses HTTPRoutes from an unstructured list
-func (m *MultiClusterClient) parseHTTPRoutesFromList(list interface{}, contextName string) ([]v1alpha1.HTTPRoute, error) {
+func (m *client.MultiClusterClient) parseHTTPRoutesFromList(list interface{}, contextName string) ([]v1alpha1.HTTPRoute, error) {
 	routes := make([]v1alpha1.HTTPRoute, 0)
 
 	if uList, ok := list.(*unstructured.UnstructuredList); ok {
@@ -315,7 +316,7 @@ func (m *MultiClusterClient) parseHTTPRoutesFromList(list interface{}, contextNa
 }
 
 // IsGatewayAPIAvailable checks if Gateway API CRDs are installed in a cluster
-func (m *MultiClusterClient) IsGatewayAPIAvailable(ctx context.Context, contextName string) bool {
+func (m *client.MultiClusterClient) IsGatewayAPIAvailable(ctx context.Context, contextName string) bool {
 	dynamicClient, err := m.GetDynamicClient(contextName)
 	if err != nil {
 		return false

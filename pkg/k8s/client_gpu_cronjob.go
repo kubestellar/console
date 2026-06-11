@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 "context"
 "encoding/json"
 "fmt"
@@ -18,7 +19,7 @@ metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // GetGPUHealthCronJobStatus checks if the GPU health CronJob is installed and returns its status.
 // It also reads structured results from the ConfigMap and auto-reconciles outdated script versions.
-func (m *MultiClusterClient) GetGPUHealthCronJobStatus(ctx context.Context, contextName string) (*GPUHealthCronJobStatus, error) {
+func (m *client.MultiClusterClient) GetGPUHealthCronJobStatus(ctx context.Context, contextName string) (*GPUHealthCronJobStatus, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -133,7 +134,7 @@ func readGPUHealthResults(ctx context.Context, client kubernetes.Interface, name
 
 // InstallGPUHealthCronJob installs the GPU health check CronJob on a cluster.
 // It creates: Namespace (if needed), ServiceAccount, ClusterRole, ClusterRoleBinding, CronJob.
-func (m *MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contextName, namespace, schedule string, tier int) error {
+func (m *client.MultiClusterClient) InstallGPUHealthCronJob(ctx context.Context, contextName, namespace, schedule string, tier int) error {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return err
@@ -621,7 +622,7 @@ if [ "$TOTAL_ISSUES" -gt "0" ]; then exit 1; fi
 }
 
 // UninstallGPUHealthCronJob removes the GPU health check CronJob and associated RBAC from a cluster.
-func (m *MultiClusterClient) UninstallGPUHealthCronJob(ctx context.Context, contextName, namespace string) error {
+func (m *client.MultiClusterClient) UninstallGPUHealthCronJob(ctx context.Context, contextName, namespace string) error {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return err
@@ -668,7 +669,7 @@ func (m *MultiClusterClient) UninstallGPUHealthCronJob(ctx context.Context, cont
 }
 
 // canManageCronJobs checks if the current user has permissions to create/delete CronJobs in the given namespace.
-func (m *MultiClusterClient) canManageCronJobs(ctx context.Context, client kubernetes.Interface, namespace string) bool {
+func (m *client.MultiClusterClient) canManageCronJobs(ctx context.Context, client kubernetes.Interface, namespace string) bool {
 	review := &authorizationv1.SelfSubjectAccessReview{
 		Spec: authorizationv1.SelfSubjectAccessReviewSpec{
 			ResourceAttributes: &authorizationv1.ResourceAttributes{

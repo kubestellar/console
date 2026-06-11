@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
@@ -14,7 +15,7 @@ import (
 
 func TestKagentiHandlers(t *testing.T) {
 	// 1. Setup mock k8s client and server
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	scheme := runtime.NewScheme()
 

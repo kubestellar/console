@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // --- handleRenameContextHTTP ---
@@ -261,7 +262,7 @@ func TestHandleKubeconfigRemoveHTTP_NilK8sClient(t *testing.T) {
 }
 
 func TestHandleKubeconfigRemoveHTTP_Success(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := newTestServer(t, withContexts("remove-me"))
 	s.k8sClient = k8sClient
 	// RemoveContext on a MultiClusterClient with no loaded config file will

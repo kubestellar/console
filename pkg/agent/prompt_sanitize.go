@@ -2,6 +2,7 @@ package agent
 
 import (
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/sanitize"
 )
 
@@ -30,7 +31,7 @@ func sanitizeK8sStringsForPrompt(values []string) []string {
 	return sanitize.PromptStrings(values)
 }
 
-func sanitizeClusterHealthForPrompt(health *k8s.ClusterHealth) *k8s.ClusterHealth {
+func sanitizeClusterHealthForPrompt(health *client.ClusterHealth) *client.ClusterHealth {
 	if health == nil {
 		return nil
 	}

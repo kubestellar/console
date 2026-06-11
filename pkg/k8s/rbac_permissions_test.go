@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"errors"
 	"testing"
@@ -18,8 +19,8 @@ import (
 
 const testRBACPermissionsCluster = "rbac-permissions-cluster"
 
-func newRBACPermissionsClient(clientset *k8sfake.Clientset) *MultiClusterClient {
-	client := &MultiClusterClient{}
+func newRBACPermissionsClient(clientset *k8sfake.Clientset) *client.MultiClusterClient {
+	client := &client.MultiClusterClient{}
 	client.SetClient(testRBACPermissionsCluster, clientset)
 	return client
 }

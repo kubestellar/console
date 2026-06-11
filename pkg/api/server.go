@@ -16,6 +16,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/safego"
@@ -41,7 +42,7 @@ type Server struct {
 	config              Config
 	hub                 *handlers.Hub
 	bridge              *mcp.Bridge
-	k8sClient           *k8s.MultiClusterClient
+	k8sClient           *client.MultiClusterClient
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
 	lifecycle           *serverLifecycle
@@ -151,7 +152,7 @@ func NewServer(cfg Config) (*Server, error) {
 	safego.GoWith("api/hub-run", func() { hub.Run() })
 
 	// Initialize Kubernetes multi-cluster client
-	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
+	k8sClient, err := client.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
 		slog.Warn("Kubernetes client initialization failed — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 	} else {
@@ -165,7 +166,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 		if !k8sClient.HasClusterConfig() {
 			slog.Warn("No kubeconfig found; starting in no-cluster mode", "path", k8sClient.KubeconfigPath())
-			if err := k8sClient.StartWatching(); err != nil && !errors.Is(err, k8s.ErrNoClusterConfigured) {
+			if err := k8sClient.StartWatching(); err != nil && !errors.Is(err, client.ErrNoClusterConfigured) {
 				slog.Warn("Kubeconfig file watcher failed to start", "error", err)
 			}
 		} else if err := k8sClient.LoadConfig(); err != nil {

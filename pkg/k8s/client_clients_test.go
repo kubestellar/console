@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"errors"
 	"sync"
 	"testing"
@@ -13,9 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// newTestClient returns a MultiClusterClient pre-configured for unit tests.
-func newTestClient(opts ...func(*MultiClusterClient)) *MultiClusterClient {
-	m := &MultiClusterClient{
+// newTestClient returns a client.MultiClusterClient pre-configured for unit tests.
+func newTestClient(opts ...func(*client.MultiClusterClient)) *client.MultiClusterClient {
+	m := &client.MultiClusterClient{
 		clients:        make(map[string]kubernetes.Interface),
 		dynamicClients: make(map[string]dynamic.Interface),
 		configs:        make(map[string]*rest.Config),
@@ -26,15 +27,15 @@ func newTestClient(opts ...func(*MultiClusterClient)) *MultiClusterClient {
 	return m
 }
 
-func withInCluster(name string) func(*MultiClusterClient) {
-	return func(m *MultiClusterClient) {
+func withInCluster(name string) func(*client.MultiClusterClient) {
+	return func(m *client.MultiClusterClient) {
 		m.inClusterConfig = &rest.Config{Host: "https://in-cluster:6443"}
 		m.inClusterName = name
 	}
 }
 
-func withNoClusterMode() func(*MultiClusterClient) {
-	return func(m *MultiClusterClient) {
+func withNoClusterMode() func(*client.MultiClusterClient) {
+	return func(m *client.MultiClusterClient) {
 		m.noClusterMode = true
 	}
 }
@@ -59,8 +60,8 @@ func TestGetClient_NoClusterMode_ReturnsError(t *testing.T) {
 	m := newTestClient(withNoClusterMode())
 
 	_, err := m.GetClient("any")
-	if !errors.Is(err, ErrNoClusterConfigured) {
-		t.Fatalf("expected ErrNoClusterConfigured, got: %v", err)
+	if !errors.Is(err, client.ErrNoClusterConfigured) {
+		t.Fatalf("expected client.ErrNoClusterConfigured, got: %v", err)
 	}
 }
 
@@ -196,8 +197,8 @@ func TestGetDynamicClient_NoClusterMode_ReturnsError(t *testing.T) {
 	m := newTestClient(withNoClusterMode())
 
 	_, err := m.GetDynamicClient("any")
-	if !errors.Is(err, ErrNoClusterConfigured) {
-		t.Fatalf("expected ErrNoClusterConfigured, got: %v", err)
+	if !errors.Is(err, client.ErrNoClusterConfigured) {
+		t.Fatalf("expected client.ErrNoClusterConfigured, got: %v", err)
 	}
 }
 

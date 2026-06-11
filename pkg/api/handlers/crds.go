@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,11 +25,11 @@ var crdGVR = schema.GroupVersionResource{
 
 // CRDHandlers handles Custom Resource Definition API endpoints
 type CRDHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // NewCRDHandlers creates a new CRD handlers instance
-func NewCRDHandlers(k8sClient *k8s.MultiClusterClient) *CRDHandlers {
+func NewCRDHandlers(k8sClient *client.MultiClusterClient) *CRDHandlers {
 	return &CRDHandlers{
 		k8sClient: k8sClient,
 	}

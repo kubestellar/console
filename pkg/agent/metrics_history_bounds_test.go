@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -45,10 +46,10 @@ const (
 	boundsTestGPUTotal = 4
 )
 
-// newBoundsTestK8sClient creates a minimal k8s.MultiClusterClient for bounds tests.
-func newBoundsTestK8sClient(t *testing.T) *k8s.MultiClusterClient {
+// newBoundsTestK8sClient creates a minimal client.MultiClusterClient for bounds tests.
+func newBoundsTestK8sClient(t *testing.T) *client.MultiClusterClient {
 	t.Helper()
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.SetRawConfig(&api.Config{
 		Contexts: map[string]*api.Context{"bounds-ctx": {Cluster: "bounds-cluster"}},
 		Clusters: map[string]*api.Cluster{"bounds-cluster": {Server: "https://fake:6443"}},

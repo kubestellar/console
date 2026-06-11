@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // mcsDefaultTimeout is the per-cluster timeout for MCS API queries.
@@ -13,12 +14,12 @@ const mcsDefaultTimeout = 15 * time.Second
 
 // MCSHandlers handles Multi-Cluster Service API endpoints
 type MCSHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 	hub       *Hub
 }
 
 // NewMCSHandlers creates a new MCS handlers instance
-func NewMCSHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *MCSHandlers {
+func NewMCSHandlers(k8sClient *client.MultiClusterClient, hub *Hub) *MCSHandlers {
 	return &MCSHandlers{
 		k8sClient: k8sClient,
 		hub:       hub,

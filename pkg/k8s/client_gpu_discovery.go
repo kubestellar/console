@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"log/slog"
@@ -9,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string) ([]GPUNode, error) {
+func (m *client.MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string) ([]GPUNode, error) {
 	nodes, _, err := m.getGPUNodesWithPods(ctx, contextName)
 	return nodes, err
 }
@@ -23,7 +24,7 @@ func (m *MultiClusterClient) GetGPUNodes(ctx context.Context, contextName string
 // The returned pod list may be nil on a listing failure; in that case the
 // node inventory is still returned with zero allocations and the listing
 // error is logged (#9091). Callers that rely on the pod list must handle nil.
-func (m *MultiClusterClient) getGPUNodesWithPods(ctx context.Context, contextName string) ([]GPUNode, *corev1.PodList, error) {
+func (m *client.MultiClusterClient) getGPUNodesWithPods(ctx context.Context, contextName string) ([]GPUNode, *corev1.PodList, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, nil, err

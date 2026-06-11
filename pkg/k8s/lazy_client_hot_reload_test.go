@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 
@@ -22,13 +23,13 @@ import (
 // clients for each context, leave m.clients deliberately empty, then call
 // the multi-cluster list API and assert every context is represented.
 
-// newLazyReloadClient builds a MultiClusterClient with fake dynamic clients
+// newLazyReloadClient builds a client.MultiClusterClient with fake dynamic clients
 // for the named contexts but an intentionally empty m.clients map. This is
 // the exact state that triggered the #6476 class of bugs: contexts exist in
 // the kubeconfig but no lazy kubernetes client has been created yet.
-func newLazyReloadClient(t *testing.T, gvrMap map[schema.GroupVersionResource]string, contextItems map[string][]runtime.Object) *MultiClusterClient {
+func newLazyReloadClient(t *testing.T, gvrMap map[schema.GroupVersionResource]string, contextItems map[string][]runtime.Object) *client.MultiClusterClient {
 	t.Helper()
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	// Build rawConfig with fake server URLs so DeduplicatedClusters sees
 	// each context. Unique server URLs prevent dedup from collapsing them.
@@ -151,7 +152,7 @@ func TestListServiceImports_SeesNewContextAfterHotReload(t *testing.T) {
 // Uses a reactor-based fake because the Gateway types are not in a registered
 // scheme and the pre-seeded tracker path would otherwise return empty lists.
 func TestListGateways_SeesNewContextAfterHotReload(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	injectTestClusters(m, "c1", "c2")
 
 	gwItem := func(name string) unstructured.Unstructured {
@@ -236,7 +237,7 @@ func TestListHTTPRoutes_SeesNewContextAfterHotReload(t *testing.T) {
 // the fake typed client is not pre-populated — the contract is that every
 // known cluster has an entry, not that it is reachable).
 func TestGetClusterCapabilities_SeesNewContextAfterHotReload(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	injectTestClusters(m, "c1", "c2")
 	// m.clients is empty — GetNodes will fail per cluster, but both
 	// clusters must still appear as entries (Available=false).
@@ -262,7 +263,7 @@ func TestGetClusterCapabilities_SeesNewContextAfterHotReload(t *testing.T) {
 // WorkloadList.ClusterErrors rather than silently dropped. We drive this
 // through a reactor that injects a Forbidden error on deployment lists.
 func TestListWorkloads_SurfacesPerClusterErrors(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	injectTestClusters(m, "c-broken")
 
 	// Build a dynamic client that hard-fails on every list with a generic

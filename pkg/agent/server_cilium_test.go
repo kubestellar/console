@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -20,7 +21,7 @@ import (
 
 func TestServer_HandleCiliumStatus(t *testing.T) {
 	// Setup dependencies
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},

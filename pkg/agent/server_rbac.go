@@ -16,7 +16,7 @@ package agent
 // through kc-agent makes the displayed permissions reflect the caller.
 //
 // kc-agent loads `s.k8sClient` from the user's kubeconfig at startup, so
-// calling the existing pkg/k8s.MultiClusterClient methods here is already
+// calling the existing pkg/client.MultiClusterClient methods here is already
 // running under the right identity — no duplication of the shared logic.
 
 import (
@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 )
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 func TestFanOutClusters_SkipsRetryingClustersAndAggregatesResults(t *testing.T) {
@@ -25,7 +26,7 @@ func TestFanOutClusters_SkipsRetryingClustersAndAggregatesResults(t *testing.T) 
 	srv.resourceRetryState[srv.clusterResourceRetryKey(resourceName, "alpha")] = alphaState
 	srv.resourceRetryMu.Unlock()
 
-	clusters := []k8s.ClusterInfo{{Name: "alpha"}, {Name: "beta"}, {Name: "gamma"}}
+	clusters := []client.ClusterInfo{{Name: "alpha"}, {Name: "beta"}, {Name: "gamma"}}
 
 	var (
 		callsMu sync.Mutex
@@ -79,7 +80,7 @@ func TestFanOutClusters_RecordsFailuresWithoutPoisoningResults(t *testing.T) {
 
 	const resourceName = "workloads"
 	srv := &Server{}
-	clusters := []k8s.ClusterInfo{{Name: "east"}, {Name: "west"}}
+	clusters := []client.ClusterInfo{{Name: "east"}, {Name: "west"}}
 
 	results := fanOutClusters(srv, context.Background(), resourceName, clusters, func(_ context.Context, clusterName string) ([]string, error) {
 		if clusterName == "east" {

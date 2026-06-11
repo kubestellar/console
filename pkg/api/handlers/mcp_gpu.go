@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // GetGPUNodes returns nodes with GPU resources
@@ -124,7 +125,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 // Phase 3e — these user-initiated tooling installs now go through kc-agent at
 // `/gpu-health-cronjob` (POST/DELETE), which runs under the user's own
 // kubeconfig instead of the backend pod ServiceAccount. The shared
-// pkg/k8s.MultiClusterClient.InstallGPUHealthCronJob /
+// pkg/client.MultiClusterClient.InstallGPUHealthCronJob /
 // UninstallGPUHealthCronJob methods stay — kc-agent calls them. See
 // pkg/agent/server_gpu_health.go.
 

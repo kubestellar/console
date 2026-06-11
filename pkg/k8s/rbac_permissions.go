@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 
@@ -11,7 +12,7 @@ import (
 )
 
 // CheckClusterAdminAccess checks if the current user has cluster-admin access
-func (m *MultiClusterClient) CheckClusterAdminAccess(ctx context.Context, contextName string) (bool, error) {
+func (m *client.MultiClusterClient) CheckClusterAdminAccess(ctx context.Context, contextName string) (bool, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return false, err
@@ -37,7 +38,7 @@ func (m *MultiClusterClient) CheckClusterAdminAccess(ctx context.Context, contex
 }
 
 // CheckPermission checks if the current user can perform an action
-func (m *MultiClusterClient) CheckPermission(ctx context.Context, contextName, verb, resource, namespace string) (bool, error) {
+func (m *client.MultiClusterClient) CheckPermission(ctx context.Context, contextName, verb, resource, namespace string) (bool, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return false, err
@@ -80,7 +81,7 @@ func (m *MultiClusterClient) CheckPermission(ctx context.Context, contextName, v
 // error as a denial. A SAR request that errors out (apiserver unreachable,
 // permission to create SARs denied, etc.) is returned verbatim so the caller
 // can log it; the caller must not open the exec stream in either case.
-func (m *MultiClusterClient) CheckPodExecPermissionForUser(
+func (m *client.MultiClusterClient) CheckPodExecPermissionForUser(
 	ctx context.Context,
 	contextName, username string,
 	groups []string,
@@ -122,7 +123,7 @@ func (m *MultiClusterClient) CheckPodExecPermissionForUser(
 }
 
 // GetClusterPermissions returns the current user's permissions on a cluster
-func (m *MultiClusterClient) GetClusterPermissions(ctx context.Context, contextName string) (*models.ClusterPermissions, error) {
+func (m *client.MultiClusterClient) GetClusterPermissions(ctx context.Context, contextName string) (*models.ClusterPermissions, error) {
 	perms := &models.ClusterPermissions{
 		Cluster: contextName,
 	}
@@ -147,7 +148,7 @@ func (m *MultiClusterClient) GetClusterPermissions(ctx context.Context, contextN
 }
 
 // GetAllClusterPermissions returns permissions for all clusters
-func (m *MultiClusterClient) GetAllClusterPermissions(ctx context.Context) ([]models.ClusterPermissions, error) {
+func (m *client.MultiClusterClient) GetAllClusterPermissions(ctx context.Context) ([]models.ClusterPermissions, error) {
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return nil, err
@@ -181,7 +182,7 @@ func (m *MultiClusterClient) GetAllClusterPermissions(ctx context.Context) ([]mo
 }
 
 // CheckCanI performs a SelfSubjectAccessReview and returns detailed result
-func (m *MultiClusterClient) CheckCanI(ctx context.Context, contextName string, req models.CanIRequest) (*CanIResult, error) {
+func (m *client.MultiClusterClient) CheckCanI(ctx context.Context, contextName string, req models.CanIRequest) (*CanIResult, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -212,7 +213,7 @@ func (m *MultiClusterClient) CheckCanI(ctx context.Context, contextName string, 
 }
 
 // GetPermissionsSummary returns a comprehensive permission summary for a cluster
-func (m *MultiClusterClient) GetPermissionsSummary(ctx context.Context, contextName string) (*PermissionsSummary, error) {
+func (m *client.MultiClusterClient) GetPermissionsSummary(ctx context.Context, contextName string) (*PermissionsSummary, error) {
 	summary := &PermissionsSummary{
 		Cluster: contextName,
 	}
@@ -271,7 +272,7 @@ func (m *MultiClusterClient) GetPermissionsSummary(ctx context.Context, contextN
 //
 // Results are written by index into a preallocated slice so cluster order
 // matches the input listing (no nondeterminism from scheduler race).
-func (m *MultiClusterClient) GetAllPermissionsSummaries(ctx context.Context) ([]PermissionsSummary, error) {
+func (m *client.MultiClusterClient) GetAllPermissionsSummaries(ctx context.Context) ([]PermissionsSummary, error) {
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return nil, err

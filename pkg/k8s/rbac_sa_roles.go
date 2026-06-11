@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // ListServiceAccounts returns all service accounts in a cluster
-func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextName, namespace string) ([]models.K8sServiceAccount, error) {
+func (m *client.MultiClusterClient) ListServiceAccounts(ctx context.Context, contextName, namespace string) ([]models.K8sServiceAccount, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -59,7 +60,7 @@ func (m *MultiClusterClient) ListServiceAccounts(ctx context.Context, contextNam
 
 // buildServiceAccountRolesMap fetches RoleBindings and ClusterRoleBindings once,
 // then builds a map of "namespace/name" -> []role for all service account subjects.
-func (m *MultiClusterClient) buildServiceAccountRolesMap(ctx context.Context, client kubernetes.Interface, namespace string) map[string][]string {
+func (m *client.MultiClusterClient) buildServiceAccountRolesMap(ctx context.Context, client kubernetes.Interface, namespace string) map[string][]string {
 	result := make(map[string][]string)
 
 	// Check RoleBindings in the namespace
@@ -97,7 +98,7 @@ func (m *MultiClusterClient) buildServiceAccountRolesMap(ctx context.Context, cl
 }
 
 // ListRoles returns all Roles in a namespace
-func (m *MultiClusterClient) ListRoles(ctx context.Context, contextName, namespace string) ([]models.K8sRole, error) {
+func (m *client.MultiClusterClient) ListRoles(ctx context.Context, contextName, namespace string) ([]models.K8sRole, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -123,7 +124,7 @@ func (m *MultiClusterClient) ListRoles(ctx context.Context, contextName, namespa
 }
 
 // ListClusterRoles returns all ClusterRoles
-func (m *MultiClusterClient) ListClusterRoles(ctx context.Context, contextName string, includeSystem bool) ([]models.K8sRole, error) {
+func (m *client.MultiClusterClient) ListClusterRoles(ctx context.Context, contextName string, includeSystem bool) ([]models.K8sRole, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -169,7 +170,7 @@ func isSystemRole(name string) bool {
 }
 
 // ListRoleBindings returns all RoleBindings in a namespace
-func (m *MultiClusterClient) ListRoleBindings(ctx context.Context, contextName, namespace string) ([]models.K8sRoleBinding, error) {
+func (m *client.MultiClusterClient) ListRoleBindings(ctx context.Context, contextName, namespace string) ([]models.K8sRoleBinding, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -210,7 +211,7 @@ func (m *MultiClusterClient) ListRoleBindings(ctx context.Context, contextName, 
 }
 
 // ListClusterRoleBindings returns all ClusterRoleBindings
-func (m *MultiClusterClient) ListClusterRoleBindings(ctx context.Context, contextName string, includeSystem bool) ([]models.K8sRoleBinding, error) {
+func (m *client.MultiClusterClient) ListClusterRoleBindings(ctx context.Context, contextName string, includeSystem bool) ([]models.K8sRoleBinding, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -255,7 +256,7 @@ func (m *MultiClusterClient) ListClusterRoleBindings(ctx context.Context, contex
 }
 
 // CreateServiceAccount creates a new ServiceAccount
-func (m *MultiClusterClient) CreateServiceAccount(ctx context.Context, contextName, namespace, name string) (*models.K8sServiceAccount, error) {
+func (m *client.MultiClusterClient) CreateServiceAccount(ctx context.Context, contextName, namespace, name string) (*models.K8sServiceAccount, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
@@ -290,7 +291,7 @@ func (m *MultiClusterClient) CreateServiceAccount(ctx context.Context, contextNa
 }
 
 // CreateRoleBinding creates a new RoleBinding
-func (m *MultiClusterClient) CreateRoleBinding(ctx context.Context, req models.CreateRoleBindingRequest) error {
+func (m *client.MultiClusterClient) CreateRoleBinding(ctx context.Context, req models.CreateRoleBindingRequest) error {
 	client, err := m.GetClient(req.Cluster)
 	if err != nil {
 		return err
@@ -340,7 +341,7 @@ func (m *MultiClusterClient) CreateRoleBinding(ctx context.Context, req models.C
 }
 
 // DeleteServiceAccount deletes a ServiceAccount
-func (m *MultiClusterClient) DeleteServiceAccount(ctx context.Context, contextName, namespace, name string) error {
+func (m *client.MultiClusterClient) DeleteServiceAccount(ctx context.Context, contextName, namespace, name string) error {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return err
@@ -350,7 +351,7 @@ func (m *MultiClusterClient) DeleteServiceAccount(ctx context.Context, contextNa
 }
 
 // DeleteRoleBinding deletes a RoleBinding or ClusterRoleBinding
-func (m *MultiClusterClient) DeleteRoleBinding(ctx context.Context, contextName, namespace, name string, isCluster bool) error {
+func (m *client.MultiClusterClient) DeleteRoleBinding(ctx context.Context, contextName, namespace, name string, isCluster bool) error {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return err

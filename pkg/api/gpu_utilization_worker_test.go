@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/test"
@@ -23,7 +24,7 @@ import (
 
 func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
 	mockStore := new(test.MockStore)
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("test-cluster", fakeClient)
 	k8sClient.SetRawConfig(&api.Config{
@@ -214,7 +215,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 		os.Setenv("GPU_UTIL_OVER_THRESHOLD", "80")
 		defer os.Unsetenv("GPU_UTIL_OVER_THRESHOLD")
 
-		k8sClient, _ := k8s.NewMultiClusterClient("")
+		k8sClient, _ := client.NewMultiClusterClient("")
 		fakeClient := k8sfake.NewSimpleClientset()
 		k8sClient.InjectClient("test-cluster", fakeClient)
 		k8sClient.SetRawConfig(&api.Config{
@@ -266,7 +267,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 		os.Setenv("GPU_UTIL_UNDER_THRESHOLD", "50")
 		defer os.Unsetenv("GPU_UTIL_UNDER_THRESHOLD")
 
-		k8sClient, _ := k8s.NewMultiClusterClient("")
+		k8sClient, _ := client.NewMultiClusterClient("")
 		fakeClient := k8sfake.NewSimpleClientset()
 		k8sClient.InjectClient("test-cluster", fakeClient)
 		k8sClient.SetRawConfig(&api.Config{
@@ -320,7 +321,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 		defer os.Unsetenv("GPU_UTIL_OVER_THRESHOLD")
 		defer os.Unsetenv("GPU_UTIL_UNDER_THRESHOLD")
 
-		k8sClient, _ := k8s.NewMultiClusterClient("")
+		k8sClient, _ := client.NewMultiClusterClient("")
 		fakeClient := k8sfake.NewSimpleClientset()
 		k8sClient.InjectClient("test-cluster", fakeClient)
 		k8sClient.SetRawConfig(&api.Config{
@@ -376,7 +377,7 @@ func TestGPUUtilizationWorker_DCGMDisabled_MemoryZero(t *testing.T) {
 	t.Setenv("GPU_METRICS_DCGM_ENABLED", "")
 
 	mockStore := new(test.MockStore)
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	k8sClient.InjectClient("c1", k8sfake.NewSimpleClientset())
 	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
 
@@ -410,7 +411,7 @@ func TestGPUUtilizationWorker_DCGMEnabled_EnvOverrides(t *testing.T) {
 	t.Setenv("GPU_METRICS_DCGM_SERVICE", "custom-svc")
 
 	mockStore := new(test.MockStore)
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
 
 	if !worker.dcgmEnabled {
@@ -428,7 +429,7 @@ func TestGPUUtilizationWorker_DCGMEnabled_MemoryFromScraper(t *testing.T) {
 	// Pass DCGM metrics directly to collectForReservation to verify the
 	// percentage computation and that non-matching namespaces fall back to 0.
 	mockStore := new(test.MockStore)
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("c1", fakeClient)
 	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
@@ -460,7 +461,7 @@ func TestGPUUtilizationWorker_DCGMEnabled_MemoryFromScraper(t *testing.T) {
 func TestGPUUtilizationWorker_DCGMEnabled_NamespaceMiss_Zero(t *testing.T) {
 	// DCGM returned data, but not for this reservation's namespace.
 	mockStore := new(test.MockStore)
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("c1", fakeClient)
 	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)

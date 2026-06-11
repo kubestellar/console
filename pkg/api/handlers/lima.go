@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -17,11 +18,11 @@ const limaListTimeout = 30 * time.Second
 
 // LimaHandlers handles Lima VM status API endpoints.
 type LimaHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // NewLimaHandlers creates a new Lima handlers instance.
-func NewLimaHandlers(k8sClient *k8s.MultiClusterClient) *LimaHandlers {
+func NewLimaHandlers(k8sClient *client.MultiClusterClient) *LimaHandlers {
 	return &LimaHandlers{k8sClient: k8sClient}
 }
 
@@ -78,9 +79,9 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), limaListTimeout)
 	defer cancel()
 
-	clusters := make([]k8s.ClusterInfo, 0)
+	clusters := make([]client.ClusterInfo, 0)
 	if cluster != "" {
-		clusters = append(clusters, k8s.ClusterInfo{Name: cluster, Context: cluster})
+		clusters = append(clusters, client.ClusterInfo{Name: cluster, Context: cluster})
 	} else {
 		deduplicated, err := h.k8sClient.DeduplicatedClusters(ctx)
 		if err != nil {

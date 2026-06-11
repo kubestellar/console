@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
@@ -36,7 +37,7 @@ type testEnv struct {
 	App       *fiber.App
 	TempDir   string
 	Settings  *settings.SettingsManager
-	K8sClient *k8s.MultiClusterClient
+	K8sClient *client.MultiClusterClient
 	Hub       *Hub
 	Store     store.Store
 }
@@ -76,7 +77,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	if err := clientcmd.WriteToFile(*rawConfig, kubeconfigPath); err != nil {
 		t.Fatalf("write test kubeconfig: %v", err)
 	}
-	k8sClient, err := k8s.NewMultiClusterClient(kubeconfigPath)
+	k8sClient, err := client.NewMultiClusterClient(kubeconfigPath)
 	if err != nil {
 		t.Fatalf("create test k8s client: %v", err)
 	}
@@ -183,7 +184,7 @@ func injectDynamicClusterWithObjects(
 
 // addClusterToRawConfig ensures a cluster appears in the rawConfig so
 // ListClusters / HealthyClusters can discover it during tests.
-func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
+func addClusterToRawConfig(client *client.MultiClusterClient, cluster string) {
 	cfg := client.GetRawConfig()
 	if cfg == nil {
 		cfg = &api.Config{

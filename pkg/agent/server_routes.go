@@ -118,7 +118,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/argocd/sync", s.handleArgoCDSync)
 
 	// GPU health CronJob install/uninstall moved to kc-agent (#7993 Phase 3e).
-	// The shared pkg/k8s.MultiClusterClient methods create the CronJob plus
+	// The shared pkg/client.MultiClusterClient methods create the CronJob plus
 	// the RBAC bundle — kc-agent runs under the user's kubeconfig. Backend
 	// handlers are deleted in this same PR along with the frontend migration.
 	// Route in pkg/agent/server_gpu_health.go.

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +21,7 @@ func TestMCPHandlers_WithDemoFallback_DemoMode(t *testing.T) {
 	demoData := map[string]string{"test": "demo"}
 
 	app.Get("/test", func(c *fiber.Ctx) error {
-		return h.withDemoFallback(c, "test-data", demoData, func(client *k8s.MultiClusterClient) error {
+		return h.withDemoFallback(c, "test-data", demoData, func(client *client.MultiClusterClient) error {
 			return c.JSON(map[string]string{"test": "live"})
 		})
 	})
@@ -38,7 +39,7 @@ func TestMCPHandlers_WithDemoFallback_NoClient(t *testing.T) {
 	h := &MCPHandlers{k8sClient: nil}
 
 	app.Get("/test", func(c *fiber.Ctx) error {
-		return h.withDemoFallback(c, "test-data", map[string]string{}, func(client *k8s.MultiClusterClient) error {
+		return h.withDemoFallback(c, "test-data", map[string]string{}, func(client *client.MultiClusterClient) error {
 			return c.JSON(map[string]string{"test": "live"})
 		})
 	})
@@ -168,10 +169,10 @@ func TestMCPHandlers_ListClusterResources_Integration(t *testing.T) {
 
 func TestMCPHandlers_WithDemoFallback_HandlerError(t *testing.T) {
 	app := fiber.New()
-	h := &MCPHandlers{k8sClient: &k8s.MultiClusterClient{}}
+	h := &MCPHandlers{k8sClient: &client.MultiClusterClient{}}
 
 	app.Get("/test", func(c *fiber.Ctx) error {
-		return h.withDemoFallback(c, "test-data", map[string]string{}, func(client *k8s.MultiClusterClient) error {
+		return h.withDemoFallback(c, "test-data", map[string]string{}, func(client *client.MultiClusterClient) error {
 			return errors.New("handler error")
 		})
 	})

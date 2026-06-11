@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"errors"
 	"fmt"
@@ -22,7 +23,7 @@ import (
 
 // ResolveWorkloadDependencies fetches a workload by name (trying Deployment/StatefulSet/DaemonSet)
 // and resolves its dependency tree without deploying. Used for dry-run preview.
-func (m *MultiClusterClient) ResolveWorkloadDependencies(
+func (m *client.MultiClusterClient) ResolveWorkloadDependencies(
 	ctx context.Context, cluster, namespace, name string,
 ) (string, *DependencyBundle, error) {
 	sourceClient, err := m.GetDynamicClient(cluster)
@@ -79,7 +80,7 @@ type DeployOptions struct {
 }
 
 // DeployWorkload fetches a workload manifest from the source cluster and applies it to target clusters
-func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, namespace, name string, targetClusters []string, replicas int32, opts *DeployOptions) (*v1alpha1.DeployResponse, error) {
+func (m *client.MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, namespace, name string, targetClusters []string, replicas int32, opts *DeployOptions) (*v1alpha1.DeployResponse, error) {
 	if opts == nil {
 		opts = &DeployOptions{DeployedBy: "anonymous"}
 	}
@@ -284,7 +285,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 }
 
 // ensureNamespace creates the namespace on the target cluster if it doesn't exist
-func (m *MultiClusterClient) ensureNamespace(
+func (m *client.MultiClusterClient) ensureNamespace(
 	ctx context.Context, client dynamic.Interface, namespace string, opts *DeployOptions,
 ) error {
 	_, err := client.Resource(gvrNamespaces).Get(ctx, namespace, metav1.GetOptions{})
@@ -504,7 +505,7 @@ func normalizeImageRef(image string) string {
 // fetching the workload and updating spec.replicas on the main resource object.
 // It tries Deployments and StatefulSets (DaemonSets do not support replicas).
 // If targetClusters is empty, all known clusters are tried.
-func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name string, targetClusters []string, replicas int32) (*v1alpha1.DeployResponse, error) {
+func (m *client.MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name string, targetClusters []string, replicas int32) (*v1alpha1.DeployResponse, error) {
 	if len(targetClusters) == 0 {
 		m.mu.RLock()
 		for clusterName := range m.dynamicClients {
@@ -621,7 +622,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 
 // DeleteWorkload deletes a workload from a cluster by trying Deployment, StatefulSet,
 // and DaemonSet in order. Returns nil if the resource was deleted or not found.
-func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namespace, name string) error {
+func (m *client.MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namespace, name string) error {
 	dynamicClient, err := m.GetDynamicClient(cluster)
 	if err != nil {
 		return fmt.Errorf("failed to get dynamic client for %s: %w", cluster, err)
@@ -669,7 +670,7 @@ func (m *MultiClusterClient) DeleteWorkload(ctx context.Context, cluster, namesp
 // the fix already landed in argocd.go for #6476. Previously, a cluster added
 // after startup whose kubernetes client had not yet been lazily created was
 // silently missing from /workloads/capabilities responses (#6661).
-func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alpha1.ClusterCapabilityList, error) {
+func (m *client.MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alpha1.ClusterCapabilityList, error) {
 	dedupClusters, err := m.DeduplicatedClusters(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters: %w", err)
@@ -737,7 +738,7 @@ func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alp
 // Each node update uses retry-on-conflict to handle transient ResourceVersion
 // mismatches. Errors are collected per-node so that one failure does not
 // prevent labeling the remaining nodes (#10256).
-func (m *MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster string, labels map[string]string) error {
+func (m *client.MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster string, labels map[string]string) error {
 	dynamicClient, err := m.GetDynamicClient(cluster)
 	if err != nil {
 		return err
@@ -781,7 +782,7 @@ func (m *MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster stri
 // Each node update uses retry-on-conflict to handle transient ResourceVersion
 // mismatches. Errors are collected per-node so that one failure does not
 // prevent updating the remaining nodes (#10256).
-func (m *MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluster string, labelKeys []string) error {
+func (m *client.MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluster string, labelKeys []string) error {
 	dynamicClient, err := m.GetDynamicClient(cluster)
 	if err != nil {
 		return err
@@ -829,7 +830,7 @@ func (m *MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluste
 }
 
 // ListBindingPolicies lists binding policies (placeholder)
-func (m *MultiClusterClient) ListBindingPolicies(ctx context.Context) (*v1alpha1.BindingPolicyList, error) {
+func (m *client.MultiClusterClient) ListBindingPolicies(ctx context.Context) (*v1alpha1.BindingPolicyList, error) {
 	// Placeholder - would list actual KubeStellar BindingPolicies
 	return &v1alpha1.BindingPolicyList{
 		Items:      []v1alpha1.BindingPolicy{},

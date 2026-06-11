@@ -11,6 +11,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -309,9 +310,9 @@ func newTestKubectlProxy(clusterNames ...string) *KubectlProxy {
 }
 
 // mustTestK8sClient creates a MultiClusterClient for testing (no actual cluster).
-func mustTestK8sClient(t *testing.T) *k8s.MultiClusterClient {
+func mustTestK8sClient(t *testing.T) *client.MultiClusterClient {
 	t.Helper()
-	c, err := k8s.NewMultiClusterClient("")
+	c, err := client.NewMultiClusterClient("")
 	if err != nil {
 		t.Fatalf("failed to create test k8s client: %v", err)
 	}

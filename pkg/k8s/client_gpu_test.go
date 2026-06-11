@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"encoding/json"
 	"testing"
@@ -20,7 +21,7 @@ import (
 
 func TestGetGPUNodes(t *testing.T) {
 	ctx := context.Background()
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	// Case 1: Simple NVIDIA GPU Node
 	node1 := &corev1.Node{
@@ -109,7 +110,7 @@ func TestGetGPUNodes(t *testing.T) {
 
 func TestGetGPUNodeHealth(t *testing.T) {
 	ctx := context.Background()
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	oneHourAgo := time.Now().Add(-1 * time.Hour)
 
@@ -236,7 +237,7 @@ func TestGetGPUNodeHealth(t *testing.T) {
 
 func TestGPUHealthCronJobReconciliation(t *testing.T) {
 	ctx := context.Background()
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 
 	ns := "nvidia-gpu-operator"
 
@@ -307,7 +308,7 @@ func TestGPUHealthCronJobReconciliation(t *testing.T) {
 
 func TestInstallGPUHealthCronJob(t *testing.T) {
 	ctx := context.Background()
-	m := &MultiClusterClient{}
+	m := &client.MultiClusterClient{}
 	fakeClient := fake.NewSimpleClientset()
 	m.InjectClient("test-cluster", fakeClient)
 

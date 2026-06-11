@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -76,7 +77,7 @@ type AIAnalysisRequest struct {
 
 // PredictionWorker runs AI analysis in the background
 type PredictionWorker struct {
-	k8sClient   *k8s.MultiClusterClient
+	k8sClient   *client.MultiClusterClient
 	registry    *Registry
 	settings    PredictionSettings
 	predictions []AIPrediction
@@ -108,7 +109,7 @@ type PredictionWorker struct {
 }
 
 // NewPredictionWorker creates a new prediction worker
-func NewPredictionWorker(k8sClient *k8s.MultiClusterClient, registry *Registry, broadcast func(string, interface{}), trackTokens func(*ProviderTokenUsage)) *PredictionWorker {
+func NewPredictionWorker(k8sClient *client.MultiClusterClient, registry *Registry, broadcast func(string, interface{}), trackTokens func(*ProviderTokenUsage)) *PredictionWorker {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &PredictionWorker{
 		k8sClient:   k8sClient,

@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -108,7 +109,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		}
 
 		if clusters == nil {
-			clusters = make([]k8s.ClusterInfo, 0)
+			clusters = make([]client.ClusterInfo, 0)
 		}
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}

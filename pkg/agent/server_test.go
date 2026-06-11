@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/settings"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
@@ -328,7 +329,7 @@ func TestServer_ResourceHandlers(t *testing.T) {
 	}
 
 	// Create mock k8s client
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 
 	// Inject fake dynamic client for "ctx-1"
 	scheme := runtime.NewScheme()
@@ -1105,7 +1106,7 @@ func TestServer_HandleNodesHTTP_Unauthorized(t *testing.T) {
 }
 
 func TestServer_HandleEventsHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},
@@ -1197,7 +1198,7 @@ func TestServer_HandlePodsHTTP_NilClient(t *testing.T) {
 }
 
 func TestServer_HandlePodsHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},
@@ -1252,7 +1253,7 @@ func TestServer_HandleClusterHealthHTTP_NilClient(t *testing.T) {
 }
 
 func TestServer_HandleClusterHealthHTTP_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	server := &Server{
 		k8sClient:      k8sClient,
 		allowedOrigins: []string{"*"},

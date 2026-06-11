@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 
@@ -19,7 +20,7 @@ import (
 )
 
 func TestRBAC_ListRoleBindings(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
 
 	m.clients["c1"] = fake.NewSimpleClientset(&rbacv1.RoleBinding{
@@ -36,7 +37,7 @@ func TestRBAC_ListRoleBindings(t *testing.T) {
 }
 
 func TestRBAC_ListClusterRoleBindings(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
 
 	m.clients["c1"] = fake.NewSimpleClientset(&rbacv1.ClusterRoleBinding{
@@ -53,7 +54,7 @@ func TestRBAC_ListClusterRoleBindings(t *testing.T) {
 }
 
 func TestRBAC_CreateServiceAccount(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset()
 	m.clients["c1"] = fakeCS
 
@@ -67,7 +68,7 @@ func TestRBAC_CreateServiceAccount(t *testing.T) {
 }
 
 func TestRBAC_CreateRoleBinding(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset()
 	m.clients["c1"] = fakeCS
 
@@ -94,7 +95,7 @@ func TestRBAC_CreateRoleBinding(t *testing.T) {
 }
 
 func TestRBAC_DeleteServiceAccount(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset(&corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "sa1", Namespace: "default"},
 	})
@@ -112,7 +113,7 @@ func TestRBAC_DeleteServiceAccount(t *testing.T) {
 }
 
 func TestRBAC_DeleteRoleBinding(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset(&rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{Name: "rb1", Namespace: "default"},
 	})
@@ -130,7 +131,7 @@ func TestRBAC_DeleteRoleBinding(t *testing.T) {
 }
 
 func TestRBAC_GetClusterPermissions(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset()
 	m.clients["c1"] = fakeCS
 
@@ -154,7 +155,7 @@ func TestRBAC_GetClusterPermissions(t *testing.T) {
 }
 
 func TestRBAC_CreateNamespace(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset()
 	m.clients["c1"] = fakeCS
 
@@ -168,7 +169,7 @@ func TestRBAC_CreateNamespace(t *testing.T) {
 }
 
 func TestRBAC_DeleteNamespace(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	fakeCS := fake.NewSimpleClientset(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
 	m.clients["c1"] = fakeCS
 
@@ -184,7 +185,7 @@ func TestRBAC_DeleteNamespace(t *testing.T) {
 }
 
 func TestGetAllClusterPermissions(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"c1": {Cluster: "cl1"},
 		"c2": {Cluster: "cl2"},
@@ -229,7 +230,7 @@ func TestGetAllClusterPermissions(t *testing.T) {
 }
 
 func TestCountServiceAccountsAllClusters(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"c1": {Cluster: "cl1"},
 	}}
@@ -251,7 +252,7 @@ func TestCountServiceAccountsAllClusters(t *testing.T) {
 }
 
 func TestGetAllK8sUsers(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"c1": {Cluster: "cl1"},
 	}}
@@ -292,7 +293,7 @@ func TestGetAllK8sUsers(t *testing.T) {
 }
 
 func TestListNamespacesWithDetails(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
 
 	fakeCS := fake.NewSimpleClientset(&corev1.Namespace{
@@ -317,7 +318,7 @@ func TestListNamespacesWithDetails(t *testing.T) {
 }
 
 func TestGetPermissionsSummary(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
 
 	fakeCS := fake.NewSimpleClientset(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}})
@@ -340,7 +341,7 @@ func TestGetPermissionsSummary(t *testing.T) {
 }
 
 func TestGrantNamespaceAccess(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
 	fakeCS := fake.NewSimpleClientset()
 	m.clients["c1"] = fakeCS
@@ -410,7 +411,7 @@ func TestSanitizeK8sName(t *testing.T) {
 }
 
 func TestCheckCanI(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}}}
 	fakeCS := fake.NewSimpleClientset()
 
@@ -436,7 +437,7 @@ func TestCheckCanI(t *testing.T) {
 }
 
 func TestGetAllPermissionsSummaries(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"c1": {Cluster: "cl1"},
 		"c2": {Cluster: "cl2"},
@@ -453,9 +454,9 @@ func TestGetAllPermissionsSummaries(t *testing.T) {
 	// Wait, GetClient uses configs/rawconfig. If we don't set a client in map, it tries to load from config.
 	// Since we don't have real config, it might fail or we can mock GetClient failure more directly?
 	// Actually GetClient checks m.clients first. If not found, it tries to load.
-	// NewMultiClusterClient("") makes empty client.
+	// client.NewMultiClusterClient("") makes empty client.
 	// We added c2 to rawConfig, so GetClient("c2") will try to load config and fail because kubeconfig is empty/invalid path?
-	// Wait, NewMultiClusterClient("") tries to load default.
+	// Wait, client.NewMultiClusterClient("") tries to load default.
 	// We can inject a client for c1, but leave c2. GetClient("c2") will try to load from config.
 	// Since rawConfig is manually set, it will try to create client from it.
 	// The rawConfig is minimal, so it might fail to create client (missing server etc).
@@ -510,7 +511,7 @@ func TestListOpenShiftUsers(t *testing.T) {
 
 	fakeDyn := dynfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap, userObj)
 
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.dynamicClients["c1"] = fakeDyn
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{"c1": {Cluster: "cluster1"}}}
 

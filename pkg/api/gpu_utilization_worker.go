@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -56,7 +57,7 @@ const (
 // GPUUtilizationWorker periodically collects GPU utilization data for active reservations
 type GPUUtilizationWorker struct {
 	store              store.Store
-	k8sClient          *k8s.MultiClusterClient
+	k8sClient          *client.MultiClusterClient
 	interval           time.Duration
 	stopCh             chan struct{}
 	stopOnce           sync.Once // protects stopCh from double-close panic
@@ -76,7 +77,7 @@ type GPUUtilizationWorker struct {
 }
 
 // NewGPUUtilizationWorker creates a new GPU utilization worker
-func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, notificationService *notifications.Service) *GPUUtilizationWorker {
+func NewGPUUtilizationWorker(s store.Store, k8sClient *client.MultiClusterClient, notificationService *notifications.Service) *GPUUtilizationWorker {
 	intervalMs := defaultUtilPollIntervalMs
 	if envVal := os.Getenv("GPU_UTIL_POLL_INTERVAL_MS"); envVal != "" {
 		if parsed, err := strconv.Atoi(envVal); err == nil && parsed > 0 {

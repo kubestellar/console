@@ -18,13 +18,14 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // newRBACTestServer creates a minimal Server wired with a fake k8s client and
 // the testBearerToken for RBAC mutation handler tests.
-func newRBACTestServer(t *testing.T) (*Server, *k8s.MultiClusterClient) {
+func newRBACTestServer(t *testing.T) (*Server, *client.MultiClusterClient) {
 	t.Helper()
-	k8sMock, err := k8s.NewMultiClusterClient("")
+	k8sMock, err := client.NewMultiClusterClient("")
 	if err != nil {
 		t.Fatalf("NewMultiClusterClient: %v", err)
 	}

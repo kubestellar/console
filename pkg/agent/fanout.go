@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -31,7 +32,7 @@ func fanOutClusters[T any](
 	s *Server,
 	ctx context.Context,
 	resourceName string,
-	clusters []k8s.ClusterInfo,
+	clusters []client.ClusterInfo,
 	fetchFn clusterFetchFn[T],
 ) []T {
 	results := make([]T, 0, len(clusters))

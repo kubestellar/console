@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,11 +44,11 @@ var (
 
 // WebhookHandlers handles admission webhook API endpoints
 type WebhookHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 }
 
 // NewWebhookHandlers creates a new webhook handlers instance
-func NewWebhookHandlers(k8sClient *k8s.MultiClusterClient) *WebhookHandlers {
+func NewWebhookHandlers(k8sClient *client.MultiClusterClient) *WebhookHandlers {
 	return &WebhookHandlers{
 		k8sClient: k8sClient,
 	}

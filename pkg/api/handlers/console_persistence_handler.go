@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/store"
 	"log/slog"
 	"time"
@@ -21,7 +22,7 @@ type workloadDeployer interface {
 // ConsolePersistenceHandlers handles console persistence API endpoints
 type ConsolePersistenceHandlers struct {
 	persistenceStore *store.PersistenceStore
-	k8sClient        *k8s.MultiClusterClient
+	k8sClient        *client.MultiClusterClient
 	watcher          *k8s.ConsoleWatcher
 	hub              *Hub
 	userStore        store.Store
@@ -33,7 +34,7 @@ type ConsolePersistenceHandlers struct {
 // NewConsolePersistenceHandlers creates a new console persistence handlers instance
 func NewConsolePersistenceHandlers(
 	persistenceStore *store.PersistenceStore,
-	k8sClient *k8s.MultiClusterClient,
+	k8sClient *client.MultiClusterClient,
 	hub *Hub,
 	userStore store.Store,
 ) *ConsolePersistenceHandlers {

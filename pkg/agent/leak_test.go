@@ -7,6 +7,7 @@ import (
 	"go.uber.org/goleak"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -25,11 +26,11 @@ const (
 	leakTestDrainDelay = 300 * time.Millisecond
 )
 
-// newTestK8sClient creates a minimal k8s.MultiClusterClient with one fake cluster
+// newTestK8sClient creates a minimal client.MultiClusterClient with one fake cluster
 // for use in goroutine leak tests.
-func newTestK8sClient(t *testing.T) *k8s.MultiClusterClient {
+func newTestK8sClient(t *testing.T) *client.MultiClusterClient {
 	t.Helper()
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.SetRawConfig(&api.Config{
 		Contexts: map[string]*api.Context{"test-ctx": {Cluster: "test-cluster"}},
 		Clusters: map[string]*api.Cluster{"test-cluster": {Server: "https://fake:6443"}},

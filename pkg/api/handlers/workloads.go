@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	corev1 "k8s.io/api/core/v1"
@@ -44,7 +45,7 @@ const (
 
 // WorkloadHandlers handles workload API endpoints
 type WorkloadHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 	hub       *Hub
 	store     store.Store
 	stopOnce  sync.Once
@@ -52,7 +53,7 @@ type WorkloadHandlers struct {
 }
 
 // NewWorkloadHandlers creates a new workload handlers instance
-func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub, s store.Store) *WorkloadHandlers {
+func NewWorkloadHandlers(k8sClient *client.MultiClusterClient, hub *Hub, s store.Store) *WorkloadHandlers {
 	return &WorkloadHandlers{
 		k8sClient: k8sClient,
 		hub:       hub,
@@ -81,7 +82,7 @@ func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
 func (h *WorkloadHandlers) withDemoAndClient(
 	c *fiber.Ctx,
 	demoHandler func() error,
-	handler func(client *k8s.MultiClusterClient) error,
+	handler func(client *client.MultiClusterClient) error,
 ) error {
 	if isDemoMode(c) {
 		return demoHandler()
@@ -104,7 +105,7 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 		func() error {
 			return demoResponse(c, "workloads", getDemoWorkloads())
 		},
-		func(client *k8s.MultiClusterClient) error {
+		func(client *client.MultiClusterClient) error {
 			// Optional filters
 			cluster := c.Query("cluster")
 			namespace := c.Query("namespace")
@@ -135,7 +136,7 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 			}
 			return c.JSON(fiber.Map{})
 		},
-		func(client *k8s.MultiClusterClient) error {
+		func(client *client.MultiClusterClient) error {
 			cluster := c.Params("cluster")
 			namespace := c.Params("namespace")
 			name := c.Params("name")
@@ -177,7 +178,7 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 				"warnings":     make([]string, 0),
 			})
 		},
-		func(client *k8s.MultiClusterClient) error {
+		func(client *client.MultiClusterClient) error {
 			cluster := c.Params("cluster")
 			namespace := c.Params("namespace")
 			name := c.Params("name")
@@ -245,7 +246,7 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 				"issues":       make([]fiber.Map, 0),
 			})
 		},
-		func(client *k8s.MultiClusterClient) error {
+		func(client *client.MultiClusterClient) error {
 			cluster := c.Params("cluster")
 			namespace := c.Params("namespace")
 			name := c.Params("name")

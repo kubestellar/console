@@ -4,16 +4,17 @@ import (
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/store"
 )
 
 type governanceRouteGroup struct {
 	store          store.Store
-	k8sClient      *k8s.MultiClusterClient
+	k8sClient      *client.MultiClusterClient
 	failureTracker *middleware.FailureTracker
 }
 
-func newGovernanceRouteGroup(store store.Store, k8sClient *k8s.MultiClusterClient, failureTracker *middleware.FailureTracker) *governanceRouteGroup {
+func newGovernanceRouteGroup(store store.Store, k8sClient *client.MultiClusterClient, failureTracker *middleware.FailureTracker) *governanceRouteGroup {
 	return &governanceRouteGroup{
 		store:          store,
 		k8sClient:      k8sClient,

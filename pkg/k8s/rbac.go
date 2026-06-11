@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"log/slog"
@@ -75,7 +76,7 @@ func isSystemNamespace(ns string) bool {
 // fetching RoleBindings/ClusterRoleBindings) and returns the number of
 // non-system ones.  This is much cheaper than ListServiceAccounts which
 // also builds a roles map that is unnecessary for counting.
-func (m *MultiClusterClient) countServiceAccountsInCluster(ctx context.Context, contextName string) (int, error) {
+func (m *client.MultiClusterClient) countServiceAccountsInCluster(ctx context.Context, contextName string) (int, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return 0, err
@@ -99,7 +100,7 @@ func (m *MultiClusterClient) countServiceAccountsInCluster(ctx context.Context, 
 // It fans out requests in parallel (one goroutine per cluster) and only lists
 // ServiceAccounts — it no longer fetches RoleBindings/ClusterRoleBindings,
 // which were previously pulled in by ListServiceAccounts but never used here.
-func (m *MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context) (int, []string, error) {
+func (m *client.MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context) (int, []string, error) {
 	clusters, err := m.ListClusters(ctx)
 	if err != nil {
 		return 0, nil, err
@@ -134,7 +135,7 @@ func (m *MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context
 }
 
 // GetAllK8sUsers returns all unique users/subjects across role bindings
-func (m *MultiClusterClient) GetAllK8sUsers(ctx context.Context, contextName string) ([]models.K8sUser, error) {
+func (m *client.MultiClusterClient) GetAllK8sUsers(ctx context.Context, contextName string) ([]models.K8sUser, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err

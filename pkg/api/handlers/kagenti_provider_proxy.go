@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -30,12 +31,12 @@ const (
 type KagentiProviderProxyHandler struct {
 	client        *kagentiprovider.KagentiClient // can be nil if kagenti not detected
 	configManager kagentiprovider.ConfigManager
-	k8sClient     *k8s.MultiClusterClient
+	k8sClient     *client.MultiClusterClient
 	store         store.Store
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *k8s.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
+func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, configManager kagentiprovider.ConfigManager, k8sClient *client.MultiClusterClient, s store.Store) *KagentiProviderProxyHandler {
 	return &KagentiProviderProxyHandler{
 		client:        client,
 		configManager: configManager,

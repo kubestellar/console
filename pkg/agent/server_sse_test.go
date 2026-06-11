@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -23,10 +24,10 @@ import (
 
 // newTestServerForSSE creates a Server with the given kubeconfig contexts and
 // fake k8s clients wired up. agentToken is left empty so validateToken passes.
-func newTestServerForSSE(t *testing.T, contexts map[string]*api.Context) (*Server, *k8s.MultiClusterClient) {
+func newTestServerForSSE(t *testing.T, contexts map[string]*api.Context) (*Server, *client.MultiClusterClient) {
 	t.Helper()
 
-	k8sMock, _ := k8s.NewMultiClusterClient("")
+	k8sMock, _ := client.NewMultiClusterClient("")
 
 	cfg := &api.Config{
 		Contexts:  contexts,
@@ -578,7 +579,7 @@ func TestHandleJobsStreamSSE_NilK8sClient(t *testing.T) {
 }
 
 func TestHandleJobsStreamSSE_NilKubectl(t *testing.T) {
-	k8sMock, _ := k8s.NewMultiClusterClient("")
+	k8sMock, _ := client.NewMultiClusterClient("")
 	srv := &Server{
 		kubectl:        nil,
 		k8sClient:      k8sMock,

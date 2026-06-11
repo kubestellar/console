@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -8,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (m *MultiClusterClient) findMatchingHPAs(
+func (m *client.MultiClusterClient) findMatchingHPAs(
 	ctx context.Context, cluster, namespace string, workloadObj *unstructured.Unstructured,
 ) []Dependency {
 	var deps []Dependency
@@ -47,7 +48,7 @@ func (m *MultiClusterClient) findMatchingHPAs(
 	return deps
 }
 
-func (m *MultiClusterClient) findMatchingPDBs(
+func (m *client.MultiClusterClient) findMatchingPDBs(
 	ctx context.Context, cluster, namespace string, podLabels map[string]string,
 ) []Dependency {
 	var deps []Dependency

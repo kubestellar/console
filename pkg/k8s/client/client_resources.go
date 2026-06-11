@@ -1,4 +1,4 @@
-package k8s
+package client
 
 // Resource-specific client helpers are split across focused modules.
 // Keep this file reserved for future custom-resource helpers that do not fit

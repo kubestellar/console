@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"fmt"
 
 	"k8s.io/client-go/dynamic"
@@ -9,7 +10,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface, error) {
+func (m *client.MultiClusterClient) GetClient(contextName string) (kubernetes.Interface, error) {
 	m.mu.RLock()
 	if client, ok := m.clients[contextName]; ok && client != nil {
 		m.mu.RUnlock()
@@ -22,7 +23,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 	m.mu.RUnlock()
 
 	if noClusterMode && inClusterConfig == nil {
-		return nil, ErrNoClusterConfigured
+		return nil, client.ErrNoClusterConfigured
 	}
 
 	// Build the client OUTSIDE the lock so concurrent callers for distinct
@@ -76,7 +77,7 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 
 // GetRestConfig returns the REST config for the specified cluster context.
 // Ensures the client (and config) is initialized first by calling GetClient.
-func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, error) {
+func (m *client.MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, error) {
 	if _, err := m.GetClient(contextName); err != nil {
 		return nil, err
 	}
@@ -96,7 +97,7 @@ func (m *MultiClusterClient) GetRestConfig(contextName string) (*rest.Config, er
 // Holding the global write lock during construction serializes all cluster probes.
 // We build the client OUTSIDE the lock and only take the write lock for the short
 // final insertion.
-func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Interface, error) {
+func (m *client.MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Interface, error) {
 	m.mu.RLock()
 	if client, ok := m.dynamicClients[contextName]; ok && client != nil {
 		m.mu.RUnlock()
@@ -111,7 +112,7 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 	m.mu.RUnlock()
 
 	if noClusterMode && inClusterConfig == nil {
-		return nil, ErrNoClusterConfigured
+		return nil, client.ErrNoClusterConfigured
 	}
 
 	// Build the client OUTSIDE the lock so concurrent callers for distinct

@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"errors"
 	"testing"
@@ -23,7 +24,7 @@ import (
 var errSARReactor = errors.New("simulated SAR apiserver failure")
 
 func TestRBAC_ListServiceAccounts(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 	}
@@ -72,7 +73,7 @@ func TestRBAC_ListServiceAccounts(t *testing.T) {
 // sets it when non-zero. See issue #6769.
 func TestRBAC_CreateServiceAccount_CreatedAt(t *testing.T) {
 	t.Run("zero creation timestamp leaves CreatedAt nil", func(t *testing.T) {
-		m, _ := NewMultiClusterClient("")
+		m, _ := client.NewMultiClusterClient("")
 		m.rawConfig = &api.Config{
 			Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 		}
@@ -90,7 +91,7 @@ func TestRBAC_CreateServiceAccount_CreatedAt(t *testing.T) {
 	})
 
 	t.Run("non-zero creation timestamp is preserved", func(t *testing.T) {
-		m, _ := NewMultiClusterClient("")
+		m, _ := client.NewMultiClusterClient("")
 		m.rawConfig = &api.Config{
 			Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 		}
@@ -120,7 +121,7 @@ func TestRBAC_CreateServiceAccount_CreatedAt(t *testing.T) {
 }
 
 func TestRBAC_ListRoles(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 	}
@@ -141,7 +142,7 @@ func TestRBAC_ListRoles(t *testing.T) {
 }
 
 func TestRBAC_ListClusterRoles(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 	}
@@ -162,7 +163,7 @@ func TestRBAC_ListClusterRoles(t *testing.T) {
 }
 
 func TestRBAC_CheckPermission(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 	}
@@ -188,7 +189,7 @@ func TestRBAC_CheckPermission(t *testing.T) {
 }
 
 func TestRBAC_CheckClusterAdminAccess(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.rawConfig = &api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 	}
@@ -269,7 +270,7 @@ func TestRBAC_CheckPermission_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.rawConfig = &api.Config{
 				Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 			}
@@ -385,7 +386,7 @@ func TestCheckPodExecPermissionForUser(t *testing.T) {
 	)
 
 	t.Run("allowed", func(t *testing.T) {
-		m, _ := NewMultiClusterClient("")
+		m, _ := client.NewMultiClusterClient("")
 		m.rawConfig = &api.Config{
 			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
 		}
@@ -432,7 +433,7 @@ func TestCheckPodExecPermissionForUser(t *testing.T) {
 	})
 
 	t.Run("denied", func(t *testing.T) {
-		m, _ := NewMultiClusterClient("")
+		m, _ := client.NewMultiClusterClient("")
 		m.rawConfig = &api.Config{
 			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
 		}
@@ -462,7 +463,7 @@ func TestCheckPodExecPermissionForUser(t *testing.T) {
 	})
 
 	t.Run("sar error is returned fail-closed", func(t *testing.T) {
-		m, _ := NewMultiClusterClient("")
+		m, _ := client.NewMultiClusterClient("")
 		m.rawConfig = &api.Config{
 			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
 		}
@@ -484,7 +485,7 @@ func TestCheckPodExecPermissionForUser(t *testing.T) {
 	})
 
 	t.Run("missing identity is rejected without calling sar", func(t *testing.T) {
-		m, _ := NewMultiClusterClient("")
+		m, _ := client.NewMultiClusterClient("")
 		m.rawConfig = &api.Config{
 			Contexts: map[string]*api.Context{testContext: {Cluster: "cl1"}},
 		}

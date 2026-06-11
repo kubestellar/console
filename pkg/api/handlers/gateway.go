@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // gatewayDefaultTimeout is the per-cluster timeout for Gateway API queries.
@@ -14,12 +15,12 @@ const gatewayDefaultTimeout = 15 * time.Second
 
 // GatewayHandlers handles Gateway API endpoints
 type GatewayHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 	hub       *Hub
 }
 
 // NewGatewayHandlers creates a new Gateway handlers instance
-func NewGatewayHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *GatewayHandlers {
+func NewGatewayHandlers(k8sClient *client.MultiClusterClient, hub *Hub) *GatewayHandlers {
 	return &GatewayHandlers{
 		k8sClient: k8sClient,
 		hub:       hub,

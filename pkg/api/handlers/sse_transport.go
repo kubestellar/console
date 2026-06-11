@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 	"log/slog"
 	"sync"
@@ -183,8 +184,8 @@ func streamClusters(
 	// Unknown cluster names return 404 so the client can distinguish "empty
 	// result" from "typo/stale reference".
 	if cfg.clusterFilter != "" {
-		filteredHealthy := make([]k8s.ClusterInfo, 0, 1)
-		filteredOffline := make([]k8s.ClusterInfo, 0, 1)
+		filteredHealthy := make([]client.ClusterInfo, 0, 1)
+		filteredOffline := make([]client.ClusterInfo, 0, 1)
 		found := false
 		for _, cl := range healthy {
 			if cl.Name == cfg.clusterFilter {

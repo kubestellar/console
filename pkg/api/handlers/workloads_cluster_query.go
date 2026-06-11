@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -72,7 +73,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		slog.Error("[Workloads] failed to get cluster health", "error", err)
 		return c.Status(500).JSON(fiber.Map{"error": "internal server error"})
 	}
-	healthData := make([]k8s.ClusterHealth, 0, len(dedupClusters))
+	healthData := make([]client.ClusterHealth, 0, len(dedupClusters))
 	for _, h := range allHealth {
 		if primaryNames[h.Cluster] {
 			healthData = append(healthData, h)
@@ -119,7 +120,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 }
 
 // clusterMatchesQuery checks if a cluster matches all query conditions
-func clusterMatchesQuery(health k8s.ClusterHealth, nodes []k8s.NodeInfo, query *ClusterGroupQuery) bool {
+func clusterMatchesQuery(health client.ClusterHealth, nodes []k8s.NodeInfo, query *ClusterGroupQuery) bool {
 	// Check label selector against node labels
 	if query.LabelSelector != "" {
 		if !clusterMatchesLabelSelector(nodes, query.LabelSelector) {
@@ -157,7 +158,7 @@ func clusterMatchesLabelSelector(nodes []k8s.NodeInfo, selectorStr string) bool 
 }
 
 // clusterMatchesFilter checks a single filter condition against cluster health + node data
-func clusterMatchesFilter(health k8s.ClusterHealth, nodes []k8s.NodeInfo, f ClusterFilter) bool {
+func clusterMatchesFilter(health client.ClusterHealth, nodes []k8s.NodeInfo, f ClusterFilter) bool {
 	switch f.Field {
 	case "healthy":
 		return compareBool(health.Healthy, f.Operator, f.Value)
@@ -411,7 +412,7 @@ If the user's request doesn't need label selectors, omit the labelSelector field
 	})
 }
 
-func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
+func buildClusterContextForAI(healthData []client.ClusterHealth) string {
 	if len(healthData) == 0 {
 		return "No cluster data available."
 	}

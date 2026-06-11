@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -28,7 +29,7 @@ func newStellarActionExecuteTestApp(t *testing.T, role models.UserRole) *fiber.A
 	return newStellarActionExecuteTestAppWithK8s(t, role, nil)
 }
 
-func newStellarActionExecuteTestAppWithK8s(t *testing.T, role models.UserRole, k8sClient *k8s.MultiClusterClient) *fiber.App {
+func newStellarActionExecuteTestAppWithK8s(t *testing.T, role models.UserRole, k8sClient *client.MultiClusterClient) *fiber.App {
 	t.Helper()
 
 	require.NoError(t, os.MkdirAll(stellarActionExecuteTestDBDir, 0o755))
@@ -91,7 +92,7 @@ func TestStellarActionExecute_RBAC(t *testing.T) {
 }
 
 func TestStellarActionExecute_DestructiveActionsRequireApprovalFlow(t *testing.T) {
-	app := newStellarActionExecuteTestAppWithK8s(t, models.UserRoleEditor, &k8s.MultiClusterClient{})
+	app := newStellarActionExecuteTestAppWithK8s(t, models.UserRoleEditor, &client.MultiClusterClient{})
 
 	tests := []struct {
 		name       string

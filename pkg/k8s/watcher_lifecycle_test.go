@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"fmt"
 	"os"
@@ -60,9 +61,9 @@ users:
 // Before the fix, a second call panicked on close of a closed channel.
 func TestMultiClusterClient_StopWatching_DoubleCallSafe(t *testing.T) {
 	path := writeTempKubeconfig(t)
-	m, err := NewMultiClusterClient(path)
+	m, err := client.NewMultiClusterClient(path)
 	if err != nil {
-		t.Fatalf("NewMultiClusterClient: %v", err)
+		t.Fatalf("client.NewMultiClusterClient: %v", err)
 	}
 	if err := m.StartWatching(); err != nil {
 		t.Fatalf("StartWatching: %v", err)
@@ -83,9 +84,9 @@ func TestMultiClusterClient_StopWatching_DoubleCallSafe(t *testing.T) {
 // fsnotify.Watcher (which would orphan it and leak).
 func TestMultiClusterClient_StartWatching_Idempotent(t *testing.T) {
 	path := writeTempKubeconfig(t)
-	m, err := NewMultiClusterClient(path)
+	m, err := client.NewMultiClusterClient(path)
 	if err != nil {
-		t.Fatalf("NewMultiClusterClient: %v", err)
+		t.Fatalf("client.NewMultiClusterClient: %v", err)
 	}
 	if err := m.StartWatching(); err != nil {
 		t.Fatalf("first StartWatching: %v", err)
@@ -114,9 +115,9 @@ func TestMultiClusterClient_StartWatching_Idempotent(t *testing.T) {
 // goroutine exited immediately because it was reading a closed channel.
 func TestMultiClusterClient_StartWatching_RestartAfterStop(t *testing.T) {
 	path := writeTempKubeconfig(t)
-	m, err := NewMultiClusterClient(path)
+	m, err := client.NewMultiClusterClient(path)
 	if err != nil {
-		t.Fatalf("NewMultiClusterClient: %v", err)
+		t.Fatalf("client.NewMultiClusterClient: %v", err)
 	}
 	if err := m.StartWatching(); err != nil {
 		t.Fatalf("first StartWatching: %v", err)
@@ -196,9 +197,9 @@ func TestConsoleWatcher_Stop_DoubleCallSafe(t *testing.T) {
 // `go test -race` to catch unlocked mutation of m.watching / m.watcher.
 func TestMultiClusterClient_StartWatching_ConcurrentRace(t *testing.T) {
 	path := writeTempKubeconfig(t)
-	m, err := NewMultiClusterClient(path)
+	m, err := client.NewMultiClusterClient(path)
 	if err != nil {
-		t.Fatalf("NewMultiClusterClient: %v", err)
+		t.Fatalf("client.NewMultiClusterClient: %v", err)
 	}
 
 	var wg sync.WaitGroup
@@ -256,9 +257,9 @@ func TestMultiClusterClient_StartWatching_ConcurrentRace(t *testing.T) {
 // raced with Start replacing the Once. Run under `go test -race`.
 func TestMultiClusterClient_StopStartRace(t *testing.T) {
 	path := writeTempKubeconfig(t)
-	m, err := NewMultiClusterClient(path)
+	m, err := client.NewMultiClusterClient(path)
 	if err != nil {
-		t.Fatalf("NewMultiClusterClient: %v", err)
+		t.Fatalf("client.NewMultiClusterClient: %v", err)
 	}
 	if err := m.StartWatching(); err != nil {
 		t.Fatalf("initial StartWatching: %v", err)
@@ -302,9 +303,9 @@ func TestMultiClusterClient_StopStartRace(t *testing.T) {
 // refactor cannot regress both callsites in silence.
 func TestMultiClusterClient_OnWatchError_CallbackWired(t *testing.T) {
 	path := writeTempKubeconfig(t)
-	m, err := NewMultiClusterClient(path)
+	m, err := client.NewMultiClusterClient(path)
 	if err != nil {
-		t.Fatalf("NewMultiClusterClient: %v", err)
+		t.Fatalf("client.NewMultiClusterClient: %v", err)
 	}
 
 	gotCh := make(chan error, 1)

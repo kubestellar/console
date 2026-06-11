@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,7 @@ type ServiceAccount struct {
 }
 
 // GetServiceAccounts returns ServiceAccounts from a cluster
-func (m *MultiClusterClient) GetServiceAccounts(ctx context.Context, contextName, namespace string) ([]ServiceAccount, error) {
+func (m *client.MultiClusterClient) GetServiceAccounts(ctx context.Context, contextName, namespace string) ([]ServiceAccount, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err

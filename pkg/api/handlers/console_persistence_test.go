@@ -5,6 +5,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +17,7 @@ func newTestHandler() *ConsolePersistenceHandlers {
 
 func TestClusterMatchesFilter_Name(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "prod-cluster"}
+	cluster := client.ClusterInfo{Name: "prod-cluster"}
 
 	assert.True(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "name", Operator: "eq", Value: "prod-cluster"}))
 	assert.False(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "name", Operator: "eq", Value: "other"}))
@@ -26,8 +27,8 @@ func TestClusterMatchesFilter_Name(t *testing.T) {
 
 func TestClusterMatchesFilter_Healthy(t *testing.T) {
 	h := newTestHandler()
-	healthy := k8s.ClusterInfo{Name: "c", Healthy: true}
-	unhealthy := k8s.ClusterInfo{Name: "c", Healthy: false}
+	healthy := client.ClusterInfo{Name: "c", Healthy: true}
+	unhealthy := client.ClusterInfo{Name: "c", Healthy: false}
 
 	assert.True(t, h.clusterMatchesFilter(healthy, nil, nil, v1alpha1.ClusterFilter{Field: "healthy", Operator: "eq", Value: "true"}))
 	assert.True(t, h.clusterMatchesFilter(healthy, nil, nil, v1alpha1.ClusterFilter{Field: "healthy", Operator: "eq", Value: "True"}))  // case-insensitive
@@ -37,8 +38,8 @@ func TestClusterMatchesFilter_Healthy(t *testing.T) {
 
 func TestClusterMatchesFilter_Reachable(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
-	health := &k8s.ClusterHealth{Reachable: true}
+	cluster := client.ClusterInfo{Name: "c"}
+	health := &client.ClusterHealth{Reachable: true}
 
 	// With health data
 	assert.True(t, h.clusterMatchesFilter(cluster, health, nil, v1alpha1.ClusterFilter{Field: "reachable", Operator: "eq", Value: "true"}))
@@ -50,7 +51,7 @@ func TestClusterMatchesFilter_Reachable(t *testing.T) {
 
 func TestClusterMatchesFilter_NodeCount(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c", NodeCount: 5}
+	cluster := client.ClusterInfo{Name: "c", NodeCount: 5}
 
 	assert.True(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "nodeCount", Operator: "eq", Value: "5"}))
 	assert.True(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "nodeCount", Operator: "gte", Value: "3"}))
@@ -62,7 +63,7 @@ func TestClusterMatchesFilter_NodeCount(t *testing.T) {
 
 func TestClusterMatchesFilter_PodCount(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c", PodCount: 20}
+	cluster := client.ClusterInfo{Name: "c", PodCount: 20}
 
 	assert.True(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "podCount", Operator: "eq", Value: "20"}))
 	assert.True(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "podCount", Operator: "gt", Value: "10"}))
@@ -71,8 +72,8 @@ func TestClusterMatchesFilter_PodCount(t *testing.T) {
 
 func TestClusterMatchesFilter_CpuCores(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
-	health := &k8s.ClusterHealth{CpuCores: 16}
+	cluster := client.ClusterInfo{Name: "c"}
+	health := &client.ClusterHealth{CpuCores: 16}
 
 	assert.True(t, h.clusterMatchesFilter(cluster, health, nil, v1alpha1.ClusterFilter{Field: "cpuCores", Operator: "gte", Value: "8"}))
 	assert.True(t, h.clusterMatchesFilter(cluster, health, nil, v1alpha1.ClusterFilter{Field: "cpuCores", Operator: "eq", Value: "16"}))
@@ -84,8 +85,8 @@ func TestClusterMatchesFilter_CpuCores(t *testing.T) {
 
 func TestClusterMatchesFilter_MemoryGB(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
-	health := &k8s.ClusterHealth{MemoryGB: 64.0}
+	cluster := client.ClusterInfo{Name: "c"}
+	health := &client.ClusterHealth{MemoryGB: 64.0}
 
 	assert.True(t, h.clusterMatchesFilter(cluster, health, nil, v1alpha1.ClusterFilter{Field: "memoryGB", Operator: "gte", Value: "32"}))
 	assert.True(t, h.clusterMatchesFilter(cluster, health, nil, v1alpha1.ClusterFilter{Field: "memoryGB", Operator: "eq", Value: "64"}))
@@ -97,7 +98,7 @@ func TestClusterMatchesFilter_MemoryGB(t *testing.T) {
 
 func TestClusterMatchesFilter_GpuCount(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
+	cluster := client.ClusterInfo{Name: "c"}
 	nodes := []k8s.NodeInfo{
 		{Name: "n1", GPUCount: 4},
 		{Name: "n2", GPUCount: 2},
@@ -113,7 +114,7 @@ func TestClusterMatchesFilter_GpuCount(t *testing.T) {
 
 func TestClusterMatchesFilter_GpuType(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
+	cluster := client.ClusterInfo{Name: "c"}
 	nodes := []k8s.NodeInfo{
 		{Name: "n1", GPUType: "NVIDIA A100"},
 		{Name: "n2", GPUType: "NVIDIA A100"},
@@ -129,7 +130,7 @@ func TestClusterMatchesFilter_GpuType(t *testing.T) {
 
 func TestClusterMatchesFilter_Label(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
+	cluster := client.ClusterInfo{Name: "c"}
 	nodes := []k8s.NodeInfo{
 		{
 			Name:   "n1",
@@ -147,7 +148,7 @@ func TestClusterMatchesFilter_Label(t *testing.T) {
 
 func TestClusterMatchesFilter_UnknownField(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c"}
+	cluster := client.ClusterInfo{Name: "c"}
 
 	// Unknown fields should return false (not silently pass)
 	assert.False(t, h.clusterMatchesFilter(cluster, nil, nil, v1alpha1.ClusterFilter{Field: "region", Operator: "eq", Value: "us-east-1"}))
@@ -159,8 +160,8 @@ func TestClusterMatchesFilter_UnknownField(t *testing.T) {
 
 func TestClusterMatchesFilters_AllMatch(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "prod-cluster", Healthy: true, NodeCount: 5, PodCount: 20}
-	health := &k8s.ClusterHealth{Reachable: true, CpuCores: 16, MemoryGB: 64.0}
+	cluster := client.ClusterInfo{Name: "prod-cluster", Healthy: true, NodeCount: 5, PodCount: 20}
+	health := &client.ClusterHealth{Reachable: true, CpuCores: 16, MemoryGB: 64.0}
 	filters := []v1alpha1.ClusterFilter{
 		{Field: "healthy", Operator: "eq", Value: "true"},
 		{Field: "nodeCount", Operator: "gte", Value: "3"},
@@ -172,8 +173,8 @@ func TestClusterMatchesFilters_AllMatch(t *testing.T) {
 
 func TestClusterMatchesFilters_OneFails(t *testing.T) {
 	h := newTestHandler()
-	cluster := k8s.ClusterInfo{Name: "c", Healthy: true, NodeCount: 2}
-	health := &k8s.ClusterHealth{Reachable: true, CpuCores: 4}
+	cluster := client.ClusterInfo{Name: "c", Healthy: true, NodeCount: 2}
+	health := &client.ClusterHealth{Reachable: true, CpuCores: 4}
 	filters := []v1alpha1.ClusterFilter{
 		{Field: "healthy", Operator: "eq", Value: "true"},
 		{Field: "nodeCount", Operator: "gte", Value: "5"}, // fails: 2 < 5

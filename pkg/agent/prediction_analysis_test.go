@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 func newTestWorkerForMerge(t *testing.T) *PredictionWorker {
 	t.Helper()
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.SetRawConfig(&api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 		Clusters: map[string]*api.Cluster{"cl1": {Server: "s1"}},
@@ -178,7 +179,7 @@ func TestGetAvailableProviders_EmptyRegistry(t *testing.T) {
 }
 
 func TestGetAvailableProviders_WithRegisteredProvider(t *testing.T) {
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.SetRawConfig(&api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 		Clusters: map[string]*api.Cluster{"cl1": {Server: "s1"}},

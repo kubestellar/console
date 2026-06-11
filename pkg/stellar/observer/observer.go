@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
@@ -91,7 +92,7 @@ func (o *Observer) resolveScannerProvider(ctx context.Context, userID string) pr
 }
 
 type K8sClient interface {
-	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	ListClusters(ctx context.Context) ([]client.ClusterInfo, error)
 	GetWarningEvents(ctx context.Context, cluster, namespace string, limit int) ([]k8s.Event, error)
 	GetDeployments(ctx context.Context, cluster, namespace string) ([]k8s.Deployment, error)
 	GetPods(ctx context.Context, cluster, namespace string) ([]k8s.PodInfo, error)

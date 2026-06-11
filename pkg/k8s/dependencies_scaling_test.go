@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"testing"
 
@@ -82,7 +83,7 @@ func TestFindMatchingHPAs(t *testing.T) {
 			}
 
 			fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, scalingGVRListKinds, objs...)
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.InjectDynamicClient("c1", fakeDyn)
 
 			workload := &unstructured.Unstructured{
@@ -114,7 +115,7 @@ func TestFindMatchingHPAs(t *testing.T) {
 }
 
 func TestFindMatchingHPAs_NoDynamicClient(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	workload := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -194,7 +195,7 @@ func TestFindMatchingPDBs(t *testing.T) {
 			}
 
 			fakeDyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, scalingGVRListKinds, objs...)
-			m, _ := NewMultiClusterClient("")
+			m, _ := client.NewMultiClusterClient("")
 			m.InjectDynamicClient("c1", fakeDyn)
 
 			deps := m.findMatchingPDBs(context.Background(), "c1", "default", tc.podLabels)
@@ -215,7 +216,7 @@ func TestFindMatchingPDBs(t *testing.T) {
 }
 
 func TestFindMatchingPDBs_NoDynamicClient(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	deps := m.findMatchingPDBs(context.Background(), "nonexistent", "default", map[string]string{"app": "web"})
 	if len(deps) != 0 {

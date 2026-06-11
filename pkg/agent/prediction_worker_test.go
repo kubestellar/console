@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -57,7 +58,7 @@ func (m *WorkerMockProvider) StreamChat(ctx context.Context, req *ChatRequest, o
 
 func TestPredictionWorker(t *testing.T) {
 	// 1. Setup mock k8s client
-	m, _ := k8s.NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 	m.SetRawConfig(&api.Config{
 		Contexts: map[string]*api.Context{"c1": {Cluster: "cl1"}},
 		Clusters: map[string]*api.Cluster{"cl1": {Server: "s1"}},

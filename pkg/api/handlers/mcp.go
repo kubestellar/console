@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
@@ -70,7 +71,7 @@ var sanitizedErrorMessages = map[string]string{
 // All other errors are returned as 500 Internal Server Error.
 // Raw error details are only logged server-side and never sent to the client (#4753).
 func handleK8sError(c *fiber.Ctx, err error) error {
-	if errors.Is(err, k8s.ErrNoClusterConfigured) {
+	if errors.Is(err, client.ErrNoClusterConfigured) {
 		slog.Info("[MCP] no cluster configured")
 		return errNoClusterAccess(c)
 	}
@@ -151,12 +152,12 @@ func (t *clusterErrorTracker) annotate(resp fiber.Map) fiber.Map {
 // MCPHandlers handles MCP-related API endpoints
 type MCPHandlers struct {
 	bridge    *mcp.Bridge
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 	store     store.Store
 }
 
 // NewMCPHandlers creates a new MCP handlers instance
-func NewMCPHandlers(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterClient, s store.Store) *MCPHandlers {
+func NewMCPHandlers(bridge *mcp.Bridge, k8sClient *client.MultiClusterClient, s store.Store) *MCPHandlers {
 	return &MCPHandlers{
 		bridge:    bridge,
 		k8sClient: k8sClient,

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/settings"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -83,7 +84,7 @@ func TestMapK8sErrorToHTTP(t *testing.T) {
 }
 
 func TestResourceHandlers_QueryExtraction(t *testing.T) {
-	k8sMock, _ := k8s.NewMultiClusterClient("")
+	k8sMock, _ := client.NewMultiClusterClient("")
 
 	// Populate the fake client with resources
 	fakeCS := fakek8s.NewSimpleClientset(
@@ -168,7 +169,7 @@ func TestResourceHandlers_QueryExtraction(t *testing.T) {
 }
 
 func TestMutationLogic_CreateNamespaceHTTP(t *testing.T) {
-	k8sMock, _ := k8s.NewMultiClusterClient("")
+	k8sMock, _ := client.NewMultiClusterClient("")
 	fakeCS := fakek8s.NewSimpleClientset()
 	k8sMock.SetClient("test-cluster", fakeCS)
 
@@ -207,7 +208,7 @@ func TestMutationLogic_CreateNamespaceHTTP(t *testing.T) {
 }
 
 func TestMutationLogic_CreateServiceAccountHTTP(t *testing.T) {
-	k8sMock, _ := k8s.NewMultiClusterClient("")
+	k8sMock, _ := client.NewMultiClusterClient("")
 	fakeCS := fakek8s.NewSimpleClientset()
 	k8sMock.SetClient("test-cluster", fakeCS)
 

@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // TestResourceWorkloadHandlers_OPTIONS tests that all workload resource
 // handlers respond correctly to CORS preflight requests.
 func TestResourceWorkloadHandlers_OPTIONS(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		k8sClient:      k8sClient,
@@ -51,7 +52,7 @@ func TestResourceWorkloadHandlers_OPTIONS(t *testing.T) {
 // TestResourceWorkloadHandlers_Unauthorized tests that handlers reject
 // unauthenticated requests when a token is configured.
 func TestResourceWorkloadHandlers_Unauthorized(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		agentToken:     "secure-token",
@@ -135,7 +136,7 @@ func TestResourceWorkloadHandlers_NilK8sClient(t *testing.T) {
 // TestResourceWorkloadHandlers_MissingCluster tests that handlers return an
 // error when the required cluster parameter is missing.
 func TestResourceWorkloadHandlers_MissingCluster(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		k8sClient:      k8sClient,
@@ -179,7 +180,7 @@ func TestResourceWorkloadHandlers_MissingCluster(t *testing.T) {
 // TestHandleNamespacesHTTP_CreateValidation tests namespace creation request
 // validation for invalid cluster and name values.
 func TestHandleNamespacesHTTP_CreateValidation(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		k8sClient:      k8sClient,
@@ -223,7 +224,7 @@ func TestHandleNamespacesHTTP_CreateValidation(t *testing.T) {
 // TestHandleNamespacesHTTP_DeleteValidation tests namespace deletion request
 // validation.
 func TestHandleNamespacesHTTP_DeleteValidation(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		k8sClient:      k8sClient,
@@ -267,7 +268,7 @@ func TestHandleNamespacesHTTP_DeleteValidation(t *testing.T) {
 // TestHandleDeploymentsHTTP_ClusterUnavailable tests that handlers return 503
 // when the cluster has no registered typed client.
 func TestHandleDeploymentsHTTP_ClusterUnavailable(t *testing.T) {
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	k8sClient, _ := client.NewMultiClusterClient("")
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		k8sClient:      k8sClient,

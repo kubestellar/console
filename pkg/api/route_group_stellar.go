@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -16,11 +17,11 @@ import (
 type stellarRouteGroup struct {
 	store     handlers.StellarStore
 	userStore store.Store
-	k8sClient *k8s.MultiClusterClient
+	k8sClient *client.MultiClusterClient
 	done      <-chan struct{}
 }
 
-func newStellarRouteGroup(stelStore handlers.StellarStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
+func newStellarRouteGroup(stelStore handlers.StellarStore, k8sClient *client.MultiClusterClient, done <-chan struct{}, userStore store.Store) *stellarRouteGroup {
 	return &stellarRouteGroup{
 		store:     stelStore,
 		userStore: userStore,

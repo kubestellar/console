@@ -8,6 +8,7 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // queryAllClusters fans out queryFn across all clusters concurrently,
@@ -30,7 +31,7 @@ import (
 // Callers receive (results []T, errTracker) and compose the fiber.Map response.
 func queryAllClusters[T any](
 	ctx context.Context,
-	clusters []k8s.ClusterInfo,
+	clusters []client.ClusterInfo,
 	queryFn func(ctx context.Context, clusterName string) ([]T, error),
 ) ([]T, *clusterErrorTracker) {
 	return queryAllClustersWithTimeout(ctx, clusters, mcpDefaultTimeout, queryFn)
@@ -45,7 +46,7 @@ const maxConcurrentClusterQueries = 32
 // (e.g., GPU node queries, pod listings on large clusters).
 func queryAllClustersWithTimeout[T any](
 	ctx context.Context,
-	clusters []k8s.ClusterInfo,
+	clusters []client.ClusterInfo,
 	perClusterTimeout time.Duration,
 	queryFn func(ctx context.Context, clusterName string) ([]T, error),
 ) ([]T, *clusterErrorTracker) {

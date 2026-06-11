@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"github.com/kubestellar/console/pkg/k8s/client"
 	"context"
 	"errors"
 	"testing"
@@ -47,7 +48,7 @@ func argoGVRMap() map[schema.GroupVersionResource]string {
 // some other code path. After the fix it iterates DeduplicatedClusters() and
 // lets GetDynamicClient lazily pick up newly-added contexts.
 func TestListArgoApplications_SeesNewContextAfterHotReload(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	// Start with ONE context (c1) — this simulates the state right after
 	// startup with one cluster loaded. c1's kubernetes client has not been
@@ -107,7 +108,7 @@ func TestListArgoApplications_SeesNewContextAfterHotReload(t *testing.T) {
 // for the ApplicationSets list path, which had the same m.clients snapshot
 // bug (#6476).
 func TestListArgoApplicationSets_SeesNewContextAfterHotReload(t *testing.T) {
-	m, _ := NewMultiClusterClient("")
+	m, _ := client.NewMultiClusterClient("")
 
 	m.rawConfig = &api.Config{
 		Contexts: map[string]*api.Context{

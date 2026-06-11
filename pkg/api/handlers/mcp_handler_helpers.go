@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/k8s/client"
 )
 
 // withDemoFallback handles the common MCP handler boilerplate:
@@ -16,7 +17,7 @@ func (h *MCPHandlers) withDemoFallback(
 	c *fiber.Ctx,
 	demoKey string,
 	demoData any,
-	handler func(client *k8s.MultiClusterClient) error,
+	handler func(client *client.MultiClusterClient) error,
 ) error {
 	if isDemoMode(c) {
 		return demoResponse(c, demoKey, demoData)
@@ -32,7 +33,7 @@ func (h *MCPHandlers) withDemoFallback(
 // results to empty slices so JSON responses stay consistent.
 func listClusterResources[T any](
 	ctx context.Context,
-	client *k8s.MultiClusterClient,
+	client *client.MultiClusterClient,
 	cluster string,
 	fetchFn func(ctx context.Context, clusterName string) ([]T, error),
 ) ([]T, *clusterErrorTracker, error) {
