@@ -7,6 +7,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,14 +51,14 @@ func TestMultiClusterClient_FindDeploymentIssues(t *testing.T) {
 	testCases := []struct {
 		name         string
 		objects      []k8sruntime.Object
-		wantNil      bool
+		wantEmpty    bool
 		wantReason   string
 		wantMessage  string
 		wantReplicas int32
 		wantReady    int32
 	}{
 		{
-			name: "happy path returns nil when all replicas ready",
+			name: "happy path returns empty when all replicas ready",
 			objects: []k8sruntime.Object{
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{Name: "ready", Namespace: "default", CreationTimestamp: now},
@@ -65,7 +66,7 @@ func TestMultiClusterClient_FindDeploymentIssues(t *testing.T) {
 					Status:     appsv1.DeploymentStatus{ReadyReplicas: 3},
 				},
 			},
-			wantNil: true,
+			wantEmpty: true,
 		},
 		{
 			name: "detects unavailable when ready replicas are below desired",
@@ -123,8 +124,8 @@ func TestMultiClusterClient_FindDeploymentIssues(t *testing.T) {
 			wantReady:    0,
 		},
 		{
-			name:    "empty deployment list returns nil",
-			wantNil: true,
+			name:      "empty deployment list returns empty",
+			wantEmpty: true,
 		},
 	}
 
@@ -139,9 +140,9 @@ func TestMultiClusterClient_FindDeploymentIssues(t *testing.T) {
 				t.Fatalf("FindDeploymentIssues returned error: %v", err)
 			}
 
-			if tc.wantNil {
-				if got != nil {
-					t.Fatalf("FindDeploymentIssues() = %#v, want nil", got)
+			if tc.wantEmpty {
+				if len(got) != 0 {
+					t.Fatalf("FindDeploymentIssues() = %#v, want empty slice", got)
 				}
 				return
 			}
@@ -626,6 +627,154 @@ func TestMultiClusterClient_GetCronJobs(t *testing.T) {
 			}
 			if cronJob.Active != tc.wantActive {
 				t.Fatalf("cronJob.Active = %d, want %d", cronJob.Active, tc.wantActive)
+			}
+		})
+	}
+}
+
+func TestMultiClusterClient_GetHPAs(t *testing.T) {
+	t.Parallel()
+
+	now := metav1.NewTime(time.Now().Add(-1 * time.Hour))
+
+	testCases := []struct {
+		name            string
+		objects         []k8sruntime.Object
+		wantCount       int
+		wantReference   string
+		wantMinReplicas int32
+		wantMaxReplicas int32
+		wantTargetCPU   string
+		wantCurrentCPU  string
+	}{
+		{
+			name:      "empty HPA list returns empty slice",
+			objects:   nil,
+			wantCount: 0,
+		},
+		{
+			name: "minReplicas defaults to 1 when nil",
+			objects: []k8sruntime.Object{
+				&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{Name: "web-hpa", Namespace: "default", CreationTimestamp: now},
+					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+							Kind: "Deployment",
+							Name: "web",
+						},
+						MinReplicas: nil,
+						MaxReplicas: 10,
+					},
+				},
+			},
+			wantCount:       1,
+			wantReference:   "Deployment/web",
+			wantMinReplicas: 1,
+			wantMaxReplicas: 10,
+			wantTargetCPU:   "",
+			wantCurrentCPU:  "",
+		},
+		{
+			name: "explicit minReplicas is respected",
+			objects: []k8sruntime.Object{
+				&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{Name: "api-hpa", Namespace: "default", CreationTimestamp: now},
+					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+							Kind: "Deployment",
+							Name: "api",
+						},
+						MinReplicas: int32Ptr(3),
+						MaxReplicas: 20,
+					},
+				},
+			},
+			wantCount:       1,
+			wantReference:   "Deployment/api",
+			wantMinReplicas: 3,
+			wantMaxReplicas: 20,
+		},
+		{
+			name: "CPU target and current utilization are extracted",
+			objects: []k8sruntime.Object{
+				&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{Name: "cpu-hpa", Namespace: "default", CreationTimestamp: now},
+					Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+						ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+							Kind: "Deployment",
+							Name: "worker",
+						},
+						MinReplicas: int32Ptr(2),
+						MaxReplicas: 8,
+						Metrics: []autoscalingv2.MetricSpec{
+							{
+								Type: autoscalingv2.ResourceMetricSourceType,
+								Resource: &autoscalingv2.ResourceMetricSource{
+									Name: corev1.ResourceCPU,
+									Target: autoscalingv2.MetricTarget{
+										AverageUtilization: int32Ptr(75),
+									},
+								},
+							},
+						},
+					},
+					Status: autoscalingv2.HorizontalPodAutoscalerStatus{
+						CurrentReplicas: 4,
+						CurrentMetrics: []autoscalingv2.MetricStatus{
+							{
+								Type: autoscalingv2.ResourceMetricSourceType,
+								Resource: &autoscalingv2.ResourceMetricStatus{
+									Name: corev1.ResourceCPU,
+									Current: autoscalingv2.MetricValueStatus{
+										AverageUtilization: int32Ptr(60),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantCount:       1,
+			wantReference:   "Deployment/worker",
+			wantMinReplicas: 2,
+			wantMaxReplicas: 8,
+			wantTargetCPU:   "75%",
+			wantCurrentCPU:  "60%",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client := newWorkloadsTestClient(tc.objects...)
+			got, err := client.GetHPAs(context.Background(), workloadTestContext, "default")
+			if err != nil {
+				t.Fatalf("GetHPAs returned error: %v", err)
+			}
+			if len(got) != tc.wantCount {
+				t.Fatalf("GetHPAs() returned %d items, want %d", len(got), tc.wantCount)
+			}
+			if tc.wantCount == 0 {
+				return
+			}
+
+			hpa := got[0]
+			if hpa.Reference != tc.wantReference {
+				t.Fatalf("hpa.Reference = %q, want %q", hpa.Reference, tc.wantReference)
+			}
+			if hpa.MinReplicas != tc.wantMinReplicas {
+				t.Fatalf("hpa.MinReplicas = %d, want %d", hpa.MinReplicas, tc.wantMinReplicas)
+			}
+			if hpa.MaxReplicas != tc.wantMaxReplicas {
+				t.Fatalf("hpa.MaxReplicas = %d, want %d", hpa.MaxReplicas, tc.wantMaxReplicas)
+			}
+			if tc.wantTargetCPU != "" && hpa.TargetCPU != tc.wantTargetCPU {
+				t.Fatalf("hpa.TargetCPU = %q, want %q", hpa.TargetCPU, tc.wantTargetCPU)
+			}
+			if tc.wantCurrentCPU != "" && hpa.CurrentCPU != tc.wantCurrentCPU {
+				t.Fatalf("hpa.CurrentCPU = %q, want %q", hpa.CurrentCPU, tc.wantCurrentCPU)
 			}
 		})
 	}
