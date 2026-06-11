@@ -256,6 +256,7 @@ Not every Go API route needs a Netlify Function. Routes fall into two categories
 **Routes WITH Netlify parity** (public/stateless data served on console.kubestellar.io):
 | Go route | Netlify function | Purpose |
 |----------|-----------------|---------|
+| `/health` | `health` | Boot config: project, branding flags, `enabled_dashboards` (drives sidebar). Keep `enabled_dashboards` in sync with `pkg/api/projects.go`; the parity test in `web/netlify/functions/__tests__/health.test.ts` catches drift. |
 | `/api/youtube/playlist` | `youtube-playlist` | YouTube content feed |
 | `/api/youtube/thumbnail/*` | `youtube-thumbnail` | Thumbnail proxy |
 | `/api/medium/blog` | `medium-blog` | Blog feed |

@@ -188,14 +188,21 @@ export function createPlatformHandlers() {
     })
   }),
 
-  // Root-level health check (used by useBackendHealth, useSelfUpgrade, useBranding, etc.)
+  // Root-level health check. Used by useBackendHealth, useSelfUpgrade,
+  // useBranding, AND useSidebarConfig (which reads enabled_dashboards to
+  // promote DISCOVERABLE_DASHBOARDS like Quantum Demo into the sidebar).
+  // Mirrors web/netlify/functions/health.mts — keep enabled_dashboards AND
+  // branding in sync with that file (and the Go side at pkg/api/projects.go);
+  // the parity test in web/netlify/functions/__tests__/health.test.ts catches
+  // drift across all three copies.
   http.get('/health', async () => {
     await delay(50)
-    // Mirrors web/netlify/functions/health.mts — keep in sync with
-    // projectDashboardPresets["kubestellar"] from pkg/api/projects.go
     return HttpResponse.json({
       status: 'ok',
       version: 'demo',
+      oauth_configured: false,
+      in_cluster: false,
+      no_local_agent: true,
       install_method: 'netlify',
       project: 'kubestellar',
       workloads: {
@@ -211,6 +218,25 @@ export function createPlatformHandlers() {
         'services', 'helm', 'logs', 'data-compliance', 'cost',
         'gitops', 'gpu',
       ],
+      branding: {
+        appName: 'KubeStellar Console',
+        appShortName: 'KubeStellar',
+        tagline: 'multi-cluster first, saving time and tokens',
+        logoUrl: '/kubestellar-logo.svg',
+        faviconUrl: '/favicon.ico',
+        themeColor: '#7c3aed',
+        docsUrl: 'https://kubestellar.io/docs/console/readme',
+        communityUrl: 'https://kubestellar.io/community',
+        websiteUrl: 'https://kubestellar.io',
+        issuesUrl: 'https://github.com/kubestellar/kubestellar/issues/new',
+        repoUrl: 'https://github.com/kubestellar/console',
+        hostedDomain: 'console.kubestellar.io',
+        showStarDecoration: true,
+        showAdopterNudge: true,
+        showDemoToLocalCTA: true,
+        showRewards: true,
+        showLinkedInShare: true,
+      },
     })
   }),
 ]

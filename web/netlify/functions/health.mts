@@ -1,5 +1,3 @@
-import type { Context } from "@netlify/functions";
-
 /**
  * /health Netlify Function — serves the same JSON shape as the Go backend's
  * GET /health (pkg/api/routes_health.go) so the frontend sidebar can
@@ -9,10 +7,19 @@ import type { Context } from "@netlify/functions";
  * frontend + Netlify Functions exist. Without this function, fetch('/health')
  * falls through to the SPA catch-all and returns HTML, causing the sidebar
  * to silently skip dashboard promotion.
+ *
+ * CORS: uses the project-wide allowlist via _shared/cors (echoes the request
+ * Origin only when allowed, with `Vary: Origin`). This replaces the inline
+ * `Access-Control-Allow-Origin: *` from the original landing PR; see
+ * _shared/cors.ts for the OWASP ZAP rationale (#9879).
  */
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
+
+const CORS_OPTIONS = { methods: "GET, OPTIONS" };
 
 // Mirrors projectDashboardPresets["kubestellar"] from pkg/api/projects.go.
-// Single source of truth for the Netlify-hosted demo site.
+// KEEP IN SYNC with that file — the parity test in
+// __tests__/health.test.ts catches drift.
 const KUBESTELLAR_DASHBOARDS = [
   "dashboard", "clusters", "cluster-admin", "compliance", "deploy",
   "insights", "ai-ml", "ai-agents", "acmm", "ci-cd",
@@ -24,6 +31,10 @@ const KUBESTELLAR_DASHBOARDS = [
   "gitops", "gpu",
 ];
 
+// Branding values mirror DEFAULT_BRANDING (web/src/lib/branding.ts) so the
+// hosted demo at console.kubestellar.io renders identically to a self-hosted
+// console in its default state. mergeBranding() in lib/branding.ts skips
+// empty strings, so set non-empty canonical values here.
 const HEALTH_RESPONSE = {
   status: "ok",
   version: "netlify",
@@ -38,15 +49,15 @@ const HEALTH_RESPONSE = {
   enabled_dashboards: KUBESTELLAR_DASHBOARDS,
   branding: {
     appName: "KubeStellar Console",
-    appShortName: "Console",
-    tagline: "Multi-cluster Kubernetes management",
-    logoUrl: "",
-    faviconUrl: "",
-    themeColor: "#06b6d4",
-    docsUrl: "https://docs.kubestellar.io",
+    appShortName: "KubeStellar",
+    tagline: "multi-cluster first, saving time and tokens",
+    logoUrl: "/kubestellar-logo.svg",
+    faviconUrl: "/favicon.ico",
+    themeColor: "#7c3aed",
+    docsUrl: "https://kubestellar.io/docs/console/readme",
     communityUrl: "https://kubestellar.io/community",
     websiteUrl: "https://kubestellar.io",
-    issuesUrl: "https://github.com/kubestellar/console/issues",
+    issuesUrl: "https://github.com/kubestellar/kubestellar/issues/new",
     repoUrl: "https://github.com/kubestellar/console",
     hostedDomain: "console.kubestellar.io",
     showStarDecoration: true,
@@ -57,29 +68,28 @@ const HEALTH_RESPONSE = {
   },
 };
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Cache-Control": "public, max-age=60, s-maxage=300",
-};
-
-export default async (req: Request, _context: Context) => {
-  // CORS preflight
+export default async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return handlePreflight(req, CORS_OPTIONS);
   }
 
-  // Only allow GET
   if (req.method !== "GET") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    return new Response(JSON.stringify({ error: "method not allowed" }), {
       status: 405,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Allow: "GET, OPTIONS",
+        ...buildCorsHeaders(req, CORS_OPTIONS),
+      },
     });
   }
 
   return new Response(JSON.stringify(HEALTH_RESPONSE), {
     status: 200,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=60, s-maxage=300",
+      ...buildCorsHeaders(req, CORS_OPTIONS),
+    },
   });
 };
