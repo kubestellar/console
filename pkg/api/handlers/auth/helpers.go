@@ -1,4 +1,4 @@
-package handlers
+package auth
 
 import (
 	"context"
@@ -115,9 +115,15 @@ func requireAdmin(c *fiber.Ctx, s store.Store) error {
 	return requireAdminCheck(user)
 }
 
-// requireAdminCheck verifies that a user has the admin role. It's a lower-level
+// RequireAdminCheck verifies that a user has the admin role. It's a lower-level
 // helper that takes an already-fetched user, used by SaveToken to avoid
-// duplicate GetUser calls when bootstrapping.
+// duplicate GetUser calls when bootstrapping. Exported for use by handlers
+// that already have a user reference.
+func RequireAdminCheck(user *models.User) error {
+	return requireAdminCheck(user)
+}
+
+// requireAdminCheck is the internal implementation.
 func requireAdminCheck(user *models.User) error {
 	if user == nil {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
@@ -128,11 +134,17 @@ func requireAdminCheck(user *models.User) error {
 	return nil
 }
 
-// requireEditorOrAdmin verifies the current request's user has at least the
+// RequireEditorOrAdmin verifies the current request's user has at least the
 // editor role. Viewer-role users and anonymous requests are rejected with 403.
 // Use this for mutating endpoints (create/update/delete) where full admin
 // privileges are not required. Called from gitops mutation handlers to gate
 // sync, helm upgrade/uninstall/rollback, and ArgoCD sync (#6022).
+// Exported for use by handlers that need to enforce editor-or-admin access.
+func RequireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
+	return requireEditorOrAdmin(c, s)
+}
+
+// requireEditorOrAdmin is the internal implementation.
 func requireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
 	if s == nil {
 		return nil
