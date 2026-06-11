@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/settings"
@@ -184,8 +185,8 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/events", events.RecordEvent)
 	api.Get("/events", events.GetEvents)
 
-	missions := handlers.NewMissionsHandler().WithStore(g.store)
-	missions.RegisterRoutes(api.Group("/missions"))
+	missionsHandler := missions.NewMissionsHandler().WithStore(g.store)
+	missionsHandler.RegisterRoutes(api.Group("/missions"))
 
 	orbitDataDir := filepath.Dir(g.config.DatabasePath)
 	if orbitDataDir == "" || orbitDataDir == "." {
