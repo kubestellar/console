@@ -191,7 +191,27 @@ export function createPlatformHandlers() {
   // Root-level health check (used by useBackendHealth, useSelfUpgrade, useBranding, etc.)
   http.get('/health', async () => {
     await delay(50)
-    return HttpResponse.json({ status: 'ok', version: 'demo', mode: 'netlify' })
+    // Mirrors web/netlify/functions/health.mts — keep in sync with
+    // projectDashboardPresets["kubestellar"] from pkg/api/projects.go
+    return HttpResponse.json({
+      status: 'ok',
+      version: 'demo',
+      install_method: 'netlify',
+      project: 'kubestellar',
+      workloads: {
+        quantum_kc_demo_available: false,
+      },
+      enabled_dashboards: [
+        'dashboard', 'clusters', 'cluster-admin', 'compliance', 'deploy',
+        'insights', 'ai-ml', 'ai-agents', 'acmm', 'ci-cd',
+        'multi-tenancy', 'alerts', 'arcade', 'quantum',
+        'llm-d-benchmarks', 'gpu-reservations',
+        'compute', 'security', 'storage', 'network', 'events',
+        'workloads', 'operators', 'nodes', 'deployments', 'pods',
+        'services', 'helm', 'logs', 'data-compliance', 'cost',
+        'gitops', 'gpu',
+      ],
+    })
   }),
 ]
 }

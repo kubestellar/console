@@ -401,6 +401,14 @@
   to = "/.netlify/functions/analytics-accm"
   status = 200
 
+# Health endpoint — serves project config + enabled_dashboards so the
+# sidebar can discover and promote dashboards (e.g. quantum). Without this,
+# fetch('/health') falls through to the SPA catch-all and returns HTML.
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
 # Quantum proxy — forwards /api/quantum/* and /api/result/histogram to the
 # quantum-proxy Netlify function. Without these rules every quantum request
 # falls through to the SPA catch-all and returns HTML instead of JSON.
