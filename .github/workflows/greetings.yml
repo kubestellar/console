@@ -6,14 +6,13 @@ on:
   issues:
     types: [opened, reopened]
 
-permissions: {}
+permissions:
+  issues: write
+  pull-requests: read
 
 jobs:
   greet:
     if: >-
       github.event_name != 'pull_request_target' ||
       github.event.pull_request.head.repo.full_name == github.repository
-    permissions:
-      issues: write
-      pull-requests: read
     uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@af322d48cc67ade7345cabc6a0ed55c6c7040ee4  # main
