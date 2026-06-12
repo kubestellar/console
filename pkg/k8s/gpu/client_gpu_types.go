@@ -87,33 +87,3 @@ type GPUHealthCheckResult struct {
 	Issues   []string             `json:"issues"`
 }
 
-// GPU health CronJob constants
-const (
-	gpuHealthCronJobName        = "gpu-health-check"
-	gpuHealthServiceAccount     = "gpu-health-checker"
-	gpuHealthClusterRole        = "gpu-health-checker"
-	gpuHealthClusterRoleBinding = "gpu-health-checker"
-	gpuHealthDefaultSchedule    = "*/5 * * * *" // every 5 minutes
-	gpuHealthDefaultNS          = "nvidia-gpu-operator"
-	// Supply-chain hardening (#6693): pin the GPU health checker image by
-	// digest so a compromised or unexpected :latest retag cannot change the
-	// binary that runs as cluster-admin via the configured RBAC.
-	//
-	// NOTE on tag choice: Bitnami only publishes a `latest` tag for
-	// `bitnami/kubectl` on Docker Hub (numeric version tags such as
-	// `1.31.0` return 404 against registry-1.docker.io). The digest below
-	// was resolved from `bitnami/kubectl:latest` on 2026-04-11. Operators
-	// should refresh this digest when rotating to a newer kubectl by
-	// running:
-	//   crane digest bitnami/kubectl:latest
-	// or the equivalent Docker Registry HTTP API lookup used here:
-	//   curl -sI -H "Accept: application/vnd.oci.image.index.v1+json" \
-	//        -H "Authorization: Bearer $TOKEN" \
-	//        https://registry-1.docker.io/v2/bitnami/kubectl/manifests/latest
-	// TODO(#6693): when Bitnami restores semver tags, switch to
-	// bitnami/kubectl:<version>@sha256:<digest> for clearer intent.
-	gpuHealthCheckerImage  = "bitnami/kubectl@sha256:59ad45e8bd79e7af7592ff2852b32adcb0da50792bc52ce44679d5c5f1b4d415"
-	gpuHealthConfigMapName = "gpu-health-results"
-	gpuHealthScriptVersion = 2 // bump when script changes
-	gpuHealthDefaultTier   = 2 // standard tier by default
-)
