@@ -38,7 +38,7 @@ let wsLastBackendCheck = 0
 // Connect to shared WebSocket for kubeconfig change notifications
 export async function connectSharedWebSocket() {
   // Don't attempt WebSocket if not authenticated or using demo token
-  if (isDemoToken()) {
+  if (await isDemoToken()) {
     return
   }
 

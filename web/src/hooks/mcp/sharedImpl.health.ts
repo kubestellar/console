@@ -91,7 +91,7 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   }
 
   // Skip backend if we've had too many consecutive failures or using demo token
-  if (healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES || isDemoToken()) {
+  if (healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES || await isDemoToken()) {
     return null
   }
 
@@ -177,7 +177,7 @@ export async function detectClusterDistribution(clusterName: string, kubectlCont
   }
 
   // Skip backend if using demo token, too many failures, or health checks failing
-  if (isDemoToken() ||
+  if (await isDemoToken() ||
       distributionDetectionFailures >= MAX_DISTRIBUTION_FAILURES ||
       healthCheckFailures >= MAX_HEALTH_CHECK_FAILURES) {
     return {}

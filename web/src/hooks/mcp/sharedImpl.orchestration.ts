@@ -152,7 +152,7 @@ export async function fullFetchClusters() {
     }
 
     // Agent unavailable — if demo mode is on and no real token, use demo data
-    if (isDemoMode() && isDemoToken()) {
+    if (isDemoMode() && await isDemoToken()) {
       await finishWithMinDuration({
         clusters: getDemoClusters(),
         isLoading: false,

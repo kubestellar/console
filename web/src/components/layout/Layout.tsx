@@ -150,11 +150,22 @@ export function Layout({ children: _children }: LayoutProps) {
 
   useClusterInventoryAnalytics(deduplicatedClusters)
 
+  const [isAuthenticatedNoAgent, setIsAuthenticatedNoAgent] = useState(false)
+
+  useEffect(() => {
+    async function checkAuthNoAgent() {
+      const { hasRealToken } = await import('../lib/demoMode')
+      const hasReal = await hasRealToken()
+      setIsAuthenticatedNoAgent(hasReal && agentStatus !== 'connected')
+    }
+    checkAuthNoAgent()
+  }, [agentStatus])
+
   const showStartupSnackbar = !isDemoModeForced && backendStatus === 'connecting'
   const { totalBannerHeight, visibleBanners } = useLayoutBanners({
     autonomousBannerDismissed,
     hasInClusterAIBackend: kagentAvailable || kagentiAvailable,
-    isAuthenticatedNoAgent: hasRealToken() && agentStatus !== 'connected',
+    isAuthenticatedNoAgent,
     isDemoMode,
     isDemoModeForced,
     isInClusterMode,

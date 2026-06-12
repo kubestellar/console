@@ -75,8 +75,17 @@ export function GPUReservations() {
   // GPU Reservations bypasses demo mode when running in-cluster with a real OAuth token.
   // Other pages can remain in demo mode — this exception ensures authenticated users
   // on cluster deployments always get live GPU reservation data.
-  const gpuLiveMode = isInClusterMode && isAuthenticated && hasRealToken()
+  const [gpuLiveMode, setGpuLiveMode] = useState(false)
   const effectiveDemoMode = demoMode && !gpuLiveMode
+
+  useEffect(() => {
+    async function checkGpuLiveMode() {
+      const { hasRealToken } = await import('../lib/demoMode')
+      const hasReal = await hasRealToken()
+      setGpuLiveMode(isInClusterMode && isAuthenticated && hasReal)
+    }
+    checkGpuLiveMode()
+  }, [isInClusterMode, isAuthenticated])
 
   const { resourceQuotas } = useResourceQuotas(undefined, undefined, gpuLiveMode)
   const { showToast } = useToast()

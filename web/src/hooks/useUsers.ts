@@ -499,9 +499,10 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
     // Creating a ServiceAccount is a user-initiated mutation on a managed
     // cluster, so it must run under the user's kubeconfig via kc-agent, not
     // the backend pod ServiceAccount. See #7993 Phase 1.5 PR A.
+    const authHeaders = await agentAuthHeaders()
     const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders },
       body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -662,9 +663,10 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
     // Creating a RoleBinding is a user-initiated RBAC mutation, so it must
     // run under the user's kubeconfig via kc-agent, not the backend pod
     // ServiceAccount. See #7993 Phase 1.5 PR A.
+    const authHeaders = await agentAuthHeaders()
     const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rolebindings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...agentAuthHeaders() },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders },
       body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     })
@@ -708,8 +710,9 @@ export function useClusterPermissions(cluster?: string) {
       // allowed origins when KC_AGENT_TOKEN is unset). Sending an empty
       // Authorization header would fail token validation on the agent side.
       const params = cluster ? `?cluster=${cluster}` : ''
+      const authHeaders = await agentAuthHeaders()
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/rbac/permissions${params}`, {
-        headers: agentAuthHeaders(),
+        headers: authHeaders,
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
         setIsLoading(false)
