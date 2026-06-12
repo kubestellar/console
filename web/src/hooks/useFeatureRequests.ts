@@ -360,7 +360,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
 
   const loadRequests = useCallback(async () => {
     // In demo mode, use mock data
-    if (isDemoUser()) {
+    if (isDemoMode) {
       if (countOnly) {
         setSummaries(DEMO_FEATURE_REQUESTS.map(r => ({ id: r.id, status: r.status })))
       } else {
@@ -389,7 +389,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     } finally {
       setIsLoading(false)
     }
-  }, [currentUserId, countOnly])
+  }, [currentUserId, countOnly, isDemoMode])
 
   useEffect(() => {
     loadRequests()
@@ -397,7 +397,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
 
   // Polling for status updates (every 30 seconds) - skip in demo mode
   useEffect(() => {
-    if (isDemoUser()) return
+    if (isDemoMode) return
 
     const interval = setInterval(() => {
       // Only poll if there are pending requests
@@ -410,7 +410,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     }, CACHE_TTL_MS)
 
     return () => clearInterval(interval)
-  }, [requests, loadRequests])
+  }, [requests, loadRequests, isDemoMode])
 
   // Refresh function with loading indicator (minimum 500ms to show animation)
   const refresh = async () => {
@@ -495,7 +495,13 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isDemoMode, setIsDemoMode] = useState(false)
   const pollingRef = useRef<number | null>(null)
+
+  // Check demo mode on mount
+  useEffect(() => {
+    isDemoUser().then(setIsDemoMode)
+  }, [])
 
   // Get unread count for a specific feature request
   const getUnreadCountForRequest = useCallback((featureRequestId: string): number => {
@@ -514,7 +520,7 @@ export function useNotifications() {
     if (unreadForRequest.length === 0) return
 
     // In demo mode, just update local state
-    if (isDemoUser()) {
+    if (isDemoMode) {
       const demoState = getDemoNotifications()
       for (let i = 0; i < demoState.length; i += 1) {
         if (demoState[i].feature_request_id === featureRequestId) {
@@ -540,7 +546,7 @@ export function useNotifications() {
 
   const loadNotifications = useCallback(async () => {
     // In demo mode, use mutable demo data
-    if (isDemoUser()) {
+    if (isDemoMode) {
       const demoData = [...getDemoNotifications()]
       setNotifications(demoData)
       setUnreadCount(demoData.filter(n => !n.read).length)
@@ -554,11 +560,11 @@ export function useNotifications() {
     } catch {
       // Silently fail - backend may be unavailable
     }
-  }, [])
+  }, [isDemoMode])
 
   const loadUnreadCount = useCallback(async () => {
     // In demo mode, calculate from mutable demo data
-    if (isDemoUser()) {
+    if (isDemoMode) {
       setUnreadCount(getDemoNotifications().filter(n => !n.read).length)
       return
     }
@@ -568,7 +574,7 @@ export function useNotifications() {
     } catch {
       // Silently fail - backend may be unavailable
     }
-  }, [])
+  }, [isDemoMode])
 
   const loadAll = useCallback(async () => {
     setIsLoading(true)
@@ -582,7 +588,7 @@ export function useNotifications() {
 
   // Poll for new notifications every 30 seconds - skip in demo mode
   useEffect(() => {
-    if (isDemoUser()) return
+    if (isDemoMode) return
 
     pollingRef.current = window.setInterval(() => {
       loadNotifications()
@@ -604,7 +610,7 @@ export function useNotifications() {
     )
     setUnreadCount(prev => Math.max(0, prev - 1))
 
-    if (isDemoUser()) {
+    if (isDemoMode) {
       const demoState = getDemoNotifications()
       const index = demoState.findIndex(n => n.id === id)
       if (index !== -1) {
@@ -633,7 +639,7 @@ export function useNotifications() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     setUnreadCount(0)
 
-    if (isDemoUser()) {
+    if (isDemoMode) {
       const demoState = getDemoNotifications()
       for (let i = 0; i < demoState.length; i += 1) {
         demoState[i] = { ...demoState[i], read: true }
