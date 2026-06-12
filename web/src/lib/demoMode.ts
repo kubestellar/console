@@ -18,7 +18,7 @@
 
 import { clearAllRegisteredCaches } from './modeTransition'
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE } from './constants'
-import { getStoredAuthToken, getStoredAuthTokenSync, setStoredAuthToken } from './authToken'
+import { getStoredAuthTokenSync, setStoredAuthToken } from './authToken'
 const DEMO_MODE_KEY = STORAGE_KEY_DEMO_MODE
 const DEMO_TOKEN = DEMO_TOKEN_VALUE
 const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
@@ -229,16 +229,16 @@ export function subscribeDemoMode(callback: (value: boolean) => void): () => voi
  *
  * Replaces all `!token || token === 'demo-token'` patterns.
  */
-export async function isDemoToken(): Promise<boolean> {
-  const token = await getStoredAuthToken()
+export function isDemoToken(): boolean {
+  const token = getStoredAuthTokenSync()
   return !token || token === DEMO_TOKEN
 }
 
 /**
  * Check if we have a real (non-demo) authentication token.
  */
-export async function hasRealToken(): Promise<boolean> {
-  const token = await getStoredAuthToken()
+export function hasRealToken(): boolean {
+  const token = getStoredAuthTokenSync()
   return !!token && token !== DEMO_TOKEN
 }
 

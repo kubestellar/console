@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, RateLimitError } from '../lib/api'
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 
@@ -16,9 +16,9 @@ const FEEDBACK_ATTACHMENT_LIMIT_ERROR = 'Attachments are too large to submit. Ke
 // hardcoded sample queue. The `kc-has-session` flag is set by /auth/refresh
 // once the backend confirms a cookie-backed session, so it's the authoritative
 // signal that a real user is logged in even with an empty localStorage token.
-async function isDemoUser(): boolean {
+function isDemoUser(): boolean {
   if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return false
-  const token = await await getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
+  const token = getStoredAuthTokenSync() || localStorage.getItem(STORAGE_KEY_TOKEN)
   return !token || token === DEMO_TOKEN_VALUE
 }
 

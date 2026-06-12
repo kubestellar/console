@@ -3,7 +3,7 @@ import { api, isBackendUnavailable } from '../lib/api'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, RBAC_QUERY_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
@@ -25,8 +25,8 @@ import type {
 // allowed origins when KC_AGENT_TOKEN is unset — so we simply omit the
 // Authorization header when no token is configured. Mirrors authHeaders() in
 // useWorkloads.ts.
-async function agentAuthHeaders(): Promise<Record<string, string>> {
-  const token = await getStoredAuthToken()
+function agentAuthHeaders(): Record<string, string> {
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
