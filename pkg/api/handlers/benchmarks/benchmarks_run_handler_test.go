@@ -26,7 +26,7 @@ func TestFetchRunFolder(t *testing.T) {
 			folderID:          "",
 			experimentName:    "exp1",
 			runName:           "run1",
-			expectError       true,
+			expectError:       true,
 			expectedMinLength: 0,
 		},
 		{
@@ -34,7 +34,7 @@ func TestFetchRunFolder(t *testing.T) {
 			folderID:          "mock-folder-id",
 			experimentName:    "test-experiment",
 			runName:           "test-run",
-			expectError       true, // Will error because no real Drive API
+			expectError:       true, // Will error because no real Drive API
 			expectedMinLength: 0,
 		},
 	}
@@ -71,7 +71,7 @@ func TestCollectBenchmarkFiles(t *testing.T) {
 			folderID:          "",
 			experimentName:    "exp1",
 			runName:           "run1",
-			expectError       true,
+			expectError:       true,
 			expectedMinLength: 0,
 		},
 		{
@@ -79,7 +79,7 @@ func TestCollectBenchmarkFiles(t *testing.T) {
 			folderID:          "mock-folder-id",
 			experimentName:    "test-experiment",
 			runName:           "test-run",
-			expectError       true, // Will error because no real Drive API
+			expectError:       true, // Will error because no real Drive API
 			expectedMinLength: 0,
 		},
 	}
