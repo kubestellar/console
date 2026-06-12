@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExtractClientAuth_EmptyCookieAndHeader(t *testing.T) {
@@ -15,14 +18,10 @@ func TestExtractClientAuth_EmptyCookieAndHeader(t *testing.T) {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	req := fiber.AcquireRequest()
-	defer fiber.ReleaseRequest(req)
-	req.SetRequestURI("/test")
-	req.Header.SetMethod(fiber.MethodGet)
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	resp, err := app.Test(req, -1)
+	require.NoError(t, err)
+	defer resp.Body.Close()
 
-	ctx := app.AcquireCtx(&fiber.fasthttp.RequestCtx{})
-	defer app.ReleaseCtx(ctx)
-
-	extractClientAuth(ctx)
-	assert.Empty(t, extractClientAuth(ctx), "should return empty string when no auth is present")
+	assert.Empty(t, result, "should return empty string when no auth is present")
 }

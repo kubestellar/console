@@ -391,7 +391,7 @@ func TestStellarStream_InvalidUserIDStillConnects(t *testing.T) {
 }
 
 // newInMemoryStellarStore creates a minimal SQLiteStore backed by a temp DB.
-func newInMemoryStellarStore(t *testing.T) StellarStore {
+func newInMemoryStellarStore(t *testing.T) Store {
 	t.Helper()
 	s, err := store.NewSQLiteStore(t.TempDir() + "/stellar-inline.db")
 	require.NoError(t, err)
