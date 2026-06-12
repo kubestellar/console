@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -1275,6 +1276,10 @@ func TestCreateOrUpdateResourceQuota(t *testing.T) {
 }
 
 func TestGetAllClusterHealth(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test; set KC_INTEGRATION_TESTS=1 to run")
+	}
+
 	m, _ := NewMultiClusterClient("")
 
 	// Setup 2 clusters in rawConfig

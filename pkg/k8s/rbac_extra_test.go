@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/models"
@@ -184,6 +185,10 @@ func TestRBAC_DeleteNamespace(t *testing.T) {
 }
 
 func TestGetAllClusterPermissions(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test; set KC_INTEGRATION_TESTS=1 to run")
+	}
+
 	m, _ := NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"c1": {Cluster: "cl1"},
@@ -436,6 +441,10 @@ func TestCheckCanI(t *testing.T) {
 }
 
 func TestGetAllPermissionsSummaries(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test; set KC_INTEGRATION_TESTS=1 to run")
+	}
+
 	m, _ := NewMultiClusterClient("")
 	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
 		"c1": {Cluster: "cl1"},

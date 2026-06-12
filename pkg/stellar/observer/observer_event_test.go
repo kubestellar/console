@@ -2,6 +2,7 @@ package observer
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -527,6 +528,10 @@ func TestFetchResourceStatePodWithContainerDetails(t *testing.T) {
 }
 
 func TestFetchResourceStateNodeWithConditions(t *testing.T) {
+	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
+		t.Skip("skipping integration test; set KC_INTEGRATION_TESTS=1 to run")
+	}
+
 	client := &k8sEventClient{
 		nodes: []k8s.NodeInfo{
 			{
