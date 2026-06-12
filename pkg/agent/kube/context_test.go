@@ -165,7 +165,7 @@ func TestBuildLiveClusterContext_NoProvidersConfigured(t *testing.T) {
 	providerClusterContextState.k8sClient = nil
 	providerClusterContextState.mu.Unlock()
 
-	req := &ai.ChatRequest{Message: "test"}
+	req := &ai.ChatRequest{Prompt: "test"}
 	got := buildLiveClusterContext(nil, req)
 	if got != "" {
 		t.Fatalf("expected empty string when no providers configured, got %q", got)

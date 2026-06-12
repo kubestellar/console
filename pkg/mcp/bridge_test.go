@@ -538,7 +538,7 @@ func TestBridge_GetPods(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_pods", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -554,6 +554,7 @@ func TestBridge_GetPods(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
+			bridge.opsClient = mockOps.Client
 
 			pods, err := bridge.GetPods(context.Background(), tc.cluster, tc.namespace, tc.labelSelector)
 
@@ -630,7 +631,7 @@ func TestBridge_FindPodIssues(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "find_pod_issues", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -643,6 +644,7 @@ func TestBridge_FindPodIssues(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
+			bridge.opsClient = mockOps.Client
 
 			issues, err := bridge.FindPodIssues(context.Background(), tc.cluster, tc.namespace)
 
@@ -709,7 +711,7 @@ func TestBridge_GetEvents(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_events", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -725,6 +727,7 @@ func TestBridge_GetEvents(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
+			bridge.opsClient = mockOps.Client
 
 			events, err := bridge.GetEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
 
@@ -790,7 +793,7 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_warning_events", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -806,6 +809,7 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
+			bridge.opsClient = mockOps.Client
 
 			events, err := bridge.GetWarningEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
 
@@ -878,7 +882,7 @@ func TestBridge_GetClusterHealth(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "get_cluster_health", toolName)
 				if tc.cluster != "" {
 					require.Equal(t, tc.cluster, args["cluster"])
@@ -888,6 +892,7 @@ func TestBridge_GetClusterHealth(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
+			bridge.opsClient = mockOps.Client
 
 			health, err := bridge.GetClusterHealth(context.Background(), tc.cluster)
 
@@ -948,7 +953,7 @@ func TestBridge_ListClusters(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bridge := NewBridge(BridgeConfig{})
-			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+			mockOps := newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
 				require.Equal(t, "list_clusters", toolName)
 				require.Equal(t, "all", args["source"])
 				if tc.mockError != nil {
@@ -956,6 +961,7 @@ func TestBridge_ListClusters(t *testing.T) {
 				}
 				return tc.mockResponse, nil
 			})
+			bridge.opsClient = mockOps.Client
 
 			clusters, err := bridge.ListClusters(context.Background())
 

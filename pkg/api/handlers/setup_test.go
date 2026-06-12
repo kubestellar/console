@@ -32,13 +32,22 @@ func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req), nil
 }
 
-type testEnv struct {
+// TestEnv holds the test environment components.
+type TestEnv struct {
 	App       *fiber.App
 	TempDir   string
 	Settings  *settings.SettingsManager
 	K8sClient *k8s.MultiClusterClient
 	Hub       *Hub
 	Store     store.Store
+}
+
+type testEnv = TestEnv // alias for backward compatibility
+
+// SetupTestEnv creates a new test environment with a fresh Fiber app and an initialized
+// SettingsManager pointing to a temporary directory.
+func SetupTestEnv(t *testing.T) *TestEnv {
+	return setupTestEnv(t)
 }
 
 // setupTestEnv creates a new test environment with a fresh Fiber app and an initialized
@@ -141,6 +150,16 @@ func gvrKindsToGVR(t testing.TB, gvrKinds map[schema.GroupVersionResource]string
 	}
 	t.Fatalf("gvrKindsToGVR: no GVR registered for listKind %q — did you forget to add it to the gvrKinds map?", listKind)
 	return schema.GroupVersionResource{}
+}
+
+// InjectDynamicCluster creates a fake dynamic client with custom list kinds (for CRD resources
+// like Gateway, HTTPRoute, ServiceExport, etc.) and injects both dynamic and typed clients
+// into the test environment for the given cluster name.
+//
+// gvrKinds maps each GVR to its list kind string (e.g. "GatewayList").
+// Returns the dynamic client for reactor registration.
+func InjectDynamicCluster(env *TestEnv, cluster string, gvrKinds map[schema.GroupVersionResource]string) *fake.FakeDynamicClient {
+	return injectDynamicCluster(env, cluster, gvrKinds)
 }
 
 // injectDynamicCluster creates a fake dynamic client with custom list kinds (for CRD resources

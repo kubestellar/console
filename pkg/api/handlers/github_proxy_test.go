@@ -12,7 +12,7 @@ import (
 
 func TestGitHubProxyHandler_MissingToken(t *testing.T) {
 	mockStore := new(test.MockStore)
-	handler := NewGitHubProxyHandler("", mockStore, nil)
+	handler := NewGitHubProxyHandler("", mockStore)
 	app := fiber.New()
 	app.Get("/api/github-proxy", handler.Proxy)
 
