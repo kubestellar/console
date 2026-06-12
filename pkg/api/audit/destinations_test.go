@@ -19,7 +19,7 @@ func TestSplunkRequiresURL(t *testing.T) {
 }
 
 func TestSplunkRequiresToken(t *testing.T) {
-	if _, err := NewSplunkDestination("https://splunk.example/services/collector", "", nil); err == nil {
+	if _, err := NewSplunkDestination("https://splunk.example.com/services/collector", "", nil); err == nil {
 		t.Fatal("NewSplunkDestination with empty token must error (HEC config)")
 	}
 }
@@ -46,7 +46,7 @@ func TestRegisterDestinationFallsBackToStubOnMissingConfig(t *testing.T) {
 	}{
 		{
 			name: "splunk without token",
-			cfg:  DestinationConfig{ID: "s", Provider: ProviderSplunk, URL: "https://splunk.example"},
+			cfg:  DestinationConfig{ID: "s", Provider: ProviderSplunk, URL: "https://splunk.example.com"},
 		},
 		{
 			name: "elastic without url",
@@ -83,7 +83,7 @@ func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 		ID:       "splunk-prod",
 		Name:     "Splunk Prod",
 		Provider: ProviderSplunk,
-		URL:      "https://splunk.example",
+		URL:      "https://splunk.example.com",
 		Token:    "abc123",
 	})
 	if err != nil {
@@ -107,7 +107,7 @@ func TestRegisterDestinationElasticWithURL(t *testing.T) {
 	adapter, err := RegisterDestination(DestinationConfig{
 		ID:       "elastic-prod",
 		Provider: ProviderElastic,
-		URL:      "https://es.example:9200",
+		URL:      "https://es.example.com:9200",
 	})
 	if err != nil {
 		t.Fatalf("RegisterDestination: %v", err)

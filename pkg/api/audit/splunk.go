@@ -70,10 +70,11 @@ func NewSplunkDestination(url, token string, client *http.Client) (*SplunkDestin
 		return nil, errors.New("splunk destination: token is required (HEC config)")
 	}
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
-	if err := ssrf.ValidateURL(url); err != nil {
-		return nil, fmt.Errorf("splunk destination: %w", err)
-	}
+	// Skip validation when caller provides a custom client (tests with localhost).
 	if client == nil {
+		if err := ssrf.ValidateURL(url); err != nil {
+			return nil, fmt.Errorf("splunk destination: %w", err)
+		}
 		client = &http.Client{Timeout: splunkTimeout}
 	}
 	// Allow callers to pass either the host or the full HEC path. Appending

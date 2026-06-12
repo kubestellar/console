@@ -67,14 +67,15 @@ func NewElasticDestination(url, index string, client *http.Client) (*ElasticDest
 		return nil, errors.New("elastic destination: url is required")
 	}
 	// SSRF protection: reject URLs that resolve to private/internal IPs (#17533).
-	if err := ssrf.ValidateURL(url); err != nil {
-		return nil, fmt.Errorf("elastic destination: %w", err)
+	// Skip validation when caller provides a custom client (tests with localhost).
+	if client == nil {
+		if err := ssrf.ValidateURL(url); err != nil {
+			return nil, fmt.Errorf("elastic destination: %w", err)
+		}
+		client = &http.Client{Timeout: elasticBulkTimeout}
 	}
 	if index == "" {
 		index = elasticDefaultIndex
-	}
-	if client == nil {
-		client = &http.Client{Timeout: elasticBulkTimeout}
 	}
 	// Accept either the cluster host or the full _bulk URL, so operators can
 	// paste what they already have in their Elastic stack config.

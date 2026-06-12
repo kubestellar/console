@@ -10,6 +10,9 @@ import (
 func OpenTestDB(t testing.TB) *SQLiteStore {
 	t.Helper()
 
+	// Set encryption key for tests that use encrypted credential storage (#17815).
+	t.Setenv("CREDENTIAL_ENCRYPTION_KEY", "test-key-for-unit-tests-only")
+
 	drv, err := sqlDriver("sqlite")
 	if err != nil {
 		t.Fatalf("lookup sqlite driver: %v", err)
