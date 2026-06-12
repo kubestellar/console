@@ -1,4 +1,4 @@
-package handlers
+package rewards
 
 import (
 	"bytes"
@@ -64,11 +64,11 @@ const (
 	badgeStatusBadGate = fiber.StatusBadGateway
 )
 
-// badgeRewardsFetcher is the narrow seam BadgeHandler depends on. Defining
+// BadgeRewardsFetcher is the narrow seam BadgeHandler depends on. Defining
 // it as an interface lets the test substitute a fake without importing the
 // whole RewardsHandler's transitive dependencies. cacheHit reports whether
 // the response came from the in-memory cache; used for GA4 analytics only.
-type badgeRewardsFetcher interface {
+type BadgeRewardsFetcher interface {
 	fetchUserRewardsForBadge(ctx context.Context, login string) (resp *GitHubRewardsResponse, cacheHit bool, err error)
 }
 
@@ -76,7 +76,7 @@ type badgeRewardsFetcher interface {
 // the "unknown" tier SVG (200, cached) instead of an error SVG (502, no-store).
 var errBadgeUnknownLogin = errors.New("unknown github login")
 
-// fetchUserRewardsForBadge adapts RewardsHandler to badgeRewardsFetcher.
+// fetchUserRewardsForBadge adapts RewardsHandler to BadgeRewardsFetcher.
 // Shares the authenticated path's cache map + TTL (rewardsCacheTTL); unlike
 // GetGitHubRewards it does NOT fall back to stale cache on upstream failure
 // because the badge handler needs to pick between success/unknown/error.
@@ -118,13 +118,13 @@ func (h *RewardsHandler) fetchUserRewardsForBadge(ctx context.Context, login str
 
 // BadgeHandler serves the public contributor-tier badge SVG.
 type BadgeHandler struct {
-	fetcher badgeRewardsFetcher
+	fetcher BadgeRewardsFetcher
 	store   store.Store
 }
 
 // NewBadgeHandler wraps a fetcher (usually *RewardsHandler) and a store
 // and exposes GetBadge.
-func NewBadgeHandler(fetcher badgeRewardsFetcher, s store.Store) *BadgeHandler {
+func NewBadgeHandler(fetcher BadgeRewardsFetcher, s store.Store) *BadgeHandler {
 	return &BadgeHandler{fetcher: fetcher, store: s}
 }
 

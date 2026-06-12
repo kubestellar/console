@@ -1,4 +1,4 @@
-package handlers
+package rewards
 
 import (
 	"bytes"
