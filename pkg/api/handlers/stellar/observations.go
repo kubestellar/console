@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bufio"
@@ -18,6 +18,7 @@ import (
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 )
 
 func (h *Handler) GetState(c *fiber.Ctx) error {
@@ -515,7 +516,7 @@ func (h *Handler) Stream(c *fiber.Ctx) error {
 // This is the HTTP bridge that connects the agent process to Stellar's notification system.
 // Only editor and admin users may inject events to prevent forged system events (CWE-285, #16709).
 func (h *Handler) IngestEvent(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.userStore); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.userStore); err != nil {
 		return err
 	}
 

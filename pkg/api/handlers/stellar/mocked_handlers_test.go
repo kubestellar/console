@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bytes"
@@ -102,7 +102,7 @@ func newMockedStellarHandlerApp(t *testing.T) (*fiber.App, *mockedStellarStore, 
 		return c.Next()
 	})
 
-	h := NewStellarHandler(mockStore, nil)
+	h := NewHandler(mockStore, nil)
 	app.Post("/api/stellar/tasks", h.CreateTask)
 	app.Patch("/api/stellar/tasks/:id/status", h.UpdateTaskStatus)
 	app.Post("/api/stellar/memory/search", h.SearchMemory)

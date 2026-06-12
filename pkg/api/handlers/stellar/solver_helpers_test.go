@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 // Unit tests for pure helpers in stellar_solver.go (#17326):
 //   - formatBatchTimestamp

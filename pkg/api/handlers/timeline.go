@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/api/handlers/stellar"
 )
 
 // ---------------------------------------------------------------------------
@@ -63,7 +64,7 @@ const demoTimelineSpanHours = 24
 // every collected cluster event to Stellar. Decouples timeline from the
 // concrete StellarHandler type and keeps the dependency one-way.
 type StellarEventSink interface {
-	ProcessEvent(ctx context.Context, event IncomingEvent)
+	ProcessEvent(ctx context.Context, event stellar.IncomingEvent)
 }
 
 // timelineClient is the narrow interface TimelineHandler requires from the
@@ -241,7 +242,7 @@ func (h *TimelineHandler) collectCluster(ci k8s.ClusterInfo) {
 		// console event-stream card surfaces. Without this hop, Stellar
 		// was blind to anything except the test ingest endpoint.
 		if h.stellarSink != nil {
-			h.stellarSink.ProcessEvent(ctx, IncomingEvent{
+			h.stellarSink.ProcessEvent(ctx, stellar.IncomingEvent{
 				Cluster:   ci.Name,
 				Namespace: ev.Namespace,
 				Name:      name,

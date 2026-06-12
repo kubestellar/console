@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bufio"
@@ -46,6 +46,8 @@ const (
 	stellarSystemUserID           = "system"
 
 	stellarOllamaAllowedCIDRsEnv = "STELLAR_OLLAMA_ALLOWED_CIDRS"
+
+	providerDNSTimeout = 5 * time.Second
 )
 
 var stellarAllowedExecutionModes = map[string]bool{

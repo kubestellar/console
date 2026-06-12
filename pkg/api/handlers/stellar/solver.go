@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"github.com/kubestellar/console/pkg/k8s"

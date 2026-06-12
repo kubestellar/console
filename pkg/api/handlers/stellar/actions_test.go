@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bytes"
@@ -56,7 +56,7 @@ func newStellarActionExecuteTestAppWithK8s(t *testing.T, role models.UserRole, k
 		return c.Next()
 	})
 
-	handler := NewStellarHandler(sqlStore, k8sClient)
+	handler := NewHandler(sqlStore, k8sClient)
 	app.Post("/api/stellar/actions/execute", handler.ExecuteAction)
 
 	return app

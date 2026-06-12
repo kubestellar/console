@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 		return c.Next()
 	})
 
-	h := NewStellarHandler(sqlStore, nil)
+	h := NewHandler(sqlStore, nil)
 	app.Get("/api/stellar/preferences", h.GetPreferences)
 	app.Put("/api/stellar/preferences", h.UpdatePreferences)
 	app.Get("/api/stellar/missions", h.ListMissions)
@@ -226,7 +226,7 @@ func TestStellarAskStateDigestAndNotifications(t *testing.T) {
 }
 
 func TestBroadcastToClientsScopesEventsByUser(t *testing.T) {
-	h := NewStellarHandler(nil, nil)
+	h := NewHandler(nil, nil)
 
 	userChannel := make(chan SSEEvent, 4)
 	otherChannel := make(chan SSEEvent, 4)

@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
-	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +65,7 @@ func TestRequireUser(t *testing.T) {
 }
 
 type mockUserStore struct {
-	store.Store
+	Store
 	user *models.User
 	err  error
 }
@@ -94,7 +93,7 @@ func TestIsAdminUser(t *testing.T) {
 		{
 			name:     "regular user",
 			userID:   userID,
-			userRole: models.UserRoleUser,
+			userRole: models.UserRoleViewer,
 			wantAdmin: false,
 		},
 		{
@@ -106,7 +105,7 @@ func TestIsAdminUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var mockStore store.Store = &mockUserStore{
+			var mockStore Store = &mockUserStore{
 				user: &models.User{ID: tt.userID, Role: tt.userRole},
 			}
 			handler := &Handler{store: mockStore}

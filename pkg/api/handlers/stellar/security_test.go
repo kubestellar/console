@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"context"
@@ -74,7 +74,7 @@ func TestRenderUntrustedPromptDataEscapesInput(t *testing.T) {
 }
 
 func TestStellarBroadcastToClientsFiltersByAudience(t *testing.T) {
-	h := &StellarHandler{
+	h := &Handler{
 		sseClients: map[string]stellarSSEClient{
 			"owner": {userID: "user-a", ch: make(chan SSEEvent, 1)},
 			"other": {userID: "user-b", ch: make(chan SSEEvent, 1)},
@@ -115,7 +115,7 @@ func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
 	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: editorID, GitHubID: "2", GitHubLogin: "editor-user", Role: models.UserRoleEditor}))
 	require.NoError(t, sqlStore.CreateUser(ctx, &models.User{ID: viewerID, GitHubID: "3", GitHubLogin: "viewer-user", Role: models.UserRoleViewer}))
 
-	h := NewStellarHandler(sqlStore, nil, WithUserStore(sqlStore))
+	h := NewHandler(sqlStore, nil, WithUserStore(sqlStore))
 
 	tests := []struct {
 		name       string
@@ -134,7 +134,7 @@ func TestStellarIngestEventRequiresEditorOrAdmin(t *testing.T) {
 				c.Locals("userID", tt.userID)
 				return c.Next()
 			})
-			app.Post(ingestEventPath, RequireEditorOrAdminMiddleware(sqlStore), h.IngestEvent)
+			app.Post(ingestEventPath, auth.RequireEditorOrAdminMiddleware(sqlStore), h.IngestEvent)
 
 			req := httptest.NewRequest(http.MethodPost, ingestEventPath, strings.NewReader(`{}`))
 			req.Header.Set("Content-Type", "application/json")

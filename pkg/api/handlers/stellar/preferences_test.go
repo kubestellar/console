@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 )
 
 type mockStellarPrefsStore struct {
-	store.Store
+	Store
 	prefs *store.StellarPreferences
 	err   error
 }

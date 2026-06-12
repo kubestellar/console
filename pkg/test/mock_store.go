@@ -744,6 +744,7 @@ func (m *MockStore) GetLatestEventBatchTimestamp(_ context.Context) (*time.Time,
 	return nil, nil
 }
 func (m *MockStore) PruneOldNotifications(_ context.Context, _ int) (int64, error) { return 0, nil }
+func (m *MockStore) PruneOldExecutions(_ context.Context, _ int) (int64, error) { return 0, nil }
 
 func (m *MockStore) CreateTask(_ context.Context, _ *store.StellarTask) (string, error) {
 	return "", nil

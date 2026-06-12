@@ -1,6 +1,7 @@
-package handlers
+package stellar
 
 import (
+	"github.com/kubestellar/console/pkg/ssrf"
 	"context"
 	"fmt"
 	"log/slog"
@@ -67,7 +68,7 @@ func resolveStellarProviderHostIPs(host string) ([]net.IP, error) {
 	if parsed := net.ParseIP(host); parsed != nil {
 		return []net.IP{parsed}, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), dnsLookupTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), providerDNSTimeout)
 	defer cancel()
 	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
 	if err != nil {
@@ -150,7 +151,7 @@ func validateStellarProviderBaseURL(provider, rawBaseURL string) (string, error)
 		return "", err
 	}
 	for _, ip := range ips {
-		if isBlockedIP(ip) {
+		if ssrf.IsBlockedIP(ip) {
 			return "", fmt.Errorf("cloud provider host resolves to blocked IP")
 		}
 	}

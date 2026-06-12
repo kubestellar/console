@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"github.com/kubestellar/console/pkg/k8s"
@@ -16,6 +16,7 @@ import (
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 )
 
 type createStellarActionRequest struct {
@@ -130,7 +131,7 @@ func (h *Handler) ApproveAction(c *fiber.Ctx) error {
 		return err
 	}
 	if s, ok := h.store.(store.Store); ok {
-		if err := requireEditorOrAdmin(c, s); err != nil {
+		if err := auth.RequireEditorOrAdmin(c, s); err != nil {
 			return err
 		}
 	}
@@ -273,7 +274,7 @@ func (h *Handler) ExecuteAction(c *fiber.Ctx) error {
 		return err
 	}
 	if s, ok := h.store.(store.Store); ok {
-		if err := requireEditorOrAdmin(c, s); err != nil {
+		if err := auth.RequireEditorOrAdmin(c, s); err != nil {
 			return err
 		}
 	}

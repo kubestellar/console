@@ -1,4 +1,4 @@
-package handlers
+package stellar
 
 import (
 	"bytes"
@@ -78,7 +78,7 @@ func TestStellarStream_SetsSSEHeaders(t *testing.T) {
 // HTTP 401 when no authenticated user is present in the request context.
 func TestStellarStream_ReturnsUnauthorizedWithoutUser(t *testing.T) {
 	app := fiber.New()
-	h := NewStellarHandler(nil, nil)
+	h := NewHandler(nil, nil)
 	app.Get("/api/stellar/stream", h.Stream)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/stellar/stream", nil)
@@ -243,7 +243,7 @@ func TestStellarIngestEvent_RequiresAuth(t *testing.T) {
 
 	app := fiber.New()
 	// Deliberately do NOT inject a userID into the context.
-	h := NewStellarHandler(s, nil, WithUserStore(sqlStore))
+	h := NewHandler(s, nil, WithUserStore(sqlStore))
 	app.Post("/api/stellar/events", h.IngestEvent)
 
 	body := `{"cluster":"c1","namespace":"ns","name":"pod-a","type":"Warning","reason":"CrashLoop","message":"back-off"}`
@@ -278,7 +278,7 @@ func TestStellarIngestEvent_MissingFieldsReturnsBadRequest(t *testing.T) {
 		c.Locals("githubLogin", "editor-user")
 		return c.Next()
 	})
-	h := NewStellarHandler(s, nil, WithUserStore(s))
+	h := NewHandler(s, nil, WithUserStore(s))
 	editorApp.Post("/api/stellar/events", h.IngestEvent)
 
 	// Missing required fields: cluster is empty.
@@ -312,7 +312,7 @@ func TestStellarIngestEvent_AcceptsValidEvent(t *testing.T) {
 		c.Locals("githubLogin", "admin-user")
 		return c.Next()
 	})
-	h := NewStellarHandler(s, nil, WithUserStore(s))
+	h := NewHandler(s, nil, WithUserStore(s))
 	adminApp.Post("/api/stellar/events", h.IngestEvent)
 
 	payload := map[string]string{
@@ -381,7 +381,7 @@ func TestStellarStream_InvalidUserIDStillConnects(t *testing.T) {
 		c.Locals("githubLogin", "stellar-github-only-user")
 		return c.Next()
 	})
-	h := NewStellarHandler(newInMemoryStellarStore(t), nil)
+	h := NewHandler(newInMemoryStellarStore(t), nil)
 	app.Get("/api/stellar/stream", h.Stream)
 
 	// Stream must still connect and emit SSE headers even without admin resolution.
