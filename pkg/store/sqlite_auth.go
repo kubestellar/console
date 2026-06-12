@@ -37,7 +37,7 @@ func (s *SQLiteStore) IsTokenRevoked(ctx context.Context, jti string) (bool, err
 // since they can no longer be used regardless of revocation status.
 func (s *SQLiteStore) CleanupExpiredTokens(ctx context.Context) (int64, error) {
 	result, err := s.db.ExecContext(ctx,
-		`DELETE FROM revoked_tokens WHERE expires_at < ?`, time.Now(),
+		`DELETE FROM revoked_tokens WHERE expires_at < ?`, time.Now().UTC(),
 	)
 	if err != nil {
 		return 0, err
@@ -135,7 +135,7 @@ func (s *SQLiteStore) ConsumeOAuthState(ctx context.Context, state string) (bool
 // passed. Returns the number of rows deleted.
 func (s *SQLiteStore) CleanupExpiredOAuthStates(ctx context.Context) (int64, error) {
 	result, err := s.db.ExecContext(ctx,
-		`DELETE FROM oauth_states WHERE expires_at < ?`, time.Now(),
+		`DELETE FROM oauth_states WHERE expires_at < ?`, time.Now().UTC(),
 	)
 	if err != nil {
 		return 0, err
