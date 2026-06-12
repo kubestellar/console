@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -40,6 +41,15 @@ const (
 
 	// cardProxyRateMax is the maximum requests per user per window.
 	cardProxyRateMax = 30
+
+	// cardProxyMaxBuckets caps the worst-case map size to prevent unbounded growth.
+	cardProxyMaxBuckets = 10000
+
+	// cardProxyLimiterIdleTTL is the idle timeout before evicting a rate limiter entry.
+	cardProxyLimiterIdleTTL = 10 * time.Minute
+
+	// cardProxyEvictionInterval is how often to run the eviction goroutine.
+	cardProxyEvictionInterval = 5 * time.Minute
 )
 
 var (
@@ -106,13 +116,26 @@ type CardProxyHandler struct {
 
 // cardProxyRateLimiter tracks per-user request counts in a sliding window.
 type cardProxyRateLimiter struct {
-	mu      sync.Mutex
-	buckets map[string]*rateBucket
+	mu           sync.Mutex
+	buckets      map[string]*rateBucket
+	evictStarted bool
 }
 
 type rateBucket struct {
-	count  int
-	window time.Time
+	count    int
+	window   time.Time
+	lastUsed time.Time
+}
+
+// cardProxyEvictCtx / cardProxyEvictCancel provide context-based cancellation
+// for the background evictor goroutine.
+var (
+	cardProxyEvictCtx    context.Context
+	cardProxyEvictCancel context.CancelFunc
+)
+
+func init() {
+	cardProxyEvictCtx, cardProxyEvictCancel = context.WithCancel(context.Background())
 }
 
 func newCardProxyRateLimiter() *cardProxyRateLimiter {
@@ -124,16 +147,29 @@ func (l *cardProxyRateLimiter) allow(userID string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	// Lazy-start the evictor on first allow() call
+	if !l.evictStarted {
+		l.evictStarted = true
+		safego.GoWith("card-proxy/limiter-evictor", func() { startCardProxyLimiterEvictor(l, cardProxyEvictCtx) })
+	}
+
+	// Cap the map to prevent unbounded growth
+	if len(l.buckets) >= cardProxyMaxBuckets {
+		slog.Warn("[CardProxy] rate limiter map at capacity", "size", len(l.buckets))
+		return false
+	}
+
 	now := time.Now()
 	b, ok := l.buckets[userID]
 	if !ok || now.Sub(b.window) > cardProxyRateWindow {
-		l.buckets[userID] = &rateBucket{count: 1, window: now}
+		l.buckets[userID] = &rateBucket{count: 1, window: now, lastUsed: now}
 		return true
 	}
 	if b.count >= cardProxyRateMax {
 		return false
 	}
 	b.count++
+	b.lastUsed = now
 	return true
 }
 
@@ -244,6 +280,47 @@ func (h *CardProxyHandler) validateProxyTarget(rawURL string) (string, error) {
 	}
 
 	return host, nil
+}
+
+// startCardProxyLimiterEvictor periodically removes idle rate limiters
+// (no requests for >10 minutes) to prevent unbounded map growth.
+// Exits when ctx is cancelled.
+//
+//nolint:nilaway // ctx is always non-nil (created by context.WithCancel)
+func startCardProxyLimiterEvictor(limiter *cardProxyRateLimiter, ctx context.Context) {
+	if ctx == nil || limiter == nil {
+		return
+	}
+	ticker := time.NewTicker(cardProxyEvictionInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now := time.Now()
+			// Collect stale keys under lock, then delete — avoids
+			// holding the lock for the entire iteration when map is large.
+			limiter.mu.Lock()
+			stale := make([]string, 0)
+			for userID, entry := range limiter.buckets {
+				if now.Sub(entry.lastUsed) > cardProxyLimiterIdleTTL {
+					stale = append(stale, userID)
+				}
+			}
+			for _, id := range stale {
+				delete(limiter.buckets, id)
+			}
+			limiter.mu.Unlock()
+		}
+	}
+}
+
+// StopCardProxyLimiterEvictor signals the background evictor goroutine to exit.
+// Safe to call multiple times. Intended for server shutdown and tests.
+func StopCardProxyLimiterEvictor() {
+	cardProxyEvictCancel()
 }
 
 // buildProxyRequest constructs the HTTP request for the proxy target.
