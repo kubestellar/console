@@ -303,8 +303,27 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	result := &RunLogsResponse{Jobs: logs}
 
-	// Cache result
+	// Cache result, evicting expired entries first to bound map growth.
+	// Without eviction, unique runId values from the public endpoint
+	// (unauthenticated, rate-limited but accessible) accumulate indefinitely.
 	h.logMu.Lock()
+	if len(h.logCache) >= maxLogCacheEntries {
+		now := time.Now()
+		for k, exp := range h.logCacheExp {
+			if now.After(exp) {
+				delete(h.logCache, k)
+				delete(h.logCacheExp, k)
+			}
+		}
+		// If still at capacity after evicting expired entries, drop the oldest entry.
+		if len(h.logCache) >= maxLogCacheEntries {
+			for k := range h.logCacheExp {
+				delete(h.logCache, k)
+				delete(h.logCacheExp, k)
+				break
+			}
+		}
+	}
 	h.logCache[cacheKey] = result
 	h.logCacheExp[cacheKey] = time.Now().Add(logCacheTTL)
 	h.logMu.Unlock()

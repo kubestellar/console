@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -31,6 +32,14 @@ const (
 	maxLogBytes       = 200_000          // 200KB tail per job log
 	logCacheTTL       = 10 * time.Minute // immutable once run completes
 	maxLogFetchJobs   = 5                // limit concurrent job log fetches
+
+	// maxLogCacheEntries caps the in-memory log cache to prevent unbounded
+	// memory growth from many unique runId values. The public endpoint
+	// /api/public/nightly-e2e/run-logs is rate-limited but unauthenticated,
+	// so this bound is necessary for defense-in-depth (CWE-400 / #18166).
+	// With logCacheTTL=10min and a typical workflow of ~13 guides, normal
+	// usage stays well below 200 entries.
+	maxLogCacheEntries = 200
 
 	// imageRepo is the GitHub repo whose guide directories contain image references
 	imageRepo = "llm-d/llm-d"
@@ -644,6 +653,16 @@ func (h *NightlyE2EHandler) fetchJobLog(ctx context.Context, repo string, jobID 
 		if location == "" {
 			return "[redirect with no Location header]"
 		}
+		// SECURITY: Validate the redirect target is a trusted GitHub domain
+		// before following it. GitHub Actions log redirects always point to
+		// *.actions.githubusercontent.com or pipelines.actions.githubusercontent.com.
+		// Accepting arbitrary Location values would allow SSRF if the upstream
+		// API were ever compromised (CWE-918 / #18167).
+		if err := validateGitHubLogRedirect(location); err != nil {
+			slog.Warn("fetchJobLog: redirect to untrusted host blocked",
+				"repo", repo, "jobID", jobID, "location", location, "error", err)
+			return "[redirect to untrusted host]"
+		}
 		redirectReq, err := http.NewRequestWithContext(ctx, "GET", location, nil)
 		if err != nil {
 			slog.Error("failed to create redirect request", "repo", repo, "jobID", jobID, "location", location, "error", err)
@@ -678,4 +697,27 @@ func readTruncatedLog(body io.Reader) string {
 		return "...[truncated]\n" + string(data)
 	}
 	return string(data)
+}
+
+// validateGitHubLogRedirect verifies that a redirect Location URL from the
+// GitHub Actions log API points to a trusted GitHub CDN host.
+// GitHub redirects job log requests to signed blob storage URLs on
+// *.actions.githubusercontent.com (e.g. pipelines.actions.githubusercontent.com).
+// Accepting arbitrary redirect targets would allow SSRF if the upstream API
+// response were tampered with (CWE-918 / #18167).
+func validateGitHubLogRedirect(location string) error {
+	parsed, err := url.Parse(location)
+	if err != nil {
+		return fmt.Errorf("invalid redirect URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("redirect scheme %q is not https", parsed.Scheme)
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "actions.githubusercontent.com" ||
+		strings.HasSuffix(host, ".actions.githubusercontent.com") ||
+		host == "pipelines.actions.githubusercontent.com" {
+		return nil
+	}
+	return fmt.Errorf("redirect host %q is not a trusted GitHub Actions host", host)
 }
