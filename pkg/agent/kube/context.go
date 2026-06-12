@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 )
@@ -34,7 +35,7 @@ func SetClusterContextProviders(bridge *mcp.Bridge, k8sClient *k8s.MultiClusterC
 	providerClusterContextState.k8sClient = k8sClient
 }
 
-func buildLiveClusterContext(ctx context.Context, req *ChatRequest) string {
+func buildLiveClusterContext(ctx context.Context, req *agent.ChatRequest) string {
 	if req == nil {
 		return ""
 	}
@@ -70,11 +71,11 @@ func buildLiveClusterContext(ctx context.Context, req *ChatRequest) string {
 	sb.WriteString("LIVE KUBERNETES CONTEXT — use this live cluster state when answering.\n")
 	sb.WriteString("<cluster-data>\n")
 	if namespace != "" {
-		sb.WriteString(fmt.Sprintf("Scoped namespace: %s\n", sanitizeK8sStringForPrompt(namespace)))
+		sb.WriteString(fmt.Sprintf("Scoped namespace: %s\n", agent.SanitizeK8sStringForPrompt(namespace)))
 	}
 
 	for _, cluster := range clusters {
-		sanitizedCluster := sanitizeK8sStringForPrompt(cluster)
+		sanitizedCluster := agent.SanitizeK8sStringForPrompt(cluster)
 		sb.WriteString(fmt.Sprintf("\nCluster: %s\n", sanitizedCluster))
 		appendClusterHealth(&sb, ctxWithTimeout, bridge, k8sClient, cluster)
 		appendPodIssues(&sb, ctxWithTimeout, bridge, k8sClient, cluster, namespace)

@@ -100,9 +100,11 @@ func TestEncryptCredential_UniqueNoncePerCall(t *testing.T) {
 
 	r1, err := encryptCredential("same-plaintext")
 	require.NoError(t, err)
+	require.NotNil(t, r1, "r1 must not be nil")
 
 	r2, err := encryptCredential("same-plaintext")
 	require.NoError(t, err)
+	require.NotNil(t, r2, "r2 must not be nil")
 
 	// Each encryption must use a unique random nonce
 	assert.NotEqual(t, r1.IV, r2.IV, "nonces must differ between encryptions")
@@ -176,9 +178,12 @@ func TestDecryptCredential_TamperedCiphertext(t *testing.T) {
 
 	encrypted, err := encryptCredential("sensitive-data")
 	require.NoError(t, err)
+	require.NotNil(t, encrypted, "encrypted must not be nil")
 
 	// Tamper with ciphertext
-	ct, _ := base64.StdEncoding.DecodeString(encrypted.Ciphertext)
+	ct, err := base64.StdEncoding.DecodeString(encrypted.Ciphertext)
+	require.NoError(t, err, "base64 decode must succeed")
+	require.NotNil(t, ct, "decoded ciphertext must not be nil")
 	ct[0] ^= 0xFF // flip bits
 	encrypted.Ciphertext = base64.StdEncoding.EncodeToString(ct)
 

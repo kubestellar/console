@@ -19,6 +19,9 @@ func (s *SQLiteStore) SaveOAuthCredentials(ctx context.Context, clientID, client
 	if err != nil {
 		return fmt.Errorf("failed to encrypt client_secret: %w", err)
 	}
+	if encrypted == nil {
+		return fmt.Errorf("encrypted credential is nil")
+	}
 
 	// Store encrypted data in dedicated columns, clear legacy plaintext column
 	_, err = s.db.ExecContext(ctx,

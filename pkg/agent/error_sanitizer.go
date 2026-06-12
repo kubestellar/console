@@ -20,6 +20,13 @@ const (
 	agentFallbackMessage    = "operation failed"
 )
 
+// SanitizeAgentError sanitizes Kubernetes API errors for display to end-users.
+// It converts potentially sensitive Kubernetes error messages into generic
+// user-friendly messages. Exported for use by agent subpackages.
+func SanitizeAgentError(operation string, err error) string {
+	return sanitizeAgentError(operation, err)
+}
+
 func sanitizeAgentError(operation string, err error) string {
 	if err == nil {
 		return sanitizedAgentFallback(operation)
