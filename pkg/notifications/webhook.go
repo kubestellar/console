@@ -80,8 +80,13 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 	// SSRF protection: resolve hostname and reject private/internal IPs.
 	// This prevents webhook URLs from reaching cloud metadata, RFC 1918,
 	// CGNAT, and other internal services (#17532).
-	if err := ssrf.ValidateHost(u.Hostname()); err != nil {
-		return nil, fmt.Errorf("webhook URL blocked: %w", err)
+	// Skip for loopback hosts (already allowed for HTTP above) and for
+	// admin-curated allowlist entries (DNS resolution is redundant when the
+	// operator has explicitly permitted the host).
+	if !isLoopbackHost(u.Hostname()) && !isHostAllowlisted(u.Hostname()) {
+		if err := ssrf.ValidateHost(u.Hostname()); err != nil {
+			return nil, fmt.Errorf("webhook URL blocked: %w", err)
+		}
 	}
 	return &WebhookNotifier{
 		URL: webhookURL,
@@ -94,7 +99,11 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 				if err := checkWebhookHostAllowed(req.URL.Hostname()); err != nil {
 					return err
 				}
-				return ssrf.ValidateHost(req.URL.Hostname())
+				redirectHost := req.URL.Hostname()
+				if !isLoopbackHost(redirectHost) && !isHostAllowlisted(redirectHost) {
+					return ssrf.ValidateHost(redirectHost)
+				}
+				return nil
 			},
 		},
 	}, nil
@@ -127,6 +136,24 @@ func isLoopbackHost(host string) bool {
 		return ipv4[0] == 127
 	}
 
+	return false
+}
+
+// isHostAllowlisted returns true when host is explicitly listed in the
+// KC_WEBHOOK_ALLOWED_HOSTS env var. Unlike checkWebhookHostAllowed, an empty
+// env var returns false (not listed), so callers can distinguish "allowlist
+// active and host present" from "no allowlist configured".
+func isHostAllowlisted(host string) bool {
+	raw := os.Getenv(webhookAllowedHostsEnv)
+	if raw == "" {
+		return false
+	}
+	host = strings.TrimSpace(host)
+	for _, allowed := range strings.Split(raw, ",") {
+		if strings.EqualFold(strings.TrimSpace(allowed), host) {
+			return true
+		}
+	}
 	return false
 }
 
