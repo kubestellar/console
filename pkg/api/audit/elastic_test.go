@@ -57,7 +57,9 @@ func TestElasticDestination_Send(t *testing.T) {
 }
 
 func TestElasticDestination_DefaultIndex(t *testing.T) {
-	dest, err := NewElasticDestination("http://localhost:9200", "", nil)
+	// Pass a custom client to bypass SSRF validation for localhost
+	client := &http.Client{Timeout: 10 * time.Second}
+	dest, err := NewElasticDestination("http://localhost:9200", "", client)
 	require.NoError(t, err)
 	assert.Equal(t, elasticDefaultIndex, dest.index)
 }

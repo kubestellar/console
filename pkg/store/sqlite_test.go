@@ -23,6 +23,8 @@ var ctx = context.Background() //nolint:gochecknoglobals // test-only convenienc
 // newTestStore creates a fresh SQLiteStore backed by a temp file for each test.
 func newTestStore(t *testing.T) *SQLiteStore {
 	t.Helper()
+	// Set encryption key for OAuth credential tests
+	t.Setenv("CREDENTIAL_ENCRYPTION_KEY", "test-key-32-bytes-for-aes256!!")
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	store, err := NewSQLiteStore(dbPath)
 	require.NoError(t, err)

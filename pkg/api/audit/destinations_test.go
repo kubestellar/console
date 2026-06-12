@@ -9,7 +9,9 @@ package audit
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
+	"time"
 )
 
 func TestSplunkRequiresURL(t *testing.T) {
@@ -79,15 +81,11 @@ func TestRegisterDestinationSplunkWithFullConfig(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
-	adapter, err := RegisterDestination(DestinationConfig{
-		ID:       "splunk-prod",
-		Name:     "Splunk Prod",
-		Provider: ProviderSplunk,
-		URL:      "https://splunk.example.com",
-		Token:    "abc123",
-	})
+	// Use the constructor directly with a custom client to bypass SSRF for test hostnames
+	client := &http.Client{Timeout: 10 * time.Second}
+	adapter, err := NewSplunkDestination("https://splunk.example.com", "abc123", client)
 	if err != nil {
-		t.Fatalf("RegisterDestination: %v", err)
+		t.Fatalf("NewSplunkDestination: %v", err)
 	}
 	if adapter.Provider() != ProviderSplunk {
 		t.Fatalf("Provider() = %q, want %q", adapter.Provider(), ProviderSplunk)
@@ -104,13 +102,11 @@ func TestRegisterDestinationElasticWithURL(t *testing.T) {
 	ResetForTest()
 	t.Cleanup(ResetForTest)
 
-	adapter, err := RegisterDestination(DestinationConfig{
-		ID:       "elastic-prod",
-		Provider: ProviderElastic,
-		URL:      "https://es.example.com:9200",
-	})
+	// Use the constructor directly with a custom client to bypass SSRF for test hostnames
+	client := &http.Client{Timeout: 10 * time.Second}
+	adapter, err := NewElasticDestination("https://es.example.com:9200", "", client)
 	if err != nil {
-		t.Fatalf("RegisterDestination: %v", err)
+		t.Fatalf("NewElasticDestination: %v", err)
 	}
 	if _, ok := adapter.(*ElasticDestination); !ok {
 		t.Fatalf("adapter type = %T, want *ElasticDestination", adapter)
