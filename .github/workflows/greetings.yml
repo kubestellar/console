@@ -12,7 +12,6 @@ permissions:
 
 jobs:
   greet:
-    if: >-
-      github.event_name != 'pull_request_target' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+    if: ${{ github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository }}
     uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@a160acca0bdce1ac6c649e006d680d5f6d53024e  # main
+    secrets: inherit
