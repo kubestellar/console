@@ -57,9 +57,22 @@ const (
 	maxGitHubResponseBytes = 10 * 1024 * 1024 // 10 MB
 )
 
+// GetProxyAPIBase returns the GitHub API base URL for the proxy.
+func GetProxyAPIBase() string {
+	if v := os.Getenv("GITHUB_API_BASE_URL"); v != "" {
+		return v
+	}
+	return githubProxyAPIBaseDefault
+}
+
+// RequireAdminForProxy checks if the user has admin privileges.
+func RequireAdminForProxy(c *fiber.Ctx, s store.Store) error {
+	return handlers.RequireAdmin(c, s)
+}
+
 // githubProxyAPIBase is the base URL for proxied GitHub API requests.
 // Configurable via GITHUB_API_BASE_URL env var to support GitHub Enterprise Server.
-var githubProxyAPIBase = handlers.GetEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
+var githubProxyAPIBase = GetProxyAPIBase()
 
 var githubProxyClient = client.GitHub
 
@@ -507,7 +520,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 // GitHub PAT from server-side settings.
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
-	if err := handlers.RequireAdmin(c, h.store); err != nil {
+	if err := RequireAdminForProxy(c, h.store); err != nil {
 		return err
 	}
 

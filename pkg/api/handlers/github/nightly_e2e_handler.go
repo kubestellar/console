@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/safego"
 	"golang.org/x/sync/singleflight"
@@ -228,7 +227,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	// Fetch jobs for this run
 	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
-		handlers.ResolveGitHubAPIBase(), repo, runID)
+		ResolveGitHubAPIBaseForNightly(), repo, runID)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", jobsURL, nil)
 	if err != nil {
