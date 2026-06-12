@@ -10,7 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
@@ -300,7 +300,7 @@ func streamClusters(
 			cacheKey := userID.String() + ":" + cfg.demoKey + ":" + cl.Name + ":" + cfg.namespace
 
 			// Check response cache — serve instantly if fresh
-			if cached := handlers.SSECacheGet(cacheKey); cached != nil {
+			if cached := transport.SSECacheGet(cacheKey); cached != nil {
 				mu.Lock()
 				completedClusters++
 				ok := emitEvent(sseEventClusterData, fiber.Map{
@@ -335,7 +335,7 @@ func streamClusters(
 				start := time.Now()
 				// #7045 — Use singleflight to coalesce concurrent cold-cache
 				// fetches for the same cache key into one Kubernetes API call.
-				v, fetchErr, _ := handlers.SSEFetchGroup.Do(cKey, func() (interface{}, error) {
+				v, fetchErr, _ := transport.SSEFetchGroup.Do(cKey, func() (interface{}, error) {
 					return fetchFn(ctx, clusterName)
 				})
 				var data interface{}
@@ -369,7 +369,7 @@ func streamClusters(
 				}
 
 				// Cache successful result
-				handlers.SSECacheSet(cKey, data)
+				transport.SSECacheSet(cKey, data)
 
 				if elapsed > 5*time.Second {
 					h.k8sClient.MarkSlow(clusterName)

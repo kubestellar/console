@@ -13,7 +13,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/api/audit"
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
@@ -39,7 +39,7 @@ type Server struct {
 	app                 *fiber.App
 	store               store.Store
 	config              Config
-	hub                 *handlers.Hub
+	hub                 *transport.Hub
 	bridge              *mcp.Bridge
 	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
@@ -145,7 +145,7 @@ func NewServer(cfg Config) (*Server, error) {
 	})
 
 	// WebSocket hub
-	hub := handlers.NewHub()
+	hub := transport.NewHub()
 	hub.SetJWTSecret(cfg.JWTSecret)
 	hub.SetDevMode(cfg.DevMode)
 	safego.GoWith("api/hub-run", func() { hub.Run() })
@@ -156,7 +156,7 @@ func NewServer(cfg Config) (*Server, error) {
 		slog.Warn("Kubernetes client initialization failed — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 	} else {
 		k8sClient.SetOnReload(func() {
-			hub.BroadcastAll(handlers.Message{
+			hub.BroadcastAll(transport.Message{
 				Type: "kubeconfig_changed",
 				Data: map[string]string{"message": "Kubeconfig updated"},
 			})

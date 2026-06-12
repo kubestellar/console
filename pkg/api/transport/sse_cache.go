@@ -1,4 +1,4 @@
-package handlers
+package transport
 
 import (
 	"github.com/kubestellar/console/pkg/safego"

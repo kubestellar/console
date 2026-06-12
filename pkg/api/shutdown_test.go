@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -28,7 +28,7 @@ func TestShutdown_Idempotent(t *testing.T) {
 	s := &Server{
 		app:       fiber.New(),
 		store:     sqliteStore,
-		hub:       handlers.NewHub(),
+		hub:       transport.NewHub(),
 		lifecycle: newServerLifecycle(nil),
 	}
 

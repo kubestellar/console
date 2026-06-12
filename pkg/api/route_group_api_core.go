@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
@@ -24,14 +25,14 @@ type apiCoreRouteGroup struct {
 	app                 *fiber.App
 	store               store.Store
 	config              Config
-	hub                 *handlers.Hub
+	hub                 *transport.Hub
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
 	k8sClient           *k8s.MultiClusterClient
 	done                <-chan struct{}
 }
 
-func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *handlers.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
+func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *transport.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
 	return &apiCoreRouteGroup{
 		app:                 app,
 		store:               store,

@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	ghhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
@@ -14,11 +15,11 @@ import (
 type publicRouteGroup struct {
 	app         *fiber.App
 	store       store.Store
-	hub         *handlers.Hub
+	hub         *transport.Hub
 	githubToken string
 }
 
-func newPublicRouteGroup(app *fiber.App, store store.Store, hub *handlers.Hub, githubToken string) *publicRouteGroup {
+func newPublicRouteGroup(app *fiber.App, store store.Store, hub *transport.Hub, githubToken string) *publicRouteGroup {
 	return &publicRouteGroup{
 		app:         app,
 		store:       store,
