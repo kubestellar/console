@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getStoredAuthToken, getStoredAuthTokenSync } from '../authToken'
+import { getStoredAuthTokenSync } from '../authToken'
 import { useKeepAliveActive } from '../../hooks/useKeepAliveActive'
 
 /**

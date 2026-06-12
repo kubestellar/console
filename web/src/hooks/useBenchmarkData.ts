@@ -20,7 +20,7 @@ import {
 import { getStoredAuthToken } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
-async function authHeaders(): Record<string, string> {
+async function authHeaders(): Promise<Record<string, string>> {
   const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

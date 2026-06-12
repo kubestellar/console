@@ -172,29 +172,31 @@ export function useClusters() {
   }, [isDemoMode])
 
   // Trigger initial fetch only once (shared across all hook instances)
-  useEffect(async () => {
-    if (!initialFetchStarted) {
-      setInitialFetchStarted(true)
-      fullFetchClusters()
+  useEffect(() => {
+    void (async () => {
+      if (!initialFetchStarted) {
+        setInitialFetchStarted(true)
+        fullFetchClusters()
 
-      // Connect to WebSocket for real-time kubeconfig change notifications
-      // Only attempt WebSocket on localhost (dev mode) - deployed versions don't have a backend
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      if (!isLocalhost) {
-        return
-      }
+        // Connect to WebSocket for real-time kubeconfig change notifications
+        // Only attempt WebSocket on localhost (dev mode) - deployed versions don't have a backend
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        if (!isLocalhost) {
+          return
+        }
 
-      // Don't attempt WebSocket if not authenticated
-      const token = await getStoredAuthToken()
-      if (!token) {
-        return
-      }
+        // Don't attempt WebSocket if not authenticated
+        const token = await getStoredAuthToken()
+        if (!token) {
+          return
+        }
 
-      // Use shared WebSocket connection to prevent multiple connections
-      if (!sharedWebSocket.connecting && !sharedWebSocket.ws) {
-        connectSharedWebSocket()
+        // Use shared WebSocket connection to prevent multiple connections
+        if (!sharedWebSocket.connecting && !sharedWebSocket.ws) {
+          connectSharedWebSocket()
+        }
       }
-    }
+    })()
   }, [])
 
   // Poll cluster data periodically to keep dashboard fresh

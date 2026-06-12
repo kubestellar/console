@@ -81,7 +81,7 @@ function saveGroups(groups: ClusterGroup[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(groups))
 }
 
-async function authHeaders(): Record<string, string> {
+async function authHeaders(): Promise<Record<string, string>> {
   const token = await getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
   if (token) headers['Authorization'] = `Bearer ${token}`

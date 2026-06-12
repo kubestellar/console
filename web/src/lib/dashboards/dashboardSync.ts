@@ -1,5 +1,5 @@
 import { api } from '../api'
-import { getStoredAuthToken } from '../authToken'
+import { getStoredAuthTokenSync } from '../authToken'
 import { DashboardCard } from './types'
 
 // ============================================================================
@@ -74,7 +74,7 @@ class DashboardSyncService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!await getStoredAuthToken()
+    return !!getStoredAuthTokenSync()
   }
 
   /**
