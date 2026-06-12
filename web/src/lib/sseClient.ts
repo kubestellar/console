@@ -13,7 +13,7 @@
  * - Auto-reconnect with exponential backoff on connection drop (#2654)
  */
 
-import { getStoredAuthToken } from './authToken'
+import { getStoredAuthTokenSync } from './authToken'
 import { emitSseAuthFailure } from './analytics'
 import { isDemoMode } from './demoMode'
 
@@ -247,7 +247,7 @@ export async function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
       const headers: Record<string, string> = {
         Accept: 'text/event-stream',
       }
-      const currentToken = getStoredAuthToken()
+      const currentToken = getStoredAuthTokenSync()
       if (currentToken) {
         headers.Authorization = `Bearer ${currentToken}`
       }

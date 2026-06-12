@@ -16,7 +16,7 @@ import {
   type NightlyGuideStatus,
   type NightlyRun,
 } from '../lib/llmd/nightlyE2EDemoData'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_MINUTE } from '../lib/constants/time'
@@ -53,7 +53,7 @@ function saveCachedData(data: NightlyE2EData): void {
 }
 
 function getAuthHeaders(): Record<string, string> {
-  const jwt = getStoredAuthToken()
+  const jwt = getStoredAuthTokenSync()
   if (!jwt) return {}
   return { Authorization: `Bearer ${jwt}` }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { SelfUpgradeStatus } from '../types/updates'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthTokenSync } from '../lib/authToken'
 import { setUpgradeState } from '../lib/upgradeState'
 
 /** Timeout for self-upgrade API calls (ms) */
@@ -21,7 +21,7 @@ const RELOAD_DELAY_MS = 1_500
 
 /** Read the JWT token from localStorage for authenticated API calls */
 const getToken = () => {
-  const secure = getStoredAuthToken()
+  const secure = getStoredAuthTokenSync()
   if (secure) return secure
   try { return localStorage.getItem(STORAGE_KEY_TOKEN) } catch { return null }
 }

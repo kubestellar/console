@@ -273,7 +273,7 @@ async function startPresenceConnection() {
       getPresenceStaleDetection().start()
       notifySubscribers({ stale: false })
       // Read token fresh to avoid stale closure on reconnects
-      const currentToken = getStoredAuthToken()
+      const currentToken = getStoredAuthTokenSync()
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
       // Clear any existing ping interval before starting a new one (prevents zombie intervals on reconnect)
       if (presencePingInterval) clearInterval(presencePingInterval)

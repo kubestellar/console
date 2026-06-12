@@ -10,7 +10,7 @@ import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { fetchSSE } from '../sseClient'
 import { clusterCacheRef } from '../../hooks/mcp/clusterCacheRef'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../constants'
-import { getStoredAuthToken } from '../authToken'
+import { getStoredAuthTokenSync } from '../authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../constants/network'
 import { settledWithConcurrency } from '../utils/concurrency'
 import {
@@ -56,7 +56,7 @@ export function getClusterModeBaseUrl(): string {
 // ============================================================================
 
 export const getToken = () => {
-  const secure = getStoredAuthToken()
+  const secure = getStoredAuthTokenSync()
   if (secure) return secure
   try { return localStorage.getItem(STORAGE_KEY_TOKEN) } catch { return null }
 }
