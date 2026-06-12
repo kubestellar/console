@@ -3,6 +3,7 @@ import { X, Upload, FileText } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { TextArea } from '../../ui/TextArea'
 import { Input } from '../../ui/Input'
+import { useToast } from '../../ui/Toast'
 
 interface CustomQASMModalProps {
   isOpen: boolean
@@ -41,6 +42,7 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
   const [content, setContent] = useState(initialContent)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   // Stable refs for callbacks to prevent effect re-runs on every parent render
   const onCancelRef = useRef(onCancel)
@@ -85,10 +87,11 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
       setError(validation.error || 'Invalid QASM')
       return
     }
+    showToast('QASM circuit submitted successfully', 'success')
     onSubmitRef.current(content)
     setContent('')
     setError(null)
-  }, [content])
+  }, [content, showToast])
 
   const handleCancel = useCallback(() => {
     setContent(initialContent)
