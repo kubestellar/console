@@ -156,19 +156,23 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
+> **Last updated:** 2026-06-12
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
 | Merge gate disabled on `main` — no required status checks | 🔴 Critical | #17852 | Open |
-| Main branch build cascade — 4 PRs broke build on 2026-06-12 | 🔴 Critical | #17756 | Ongoing |
+| Main branch build cascade — 8+ breaks on 2026-06-12, recovery SLA undefined | 🔴 Critical | #17756, #17969 | Escalating |
 | Auth smoke test regression | 🔴 Critical | #17824 | Open |
+| DCO sign-off failures on automation PRs — legal compliance risk | 🔴 Critical | #17966 | Open |
 | Coverage suite — 415 failures risk v0.3 "91% coverage" claim | 🟠 High | #17856 | Open |
-| Scanner PR backlog (6 PRs) stalling v0.4 arch refactor | 🟠 High | #17853 | Open |
+| v0.4 feature velocity at zero — all recent merges are maintenance | 🟠 High | #17968 | Ongoing |
+| Scanner PR backlog stalling v0.4 arch refactor | 🟠 High | #17853 | Open |
 | Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Open |
-| Plugin architecture RFC absent | 🟡 Medium | #17760 | Open |
-| Organic contributor drought — 29/30 merged PRs from automation | 🟡 Medium | — | Ongoing |
+| Plugin architecture RFC exists (Draft) but issue tracker not closed | 🟡 Medium | #17760 | RFC exists |
+| Organic contributor drought — <4% human PR ratio | 🟡 Medium | #17967 | Ongoing |
+| Adoption metrics (`docs/ADOPTION-METRICS.md`) all TBD | 🟡 Medium | #17965 | Unresolved |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
 
 ### v0.4 Delivery Prerequisites
@@ -177,16 +181,19 @@ Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the foll
 
 1. **Merge gate enforcement** (#17852) — Must be enabled first; every other quality improvement depends on a stable merge pipeline.
 2. **Build stabilization** (#17756) — Main must stay green for at least 2 weeks before any v0.4 feature work is reliable.
-3. **Coverage regression triage** (#17856) — Determine whether the 415-failure coverage suite is a build environment artifact or real test regression.
-4. **Scanner PR clearance** (#17853) — The 6+ pending refactor PRs must land before the v0.4 architecture goals (pkg/api/handlers decomposition, pkg/agent sub-packages) can be validated as complete.
+3. **Recovery SLA definition** (#17969) — Define build sheriff role, 4-hour SLA, and circuit breaker for automation agents when main is broken.
+4. **Coverage regression triage** (#17856) — Determine whether the 415-failure coverage suite is a build environment artifact or real test regression.
+5. **v0.4 feature work kickoff** (#17968) — Designate a feature captain and open at least one implementation PR for llm-d, Drasi, or kagent integration.
 
 ### Adoption Readiness
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | ❌ Failing (4 breaks on 2026-06-12) |
+| Main branch build stability | Green ≥14 consecutive days | ❌ Failing (8+ breaks on 2026-06-12) |
 | Coverage suite pass rate | >99% | ❌ 415 failures |
 | Human contributor ratio | ≥10% of merged PRs | ❌ <4% (1/30 recent merges) |
 | ADOPTERS.md confirmed entries | ≥3 production users | ⚠️ TBD |
+| Adoption metrics populated | All fields in `docs/ADOPTION-METRICS.md` | ❌ All TBD (#17965) |
+| DCO compliance on automation PRs | 100% of merged PRs signed | ⚠️ Gaps identified (#17966) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
 
