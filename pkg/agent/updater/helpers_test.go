@@ -1,4 +1,4 @@
-package agent
+package updater
 
 import (
 	"encoding/json"
@@ -77,24 +77,24 @@ func TestGithubReleasesURL(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// detectAgentInstallMethod
+// DetectAgentInstallMethod
 // ---------------------------------------------------------------------------
 
 func TestDetectAgentInstallMethod_Dev(t *testing.T) {
 	// The test runs inside the repo, so go.mod should exist.
 	os.Unsetenv("KUBERNETES_SERVICE_HOST")
-	got := detectAgentInstallMethod()
+	got := DetectAgentInstallMethod()
 	// In the test directory (repo root) go.mod exists → "dev"
 	if got != "dev" {
-		t.Logf("detectAgentInstallMethod() = %q (expected 'dev' when go.mod exists)", got)
+		t.Logf("DetectAgentInstallMethod() = %q (expected 'dev' when go.mod exists)", got)
 	}
 }
 
 func TestDetectAgentInstallMethod_Helm(t *testing.T) {
 	t.Setenv("KUBERNETES_SERVICE_HOST", "10.0.0.1")
-	got := detectAgentInstallMethod()
+	got := DetectAgentInstallMethod()
 	if got != "helm" {
-		t.Errorf("detectAgentInstallMethod() = %q, want %q", got, "helm")
+		t.Errorf("DetectAgentInstallMethod() = %q, want %q", got, "helm")
 	}
 }
 

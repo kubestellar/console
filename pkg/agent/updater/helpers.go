@@ -1,4 +1,4 @@
-package agent
+package updater
 
 import (
 	"context"
@@ -87,10 +87,16 @@ type UpdateChecker struct {
 	// goroutine long enough to verify concurrent-exclusion semantics. Always
 	// nil in production code.
 	onUpdateStart func()
+
+	// healthCheckFn checks if the backend is healthy after an update.
+	// Injected by the caller to avoid coupling to HTTP details.
+	healthCheckFn func() bool
 }
 
 // UpdateCheckerConfig holds initialization parameters.
 type UpdateCheckerConfig struct {
+	Version        string
+	HealthCheckFn  func() bool
 	Broadcast      func(string, interface{})
 	RestartBackend func() error
 	KillBackend    func() bool
@@ -132,7 +138,7 @@ type AutoUpdateConfigRequest struct {
 }
 
 // NewUpdateChecker creates a checker but does not start it.
-func detectAgentInstallMethod() string {
+func DetectAgentInstallMethod() string {
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
 		return "helm"
 	}

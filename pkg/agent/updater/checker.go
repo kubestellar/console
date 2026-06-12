@@ -1,4 +1,4 @@
-package agent
+package updater
 
 import (
 	"context"
@@ -38,7 +38,7 @@ const (
 // githubRepo returns the GitHub owner/repo slug, preferring the GITHUB_REPO
 // environment variable so forks and GHE instances work out-of-the-box.
 func NewUpdateChecker(cfg UpdateCheckerConfig) *UpdateChecker {
-	installMethod := detectAgentInstallMethod()
+	installMethod := DetectAgentInstallMethod()
 	repoPath := detectRepoPath()
 	currentSHA := detectCurrentSHA(repoPath)
 
@@ -46,11 +46,12 @@ func NewUpdateChecker(cfg UpdateCheckerConfig) *UpdateChecker {
 		channel:        "stable",
 		installMethod:  installMethod,
 		repoPath:       repoPath,
-		currentVersion: Version,
+		currentVersion: cfg.Version,
 		currentSHA:     currentSHA,
 		broadcast:      cfg.Broadcast,
 		restartBackend: cfg.RestartBackend,
 		killBackend:    cfg.KillBackend,
+		healthCheckFn:  cfg.HealthCheckFn,
 	}
 }
 

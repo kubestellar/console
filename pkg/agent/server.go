@@ -19,6 +19,7 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/agent/kube"
+	"github.com/kubestellar/console/pkg/agent/updater"
 )
 
 const (
@@ -46,6 +47,10 @@ const (
 	backendHealthHost        = "127.0.0.1"
 	backendHealthPath        = "/health"
 	backendPortEnvVar        = "BACKEND_PORT"
+
+	// Auto-update health check polling parameters.
+	healthCheckRetries = 15
+	healthCheckDelay   = 2 * time.Second
 
 	maxQueryLimit       = 1000    // Upper bound for client-supplied limit query parameter
 	maxRequestBodyBytes = 1 << 20 // 1MB upper bound for request body reads
@@ -205,7 +210,7 @@ type Server struct {
 	dryRunSessionsMu sync.RWMutex
 
 	// Auto-update system
-	updateChecker *UpdateChecker
+	updateChecker *updater.UpdateChecker
 
 	resourceRetryMu    sync.Mutex
 	resourceRetryState map[string]clusterResourceRetryState
@@ -373,7 +378,9 @@ func NewServer(cfg Config) (*Server, error) {
 	server.localClusters = kube.NewLocalClusterManager(server.BroadcastToClients)
 
 	// Initialize auto-update checker
-	server.updateChecker = NewUpdateChecker(UpdateCheckerConfig{
+	server.updateChecker = updater.NewUpdateChecker(updater.UpdateCheckerConfig{
+		Version:        Version,
+		HealthCheckFn:  waitForBackendHealth,
 		Broadcast:      server.BroadcastToClients,
 		RestartBackend: server.startBackendProcess,
 		KillBackend:    server.killBackendProcess,

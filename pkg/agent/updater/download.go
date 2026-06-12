@@ -1,4 +1,4 @@
-package agent
+package updater
 
 import (
 	"archive/tar"
@@ -354,7 +354,7 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	stagedBinary := filepath.Join(stagingDir, "console")
 	// fileModeBinary is the permission bits for the installed console binary.
 	const fileModeBinary = 0755
-	if err := chmodIfSupported(stagedBinary, fileModeBinary); err != nil {
+	if err := ChmodIfSupported(stagedBinary, fileModeBinary); err != nil {
 		if rbErr := renameOrCopy(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after chmod error", "error", rbErr)
 		}
@@ -405,7 +405,7 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 		return
 	}
 
-	if !waitForBackendHealth() {
+	if uc.healthCheckFn != nil && !uc.healthCheckFn() {
 		if rbErr := os.Rename(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after health check failure", "error", rbErr)
 		}
@@ -438,22 +438,6 @@ func (uc *UpdateChecker) executeBinaryUpdateFlow(release *githubReleaseInfo) {
 	})
 }
 
-func waitForBackendHealth() bool {
-	// URL is resolved once per poll so that a BACKEND_PORT env var change
-	// mid-run (e.g. an operator re-running startup-oauth.sh) is picked up.
-	healthURL := backendHealthURL()
-	for i := 0; i < healthCheckRetries; i++ {
-		resp, err := healthCheckHTTPClient.Get(healthURL)
-		if err == nil {
-			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				return true
-			}
-		}
-		time.Sleep(healthCheckDelay)
-	}
-	return false
-}
 
 // maxDownloadBytes is the upper bound for downloadFile to prevent disk exhaustion (#14379).
 const maxDownloadBytes = 512 * 1024 * 1024 // 512 MB

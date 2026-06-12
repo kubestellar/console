@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/agent/updater"
 )
 
 // handleHealth handles HTTP health checks
@@ -61,7 +62,7 @@ func (s *Server) buildStatusPayload() protocol.HealthPayload {
 		Clusters:           clusterCount,
 		HasClaude:          hasClaude,
 		Claude:             s.getClaudeInfo(),
-		InstallMethod:      detectAgentInstallMethod(),
+		InstallMethod:      updater.DetectAgentInstallMethod(),
 		AvailableProviders: providerSummaries,
 	}
 }

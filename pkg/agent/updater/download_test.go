@@ -1,4 +1,4 @@
-package agent
+package updater
 
 import (
 	"archive/tar"

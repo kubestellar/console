@@ -1,4 +1,4 @@
-package agent
+package updater
 
 import (
 	"log/slog"
@@ -38,7 +38,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	}
 	// #6297: Setpgid is Unix-only; routed through a build-tagged helper
 	// (restart_unix.go / restart_windows.go) so kc-agent compiles on Windows.
-	setDetachedProcessGroup(cmd)
+	SetDetachedProcessGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
 		slog.Error("[AutoUpdate] failed to spawn startup-oauth.sh", "error", err)
@@ -85,9 +85,9 @@ func (uc *UpdateChecker) selfUpdateFallback(repoPath string) {
 
 	// Re-exec with the same args — replaces this process atomically on Unix.
 	// #6297: Windows can't replace the current process image in place;
-	// execReplace returns an error there and kc-agent logs it and keeps
+	// ExecReplace returns an error there and kc-agent logs it and keeps
 	// running the old binary until the user restarts manually.
-	if err := execReplace(currentBinary, os.Args, os.Environ()); err != nil {
+	if err := ExecReplace(currentBinary, os.Args, os.Environ()); err != nil {
 		slog.Error("[AutoUpdate] exec into new kc-agent failed", "error", err)
 	}
 	// If exec succeeds on Unix, this line is never reached

@@ -3,7 +3,6 @@ package agent
 import (
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
 )
 
@@ -11,9 +10,6 @@ import (
 // can be located on the system PATH.
 var errNoShellFound = errors.New("no usable shell found on PATH")
 
-// osChmod is an alias for os.Chmod, extracted so the Unix build-tagged
-// chmodIfSupported can call it without repeating the import.
-var osChmod = os.Chmod
 
 // OSContext returns a short string describing the current operating system
 // and architecture that can be injected into AI system prompts so the agent
