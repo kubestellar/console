@@ -159,7 +159,7 @@ func TestAuthHelpers(t *testing.T) {
 
 				app.Get("/test", func(c *fiber.Ctx) error {
 					c.Locals("userID", userID)
-					return requireViewerOrAbove(c, mockStore)
+					return RequireViewerOrAbove(c, mockStore)
 				})
 
 				req := httptest.NewRequest("GET", "/test", nil)

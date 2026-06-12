@@ -60,7 +60,8 @@ type AuthHandler struct {
 	githubToken    string
 	devMode        bool
 	skipOnboarding bool
-	wsHub          SessionDisconnecter // optional — set via SetHub to disconnect WS sessions on logout
+	wsHub          SessionDisconnecter      // optional — set via SetHub to disconnect WS sessions on logout
+	onLogoutSSE    func(userID uuid.UUID)   // optional — tears down SSE streams on logout; set via SetSSECanceller
 	cleanupCtx     context.Context     // cancelled by Stop to terminate the OAuth state cleanup goroutine
 	cleanupCancel  context.CancelFunc  // call to stop the OAuth state cleanup goroutine
 	// githubHTTPClient is a shared HTTP client for GitHub API calls (#6582).
@@ -520,7 +521,9 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	// closes, so there's no cross-session state that Logout needs to tear
 	// down. #5406 is closed as part of the same migration.
 	if claims.UserID != uuid.Nil {
-		CancelUserSSEStreams(claims.UserID)
+		if h.onLogoutSSE != nil {
+			h.onLogoutSSE(claims.UserID)
+		}
 	}
 
 	audit.Log(c, audit.ActionUserLogout, "user", claims.UserID.String(), claims.GitHubLogin)

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 )
@@ -11,7 +12,7 @@ import (
 func TestResolveScopedClusters_DeduplicatesAndSorts(t *testing.T) {
 	t.Helper()
 
-	req := &ChatRequest{
+	req := &ai.ChatRequest{
 		Context: map[string]string{
 			"clusterContext": "west, east",
 			"cluster":        "prod, east",
@@ -34,7 +35,7 @@ func TestResolveScopedClusters_DeduplicatesAndSorts(t *testing.T) {
 func TestResolveScopedNamespace_TrimsWhitespace(t *testing.T) {
 	t.Helper()
 
-	req := &ChatRequest{Context: map[string]string{"namespace": "  observability  "}}
+	req := &ai.ChatRequest{Context: map[string]string{"namespace": "  observability  "}}
 	if got := resolveScopedNamespace(req); got != "observability" {
 		t.Fatalf("unexpected namespace: %q", got)
 	}

@@ -168,7 +168,7 @@ func requireEditorOrAdmin(c *fiber.Ctx, s store.Store) error {
 // store". Use this for read endpoints that should still require a valid user
 // identity (not just a valid JWT). Drift detection is classified as read-only
 // but sensitive enough to warrant this check (#6022).
-func requireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
+func RequireViewerOrAbove(c *fiber.Ctx, s store.Store) error {
 	if s == nil {
 		return nil
 	}

@@ -85,6 +85,9 @@ const (
 	// clientAuthCookieName is the opaque HttpOnly cookie that carries the
 	// GitHub OAuth access token used for feedback attribution flows.
 	clientAuthCookieName = "kc_ux_ctx"
+	// ClientAuthCookieName is the exported form of clientAuthCookieName for
+	// backward-compatible access from the parent handlers package.
+	ClientAuthCookieName = clientAuthCookieName
 	// maxOAuthErrorDescriptionLen bounds the length of an OAuth
 	// error_description value reflected into a redirect URL (#6583).
 	maxOAuthErrorDescriptionLen = 200

@@ -76,6 +76,14 @@ func (h *AuthHandler) SetHub(hub SessionDisconnecter) {
 	h.wsHub = hub
 }
 
+// SetSSECanceller wires the SSE stream cancellation function into the auth
+// handler so that logout tears down active SSE connections for the user.
+// This avoids an import cycle between handlers/auth and the parent handlers
+// package where CancelUserSSEStreams is defined.
+func (h *AuthHandler) SetSSECanceller(fn func(userID uuid.UUID)) {
+	h.onLogoutSSE = fn
+}
+
 // hasValidAuthCookie reports whether the incoming request carries a kc_auth
 // cookie that parses as a non-expired, non-revoked JWT under the handler's
 // signing secret. It is used by GitHubCallback (#6064) to recover from CSRF
