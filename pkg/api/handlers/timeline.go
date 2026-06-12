@@ -82,8 +82,9 @@ type TimelineHandler struct {
 }
 
 // NewTimelineHandler creates a TimelineHandler.
-// Accepts the narrow timelineClient interface so tests can substitute a mock.
-func NewTimelineHandler(s store.Store, k8sClient timelineClient) *TimelineHandler {
+// Accepts the full *k8s.MultiClusterClient at the call-site but stores it as
+// the narrow timelineClient interface so tests can substitute a simple mock.
+func NewTimelineHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *TimelineHandler {
 	return &TimelineHandler{store: s, k8sClient: k8sClient}
 }
 

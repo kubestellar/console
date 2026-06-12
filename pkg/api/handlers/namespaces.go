@@ -10,6 +10,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -38,7 +39,7 @@ type NamespaceHandler struct {
 // NewNamespaceHandler creates a new namespace handler.
 // Accepts the full *k8s.MultiClusterClient at the call-site but stores it as
 // the narrow namespaceClient interface so tests can substitute a simple mock.
-func NewNamespaceHandler(s store.Store, k8sClient namespaceClient) *NamespaceHandler {
+func NewNamespaceHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *NamespaceHandler {
 	return &NamespaceHandler{store: s, k8sClient: k8sClient}
 }
 
