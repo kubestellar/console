@@ -40,6 +40,16 @@ const (
 
 	// cardProxyRateMax is the maximum requests per user per window.
 	cardProxyRateMax = 30
+
+	// cardProxyBucketIdleTTL is the idle timeout before a rate limiter bucket is evicted.
+	cardProxyBucketIdleTTL = 10 * time.Minute
+
+	// cardProxyEvictionInterval is how often the evictor runs to remove stale buckets.
+	cardProxyEvictionInterval = 5 * time.Minute
+
+	// cardProxyMaxBuckets caps the number of rate limiter buckets to prevent unbounded growth.
+	// If exceeded, all expired buckets are evicted immediately.
+	cardProxyMaxBuckets = 10000
 )
 
 var (
@@ -106,17 +116,44 @@ type CardProxyHandler struct {
 
 // cardProxyRateLimiter tracks per-user request counts in a sliding window.
 type cardProxyRateLimiter struct {
-	mu      sync.Mutex
-	buckets map[string]*rateBucket
+	mu           sync.Mutex
+	buckets      map[string]*rateBucket
+	evictStarted bool
 }
 
 type rateBucket struct {
-	count  int
-	window time.Time
+	count    int
+	window   time.Time
+	lastUsed time.Time
 }
 
 func newCardProxyRateLimiter() *cardProxyRateLimiter {
 	return &cardProxyRateLimiter{buckets: make(map[string]*rateBucket)}
+}
+
+// startCardProxyBucketEvictor periodically removes idle rate limiter buckets
+// (no requests for >10 minutes) to prevent unbounded map growth.
+// Runs every 5 minutes until the server shuts down.
+func (l *cardProxyRateLimiter) startCardProxyBucketEvictor() {
+	go func() {
+		ticker := time.NewTicker(cardProxyEvictionInterval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			now := time.Now()
+			l.mu.Lock()
+			stale := make([]string, 0)
+			for userID, bucket := range l.buckets {
+				if now.Sub(bucket.lastUsed) > cardProxyBucketIdleTTL {
+					stale = append(stale, userID)
+				}
+			}
+			for _, id := range stale {
+				delete(l.buckets, id)
+			}
+			l.mu.Unlock()
+		}
+	}()
 }
 
 // allow returns true if the user has remaining quota in the current window.
@@ -124,12 +161,33 @@ func (l *cardProxyRateLimiter) allow(userID string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	// Lazy-start the evictor on first bucket creation
+	if !l.evictStarted {
+		l.evictStarted = true
+		l.startCardProxyBucketEvictor()
+	}
+
+	// If map is oversized, evict all expired buckets immediately
+	if len(l.buckets) > cardProxyMaxBuckets {
+		now := time.Now()
+		stale := make([]string, 0)
+		for userID, bucket := range l.buckets {
+			if now.Sub(bucket.window) > cardProxyRateWindow {
+				stale = append(stale, userID)
+			}
+		}
+		for _, id := range stale {
+			delete(l.buckets, id)
+		}
+	}
+
 	now := time.Now()
 	b, ok := l.buckets[userID]
 	if !ok || now.Sub(b.window) > cardProxyRateWindow {
-		l.buckets[userID] = &rateBucket{count: 1, window: now}
+		l.buckets[userID] = &rateBucket{count: 1, window: now, lastUsed: now}
 		return true
 	}
+	b.lastUsed = now
 	if b.count >= cardProxyRateMax {
 		return false
 	}
@@ -146,7 +204,7 @@ func NewCardProxyHandler(s store.Store) *CardProxyHandler {
 func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Require at least editor role — viewers and anonymous users must not be
 	// able to trigger outbound requests through the proxy (#12436).
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
