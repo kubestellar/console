@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react'
 import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
 import { useCache } from '../lib/cache'
@@ -67,7 +67,7 @@ export interface ArgoSyncData {
 // ============================================================================
 
 function authHeaders(): Record<string, string> {
-  const token = await getStoredAuthToken()
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = { 'Accept': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

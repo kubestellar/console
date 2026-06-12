@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /**
@@ -244,7 +244,7 @@ function stopPresenceConnection() {
 }
 
 // Start WebSocket presence connection (backend mode)
-function startPresenceConnection() {
+async function startPresenceConnection() {
   if (presenceStarted) return
 
   const token = await getStoredAuthToken()
@@ -273,7 +273,7 @@ function startPresenceConnection() {
       getPresenceStaleDetection().start()
       notifySubscribers({ stale: false })
       // Read token fresh to avoid stale closure on reconnects
-      const currentToken = getStoredAuthToken()
+      const currentToken = getStoredAuthTokenSync()
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
       // Clear any existing ping interval before starting a new one (prevents zombie intervals on reconnect)
       if (presencePingInterval) clearInterval(presencePingInterval)

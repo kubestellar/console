@@ -6,7 +6,7 @@ import { isDemoMode } from '../lib/demoMode'
 import { isInClusterMode } from './useBackendHealth'
 import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
 // Types
@@ -85,7 +85,7 @@ export interface UseWorkloadsResult {
 }
 
 export function authHeaders(): Record<string, string> {
-  const token = await getStoredAuthToken()
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

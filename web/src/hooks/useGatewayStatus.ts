@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useClusters } from './useMCP'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { registerRefetch } from '../lib/modeTransition'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
@@ -79,7 +79,7 @@ interface CachedData {
 // ============================================================================
 
 function authHeaders(): Record<string, string> {
-  const token = await getStoredAuthToken()
+  const token = getStoredAuthTokenSync()
   const headers: Record<string, string> = { 'Accept': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers

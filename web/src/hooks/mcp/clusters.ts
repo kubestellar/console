@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
-import { getStoredAuthToken } from '../../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../../lib/authToken'
 import type { ClusterHealth, MCPStatus } from './types'
 import {
   REFRESH_INTERVAL_MS,
@@ -185,15 +185,17 @@ export function useClusters() {
       }
 
       // Don't attempt WebSocket if not authenticated
-      const token = await getStoredAuthToken()
-      if (!token) {
-        return
-      }
+      ;(async () => {
+        const token = await getStoredAuthToken()
+        if (!token) {
+          return
+        }
 
-      // Use shared WebSocket connection to prevent multiple connections
-      if (!sharedWebSocket.connecting && !sharedWebSocket.ws) {
-        connectSharedWebSocket()
-      }
+        // Use shared WebSocket connection to prevent multiple connections
+        if (!sharedWebSocket.connecting && !sharedWebSocket.ws) {
+          connectSharedWebSocket()
+        }
+      })()
     }
   }, [])
 

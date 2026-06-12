@@ -16,7 +16,7 @@
 import { useRef, useEffect } from 'react'
 import { useCache } from '../lib/cache'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   TopologyResponse,
@@ -143,7 +143,7 @@ function saveToCache<T>(key: string, data: T): void {
 // ============================================================================
 
 function authHeaders(): Record<string, string> {
-  const token = await getStoredAuthToken()
+  const token = getStoredAuthTokenSync()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

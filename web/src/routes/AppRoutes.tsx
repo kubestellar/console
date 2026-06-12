@@ -32,7 +32,7 @@ import { PageErrorBoundary } from '../components/PageErrorBoundary'
 import { InitialInfrastructureGate } from '../components/InitialInfrastructureGate'
 import { StellarProvider } from '../hooks/useStellar'
 import { ROUTES } from '../config/routes'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { safeSet } from '../lib/safeLocalStorage'
 import {
   OrbitAutoRunner, SettingsSyncInit, PageViewTracker, DataPrefetchInit,
@@ -124,7 +124,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // If the token is expired, showing protected children would leak content
     // to an unauthenticated user during the brief refreshUser() window. In
     // that case render nothing (a spinner placeholder) until auth resolves.
-    const storedToken = getStoredAuthToken()
+    const storedToken = getStoredAuthTokenSync()
     if (storedToken && (storedToken === DEMO_TOKEN_VALUE || !isJWTExpired(storedToken))) {
       return <>{children}</>
     }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getStoredAuthToken } from '../authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../authToken'
 import { useKeepAliveActive } from '../../hooks/useKeepAliveActive'
 
 /**
@@ -38,7 +38,7 @@ export interface CardFetchOptions {
 /** Safely read from localStorage — returns null if unavailable (sandboxed iframes, etc.) */
 function safeGetToken(): string | null {
   try {
-    return getStoredAuthToken()
+    return getStoredAuthTokenSync()
   } catch {
     return null
   }

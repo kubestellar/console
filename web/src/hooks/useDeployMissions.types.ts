@@ -1,4 +1,4 @@
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** HTTP status codes that indicate authentication/authorization failure */
@@ -88,7 +88,7 @@ export function isTerminalStatus(s: DeployMissionStatus): boolean {
   return s === 'orbit' || s === 'abort' || s === 'partial'
 }
 
-export function authHeaders(): Record<string, string> {
+export async function authHeaders(): Promise<Record<string, string>> {
   const token = await getStoredAuthToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }

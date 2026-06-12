@@ -17,11 +17,11 @@ import {
   generateBenchmarkReports,
   type BenchmarkReport,
 } from '../lib/llmd/benchmarkMockData'
-import { getStoredAuthToken } from '../lib/authToken'
+import { getStoredAuthToken, getStoredAuthTokenSync } from '../lib/authToken'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 function authHeaders(): Record<string, string> {
-  const token = await getStoredAuthToken()
+  const token = getStoredAuthTokenSync()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -105,7 +105,7 @@ function startGlobalStream(since: string) {
   streamState = { ...streamState, isStreaming: true, status: 'connecting', since }
   notifySubscribers()
 
-  const token = await getStoredAuthToken()
+  const token = getStoredAuthTokenSync()
   abortController = new AbortController()
 
   // Connection timeout: abort if the server doesn't respond within the default timeout.

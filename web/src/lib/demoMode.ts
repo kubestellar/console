@@ -113,7 +113,7 @@ function handleStorageEvent(e: StorageEvent) {
 // Initialize from localStorage or environment
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
-  const hasDemoToken = await await getStoredAuthToken() === DEMO_TOKEN
+  const hasDemoToken = getStoredAuthTokenSync() === DEMO_TOKEN
   const userExplicitlyDisabled = stored === 'false'
 
   // Priority: Netlify > explicit preference > demo token fallback
@@ -229,7 +229,7 @@ export function subscribeDemoMode(callback: (value: boolean) => void): () => voi
  *
  * Replaces all `!token || token === 'demo-token'` patterns.
  */
-export function isDemoToken(): boolean {
+export async function isDemoToken(): Promise<boolean> {
   const token = await getStoredAuthToken()
   return !token || token === DEMO_TOKEN
 }
@@ -237,7 +237,7 @@ export function isDemoToken(): boolean {
 /**
  * Check if we have a real (non-demo) authentication token.
  */
-export function hasRealToken(): boolean {
+export async function hasRealToken(): Promise<boolean> {
   const token = await getStoredAuthToken()
   return !!token && token !== DEMO_TOKEN
 }
