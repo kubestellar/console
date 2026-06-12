@@ -14,7 +14,10 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/mock"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -120,4 +123,44 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Hub:       hub,
 		Store:     mockStore,
 	}
+}
+
+// addClusterToRawConfig ensures the cluster appears in the raw kubeconfig for test discovery.
+func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
+	cfg := client.GetRawConfig()
+	if cfg == nil {
+		cfg = &api.Config{Clusters: map[string]*api.Cluster{}, Contexts: map[string]*api.Context{}}
+	}
+	if cfg.Clusters == nil {
+		cfg.Clusters = map[string]*api.Cluster{}
+	}
+	if cfg.Contexts == nil {
+		cfg.Contexts = map[string]*api.Context{}
+	}
+	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
+	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
+	client.SetRawConfig(cfg)
+}
+
+// newK8sScheme creates a new runtime.Scheme with standard k8s types registered.
+func newK8sScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	_ = k8sscheme.AddToScheme(scheme)
+	return scheme
+}
+
+// injectDynamicClusterWithObjects creates a fake dynamic client seeded with objects
+// and injects both dynamic and typed clients into the test environment.
+func injectDynamicClusterWithObjects(
+	env *testEnv,
+	cluster string,
+	scheme *runtime.Scheme,
+	dynamicObjects []runtime.Object,
+	typedObjects ...runtime.Object,
+) *fake.FakeDynamicClient {
+	dynClient := fake.NewSimpleDynamicClient(scheme, dynamicObjects...)
+	env.K8sClient.InjectDynamicClient(cluster, dynClient)
+	env.K8sClient.InjectClient(cluster, k8sfake.NewSimpleClientset(typedObjects...))
+	addClusterToRawConfig(env.K8sClient, cluster)
+	return dynClient
 }

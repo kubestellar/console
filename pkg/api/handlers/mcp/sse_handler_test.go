@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"encoding/json"
@@ -13,6 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+// noClusterAccessMsg mirrors the const in handlers/demo_data.go for test assertions.
+const noClusterAccessMsg = "No cluster access"
 
 func TestSSEHandler_GetPodsStream_StreamsClusterData(t *testing.T) {
 	env := setupTestEnv(t)

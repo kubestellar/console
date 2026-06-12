@@ -14,11 +14,11 @@ func clearCacheForTest(t *testing.T) {
 	ClearSSECache()
 }
 
-// ---------- sseCacheGet ----------
+// ---------- SSECacheGet ----------
 
 func TestSSECacheGet_MissingKey(t *testing.T) {
 	clearCacheForTest(t)
-	if got := sseCacheGet("nonexistent"); got != nil {
+	if got := SSECacheGet("nonexistent"); got != nil {
 		t.Fatalf("expected nil for missing key, got %v", got)
 	}
 }
@@ -26,8 +26,8 @@ func TestSSECacheGet_MissingKey(t *testing.T) {
 func TestSSECacheGet_FreshEntry(t *testing.T) {
 	clearCacheForTest(t)
 	want := []string{"a", "b"}
-	sseCacheSet("k1", want)
-	got := sseCacheGet("k1")
+	SSECacheSet("k1", want)
+	got := SSECacheGet("k1")
 	if got == nil {
 		t.Fatal("expected data for fresh cache entry, got nil")
 	}
@@ -43,7 +43,7 @@ func TestSSECacheGet_ExpiredEntry(t *testing.T) {
 	}
 	sseCacheMu.Unlock()
 
-	if got := sseCacheGet("old"); got != nil {
+	if got := SSECacheGet("old"); got != nil {
 		t.Fatalf("expected nil for expired entry, got %v", got)
 	}
 	// The expired entry should have been removed.
@@ -66,22 +66,22 @@ func TestSSECacheGet_EntryRefreshedBetweenLocks(t *testing.T) {
 	}
 	sseCacheMu.Unlock()
 
-	got := sseCacheGet("race")
+	got := SSECacheGet("race")
 	if got == nil {
 		t.Fatal("expected data for entry that was just refreshed, got nil")
 	}
 }
 
-// ---------- sseCacheSet ----------
+// ---------- SSECacheSet ----------
 
 func TestSSECacheSet_StoresData(t *testing.T) {
 	clearCacheForTest(t)
-	sseCacheSet("setkey", 42)
+	SSECacheSet("setkey", 42)
 	sseCacheMu.RLock()
 	e, ok := sseCache["setkey"]
 	sseCacheMu.RUnlock()
 	if !ok {
-		t.Fatal("key not found after sseCacheSet")
+		t.Fatal("key not found after SSECacheSet")
 	}
 	if e.data != 42 {
 		t.Fatalf("expected data=42, got %v", e.data)
@@ -93,9 +93,9 @@ func TestSSECacheSet_StoresData(t *testing.T) {
 
 func TestSSECacheSet_OverwritesExisting(t *testing.T) {
 	clearCacheForTest(t)
-	sseCacheSet("dup", "first")
-	sseCacheSet("dup", "second")
-	got := sseCacheGet("dup")
+	SSECacheSet("dup", "first")
+	SSECacheSet("dup", "second")
+	got := SSECacheGet("dup")
 	if got != "second" {
 		t.Fatalf("expected 'second' after overwrite, got %v", got)
 	}
@@ -105,8 +105,8 @@ func TestSSECacheSet_OverwritesExisting(t *testing.T) {
 
 func TestClearSSECache_EmptiesCache(t *testing.T) {
 	clearCacheForTest(t)
-	sseCacheSet("a", 1)
-	sseCacheSet("b", 2)
+	SSECacheSet("a", 1)
+	SSECacheSet("b", 2)
 	ClearSSECache()
 	sseCacheMu.RLock()
 	n := len(sseCache)

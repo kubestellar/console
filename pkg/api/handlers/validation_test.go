@@ -51,7 +51,7 @@ func TestIsValidK8sName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isValidK8sName(tt.k8sName))
+			assert.Equal(t, tt.want, IsValidK8sName(tt.k8sName))
 		})
 	}
 }
@@ -73,7 +73,7 @@ func TestIsValidK8sVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isValidK8sVersion(tt.version))
+			assert.Equal(t, tt.want, IsValidK8sVersion(tt.version))
 		})
 	}
 }

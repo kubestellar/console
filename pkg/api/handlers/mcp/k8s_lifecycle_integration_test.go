@@ -1,4 +1,4 @@
-package handlers
+package mcp
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/testutil"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -20,14 +22,12 @@ import (
 
 // TestK8sLifecycle_Integration verifies issue #4.3:
 // Backend ↔ Kubernetes API lifecycle (create → watch → update → delete).
-// It uses the MultiClusterClient with a fake K8s backend to exercise the
-// full life of a resource being observed by the Console.
 func TestK8sLifecycle_Integration(t *testing.T) {
 	env := setupTestEnv(t)
 	clusterName := "lifecycle-cluster"
 	fakeK8s := k8sfake.NewSimpleClientset()
 	env.K8sClient.InjectClient(clusterName, fakeK8s)
-	addClusterToRawConfig(env.K8sClient, clusterName)
+	testutil.AddClusterToRawConfig(env.K8sClient, clusterName)
 
 	handler := NewMCPHandlers(nil, env.K8sClient, nil)
 
@@ -52,7 +52,7 @@ func TestK8sLifecycle_Integration(t *testing.T) {
 
 	// 2. Fetch via API - Verify it exists
 	req := httptest.NewRequest(http.MethodGet, "/api/mcp/pods?cluster="+clusterName, nil)
-	ClearSSECache()
+	handlers.ClearSSECache()
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 
@@ -65,7 +65,7 @@ func TestK8sLifecycle_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify update is reflected
-	ClearSSECache()
+	handlers.ClearSSECache()
 	resp2, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	require.NotNil(t, resp2)
@@ -78,7 +78,7 @@ func TestK8sLifecycle_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify deletion
-	ClearSSECache()
+	handlers.ClearSSECache()
 	resp3, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 	require.NotNil(t, resp3)
