@@ -15,7 +15,8 @@ import (
 
 func TestKubaraCatalogHandler_GetConfig(t *testing.T) {
 	env := setupTestEnv(t)
-	h := NewKubaraCatalogHandler("token", "org/repo", "path/to/helm")
+	h, err := NewKubaraCatalogHandler("token", "org/repo", "path/to/helm")
+	require.NoError(t, err)
 	env.App.Get("/api/kubara/config", h.GetConfig)
 
 	req := httptest.NewRequest("GET", "/api/kubara/config", nil)
@@ -33,7 +34,8 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 	const kubaraCatalogLockCheckTimeout = 100 * time.Millisecond
 
 	env := setupTestEnv(t)
-	h := NewKubaraCatalogHandler("token", "org/repo", "path")
+	h, err := NewKubaraCatalogHandler("token", "org/repo", "path")
+	require.NoError(t, err)
 	env.App.Get("/api/kubara/catalog", h.GetCatalog)
 
 	t.Run("demo mode", func(t *testing.T) {
@@ -138,7 +140,8 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 	})
 
 	t.Run("upstream error", func(t *testing.T) {
-		h := NewKubaraCatalogHandler("", "fail/repo", "path")
+		h, err := NewKubaraCatalogHandler("", "fail/repo", "path")
+		require.NoError(t, err)
 		env.App.Get("/api/kubara/catalog/fail", h.GetCatalog)
 
 		h.httpClient.Transport = RoundTripFunc(func(req *http.Request) *http.Response {
@@ -155,4 +158,99 @@ func TestKubaraCatalogHandler_GetCatalog(t *testing.T) {
 		// Code returns StatusBadGateway (502) for any upstream error
 		assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
 	})
+}
+
+// TestValidateCatalogRepo tests the validation logic for catalog repo identifiers
+func TestValidateCatalogRepo(t *testing.T) {
+	tests := []struct {
+		name        string
+		repo        string
+		shouldError bool
+	}{
+		{"valid repo", "owner/repo", false},
+		{"valid with hyphens", "my-org/my-repo", false},
+		{"valid with underscores", "my_org/my_repo", false},
+		{"valid with dots", "my.org/my.repo", false},
+		{"empty", "", true},
+		{"path traversal ..", "owner/../repo", true},
+		{"double slash", "owner//repo", true},
+		{"newline", "owner/re\npo", true},
+		{"control character", "owner/re\x00po", true},
+		{"missing slash", "ownerrepo", true},
+		{"too long", "owner/" + strings.Repeat("a", 300), true},
+		{"invalid characters", "owner@/repo!", true},
+		{"extra slashes", "owner/repo/extra", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateCatalogRepo(tt.repo)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestValidateCatalogPath tests the validation logic for catalog paths
+func TestValidateCatalogPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		path        string
+		shouldError bool
+	}{
+		{"simple path", "helm", false},
+		{"nested path", "path/to/helm", false},
+		{"with hyphens", "my-path/my-helm", false},
+		{"with underscores", "my_path/my_helm", false},
+		{"with dots", "my.path/my.helm", false},
+		{"empty", "", true},
+		{"path traversal ..", "path/../helm", true},
+		{"double slash", "path//helm", true},
+		{"newline", "path/hel\nm", true},
+		{"control character", "path/hel\x00m", true},
+		{"too long", strings.Repeat("a/", 200), true},
+		{"invalid characters", "path/hel@m!", true},
+		{"leading slash", "/path/helm", true},
+		{"trailing slash", "path/helm/", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateCatalogPath(tt.path)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestNewKubaraCatalogHandler_ValidationErrors tests that initialization fails with invalid inputs
+func TestNewKubaraCatalogHandler_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		repo        string
+		path        string
+		shouldError bool
+	}{
+		{"valid", "owner/repo", "helm", false},
+		{"invalid repo with ..", "owner/../repo", "helm", true},
+		{"invalid path with ..", "owner/repo", "path/../helm", true},
+		{"both invalid", "owner/../repo", "path/../helm", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewKubaraCatalogHandler("token", tt.repo, tt.path)
+			if tt.shouldError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

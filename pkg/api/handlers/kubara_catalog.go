@@ -4,11 +4,15 @@ package handlers
 import (
 	"encoding/json"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/client"
@@ -31,9 +35,83 @@ const (
 	// kubaraCatalogDefaultPath is the fallback path inside the repo when
 	// KUBARA_CATALOG_PATH is not set.
 	kubaraCatalogDefaultPath = "go-binary/templates/embedded/managed-service-catalog/helm"
+
+	// kubaraCatalogRepoMaxLen limits the length of the repository identifier
+	kubaraCatalogRepoMaxLen = 256
+
+	// kubaraCatalogPathMaxLen limits the length of the catalog path
+	kubaraCatalogPathMaxLen = 256
 )
 
-// KubaraCatalogEntry represents a single chart directory in the Kubara repo.
+// validateCatalogRepo validates a GitHub repo identifier (owner/name).
+// Returns an error if the repo contains path traversal, control characters, or other dangerous patterns.
+func validateCatalogRepo(repo string) error {
+	if repo == "" {
+		return fmt.Errorf("catalog repo cannot be empty")
+	}
+	if len(repo) > kubaraCatalogRepoMaxLen {
+		return fmt.Errorf("catalog repo exceeds maximum length of %d", kubaraCatalogRepoMaxLen)
+	}
+
+	// Reject path traversal patterns
+	if strings.Contains(repo, "..") {
+		return fmt.Errorf("catalog repo contains path traversal sequence '..'")
+	}
+	if strings.Contains(repo, "//") {
+		return fmt.Errorf("catalog repo contains double slash '//'")
+	}
+
+	// Reject newlines and control characters
+	for _, r := range repo {
+		if unicode.IsControl(r) {
+			return fmt.Errorf("catalog repo contains control character")
+		}
+	}
+
+	// Validate format: must be owner/name with alphanumeric, hyphen, underscore
+	repoRegex := regexp.MustCompile(`^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$`)
+	if !repoRegex.MatchString(repo) {
+		return fmt.Errorf("catalog repo format must be owner/name with alphanumeric, hyphen, underscore, or dot characters")
+	}
+
+	return nil
+}
+
+// validateCatalogPath validates a GitHub repository path.
+// Returns an error if the path contains path traversal, control characters, or other dangerous patterns.
+func validateCatalogPath(path string) error {
+	if path == "" {
+		return fmt.Errorf("catalog path cannot be empty")
+	}
+	if len(path) > kubaraCatalogPathMaxLen {
+		return fmt.Errorf("catalog path exceeds maximum length of %d", kubaraCatalogPathMaxLen)
+	}
+
+	// Reject path traversal patterns
+	if strings.Contains(path, "..") {
+		return fmt.Errorf("catalog path contains path traversal sequence '..'")
+	}
+	if strings.Contains(path, "//") {
+		return fmt.Errorf("catalog path contains double slash '//'")
+	}
+
+	// Reject newlines and control characters
+	for _, r := range path {
+		if unicode.IsControl(r) {
+			return fmt.Errorf("catalog path contains control character")
+		}
+	}
+
+	// Validate format: path segments separated by slashes, each segment alphanumeric with hyphen/underscore/dot
+	pathRegex := regexp.MustCompile(`^[a-zA-Z0-9_.\-]+(/[a-zA-Z0-9_.\-]+)*$`)
+	if !pathRegex.MatchString(path) {
+		return fmt.Errorf("catalog path format must contain path segments with alphanumeric, hyphen, underscore, or dot characters")
+	}
+
+	return nil
+}
+
+
 type KubaraCatalogEntry struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
@@ -59,19 +137,29 @@ type KubaraCatalogHandler struct {
 // NewKubaraCatalogHandler creates a new handler for the Kubara catalog endpoint.
 // catalogRepo is the GitHub owner/name (e.g. "kubara-io/kubara"); pass "" to use
 // the default. catalogPath is the directory path inside the repo; pass "" for default.
-func NewKubaraCatalogHandler(githubToken, catalogRepo, catalogPath string) *KubaraCatalogHandler {
+// Returns an error if either catalogRepo or catalogPath fail validation.
+func NewKubaraCatalogHandler(githubToken, catalogRepo, catalogPath string) (*KubaraCatalogHandler, error) {
 	if catalogRepo == "" {
 		catalogRepo = kubaraCatalogDefaultRepo
 	}
 	if catalogPath == "" {
 		catalogPath = kubaraCatalogDefaultPath
 	}
+
+	// Validate inputs to prevent URL injection attacks
+	if err := validateCatalogRepo(catalogRepo); err != nil {
+		return nil, fmt.Errorf("invalid catalog repo: %w", err)
+	}
+	if err := validateCatalogPath(catalogPath); err != nil {
+		return nil, fmt.Errorf("invalid catalog path: %w", err)
+	}
+
 	return &KubaraCatalogHandler{
 		githubToken: githubToken,
 		catalogRepo: catalogRepo,
 		catalogPath: catalogPath,
 		httpClient:  client.GitHub,
-	}
+	}, nil
 }
 
 // GetConfig handles GET /api/kubara/config — returns the configured catalog

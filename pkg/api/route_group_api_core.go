@@ -221,7 +221,11 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
-	kubaraCatalog := handlers.NewKubaraCatalogHandler(g.config.GitHubToken, g.config.KubaraCatalogRepo, g.config.KubaraCatalogPath)
+	kubaraCatalog, err := handlers.NewKubaraCatalogHandler(g.config.GitHubToken, g.config.KubaraCatalogRepo, g.config.KubaraCatalogPath)
+	if err != nil {
+		slog.Error("Failed to initialize Kubara catalog handler; catalog routes will be unavailable", "error", err)
+		return
+	}
 	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
 	api.Get("/kubara/config", kubaraCatalog.GetConfig)
 }
