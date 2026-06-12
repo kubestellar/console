@@ -33,10 +33,10 @@ func NewAuditHandler(s store.Store) *AuditHandler {
 //
 // In demo mode, returns an empty JSON array.
 func (h *AuditHandler) GetAuditLog(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(make([]store.AuditEntry, 0))
 	}
-	if err := requireAdmin(c, h.store); err != nil {
+	if err := RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 

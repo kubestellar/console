@@ -98,7 +98,7 @@ func (h *TimelineHandler) SetStellarEventSink(sink StellarEventSink) {
 // GetTimeline handles GET /api/timeline.
 // Query params: cluster, namespace, since, until, kind, limit.
 func (h *TimelineHandler) GetTimeline(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(demoTimelineEvents())
 	}
 

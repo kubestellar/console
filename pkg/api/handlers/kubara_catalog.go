@@ -87,7 +87,7 @@ func (h *KubaraCatalogHandler) GetConfig(c *fiber.Ctx) error {
 // chart index, refreshing from upstream if the cache has expired.
 func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 	// Demo mode: return static demo catalog immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{
 			"entries": getDemoKubaraCatalog(),
 			"source":  "demo",

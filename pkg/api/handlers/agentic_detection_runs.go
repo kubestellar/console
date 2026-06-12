@@ -89,7 +89,7 @@ type DetectionRunIssue struct {
 
 // GetDetectionRuns returns detection runs from the active detection tracking issue.
 func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "agentic-detection-runs", getDemoDetectionRuns())
 	}
 

@@ -60,7 +60,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 		return err
 	}
 
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(CustomResourceResponse{Items: []CustomResourceItem{}, IsDemoData: true})
 	}
 
@@ -198,7 +198,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 		})
 	}
 
-	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+	WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 	pageItems, nextContinue := paginateCustomResourceItems(allItems, continueOffset, limit)
 	resp := CustomResourceResponse{
 		Items:        pageItems,

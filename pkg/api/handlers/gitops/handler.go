@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sync/singleflight"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/safego"
@@ -611,7 +612,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			})
 		}
 
-		waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+		handlers.WaitWithDeadline(&wg, clusterCancel, handlers.MaxResponseDeadline)
 		return c.JSON(fiber.Map{"kustomizations": allKustomizations})
 	}
 

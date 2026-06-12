@@ -14,7 +14,7 @@ import (
 // collecting results from each into a single slice.
 //
 // Each per-cluster goroutine runs under mcpDefaultTimeout. The overall
-// fan-out is coordinated by waitWithDeadline (maxResponseDeadline).
+// fan-out is coordinated by waitWithDeadline (MaxResponseDeadline).
 //
 // Used to eliminate the repeated boilerplate loop in mcp_resources.go:
 //
@@ -25,7 +25,7 @@ import (
 //	clusterCtx, clusterCancel := context.WithCancel(ctx)
 //	defer clusterCancel()
 //	for _, cl := range clusters { wg.Add(1); go func(...) { ... }(cl.Name) }
-//	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+//	WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 //
 // Callers receive (results []T, errTracker) and compose the fiber.Map response.
 func queryAllClusters[T any](
@@ -79,6 +79,6 @@ func queryAllClustersWithTimeout[T any](
 		})
 	}
 
-	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+	WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 	return results, errTracker
 }

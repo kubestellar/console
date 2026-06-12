@@ -249,7 +249,7 @@ type kagentiConfigUpdateRequest struct {
 
 // UpdateConfig updates the in-cluster Kagenti LLM provider configuration.
 func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
-	if err := requireAdmin(c, h.store); err != nil {
+	if err := RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 

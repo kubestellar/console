@@ -45,7 +45,7 @@ func TestWaitWithDeadline(t *testing.T) {
 				}
 			}()
 
-			deadlineHit := waitWithDeadline(&wg, cancel, tt.deadline)
+			deadlineHit := WaitWithDeadline(&wg, cancel, tt.deadline)
 			assert.Equal(t, tt.wantDeadlineHit, deadlineHit)
 		})
 	}
@@ -67,7 +67,7 @@ func TestWaitWithDeadline_CancelsOnDeadline(t *testing.T) {
 		}
 	}()
 
-	deadlineHit := waitWithDeadline(&wg, cancel, 20*time.Millisecond)
+	deadlineHit := WaitWithDeadline(&wg, cancel, 20*time.Millisecond)
 	assert.True(t, deadlineHit)
 	assert.True(t, cancelReceived)
 }

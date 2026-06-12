@@ -506,7 +506,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 // GitHub PAT from server-side settings.
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
-	if err := requireAdmin(c, h.store); err != nil {
+	if err := RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 

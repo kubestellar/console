@@ -16,7 +16,7 @@ import (
 //
 // #7050 — eventName is sanitized by stripping \n and \r to prevent SSE frame
 // injection if a future caller inadvertently passes user-controlled input.
-func writeSSEEvent(w *bufio.Writer, eventName string, data interface{}) error {
+func WriteSSEEvent(w *bufio.Writer, eventName string, data interface{}) error {
 	// Sanitize eventName: strip characters that would break the SSE wire format.
 	sanitized := strings.NewReplacer("\n", "", "\r", "").Replace(eventName)
 
@@ -42,7 +42,7 @@ func streamEmptySSE(c *fiber.Ctx) error {
 	c.Set("Connection", "keep-alive")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		if err := writeSSEEvent(w, sseEventDone, fiber.Map{
+		if err := WriteSSEEvent(w, sseEventDone, fiber.Map{
 			"totalClusters":     0,
 			"completedClusters": 0,
 			"skippedOffline":    0,
@@ -54,14 +54,15 @@ func streamEmptySSE(c *fiber.Ctx) error {
 	return nil
 }
 
-// streamDemoSSE sends demo data as a single instant SSE event.
-func streamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
+// StreamDemoSSE sends demo data as a single instant SSE event.
+// Exported for use in sub-packages like gitops.
+func StreamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		if err := writeSSEEvent(w, sseEventClusterData, fiber.Map{
+		if err := WriteSSEEvent(w, sseEventClusterData, fiber.Map{
 			"cluster": "demo",
 			dataKey:   demoData,
 			"source":  "demo",
@@ -69,7 +70,7 @@ func streamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
 			slog.Info("[SSE] demo stream write failed", "event", sseEventClusterData, "error", err)
 			return
 		}
-		if err := writeSSEEvent(w, sseEventDone, fiber.Map{
+		if err := WriteSSEEvent(w, sseEventDone, fiber.Map{
 			"totalClusters":     1,
 			"completedClusters": 1,
 		}); err != nil {
@@ -82,11 +83,11 @@ func streamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
 
 // GetPodsStream streams pods per cluster via SSE.
 func (h *MCPHandlers) GetPodsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "pods", getDemoPods())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -107,7 +108,7 @@ func (h *MCPHandlers) GetPodsStream(c *fiber.Ctx) error {
 
 // FindPodIssuesStream streams pod issues per cluster via SSE.
 func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "issues", getDemoPodIssues())
 	}
 	if h.k8sClient == nil {
@@ -132,11 +133,11 @@ func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
 
 // GetDeploymentsStream streams deployments per cluster via SSE.
 func (h *MCPHandlers) GetDeploymentsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "deployments", getDemoDeployments())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -157,11 +158,11 @@ func (h *MCPHandlers) GetDeploymentsStream(c *fiber.Ctx) error {
 
 // GetEventsStream streams events per cluster via SSE.
 func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "events", getDemoEvents())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -189,11 +190,11 @@ func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
 
 // GetServicesStream streams services per cluster via SSE.
 func (h *MCPHandlers) GetServicesStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "services", getDemoServices())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -212,7 +213,7 @@ func (h *MCPHandlers) GetServicesStream(c *fiber.Ctx) error {
 
 // CheckSecurityIssuesStream streams security issues per cluster via SSE.
 func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "issues", getDemoSecurityIssues())
 	}
 	if h.k8sClient == nil {
@@ -237,7 +238,7 @@ func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
 
 // FindDeploymentIssuesStream streams deployment issues per cluster via SSE.
 func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "issues", getDemoDeploymentIssues())
 	}
 	if h.k8sClient == nil {
@@ -262,11 +263,11 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 
 // GetNodesStream streams node info per cluster via SSE.
 func (h *MCPHandlers) GetNodesStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "nodes", getDemoNodes())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	clusterFilter := c.Query("cluster")
@@ -281,11 +282,11 @@ func (h *MCPHandlers) GetNodesStream(c *fiber.Ctx) error {
 
 // GetGPUNodesStream streams GPU node info per cluster via SSE.
 func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "nodes", getDemoGPUNodes())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	clusterFilter := c.Query("cluster")
@@ -300,11 +301,11 @@ func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
 
 // GetGPUNodeHealthStream streams GPU node health results per cluster via SSE.
 func (h *MCPHandlers) GetGPUNodeHealthStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "nodes", getDemoGPUNodeHealth())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	clusterFilter := c.Query("cluster")
@@ -327,7 +328,7 @@ func (h *MCPHandlers) GetGPUNodeHealthStream(c *fiber.Ctx) error {
 //     defaultWarningEventsLimit on missing/invalid input and is clamped to
 //     maxWarningEventsLimit.
 func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "events", getDemoWarningEvents())
 	}
 	if h.k8sClient == nil {
@@ -367,11 +368,11 @@ func parseWarningEventsLimit(raw string) int {
 
 // GetJobsStream streams jobs per cluster via SSE.
 func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "jobs", getDemoJobs())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -388,11 +389,11 @@ func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
 
 // GetConfigMapsStream streams configmaps per cluster via SSE.
 func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "configmaps", getDemoConfigMaps())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -413,11 +414,11 @@ func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
 		return err
 	}
 
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "secrets", getDemoSecrets())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -434,11 +435,11 @@ func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
 
 // GetWorkloadsStream streams workloads per cluster via SSE.
 func (h *MCPHandlers) GetWorkloadsStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "workloads", getDemoWorkloads())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -460,11 +461,11 @@ func (h *MCPHandlers) GetWorkloadsStream(c *fiber.Ctx) error {
 
 // GetNVIDIAOperatorStatusStream streams NVIDIA operator status per cluster via SSE.
 func (h *MCPHandlers) GetNVIDIAOperatorStatusStream(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return streamDemoSSE(c, "operators", getDemoNVIDIAOperatorStatus())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	clusterFilter := c.Query("cluster")

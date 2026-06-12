@@ -64,7 +64,7 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -102,7 +102,7 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")

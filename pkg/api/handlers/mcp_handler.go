@@ -15,11 +15,11 @@ import (
 	"github.com/kubestellar/console/pkg/store"
 )
 
-// maxResponseDeadline is the maximum time any multi-cluster REST handler will
+// MaxResponseDeadline is the maximum time any multi-cluster REST handler will
 // wait before returning whatever data has been collected. This is a fallback
 // for when SSE streaming is not used. Set to 30s to allow healthy clusters
 // time to respond (offline clusters are now skipped via HealthyClusters).
-const maxResponseDeadline = 30 * time.Second
+const MaxResponseDeadline = 30 * time.Second
 
 // mcpHealthTimeout is the timeout for multi-cluster health check aggregation.
 const mcpHealthTimeout = 60 * time.Second
@@ -37,7 +37,7 @@ const mcpExtendedTimeout = 30 * time.Second
 // rather than running indefinitely in the background. Returns true if the
 // deadline was hit (partial results), false if all goroutines completed in
 // time.
-func waitWithDeadline(wg *sync.WaitGroup, cancel context.CancelFunc, deadline time.Duration) bool {
+func WaitWithDeadline(wg *sync.WaitGroup, cancel context.CancelFunc, deadline time.Duration) bool {
 	done := make(chan struct{})
 	safego.Go(func() {
 		wg.Wait()
@@ -69,10 +69,10 @@ var sanitizedErrorMessages = map[string]string{
 // payload so the frontend can show a degraded state instead of a broken page.
 // All other errors are returned as 500 Internal Server Error.
 // Raw error details are only logged server-side and never sent to the client (#4753).
-func handleK8sError(c *fiber.Ctx, err error) error {
+func HandleK8sError(c *fiber.Ctx, err error) error {
 	if errors.Is(err, k8s.ErrNoClusterConfigured) {
 		slog.Info("[MCP] no cluster configured")
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	errType := k8s.ClassifyError(err.Error())

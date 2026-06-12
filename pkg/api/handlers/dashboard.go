@@ -53,7 +53,7 @@ func NewDashboardHandler(s store.Store) *DashboardHandler {
 // Supports limit/offset query params via parsePageParams (#6596); a response
 // may therefore be a partial page. Absent limit yields the store default.
 func (h *DashboardHandler) ListDashboards(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON([]models.Dashboard{})
 	}
 	userID := middleware.GetUserID(c)
@@ -76,7 +76,7 @@ func (h *DashboardHandler) ListDashboards(c *fiber.Ctx) error {
 
 // GetDashboard returns a dashboard with its cards
 func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(models.DashboardWithCards{
 			Dashboard: models.Dashboard{Name: "Demo Dashboard"},
 			Cards:     []models.Card{},
@@ -113,7 +113,7 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 
 // CreateDashboard creates a new dashboard
 func (h *DashboardHandler) CreateDashboard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	userID := middleware.GetUserID(c)
@@ -155,7 +155,7 @@ func (h *DashboardHandler) CreateDashboard(c *fiber.Ctx) error {
 
 // UpdateDashboard updates a dashboard
 func (h *DashboardHandler) UpdateDashboard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	userID := middleware.GetUserID(c)
@@ -202,7 +202,7 @@ func (h *DashboardHandler) UpdateDashboard(c *fiber.Ctx) error {
 
 // DeleteDashboard deletes a dashboard
 func (h *DashboardHandler) DeleteDashboard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 	userID := middleware.GetUserID(c)
@@ -232,7 +232,7 @@ func (h *DashboardHandler) DeleteDashboard(c *fiber.Ctx) error {
 // ExportDashboard returns a self-contained JSON blob with the dashboard and
 // all its cards in a portable format that can be shared or re-imported.
 func (h *DashboardHandler) ExportDashboard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(DashboardExport{
 			Format:     "kc-dashboard-v1",
 			Name:       "Demo Dashboard",
@@ -284,7 +284,7 @@ func (h *DashboardHandler) ExportDashboard(c *fiber.Ctx) error {
 
 // ImportDashboard creates a new dashboard from a portable export JSON blob.
 func (h *DashboardHandler) ImportDashboard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	userID := middleware.GetUserID(c)

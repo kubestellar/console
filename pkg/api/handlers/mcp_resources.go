@@ -34,7 +34,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 			return client.GetConfigMaps(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "configmaps", items, errTracker)
 	})
@@ -59,7 +59,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 			return client.GetSecrets(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "secrets", items, errTracker)
 	})
@@ -79,7 +79,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 			return client.GetServiceAccounts(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "serviceAccounts", items, errTracker)
 	})
@@ -99,7 +99,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 			return client.GetPVCs(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "pvcs", items, errTracker)
 	})
@@ -117,7 +117,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 			return client.GetPVs(ctx, clusterName)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "pvs", items, errTracker)
 	})
@@ -137,7 +137,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 			return client.GetResourceQuotas(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "resourceQuotas", items, errTracker)
 	})
@@ -157,7 +157,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 			return client.GetLimitRanges(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "limitRanges", items, errTracker)
 	})
@@ -222,7 +222,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 
 		quota, err := h.k8sClient.CreateOrUpdateResourceQuota(ctx, req.Cluster, spec)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 
 		audit.Log(c, audit.ActionCreateResourceQuota, "resource_quota", req.Name,
@@ -231,7 +231,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"resourceQuota": quota, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // DeleteResourceQuota deletes a ResourceQuota
@@ -261,7 +261,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 		err := h.k8sClient.DeleteResourceQuota(ctx, cluster, namespace, name)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 
 		audit.Log(c, audit.ActionDeleteResourceQuota, "resource_quota", name,
@@ -270,7 +270,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"deleted": true, "name": name, "namespace": namespace, "cluster": cluster})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetPodLogs returns logs from a pod
@@ -280,7 +280,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 	}
 
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "logs", getDemoPodLogs())
 	}
 
@@ -312,12 +312,12 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 
 		logs, err := h.k8sClient.GetPodLogs(ctx, cluster, namespace, pod, container, int64(tailLines))
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{"logs": logs, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // CallToolRequest represents a request to call an MCP tool
@@ -398,7 +398,7 @@ var AllowedDeployTools = map[string]bool{
 // GetWasmCloudHosts returns wasmCloud hosts from clusters
 func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "hosts", getWasmCloudHosts())
 	}
 
@@ -410,7 +410,7 @@ func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 // GetWasmCloudActors returns wasmCloud actors from clusters
 func (h *MCPHandlers) GetWasmCloudActors(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "actors", getWasmCloudActors())
 	}
 
@@ -462,7 +462,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallOpsTool(ctx, req.Name, req.Arguments)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -495,7 +495,7 @@ func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 
 	result, err := h.bridge.CallDeployTool(ctx, req.Name, req.Arguments)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	return c.JSON(result)
@@ -515,7 +515,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 			return client.GetFlatcarNodes(ctx, clusterName)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "nodes", items, errTracker)
 	})
@@ -535,7 +535,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 			return client.GetIngresses(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "ingresses", items, errTracker)
 	})
@@ -555,7 +555,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 			return client.GetNetworkPolicies(ctx, clusterName, namespace)
 		})
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return respondClusterResources(c, "networkpolicies", items, errTracker)
 	})
@@ -615,12 +615,12 @@ func classifyComponent(labels map[string]string) string {
 // frontend can fall back to demo values.
 func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	// Demo mode: return realistic sample data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "stats", getDemoPodNetworkStats())
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
@@ -791,7 +791,7 @@ func fetchPodInterfaceStats(
 // support which will be added in a future iteration. For now, it returns an
 // empty yaml field so the frontend can gracefully fall back to demo YAML.
 func (h *MCPHandlers) GetResourceYAML(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"yaml": "", "source": "demo"})
 	}
 

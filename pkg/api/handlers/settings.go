@@ -25,8 +25,8 @@ func NewSettingsHandler(manager *settings.SettingsManager, s store.Store) *Setti
 // request body may be loaded until this check passes (#6000). Without this
 // invariant, an attacker can trigger side effects (decryption, disk I/O,
 // manager lookups) before being told they are forbidden.
-func (h *SettingsHandler) requireAdmin(c *fiber.Ctx) error {
-	return requireAdmin(c, h.store)
+func (h *SettingsHandler) RequireAdmin(c *fiber.Ctx) error {
+	return RequireAdmin(c, h.store)
 }
 
 // GetSettings returns browser-safe settings metadata without exposing secrets.
@@ -34,7 +34,7 @@ func (h *SettingsHandler) requireAdmin(c *fiber.Ctx) error {
 func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	// RBAC MUST be the very first operation — do not read any settings
 	// until the caller has been authorized (#6000).
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -54,7 +54,7 @@ func (h *SettingsHandler) SaveSettings(c *fiber.Ctx) error {
 	// RBAC MUST be the very first operation — do not parse the body or
 	// touch the settings manager until the caller has been authorized
 	// (#6000).
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func (h *SettingsHandler) ExportSettings(c *fiber.Ctx) error {
 	// RBAC MUST be the very first operation — the encrypted export
 	// contains secrets and must never be produced for unauthorized callers
 	// (#6000).
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (h *SettingsHandler) ImportSettings(c *fiber.Ctx) error {
 	// RBAC MUST be the very first operation — do not read the request
 	// body or hand it to the settings manager until the caller has been
 	// authorized (#6000).
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 

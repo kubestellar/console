@@ -8,10 +8,11 @@ import (
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
-// isDemoMode checks if the request has the X-Demo-Mode header set to "true"
+// IsDemoMode checks if the request has the X-Demo-Mode header set to "true"
 // When demo mode is enabled, handlers should return demo data immediately
-// without attempting to connect to real clusters
-func isDemoMode(c *fiber.Ctx) bool {
+// without attempting to connect to real clusters.
+// Exported for use in sub-packages like gitops.
+func IsDemoMode(c *fiber.Ctx) bool {
 	return c.Get("X-Demo-Mode") == "true"
 }
 
@@ -21,7 +22,9 @@ func isDemoMode(c *fiber.Ctx) bool {
 // ensures the message stays in sync across handlers (#9830).
 const noClusterAccessMsg = "No cluster access"
 
-func errNoClusterAccess(c *fiber.Ctx) error {
+// ErrNoClusterAccess returns a standard error for missing cluster access.
+// Exported for use in sub-packages like gitops.
+func ErrNoClusterAccess(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": noClusterAccessMsg})
 }
 

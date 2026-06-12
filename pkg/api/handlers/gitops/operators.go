@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/safego"
 )
 
@@ -109,12 +110,12 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		}
 	}
 
-	if isDemoMode(c) {
-		return streamDemoSSE(c, "operators", getDemoOperatorsForStreaming())
+	if handlers.IsDemoMode(c) {
+		return handlers.StreamDemoSSE(c, "operators", getDemoOperatorsForStreaming())
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return handlers.ErrNoClusterAccess(c)
 	}
 
 	// Capture request context before entering the stream writer so client
@@ -128,23 +129,23 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		c.Set("Connection", "keep-alive")
 		c.Set("X-Accel-Buffering", "no")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+			handlers.WriteSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
 			ctx, cancel := context.WithTimeout(requestCtx, operatorPerClusterTimeout)
 			defer cancel()
 			operators := h.getOperatorsForCluster(ctx, cluster)
-			writeSSEEvent(w, "cluster_data", fiber.Map{
+			handlers.WriteSSEEvent(w, "cluster_data", fiber.Map{
 				"cluster":   cluster,
 				"operators": operators,
 				"source":    "k8s",
 			})
-			writeSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
+			handlers.WriteSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
 		})
 		return nil
 	}
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return handleK8sError(c, err)
+		return handlers.HandleK8sError(c, err)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -153,7 +154,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 	c.Set("X-Accel-Buffering", "no")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+		handlers.WriteSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
@@ -177,12 +178,12 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 				// can distinguish "no operators" from "query failed".
 				if fetchErr != nil {
 					slog.Error("[GitOpsOperators] cluster fetch failed", "cluster", clusterName, "error", fetchErr)
-					writeSSEEvent(w, sseEventClusterError, fiber.Map{
+					handlers.WriteSSEEvent(w, sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
 						"error":   "cluster query failed",
 					})
 				} else {
-					writeSSEEvent(w, "cluster_data", fiber.Map{
+					handlers.WriteSSEEvent(w, "cluster_data", fiber.Map{
 						"cluster":   clusterName,
 						"operators": operators,
 						"source":    "k8s",
@@ -193,7 +194,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		}
 
 		wg.Wait()
-		writeSSEEvent(w, "done", fiber.Map{
+		handlers.WriteSSEEvent(w, "done", fiber.Map{
 			"totalClusters":     totalClusters,
 			"completedClusters": completedClusters,
 		})
@@ -496,12 +497,12 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		}
 	}
 
-	if isDemoMode(c) {
-		return streamDemoSSE(c, "subscriptions", []OperatorSubscription{})
+	if handlers.IsDemoMode(c) {
+		return handlers.StreamDemoSSE(c, "subscriptions", []OperatorSubscription{})
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return handlers.ErrNoClusterAccess(c)
 	}
 
 	requestCtx := c.UserContext()
@@ -512,23 +513,23 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		c.Set("Connection", "keep-alive")
 		c.Set("X-Accel-Buffering", "no")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+			handlers.WriteSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
 			ctx, cancel := context.WithTimeout(requestCtx, subscriptionPerClusterTimeout)
 			defer cancel()
 			subs := h.getSubscriptionsForCluster(ctx, cluster)
-			writeSSEEvent(w, "cluster_data", fiber.Map{
+			handlers.WriteSSEEvent(w, "cluster_data", fiber.Map{
 				"cluster":       cluster,
 				"subscriptions": subs,
 				"source":        "k8s",
 			})
-			writeSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
+			handlers.WriteSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
 		})
 		return nil
 	}
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return handleK8sError(c, err)
+		return handlers.HandleK8sError(c, err)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -537,7 +538,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 	c.Set("X-Accel-Buffering", "no")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+		handlers.WriteSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
@@ -561,12 +562,12 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 				// can distinguish "no subscriptions" from "query failed".
 				if fetchErr != nil {
 					slog.Error("[GitOpsOperators] cluster fetch failed", "cluster", clusterName, "error", fetchErr)
-					writeSSEEvent(w, sseEventClusterError, fiber.Map{
+					handlers.WriteSSEEvent(w, sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
 						"error":   "cluster query failed",
 					})
 				} else {
-					writeSSEEvent(w, "cluster_data", fiber.Map{
+					handlers.WriteSSEEvent(w, "cluster_data", fiber.Map{
 						"cluster":       clusterName,
 						"subscriptions": subs,
 						"source":        "k8s",
@@ -577,7 +578,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		}
 
 		wg.Wait()
-		writeSSEEvent(w, "done", fiber.Map{
+		handlers.WriteSSEEvent(w, "done", fiber.Map{
 			"totalClusters":     totalClusters,
 			"completedClusters": completedClusters,
 		})
@@ -679,12 +680,12 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 		}
 	}
 
-	if isDemoMode(c) {
-		return streamDemoSSE(c, "releases", getDemoHelmReleasesForStreaming())
+	if handlers.IsDemoMode(c) {
+		return handlers.StreamDemoSSE(c, "releases", getDemoHelmReleasesForStreaming())
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return handlers.ErrNoClusterAccess(c)
 	}
 
 	requestCtx := c.UserContext()
@@ -695,23 +696,23 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 		c.Set("Connection", "keep-alive")
 		c.Set("X-Accel-Buffering", "no")
 		c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-			writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+			handlers.WriteSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
 			ctx, cancel := context.WithTimeout(requestCtx, helmStreamPerClusterTimeout)
 			defer cancel()
 			releases := h.getHelmReleasesForCluster(ctx, cluster)
-			writeSSEEvent(w, "cluster_data", fiber.Map{
+			handlers.WriteSSEEvent(w, "cluster_data", fiber.Map{
 				"cluster":  cluster,
 				"releases": releases,
 				"source":   "k8s",
 			})
-			writeSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
+			handlers.WriteSSEEvent(w, "done", fiber.Map{"totalClusters": 1, "completedClusters": 1})
 		})
 		return nil
 	}
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return handleK8sError(c, err)
+		return handlers.HandleK8sError(c, err)
 	}
 
 	c.Set("Content-Type", "text/event-stream")
@@ -720,7 +721,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 	c.Set("X-Accel-Buffering", "no")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-		writeSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
+		handlers.WriteSSEEvent(w, "connected", fiber.Map{"status": "streaming"})
 
 		var wg sync.WaitGroup
 		var mu sync.Mutex
@@ -740,7 +741,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 				releases := h.getHelmReleasesForCluster(ctx, clusterName)
 				mu.Lock()
 				completedClusters++
-				writeSSEEvent(w, "cluster_data", fiber.Map{
+				handlers.WriteSSEEvent(w, "cluster_data", fiber.Map{
 					"cluster":  clusterName,
 					"releases": releases,
 					"source":   "k8s",
@@ -750,7 +751,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 		}
 
 		wg.Wait()
-		writeSSEEvent(w, "done", fiber.Map{
+		handlers.WriteSSEEvent(w, "done", fiber.Map{
 			"totalClusters":     totalClusters,
 			"completedClusters": completedClusters,
 		})

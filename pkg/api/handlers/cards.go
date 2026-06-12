@@ -75,7 +75,7 @@ func isValidCardType(t models.CardType) bool {
 
 // ListCards returns all cards for a dashboard
 func (h *CardHandler) ListCards(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON([]models.Card{})
 	}
 	userID := middleware.GetUserID(c)
@@ -102,7 +102,7 @@ func (h *CardHandler) ListCards(c *fiber.Ctx) error {
 
 // CreateCard creates a new card
 func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check must run before any data access (#5999). Viewers cannot
@@ -174,7 +174,7 @@ func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
 
 // UpdateCard updates a card
 func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check must run before any data access (#5999).
@@ -251,7 +251,7 @@ func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
 
 // DeleteCard deletes a card
 func (h *CardHandler) DeleteCard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 	// Role check must run before any data access (#5999).
@@ -293,7 +293,7 @@ func (h *CardHandler) DeleteCard(c *fiber.Ctx) error {
 
 // RecordFocus records a card focus event
 func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check: RecordFocus writes to card_focus and the event log, so
@@ -351,7 +351,7 @@ func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
 
 // GetCardTypes returns available card types
 func (h *CardHandler) GetCardTypes(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "card_types", models.GetCardTypes())
 	}
 	return c.JSON(models.GetCardTypes())
@@ -359,7 +359,7 @@ func (h *CardHandler) GetCardTypes(c *fiber.Ctx) error {
 
 // GetHistory returns the user's card history
 func (h *CardHandler) GetHistory(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON([]models.CardHistory{})
 	}
 	userID := middleware.GetUserID(c)
@@ -382,7 +382,7 @@ func (h *CardHandler) GetHistory(c *fiber.Ctx) error {
 
 // MoveCard moves a card to a different dashboard
 func (h *CardHandler) MoveCard(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check must run before any data access (#5999).

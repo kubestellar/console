@@ -61,7 +61,7 @@ type LimaListResponse struct {
 //
 // GET /api/lima
 func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(LimaListResponse{
 			LimaInstances: getDemoLimaInstances(),
 			IsDemoData:    true,

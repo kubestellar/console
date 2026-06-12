@@ -47,7 +47,7 @@ func finishClusterHealthWarmup() {
 // ListClusters returns all discovered clusters with health data
 func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately without trying real clusters
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "clusters", getDemoClusters())
 	}
 
@@ -113,7 +113,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetClusterHealth returns health for a specific cluster
@@ -124,7 +124,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 	}
 
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(getDemoClusterHealth(cluster))
 	}
 
@@ -149,13 +149,13 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(health)
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetAllClusterHealth returns health for all clusters
 func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "health", getDemoAllClusterHealth())
 	}
 
@@ -171,13 +171,13 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"health": health})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetNodes returns detailed node information
 func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "nodes", getDemoNodes())
 	}
 
@@ -225,7 +225,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 				})
 			}
 
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+			WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 			return c.JSON(errTracker.annotate(fiber.Map{"nodes": allNodes, "source": "k8s"}))
 		}
 
@@ -242,13 +242,13 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetEvents returns events from clusters
 func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "events", getDemoEvents())
 	}
 
@@ -327,7 +327,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 				})
 			}
 
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+			WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 
 			// Sort by LastSeen parsed as time (most recent first).
 			// Lexicographic string compare is unreliable across timezones
@@ -352,13 +352,13 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetWarningEvents returns warning events from clusters
 func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "events", getDemoWarningEvents())
 	}
 
@@ -434,7 +434,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 				})
 			}
 
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+			WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 
 			// Sort by LastSeen parsed as time (most recent first).
 			// Lexicographic string compare is unreliable across timezones
@@ -459,13 +459,13 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // CheckSecurityIssues returns security misconfigurations
 func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "issues", getDemoSecurityIssues())
 	}
 
@@ -516,7 +516,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 				})
 			}
 
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+			WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 			return c.JSON(errTracker.annotate(fiber.Map{"issues": allIssues, "source": "k8s"}))
 		}
 
@@ -533,7 +533,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetNamespacesOverview returns namespace counts across all healthy clusters.
@@ -581,7 +581,7 @@ func (h *MCPHandlers) GetNamespacesOverview(c *fiber.Ctx) error {
 		})
 	}
 
-	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+	WaitWithDeadline(&wg, clusterCancel, MaxResponseDeadline)
 	return c.JSON(fiber.Map{"namespaces": allNS})
 }
 

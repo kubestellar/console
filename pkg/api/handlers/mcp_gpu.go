@@ -11,7 +11,7 @@ import (
 // GetGPUNodes returns nodes with GPU resources
 func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "nodes", getDemoGPUNodes())
 	}
 
@@ -48,12 +48,12 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetGPUNodeHealth returns proactive health check results for GPU nodes
 func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "nodes", getDemoGPUNodeHealth())
 	}
 
@@ -89,12 +89,12 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }
 
 // GetGPUHealthCronJobStatus returns the installation status of the GPU health CronJob
 func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": k8s.GPUHealthCronJobStatus{CanInstall: true}})
 	}
 
@@ -107,7 +107,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -131,7 +131,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 // GetGPUHealthCronJobResults returns the latest health check results from the ConfigMap.
 // This is the endpoint used by the AlertsContext to evaluate gpu_health_cronjob conditions.
 func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{"results": []k8s.GPUHealthCheckResult{}})
 	}
 
@@ -144,7 +144,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return ErrNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -160,7 +160,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 // GetNVIDIAOperatorStatus returns NVIDIA GPU and Network operator status
 func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
-	if isDemoMode(c) {
+	if IsDemoMode(c) {
 		return demoResponse(c, "operators", getDemoNVIDIAOperatorStatus())
 	}
 
@@ -201,5 +201,5 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"operators": []*k8s.NVIDIAOperatorStatus{status}, "source": "k8s"})
 	}
 
-	return errNoClusterAccess(c)
+	return ErrNoClusterAccess(c)
 }

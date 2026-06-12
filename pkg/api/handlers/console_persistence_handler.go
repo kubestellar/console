@@ -57,7 +57,7 @@ func NewConsolePersistenceHandlers(
 // GET /api/persistence/config
 func (h *ConsolePersistenceHandlers) GetConfig(c *fiber.Ctx) error {
 	// Persistence config access requires admin role (#16484)
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -69,7 +69,7 @@ func (h *ConsolePersistenceHandlers) GetConfig(c *fiber.Ctx) error {
 // PUT /api/persistence/config
 func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 	// Persistence config changes require admin role (#4750)
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -101,7 +101,7 @@ func (h *ConsolePersistenceHandlers) UpdateConfig(c *fiber.Ctx) error {
 // GET /api/persistence/status
 func (h *ConsolePersistenceHandlers) GetStatus(c *fiber.Ctx) error {
 	// Persistence status access requires admin role (#16484)
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -254,7 +254,7 @@ func (h *ConsolePersistenceHandlers) GetWorkloadDeployment(c *fiber.Ctx) error {
 // SyncNow triggers an immediate sync of all console resources
 // POST /api/persistence/sync
 func (h *ConsolePersistenceHandlers) SyncNow(c *fiber.Ctx) error {
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
@@ -275,7 +275,7 @@ func (h *ConsolePersistenceHandlers) SyncNow(c *fiber.Ctx) error {
 // POST /api/persistence/test
 func (h *ConsolePersistenceHandlers) TestConnection(c *fiber.Ctx) error {
 	// Persistence test access requires admin role (#16484)
-	if err := h.requireAdmin(c); err != nil {
+	if err := h.RequireAdmin(c); err != nil {
 		return err
 	}
 
