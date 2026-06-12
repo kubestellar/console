@@ -1,0 +1,163 @@
+package gitops
+
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/store"
+	"github.com/kubestellar/console/pkg/test"
+	"github.com/stretchr/testify/mock"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/fake"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
+)
+
+// testAdminUserID is the fixed user ID injected by setupTestEnv for RBAC-protected
+// endpoints. The MockStore is configured to return an admin user for this ID.
+var testAdminUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+// testEnv holds the test environment components.
+type testEnv struct {
+	App       *fiber.App
+	TempDir   string
+	Settings  *settings.SettingsManager
+	K8sClient *k8s.MultiClusterClient
+	Hub       *handlers.Hub
+	Store     store.Store
+}
+
+// setupTestEnv creates a new test environment with a fresh Fiber app and an initialized
+// SettingsManager pointing to a temporary directory.
+func setupTestEnv(t *testing.T) *testEnv {
+	// Create a temporary directory for settings
+	tempDir := t.TempDir()
+	settingsPath := filepath.Join(tempDir, "settings.json")
+	keyPath := filepath.Join(tempDir, ".keyfile")
+
+	// Initialize SettingsManager
+	manager := settings.GetSettingsManager()
+	// Override paths for testing isolation
+	manager.SetSettingsPath(settingsPath)
+	manager.SetKeyPath(keyPath)
+
+	// Ensure we start with a clean state for this test run relative to the file.
+	_ = manager.Load()
+
+	// Initialize K8s Client with an isolated kubeconfig file so tests can inject
+	// fake cluster clients without tripping ErrNoClusterConfigured.
+	rawConfig := &api.Config{
+		Clusters: map[string]*api.Cluster{
+			"test-cluster": {Server: "https://test-cluster:6443"},
+		},
+		Contexts: map[string]*api.Context{
+			"test-cluster": {Cluster: "test-cluster", AuthInfo: "test-user"},
+		},
+		AuthInfos: map[string]*api.AuthInfo{
+			"test-user": {},
+		},
+		CurrentContext: "test-cluster",
+	}
+	kubeconfigPath := filepath.Join(tempDir, "kubeconfig")
+	if err := clientcmd.WriteToFile(*rawConfig, kubeconfigPath); err != nil {
+		t.Fatalf("write test kubeconfig: %v", err)
+	}
+	k8sClient, err := k8s.NewMultiClusterClient(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("create test k8s client: %v", err)
+	}
+	// Inject a fake client for a "test-cluster" context
+	fakeClient := k8sfake.NewSimpleClientset()
+	k8sClient.InjectClient("test-cluster", fakeClient)
+
+	// Set a minimal rawConfig so ListClusters / HealthyClusters can discover
+	// injected clusters (without this, LoadConfig fails → 500 in handlers).
+	k8sClient.SetRawConfig(rawConfig)
+
+	// Initialize Hub
+	hub := handlers.NewHub()
+	go hub.Run() // Start hub loop (in background)
+	t.Cleanup(func() {
+		hub.Close()
+	})
+
+	// Initialize a MockStore with a pre-configured admin user so RBAC-protected
+	// handler tests pass without extra setup.
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", testAdminUserID).Return(&models.User{
+		ID:   testAdminUserID,
+		Role: "admin",
+	}, nil).Maybe()
+
+	// Cluster-group CRUD handlers persist definitions to the store (#7013).
+	// Register permissive mocks so TestClusterGroupsCRUD doesn't panic when
+	// the handler calls Save/Delete/List. Individual tests can override with
+	// an explicit expectation to assert specific persistence behavior.
+	mockStore.On("SaveClusterGroup", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockStore.On("DeleteClusterGroup", mock.Anything, mock.Anything).Return(nil).Maybe()
+	mockStore.On("ListClusterGroups", mock.Anything).Return(map[string][]byte{}, nil).Maybe()
+
+	app := fiber.New()
+
+	// Inject the admin user ID into Fiber locals so middleware.GetUserID works
+	// in handler tests that exercise RBAC-protected endpoints.
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", testAdminUserID)
+		return c.Next()
+	})
+
+	// Return the environment
+	return &testEnv{
+		App:       app,
+		TempDir:   tempDir,
+		Settings:  manager,
+		K8sClient: k8sClient,
+		Hub:       hub,
+		Store:     mockStore,
+	}
+}
+
+// injectDynamicCluster creates a fake dynamic client with custom list kinds (for CRD resources
+// like Gateway, HTTPRoute, ServiceExport, etc.) and injects both dynamic and typed clients
+// into the test environment for the given cluster name.
+//
+// gvrKinds maps each GVR to its list kind string (e.g. "GatewayList").
+// Returns the dynamic client for reactor registration.
+func injectDynamicCluster(env *testEnv, cluster string, gvrKinds map[schema.GroupVersionResource]string) *fake.FakeDynamicClient {
+	scheme := runtime.NewScheme()
+	dynClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrKinds)
+	env.K8sClient.InjectDynamicClient(cluster, dynClient)
+	env.K8sClient.InjectClient(cluster, k8sfake.NewSimpleClientset())
+	// Ensure the cluster is discoverable via ListClusters / HealthyClusters.
+	addClusterToRawConfig(env.K8sClient, cluster)
+	return dynClient
+}
+
+// addClusterToRawConfig ensures a cluster appears in the rawConfig so
+// ListClusters / HealthyClusters can discover it during tests.
+func addClusterToRawConfig(client *k8s.MultiClusterClient, cluster string) {
+	cfg := client.GetRawConfig()
+	if cfg == nil {
+		cfg = &api.Config{
+			Clusters: map[string]*api.Cluster{},
+			Contexts: map[string]*api.Context{},
+		}
+	}
+	if cfg.Clusters == nil {
+		cfg.Clusters = map[string]*api.Cluster{}
+	}
+	if cfg.Contexts == nil {
+		cfg.Contexts = map[string]*api.Context{}
+	}
+	cfg.Clusters[cluster] = &api.Cluster{Server: "https://" + cluster + ":6443"}
+	cfg.Contexts[cluster] = &api.Context{Cluster: cluster, AuthInfo: "test-user"}
+	client.SetRawConfig(cfg)
+}

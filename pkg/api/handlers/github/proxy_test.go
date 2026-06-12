@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/test"
@@ -50,7 +51,7 @@ func TestSaveToken_RejectsNonAdmin(t *testing.T) {
 
 	app.Post("/api/github/token", func(c *fiber.Ctx) error {
 		c.Locals("userID", userID)
-		if err := RequireAdmin(c, mockStore); err != nil {
+		if err := auth.RequireAdmin(c, mockStore); err != nil {
 			return err
 		}
 		return h.SaveToken(c)
@@ -84,7 +85,7 @@ func TestSaveToken_AllowsAdmin(t *testing.T) {
 
 	app.Post("/api/github/token", func(c *fiber.Ctx) error {
 		c.Locals("userID", userID)
-		if err := RequireAdmin(c, mockStore); err != nil {
+		if err := auth.RequireAdmin(c, mockStore); err != nil {
 			return err
 		}
 		return h.SaveToken(c)

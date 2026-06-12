@@ -18,6 +18,8 @@ import (
 	"github.com/kubestellar/console/pkg/test"
 )
 
+const fiberTestTimeout = 5000
+
 func setupGitOpsTest() (*fiber.App, *GitOpsHandlers) {
 	app := fiber.New()
 	// Pass nil userStore — requireAdmin treats this as dev/demo and skips
