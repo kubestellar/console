@@ -226,7 +226,7 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 
 	// Fetch jobs for this run
 	jobsURL := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
-		resolveGitHubAPIBase(), repo, runID)
+		ResolveGitHubAPIBase(), repo, runID)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", jobsURL, nil)
 	if err != nil {

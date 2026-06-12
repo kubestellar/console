@@ -58,7 +58,7 @@ const (
 
 // githubProxyAPIBase is the base URL for proxied GitHub API requests.
 // Configurable via GITHUB_API_BASE_URL env var to support GitHub Enterprise Server.
-var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
+var githubProxyAPIBase = GetEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
 
 var githubProxyClient = client.GitHub
 

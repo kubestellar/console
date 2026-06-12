@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
@@ -23,7 +24,7 @@ type routeSetupContext struct {
 	publicAPI          fiber.Router
 	api                fiber.Router
 	bodyGuard          fiber.Handler
-	feedback           *handlers.FeedbackHandler
+	feedback           *feedback.FeedbackHandler
 	namespaces         *handlers.NamespaceHandler
 	aiLimiter          fiber.Handler // per-user rate limit for AI-calling endpoints (#17294)
 }
@@ -259,8 +260,8 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		return c.Next()
 	}
 
-	feedbackCfg := handlers.LoadFeedbackConfig()
-	feedbackHandler := handlers.NewFeedbackHandler(s.store, feedbackCfg)
+	feedbackCfg := feedback.LoadFeedbackConfig()
+	feedbackHandler := feedback.NewFeedbackHandler(s.store, feedbackCfg)
 	app.Post("/api/feedback/requests", feedbackBodyGuard, csrfGuard, jwtAuth, feedbackLimiter, feedbackHandler.CreateFeatureRequest)
 
 	apiLimiterSkipPaths := map[string]bool{

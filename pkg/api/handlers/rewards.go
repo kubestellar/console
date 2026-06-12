@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/rewards"
@@ -392,7 +393,7 @@ func isConsoleAppSubmitted(item searchItem) bool {
 	if item.PerformedViaGitHubApp == nil {
 		return false
 	}
-	return item.PerformedViaGitHubApp.Slug == ExpectedAppSlug()
+	return item.PerformedViaGitHubApp.Slug == feedback.ExpectedAppSlug()
 }
 
 // requiresAppAttribution reports whether this issue is subject to the

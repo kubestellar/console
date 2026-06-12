@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/feedback"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
@@ -16,7 +16,7 @@ import (
 func (s *Server) setupWebSocketStaticRoutes(routes *routeSetupContext) {
 	feedbackHandler := routes.feedback
 	if feedbackHandler == nil {
-		feedbackHandler = handlers.NewFeedbackHandler(s.store, handlers.LoadFeedbackConfig())
+		feedbackHandler = feedback.NewFeedbackHandler(s.store, feedback.LoadFeedbackConfig())
 		routes.feedback = feedbackHandler
 	}
 	s.app.Post("/webhooks/github", feedbackHandler.HandleGitHubWebhook)
