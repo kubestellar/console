@@ -12,7 +12,7 @@ import (
 
 func TestGitHubProxyHandler_MissingToken(t *testing.T) {
 	mockStore := new(test.MockStore)
-	handler := NewGitHubProxyHandler("", mockStore, nil)
+	handler := NewGitHubProxyHandler("", mockStore)
 	app := fiber.New()
 	app.Get("/api/github-proxy", handler.Proxy)
 
@@ -44,7 +44,7 @@ func TestGitHubProxyHandler_InvalidPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStore := new(test.MockStore)
-			handler := NewGitHubProxyHandler("fake-token", mockStore, nil)
+			handler := NewGitHubProxyHandler("fake-token", mockStore)
 			app := fiber.New()
 			app.Get("/api/github-proxy", handler.Proxy)
 
@@ -58,7 +58,7 @@ func TestGitHubProxyHandler_InvalidPath(t *testing.T) {
 
 func TestGitHubProxyHandler_DisallowedRepo(t *testing.T) {
 	mockStore := new(test.MockStore)
-	handler := NewGitHubProxyHandler("fake-token", mockStore, nil)
+	handler := NewGitHubProxyHandler("fake-token", mockStore)
 	app := fiber.New()
 	app.Get("/api/github-proxy", handler.Proxy)
 

@@ -8,12 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMissions_ShareToSlack_Success(t *testing.T) {
+func TestMissions_ShareToSlack_Success_Integration(t *testing.T) {
 	slackMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))

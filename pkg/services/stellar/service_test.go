@@ -763,6 +763,7 @@ func TestObservationOperations(t *testing.T) {
 		Cluster: "prod",
 		Summary: "Test observation",
 	}
+	_ = userID // userID used by other subtests in this function
 
 	t.Run("create observation", func(t *testing.T) {
 		id, err := svc.CreateObservation(ctx, obs)

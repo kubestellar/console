@@ -143,6 +143,154 @@ func TestDriveGetWithRetry(t *testing.T) {
 	})
 }
 
+func TestCollectBenchmarkFiles_HTTPParsing(t *testing.T) {
+	validYAML := `
+apiVersion: v1
+kind: BenchmarkReport
+metadata:
+  name: test-benchmark
+  timestamp: "2025-05-01T10:00:00Z"
+results:
+  - name: BenchmarkTest
+    nsPerOp: 1000
+    bytesPerOp: 100
+    allocsPerOp: 5
+`
+
+	t.Run("parses valid benchmark files", func(t *testing.T) {
+		fileCount := 0
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.String(), "files?q=") {
+				w.Header().Set("Content-Type", "application/json")
+				json := `{
+					"files": [
+						{"id": "file1", "name": "benchmark_report_1.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T10:00:00Z"},
+						{"id": "file2", "name": "benchmark_report_2.yaml", "mimeType": "text/yaml", "createdTime": "2025-05-01T11:00:00Z"}
+					]
+				}`
+				w.Write([]byte(json))
+			} else if strings.Contains(r.URL.String(), "uc?id=") {
+				fileCount++
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(validYAML))
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{
+			client:   srv.Client(),
+			apiKey:   "test-key",
+			folderID: "folder123",
+		}
+		ctx := context.Background()
+
+		reports, failures, err := h.collectBenchmarkFiles(ctx, "folder123", "exp1", "run1")
+		require.NoError(t, err)
+		require.Equal(t, 0, failures)
+		require.Len(t, reports, 2)
+		require.Equal(t, 2, fileCount, "should download both files")
+	})
+
+	t.Run("skips folders and non-benchmark files", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.String(), "files?q=") {
+				json := `{
+					"files": [
+						{"id": "folder1", "name": "subfolder", "mimeType": "application/vnd.google-apps.folder", "createdTime": "2025-05-01T10:00:00Z"},
+						{"id": "file1", "name": "readme.txt", "mimeType": "text/plain", "createdTime": "2025-05-01T11:00:00Z"}
+					]
+				}`
+				w.Write([]byte(json))
+			}
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{
+			client:   srv.Client(),
+			apiKey:   "test-key",
+			folderID: "folder123",
+		}
+		ctx := context.Background()
+
+		reports, failures, err := h.collectBenchmarkFiles(ctx, "folder123", "exp1", "run1")
+		require.NoError(t, err)
+		require.Equal(t, 0, failures)
+		require.Len(t, reports, 0, "should skip non-benchmark files and folders")
+	})
+}
+
+func TestDownloadAndParseReport_HTTPDownload(t *testing.T) {
+	validYAML := `
+apiVersion: v1
+kind: BenchmarkReport
+metadata:
+  name: test
+results:
+  - name: BenchmarkTest
+    nsPerOp: 1000
+`
+
+	t.Run("successfully downloads and parses valid YAML", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(validYAML))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		file := driveFile{
+			ID:          "file123",
+			Name:        "benchmark_report_1.yaml",
+			CreatedTime: "2025-05-01T10:00:00Z",
+		}
+
+		report, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
+		require.NoError(t, err)
+		require.NotNil(t, report)
+	})
+
+	t.Run("returns error on invalid YAML", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("not valid yaml: {{{"))
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		file := driveFile{
+			ID:          "file123",
+			Name:        "benchmark_report_bad.yaml",
+			CreatedTime: "2025-05-01T10:00:00Z",
+		}
+
+		_, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
+		require.Error(t, err, "should fail on invalid YAML")
+	})
+
+	t.Run("returns error on download failure", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+
+		h := &BenchmarkHandlers{client: srv.Client()}
+		ctx := context.Background()
+
+		file := driveFile{
+			ID:          "missing",
+			Name:        "benchmark_report_missing.yaml",
+			CreatedTime: "2025-05-01T10:00:00Z",
+		}
+
+		_, err := h.downloadAndParseReport(ctx, file, "exp1", "run1")
+		require.Error(t, err, "should fail on 404")
+	})
+}
+
 func TestDownloadDriveFile(t *testing.T) {
 	t.Run("downloads file successfully", func(t *testing.T) {
 		content := "benchmark data here"

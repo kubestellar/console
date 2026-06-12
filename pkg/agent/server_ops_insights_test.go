@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"os/exec"
 	"testing"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleInsightsEnrich(t *testing.T) {
@@ -85,7 +87,7 @@ func TestServer_HandleVClusterCheck(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  &LocalClusterManager{},
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/vcluster/check", nil)

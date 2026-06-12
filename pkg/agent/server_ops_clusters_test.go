@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	"github.com/kubestellar/console/pkg/agent/kube"
 )
 
 func TestServer_HandleCloudCLIStatus(t *testing.T) {
@@ -65,7 +67,7 @@ func TestServer_HandleLocalClusterTools(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools", nil)
@@ -78,7 +80,7 @@ func TestServer_HandleLocalClusterTools(t *testing.T) {
 	}
 
 	var resp struct {
-		Tools []LocalClusterTool `json:"tools"`
+		Tools []kube.LocalClusterTool `json:"tools"`
 	}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
@@ -133,7 +135,7 @@ func TestServer_HandleLocalClusterTools_RequestedToolsFallback(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/local-cluster-tools?tool=helm", nil)
@@ -149,7 +151,7 @@ func TestServer_HandleLocalClusterTools_RequestedToolsFallback(t *testing.T) {
 	}
 
 	var resp struct {
-		Tools []LocalClusterTool `json:"tools"`
+		Tools []kube.LocalClusterTool `json:"tools"`
 	}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
@@ -172,7 +174,7 @@ func TestServer_HandleLocalClusters_List(t *testing.T) {
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
-		localClusters:  NewLocalClusterManager(nil),
+		localClusters:  kube.NewLocalClusterManager(nil),
 	}
 
 	req := httptest.NewRequest("GET", "/local-clusters", nil)

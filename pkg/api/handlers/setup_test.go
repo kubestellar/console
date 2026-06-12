@@ -17,9 +17,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
+
+func newK8sScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	_ = k8sscheme.AddToScheme(scheme)
+	return scheme
+}
 
 // testAdminUserID is the fixed user ID injected by setupTestEnv for RBAC-protected
 // endpoints. The MockStore is configured to return an admin user for this ID.

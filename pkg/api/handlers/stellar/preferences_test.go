@@ -28,6 +28,10 @@ func (m *mockStellarPrefsStore) UpdateStellarPreferences(ctx context.Context, pr
 	return m.err
 }
 
+func (m *mockStellarPrefsStore) PruneOldExecutions(_ context.Context, _ int) (int64, error) {
+	return 0, nil
+}
+
 func TestGetPreferences(t *testing.T) {
 	tests := []struct {
 		name           string

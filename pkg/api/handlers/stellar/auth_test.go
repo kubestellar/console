@@ -74,6 +74,10 @@ func (m *mockUserStore) GetUser(ctx context.Context, id uuid.UUID) (*models.User
 	return m.user, m.err
 }
 
+func (m *mockUserStore) PruneOldExecutions(_ context.Context, _ int) (int64, error) {
+	return 0, nil
+}
+
 func TestIsAdminUser(t *testing.T) {
 	adminID := uuid.New()
 	userID := uuid.New()
