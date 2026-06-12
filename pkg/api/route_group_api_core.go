@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -134,8 +135,8 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 
 	api.Get("/github/*", githubProxy.Proxy)
 
-	api.Get("/acmm/scan", handlers.ACMMScanHandler)
-	api.Get("/acmm/badge", handlers.ACMMBadgeHandler)
+	api.Get("/acmm/scan", compliance.ACMMScanHandler)
+	api.Get("/acmm/badge", compliance.ACMMBadgeHandler)
 
 	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), g.store)
 	api.Get("/settings", settingsHandler.GetSettings)

@@ -1,5 +1,5 @@
 // Package handlers provides HTTP handlers for the console API.
-package handlers
+package compliance
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
@@ -228,7 +229,7 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	}
 
 	// Demo mode support
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		return c.JSON(demoACMMScan(repo))
 	}
 

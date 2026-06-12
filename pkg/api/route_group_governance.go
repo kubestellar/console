@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
@@ -38,9 +39,9 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	auditHandler := handlers.NewAuditHandler(g.store)
 	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
-	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
+	complianceFrameworks := compliance.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
-	complianceReports := handlers.NewComplianceReportsHandler(nil)
+	complianceReports := compliance.NewComplianceReportsHandler(nil)
 	complianceReports.RegisterRoutes(api.Group("/compliance/frameworks"))
 
 	routes.namespaces = handlers.NewNamespaceHandler(g.store, g.k8sClient)
@@ -51,6 +52,6 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
 
 	// SIEM export (admin-only, moved from public routes — fix #16518).
-	siemHandler := handlers.NewSIEMHandler(g.store)
+	siemHandler := compliance.NewSIEMHandler(g.store)
 	siemHandler.RegisterRoutes(api)
 }

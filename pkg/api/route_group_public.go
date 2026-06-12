@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	ghhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"github.com/kubestellar/console/pkg/compliance/residency"
@@ -81,48 +82,48 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 	missionsHandler := missions.NewMissionsHandler().WithStore(g.store)
 	missionsHandler.RegisterPublicRoutes(g.app.Group("/api/missions"))
 
-	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
+	complianceFrameworks := compliance.NewComplianceFrameworksHandler(nil)
 	complianceFrameworks.RegisterPublicRoutes(g.app.Group("/api/compliance/frameworks", publicLimiter))
 
 	residencyEngine := residency.NewEngine()
-	dataResidency := handlers.NewDataResidencyHandler(residencyEngine)
+	dataResidency := compliance.NewDataResidencyHandler(residencyEngine)
 	dataResidency.RegisterPublicRoutes(g.app.Group("/api/compliance/residency", publicLimiter))
 
 	changeControl := handlers.NewChangeControlHandler()
 	changeControl.RegisterPublicRoutes(publicAPI)
 
-	sodHandler := handlers.NewSoDHandler()
+	sodHandler := compliance.NewSoDHandler()
 	sodHandler.RegisterPublicRoutes(publicAPI)
 
 	baaHandler := handlers.NewBAAHandler()
 	baaHandler.RegisterPublicRoutes(publicAPI)
 
-	hipaaHandler := handlers.NewHIPAAHandler()
+	hipaaHandler := compliance.NewHIPAAHandler()
 	hipaaHandler.RegisterPublicRoutes(publicAPI)
 
-	gxpHandler := handlers.NewGxPHandler()
+	gxpHandler := compliance.NewGxPHandler()
 	gxpHandler.RegisterPublicRoutes(publicAPI)
 
-	nistHandler := handlers.NewNIST80053Handler()
+	nistHandler := compliance.NewNIST80053Handler()
 	nistHandler.RegisterPublicRoutes(publicAPI)
 
-	stigHandler := handlers.NewSTIGHandler()
+	stigHandler := compliance.NewSTIGHandler()
 	stigHandler.RegisterPublicRoutes(publicAPI)
 
 	airgapHandler := handlers.NewAirGapHandler()
 	airgapHandler.RegisterPublicRoutes(publicAPI)
 
-	fedrampHandler := handlers.NewFedRAMPHandler()
+	fedrampHandler := compliance.NewFedRAMPHandler()
 	fedrampHandler.RegisterPublicRoutes(publicAPI)
 
-	sbomHandler := handlers.NewSBOMHandler()
+	sbomHandler := compliance.NewSBOMHandler()
 	sbomHandler.RegisterPublicRoutes(publicAPI)
-	signingHandler := handlers.NewSigningHandler()
+	signingHandler := compliance.NewSigningHandler()
 	signingHandler.RegisterPublicRoutes(publicAPI)
-	slsaHandler := handlers.NewSLSAHandler()
+	slsaHandler := compliance.NewSLSAHandler()
 	slsaHandler.RegisterPublicRoutes(publicAPI)
-	licenseHandler := handlers.NewLicenseHandler()
+	licenseHandler := compliance.NewLicenseHandler()
 	licenseHandler.RegisterPublicRoutes(publicAPI)
-	attestationHandler := handlers.NewAttestationHandler()
+	attestationHandler := compliance.NewAttestationHandler()
 	attestationHandler.RegisterPublicRoutes(publicAPI)
 }

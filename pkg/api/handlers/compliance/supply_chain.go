@@ -1,4 +1,4 @@
-package handlers
+package compliance
 
 // Supply Chain & Software Provenance handlers — Epic 6 (#9632)
 //

@@ -1,4 +1,4 @@
-package handlers
+package compliance
 
 // Tests for the SIEM webhook destination adapter (#9887 / #9643).
 //

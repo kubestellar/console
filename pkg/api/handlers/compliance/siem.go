@@ -1,4 +1,4 @@
-package handlers
+package compliance
 
 // SIEM Export Handler — Issue #9643 / #9887
 //
@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -34,7 +35,7 @@ func NewSIEMHandler(s store.Store) *SIEMHandler { return &SIEMHandler{store: s} 
 func (h *SIEMHandler) RegisterRoutes(r fiber.Router) {
 	g := r.Group("/audit/export")
 	g.Use(func(c *fiber.Ctx) error {
-		if err := RequireAdmin(c, h.store); err != nil {
+		if err := auth.RequireAdmin(c, h.store); err != nil {
 			return err
 		}
 		return c.Next()

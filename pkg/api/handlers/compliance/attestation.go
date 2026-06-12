@@ -1,4 +1,4 @@
-package handlers
+package compliance
 
 // Runtime Attestation Score handler — Issue #9987
 //
@@ -14,6 +14,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
 )
 
 // ── Score signal weights (must sum to 100) ──────────────────────────────────
@@ -71,8 +72,8 @@ func (h *AttestationHandler) RegisterPublicRoutes(r fiber.Router) {
 }
 
 func (h *AttestationHandler) getScore(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "attestation", GetDemoAttestationScores())
+	if handlers.IsDemoMode(c) {
+		return handlers.DemoResponse(c, "attestation", GetDemoAttestationScores())
 	}
 	// TODO: replace with live signal collection when backends land.
 	return c.JSON(GetDemoAttestationScores())

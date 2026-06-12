@@ -1,7 +1,8 @@
-package handlers
+package compliance
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/compliance/residency"
 )
 
@@ -27,8 +28,8 @@ func (h *DataResidencyHandler) RegisterPublicRoutes(group fiber.Router) {
 // ListRules returns all configured residency rules.
 // GET /api/compliance/residency/rules
 func (h *DataResidencyHandler) ListRules(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "rules", h.engine.Rules())
+	if handlers.IsDemoMode(c) {
+		return handlers.DemoResponse(c, "rules", h.engine.Rules())
 	}
 	return c.JSON(h.engine.Rules())
 }
@@ -36,7 +37,7 @@ func (h *DataResidencyHandler) ListRules(c *fiber.Ctx) error {
 // ListRegions returns all available region codes with labels.
 // GET /api/compliance/residency/regions
 func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		type regionInfo struct {
 			Code  residency.Region `json:"code"`
 			Label string           `json:"label"`
@@ -46,7 +47,7 @@ func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
 		for i, r := range regions {
 			result[i] = regionInfo{Code: r, Label: residency.RegionLabel(r)}
 		}
-		return DemoResponse(c, "regions", result)
+		return handlers.DemoResponse(c, "regions", result)
 	}
 
 	type regionInfo struct {
@@ -65,8 +66,8 @@ func (h *DataResidencyHandler) ListRegions(c *fiber.Ctx) error {
 // ListClusterRegions returns the cluster-to-region mapping.
 // GET /api/compliance/residency/clusters
 func (h *DataResidencyHandler) ListClusterRegions(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "clusterRegions", h.engine.ClusterRegions())
+	if handlers.IsDemoMode(c) {
+		return handlers.DemoResponse(c, "clusterRegions", h.engine.ClusterRegions())
 	}
 	return c.JSON(h.engine.ClusterRegions())
 }
@@ -74,9 +75,9 @@ func (h *DataResidencyHandler) ListClusterRegions(c *fiber.Ctx) error {
 // ListViolations evaluates all rules and returns violations.
 // GET /api/compliance/residency/violations
 func (h *DataResidencyHandler) ListViolations(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		violations, _ := h.engine.Evaluate()
-		return DemoResponse(c, "violations", violations)
+		return handlers.DemoResponse(c, "violations", violations)
 	}
 	violations, _ := h.engine.Evaluate()
 	return c.JSON(violations)
@@ -85,8 +86,8 @@ func (h *DataResidencyHandler) ListViolations(c *fiber.Ctx) error {
 // GetSummary returns an overview of the data residency posture.
 // GET /api/compliance/residency/summary
 func (h *DataResidencyHandler) GetSummary(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "summary", h.engine.Summary())
+	if handlers.IsDemoMode(c) {
+		return handlers.DemoResponse(c, "summary", h.engine.Summary())
 	}
 	return c.JSON(h.engine.Summary())
 }

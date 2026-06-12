@@ -1,5 +1,5 @@
 // Package handlers provides HTTP handlers for the console API.
-package handlers
+package compliance
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
@@ -140,7 +141,7 @@ func ACMMBadgeHandler(c *fiber.Ctx) error {
 	}
 
 	// Demo mode support
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		badge := &shieldsEndpointBadge{
 			SchemaVersion: 1,
 			Label:         "ACMM",
