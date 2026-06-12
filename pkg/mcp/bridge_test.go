@@ -456,3 +456,518 @@ func TestGetEnvOrDefault(t *testing.T) {
 		})
 	}
 }
+
+// mockClient is a test helper that simulates an MCP client with a CallTool method
+type mockClient struct {
+	*Client
+	callToolFunc func(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error)
+}
+
+func (m *mockClient) CallTool(ctx context.Context, name string, args map[string]interface{}) (*CallToolResult, error) {
+	if m.callToolFunc != nil {
+		return m.callToolFunc(ctx, name, args)
+	}
+	return nil, fmt.Errorf("mock CallTool not implemented")
+}
+
+func newMockClient(name string, callToolFunc func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error)) *mockClient {
+	base := newFakeClient(name)
+	base.ready.Store(true)
+	return &mockClient{
+		Client:       base,
+		callToolFunc: callToolFunc,
+	}
+}
+
+func TestBridge_GetPods(t *testing.T) {
+	tests := []struct {
+		name          string
+		cluster       string
+		namespace     string
+		labelSelector string
+		mockResponse  *CallToolResult
+		mockError     error
+		wantPods      []PodInfo
+		wantError     bool
+		errorContains string
+	}{
+		{
+			name:      "returns pods with all filters",
+			cluster:   "prod",
+			namespace: "default",
+			labelSelector: "app=nginx",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"pod-1","namespace":"default","status":"Running","ready":"1/1","restarts":0,"age":"5d"}]`,
+				}},
+			},
+			wantPods: []PodInfo{{Name: "pod-1", Namespace: "default", Status: "Running", Ready: "1/1", Restarts: 0, Age: "5d"}},
+		},
+		{
+			name:    "returns pods with minimal filters",
+			cluster: "dev",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"pod-2","namespace":"kube-system","status":"Pending","ready":"0/1","restarts":5,"age":"1h"}]`,
+				}},
+			},
+			wantPods: []PodInfo{{Name: "pod-2", Namespace: "kube-system", Status: "Pending", Ready: "0/1", Restarts: 5, Age: "1h"}},
+		},
+		{
+			name:        "returns error when client call fails",
+			cluster:     "prod",
+			mockError:   fmt.Errorf("connection timeout"),
+			wantError:   true,
+			errorContains: "connection timeout",
+		},
+		{
+			name:    "returns error when result is error",
+			cluster: "prod",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{Type: "text", Text: "cluster not found"}},
+				IsError: true,
+			},
+			wantError:   true,
+			errorContains: "tool error",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bridge := NewBridge(BridgeConfig{})
+			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+				require.Equal(t, "get_pods", toolName)
+				if tc.cluster != "" {
+					require.Equal(t, tc.cluster, args["cluster"])
+				}
+				if tc.namespace != "" {
+					require.Equal(t, tc.namespace, args["namespace"])
+				}
+				if tc.labelSelector != "" {
+					require.Equal(t, tc.labelSelector, args["label_selector"])
+				}
+				if tc.mockError != nil {
+					return nil, tc.mockError
+				}
+				return tc.mockResponse, nil
+			})
+
+			pods, err := bridge.GetPods(context.Background(), tc.cluster, tc.namespace, tc.labelSelector)
+
+			if tc.wantError {
+				require.Error(t, err)
+				if tc.errorContains != "" {
+					require.Contains(t, err.Error(), tc.errorContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantPods, pods)
+		})
+	}
+}
+
+func TestBridge_FindPodIssues(t *testing.T) {
+	tests := []struct {
+		name          string
+		cluster       string
+		namespace     string
+		mockResponse  *CallToolResult
+		mockError     error
+		wantIssues    []PodIssue
+		wantError     bool
+		errorContains string
+	}{
+		{
+			name:      "returns pod issues with CrashLoopBackOff",
+			cluster:   "prod",
+			namespace: "default",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"crash-pod","namespace":"default","status":"CrashLoopBackOff","reason":"Error","issues":["CrashLoopBackOff"],"restarts":10}]`,
+				}},
+			},
+			wantIssues: []PodIssue{{Name: "crash-pod", Namespace: "default", Status: "CrashLoopBackOff", Reason: "Error", Issues: []string{"CrashLoopBackOff"}, Restarts: 10}},
+		},
+		{
+			name:      "returns pod issues with ImagePullBackOff",
+			cluster:   "dev",
+			namespace: "staging",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"image-pod","namespace":"staging","status":"ImagePullBackOff","reason":"ErrImagePull","issues":["ImagePullBackOff"],"restarts":0}]`,
+				}},
+			},
+			wantIssues: []PodIssue{{Name: "image-pod", Namespace: "staging", Status: "ImagePullBackOff", Reason: "ErrImagePull", Issues: []string{"ImagePullBackOff"}, Restarts: 0}},
+		},
+		{
+			name:      "returns pod issues with OOMKilled",
+			cluster:   "prod",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"oom-pod","namespace":"default","status":"OOMKilled","reason":"OOMKilled","issues":["OOMKilled","High restart count"],"restarts":25}]`,
+				}},
+			},
+			wantIssues: []PodIssue{{Name: "oom-pod", Namespace: "default", Status: "OOMKilled", Reason: "OOMKilled", Issues: []string{"OOMKilled", "High restart count"}, Restarts: 25}},
+		},
+		{
+			name:        "returns error when client call fails",
+			cluster:     "prod",
+			namespace:   "default",
+			mockError:   fmt.Errorf("connection refused"),
+			wantError:   true,
+			errorContains: "connection refused",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bridge := NewBridge(BridgeConfig{})
+			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+				require.Equal(t, "find_pod_issues", toolName)
+				if tc.cluster != "" {
+					require.Equal(t, tc.cluster, args["cluster"])
+				}
+				if tc.namespace != "" {
+					require.Equal(t, tc.namespace, args["namespace"])
+				}
+				if tc.mockError != nil {
+					return nil, tc.mockError
+				}
+				return tc.mockResponse, nil
+			})
+
+			issues, err := bridge.FindPodIssues(context.Background(), tc.cluster, tc.namespace)
+
+			if tc.wantError {
+				require.Error(t, err)
+				if tc.errorContains != "" {
+					require.Contains(t, err.Error(), tc.errorContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantIssues, issues)
+		})
+	}
+}
+
+func TestBridge_GetEvents(t *testing.T) {
+	tests := []struct {
+		name          string
+		cluster       string
+		namespace     string
+		limit         int
+		mockResponse  *CallToolResult
+		mockError     error
+		wantEvents    []Event
+		wantError     bool
+		errorContains string
+	}{
+		{
+			name:      "returns events with limit",
+			cluster:   "prod",
+			namespace: "default",
+			limit:     10,
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"type":"Warning","reason":"BackOff","message":"Back-off restarting failed container","object":"pod/test","namespace":"default","count":5}]`,
+				}},
+			},
+			wantEvents: []Event{{Type: "Warning", Reason: "BackOff", Message: "Back-off restarting failed container", Object: "pod/test", Namespace: "default", Count: 5}},
+		},
+		{
+			name:    "returns events without limit",
+			cluster: "dev",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"type":"Normal","reason":"Created","message":"Created container","object":"pod/nginx","namespace":"default","count":1}]`,
+				}},
+			},
+			wantEvents: []Event{{Type: "Normal", Reason: "Created", Message: "Created container", Object: "pod/nginx", Namespace: "default", Count: 1}},
+		},
+		{
+			name:        "returns error when client call fails",
+			cluster:     "prod",
+			limit:       5,
+			mockError:   fmt.Errorf("timeout"),
+			wantError:   true,
+			errorContains: "timeout",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bridge := NewBridge(BridgeConfig{})
+			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+				require.Equal(t, "get_events", toolName)
+				if tc.cluster != "" {
+					require.Equal(t, tc.cluster, args["cluster"])
+				}
+				if tc.namespace != "" {
+					require.Equal(t, tc.namespace, args["namespace"])
+				}
+				if tc.limit > 0 {
+					require.Equal(t, tc.limit, args["limit"])
+				}
+				if tc.mockError != nil {
+					return nil, tc.mockError
+				}
+				return tc.mockResponse, nil
+			})
+
+			events, err := bridge.GetEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
+
+			if tc.wantError {
+				require.Error(t, err)
+				if tc.errorContains != "" {
+					require.Contains(t, err.Error(), tc.errorContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantEvents, events)
+		})
+	}
+}
+
+func TestBridge_GetWarningEvents(t *testing.T) {
+	tests := []struct {
+		name          string
+		cluster       string
+		namespace     string
+		limit         int
+		mockResponse  *CallToolResult
+		mockError     error
+		wantEvents    []Event
+		wantError     bool
+		errorContains string
+	}{
+		{
+			name:      "returns warning events only",
+			cluster:   "prod",
+			namespace: "default",
+			limit:     5,
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"type":"Warning","reason":"Failed","message":"Failed to pull image","object":"pod/app","namespace":"default","count":3}]`,
+				}},
+			},
+			wantEvents: []Event{{Type: "Warning", Reason: "Failed", Message: "Failed to pull image", Object: "pod/app", Namespace: "default", Count: 3}},
+		},
+		{
+			name:    "returns empty list when no warnings",
+			cluster: "dev",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"type":"Warning","reason":"Evicted","message":"Pod evicted","object":"pod/old","namespace":"default","count":1}]`,
+				}},
+			},
+			wantEvents: []Event{{Type: "Warning", Reason: "Evicted", Message: "Pod evicted", Object: "pod/old", Namespace: "default", Count: 1}},
+		},
+		{
+			name:        "returns error when client call fails",
+			cluster:     "prod",
+			mockError:   fmt.Errorf("network error"),
+			wantError:   true,
+			errorContains: "network error",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bridge := NewBridge(BridgeConfig{})
+			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+				require.Equal(t, "get_warning_events", toolName)
+				if tc.cluster != "" {
+					require.Equal(t, tc.cluster, args["cluster"])
+				}
+				if tc.namespace != "" {
+					require.Equal(t, tc.namespace, args["namespace"])
+				}
+				if tc.limit > 0 {
+					require.Equal(t, tc.limit, args["limit"])
+				}
+				if tc.mockError != nil {
+					return nil, tc.mockError
+				}
+				return tc.mockResponse, nil
+			})
+
+			events, err := bridge.GetWarningEvents(context.Background(), tc.cluster, tc.namespace, tc.limit)
+
+			if tc.wantError {
+				require.Error(t, err)
+				if tc.errorContains != "" {
+					require.Contains(t, err.Error(), tc.errorContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantEvents, events)
+		})
+	}
+}
+
+func TestBridge_GetClusterHealth(t *testing.T) {
+	tests := []struct {
+		name          string
+		cluster       string
+		mockResponse  *CallToolResult
+		mockError     error
+		wantHealth    *ClusterHealth
+		wantError     bool
+		errorContains string
+	}{
+		{
+			name:    "returns healthy cluster",
+			cluster: "prod",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `{"cluster":"prod","healthy":true,"reachable":true,"nodeCount":5,"readyNodes":5,"podCount":100}`,
+				}},
+			},
+			wantHealth: &ClusterHealth{Cluster: "prod", Healthy: true, Reachable: true, NodeCount: 5, ReadyNodes: 5, PodCount: 100},
+		},
+		{
+			name:    "returns unhealthy cluster with issues",
+			cluster: "dev",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `{"cluster":"dev","healthy":false,"reachable":true,"nodeCount":3,"readyNodes":2,"podCount":50,"issues":["Node not ready"]}`,
+				}},
+			},
+			wantHealth: &ClusterHealth{Cluster: "dev", Healthy: false, Reachable: true, NodeCount: 3, ReadyNodes: 2, PodCount: 50, Issues: []string{"Node not ready"}},
+		},
+		{
+			name:    "returns unreachable cluster",
+			cluster: "staging",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `{"cluster":"staging","healthy":false,"reachable":false,"errorType":"connection","errorMessage":"connection refused"}`,
+				}},
+			},
+			wantHealth: &ClusterHealth{Cluster: "staging", Healthy: false, Reachable: false, ErrorType: "connection", ErrorMessage: "connection refused"},
+		},
+		{
+			name:        "returns error when client call fails",
+			cluster:     "prod",
+			mockError:   fmt.Errorf("client error"),
+			wantError:   true,
+			errorContains: "client error",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bridge := NewBridge(BridgeConfig{})
+			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+				require.Equal(t, "get_cluster_health", toolName)
+				if tc.cluster != "" {
+					require.Equal(t, tc.cluster, args["cluster"])
+				}
+				if tc.mockError != nil {
+					return nil, tc.mockError
+				}
+				return tc.mockResponse, nil
+			})
+
+			health, err := bridge.GetClusterHealth(context.Background(), tc.cluster)
+
+			if tc.wantError {
+				require.Error(t, err)
+				if tc.errorContains != "" {
+					require.Contains(t, err.Error(), tc.errorContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantHealth, health)
+		})
+	}
+}
+
+func TestBridge_ListClusters(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponse  *CallToolResult
+		mockError     error
+		wantClusters  []ClusterInfo
+		wantError     bool
+		errorContains string
+	}{
+		{
+			name: "returns multiple clusters",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"prod","context":"prod-context","healthy":true,"nodeCount":5},{"name":"dev","context":"dev-context","healthy":true,"nodeCount":2}]`,
+				}},
+			},
+			wantClusters: []ClusterInfo{
+				{Name: "prod", Context: "prod-context", Healthy: true, NodeCount: 5},
+				{Name: "dev", Context: "dev-context", Healthy: true, NodeCount: 2},
+			},
+		},
+		{
+			name: "returns single cluster",
+			mockResponse: &CallToolResult{
+				Content: []ContentItem{{
+					Type: "text",
+					Text: `[{"name":"local","context":"docker-desktop","healthy":true}]`,
+				}},
+			},
+			wantClusters: []ClusterInfo{{Name: "local", Context: "docker-desktop", Healthy: true}},
+		},
+		{
+			name:        "returns error when client call fails",
+			mockError:   fmt.Errorf("discovery failed"),
+			wantError:   true,
+			errorContains: "discovery failed",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bridge := NewBridge(BridgeConfig{})
+			bridge.opsClient = newMockClient("ops", func(ctx context.Context, toolName string, args map[string]interface{}) (*CallToolResult, error) {
+				require.Equal(t, "list_clusters", toolName)
+				require.Equal(t, "all", args["source"])
+				if tc.mockError != nil {
+					return nil, tc.mockError
+				}
+				return tc.mockResponse, nil
+			})
+
+			clusters, err := bridge.ListClusters(context.Background())
+
+			if tc.wantError {
+				require.Error(t, err)
+				if tc.errorContains != "" {
+					require.Contains(t, err.Error(), tc.errorContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.wantClusters, clusters)
+		})
+	}
+}
