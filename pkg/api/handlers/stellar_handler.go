@@ -170,11 +170,18 @@ type Store interface {
 	UpdateNotificationBody(ctx context.Context, dedupeKey, newBody string) error
 }
 
+// stellarK8sClient defines the narrow subset of k8s.MultiClusterClient used by the Stellar Handler.
+type stellarK8sClient interface {
+	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	GetWarningEvents(ctx context.Context, contextName, namespace string, limit int) ([]k8s.Event, error)
+}
+
 // Handler exposes persistence and operational APIs for the Stellar assistant.
 type Handler struct {
 	store            Store
 	userStore        store.Store // for admin role checks on sensitive endpoints
-	k8sClient        *k8s.MultiClusterClient
+	k8sClient        stellarK8sClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
 	sseClients       map[string]stellarSSEClient

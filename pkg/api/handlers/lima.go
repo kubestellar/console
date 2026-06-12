@@ -15,12 +15,19 @@ import (
 // limaListTimeout is the timeout for listing Lima nodes across all clusters.
 const limaListTimeout = 30 * time.Second
 
+// limaClient defines the narrow subset of k8s.MultiClusterClient used by LimaHandlers.
+type limaClient interface {
+	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	GetNodes(ctx context.Context, contextName string) ([]k8s.NodeInfo, error)
+}
+
 // LimaHandlers handles Lima VM status API endpoints.
 type LimaHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient limaClient
 }
 
 // NewLimaHandlers creates a new Lima handlers instance.
+// Accepts *k8s.MultiClusterClient (or any limaClient implementation).
 func NewLimaHandlers(k8sClient *k8s.MultiClusterClient) *LimaHandlers {
 	return &LimaHandlers{k8sClient: k8sClient}
 }
