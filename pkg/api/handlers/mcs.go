@@ -5,19 +5,32 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
 // mcsDefaultTimeout is the per-cluster timeout for MCS API queries.
 const mcsDefaultTimeout = 15 * time.Second
 
+// mcsClient defines the narrow interface consumed by MCSHandlers.
+// *k8s.MultiClusterClient satisfies this implicitly.
+type mcsClient interface {
+	HealthyClusters(ctx context.Context) ([]k8s.ClusterInfo, []k8s.ClusterInfo, error)
+	IsMCSAvailable(ctx context.Context, contextName string) bool
+	ListServiceExports(ctx context.Context) (*v1alpha1.ServiceExportList, error)
+	ListServiceExportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceExport, error)
+	ListServiceImports(ctx context.Context) (*v1alpha1.ServiceImportList, error)
+	ListServiceImportsForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.ServiceImport, error)
+}
+
 // MCSHandlers handles Multi-Cluster Service API endpoints
 type MCSHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient mcsClient
 	hub       *Hub
 }
 
-// NewMCSHandlers creates a new MCS handlers instance
+// NewMCSHandlers creates a new MCS handlers instance.
+// Accepts *k8s.MultiClusterClient (or any mcsClient implementation).
 func NewMCSHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *MCSHandlers {
 	return &MCSHandlers{
 		k8sClient: k8sClient,

@@ -6,19 +6,32 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
 // gatewayDefaultTimeout is the per-cluster timeout for Gateway API queries.
 const gatewayDefaultTimeout = 15 * time.Second
 
+// gatewayClient defines the narrow interface consumed by GatewayHandlers.
+// *k8s.MultiClusterClient satisfies this implicitly.
+type gatewayClient interface {
+	HealthyClusters(ctx context.Context) ([]k8s.ClusterInfo, []k8s.ClusterInfo, error)
+	IsGatewayAPIAvailable(ctx context.Context, contextName string) bool
+	ListGateways(ctx context.Context) (*v1alpha1.GatewayList, error)
+	ListGatewaysForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.Gateway, error)
+	ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTPRouteList, error)
+	ListHTTPRoutesForCluster(ctx context.Context, contextName, namespace string) ([]v1alpha1.HTTPRoute, error)
+}
+
 // GatewayHandlers handles Gateway API endpoints
 type GatewayHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient gatewayClient
 	hub       *Hub
 }
 
-// NewGatewayHandlers creates a new Gateway handlers instance
+// NewGatewayHandlers creates a new Gateway handlers instance.
+// Accepts *k8s.MultiClusterClient (or any gatewayClient implementation).
 func NewGatewayHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *GatewayHandlers {
 	return &GatewayHandlers{
 		k8sClient: k8sClient,
