@@ -24,7 +24,7 @@
 // The handler streams the upstream response directly so SSE and chunked
 // responses work — drasi-server's `/api/v1/instances/.../events/stream`
 // endpoints are SSE.
-package handlers
+package mcp
 
 import (
 	"context"
