@@ -59,7 +59,7 @@ func namespaceListError(err error) error {
 func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	// SECURITY (#7485): namespace listing exposes cluster structure; require a
 	// valid console role (viewer or above).
-	if err := requireViewerOrAbove(c, h.store); err != nil {
+	if err := RequireViewerOrAbove(c, h.store); err != nil {
 		return err
 	}
 

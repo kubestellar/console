@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	ghhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/gitops"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/fileutil"
@@ -280,7 +281,7 @@ func (s *Server) Shutdown() error {
 		}
 		// stop the operator cache and GitHub proxy limiter eviction goroutines.
 		gitops.StopOperatorCacheEvictor()
-		handlers.StopGitHubProxyLimiterEvictor()
+		ghhandlers.StopGitHubProxyLimiterEvictor()
 		// #7043 — stop the SSE cache evictor goroutine that was started
 		// lazily by sseCacheSet. Without this the goroutine leaks after
 		// server shutdown.

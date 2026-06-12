@@ -58,7 +58,7 @@ const (
 func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	// SECURITY (#7487): custom resource listing can expose sensitive spec/status
 	// data; require a valid console role (viewer or above).
-	if err := requireViewerOrAbove(c, h.store); err != nil {
+	if err := handlers.RequireViewerOrAbove(c, h.store); err != nil {
 		return err
 	}
 
@@ -85,13 +85,13 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	}
 
 	// Validate GVR parameters against Kubernetes naming conventions
-	if !isValidK8sName(group) {
+	if !handlers.IsValidK8sName(group) {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid group parameter — must match DNS subdomain format"})
 	}
-	if !isValidK8sVersion(version) {
+	if !handlers.IsValidK8sVersion(version) {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid version parameter — must be alphanumeric (e.g. v1, v1beta1)"})
 	}
-	if !isValidK8sName(resource) {
+	if !handlers.IsValidK8sName(resource) {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid resource parameter — must match DNS label format"})
 	}
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"golang.org/x/sync/errgroup"
 )
@@ -488,7 +489,7 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	if middleware.GetUserID(c) == uuid.Nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "User authentication required")
 	}
-	if err := RequireAdmin(c, h.store); err != nil {
+	if err := handlers.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.mutationToken == "" {

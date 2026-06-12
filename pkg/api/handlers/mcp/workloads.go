@@ -19,7 +19,7 @@ import (
 func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "pods", getDemoPods())
+		return handlers.DemoResponse(c, "pods", handlers.GetDemoPods())
 	}
 
 	cluster := c.Query("cluster")
@@ -81,7 +81,7 @@ func (h *MCPHandlers) GetPods(c *fiber.Ctx) error {
 func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "issues", getDemoPodIssues())
+		return handlers.DemoResponse(c, "issues", handlers.GetDemoPodIssues())
 	}
 
 	cluster := c.Query("cluster")
@@ -137,7 +137,7 @@ func (h *MCPHandlers) FindPodIssues(c *fiber.Ctx) error {
 
 // FindDeploymentIssues returns deployments with issues
 func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "issues", getDemoDeploymentIssues(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "issues", handlers.GetDemoDeploymentIssues(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -174,7 +174,7 @@ func (h *MCPHandlers) FindDeploymentIssues(c *fiber.Ctx) error {
 
 // GetDeployments returns deployments with rollout status
 func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "deployments", getDemoDeployments(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "deployments", handlers.GetDemoDeployments(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -211,7 +211,7 @@ func (h *MCPHandlers) GetDeployments(c *fiber.Ctx) error {
 
 // GetServices returns services from clusters
 func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "services", getDemoServices(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "services", handlers.GetDemoServices(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -310,7 +310,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 // GetJobs returns jobs from clusters
 func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "jobs", getDemoJobs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "jobs", handlers.GetDemoJobs(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -347,7 +347,7 @@ func (h *MCPHandlers) GetJobs(c *fiber.Ctx) error {
 
 // GetHPAs returns HPAs from clusters
 func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "hpas", getDemoHPAs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "hpas", handlers.GetDemoHPAs(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -384,7 +384,7 @@ func (h *MCPHandlers) GetHPAs(c *fiber.Ctx) error {
 
 // GetReplicaSets returns ReplicaSets from clusters
 func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "replicasets", getDemoReplicaSets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "replicasets", handlers.GetDemoReplicaSets(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -421,7 +421,7 @@ func (h *MCPHandlers) GetReplicaSets(c *fiber.Ctx) error {
 
 // GetStatefulSets returns StatefulSets from clusters
 func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "statefulsets", getDemoStatefulSets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "statefulsets", handlers.GetDemoStatefulSets(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -458,7 +458,7 @@ func (h *MCPHandlers) GetStatefulSets(c *fiber.Ctx) error {
 
 // GetDaemonSets returns DaemonSets from clusters
 func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "daemonsets", getDemoDaemonSets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "daemonsets", handlers.GetDemoDaemonSets(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -495,7 +495,7 @@ func (h *MCPHandlers) GetDaemonSets(c *fiber.Ctx) error {
 
 // GetCronJobs returns CronJobs from clusters
 func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "cronjobs", getDemoCronJobs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "cronjobs", handlers.GetDemoCronJobs(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 
@@ -534,7 +534,7 @@ func (h *MCPHandlers) GetCronJobs(c *fiber.Ctx) error {
 // DaemonSets) from clusters. This is the non-streaming counterpart of
 // GetWorkloadsStream, used by the widget export system (/api/mcp/workloads).
 func (h *MCPHandlers) GetWorkloads(c *fiber.Ctx) error {
-	return h.withDemoFallback(c, "workloads", getDemoWorkloads(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "workloads", handlers.GetDemoWorkloads(), func(client *k8s.MultiClusterClient) error {
 		cluster := c.Query("cluster")
 		namespace := c.Query("namespace")
 		workloadType := c.Query("type")

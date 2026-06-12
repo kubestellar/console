@@ -55,7 +55,7 @@ func TestDemoDataHelpers(t *testing.T) {
 
 	t.Run("demoResponse", func(t *testing.T) {
 		app.Get("/demo-resp", func(c *fiber.Ctx) error {
-			return demoResponse(c, "test-key", []string{"a", "b"})
+			return DemoResponse(c, "test-key", []string{"a", "b"})
 		})
 
 		req := httptest.NewRequest("GET", "/demo-resp", nil)
@@ -70,14 +70,14 @@ func TestDemoDataHelpers(t *testing.T) {
 
 func TestGetDemoFunctions(t *testing.T) {
 	// Smoke tests for some demo data functions to ensure they don't panic and return something
-	assert.NotEmpty(t, getDemoClusters())
-	assert.NotNil(t, getDemoClusterHealth("kind-local"))
-	assert.NotEmpty(t, getDemoPods())
-	assert.NotEmpty(t, getDemoPodIssues())
-	assert.NotEmpty(t, getDemoEvents())
-	assert.NotEmpty(t, getDemoNodes())
-	assert.NotEmpty(t, getDemoDeployments())
-	assert.NotEmpty(t, getDemoServices())
-	assert.NotEmpty(t, getDemoGPUNodes())
-	assert.NotEmpty(t, getDemoGPUNodeHealth())
+	assert.NotEmpty(t, GetDemoClusters())
+	assert.NotNil(t, GetDemoClusterHealth("kind-local"))
+	assert.NotEmpty(t, GetDemoPods())
+	assert.NotEmpty(t, GetDemoPodIssues())
+	assert.NotEmpty(t, GetDemoEvents())
+	assert.NotEmpty(t, GetDemoNodes())
+	assert.NotEmpty(t, GetDemoDeployments())
+	assert.NotEmpty(t, GetDemoServices())
+	assert.NotEmpty(t, GetDemoGPUNodes())
+	assert.NotEmpty(t, GetDemoGPUNodeHealth())
 }

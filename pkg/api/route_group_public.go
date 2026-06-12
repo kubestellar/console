@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	ghhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
 	"github.com/kubestellar/console/pkg/compliance/residency"
 	"github.com/kubestellar/console/pkg/store"
@@ -63,7 +64,7 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 		})
 	})
 
-	nightlyE2EPublic := handlers.NewNightlyE2EHandler(g.githubToken)
+	nightlyE2EPublic := ghhandlers.NewNightlyE2EHandler(g.githubToken)
 	g.app.Get("/api/public/nightly-e2e/runs", publicLimiter, nightlyE2EPublic.GetRuns)
 	g.app.Get("/api/public/nightly-e2e/run-logs", publicLimiter, nightlyE2EPublic.GetRunLogs)
 

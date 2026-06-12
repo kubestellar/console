@@ -42,6 +42,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
 )
 
 // Constants used by the Drasi proxy.
@@ -206,12 +208,12 @@ func (h *MCPHandlers) ProxyDrasi(c *fiber.Ctx) error {
 
 func (h *MCPHandlers) authorizeDrasiProxy(c *fiber.Ctx, target string) error {
 	if target == "server" {
-		return requireEditorOrAdmin(c, h.store)
+		return handlers.RequireEditorOrAdmin(c, h.store)
 	}
 	if c.Method() == fiber.MethodGet {
-		return requireViewerOrAbove(c, h.store)
+		return handlers.RequireViewerOrAbove(c, h.store)
 	}
-	return requireEditorOrAdmin(c, h.store)
+	return handlers.RequireEditorOrAdmin(c, h.store)
 }
 
 // proxyDrasiServer forwards to a drasi-server REST URL configured via ?url=…

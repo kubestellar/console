@@ -177,7 +177,7 @@ func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 	// Demo mode: return static demo catalog immediately
 	if IsDemoMode(c) {
 		return c.JSON(fiber.Map{
-			"entries": getDemoKubaraCatalog(),
+			"entries": GetDemoKubaraCatalog(),
 			"source":  "demo",
 		})
 	}
@@ -289,8 +289,8 @@ func (h *KubaraCatalogHandler) fetchUpstream(ctx context.Context) ([]KubaraCatal
 	return entries, nil
 }
 
-// getDemoKubaraCatalog returns realistic fixture data for demo mode (#8486).
-func getDemoKubaraCatalog() []KubaraCatalogEntry {
+// GetDemoKubaraCatalog returns realistic fixture data for demo mode (#8486).
+func GetDemoKubaraCatalog() []KubaraCatalogEntry {
 	return []KubaraCatalogEntry{
 		{
 			Name:        "prometheus-stack",

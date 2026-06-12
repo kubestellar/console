@@ -350,7 +350,7 @@ func TestFetchDetectionRuns_InvalidJSON(t *testing.T) {
 // ── Demo data structure tests ─────────────────────────────────────────────────
 
 func TestGetDemoDetectionRuns_Structure(t *testing.T) {
-	result := getDemoDetectionRuns()
+	result := GetDemoDetectionRuns()
 
 	assert.True(t, result.IsDemoData)
 	assert.Equal(t, "demo", result.Source)

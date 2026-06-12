@@ -50,7 +50,7 @@ func finishClusterHealthWarmup() {
 func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately without trying real clusters
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "clusters", getDemoClusters())
+		return handlers.DemoResponse(c, "clusters", handlers.GetDemoClusters())
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -69,7 +69,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		clusters, err := h.k8sClient.ListClusters(ctx)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 
 		// Enrich with cached health data only — never block on live health
@@ -127,7 +127,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return c.JSON(getDemoClusterHealth(cluster))
+		return c.JSON(handlers.GetDemoClusterHealth(cluster))
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -146,7 +146,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 	if h.k8sClient != nil {
 		health, err := h.k8sClient.GetClusterHealth(ctx, cluster)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(health)
 	}
@@ -158,7 +158,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "health", getDemoAllClusterHealth())
+		return handlers.DemoResponse(c, "health", handlers.GetDemoAllClusterHealth())
 	}
 
 	// Use direct k8s client for this as it's more efficient
@@ -168,7 +168,7 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 
 		health, err := h.k8sClient.GetAllClusterHealth(ctx)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{"health": health})
 	}
@@ -180,7 +180,7 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "nodes", getDemoNodes())
+		return handlers.DemoResponse(c, "nodes", handlers.GetDemoNodes())
 	}
 
 	cluster := c.Query("cluster")
@@ -193,7 +193,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			var wg sync.WaitGroup
@@ -236,7 +236,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 
 		nodes, err := h.k8sClient.GetNodes(ctx, cluster)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		if nodes == nil {
 			nodes = make([]k8s.NodeInfo, 0)
@@ -251,7 +251,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "events", getDemoEvents())
+		return handlers.DemoResponse(c, "events", handlers.GetDemoEvents())
 	}
 
 	cluster := c.Query("cluster")
@@ -285,7 +285,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 			// via multiple kubeconfig contexts (e.g. "vllm-d" and its long OpenShift name)
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			if len(clusters) == 0 {
@@ -346,7 +346,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 		events, err := h.k8sClient.GetEvents(ctx, cluster, namespace, limit)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		if events == nil {
 			events = make([]k8s.Event, 0)
@@ -361,7 +361,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "events", getDemoWarningEvents())
+		return handlers.DemoResponse(c, "events", handlers.GetDemoWarningEvents())
 	}
 
 	cluster := c.Query("cluster")
@@ -393,7 +393,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			if len(clusters) == 0 {
@@ -453,7 +453,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 		events, err := h.k8sClient.GetWarningEvents(ctx, cluster, namespace, limit)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		if events == nil {
 			events = make([]k8s.Event, 0)
@@ -468,7 +468,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "issues", getDemoSecurityIssues())
+		return handlers.DemoResponse(c, "issues", handlers.GetDemoSecurityIssues())
 	}
 
 	cluster := c.Query("cluster")
@@ -484,7 +484,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			var wg sync.WaitGroup
@@ -527,7 +527,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 		issues, err := h.k8sClient.CheckSecurityIssues(ctx, cluster, namespace)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		if issues == nil {
 			issues = make([]k8s.SecurityIssue, 0)
@@ -546,7 +546,7 @@ func (h *MCPHandlers) GetNamespacesOverview(c *fiber.Ctx) error {
 	}
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 
 	type nsEntry struct {

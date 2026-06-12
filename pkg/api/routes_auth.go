@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/feedback"
+	mcphandlers "github.com/kubestellar/console/pkg/api/handlers/mcp"
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
@@ -81,7 +82,7 @@ func (s *Server) reloadOAuth(clientID, clientSecret string) {
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
 	s.auth.handler.SetHub(s.hub)
-	s.auth.handler.SetSSECanceller(handlers.CancelUserSSEStreams)
+	s.auth.handler.SetSSECanceller(mcphandlers.CancelUserSSEStreams)
 	slog.Info("[Server] OAuth config hot-reloaded after manifest flow")
 }
 
@@ -129,7 +130,7 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 	}
 
 	auth.SetHub(s.hub)
-	auth.SetSSECanceller(handlers.CancelUserSSEStreams)
+	auth.SetSSECanceller(mcphandlers.CancelUserSSEStreams)
 	currentAuthHandler := func() *handlers.AuthHandler {
 		s.auth.oauthMu.RLock()
 		defer s.auth.oauthMu.RUnlock()

@@ -26,21 +26,21 @@ func (h *AirGapHandler) RegisterPublicRoutes(r fiber.Router) {
 
 func (h *AirGapHandler) listRequirements(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "requirements", h.engine.Requirements())
+		return DemoResponse(c, "requirements", h.engine.Requirements())
 	}
 	return c.JSON(h.engine.Requirements())
 }
 
 func (h *AirGapHandler) listClusters(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "clusters", h.engine.Clusters())
+		return DemoResponse(c, "clusters", h.engine.Clusters())
 	}
 	return c.JSON(h.engine.Clusters())
 }
 
 func (h *AirGapHandler) getSummary(c *fiber.Ctx) error {
 	if IsDemoMode(c) {
-		return demoResponse(c, "summary", h.engine.Summary())
+		return DemoResponse(c, "summary", h.engine.Summary())
 	}
 	return c.JSON(h.engine.Summary())
 }

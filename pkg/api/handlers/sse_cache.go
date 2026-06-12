@@ -24,7 +24,7 @@ var (
 	sseCacheEvictDone = make(chan struct{})
 	// #7045 — singleflight group coalesces concurrent cold-cache fetches for
 	// the same cache key into a single Kubernetes API call.
-	sseFetchGroup singleflight.Group
+	SSEFetchGroup singleflight.Group
 )
 
 type sseCacheEntry struct {
@@ -78,7 +78,7 @@ func StopSSECacheEvictor() {
 	}
 }
 
-func sseCacheGet(key string) interface{} {
+func SSECacheGet(key string) interface{} {
 	// Fast path: take a read lock for the common case (entry exists and is
 	// fresh). Previously this used an exclusive Lock which serialized every
 	// concurrent cache read.
@@ -115,7 +115,7 @@ func sseCacheGet(key string) interface{} {
 	return nil
 }
 
-func sseCacheSet(key string, data interface{}) {
+func SSECacheSet(key string, data interface{}) {
 	// Ensure the background evictor is running.
 	startSSECacheEvictor()
 

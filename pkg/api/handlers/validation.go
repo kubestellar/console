@@ -47,7 +47,7 @@ func isValidCronSchedule(schedule string) bool {
 const MaxK8sNameLen = 253
 
 // isValidK8sName validates a Kubernetes-style DNS name (group or resource).
-func isValidK8sName(name string) bool {
+func IsValidK8sName(name string) bool {
 	if len(name) > MaxK8sNameLen {
 		return false
 	}
@@ -55,7 +55,7 @@ func isValidK8sName(name string) bool {
 }
 
 // isValidK8sVersion validates a Kubernetes API version string.
-func isValidK8sVersion(version string) bool {
+func IsValidK8sVersion(version string) bool {
 	if len(version) > MaxK8sNameLen {
 		return false
 	}

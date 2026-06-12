@@ -31,7 +31,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "configmaps", getDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "configmaps", handlers.GetDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ConfigMap, error) {
 			return client.GetConfigMaps(ctx, clusterName, namespace)
 		})
@@ -45,7 +45,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 // GetSecrets returns Secrets from clusters.
 // Requires editor or admin role — Secrets contain sensitive data (CWE-862, #16731).
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -56,7 +56,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "secrets", getDemoSecrets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "secrets", handlers.GetDemoSecrets(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Secret, error) {
 			return client.GetSecrets(ctx, clusterName, namespace)
 		})
@@ -76,7 +76,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "serviceAccounts", getDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "serviceAccounts", handlers.GetDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ServiceAccount, error) {
 			return client.GetServiceAccounts(ctx, clusterName, namespace)
 		})
@@ -96,7 +96,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvcs", getDemoPVCs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvcs", handlers.GetDemoPVCs(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PVC, error) {
 			return client.GetPVCs(ctx, clusterName, namespace)
 		})
@@ -114,7 +114,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvs", getDemoPVs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvs", handlers.GetDemoPVs(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PV, error) {
 			return client.GetPVs(ctx, clusterName)
 		})
@@ -134,7 +134,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "resourceQuotas", getDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "resourceQuotas", handlers.GetDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ResourceQuota, error) {
 			return client.GetResourceQuotas(ctx, clusterName, namespace)
 		})
@@ -154,7 +154,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "limitRanges", getDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "limitRanges", handlers.GetDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.LimitRange, error) {
 			return client.GetLimitRanges(ctx, clusterName, namespace)
 		})
@@ -170,7 +170,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	// SECURITY (#7490, #7492): mutating endpoint requires editor or admin role.
 	// This also covers the ensure_namespace path (#7492) since the whole handler
 	// is gated before any namespace or quota creation occurs.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -239,7 +239,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 // DeleteResourceQuota deletes a ResourceQuota
 func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	// SECURITY (#7491): destructive endpoint requires editor or admin role.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -277,13 +277,13 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 // GetPodLogs returns logs from a pod
 func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "logs", getDemoPodLogs())
+		return handlers.DemoResponse(c, "logs", handlers.GetDemoPodLogs())
 	}
 
 	cluster := c.Query("cluster")
@@ -401,7 +401,7 @@ var AllowedDeployTools = map[string]bool{
 func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "hosts", getWasmCloudHosts())
+		return handlers.DemoResponse(c, "hosts", handlers.GetWasmCloudHosts())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -413,7 +413,7 @@ func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetWasmCloudActors(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "actors", getWasmCloudActors())
+		return handlers.DemoResponse(c, "actors", handlers.GetWasmCloudActors())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -441,7 +441,7 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
 	// require at least editor role to invoke tools.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -474,7 +474,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
 	// require at least editor role to invoke tools.
-	if err := requireEditorOrAdmin(c, h.store); err != nil {
+	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -512,7 +512,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "nodes", getDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "nodes", handlers.GetDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.FlatcarNodeInfo, error) {
 			return client.GetFlatcarNodes(ctx, clusterName)
 		})
@@ -532,7 +532,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "ingresses", getDemoIngresses(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "ingresses", handlers.GetDemoIngresses(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Ingress, error) {
 			return client.GetIngresses(ctx, clusterName, namespace)
 		})
@@ -552,7 +552,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "networkpolicies", getDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "networkpolicies", handlers.GetDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.NetworkPolicy, error) {
 			return client.GetNetworkPolicies(ctx, clusterName, namespace)
 		})
@@ -567,30 +567,9 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 // Kept short because kubelet stats/summary can be slow on large clusters.
 const podNetworkStatsTimeout = 10 * time.Second
 
-// networkStatsPollIntervalSec is the expected frontend polling interval in seconds.
-// Used to estimate per-second rates from cumulative kubelet byte counters.
-const networkStatsPollIntervalSec int64 = 15
-
 // multiTenancyLabels are the app-label values for multi-tenancy infrastructure pods
 // whose network stats we want to collect.
 var multiTenancyLabels = []string{"virt-launcher", "k3s", "ovnkube-node"}
-
-// InterfaceStats describes byte-rate counters for a single network interface.
-type InterfaceStats struct {
-	Name          string `json:"name"`
-	RxBytes       int64  `json:"rxBytes"`
-	TxBytes       int64  `json:"txBytes"`
-	RxBytesPerSec int64  `json:"rxBytesPerSec"`
-	TxBytesPerSec int64  `json:"txBytesPerSec"`
-}
-
-// PodNetworkStats holds the network throughput data for one pod.
-type PodNetworkStats struct {
-	PodName    string           `json:"podName"`
-	Namespace  string           `json:"namespace"`
-	Component  string           `json:"component"`
-	Interfaces []InterfaceStats `json:"interfaces"`
-}
 
 // classifyComponent maps a pod's app label to a topology component name.
 func classifyComponent(labels map[string]string) string {
@@ -618,7 +597,7 @@ func classifyComponent(labels map[string]string) string {
 func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	// Demo mode: return realistic sample data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "stats", getDemoPodNetworkStats())
+		return handlers.DemoResponse(c, "stats", handlers.GetDemoPodNetworkStats())
 	}
 
 	if h.k8sClient == nil {
@@ -633,7 +612,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	allStats := make([]PodNetworkStats, 0, len(clusters)*8)
+	allStats := make([]handlers.PodNetworkStats, 0, len(clusters)*8)
 	var errTracker clusterErrorTracker
 
 	clusterCtx, clusterCancel := context.WithCancel(c.Context())
@@ -691,7 +670,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 						continue
 					}
 
-					stat := PodNetworkStats{
+					stat := handlers.PodNetworkStats{
 						PodName:    pod.Name,
 						Namespace:  pod.Namespace,
 						Component:  component,
@@ -741,7 +720,7 @@ func fetchPodInterfaceStats(
 	ctx context.Context,
 	client kubernetes.Interface,
 	nodeName, podNamespace, podName string,
-) []InterfaceStats {
+) []handlers.InterfaceStats {
 	// Proxy request: GET /api/v1/nodes/{node}/proxy/stats/summary
 	raw, err := client.CoreV1().RESTClient().Get().
 		AbsPath(fmt.Sprintf("/api/v1/nodes/%s/proxy/stats/summary", nodeName)).
@@ -760,7 +739,7 @@ func fetchPodInterfaceStats(
 	// Find the target pod in the summary
 	for _, ps := range summary.Pods {
 		if ps.PodRef.Name == podName && ps.PodRef.Namespace == podNamespace && ps.Network != nil {
-			result := make([]InterfaceStats, 0, len(ps.Network.Interfaces))
+			result := make([]handlers.InterfaceStats, 0, len(ps.Network.Interfaces))
 			for _, iface := range ps.Network.Interfaces {
 				var rxBytes, txBytes int64
 				if iface.RxBytes != nil {
@@ -769,7 +748,7 @@ func fetchPodInterfaceStats(
 				if iface.TxBytes != nil {
 					txBytes = *iface.TxBytes
 				}
-				result = append(result, InterfaceStats{
+				result = append(result, handlers.InterfaceStats{
 					Name:    iface.Name,
 					RxBytes: rxBytes,
 					TxBytes: txBytes,
@@ -777,8 +756,8 @@ func fetchPodInterfaceStats(
 					// byte counters, not per-second rates. The frontend computes
 					// deltas between successive polls.  We provide a rough estimate
 					// here by dividing by the expected poll interval.
-					RxBytesPerSec: rxBytes / networkStatsPollIntervalSec,
-					TxBytesPerSec: txBytes / networkStatsPollIntervalSec,
+					RxBytesPerSec: rxBytes / handlers.NetworkStatsPollIntervalSec,
+					TxBytesPerSec: txBytes / handlers.NetworkStatsPollIntervalSec,
 				})
 			}
 			return result

@@ -14,7 +14,7 @@ import (
 func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "nodes", getDemoGPUNodes())
+		return handlers.DemoResponse(c, "nodes", handlers.GetDemoGPUNodes())
 	}
 
 	cluster := c.Query("cluster")
@@ -27,7 +27,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			allNodes, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
@@ -42,7 +42,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 
 		nodes, err := h.k8sClient.GetGPUNodes(ctx, cluster)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		if nodes == nil {
 			nodes = make([]k8s.GPUNode, 0)
@@ -56,7 +56,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 // GetGPUNodeHealth returns proactive health check results for GPU nodes
 func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "nodes", getDemoGPUNodeHealth())
+		return handlers.DemoResponse(c, "nodes", handlers.GetDemoGPUNodeHealth())
 	}
 
 	cluster := c.Query("cluster")
@@ -68,7 +68,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			allNodes, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
@@ -83,7 +83,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 
 		nodes, err := h.k8sClient.GetGPUNodeHealth(ctx, cluster)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		if nodes == nil {
 			nodes = make([]k8s.GPUNodeHealthStatus, 0)
@@ -117,7 +117,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 
 	status, err := h.k8sClient.GetGPUHealthCronJobStatus(ctx, cluster)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 	return c.JSON(fiber.Map{"status": status})
 }
@@ -154,7 +154,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 
 	status, err := h.k8sClient.GetGPUHealthCronJobStatus(ctx, cluster)
 	if err != nil {
-		return handleK8sError(c, err)
+		return HandleK8sError(c, err)
 	}
 	return c.JSON(fiber.Map{"results": status.LastResults, "cluster": cluster})
 }
@@ -163,7 +163,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, "operators", getDemoNVIDIAOperatorStatus())
+		return handlers.DemoResponse(c, "operators", handlers.GetDemoNVIDIAOperatorStatus())
 	}
 
 	cluster := c.Query("cluster")
@@ -176,7 +176,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 		if cluster == "" {
 			clusters, _, err := h.k8sClient.HealthyClusters(c.Context())
 			if err != nil {
-				return handleK8sError(c, err)
+				return HandleK8sError(c, err)
 			}
 
 			allStatus, errTracker := queryAllClusters(c.Context(), clusters,
@@ -198,7 +198,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 
 		status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, cluster)
 		if err != nil {
-			return handleK8sError(c, err)
+			return HandleK8sError(c, err)
 		}
 		return c.JSON(fiber.Map{"operators": []*k8s.NVIDIAOperatorStatus{status}, "source": "k8s"})
 	}

@@ -21,7 +21,7 @@ func (h *MCPHandlers) withDemoFallback(
 	handler func(client *k8s.MultiClusterClient) error,
 ) error {
 	if handlers.IsDemoMode(c) {
-		return handlers.demoResponse(c, demoKey, demoData)
+		return handlers.DemoResponse(c, demoKey, demoData)
 	}
 	if h.k8sClient == nil {
 		return handlers.ErrNoClusterAccess(c)
