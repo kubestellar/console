@@ -66,16 +66,24 @@ type StellarEventSink interface {
 	ProcessEvent(ctx context.Context, event IncomingEvent)
 }
 
+// timelineClient is the narrow interface TimelineHandler requires from the
+// cluster layer. *k8s.MultiClusterClient satisfies it implicitly.
+type timelineClient interface {
+	HealthyClusters(ctx context.Context) (healthy []k8s.ClusterInfo, offline []k8s.ClusterInfo, err error)
+	GetEvents(ctx context.Context, contextName, namespace string, limit int, fieldSelectors ...string) ([]k8s.Event, error)
+}
+
 // TimelineHandler serves the GET /api/timeline endpoint and owns the
 // background event journal collector goroutine.
 type TimelineHandler struct {
 	store        store.Store
-	k8sClient    *k8s.MultiClusterClient
+	k8sClient    timelineClient
 	stellarSink  StellarEventSink
 }
 
 // NewTimelineHandler creates a TimelineHandler.
-func NewTimelineHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *TimelineHandler {
+// Accepts the narrow timelineClient interface so tests can substitute a mock.
+func NewTimelineHandler(s store.Store, k8sClient timelineClient) *TimelineHandler {
 	return &TimelineHandler{store: s, k8sClient: k8sClient}
 }
 

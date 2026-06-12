@@ -8,20 +8,29 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
-	"github.com/kubestellar/console/pkg/k8s"
 )
 
 // topologyTimeout is the timeout for aggregating topology data across clusters.
 const topologyTimeout = 30 * time.Second
 
+// topologyClient is the narrow interface TopologyHandlers requires from the
+// cluster layer. *k8s.MultiClusterClient satisfies it implicitly.
+type topologyClient interface {
+	ListServiceExports(ctx context.Context) (*v1alpha1.ServiceExportList, error)
+	ListServiceImports(ctx context.Context) (*v1alpha1.ServiceImportList, error)
+	ListGateways(ctx context.Context) (*v1alpha1.GatewayList, error)
+	ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTPRouteList, error)
+}
+
 // TopologyHandlers handles service topology API endpoints
 type TopologyHandlers struct {
-	k8sClient *k8s.MultiClusterClient
+	k8sClient topologyClient
 	hub       *Hub
 }
 
-// NewTopologyHandlers creates a new topology handlers instance
-func NewTopologyHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub) *TopologyHandlers {
+// NewTopologyHandlers creates a new topology handlers instance.
+// Accepts the narrow topologyClient interface so tests can substitute a mock.
+func NewTopologyHandlers(k8sClient topologyClient, hub *Hub) *TopologyHandlers {
 	return &TopologyHandlers{
 		k8sClient: k8sClient,
 		hub:       hub,

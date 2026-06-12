@@ -10,13 +10,19 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
-	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
 
 // nsDefaultTimeout is the per-cluster timeout for namespace queries.
 const nsDefaultTimeout = 15 * time.Second
+
+// namespaceClient is the narrow interface NamespaceHandler requires from the
+// cluster layer. *k8s.MultiClusterClient satisfies it implicitly.
+type namespaceClient interface {
+	ListNamespacesWithDetails(ctx context.Context, contextName string) ([]models.NamespaceDetails, error)
+	ListRoleBindings(ctx context.Context, contextName, namespace string) ([]models.K8sRoleBinding, error)
+}
 
 // NamespaceHandler handles namespace read operations.
 //
@@ -26,11 +32,13 @@ const nsDefaultTimeout = 15 * time.Second
 // ServiceAccount. See pkg/agent/server_http.go.
 type NamespaceHandler struct {
 	store     store.Store
-	k8sClient *k8s.MultiClusterClient
+	k8sClient namespaceClient
 }
 
-// NewNamespaceHandler creates a new namespace handler
-func NewNamespaceHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *NamespaceHandler {
+// NewNamespaceHandler creates a new namespace handler.
+// Accepts the full *k8s.MultiClusterClient at the call-site but stores it as
+// the narrow namespaceClient interface so tests can substitute a simple mock.
+func NewNamespaceHandler(s store.Store, k8sClient namespaceClient) *NamespaceHandler {
 	return &NamespaceHandler{store: s, k8sClient: k8sClient}
 }
 
