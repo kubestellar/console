@@ -178,7 +178,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 				// can distinguish "no operators" from "query failed".
 				if fetchErr != nil {
 					slog.Error("[GitOpsOperators] cluster fetch failed", "cluster", clusterName, "error", fetchErr)
-					handlers.WriteSSEEvent(w, sseEventClusterError, fiber.Map{
+					handlers.WriteSSEEvent(w, "cluster_error", fiber.Map{
 						"cluster": clusterName,
 						"error":   "cluster query failed",
 					})
@@ -562,7 +562,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 				// can distinguish "no subscriptions" from "query failed".
 				if fetchErr != nil {
 					slog.Error("[GitOpsOperators] cluster fetch failed", "cluster", clusterName, "error", fetchErr)
-					handlers.WriteSSEEvent(w, sseEventClusterError, fiber.Map{
+					handlers.WriteSSEEvent(w, "cluster_error", fiber.Map{
 						"cluster": clusterName,
 						"error":   "cluster query failed",
 					})

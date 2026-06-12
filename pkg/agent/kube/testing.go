@@ -3,7 +3,7 @@ package kube
 import (
 	"strings"
 
-	"github.com/kubestellar/console/pkg/agent/kube/k8s"
+	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
