@@ -1,6 +1,11 @@
 package audit
 
 import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -67,4 +72,81 @@ func TestRecordEvent_RingBuffer(t *testing.T) {
 
 	events := RecentEvents()
 	assert.Len(t, events, 256)
+}
+
+func TestWebhookDestination_Send(t *testing.T) {
+	events := []PipelineEvent{
+		{ID: "evt-1", Cluster: "test-cluster", Timestamp: time.Now().UTC()},
+		{ID: "evt-2", Cluster: "test-cluster", Timestamp: time.Now().UTC()},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		var payload WebhookPayload
+		err = json.Unmarshal(body, &payload)
+		require.NoError(t, err)
+
+		assert.Equal(t, webhookPayloadVersion, payload.Version)
+		assert.Len(t, payload.Events, 2)
+		assert.Equal(t, "evt-1", payload.Events[0].ID)
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	dest, err := NewWebhookDestination(srv.URL, srv.Client())
+	require.NoError(t, err)
+
+	err = dest.Send(context.Background(), events)
+	assert.NoError(t, err)
+}
+
+func TestWebhookDestination_SendError(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		wantErr    string
+	}{
+		{name: "bad request", statusCode: http.StatusBadRequest, wantErr: "400"},
+		{name: "internal server error", statusCode: http.StatusInternalServerError, wantErr: "500"},
+		{name: "service unavailable", statusCode: http.StatusServiceUnavailable, wantErr: "503"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.statusCode)
+			}))
+			defer srv.Close()
+
+			dest, err := NewWebhookDestination(srv.URL, srv.Client())
+			require.NoError(t, err)
+
+			events := []PipelineEvent{{ID: "evt-fail", Timestamp: time.Now().UTC()}}
+			err = dest.Send(context.Background(), events)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+func TestWebhookDestination_EmptyEvents(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not be called for empty events")
+	}))
+	defer srv.Close()
+
+	dest, err := NewWebhookDestination(srv.URL, srv.Client())
+	require.NoError(t, err)
+
+	err = dest.Send(context.Background(), nil)
+	assert.NoError(t, err)
+
+	err = dest.Send(context.Background(), []PipelineEvent{})
+	assert.NoError(t, err)
 }

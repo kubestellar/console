@@ -89,3 +89,128 @@ func TestSyslogDestination_RequiresAddr(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "addr is required")
 }
+
+func TestSyslogDestination_SendMultipleEvents(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	done := make(chan struct{})
+	var received []string
+	go func() {
+		defer close(done)
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		scanner := bufio.NewScanner(conn)
+		for scanner.Scan() {
+			received = append(received, scanner.Text())
+		}
+	}()
+
+	addr := ln.Addr().String()
+	dest, err := NewSyslogDestination("tcp", addr, "test-tag")
+	require.NoError(t, err)
+	defer dest.Close()
+
+	events := []PipelineEvent{
+		{ID: "syslog-1", Cluster: "prod", EventType: "create", Timestamp: time.Now().UTC()},
+		{ID: "syslog-2", Cluster: "stage", EventType: "update", Timestamp: time.Now().UTC()},
+		{ID: "syslog-3", Cluster: "dev", EventType: "delete", Timestamp: time.Now().UTC()},
+	}
+
+	err = dest.Send(context.Background(), events)
+	assert.NoError(t, err)
+
+	require.NoError(t, dest.Close())
+	<-done
+
+	require.Len(t, received, 3)
+	for i, line := range received {
+		assert.Contains(t, line, events[i].ID)
+		assert.Contains(t, line, events[i].Cluster)
+	}
+}
+
+func TestSyslogDestination_EmptyEventsNoOp(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	addr := ln.Addr().String()
+	dest, err := NewSyslogDestination("tcp", addr, "empty-test")
+	require.NoError(t, err)
+	defer dest.Close()
+
+	err = dest.Send(context.Background(), nil)
+	assert.NoError(t, err)
+
+	err = dest.Send(context.Background(), []PipelineEvent{})
+	assert.NoError(t, err)
+}
+
+func TestSyslogDestination_ContextCancellation(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	addr := ln.Addr().String()
+	dest, err := NewSyslogDestination("tcp", addr, "cancel-test")
+	require.NoError(t, err)
+	defer dest.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	events := make([]PipelineEvent, 100)
+	for i := range events {
+		events[i] = PipelineEvent{
+			ID:        "evt-" + string(rune(i)),
+			Cluster:   "test",
+			Timestamp: time.Now().UTC(),
+		}
+	}
+
+	err = dest.Send(ctx, events)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context canceled")
+}
+
+func TestSyslogDestination_ClosedWriter(t *testing.T) {
+	orig := syslogHostValidator
+	syslogHostValidator = func(_ string) error { return nil }
+	t.Cleanup(func() { syslogHostValidator = orig })
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer ln.Close()
+
+	addr := ln.Addr().String()
+	dest, err := NewSyslogDestination("tcp", addr, "closed-test")
+	require.NoError(t, err)
+
+	require.NoError(t, dest.Close())
+
+	events := []PipelineEvent{{ID: "evt-after-close", Timestamp: time.Now().UTC()}}
+	err = dest.Send(context.Background(), events)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "writer is closed")
+
+	err = dest.Close()
+	assert.NoError(t, err)
+}
