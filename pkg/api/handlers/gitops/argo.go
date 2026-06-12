@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -66,7 +67,7 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 
 // GetHelmValues returns the values of a specific Helm release
 func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
-	if err := requireAdmin(c, h.userStore); err != nil {
+	if err := handlers.RequireAdmin(c, h.userStore); err != nil {
 		return err
 	}
 
