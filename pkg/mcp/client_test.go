@@ -519,11 +519,9 @@ func TestClient_Send_WriteTimeout(t *testing.T) {
 		done:  make(chan struct{}),
 	}
 
-	// Override timeout for faster test
-	originalTimeout := stdinWriteTimeout
-	defer func() {
-		// Can't actually change the const, but we test the timeout path
-	}()
+	// Note: stdinWriteTimeout is a const so we can't override it in tests,
+	// but we verify the timeout path via the blocking writer.
+	_ = stdinWriteTimeout
 
 	req := Request{
 		JSONRPC: "2.0",

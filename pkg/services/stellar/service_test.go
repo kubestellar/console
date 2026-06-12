@@ -221,7 +221,7 @@ func (m *mockStore) UpdateStellarNotification(ctx context.Context, notification 
 
 func (m *mockStore) MarkStellarNotificationRead(ctx context.Context, userID, notificationID string) error {
 	if notification, ok := m.notifications[notificationID]; ok {
-		notification.IsRead = true
+		notification.Read = true
 	}
 	return nil
 }
@@ -229,7 +229,7 @@ func (m *mockStore) MarkStellarNotificationRead(ctx context.Context, userID, not
 func (m *mockStore) CountUnreadStellarNotifications(ctx context.Context, userID string) (int, error) {
 	count := 0
 	for _, notification := range m.notifications {
-		if notification.UserID == userID && !notification.IsRead {
+		if notification.UserID == userID && !notification.Read {
 			count++
 		}
 	}
@@ -392,7 +392,6 @@ func (m *mockStore) UpdateNotificationBody(ctx context.Context, dedupeKey, newBo
 
 func TestMissionValidation(t *testing.T) {
 	svc := stellar.New(newMockStore())
-	ctx := context.Background()
 
 	t.Run("valid mission", func(t *testing.T) {
 		mission := &store.StellarMission{
@@ -517,7 +516,7 @@ func TestNotificationOperations(t *testing.T) {
 		UserID:    userID,
 		Title:     "Test Notification",
 		Body:      "Test body",
-		IsRead:    false,
+		Read:      false,
 		CreatedAt: time.Now(),
 	}
 
