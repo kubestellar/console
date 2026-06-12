@@ -149,7 +149,7 @@ describe('subscribeDemoMode', () => {
 describe('setDemoToken', () => {
   beforeEach(() => { localStorage.clear() })
 
-  it('stores demo-token in auth storage', () => {
+  it('stores demo-token in auth storage', async () => {
     setDemoToken()
     expect(await getStoredAuthToken()).toBe('demo-token')
   })
@@ -161,7 +161,7 @@ describe('activatePublicDemoMode', () => {
     setDemoMode(false, true)
   })
 
-  it('seeds anonymous visitors with demo auth state', () => {
+  it('seeds anonymous visitors with demo auth state', async () => {
     localStorage.setItem('kc-user-cache', JSON.stringify({ id: 'cached-user' }))
     localStorage.setItem('kc-has-session', 'true')
 
@@ -174,7 +174,7 @@ describe('activatePublicDemoMode', () => {
     expect(localStorage.getItem('kc-has-session')).toBeNull()
   })
 
-  it('preserves real auth tokens while enabling demo mode', () => {
+  it('preserves real auth tokens while enabling demo mode', async () => {
     localStorage.setItem('token', 'real-jwt-token')
     localStorage.setItem('kc-user-cache', JSON.stringify({ id: 'real-user' }))
 
