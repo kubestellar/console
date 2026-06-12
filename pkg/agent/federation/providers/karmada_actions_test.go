@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -90,4 +91,161 @@ func TestKarmadaExecuteUnknownAction(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for unknown action")
 	}
+}
+
+func TestExecuteKarmadaJoinCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: karmadaActionJoinCluster,
+				Payload: map[string]interface{}{
+					"apiEndpoint": "https://api.cluster.local:6443",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "missing apiEndpoint",
+			req: federation.ActionRequest{
+				ActionID:    karmadaActionJoinCluster,
+				ClusterName: "cluster-1",
+				Payload:     map[string]interface{}{},
+			},
+			wantErrSubstring: "payload.apiEndpoint is required",
+		},
+		{
+			name: "empty clusterName",
+			req: federation.ActionRequest{
+				ActionID:    karmadaActionJoinCluster,
+				ClusterName: "",
+				Payload: map[string]interface{}{
+					"apiEndpoint": "https://api.cluster.local:6443",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeKarmadaJoinCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteKarmadaUnjoinCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: karmadaActionUnjoinCluster,
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "empty clusterName",
+			req: federation.ActionRequest{
+				ActionID:    karmadaActionUnjoinCluster,
+				ClusterName: "",
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeKarmadaUnjoinCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteKarmadaTaintCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: karmadaActionTaintCluster,
+				Payload: map[string]interface{}{
+					"key":    "node-role.kubernetes.io/control-plane",
+					"effect": "NoSchedule",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "missing taint key",
+			req: federation.ActionRequest{
+				ActionID:    karmadaActionTaintCluster,
+				ClusterName: "cluster-1",
+				Payload: map[string]interface{}{
+					"effect": "NoSchedule",
+				},
+			},
+			wantErrSubstring: "payload.key and payload.effect are required",
+		},
+		{
+			name: "missing taint effect",
+			req: federation.ActionRequest{
+				ActionID:    karmadaActionTaintCluster,
+				ClusterName: "cluster-1",
+				Payload: map[string]interface{}{
+					"key": "node-role.kubernetes.io/control-plane",
+				},
+			},
+			wantErrSubstring: "payload.key and payload.effect are required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeKarmadaTaintCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+// containsString checks if s contains substring.
+func containsString(s, substring string) bool {
+	if len(substring) == 0 {
+		return true
+	}
+	if len(s) < len(substring) {
+		return false
+	}
+	for i := 0; i <= len(s)-len(substring); i++ {
+		if s[i:i+len(substring)] == substring {
+			return true
+		}
+	}
+	return false
 }

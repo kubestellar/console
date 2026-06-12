@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -90,4 +91,177 @@ func TestCAPIExecuteUnknownAction(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for unknown action")
 	}
+}
+
+func TestExecuteCAPIScaleMachineDeployment_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing payload name",
+			req: federation.ActionRequest{
+				ActionID: capiActionScaleMachineDeployment,
+				Payload: map[string]interface{}{
+					"namespace": "default",
+					"replicas":  float64(5),
+				},
+			},
+			wantErrSubstring: "payload.name",
+		},
+		{
+			name: "missing payload namespace",
+			req: federation.ActionRequest{
+				ActionID: capiActionScaleMachineDeployment,
+				Payload: map[string]interface{}{
+					"name":     "md-workers",
+					"replicas": float64(5),
+				},
+			},
+			wantErrSubstring: "payload.namespace",
+		},
+		{
+			name: "missing payload replicas",
+			req: federation.ActionRequest{
+				ActionID: capiActionScaleMachineDeployment,
+				Payload: map[string]interface{}{
+					"name":      "md-workers",
+					"namespace": "default",
+				},
+			},
+			wantErrSubstring: "payload.replicas",
+		},
+		{
+			name: "empty name",
+			req: federation.ActionRequest{
+				ActionID: capiActionScaleMachineDeployment,
+				Payload: map[string]interface{}{
+					"name":      "",
+					"namespace": "default",
+					"replicas":  float64(3),
+				},
+			},
+			wantErrSubstring: "payload.name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeCAPIScaleMachineDeployment(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteCAPIDeleteCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: capiActionDeleteCluster,
+				Payload: map[string]interface{}{
+					"namespace": "default",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "missing payload namespace",
+			req: federation.ActionRequest{
+				ActionID:    capiActionDeleteCluster,
+				ClusterName: "cluster-1",
+				Payload:     map[string]interface{}{},
+			},
+			wantErrSubstring: "payload.namespace is required",
+		},
+		{
+			name: "empty clusterName",
+			req: federation.ActionRequest{
+				ActionID:    capiActionDeleteCluster,
+				ClusterName: "",
+				Payload: map[string]interface{}{
+					"namespace": "default",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeCAPIDeleteCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteCAPIRetryProvisioning_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: capiActionRetryProvisioning,
+				Payload: map[string]interface{}{
+					"namespace": "default",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "missing payload namespace",
+			req: federation.ActionRequest{
+				ActionID:    capiActionRetryProvisioning,
+				ClusterName: "cluster-1",
+				Payload:     map[string]interface{}{},
+			},
+			wantErrSubstring: "payload.namespace is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeCAPIRetryProvisioning(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+// containsString checks if s contains substring.
+func containsString(s, substring string) bool {
+	if len(substring) == 0 {
+		return true
+	}
+	if len(s) < len(substring) {
+		return false
+	}
+	for i := 0; i <= len(s)-len(substring); i++ {
+		if s[i:i+len(substring)] == substring {
+			return true
+		}
+	}
+	return false
 }

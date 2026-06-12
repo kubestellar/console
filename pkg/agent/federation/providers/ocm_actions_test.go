@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/agent/federation"
@@ -104,6 +105,163 @@ func TestOCMExecuteUnknownAction(t *testing.T) {
 	}
 }
 
+func TestExecuteOCMApproveCSR_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing csrName",
+			req: federation.ActionRequest{
+				ActionID: ocmActionApproveCSR,
+				Payload:  map[string]interface{}{},
+			},
+			wantErrSubstring: "payload.csrName is required",
+		},
+		{
+			name: "empty csrName",
+			req: federation.ActionRequest{
+				ActionID: ocmActionApproveCSR,
+				Payload: map[string]interface{}{
+					"csrName": "",
+				},
+			},
+			wantErrSubstring: "payload.csrName is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeOCMApproveCSR(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteOCMAcceptCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: ocmActionAcceptCluster,
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "empty clusterName",
+			req: federation.ActionRequest{
+				ActionID:    ocmActionAcceptCluster,
+				ClusterName: "",
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeOCMAcceptCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteOCMDetachCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: ocmActionDetachCluster,
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeOCMDetachCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
+func TestExecuteOCMTaintCluster_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name             string
+		req              federation.ActionRequest
+		wantErrSubstring string
+	}{
+		{
+			name: "missing clusterName",
+			req: federation.ActionRequest{
+				ActionID: ocmActionTaintCluster,
+				Payload: map[string]interface{}{
+					"key":    "node-role.kubernetes.io/control-plane",
+					"effect": "NoSchedule",
+				},
+			},
+			wantErrSubstring: "clusterName is required",
+		},
+		{
+			name: "missing taint key",
+			req: federation.ActionRequest{
+				ActionID:    ocmActionTaintCluster,
+				ClusterName: "cluster-1",
+				Payload: map[string]interface{}{
+					"effect": "NoSchedule",
+				},
+			},
+			wantErrSubstring: "payload.key and payload.effect are required",
+		},
+		{
+			name: "missing taint effect",
+			req: federation.ActionRequest{
+				ActionID:    ocmActionTaintCluster,
+				ClusterName: "cluster-1",
+				Payload: map[string]interface{}{
+					"key": "node-role.kubernetes.io/control-plane",
+				},
+			},
+			wantErrSubstring: "payload.key and payload.effect are required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := executeOCMTaintCluster(context.Background(), nil, tt.req)
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", tt.wantErrSubstring)
+			}
+			if !containsString(err.Error(), tt.wantErrSubstring) {
+				t.Errorf("error = %v, want substring %q", err, tt.wantErrSubstring)
+			}
+		})
+	}
+}
+
 func TestIsConflictError(t *testing.T) {
 	tests := []struct {
 		name string
@@ -142,6 +300,22 @@ func TestIsNotFoundError(t *testing.T) {
 			}
 		})
 	}
+}
+
+// containsString checks if s contains substring.
+func containsString(s, substring string) bool {
+	if len(substring) == 0 {
+		return true
+	}
+	if len(s) < len(substring) {
+		return false
+	}
+	for i := 0; i <= len(s)-len(substring); i++ {
+		if s[i:i+len(substring)] == substring {
+			return true
+		}
+	}
+	return false
 }
 
 // errFromString is a minimal error type for tests.
