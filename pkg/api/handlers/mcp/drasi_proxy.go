@@ -160,6 +160,30 @@ var drasiHopByHopHeaders = map[string]bool{
 	"upgrade":             true,
 }
 
+// drasiBlockedResponseHeaders lists security-sensitive response headers that
+// must NOT be forwarded from the upstream Drasi server to the browser.
+// Forwarding these would allow a malicious or compromised Drasi server to
+// inject cookies, override CSP/CORS/clickjacking protections, or weaken the
+// console's security posture (CWE-116 / #18203).
+var drasiBlockedResponseHeaders = map[string]bool{
+	"set-cookie":                    true,
+	"content-security-policy":       true,
+	"content-security-policy-report-only": true,
+	"access-control-allow-origin":   true,
+	"access-control-allow-headers":  true,
+	"access-control-allow-methods":  true,
+	"access-control-expose-headers": true,
+	"access-control-max-age":        true,
+	"access-control-allow-credentials": true,
+	"x-frame-options":               true,
+	"x-content-type-options":        true,
+	"strict-transport-security":     true,
+	"permissions-policy":            true,
+	"cross-origin-opener-policy":    true,
+	"cross-origin-embedder-policy":  true,
+	"cross-origin-resource-policy":  true,
+}
+
 // ProxyDrasi is the handler registered at `/api/drasi/proxy/*`.
 // It accepts ANY method (GET/POST/PUT/DELETE/PATCH) and forwards to the
 // upstream Drasi REST API, streaming the response.
@@ -371,6 +395,13 @@ func streamUpstream(c *fiber.Ctx, client *http.Client, req *http.Request) error 
 	for k, vs := range resp.Header {
 		key := strings.ToLower(k)
 		if drasiHopByHopHeaders[key] {
+			continue
+		}
+		// Never forward security-sensitive headers from the upstream to the
+		// browser — a malicious Drasi server could otherwise override the
+		// console's CSP, inject cookies, or weaken clickjacking/CORS
+		// protections (CWE-116 / #18203).
+		if drasiBlockedResponseHeaders[key] {
 			continue
 		}
 		for _, v := range vs {
