@@ -257,3 +257,97 @@ func TestGetGatewayAPIStatus(t *testing.T) {
 	clusters := res["clusters"].([]interface{})
 	assert.NotEmpty(t, clusters)
 }
+
+// TestListGatewaysMock demonstrates mock-based testing with injected errors.
+// This exercises error paths that are hard to trigger with fake clients.
+func TestListGatewaysMock(t *testing.T) {
+	env := setupTestEnv(t)
+	env.App.Get("/api/gateway/gateways", func(c *fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusInternalServerError, "handler not initialized")
+	})
+
+	t.Run("HealthyClusters error propagates as 500", func(t *testing.T) {
+		mock := &mockGatewayClient{
+			healthyClustersFunc: func(ctx context.Context) ([]k8s.ClusterInfo, []k8s.ClusterInfo, error) {
+				return nil, nil, errors.New("cluster discovery failed")
+			},
+		}
+		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
+		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+
+		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 500, resp.StatusCode)
+	})
+
+	t.Run("ListGateways error propagates", func(t *testing.T) {
+		mock := &mockGatewayClient{
+			listGatewaysFunc: func(ctx context.Context) (*v1alpha1.GatewayList, error) {
+				return nil, errors.New("gateway list failed")
+			},
+		}
+		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
+		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+
+		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 500, resp.StatusCode)
+	})
+
+	t.Run("Empty result set returns 200", func(t *testing.T) {
+		mock := &mockGatewayClient{}
+		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
+		env.App.Get("/api/gateway/gateways", handler.ListGateways)
+
+		req, _ := http.NewRequest("GET", "/api/gateway/gateways", nil)
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		var list v1alpha1.GatewayList
+		body, _ := io.ReadAll(resp.Body)
+		err = json.Unmarshal(body, &list)
+		require.NoError(t, err)
+		assert.Empty(t, list.Items)
+	})
+}
+
+// TestListHTTPRoutesMock exercises mock-based error injection for HTTPRoutes.
+func TestListHTTPRoutesMock(t *testing.T) {
+	env := setupTestEnv(t)
+	env.App.Get("/api/gateway/httproutes", func(c *fiber.Ctx) error {
+		return fiber.NewError(fiber.StatusInternalServerError, "handler not initialized")
+	})
+
+	t.Run("ListHTTPRoutes error propagates", func(t *testing.T) {
+		mock := &mockGatewayClient{
+			listHTTPRoutesFunc: func(ctx context.Context) (*v1alpha1.HTTPRouteList, error) {
+				return nil, errors.New("httproute list failed")
+			},
+		}
+		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
+		env.App.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
+
+		req, _ := http.NewRequest("GET", "/api/gateway/httproutes", nil)
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 500, resp.StatusCode)
+	})
+
+	t.Run("Cluster-specific query error", func(t *testing.T) {
+		mock := &mockGatewayClient{
+			listHTTPRoutesForClusterFunc: func(ctx context.Context, contextName, namespace string) ([]v1alpha1.HTTPRoute, error) {
+				return nil, errors.New("cluster-specific error")
+			},
+		}
+		handler := &GatewayHandlers{k8sClient: mock, hub: env.Hub}
+		env.App.Get("/api/gateway/httproutes", handler.ListHTTPRoutes)
+
+		req, _ := http.NewRequest("GET", "/api/gateway/httproutes?cluster=test-cluster", nil)
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 500, resp.StatusCode)
+	})
+}
