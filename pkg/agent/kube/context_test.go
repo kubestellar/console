@@ -119,3 +119,156 @@ func TestUniqueSortedStrings_EmptyAndDeduplicated(t *testing.T) {
 		}
 	}
 }
+
+func TestSetClusterContextProviders(t *testing.T) {
+	t.Helper()
+
+	// Clear state
+	providerClusterContextState.mu.Lock()
+	providerClusterContextState.bridge = nil
+	providerClusterContextState.k8sClient = nil
+	providerClusterContextState.mu.Unlock()
+
+	// Create mock instances (nil is valid for testing the setter)
+	var mockBridge *mcp.Bridge
+	var mockClient *k8s.MultiClusterClient
+
+	// Set providers
+	SetClusterContextProviders(mockBridge, mockClient)
+
+	// Verify state was set
+	providerClusterContextState.mu.RLock()
+	if providerClusterContextState.bridge != mockBridge {
+		t.Fatalf("bridge not set correctly")
+	}
+	if providerClusterContextState.k8sClient != mockClient {
+		t.Fatalf("k8sClient not set correctly")
+	}
+	providerClusterContextState.mu.RUnlock()
+}
+
+func TestBuildLiveClusterContext_NilRequest(t *testing.T) {
+	t.Helper()
+
+	got := buildLiveClusterContext(nil, nil)
+	if got != "" {
+		t.Fatalf("expected empty string for nil request, got %q", got)
+	}
+}
+
+func TestBuildLiveClusterContext_NoProvidersConfigured(t *testing.T) {
+	t.Helper()
+
+	// Clear state
+	providerClusterContextState.mu.Lock()
+	providerClusterContextState.bridge = nil
+	providerClusterContextState.k8sClient = nil
+	providerClusterContextState.mu.Unlock()
+
+	req := &ai.ChatRequest{Message: "test"}
+	got := buildLiveClusterContext(nil, req)
+	if got != "" {
+		t.Fatalf("expected empty string when no providers configured, got %q", got)
+	}
+}
+
+func TestAppendClusterHealth_BothProvidersUnavailable(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendClusterHealth(&sb, nil, nil, nil, "test-cluster")
+	got := sb.String()
+	if !strings.Contains(got, "Health: unavailable") {
+		t.Fatalf("expected unavailable health, got %q", got)
+	}
+}
+
+func TestAppendPodIssues_BothProvidersUnavailable(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendPodIssues(&sb, nil, nil, nil, "test-cluster", "default")
+	got := sb.String()
+	if !strings.Contains(got, "Pod issues: unavailable") {
+		t.Fatalf("expected unavailable pod issues, got %q", got)
+	}
+}
+
+func TestAppendWarningEvents_BothProvidersUnavailable(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendWarningEvents(&sb, nil, nil, nil, "test-cluster", "default")
+	got := sb.String()
+	if !strings.Contains(got, "Recent warning events: unavailable") {
+		t.Fatalf("expected unavailable warning events, got %q", got)
+	}
+}
+
+func TestAppendFormattedBridgePodIssues_NoneDetected(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendFormattedBridgePodIssues(&sb, nil)
+	got := sb.String()
+	if !strings.Contains(got, "Pod issues: none detected") {
+		t.Fatalf("expected none detected, got %q", got)
+	}
+}
+
+func TestAppendFormattedPodIssues_NoneDetected(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendFormattedPodIssues(&sb, nil)
+	got := sb.String()
+	if !strings.Contains(got, "Pod issues: none detected") {
+		t.Fatalf("expected none detected, got %q", got)
+	}
+}
+
+func TestAppendFormattedBridgeWarningEvents_None(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendFormattedBridgeWarningEvents(&sb, nil)
+	got := sb.String()
+	if !strings.Contains(got, "Recent warning events: none") {
+		t.Fatalf("expected none, got %q", got)
+	}
+}
+
+func TestAppendFormattedWarningEvents_None(t *testing.T) {
+	t.Helper()
+
+	var sb strings.Builder
+	appendFormattedWarningEvents(&sb, nil)
+	got := sb.String()
+	if !strings.Contains(got, "Recent warning events: none") {
+		t.Fatalf("expected none, got %q", got)
+	}
+}
+
+func TestAppendFormattedWarningEvents_TruncatesLongMessages(t *testing.T) {
+	t.Helper()
+
+	longMessage := strings.Repeat("x", providerClusterContextMessageLimit+50)
+	events := []k8s.Event{{
+		Reason:    "PodEvicted",
+		Namespace: "default",
+		Object:    "my-pod",
+		Count:     5,
+		Message:   longMessage,
+	}}
+
+	var sb strings.Builder
+	appendFormattedWarningEvents(&sb, events)
+	got := sb.String()
+
+	if !strings.Contains(got, "...") {
+		t.Fatalf("long message should be truncated with ellipsis: %q", got)
+	}
+	if strings.Contains(got, longMessage) {
+		t.Fatalf("full message should not appear after truncation")
+	}
+}

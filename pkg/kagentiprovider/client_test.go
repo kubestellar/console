@@ -296,3 +296,208 @@ func newReroutedHTTPClient(t *testing.T, targetURL string) *http.Client {
 		Timeout: defaultDetectTimeout,
 	}
 }
+
+func TestDiscover(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/api/a2a/team-a/agent-one/.well-known/agent.json", r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"name":"agent-one","description":"demo agent","url":"http://example.com"}`))
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		card, err := client.Discover("team-a", "agent-one")
+		require.NoError(t, err)
+		require.NotNil(t, card)
+		assert.Equal(t, "agent-one", card.Name)
+		assert.Equal(t, "demo agent", card.Description)
+		assert.Equal(t, "http://example.com", card.URL)
+	})
+
+	t.Run("escapes namespace and agent name", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/api/a2a/team%2Fa/agent%20one/.well-known/agent.json", r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"name":"agent one","description":"demo"}`))
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		card, err := client.Discover("team/a", "agent one")
+		require.NoError(t, err)
+		assert.Equal(t, "agent one", card.Name)
+	})
+
+	t.Run("handles HTTP errors", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("agent not found"))
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		card, err := client.Discover("team-a", "missing-agent")
+		assert.Error(t, err)
+		assert.Nil(t, card)
+		assert.Contains(t, err.Error(), "404")
+	})
+
+	t.Run("handles invalid JSON", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{invalid json`))
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		card, err := client.Discover("team-a", "agent-one")
+		assert.Error(t, err)
+		assert.Nil(t, card)
+		assert.Contains(t, err.Error(), "decode")
+	})
+}
+
+func TestInvoke(t *testing.T) {
+	t.Run("controller mode success", func(t *testing.T) {
+		var receivedPayload map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/v1/chat/team-a/agent-one/stream" {
+				assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+				assert.Equal(t, "text/event-stream", r.Header.Get("Accept"))
+				err := json.NewDecoder(r.Body).Decode(&receivedPayload)
+				require.NoError(t, err)
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte("data: response\n\n"))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		history := []HistoryMessage{{Role: "user", Content: "hello"}}
+		body, err := client.Invoke(context.Background(), "team-a", "agent-one", "test message", "ctx-123", history)
+		require.NoError(t, err)
+		require.NotNil(t, body)
+		defer body.Close()
+
+		assert.Equal(t, "test message", receivedPayload["message"])
+		assert.Equal(t, "ctx-123", receivedPayload["session_id"])
+		assert.Equal(t, 1, len(receivedPayload["history"].([]any)))
+	})
+
+	t.Run("controller mode fallback paths", func(t *testing.T) {
+		var requests []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests = append(requests, r.URL.Path)
+			if r.URL.Path == "/api/chat/team-a/agent-one/stream" {
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte("data: ok\n\n"))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		body, err := client.Invoke(context.Background(), "team-a", "agent-one", "test", "", nil)
+		require.NoError(t, err)
+		require.NotNil(t, body)
+		defer body.Close()
+
+		assert.Equal(t, []string{
+			"/api/v1/chat/team-a/agent-one/stream",
+			"/api/chat/team-a/agent-one/stream",
+		}, requests)
+	})
+
+	t.Run("direct agent mode success", func(t *testing.T) {
+		var receivedPayload map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/chat/stream" {
+				err := json.NewDecoder(r.Body).Decode(&receivedPayload)
+				require.NoError(t, err)
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte("data: response\n\n"))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := &KagentiClient{
+			directAgentURL: strings.TrimRight(server.URL, "/"),
+			httpClient:     &http.Client{Timeout: defaultClientTimeout},
+		}
+
+		history := []HistoryMessage{{Role: "assistant", Content: "hi"}}
+		body, err := client.Invoke(context.Background(), "ignored-ns", "ignored-agent", "direct message", "session-456", history)
+		require.NoError(t, err)
+		require.NotNil(t, body)
+		defer body.Close()
+
+		assert.Equal(t, "direct message", receivedPayload["message"])
+		assert.Equal(t, "session-456", receivedPayload["session_id"])
+		assert.Equal(t, 1, len(receivedPayload["history"].([]any)))
+	})
+
+	t.Run("direct agent mode fallback paths", func(t *testing.T) {
+		var requests []string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests = append(requests, r.URL.Path)
+			if r.URL.Path == "/stream" {
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte("data: ok\n\n"))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		client := &KagentiClient{
+			directAgentURL: strings.TrimRight(server.URL, "/"),
+			httpClient:     &http.Client{Timeout: defaultClientTimeout},
+		}
+
+		body, err := client.Invoke(context.Background(), "", "", "msg", "", nil)
+		require.NoError(t, err)
+		require.NotNil(t, body)
+		defer body.Close()
+
+		assert.Equal(t, []string{
+			"/api/chat/stream",
+			"/chat/stream",
+			"/stream",
+		}, requests)
+	})
+
+	t.Run("handles HTTP errors", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte("invalid request"))
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		body, err := client.Invoke(context.Background(), "team-a", "agent-one", "test", "", nil)
+		assert.Error(t, err)
+		assert.Nil(t, body)
+		assert.Contains(t, err.Error(), "400")
+	})
+
+	t.Run("handles context cancellation", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			<-r.Context().Done()
+		}))
+		defer server.Close()
+
+		client := NewKagentiClient(server.URL)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		body, err := client.Invoke(ctx, "team-a", "agent-one", "test", "", nil)
+		assert.Error(t, err)
+		assert.Nil(t, body)
+	})
+}
