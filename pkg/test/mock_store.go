@@ -857,8 +857,4 @@ func (m *MockStore) ListStellarAuditLog(_ context.Context, _ string, _ int) ([]s
 	return nil, nil
 }
 
-func (m *MockStore) PruneOldExecutions(_ context.Context, _ int) (int64, error) {
-	return 0, nil
-}
-
 func (m *MockStore) Close() error { return nil }
