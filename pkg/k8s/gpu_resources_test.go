@@ -1,4 +1,4 @@
-package gpu
+package k8s
 
 import (
 	"testing"

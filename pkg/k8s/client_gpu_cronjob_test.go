@@ -1,11 +1,10 @@
-package gpu
+package k8s
 
 import (
 	"context"
 	"encoding/json"
 	"testing"
 
-	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -22,7 +21,7 @@ func TestUninstallGPUHealthCronJob(t *testing.T) {
 	ns := "nvidia-gpu-operator"
 
 	t.Run("removes all resources", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 
 		// Pre-create all resources that Install would create
 		sa := &corev1.ServiceAccount{
@@ -55,7 +54,7 @@ func TestUninstallGPUHealthCronJob(t *testing.T) {
 	})
 
 	t.Run("uses default namespace when empty", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		cj := &batchv1.CronJob{
 			ObjectMeta: metav1.ObjectMeta{Name: gpuHealthCronJobName, Namespace: gpuHealthDefaultNS},
 		}
@@ -70,7 +69,7 @@ func TestUninstallGPUHealthCronJob(t *testing.T) {
 	})
 
 	t.Run("succeeds when resources already absent", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		m.InjectClient("test-cluster", fakeClient)
 
@@ -79,7 +78,7 @@ func TestUninstallGPUHealthCronJob(t *testing.T) {
 	})
 
 	t.Run("returns error for unknown cluster", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		err := m.UninstallGPUHealthCronJob(ctx, "no-such-cluster", ns)
 		assert.Error(t, err)
 	})
@@ -89,7 +88,7 @@ func TestCanManageCronJobs(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("returns true when allowed", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		fakeClient.PrependReactor("create", "selfsubjectaccessreviews", func(action clientgotesting.Action) (bool, k8sruntime.Object, error) {
 			return true, &authorizationv1.SelfSubjectAccessReview{
@@ -104,7 +103,7 @@ func TestCanManageCronJobs(t *testing.T) {
 	})
 
 	t.Run("returns false when denied", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		fakeClient.PrependReactor("create", "selfsubjectaccessreviews", func(action clientgotesting.Action) (bool, k8sruntime.Object, error) {
 			return true, &authorizationv1.SelfSubjectAccessReview{
@@ -119,7 +118,7 @@ func TestCanManageCronJobs(t *testing.T) {
 	})
 
 	t.Run("returns false on API error", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		fakeClient.PrependReactor("create", "selfsubjectaccessreviews", func(action clientgotesting.Action) (bool, k8sruntime.Object, error) {
 			return true, nil, assert.AnError
@@ -248,7 +247,7 @@ func TestInstallGPUHealthCronJob_EdgeCases(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("invalid tier defaults to default tier", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		m.InjectClient("test-cluster", fakeClient)
 
@@ -261,7 +260,7 @@ func TestInstallGPUHealthCronJob_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("tier above 4 defaults to default tier", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		m.InjectClient("test-cluster", fakeClient)
 
@@ -274,7 +273,7 @@ func TestInstallGPUHealthCronJob_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty schedule uses default", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		m.InjectClient("test-cluster", fakeClient)
 
@@ -287,7 +286,7 @@ func TestInstallGPUHealthCronJob_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty namespace uses default", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		fakeClient := fake.NewSimpleClientset()
 		m.InjectClient("test-cluster", fakeClient)
 
@@ -299,7 +298,7 @@ func TestInstallGPUHealthCronJob_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("updates existing CronJob", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		existingCJ := &batchv1.CronJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      gpuHealthCronJobName,
@@ -321,7 +320,7 @@ func TestInstallGPUHealthCronJob_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("returns error for unknown cluster", func(t *testing.T) {
-		m := &k8s.MultiClusterClient{}
+		m := &MultiClusterClient{}
 		err := m.InstallGPUHealthCronJob(ctx, "no-such-cluster", "test-ns", "*/5 * * * *", 2)
 		assert.Error(t, err)
 	})
