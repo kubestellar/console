@@ -129,14 +129,19 @@ func TestGetUserPendingSwaps(t *testing.T) {
 		Role:        "viewer",
 	}))
 
+	dash := &models.Dashboard{UserID: userID, Name: "SwapDash"}
+	require.NoError(t, store.CreateDashboard(ctx, dash))
+
 	baseTime := time.Date(2025, time.June, 1, 12, 0, 0, 0, time.UTC)
 
 	t.Run("returns pending swaps ordered by swap_at", func(t *testing.T) {
-		cardID := uuid.New()
+		card := &models.Card{DashboardID: dash.ID, CardType: models.CardTypePodIssues, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card))
+
 		swap1 := &models.PendingSwap{
 			ID:            uuid.New(),
 			UserID:        userID,
-			CardID:        cardID,
+			CardID:        card.ID,
 			NewCardType:   "type-a",
 			Reason:        "old swap",
 			SwapAt:        baseTime.Add(2 * time.Hour),
@@ -145,7 +150,7 @@ func TestGetUserPendingSwaps(t *testing.T) {
 		swap2 := &models.PendingSwap{
 			ID:            uuid.New(),
 			UserID:        userID,
-			CardID:        cardID,
+			CardID:        card.ID,
 			NewCardType:   "type-b",
 			Reason:        "newer swap",
 			SwapAt:        baseTime.Add(1 * time.Hour),
@@ -171,11 +176,17 @@ func TestGetUserPendingSwaps(t *testing.T) {
 			Role:        "viewer",
 		}))
 
+		dash2 := &models.Dashboard{UserID: otherUser, Name: "SwapDash2"}
+		require.NoError(t, store.CreateDashboard(ctx, dash2))
+
 		for i := 0; i < 5; i++ {
+			card := &models.Card{DashboardID: dash2.ID, CardType: models.CardTypeClusterHealth, Position: models.CardPosition{W: 1, H: 1}}
+			require.NoError(t, store.CreateCard(ctx, card))
+
 			swap := &models.PendingSwap{
 				ID:          uuid.New(),
 				UserID:      otherUser,
-				CardID:      uuid.New(),
+				CardID:      card.ID,
 				NewCardType: "type",
 				Reason:      fmt.Sprintf("swap-%d", i),
 				SwapAt:      baseTime.Add(time.Duration(i) * time.Hour),
@@ -204,10 +215,19 @@ func TestGetUserPendingSwaps(t *testing.T) {
 			Role:        "viewer",
 		}))
 
+		dash3 := &models.Dashboard{UserID: completedUser, Name: "CompletedDash"}
+		require.NoError(t, store.CreateDashboard(ctx, dash3))
+
+		card1 := &models.Card{DashboardID: dash3.ID, CardType: models.CardTypePodIssues, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card1))
+
+		card2 := &models.Card{DashboardID: dash3.ID, CardType: models.CardTypeTopPods, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card2))
+
 		pendingSwap := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      completedUser,
-			CardID:      uuid.New(),
+			CardID:      card1.ID,
 			NewCardType: "type-a",
 			Reason:      "pending",
 			SwapAt:      baseTime,
@@ -216,7 +236,7 @@ func TestGetUserPendingSwaps(t *testing.T) {
 		completedSwap := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      completedUser,
-			CardID:      uuid.New(),
+			CardID:      card2.ID,
 			NewCardType: "type-b",
 			Reason:      "completed",
 			SwapAt:      baseTime,
@@ -245,13 +265,22 @@ func TestGetDueSwaps(t *testing.T) {
 		Role:        "viewer",
 	}))
 
+	dash := &models.Dashboard{UserID: userID, Name: "DueDash"}
+	require.NoError(t, store.CreateDashboard(ctx, dash))
+
 	now := time.Now()
 
 	t.Run("returns swaps where swap_at has arrived", func(t *testing.T) {
+		card1 := &models.Card{DashboardID: dash.ID, CardType: models.CardTypePodIssues, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card1))
+
+		card2 := &models.Card{DashboardID: dash.ID, CardType: models.CardTypeTopPods, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card2))
+
 		dueSwap := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      userID,
-			CardID:      uuid.New(),
+			CardID:      card1.ID,
 			NewCardType: "type-a",
 			Reason:      "due now",
 			SwapAt:      now.Add(-10 * time.Minute),
@@ -260,7 +289,7 @@ func TestGetDueSwaps(t *testing.T) {
 		futureSwap := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      userID,
-			CardID:      uuid.New(),
+			CardID:      card2.ID,
 			NewCardType: "type-b",
 			Reason:      "not due yet",
 			SwapAt:      now.Add(10 * time.Minute),
@@ -285,10 +314,16 @@ func TestGetDueSwaps(t *testing.T) {
 	})
 
 	t.Run("orders by swap_at ascending", func(t *testing.T) {
+		card3 := &models.Card{DashboardID: dash.ID, CardType: models.CardTypeClusterHealth, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card3))
+
+		card4 := &models.Card{DashboardID: dash.ID, CardType: models.CardTypeEventStream, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card4))
+
 		older := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      userID,
-			CardID:      uuid.New(),
+			CardID:      card3.ID,
 			NewCardType: "type-a",
 			Reason:      "older",
 			SwapAt:      now.Add(-2 * time.Hour),
@@ -297,7 +332,7 @@ func TestGetDueSwaps(t *testing.T) {
 		newer := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      userID,
-			CardID:      uuid.New(),
+			CardID:      card4.ID,
 			NewCardType: "type-b",
 			Reason:      "newer",
 			SwapAt:      now.Add(-1 * time.Hour),
@@ -336,11 +371,17 @@ func TestGetDueSwaps(t *testing.T) {
 			Role:        "viewer",
 		}))
 
+		dash2 := &models.Dashboard{UserID: user2, Name: "LimitDash"}
+		require.NoError(t, store.CreateDashboard(ctx, dash2))
+
 		for i := 0; i < 5; i++ {
+			card := &models.Card{DashboardID: dash2.ID, CardType: models.CardTypeClusterHealth, Position: models.CardPosition{W: 1, H: 1}}
+			require.NoError(t, store.CreateCard(ctx, card))
+
 			swap := &models.PendingSwap{
 				ID:          uuid.New(),
 				UserID:      user2,
-				CardID:      uuid.New(),
+				CardID:      card.ID,
 				NewCardType: "type",
 				Reason:      fmt.Sprintf("swap-%d", i),
 				SwapAt:      now.Add(-time.Duration(i+1) * time.Hour),
@@ -374,13 +415,19 @@ func TestSnoozeSwap(t *testing.T) {
 		Role:        "viewer",
 	}))
 
+	dash := &models.Dashboard{UserID: userID, Name: "SnoozeDash"}
+	require.NoError(t, store.CreateDashboard(ctx, dash))
+
 	now := time.Now()
 
 	t.Run("updates swap_at and sets status to snoozed", func(t *testing.T) {
+		card := &models.Card{DashboardID: dash.ID, CardType: models.CardTypePodIssues, Position: models.CardPosition{W: 1, H: 1}}
+		require.NoError(t, store.CreateCard(ctx, card))
+
 		swap := &models.PendingSwap{
 			ID:          uuid.New(),
 			UserID:      userID,
-			CardID:      uuid.New(),
+			CardID:      card.ID,
 			NewCardType: "type-a",
 			Reason:      "original",
 			SwapAt:      now.Add(-1 * time.Hour),
