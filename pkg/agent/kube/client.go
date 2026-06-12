@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

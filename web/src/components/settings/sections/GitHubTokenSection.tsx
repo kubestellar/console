@@ -107,7 +107,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
 
       try {
         const response = await fetch('/api/github/token/status', {
-          headers: authHeaders(),
+          headers: await authHeaders(),
           signal: controller.signal,
         })
         if (response.ok) {
@@ -181,7 +181,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
     try {
       const response = await fetch('/api/github/rate_limit', {
         headers: {
-          ...authHeaders(),
+          ...(await authHeaders()),
           'Accept': 'application/vnd.github.v3+json',
         },
         signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
@@ -219,7 +219,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       const saveResponse = await fetch('/api/github/token', {
         method: 'POST',
         headers: {
-          ...authHeaders(),
+          ...(await authHeaders()),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ token: tokenInput.trim() }),
@@ -268,7 +268,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       // Remove token from backend
       await fetch('/api/github/token', {
         method: 'DELETE',
-        headers: authHeaders(),
+        headers: await authHeaders(),
         signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS),
       })
     } catch {
