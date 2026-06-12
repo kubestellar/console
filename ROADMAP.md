@@ -156,44 +156,46 @@ We welcome community input on priorities:
 ## Strategic Health — June 2026
 
 > Status snapshot filed by the strategist agent (ACMM L6). Updated when material risks to roadmap delivery are identified.
-> **Last updated:** 2026-06-12
+> **Last updated:** 2026-06-12 (03:24 PM EDT, pass 2)
 
 ### Current Risk Register
 
 | Risk | Severity | Issue | Status |
 |------|----------|-------|--------|
-| Merge gate disabled on `main` — no required status checks | 🔴 Critical | #17852 | Open |
-| Main branch build cascade — 8+ breaks on 2026-06-12, recovery SLA undefined | 🔴 Critical | #17756, #17969 | Escalating |
-| Auth smoke test regression | 🔴 Critical | #17824 | Open |
-| DCO sign-off failures on automation PRs — legal compliance risk | 🔴 Critical | #17966 | Open |
-| Coverage suite — 415 failures risk v0.3 "91% coverage" claim | 🟠 High | #17856 | Open |
-| v0.4 feature velocity at zero — all recent merges are maintenance | 🟠 High | #17968 | Ongoing |
-| Scanner PR backlog stalling v0.4 arch refactor | 🟠 High | #17853 | Open |
-| Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Open |
-| Plugin architecture RFC exists (Draft) but issue tracker not closed | 🟡 Medium | #17760 | RFC exists |
-| Organic contributor drought — <4% human PR ratio | 🟡 Medium | #17967 | Ongoing |
-| Adoption metrics (`docs/ADOPTION-METRICS.md`) all TBD | 🟡 Medium | #17965 | Unresolved |
+| Build broken: PR #18173 broke main again — merge gate still absent | 🔴 Critical | #18184, #18187 | Open |
+| v0.4 Q3 2026 deadline at risk — zero feature PRs with 18 days until Q3 | 🔴 Critical | #18189 | New |
+| Organic contributor drought — all "human" PRs are hive bot, ratio <4% | 🟠 High | #18093 | Ongoing |
+| ADOPTERS.md created but self-referential — no external adopters listed | 🟠 High | #18188 | New |
+| 5 stale needs-rebase PRs blocking architecture refactor momentum | 🟠 High | #18190 | New |
+| PR triage SLA absent — ai-needs-human PRs lack escalation path | 🟡 Medium | #18037 | Ongoing |
+| Tech-debt arch refactors on hold (#17123, #17124, #17576, #17878, #17882, #17883) | 🟡 Medium | #17883 | Ongoing |
+| Stellar subsystem — no GA milestone or alpha exit criteria | 🟡 Medium | #17757 | Tracked |
 | CNCF incubation tracker on `hold` | 🟡 Medium | #4072 | Blocked |
+| ~~Merge gate disabled (first filing)~~ | ~~🔴 Critical~~ | ~~#17852~~ | ✅ Closed |
+| ~~DCO sign-off failures on automation PRs~~ | ~~🔴 Critical~~ | ~~#17966~~ | ✅ Closed |
+| ~~Coverage suite 415 failures~~ | ~~🟠 High~~ | ~~#17856~~ | ✅ Closed |
+| ~~Adoption metrics all TBD~~ | ~~🟡 Medium~~ | ~~#17965~~ | ✅ Closed |
 
 ### v0.4 Delivery Prerequisites
 
-Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following blockers must be resolved:
+Before v0.4 ("AI-Native Observability") can ship on-schedule (Q3 2026), the following blockers must be resolved — in priority order:
 
-1. **Merge gate enforcement** (#17852) — Must be enabled first; every other quality improvement depends on a stable merge pipeline.
-2. **Build stabilization** (#17756) — Main must stay green for at least 2 weeks before any v0.4 feature work is reliable.
-3. **Recovery SLA definition** (#17969) — Define build sheriff role, 4-hour SLA, and circuit breaker for automation agents when main is broken.
-4. **Coverage regression triage** (#17856) — Determine whether the 415-failure coverage suite is a build environment artifact or real test regression.
-5. **v0.4 feature work kickoff** (#17968) — Designate a feature captain and open at least one implementation PR for llm-d, Drasi, or kagent integration.
+1. **Build stabilization** (#18184, #18187) — Main is broken as of 2026-06-12. Restore green main and enable required status checks on `main` before any feature work is reliable.
+2. **v0.4 feature kickoff** (#18189) — Q3 starts July 1 (18 days). Designate feature captain and open at least one implementation PR for llm-d, Drasi, or kagent integration before July 1.
+3. **Stale PR cleanup** (#18190) — 5 needs-rebase PRs must be rebased or closed within 1 week.
+4. **External adopter recruitment** (#18188) — ADOPTERS.md has only KubeStellar itself; recruit ≥3 external organizations before CNCF application.
+5. **Coverage gap closure** (#18093) — 39 source files in `pkg/api/handlers` still lack test coverage.
 
 ### Adoption Readiness
 
 | Signal | Target | Current |
 |--------|--------|---------|
-| Main branch build stability | Green ≥14 consecutive days | ❌ Failing (8+ breaks on 2026-06-12) |
-| Coverage suite pass rate | >99% | ❌ 415 failures |
-| Human contributor ratio | ≥10% of merged PRs | ❌ <4% (1/30 recent merges) |
-| ADOPTERS.md confirmed entries | ≥3 production users | ⚠️ TBD |
-| Adoption metrics populated | All fields in `docs/ADOPTION-METRICS.md` | ❌ All TBD (#17965) |
-| DCO compliance on automation PRs | 100% of merged PRs signed | ⚠️ Gaps identified (#17966) |
+| Main branch build stability | Green ≥14 consecutive days | ❌ Broken (#18184) |
+| External adopters in ADOPTERS.md | ≥3 confirmed orgs | ❌ 0 external (KubeStellar self-listed only) |
+| Human contributor ratio | ≥10% of merged PRs | ❌ <4% (hive bot dominates recent merges) |
+| v0.4 feature work started | ≥1 feature PR open | ❌ Zero feature PRs |
+| PR triage SLA | Defined + enforced | ❌ Undefined |
+| Coverage — handler package | >80% | ❌ 39 files uncovered (#18093) |
+| DCO compliance on automation PRs | 100% of merged PRs signed | ⚠️ Gaps in stale PR backlog (#18190) |
 | CNCF incubation application | Filed | ⏸ On hold (#4072) |
 
