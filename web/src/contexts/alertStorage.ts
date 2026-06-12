@@ -110,12 +110,18 @@ export function loadFromStorage<T>(key: string, defaultValue: T): T {
 
 /** Save to localStorage with error logging (#7576).
  *  Uses localStorage directly instead of safeSetJSON so errors are
- *  observable rather than silently swallowed. */
+ *  observable rather than silently swallowed. Dispatches storage-error event for observability. */
 export function saveToStorage<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e: unknown) {
     console.error(`Failed to save ${key} to localStorage:`, e)
+    // Dispatch custom event for monitoring/observability
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('storage-error', {
+        detail: { operation: 'setItem', key, error: e instanceof Error ? e.message : String(e), timestamp: Date.now() }
+      }))
+    }
   }
 }
 
@@ -160,6 +166,12 @@ export function saveAlerts(alerts: Alert[]): void {
         localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
       } catch (retryError: unknown) {
         console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
+        // Dispatch event for monitoring
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('storage-error', {
+            detail: { operation: 'setItem', key: ALERTS_KEY, error: retryError instanceof Error ? retryError.message : String(retryError), timestamp: Date.now(), severity: 'critical' }
+          }))
+        }
         safeRemove(ALERTS_KEY)
       }
     } else {
